@@ -168,8 +168,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
       AutoCloseDataSetLock volLock = getReadLock(level, resources);
       volLock.setParentLock(bpLock);
       if (openLockTrace) {
-        LOG.info("Sub lock " + resources[0] + resources[1] + " parent lock " +
-            resources[0]);
+        LOG.info("Sub lock {}, parent lock {}.", resources[0] + resources[1], resources[0]);
       }
       return volLock;
     } else {
@@ -179,7 +178,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
       AutoCloseDataSetLock dirLock = getReadLock(level, resources);
       dirLock.setParentLock(volLock);
       if (openLockTrace) {
-        LOG.info("Sub lock " + resources[0] + resources[1] + resources[2] + " parent lock " +
+        LOG.info("Sub lock {}, parent lock {}", resources[0] + resources[1] + resources[2],
             resources[0] + resources[1]);
       }
       return dirLock;
@@ -195,8 +194,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
       AutoCloseDataSetLock volLock = getWriteLock(level, resources);
       volLock.setParentLock(bpLock);
       if (openLockTrace) {
-        LOG.info("Sub lock " + resources[0] + resources[1] + " parent lock " +
-            resources[0]);
+        LOG.info("Sub lock {}, parent lock {}.", resources[0] + resources[1], resources[0]);
       }
       return volLock;
     } else {
@@ -206,7 +204,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
       AutoCloseDataSetLock dirLock = getWriteLock(level, resources);
       dirLock.setParentLock(volLock);
       if (openLockTrace) {
-        LOG.info("Sub lock " + resources[0] + resources[1] + resources[2] + " parent lock " +
+        LOG.info("Sub lock {}, parent lock {}.", resources[0] + resources[1] + resources[2],
             resources[0] + resources[1]);
       }
       return dirLock;
