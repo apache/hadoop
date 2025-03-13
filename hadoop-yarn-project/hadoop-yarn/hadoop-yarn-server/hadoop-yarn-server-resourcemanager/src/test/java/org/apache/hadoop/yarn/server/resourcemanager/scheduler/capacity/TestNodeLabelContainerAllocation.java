@@ -1706,16 +1706,14 @@ public class TestNodeLabelContainerAllocation {
       cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
     }
 
-    assertTrue(
-    
-       app.getDiagnostics().toString().contains(
-            CSAMContainerLaunchDiagnosticsConstants.SKIP_AM_ALLOCATION_IN_IGNORE_EXCLUSIVE_MODE), "Scheduler diagnostics should have reason for not assigning the node");
+    assertTrue(app.getDiagnostics().toString().contains(
+        CSAMContainerLaunchDiagnosticsConstants.SKIP_AM_ALLOCATION_IN_IGNORE_EXCLUSIVE_MODE),
+        "Scheduler diagnostics should have reason for not assigning the node");
 
-    assertTrue(
-    
-       app.getDiagnostics().toString().contains(
-            CSAMContainerLaunchDiagnosticsConstants.LAST_NODE_PROCESSED_MSG
-                + nodeIdStr + " ( Partition : [x]"), "Scheduler diagnostics should have last processed node information");
+    assertTrue(app.getDiagnostics().toString().contains(
+        CSAMContainerLaunchDiagnosticsConstants.LAST_NODE_PROCESSED_MSG
+        + nodeIdStr + " ( Partition : [x]"),
+        "Scheduler diagnostics should have last processed node information");
     assertEquals(0, cs.getSchedulerNode(nm1.getNodeId())
         .getNumContainers());
     

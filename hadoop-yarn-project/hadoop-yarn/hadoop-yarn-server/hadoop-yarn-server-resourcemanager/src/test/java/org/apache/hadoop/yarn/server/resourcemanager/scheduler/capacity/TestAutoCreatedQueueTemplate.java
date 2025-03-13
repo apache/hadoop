@@ -223,8 +223,8 @@ public class TestAutoCreatedQueueTemplate {
         new AutoCreatedQueueTemplate(conf, invalidPath);
     template.setTemplateEntriesForChild(conf, TEST_QUEUE_AB);
 
-    assertEquals( -1f, conf.getNonLabeledQueueWeight(TEST_QUEUE_AB), 10e-6,
-        "weight is set using invalid queue path");
+    assertEquals(-1f, conf.getNonLabeledQueueWeight(TEST_QUEUE_AB),
+        10e-6, "weight is set using invalid queue path");
   }
 
   private String getTemplateKey(QueuePath queuePath, String entryKey) {

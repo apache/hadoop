@@ -41,7 +41,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.Yar
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -57,7 +56,11 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests {@link ZKConfigurationStore}.
@@ -114,18 +117,18 @@ public class TestZKConfigurationStore extends
 
   @Test
   public void testIncompatibleVersion() throws Exception {
-    assertThrows(YarnConfStoreVersionIncompatibleException.class, ()->{
+    assertThrows(YarnConfStoreVersionIncompatibleException.class, () -> {
       confStore.initialize(conf, schedConf, rmContext);
 
       Version otherVersion = Version.newInstance(1, 1);
       String zkVersionPath = getZkPath("VERSION");
       byte[] versionData =
-              ((VersionPBImpl) otherVersion).getProto().toByteArray();
+          ((VersionPBImpl) otherVersion).getProto().toByteArray();
       ((ZKConfigurationStore) confStore).safeCreateZkData(zkVersionPath,
-              versionData);
+          versionData);
 
-      assertEquals(otherVersion, confStore.getConfStoreVersion(), "The configuration store should have stored the new" +
-              "version.");
+      assertEquals(otherVersion, confStore.getConfStoreVersion(),
+          "The configuration store should have stored the new version.");
       confStore.checkVersion();
     });
   }
@@ -142,7 +145,7 @@ public class TestZKConfigurationStore extends
   @Test
   public void testGetConfigurationVersionOnSerializedNullData()
       throws Exception {
-    assertThrows(IllegalStateException.class, ()->{
+    assertThrows(IllegalStateException.class, () -> {
       confStore.initialize(conf, schedConf, rmContext);
       String confVersionPath = getZkPath("CONF_VERSION");
       ((ZKConfigurationStore) confStore).setZkData(confVersionPath, null);
@@ -159,7 +162,7 @@ public class TestZKConfigurationStore extends
    */
   @Test
   public void testLogMutationAfterSerializationError() throws Exception {
-    assertThrows(ClassCastException.class, ()->{
+    assertThrows(ClassCastException.class, () -> {
       byte[] data = null;
       String logs = "NOT_LINKED_LIST";
       confStore.initialize(conf, schedConf, rmContext);
@@ -173,14 +176,14 @@ public class TestZKConfigurationStore extends
       }
 
       String logsPath = getZkPath("LOGS");
-      ((ZKConfigurationStore)confStore).setZkData(logsPath, data);
+      ((ZKConfigurationStore) confStore).setZkData(logsPath, data);
 
       Map<String, String> update = new HashMap<>();
       update.put("valid_key", "valid_value");
 
       confStore.logMutation(new LogMutation(update, TEST_USER));
 
-      assertEquals(data, ((ZKConfigurationStore)confStore).getZkData(logsPath));
+      assertEquals(data, ((ZKConfigurationStore) confStore).getZkData(logsPath));
     });
   }
 
@@ -240,20 +243,20 @@ public class TestZKConfigurationStore extends
     ResourceManager rm1 = new MockRM(conf1);
     rm1.start();
     rm1.getRMContext().getRMAdminService().transitionToActive(req);
-    assertEquals(
-       Service.STATE.STARTED, rm1.getServiceState(), "RM with ZKStore didn't start");
-    assertEquals(
-       HAServiceProtocol.HAServiceState.ACTIVE
-,         rm1.getRMContext().getRMAdminService().getServiceStatus().getState(), "RM should be Active");
+    assertEquals(Service.STATE.STARTED, rm1.getServiceState(),
+        "RM with ZKStore didn't start");
+    assertEquals(HAServiceProtocol.HAServiceState.ACTIVE,
+        rm1.getRMContext().getRMAdminService().getServiceStatus().getState(),
+        "RM should be Active");
     assertNull(((MutableConfScheduler) rm1.getResourceScheduler())
         .getConfiguration().get("key"));
 
     Configuration conf2 = createRMHAConf("rm1,rm2", "rm2", 5678);
     ResourceManager rm2 = new MockRM(conf2);
     rm2.start();
-    assertEquals(
-       HAServiceProtocol.HAServiceState.STANDBY
-,         rm2.getRMContext().getRMAdminService().getServiceStatus().getState(), "RM should be Standby");
+    assertEquals(HAServiceProtocol.HAServiceState.STANDBY,
+        rm2.getRMContext().getRMAdminService().getServiceStatus().getState(),
+        "RM should be Standby");
 
     // Update configuration on RM1
     SchedConfUpdateInfo schedConfUpdateInfo = new SchedConfUpdateInfo();
@@ -276,11 +279,11 @@ public class TestZKConfigurationStore extends
 
     // Start RM2 and verifies it starts with updated configuration
     rm2.getRMContext().getRMAdminService().transitionToActive(req);
-    assertEquals(
-       Service.STATE.STARTED, rm2.getServiceState(), "RM with ZKStore didn't start");
-    assertEquals(
-       HAServiceProtocol.HAServiceState.ACTIVE
-,         rm2.getRMContext().getRMAdminService().getServiceStatus().getState(), "RM should be Active");
+    assertEquals(Service.STATE.STARTED, rm2.getServiceState(),
+        "RM with ZKStore didn't start");
+    assertEquals(HAServiceProtocol.HAServiceState.ACTIVE,
+        rm2.getRMContext().getRMAdminService().getServiceStatus().getState(),
+        "RM should be Active");
 
     for (int i = 0; i < ZK_TIMEOUT_MS / 50; i++) {
       if (HAServiceProtocol.HAServiceState.ACTIVE ==
@@ -289,12 +292,12 @@ public class TestZKConfigurationStore extends
         Thread.sleep(100);
       }
     }
-    assertEquals(
-       HAServiceProtocol.HAServiceState.STANDBY
-,         rm1.getRMContext().getRMAdminService().getServiceStatus().getState(), "RM should have been fenced");
-    assertEquals(
-       HAServiceProtocol.HAServiceState.ACTIVE
-,         rm2.getRMContext().getRMAdminService().getServiceStatus().getState(), "RM should be Active");
+    assertEquals(HAServiceProtocol.HAServiceState.STANDBY,
+        rm1.getRMContext().getRMAdminService().getServiceStatus().getState(),
+        "RM should have been fenced");
+    assertEquals(HAServiceProtocol.HAServiceState.ACTIVE,
+        rm2.getRMContext().getRMAdminService().getServiceStatus().getState(),
+        "RM should be Active");
 
     assertEquals("val", ((MutableCSConfigurationProvider) (
         (CapacityScheduler) rm2.getResourceScheduler())
@@ -326,18 +329,18 @@ public class TestZKConfigurationStore extends
     ResourceManager rm1 = new MockRM(conf1);
     rm1.start();
     rm1.getRMContext().getRMAdminService().transitionToActive(req);
-    assertEquals(
-       Service.STATE.STARTED, rm1.getServiceState(), "RM with ZKStore didn't start");
-    assertEquals(
-       HAServiceProtocol.HAServiceState.ACTIVE
-,         rm1.getRMContext().getRMAdminService().getServiceStatus().getState(), "RM should be Active");
+    assertEquals(Service.STATE.STARTED, rm1.getServiceState(),
+        "RM with ZKStore didn't start");
+    assertEquals(HAServiceProtocol.HAServiceState.ACTIVE,
+        rm1.getRMContext().getRMAdminService().getServiceStatus().getState(),
+        "RM should be Active");
 
     Configuration conf2 = createRMHAConf("rm1,rm2", "rm2", 5678);
     ResourceManager rm2 = new MockRM(conf2);
     rm2.start();
-    assertEquals(
-       HAServiceProtocol.HAServiceState.STANDBY
-,         rm2.getRMContext().getRMAdminService().getServiceStatus().getState(), "RM should be Standby");
+    assertEquals(HAServiceProtocol.HAServiceState.STANDBY,
+        rm2.getRMContext().getRMAdminService().getServiceStatus().getState(),
+        "RM should be Standby");
 
     UserGroupInformation user = UserGroupInformation
         .createUserForTesting(TEST_USER, new String[0]);
@@ -375,11 +378,11 @@ public class TestZKConfigurationStore extends
 
     // Start RM2 and verifies it starts with updated configuration
     rm2.getRMContext().getRMAdminService().transitionToActive(req);
-    assertEquals(
-       Service.STATE.STARTED, rm2.getServiceState(), "RM with ZKStore didn't start");
-    assertEquals(
-       HAServiceProtocol.HAServiceState.ACTIVE
-,         rm2.getRMContext().getRMAdminService().getServiceStatus().getState(), "RM should be Active");
+    assertEquals(Service.STATE.STARTED, rm2.getServiceState(),
+        "RM with ZKStore didn't start");
+    assertEquals(HAServiceProtocol.HAServiceState.ACTIVE,
+        rm2.getRMContext().getRMAdminService().getServiceStatus().getState(),
+        "RM should be Active");
 
     for (int i = 0; i < ZK_TIMEOUT_MS / 50; i++) {
       if (HAServiceProtocol.HAServiceState.ACTIVE ==
@@ -388,12 +391,12 @@ public class TestZKConfigurationStore extends
         Thread.sleep(100);
       }
     }
-    assertEquals(
-       HAServiceProtocol.HAServiceState.STANDBY
-,         rm1.getRMContext().getRMAdminService().getServiceStatus().getState(), "RM should have been fenced");
-    assertEquals(
-       HAServiceProtocol.HAServiceState.ACTIVE
-,         rm2.getRMContext().getRMAdminService().getServiceStatus().getState(), "RM should be Active");
+    assertEquals(HAServiceProtocol.HAServiceState.STANDBY,
+        rm1.getRMContext().getRMAdminService().getServiceStatus().getState(),
+        "RM should have been fenced");
+    assertEquals(HAServiceProtocol.HAServiceState.ACTIVE,
+        rm2.getRMContext().getRMAdminService().getServiceStatus().getState(),
+        "RM should be Active");
 
     assertEquals("a", ((MutableCSConfigurationProvider) (
         (CapacityScheduler) rm2.getResourceScheduler())
@@ -420,13 +423,13 @@ public class TestZKConfigurationStore extends
 
     File flagFile = new File(DESERIALIZATION_VULNERABILITY_FILEPATH);
     if (flagFile.exists()) {
-      Assertions.assertTrue(flagFile.delete());
+      assertTrue(flagFile.delete());
     }
 
     // Generated using ysoserial (https://github.com/frohoff/ysoserial)
     // java -jar ysoserial.jar CommonsBeanutils1 'touch /tmp/ZK_DESERIALIZATION_VULNERABILITY' | base64
     ((ZKConfigurationStore) confStore).setZkData(confStorePath, Base64.getDecoder().decode("rO0ABXNyABdqYXZhLnV0aWwuUHJpb3JpdHlRdWV1ZZTaMLT7P4KxAwACSQAEc2l6ZUwACmNvbXBhcmF0b3J0ABZMamF2YS91dGlsL0NvbXBhcmF0b3I7eHAAAAACc3IAK29yZy5hcGFjaGUuY29tbW9ucy5iZWFudXRpbHMuQmVhbkNvbXBhcmF0b3LjoYjqcyKkSAIAAkwACmNvbXBhcmF0b3JxAH4AAUwACHByb3BlcnR5dAASTGphdmEvbGFuZy9TdHJpbmc7eHBzcgA/b3JnLmFwYWNoZS5jb21tb25zLmNvbGxlY3Rpb25zLmNvbXBhcmF0b3JzLkNvbXBhcmFibGVDb21wYXJhdG9y+/SZJbhusTcCAAB4cHQAEG91dHB1dFByb3BlcnRpZXN3BAAAAANzcgA6Y29tLnN1bi5vcmcuYXBhY2hlLnhhbGFuLmludGVybmFsLnhzbHRjLnRyYXguVGVtcGxhdGVzSW1wbAlXT8FurKszAwAGSQANX2luZGVudE51bWJlckkADl90cmFuc2xldEluZGV4WwAKX2J5dGVjb2Rlc3QAA1tbQlsABl9jbGFzc3QAEltMamF2YS9sYW5nL0NsYXNzO0wABV9uYW1lcQB+AARMABFfb3V0cHV0UHJvcGVydGllc3QAFkxqYXZhL3V0aWwvUHJvcGVydGllczt4cAAAAAD/////dXIAA1tbQkv9GRVnZ9s3AgAAeHAAAAACdXIAAltCrPMX+AYIVOACAAB4cAAABsHK/rq+AAAAMgA5CgADACIHADcHACUHACYBABBzZXJpYWxWZXJzaW9uVUlEAQABSgEADUNvbnN0YW50VmFsdWUFrSCT85Hd7z4BAAY8aW5pdD4BAAMoKVYBAARDb2RlAQAPTGluZU51bWJlclRhYmxlAQASTG9jYWxWYXJpYWJsZVRhYmxlAQAEdGhpcwEAE1N0dWJUcmFuc2xldFBheWxvYWQBAAxJbm5lckNsYXNzZXMBADVMeXNvc2VyaWFsL3BheWxvYWRzL3V0aWwvR2FkZ2V0cyRTdHViVHJhbnNsZXRQYXlsb2FkOwEACXRyYW5zZm9ybQEAcihMY29tL3N1bi9vcmcvYXBhY2hlL3hhbGFuL2ludGVybmFsL3hzbHRjL0RPTTtbTGNvbS9zdW4vb3JnL2FwYWNoZS94bWwvaW50ZXJuYWwvc2VyaWFsaXplci9TZXJpYWxpemF0aW9uSGFuZGxlcjspVgEACGRvY3VtZW50AQAtTGNvbS9zdW4vb3JnL2FwYWNoZS94YWxhbi9pbnRlcm5hbC94c2x0Yy9ET007AQAIaGFuZGxlcnMBAEJbTGNvbS9zdW4vb3JnL2FwYWNoZS94bWwvaW50ZXJuYWwvc2VyaWFsaXplci9TZXJpYWxpemF0aW9uSGFuZGxlcjsBAApFeGNlcHRpb25zBwAnAQCmKExjb20vc3VuL29yZy9hcGFjaGUveGFsYW4vaW50ZXJuYWwveHNsdGMvRE9NO0xjb20vc3VuL29yZy9hcGFjaGUveG1sL2ludGVybmFsL2R0bS9EVE1BeGlzSXRlcmF0b3I7TGNvbS9zdW4vb3JnL2FwYWNoZS94bWwvaW50ZXJuYWwvc2VyaWFsaXplci9TZXJpYWxpemF0aW9uSGFuZGxlcjspVgEACGl0ZXJhdG9yAQA1TGNvbS9zdW4vb3JnL2FwYWNoZS94bWwvaW50ZXJuYWwvZHRtL0RUTUF4aXNJdGVyYXRvcjsBAAdoYW5kbGVyAQBBTGNvbS9zdW4vb3JnL2FwYWNoZS94bWwvaW50ZXJuYWwvc2VyaWFsaXplci9TZXJpYWxpemF0aW9uSGFuZGxlcjsBAApTb3VyY2VGaWxlAQAMR2FkZ2V0cy5qYXZhDAAKAAsHACgBADN5c29zZXJpYWwvcGF5bG9hZHMvdXRpbC9HYWRnZXRzJFN0dWJUcmFuc2xldFBheWxvYWQBAEBjb20vc3VuL29yZy9hcGFjaGUveGFsYW4vaW50ZXJuYWwveHNsdGMvcnVudGltZS9BYnN0cmFjdFRyYW5zbGV0AQAUamF2YS9pby9TZXJpYWxpemFibGUBADljb20vc3VuL29yZy9hcGFjaGUveGFsYW4vaW50ZXJuYWwveHNsdGMvVHJhbnNsZXRFeGNlcHRpb24BAB95c29zZXJpYWwvcGF5bG9hZHMvdXRpbC9HYWRnZXRzAQAIPGNsaW5pdD4BABFqYXZhL2xhbmcvUnVudGltZQcAKgEACmdldFJ1bnRpbWUBABUoKUxqYXZhL2xhbmcvUnVudGltZTsMACwALQoAKwAuAQArdG91Y2ggL3RtcC9aS19ERVNFUklBTElaQVRJT05fVlVMTkVSQUJJTElUWQgAMAEABGV4ZWMBACcoTGphdmEvbGFuZy9TdHJpbmc7KUxqYXZhL2xhbmcvUHJvY2VzczsMADIAMwoAKwA0AQANU3RhY2tNYXBUYWJsZQEAHnlzb3NlcmlhbC9Qd25lcjExNTM4MjYwNDMyOTA1MQEAIEx5c29zZXJpYWwvUHduZXIxMTUzODI2MDQzMjkwNTE7ACEAAgADAAEABAABABoABQAGAAEABwAAAAIACAAEAAEACgALAAEADAAAAC8AAQABAAAABSq3AAGxAAAAAgANAAAABgABAAAALwAOAAAADAABAAAABQAPADgAAAABABMAFAACAAwAAAA/AAAAAwAAAAGxAAAAAgANAAAABgABAAAANAAOAAAAIAADAAAAAQAPADgAAAAAAAEAFQAWAAEAAAABABcAGAACABkAAAAEAAEAGgABABMAGwACAAwAAABJAAAABAAAAAGxAAAAAgANAAAABgABAAAAOAAOAAAAKgAEAAAAAQAPADgAAAAAAAEAFQAWAAEAAAABABwAHQACAAAAAQAeAB8AAwAZAAAABAABABoACAApAAsAAQAMAAAAJAADAAIAAAAPpwADAUy4AC8SMbYANVexAAAAAQA2AAAAAwABAwACACAAAAACACEAEQAAAAoAAQACACMAEAAJdXEAfgAQAAAB1Mr+ur4AAAAyABsKAAMAFQcAFwcAGAcAGQEAEHNlcmlhbFZlcnNpb25VSUQBAAFKAQANQ29uc3RhbnRWYWx1ZQVx5mnuPG1HGAEABjxpbml0PgEAAygpVgEABENvZGUBAA9MaW5lTnVtYmVyVGFibGUBABJMb2NhbFZhcmlhYmxlVGFibGUBAAR0aGlzAQADRm9vAQAMSW5uZXJDbGFzc2VzAQAlTHlzb3NlcmlhbC9wYXlsb2Fkcy91dGlsL0dhZGdldHMkRm9vOwEAClNvdXJjZUZpbGUBAAxHYWRnZXRzLmphdmEMAAoACwcAGgEAI3lzb3NlcmlhbC9wYXlsb2Fkcy91dGlsL0dhZGdldHMkRm9vAQAQamF2YS9sYW5nL09iamVjdAEAFGphdmEvaW8vU2VyaWFsaXphYmxlAQAfeXNvc2VyaWFsL3BheWxvYWRzL3V0aWwvR2FkZ2V0cwAhAAIAAwABAAQAAQAaAAUABgABAAcAAAACAAgAAQABAAoACwABAAwAAAAvAAEAAQAAAAUqtwABsQAAAAIADQAAAAYAAQAAADwADgAAAAwAAQAAAAUADwASAAAAAgATAAAAAgAUABEAAAAKAAEAAgAWABAACXB0AARQd25ycHcBAHhxAH4ADXg="));
-    Assertions.assertNull(confStore.retrieve());
+    assertNull(confStore.retrieve());
 
     if (!System.getProperty("os.name").startsWith("Windows")) {
       for (int i = 0; i < 20; ++i) {
@@ -436,7 +439,7 @@ public class TestZKConfigurationStore extends
         Thread.sleep(100);
       }
 
-      Assertions.assertFalse(flagFile.exists(), "The file '" + DESERIALIZATION_VULNERABILITY_FILEPATH +
+      assertFalse(flagFile.exists(), "The file '" + DESERIALIZATION_VULNERABILITY_FILEPATH +
           "' should not have been created by deserialization attack");
     }
   }

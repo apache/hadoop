@@ -66,8 +66,8 @@ public class TestLegacyMappingRuleToJson {
     List<MappingRule> jsonRules = conf.getMappingRules();
 
     //Sanity check
-    assertEquals(
-       legacyRules.size(), jsonRules.size(), "Number of rules should mach");
+    assertEquals(legacyRules.size(), jsonRules.size(),
+        "Number of rules should mach");
 
     //We expect ALL rules to match no matter if it was parsed from legacy format
     //or from JSON

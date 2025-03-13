@@ -370,6 +370,7 @@ public class TestCapacitySchedulerAsyncScheduling {
   // Testcase for YARN-6678
   @Test
   @Timeout(value = 30)
+  @SuppressWarnings("checkstyle:methodlength")
   public void testCommitOutdatedReservedProposal() throws Exception {
     // disable async-scheduling for simulating complex since scene
     Configuration disableAsyncConf = new Configuration(conf);

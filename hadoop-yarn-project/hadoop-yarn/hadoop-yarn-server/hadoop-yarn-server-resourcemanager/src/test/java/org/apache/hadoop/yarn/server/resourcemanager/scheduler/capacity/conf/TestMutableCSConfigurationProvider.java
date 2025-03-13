@@ -142,9 +142,9 @@ public class TestMutableCSConfigurationProvider {
 
     log = confProvider.logAndApplyMutation(TEST_USER, updateInfo);
     confProvider.confirmPendingMutation(log, true);
-    assertNull(
-       confProvider.loadConfiguration(conf)
-        .get("yarn.scheduler.capacity.root.a.testkey1"), "Failed to remove config");
+    assertNull(confProvider.loadConfiguration(conf)
+        .get("yarn.scheduler.capacity.root.a.testkey1"),
+        "Failed to remove config");
     assertEquals("testval2", confProvider.loadConfiguration(conf)
         .get("yarn.scheduler.capacity.root.a.testkey2"));
   }

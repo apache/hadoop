@@ -162,7 +162,8 @@ public class TestFSSchedulerConfigurationStore extends
       fail("Expected an IOException with message containing \"no capacity " +
           "scheduler file in\" to be thrown");
     } catch (IOException e) {
-      assertThat(e.getMessage()).contains("no capacity scheduler file in").as("Exception message should contain the predefined string.");
+      assertThat(e.getMessage()).contains("no capacity scheduler file in").
+          as("Exception message should contain the predefined string.");
     }
   }
 

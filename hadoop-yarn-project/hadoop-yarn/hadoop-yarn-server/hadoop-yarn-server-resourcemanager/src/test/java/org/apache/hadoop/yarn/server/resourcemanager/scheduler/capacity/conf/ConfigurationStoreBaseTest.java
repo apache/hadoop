@@ -62,8 +62,8 @@ public abstract class ConfigurationStoreBaseTest {
 
     confStore.confirmMutation(prepareLogMutation("keyUpdate2", "valUpdate2"),
         false);
-    assertNull(
-       confStore.retrieve().get("keyUpdate2"), "Configuration should not be updated");
+    assertNull(confStore.retrieve().get("keyUpdate2"),
+        "Configuration should not be updated");
     confStore.close();
   }
 

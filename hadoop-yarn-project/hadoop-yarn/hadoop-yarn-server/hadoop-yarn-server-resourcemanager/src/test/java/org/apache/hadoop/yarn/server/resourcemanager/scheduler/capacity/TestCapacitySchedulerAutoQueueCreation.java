@@ -942,8 +942,8 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       // After loosing one NM, resources will reduce
       assertEquals(MIN_RES_UPDATED,
-          user1LeafQueue.getQueueResourceQuotas().getEffectiveMinResource
-          (), "Effective Min resource for USER2 is not correct");
+          user1LeafQueue.getQueueResourceQuotas().getEffectiveMinResource(),
+          "Effective Min resource for USER2 is not correct");
       assertEquals(MAX_RES_UPDATED, user2LeafQueue.getQueueResourceQuotas()
           .getEffectiveMaxResource(), "Effective Max resource for USER2 is not correct");
 

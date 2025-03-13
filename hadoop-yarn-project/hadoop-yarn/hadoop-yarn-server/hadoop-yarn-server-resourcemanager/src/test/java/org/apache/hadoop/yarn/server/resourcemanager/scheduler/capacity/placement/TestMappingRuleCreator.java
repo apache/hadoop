@@ -108,10 +108,10 @@ public class TestMappingRuleCreator {
 
     IllegalArgumentException illegalArgumentException =
         assertThrows(IllegalArgumentException.class, () -> {
-      rule.setType(Type.GROUP);
-      // fails because "*" is not applicable to group type
-      ruleCreator.getMappingRules(description);
-    });
+            rule.setType(Type.GROUP);
+            // fails because "*" is not applicable to group type
+            ruleCreator.getMappingRules(description);
+          });
 
     assertTrue(illegalArgumentException.getMessage().
         contains("Cannot match '*' for groups"));
@@ -362,8 +362,8 @@ public class TestMappingRuleCreator {
     List<MappingRule> rules = ruleCreator.getMappingRules(description);
     MappingRule mpr = rules.get(0);
 
-    assertEquals(
-       expectedType, mpr.getFallback().getResult(), "Fallback result");
+    assertEquals(expectedType, mpr.getFallback().getResult(),
+        "Fallback result");
   }
 
   @Test
@@ -371,8 +371,8 @@ public class TestMappingRuleCreator {
     rule.setFallbackResult(null);
     List<MappingRule> rules = ruleCreator.getMappingRules(description);
     MappingRule mpr = rules.get(0);
-    assertEquals(MappingRuleResultType.SKIP
-,         mpr.getFallback().getResult(), "Fallback result");
+    assertEquals(MappingRuleResultType.SKIP,
+        mpr.getFallback().getResult(), "Fallback result");
   }
 
   @Test
@@ -471,11 +471,11 @@ public class TestMappingRuleCreator {
     assertEquals(allowCreate, result.isCreateAllowed(), "Create flag");
 
     if (expectedResultType != null) {
-      assertEquals(
-         expectedResultType, result.getResult(), "Mapping rule result");
+      assertEquals(expectedResultType, result.getResult(),
+          "Mapping rule result");
     } else {
-      assertEquals(
-         MappingRuleResultType.SKIP, result.getResult(), "Mapping rule result");
+      assertEquals(MappingRuleResultType.SKIP, result.getResult(),
+          "Mapping rule result");
     }
 
     if (expectedQueue != null) {

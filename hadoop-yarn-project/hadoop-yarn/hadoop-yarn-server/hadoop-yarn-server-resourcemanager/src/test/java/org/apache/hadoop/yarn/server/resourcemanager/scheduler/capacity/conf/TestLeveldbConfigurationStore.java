@@ -73,9 +73,8 @@ public class TestLeveldbConfigurationStore extends
         Version otherVersion = Version.newInstance(1, 1);
         ((LeveldbConfigurationStore) confStore).storeVersion(otherVersion);
 
-        assertEquals(otherVersion
-                ,           confStore.getConfStoreVersion(), "The configuration store should have stored the new" +
-                        "version.");
+        assertEquals(otherVersion, confStore.getConfStoreVersion(),
+            "The configuration store should have stored the new version.");
         confStore.checkVersion();
       } finally {
         confStore.close();

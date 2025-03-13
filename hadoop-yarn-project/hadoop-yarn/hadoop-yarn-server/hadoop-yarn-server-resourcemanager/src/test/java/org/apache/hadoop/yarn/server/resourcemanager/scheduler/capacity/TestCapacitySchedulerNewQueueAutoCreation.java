@@ -991,11 +991,8 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     policies.add(
         AutoCreatedQueueDeletionPolicy.class.getCanonicalName());
 
-    assertTrue(
-    
-       cs.getSchedulingMonitorManager().
-            isSameConfiguredPolicies(policies), "No AutoCreatedQueueDeletionPolicy " +
-            "is present in running monitors");
+    assertTrue(cs.getSchedulingMonitorManager().isSameConfiguredPolicies(policies),
+        "No AutoCreatedQueueDeletionPolicy is present in running monitors");
 
     ApplicationAttemptId a2App = submitApp(cs, USER0,
         "a2-auto", "root.a.a1-auto");
