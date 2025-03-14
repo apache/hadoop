@@ -30,8 +30,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assume.assumeNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import javax.script.ScriptEngineManager;
 
@@ -51,7 +51,7 @@ public class TestMetricsInvariantChecker {
   @BeforeEach
   public void setup() {
     //JavaScript engine has been removed from Java in Java 15.
-    assumeNotNull(new ScriptEngineManager().getEngineByName("JavaScript"));
+    assumeFalse(new ScriptEngineManager().getEngineByName("JavaScript") == null);
     this.metricsSystem = DefaultMetricsSystem.instance();
     JvmMetrics.initSingleton("ResourceManager", null);
     this.ic = new MetricsInvariantChecker();
