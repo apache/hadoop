@@ -32,10 +32,7 @@ import org.junit.runners.Parameterized.*;
 import java.security.Security;
 import java.util.*;
 
-import javax.script.ScriptEngineManager;
-
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeNotNull;
 
 /**
  * This test performs simple runs of the SLS with different trace types and
@@ -81,8 +78,6 @@ public class TestSLSRunner extends BaseSLSRunnerTest {
 
   @Before
   public void setup() {
-    //JavaScript engine has been removed from Java in Java 15.
-    assumeNotNull(new ScriptEngineManager().getEngineByName("JavaScript"));
     ongoingInvariantFile = "src/test/resources/ongoing-invariants.txt";
     exitInvariantFile = "src/test/resources/exit-invariants.txt";
   }

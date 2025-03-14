@@ -28,12 +28,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import static org.junit.Assume.assumeNotNull;
-
 import java.util.Arrays;
 import java.util.Collection;
-
-import javax.script.ScriptEngineManager;
 
 /**
  * This test performs simple runs of the SLS with the generic syn json format.
@@ -66,8 +62,6 @@ public class TestSLSGenericSynth extends BaseSLSRunnerTest {
 
   @Before
   public void setup() {
-    //JavaScript engine has been removed from Java in Java 15.
-    assumeNotNull(new ScriptEngineManager().getEngineByName("JavaScript"));
     ongoingInvariantFile = "src/test/resources/ongoing-invariants.txt";
     exitInvariantFile = "src/test/resources/exit-invariants.txt";
   }

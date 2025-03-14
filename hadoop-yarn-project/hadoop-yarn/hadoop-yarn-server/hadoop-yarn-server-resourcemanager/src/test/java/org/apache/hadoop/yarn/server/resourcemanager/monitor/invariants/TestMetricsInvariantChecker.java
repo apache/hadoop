@@ -48,10 +48,14 @@ public class TestMetricsInvariantChecker {
   private MetricsInvariantChecker ic;
   private Configuration conf;
 
+  @BeforeAll
+  public static void checkForJavaScript() {
+    assumeFalse(new ScriptEngineManager().getEngineByName("JavaScript") == null,
+        "JavaScript engine not available (JEP 372)");
+  }
+
   @BeforeEach
   public void setup() {
-    //JavaScript engine has been removed from Java in Java 15.
-    assumeFalse(new ScriptEngineManager().getEngineByName("JavaScript") == null);
     this.metricsSystem = DefaultMetricsSystem.instance();
     JvmMetrics.initSingleton("ResourceManager", null);
     this.ic = new MetricsInvariantChecker();
