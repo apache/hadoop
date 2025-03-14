@@ -38,6 +38,7 @@ import java.security.Permission;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.doReturn;
@@ -66,7 +67,11 @@ public class TestExternalCall {
   public void setup() {
 
     securityManager = System.getSecurityManager();
-    System.setSecurityManager(new NoExitSecurityManager());
+    try {
+      System.setSecurityManager(new NoExitSecurityManager());
+    } catch (UnsupportedOperationException e) {
+      assumeTrue(false, "Test is skipped because SecurityManager cannot be set (JEP 411)");
+    }
     try {
       fs = FileSystem.get(getConf());
       root = new Path("target/tmp").makeQualified(fs.getUri(),
@@ -79,10 +84,16 @@ public class TestExternalCall {
 
   @AfterEach
   public void tearDown() {
-    System.setSecurityManager(securityManager);
+    try {
+      System.setSecurityManager(securityManager);
+    } catch (UnsupportedOperationException e) {
+      // JUnit 5 calls @AfterEach even if @BeforeEach has thrown TestAbortedException
+      // The test has already been already skipped
+    }
   }
+
 /**
- * test methods run end execute of DistCp class. silple copy file
+ * test methods run end execute of DistCp class. simple copy file
  * @throws Exception 
  */
   @Test
