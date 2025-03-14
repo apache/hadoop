@@ -1562,7 +1562,7 @@ public class Client implements AutoCloseable {
   public static boolean isAsynchronousModeAndNotFromRouter() {
     return isAsynchronousMode() && !isAsyncRpcFromRouter();
   }
-  
+
   /**
    * Check if RPC is in asynchronous mode or not.
    *
