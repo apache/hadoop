@@ -54,7 +54,7 @@ public class RouterAsyncRpcFairnessPolicyController extends
     }
     LOG.info("Max async call permits per nameservice: {}", maxAsyncCallPermit);
 
-    // Get all name services configured
+    // Get all name services configured.
     Set<String> allConfiguredNS = FederationUtil.getAllConfiguredNS(conf);
 
     for (String nsId : allConfiguredNS) {
