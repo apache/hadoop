@@ -599,9 +599,7 @@ public class TestDFSShell {
         }
       });
     } catch (UnsupportedOperationException e) {
-      // Test is skipped because SecurityManager cannot be set (JEP411)
-      // TODO add message when migrating to Junit 5
-      assumeTrue(false);
+      assumeTrue("Test is skipped because SecurityManager cannot be set (JEP 411)", false);
     }
     show("copy local " + f1 + " to remote " + dst);
     dfs.copyFromLocalFile(false, false, new Path(f1.getPath()), dst);

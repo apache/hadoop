@@ -375,8 +375,7 @@ public class TestCGroupsHandlerImpl extends TestCGroupsHandlerBase {
       try {
         System.setSecurityManager(new MockSecurityManagerDenyWrite());
       } catch (UnsupportedOperationException e) {
-        assumeTrue(false,
-            "Test is skipped because SecurityManager cannot be set (JEP411)");
+        assumeTrue(false, "Test is skipped because SecurityManager cannot be set (JEP 411)");
       }
       try {
         cGroupsHandler.initializeCGroupController(

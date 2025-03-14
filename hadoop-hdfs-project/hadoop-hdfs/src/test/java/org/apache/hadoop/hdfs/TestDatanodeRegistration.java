@@ -83,9 +83,7 @@ public class TestDatanodeRegistration {
     try {
       System.setSecurityManager(sm);
     } catch (UnsupportedOperationException e) {
-      // Test is skipped because SecurityManager cannot be set (JEP411)
-      // TODO add message when migrating to Junit 5
-      assumeTrue(false);
+      assumeTrue("Test is skipped because SecurityManager cannot be set (JEP 411)", false);
     }
     
     MiniDFSCluster cluster = null;
