@@ -272,8 +272,6 @@ public class TestPipeApplication {
     Submitter.setJavaPartitioner(conf, partitioner.getClass());
 
     assertEquals(PipesPartitioner.class, (Submitter.getJavaPartitioner(conf)));
-    // test going to call main method with System.exit(). Change Security
-    SecurityManager securityManager = System.getSecurityManager();
     // store System.out
     PrintStream oldps = System.out;
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -330,8 +328,6 @@ public class TestPipeApplication {
               + "archives to be unarchived on the compute machines"));
     } finally {
       System.setOut(oldps);
-      // restore
-      System.setSecurityManager(securityManager);
       if (psw != null) {
         // remove password files
         for (File file : psw) {
@@ -381,7 +377,6 @@ public class TestPipeApplication {
 
     } finally {
       System.setOut(oldps);
-      System.setSecurityManager(securityManager);
     }
 
   }
