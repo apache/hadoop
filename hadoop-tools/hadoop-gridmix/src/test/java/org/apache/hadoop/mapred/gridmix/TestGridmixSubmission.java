@@ -174,8 +174,6 @@ public class TestGridmixSubmission extends CommonJobTest {
   @Test (timeout=100000)
   public void testMain() throws Exception {
 
-    SecurityManager securityManager = System.getSecurityManager();
-
     final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
     final PrintStream out = new PrintStream(bytes);
     final PrintStream oldOut = System.out;
@@ -190,7 +188,6 @@ public class TestGridmixSubmission extends CommonJobTest {
       ExitUtil.resetFirstExitException();
     } finally {
       System.setErr(oldOut);
-      System.setSecurityManager(securityManager);
     }
     String print = bytes.toString();
     // should be printed tip in std error stream

@@ -85,6 +85,7 @@ import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 import static org.hamcrest.core.StringContains.containsString;
 
 /**
@@ -576,26 +577,32 @@ public class TestDFSShell {
     //use SecurityManager to pause the copying of f1 and begin copying f2
     SecurityManager sm = System.getSecurityManager();
     System.out.println("SecurityManager = " + sm);
-    System.setSecurityManager(new SecurityManager() {
-      private boolean firstTime = true;
+    try {
+      System.setSecurityManager(new SecurityManager() {
+        private boolean firstTime = true;
 
-      @Override
-      public void checkPermission(Permission perm) {
-        if (firstTime) {
-          Thread t = Thread.currentThread();
-          if (!t.toString().contains("DataNode")) {
-            String s = "" + Arrays.asList(t.getStackTrace());
-            if (s.contains("FileUtil.copyContent")) {
-              //pause at FileUtil.copyContent
+        @Override
+        public void checkPermission(Permission perm) {
+          if (firstTime) {
+            Thread t = Thread.currentThread();
+            if (!t.toString().contains("DataNode")) {
+              String s = "" + Arrays.asList(t.getStackTrace());
+              if (s.contains("FileUtil.copyContent")) {
+                //pause at FileUtil.copyContent
 
-              firstTime = false;
-              copy2ndFileThread.start();
-              try {Thread.sleep(5000);} catch (InterruptedException e) {}
+                firstTime = false;
+                copy2ndFileThread.start();
+                try {Thread.sleep(5000);} catch (InterruptedException e) {}
+              }
             }
           }
         }
-      }
-    });
+      });
+    } catch (UnsupportedOperationException e) {
+      // Test is skipped because SecurityManager cannot be set (JEP411)
+      // TODO add message when migrating to Junit 5
+      assumeTrue(false);
+    }
     show("copy local " + f1 + " to remote " + dst);
     dfs.copyFromLocalFile(false, false, new Path(f1.getPath()), dst);
     show("done");

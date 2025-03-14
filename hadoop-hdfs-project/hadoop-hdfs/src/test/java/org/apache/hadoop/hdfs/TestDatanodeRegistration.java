@@ -48,6 +48,7 @@ import java.security.Permission;
 import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -79,7 +80,13 @@ public class TestDatanodeRegistration {
   @Test
   public void testDNSLookups() throws Exception {
     MonitorDNS sm = new MonitorDNS();
-    System.setSecurityManager(sm);
+    try {
+      System.setSecurityManager(sm);
+    } catch (UnsupportedOperationException e) {
+      // Test is skipped because SecurityManager cannot be set (JEP411)
+      // TODO add message when migrating to Junit 5
+      assumeTrue(false);
+    }
     
     MiniDFSCluster cluster = null;
     try {

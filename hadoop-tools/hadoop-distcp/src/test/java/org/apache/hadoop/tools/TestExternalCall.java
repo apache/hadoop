@@ -38,6 +38,7 @@ import java.security.Permission;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.doReturn;
@@ -66,7 +67,12 @@ public class TestExternalCall {
   public void setup() {
 
     securityManager = System.getSecurityManager();
-    System.setSecurityManager(new NoExitSecurityManager());
+    try {
+      System.setSecurityManager(new NoExitSecurityManager());
+    } catch (UnsupportedOperationException e) {
+      assumeTrue(false,
+          "Test is skipped because SecurityManager cannot be set (JEP411)");
+    }
     try {
       fs = FileSystem.get(getConf());
       root = new Path("target/tmp").makeQualified(fs.getUri(),

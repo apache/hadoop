@@ -76,6 +76,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.Candida
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimpleCandidateNodeSet;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -1113,7 +1114,11 @@ public class TestCapacitySchedulerAsyncScheduling {
     SecurityManager originalSecurityManager = System.getSecurityManager();
     NoExitSecurityManager noExitSecurityManager =
         new NoExitSecurityManager(originalSecurityManager);
-    System.setSecurityManager(noExitSecurityManager);
+    try {
+      System.setSecurityManager(noExitSecurityManager);
+    } catch (UnsupportedOperationException e) {
+      Assumptions.assumeTrue(false, "Test is skipped because SecurityManager cannot be set (JEP411)");
+    }
 
     // test async-scheduling thread exit
     try{
