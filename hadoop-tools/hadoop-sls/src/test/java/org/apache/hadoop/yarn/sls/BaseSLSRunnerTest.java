@@ -68,7 +68,7 @@ public abstract class BaseSLSRunnerTest {
     Assume.assumeNotNull("JavaScript engine not available (JEP 372)",
         new ScriptEngineManager().getEngineByName("JavaScript"));
   }
-  
+
   @Before
   public abstract void setup();
 
