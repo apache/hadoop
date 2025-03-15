@@ -592,7 +592,10 @@ public class TestDFSShell {
 
                 firstTime = false;
                 copy2ndFileThread.start();
-                try {Thread.sleep(5000);} catch (InterruptedException e) {}
+                try {
+                  Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                }
               }
             }
           }
