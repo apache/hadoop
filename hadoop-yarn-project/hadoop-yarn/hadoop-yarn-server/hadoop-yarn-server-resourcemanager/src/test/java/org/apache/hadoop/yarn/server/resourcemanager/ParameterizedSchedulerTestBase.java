@@ -26,15 +26,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 
-
-
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
     .allocationfile.AllocationFileQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
     .allocationfile.AllocationFileWriter;
-import org.junit.After;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
 
 import java.io.File;
 import java.io.IOException;
@@ -42,7 +38,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.stream.Collectors;
 
-@RunWith(Parameterized.class)
 public abstract class ParameterizedSchedulerTestBase {
   protected final static String TEST_DIR =
       new File(System.getProperty("test.build.data", "/tmp")).getAbsolutePath();
@@ -53,7 +48,6 @@ public abstract class ParameterizedSchedulerTestBase {
     CAPACITY, FAIR
   }
 
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> getParameters() {
     return Arrays.stream(SchedulerType.values()).map(
         type -> new Object[]{type}).collect(Collectors.toList());
@@ -68,7 +62,7 @@ public abstract class ParameterizedSchedulerTestBase {
   }
 
   // Due to parameterization, this gets called before each test method
-  public ParameterizedSchedulerTestBase(SchedulerType type)
+  public void initParameterizedSchedulerTestBase(SchedulerType type)
       throws IOException {
     conf = new YarnConfiguration();
 
@@ -113,7 +107,7 @@ public abstract class ParameterizedSchedulerTestBase {
     configuration.setLong(FairSchedulerConfiguration.UPDATE_INTERVAL_MS, 10);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (schedulerType == SchedulerType.FAIR) {
       (new File(FS_ALLOC_FILE)).delete();
@@ -128,7 +122,7 @@ public abstract class ParameterizedSchedulerTestBase {
    * Return a scheduler configured by {@code YarnConfiguration.RM_SCHEDULER}
    *
    * <p>The scheduler is configured by
-   * {@link #ParameterizedSchedulerTestBase(SchedulerType)}.
+   * {@link ParameterizedSchedulerTestBase}.
    * Client test code can obtain the scheduler with this getter method.
    * Schedulers supported by this class are {@link FairScheduler} or
    * {@link CapacityScheduler}. </p>

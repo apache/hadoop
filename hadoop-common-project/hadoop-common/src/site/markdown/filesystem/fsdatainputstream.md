@@ -129,10 +129,11 @@ as implicitly set in `pos`.
 #### Preconditions
 
     isOpen(FSDIS)
-    buffer != null else raise NullPointerException
-    length >= 0
-    offset < len(buffer)
-    length <= len(buffer) - offset
+    buffer != null else raise NullPointerException, IllegalArgumentException
+    offset >= 0 else raise IndexOutOfBoundsException
+    length >= 0 else raise IndexOutOfBoundsException, IllegalArgumentException
+    offset < len(buffer) else raise IndexOutOfBoundsException
+    length <= len(buffer) - offset else raise IndexOutOfBoundsException
     pos >= 0 else raise EOFException, IOException
 
 Exceptions that may be raised on precondition failure are
@@ -174,6 +175,19 @@ What is critical is that unless the destination buffer size is 0, the call
 must block until at least one byte is returned. Thus, for any data source
 of length greater than zero, repeated invocations of this `read()` operation
 will eventually read all the data.
+
+#### Implementation Notes
+
+1. If the caller passes a `null` buffer, then an unchecked exception MUST be thrown. The base JDK
+`InputStream` implementation throws `NullPointerException`. HDFS historically used
+`IllegalArgumentException`. Implementations MAY use either of these.
+1. If the caller passes a negative value for `length`, then an unchecked exception MUST be thrown.
+The base JDK `InputStream` implementation throws `IndexOutOfBoundsException`. HDFS historically used
+`IllegalArgumentException`. Implementations MAY use either of these.
+1. Reads through any method MUST return the same data.
+1. Callers MAY interleave calls to different read methods (single-byte and multi-byte) on the same
+stream. The stream MUST return the same underlying data, regardless of the specific read calls or
+their ordering.
 
 ### <a name="Seekable.seek"></a>`Seekable.seek(s)`
 
@@ -653,4 +667,29 @@ Stream.hasCapability("in:readvectored")
 
 Given the HADOOP-18296 problem with `ChecksumFileSystem` and direct buffers, across all releases,
 it is best to avoid using this API in production with direct buffers.
+
+
+## `void readVectored(List<? extends FileRange> ranges, IntFunction<ByteBuffer> allocate, Consumer<ByteBuffer> release)`
+
+This is the extension of `readVectored/2` with an additional `release` consumer operation to release buffers.
+
+The specification and rules of this method are exactly those of the other operation, with
+the addition of:
+
+Preconditions
+```
+if release = null raise NullPointerException
+```
+
+* If a read operation fails due to an `IOException` or similar, the implementation of `readVectored()`,
+  SHOULD call `release(buffer)` with the buffer created by invoking the `allocate()` function into which
+  the data was being read.
+* Implementations MUST NOT call `release(buffer)` with any non-null buffer _not_ obtained through `allocate()`.
+* Implementations MUST only call `release(buffer)` when a failure has occurred and the future is about to have `Future.completedExceptionally()` invoked.
+
+It is an extension to the original Vector Read API -not all versions of Hadoop with the original `readVectored()` call define it.
+If used directly in application code, that application is restricting itself to later versions
+of the API.
+
+If used via reflection, if this method is not found, fall back to the original method.
 

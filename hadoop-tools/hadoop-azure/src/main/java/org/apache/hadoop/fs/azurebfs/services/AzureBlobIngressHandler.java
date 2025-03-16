@@ -168,13 +168,13 @@ public class AzureBlobIngressHandler extends AzureIngressHandler {
     if (getAbfsOutputStream().isAppendBlob()) {
       return null;
     }
-    if (!blobBlockManager.hasListToCommit()) {
+    if (!blobBlockManager.hasBlocksToCommit()) {
       return null;
     }
     try {
       // Generate the xml with the list of blockId's to generate putBlockList call.
       String blockListXml = generateBlockListXml(
-          blobBlockManager.getBlockIdList());
+          blobBlockManager.getBlockIdToCommit());
       TracingContext tracingContextFlush = new TracingContext(tracingContext);
       tracingContextFlush.setIngressHandler(BLOB_FLUSH);
       tracingContextFlush.setPosition(String.valueOf(offset));
@@ -297,7 +297,8 @@ public class AzureBlobIngressHandler extends AzureIngressHandler {
             activeBlock, reqParams,
             new TracingContext(getAbfsOutputStream().getTracingContext()));
       } catch (InvalidIngressServiceException ex) {
-        LOG.debug("InvalidIngressServiceException caught for path: {}, switching handler and retrying remoteAppendBlobWrite.", getAbfsOutputStream().getPath());
+        LOG.debug("InvalidIngressServiceException caught for path: {}, switching handler and retrying remoteAppendBlobWrite.",
+            getAbfsOutputStream().getPath());
         getAbfsOutputStream().switchHandler();
         op = getAbfsOutputStream().getIngressHandler()
             .remoteAppendBlobWrite(getAbfsOutputStream().getPath(), uploadData,

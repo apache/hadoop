@@ -30,6 +30,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
+
 /**
  * S3a implementation of FCStatisticsBaseTest.
  */
@@ -44,6 +46,10 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
   @Before
   public void setUp() throws Exception {
     conf = new Configuration();
+    // Analytics accelerator currently does not support IOStatistics, this will be added as
+    // part of https://issues.apache.org/jira/browse/HADOOP-19364
+    skipIfAnalyticsAcceleratorEnabled(conf,
+        "Analytics Accelerator currently does not support stream statistics");
     fc = S3ATestUtils.createTestFileContext(conf);
     testRootPath = fileContextTestHelper.getTestRootPath(fc, "test");
     fc.mkdir(testRootPath,

@@ -21,11 +21,13 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 import static org.apache.hadoop.service.Service.STATE.INITED;
 import static org.apache.hadoop.service.Service.STATE.STARTED;
 import static org.apache.hadoop.service.Service.STATE.STOPPED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -39,11 +41,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecord;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecords;
-import org.junit.After;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,14 +97,14 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceFile;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Test for auxiliary services. Parameter 0 tests the Configuration-based aux
  * services and parameter 1 tests manifest-based aux services.
  */
-@RunWith(value = Parameterized.class)
 public class TestAuxServices {
   private static final Logger LOG =
        LoggerFactory.getLogger(TestAuxServices.class);
@@ -118,25 +117,24 @@ public class TestAuxServices {
   private final static Context MOCK_CONTEXT = mock(Context.class);
   private final static DeletionService MOCK_DEL_SERVICE = mock(
       DeletionService.class);
-  private final Boolean useManifest;
+  private Boolean useManifest;
   private File rootDir = GenericTestUtils.getTestDir(getClass()
       .getSimpleName());
   private File manifest = new File(rootDir, "manifest.txt");
   private ObjectMapper mapper = new ObjectMapper();
 
-  @Parameterized.Parameters
   public static Collection<Boolean> getParams() {
     return Arrays.asList(false, true);
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     if (!rootDir.exists()) {
       rootDir.mkdirs();
     }
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     if (useManifest) {
       manifest.delete();
@@ -144,8 +142,8 @@ public class TestAuxServices {
     rootDir.delete();
   }
 
-  public TestAuxServices(Boolean useManifest) {
-    this.useManifest = useManifest;
+  private void initTestAuxServices(Boolean pUseManifest) {
+    this.useManifest = pUseManifest;
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
   }
 
@@ -269,8 +267,10 @@ public class TestAuxServices {
   }
 
   @SuppressWarnings("resource")
-  @Test
-  public void testRemoteAuxServiceClassPath() throws Exception {
+  @ParameterizedTest
+  @MethodSource("getParams")
+  public void testRemoteAuxServiceClassPath(boolean pUseManifest) throws Exception {
+    initTestAuxServices(pUseManifest);
     Configuration conf = new YarnConfiguration();
     FileSystem fs = FileSystem.get(conf);
     AuxServiceRecord serviceC =
@@ -320,11 +320,11 @@ public class TestAuxServices {
         aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
             mockContext2, mockDelService2);
         aux.init(conf);
-        Assert.fail("The permission of the jar is wrong."
+        fail("The permission of the jar is wrong."
             + "Should throw out exception.");
       } catch (YarnRuntimeException ex) {
-        Assert.assertTrue(ex.getMessage(), ex.getMessage().contains(
-            "The remote jarfile should not be writable by group or others"));
+        assertTrue(ex.getMessage().contains(
+            "The remote jarfile should not be writable by group or others"), ex.getMessage());
       }
 
       Files.delete(Paths.get(testJar.getAbsolutePath()));
@@ -345,14 +345,14 @@ public class TestAuxServices {
       aux.start();
       Map<String, ByteBuffer> meta = aux.getMetaData();
       String auxName = "";
-      Assert.assertTrue(meta.size() == 1);
+      assertTrue(meta.size() == 1);
       for(Entry<String, ByteBuffer> i : meta.entrySet()) {
         auxName = i.getKey();
       }
-      Assert.assertEquals("ServiceC", auxName);
+      assertEquals("ServiceC", auxName);
       aux.serviceStop();
       FileStatus[] status = fs.listStatus(rootAuxServiceDirPath);
-      Assert.assertTrue(status.length == 1);
+      assertTrue(status.length == 1);
 
       // initialize the same auxservice again, and make sure that we did not
       // re-download the jar from remote directory.
@@ -361,14 +361,14 @@ public class TestAuxServices {
       aux.init(conf);
       aux.start();
       meta = aux.getMetaData();
-      Assert.assertTrue(meta.size() == 1);
+      assertTrue(meta.size() == 1);
       for(Entry<String, ByteBuffer> i : meta.entrySet()) {
         auxName = i.getKey();
       }
-      Assert.assertEquals("ServiceC", auxName);
+      assertEquals("ServiceC", auxName);
       verify(mockDelService2, times(0)).delete(any(FileDeletionTask.class));
       status = fs.listStatus(rootAuxServiceDirPath);
-      Assert.assertTrue(status.length == 1);
+      assertTrue(status.length == 1);
       aux.serviceStop();
 
       // change the last modification time for remote jar,
@@ -383,7 +383,7 @@ public class TestAuxServices {
       aux.start();
       verify(mockDelService2, times(1)).delete(any(FileDeletionTask.class));
       status = fs.listStatus(rootAuxServiceDirPath);
-      Assert.assertTrue(status.length == 2);
+      assertTrue(status.length == 2);
       aux.serviceStop();
     } finally {
       if (testJar != null) {
@@ -400,8 +400,11 @@ public class TestAuxServices {
   // including ServiceC class, and add this jar to customized directory.
   // By setting some proper configurations, we should load ServiceC class
   // from customized class path.
-  @Test (timeout = 15000)
-  public void testCustomizedAuxServiceClassPath() throws Exception {
+  @ParameterizedTest
+  @MethodSource("getParams")
+  @Timeout(value = 15)
+  public void testCustomizedAuxServiceClassPath(boolean pUseManifest) throws Exception {
+    initTestAuxServices(pUseManifest);
     // verify that we can load AuxService Class from default Class path
     Configuration conf = new YarnConfiguration();
     AuxServiceRecord serviceC =
@@ -423,14 +426,14 @@ public class TestAuxServices {
     Map<String, ByteBuffer> meta = aux.getMetaData();
     String auxName = "";
     Set<String> defaultAuxClassPath = null;
-    Assert.assertTrue(meta.size() == 1);
+    assertTrue(meta.size() == 1);
     for(Entry<String, ByteBuffer> i : meta.entrySet()) {
       auxName = i.getKey();
       String auxClassPath = StandardCharsets.UTF_8.decode(i.getValue()).toString();
       defaultAuxClassPath = new HashSet<String>(Arrays.asList(StringUtils
           .getTrimmedStrings(auxClassPath)));
     }
-    Assert.assertEquals("ServiceC", auxName);
+    assertEquals("ServiceC", auxName);
     aux.serviceStop();
 
     // create a new jar file, and configure it as customized class path
@@ -474,14 +477,14 @@ public class TestAuxServices {
       aux.init(conf);
       aux.start();
       meta = aux.getMetaData();
-      Assert.assertTrue(meta.size() == 1);
+      assertTrue(meta.size() == 1);
       Set<String> customizedAuxClassPath = null;
       for(Entry<String, ByteBuffer> i : meta.entrySet()) {
-        Assert.assertTrue(auxName.equals(i.getKey()));
+        assertTrue(auxName.equals(i.getKey()));
         String classPath = StandardCharsets.UTF_8.decode(i.getValue()).toString();
         customizedAuxClassPath = new HashSet<String>(Arrays.asList(StringUtils
             .getTrimmedStrings(classPath)));
-        Assert.assertTrue(classPath.contains(testJar.getName()));
+        assertTrue(classPath.contains(testJar.getName()));
       }
       aux.stop();
 
@@ -489,7 +492,7 @@ public class TestAuxServices {
       // and the default class path.
       Set<String> mutalClassPath = Sets.intersection(defaultAuxClassPath,
           customizedAuxClassPath);
-      Assert.assertTrue(mutalClassPath.isEmpty());
+      assertTrue(mutalClassPath.isEmpty());
     } finally {
       if (testJar != null) {
         testJar.delete();
@@ -497,8 +500,11 @@ public class TestAuxServices {
     }
   }
 
-  @Test (timeout = 15000)
-  public void testReuseLocalizedAuxiliaryJar() throws Exception {
+  @ParameterizedTest
+  @MethodSource("getParams")
+  @Timeout(value = 15)
+  public void testReuseLocalizedAuxiliaryJar(boolean pUseManifest) throws Exception {
+    initTestAuxServices(pUseManifest);
     File testJar = null;
     AuxServices aux = null;
     Configuration conf = new YarnConfiguration();
@@ -524,8 +530,7 @@ public class TestAuxServices {
       // Validate the path on reuse of localized jar
       path = aux.maybeDownloadJars("ServiceB", ServiceB.class.getName(),
           testJar.getAbsolutePath(), AuxServiceFile.TypeEnum.STATIC, conf);
-      assertFalse("Failed to reuse the localized jar",
-          path.toString().endsWith("/*"));
+      assertFalse(path.toString().endsWith("/*"), "Failed to reuse the localized jar");
     } finally {
       if (testJar != null) {
         testJar.delete();
@@ -536,8 +541,10 @@ public class TestAuxServices {
     }
   }
 
-  @Test
-  public void testAuxEventDispatch() throws IOException {
+  @ParameterizedTest
+  @MethodSource("getParams")
+  public void testAuxEventDispatch(boolean pUseManifest) throws IOException {
+    initTestAuxServices(pUseManifest);
     Configuration conf = new Configuration();
     if (useManifest) {
       AuxServiceRecord serviceA =
@@ -579,8 +586,8 @@ public class TestAuxServices {
     Collection<AuxiliaryService> servs = aux.getServices();
     for (AuxiliaryService serv: servs) {
       ArrayList<Integer> appIds = ((LightService)serv).getAppIdsStopped();
-      assertEquals("app not properly stopped", 1, appIds.size());
-      assertTrue("wrong app stopped", appIds.contains((Integer)66));
+      assertEquals(1, appIds.size(), "app not properly stopped");
+      assertTrue(appIds.contains((Integer)66), "wrong app stopped");
     }
 
     for (AuxiliaryService serv : servs) {
@@ -642,8 +649,10 @@ public class TestAuxServices {
     return conf;
   }
 
-  @Test
-  public void testAuxServices() throws IOException {
+  @ParameterizedTest
+  @MethodSource("getParams")
+  public void testAuxServices(boolean pUseManifest) throws IOException {
+    initTestAuxServices(pUseManifest);
     Configuration conf = getABConf();
     final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
         MOCK_CONTEXT, MOCK_DEL_SERVICE);
@@ -656,7 +665,7 @@ public class TestAuxServices {
       else if (s instanceof ServiceB) { latch *= 3; }
       else fail("Unexpected service type " + s.getClass());
     }
-    assertEquals("Invalid mix of services", 6, latch);
+    assertEquals(6, latch, "Invalid mix of services");
     aux.start();
     for (AuxiliaryService s : aux.getServices()) {
       assertEquals(STARTED, s.getServiceState());
@@ -670,8 +679,10 @@ public class TestAuxServices {
     }
   }
 
-  @Test
-  public void testAuxServicesMeta() throws IOException {
+  @ParameterizedTest
+  @MethodSource("getParams")
+  public void testAuxServicesMeta(boolean pUseManifest) throws IOException {
+    initTestAuxServices(pUseManifest);
     Configuration conf = getABConf();
     final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
         MOCK_CONTEXT, MOCK_DEL_SERVICE);
@@ -684,7 +695,7 @@ public class TestAuxServices {
       else if (s instanceof ServiceB) { latch *= 3; }
       else fail("Unexpected service type " + s.getClass());
     }
-    assertEquals("Invalid mix of services", 6, latch);
+    assertEquals(6, latch, "Invalid mix of services");
     aux.start();
     for (Service s : aux.getServices()) {
       assertEquals(STARTED, s.getServiceState());
@@ -701,8 +712,10 @@ public class TestAuxServices {
     }
   }
 
-  @Test
-  public void testAuxUnexpectedStop() throws IOException {
+  @ParameterizedTest
+  @MethodSource("getParams")
+  public void testAuxUnexpectedStop(boolean pUseManifest) throws IOException {
+    initTestAuxServices(pUseManifest);
     // AuxServices no longer expected to stop when services stop
     Configuration conf = getABConf();
     final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
@@ -712,13 +725,15 @@ public class TestAuxServices {
 
     Service s = aux.getServices().iterator().next();
     s.stop();
-    assertEquals("Auxiliary service stop caused AuxServices stop",
-        STARTED, aux.getServiceState());
+    assertEquals(STARTED, aux.getServiceState(),
+        "Auxiliary service stop caused AuxServices stop");
     assertEquals(2, aux.getServices().size());
   }
 
-  @Test
-  public void testValidAuxServiceName() throws IOException {
+  @ParameterizedTest
+  @MethodSource("getParams")
+  public void testValidAuxServiceName(boolean pUseManifest) throws IOException {
+    initTestAuxServices(pUseManifest);
     Configuration conf = getABConf("Asrv1", "Bsrv_2", ServiceA.class,
         ServiceB.class);
     final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
@@ -726,7 +741,7 @@ public class TestAuxServices {
     try {
       aux.init(conf);
     } catch (Exception ex) {
-      Assert.fail("Should not receive the exception.");
+      fail("Should not receive the exception.");
     }
 
     //Test bad auxService Name
@@ -744,17 +759,18 @@ public class TestAuxServices {
     }
     try {
       aux1.init(conf);
-      Assert.fail("Should receive the exception.");
+      fail("Should receive the exception.");
     } catch (Exception ex) {
-      assertTrue("Wrong message: " + ex.getMessage(),
-          ex.getMessage().contains("The auxiliary service name: 1Asrv1 is " +
-              "invalid. The valid service name should only contain a-zA-Z0-9_" +
-              " and cannot start with numbers."));
+      assertTrue(ex.getMessage().contains("The auxiliary service name: 1Asrv1 is " +
+          "invalid. The valid service name should only contain a-zA-Z0-9_" +
+          " and cannot start with numbers."), "Wrong message: " + ex.getMessage());
     }
   }
 
-  @Test
-  public void testAuxServiceRecoverySetup() throws IOException {
+  @ParameterizedTest
+  @MethodSource("getParams")
+  public void testAuxServiceRecoverySetup(boolean pUseManifest) throws IOException {
+    initTestAuxServices(pUseManifest);
     Configuration conf = getABConf("Asrv", "Bsrv", RecoverableServiceA.class,
         RecoverableServiceB.class);
     conf.setBoolean(YarnConfiguration.NM_RECOVERY_ENABLED, true);
@@ -763,10 +779,10 @@ public class TestAuxServices {
       final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
           MOCK_CONTEXT, MOCK_DEL_SERVICE);
       aux.init(conf);
-      Assert.assertEquals(2, aux.getServices().size());
+      assertEquals(2, aux.getServices().size());
       File auxStorageDir = new File(TEST_DIR,
           AuxServices.STATE_STORE_ROOT_NAME);
-      Assert.assertEquals(2, auxStorageDir.listFiles().length);
+      assertEquals(2, auxStorageDir.listFiles().length);
       aux.close();
     } finally {
       FileUtil.fullyDelete(TEST_DIR);
@@ -788,15 +804,14 @@ public class TestAuxServices {
     protected void serviceInit(Configuration conf) throws Exception {
       super.serviceInit(conf);
       Path storagePath = getRecoveryPath();
-      Assert.assertNotNull("Recovery path not present when aux service inits",
-          storagePath);
-      Assert.assertTrue(storagePath.toString().contains(auxName));
+      assertNotNull(storagePath,
+          "Recovery path not present when aux service inits");
+      assertTrue(storagePath.toString().contains(auxName));
       FileSystem fs = FileSystem.getLocal(conf);
-      Assert.assertTrue("Recovery path does not exist",
-          fs.exists(storagePath));
-      Assert.assertEquals("Recovery path has wrong permissions",
-          new FsPermission((short)0700),
-          fs.getFileStatus(storagePath).getPermission());
+      assertTrue(fs.exists(storagePath), "Recovery path does not exist");
+      assertEquals(new FsPermission((short)0700),
+          fs.getFileStatus(storagePath).getPermission(),
+          "Recovery path has wrong permissions");
     }
 
     @Override
@@ -854,8 +869,10 @@ public class TestAuxServices {
     }
   }
 
-  @Test
-  public void testAuxServicesConfChange() throws IOException {
+  @ParameterizedTest
+  @MethodSource("getParams")
+  public void testAuxServicesConfChange(boolean pUseManifest) throws IOException {
+    initTestAuxServices(pUseManifest);
     Configuration conf = new Configuration();
     if (useManifest) {
       AuxServiceRecord service =
@@ -887,9 +904,11 @@ public class TestAuxServices {
     aux.stop();
   }
 
-  @Test
-  public void testAuxServicesManifestPermissions() throws IOException {
-    Assume.assumeTrue(useManifest);
+  @ParameterizedTest
+  @MethodSource("getParams")
+  public void testAuxServicesManifestPermissions(boolean pUseManifest) throws IOException {
+    initTestAuxServices(pUseManifest);
+    assumeTrue(useManifest);
     Configuration conf = getABConf();
     FileSystem fs = FileSystem.get(conf);
     fs.setPermission(new Path(manifest.getAbsolutePath()), FsPermission
@@ -936,9 +955,11 @@ public class TestAuxServices {
     assertEquals(2, aux.getServices().size());
   }
 
-  @Test
-  public void testRemoveManifest() throws IOException {
-    Assume.assumeTrue(useManifest);
+  @ParameterizedTest
+  @MethodSource("getParams")
+  public void testRemoveManifest(boolean pUseManifest) throws IOException {
+    initTestAuxServices(pUseManifest);
+    assumeTrue(useManifest);
     Configuration conf = getABConf();
     final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
         MOCK_CONTEXT, MOCK_DEL_SERVICE);
@@ -949,20 +970,22 @@ public class TestAuxServices {
     assertEquals(0, aux.getServices().size());
   }
 
-  @Test
-  public void testManualReload() throws IOException {
-    Assume.assumeTrue(useManifest);
+  @ParameterizedTest
+  @MethodSource("getParams")
+  public void testManualReload(boolean pUseManifest) throws IOException {
+    initTestAuxServices(pUseManifest);
+    assumeTrue(useManifest);
     Configuration conf = getABConf();
     final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
         MOCK_CONTEXT, MOCK_DEL_SERVICE);
     aux.init(conf);
     try {
       aux.reload(null);
-      Assert.fail("Should receive the exception.");
+      fail("Should receive the exception.");
     } catch (IOException e) {
-      assertTrue("Wrong message: " + e.getMessage(),
-          e.getMessage().equals("Auxiliary services have not been started " +
-              "yet, please retry later"));
+      assertTrue(e.getMessage().equals("Auxiliary services have not been started " +
+          "yet, please retry later"),
+          "Wrong message: " + e.getMessage());
     }
     aux.start();
     assertEquals(2, aux.getServices().size());
@@ -973,27 +996,29 @@ public class TestAuxServices {
     aux.stop();
   }
 
-  @Test
-  public void testReloadWhenDisabled() throws IOException {
+  @ParameterizedTest
+  @MethodSource("getParams")
+  public void testReloadWhenDisabled(boolean pUseManifest) throws IOException {
+    initTestAuxServices(pUseManifest);
     Configuration conf = new Configuration();
     final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
         MOCK_CONTEXT, MOCK_DEL_SERVICE);
     aux.init(conf);
     try {
       aux.reload(null);
-      Assert.fail("Should receive the exception.");
+      fail("Should receive the exception.");
     } catch (IOException e) {
-      assertTrue("Wrong message: " + e.getMessage(),
-          e.getMessage().equals("Dynamic reloading is not enabled via " +
-              YarnConfiguration.NM_AUX_SERVICES_MANIFEST_ENABLED));
+      assertTrue(e.getMessage().equals("Dynamic reloading is not enabled via " +
+          YarnConfiguration.NM_AUX_SERVICES_MANIFEST_ENABLED),
+          "Wrong message: " + e.getMessage());
     }
     try {
       aux.reloadManifest();
-      Assert.fail("Should receive the exception.");
+      fail("Should receive the exception.");
     } catch (IOException e) {
-      assertTrue("Wrong message: " + e.getMessage(),
-          e.getMessage().equals("Dynamic reloading is not enabled via " +
-              YarnConfiguration.NM_AUX_SERVICES_MANIFEST_ENABLED));
+      assertTrue(e.getMessage().equals("Dynamic reloading is not enabled via " +
+          YarnConfiguration.NM_AUX_SERVICES_MANIFEST_ENABLED),
+          "Wrong message: " + e.getMessage());
     }
   }
 }

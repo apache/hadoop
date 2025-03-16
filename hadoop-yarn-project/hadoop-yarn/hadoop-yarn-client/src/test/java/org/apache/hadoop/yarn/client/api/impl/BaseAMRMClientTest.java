@@ -43,8 +43,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -53,8 +53,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Base class for testing AMRMClient.
@@ -83,7 +83,7 @@ public class BaseAMRMClientTest {
   protected String[] nodes;
   protected String[] racks;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new YarnConfiguration();
     createClusterAndStartApplication(conf);
@@ -120,12 +120,12 @@ public class BaseAMRMClientTest {
     yarnClient.start();
 
     // get node info
-    assertTrue("All node managers did not connect to the RM within the "
-            + "allotted 5-second timeout",
-        yarnCluster.waitForNodeManagersToConnect(5000L));
+    assertTrue(yarnCluster.waitForNodeManagersToConnect(5000L),
+        "All node managers did not connect to the RM within the "
+        + "allotted 5-second timeout");
     nodeReports = yarnClient.getNodeReports(NodeState.RUNNING);
-    assertEquals("Not all node managers were reported running",
-        nodeCount, nodeReports.size());
+    assertEquals(nodeCount, nodeReports.size(),
+        "Not all node managers were reported running");
 
     priority = Priority.newInstance(1);
     priority2 = Priority.newInstance(2);
@@ -194,7 +194,7 @@ public class BaseAMRMClientTest {
         ClientRMProxy.getAMRMTokenService(conf));
   }
 
-  @After
+  @AfterEach
   public void teardown() throws YarnException, IOException {
     if (yarnClient != null && attemptId != null) {
       yarnClient.killApplication(attemptId.getApplicationId());

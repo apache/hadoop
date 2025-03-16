@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.net.HostAndPort;
 
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 
 /**
  * The local subcluster (where the writer is) should be tried first. The writer
@@ -124,9 +125,9 @@ public class LocalResolver extends RouterResolver<String, String> {
    * needs to be done as a privileged action to use the user for the Router and
    * not the one from the client in the RPC call.
    *
-   * @return DN IP -> Subcluster.
+   * @return DN IP -&gt; Subcluster.
    */
-  private Map<String, String> getDatanodesSubcluster() {
+  public Map<String, String> getDatanodesSubcluster() {
 
     final RouterRpcServer rpcServer = getRpcServer();
     if (rpcServer == null) {
@@ -143,9 +144,16 @@ public class LocalResolver extends RouterResolver<String, String> {
             @Override
             public Map<String, DatanodeStorageReport[]> run() {
               try {
-                return rpcServer.getDatanodeStorageReportMap(
-                    DatanodeReportType.ALL);
-              } catch (IOException e) {
+                Map<String, DatanodeStorageReport[]> result;
+                if (rpcServer.isAsync()) {
+                  rpcServer.getDatanodeStorageReportMapAsync(DatanodeReportType.ALL);
+                  result = syncReturn(Map.class);
+                } else {
+                  result = rpcServer.getDatanodeStorageReportMap(
+                      DatanodeReportType.ALL);
+                }
+                return result;
+              } catch (Exception e) {
                 LOG.error("Cannot get the datanodes from the RPC server", e);
                 return null;
               }

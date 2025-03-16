@@ -18,14 +18,14 @@
 
 package org.apache.hadoop.yarn.server.timeline.security;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_HTTP_AUTH_PREFIX;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests {@link TimelineAuthenticationFilterInitializer}.
@@ -67,12 +67,9 @@ public class TestTimelineAuthenticationFilterInitializer {
       TimelineAuthenticationFilterInitializer initializer =
           new TimelineAuthenticationFilterInitializer();
       initializer.initFilter(container, conf);
-      Assert.assertEquals(
-          "*", initializer.filterConfig.get("proxyuser.foo.hosts"));
-      Assert.assertEquals(
-          "*", initializer.filterConfig.get("proxyuser.foo.users"));
-      Assert.assertEquals(
-          "*", initializer.filterConfig.get("proxyuser.foo.groups"));
+      assertEquals("*", initializer.filterConfig.get("proxyuser.foo.hosts"));
+      assertEquals("*", initializer.filterConfig.get("proxyuser.foo.users"));
+      assertEquals("*", initializer.filterConfig.get("proxyuser.foo.groups"));
     }
   }
 }

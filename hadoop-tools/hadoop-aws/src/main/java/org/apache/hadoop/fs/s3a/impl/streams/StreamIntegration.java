@@ -113,7 +113,6 @@ public final class StreamIntegration {
    * @throws RuntimeException any binding/loading/instantiation problem
    */
   public static ObjectInputStreamFactory factoryFromConfig(final Configuration conf) {
-
     // Construct the factory.
     return determineInputStreamType(conf)
         .factory()
@@ -135,7 +134,7 @@ public final class StreamIntegration {
    * @param conf configuration
    * @return a stream factory.
    */
-  static InputStreamType determineInputStreamType(final Configuration conf) {
+  public static InputStreamType determineInputStreamType(final Configuration conf) {
     // work out the default stream; this includes looking at the
     // deprecated prefetch enabled key to see if it is set.
     if (conf.getBoolean(PREFETCH_ENABLED_KEY, false)) {

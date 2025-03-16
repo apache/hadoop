@@ -140,8 +140,8 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.router.RouterAuditLogger;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
-import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.MonotonicClock;
+import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Records;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -816,7 +816,7 @@ public class FederationClientInterceptor
       GetClusterMetricsRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrGetClusterMetricsFailedRetrieved();
-      String msg = "Missing getApplications request.";
+      String msg = "Missing getClusterMetrics request.";
       RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERMETRICS, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
@@ -1386,7 +1386,7 @@ public class FederationClientInterceptor
       GetLabelsToNodesRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
-      String msg = "Missing getNodesToLabels request.";
+      String msg = "Missing getLabelsToNodes request.";
       RouterAuditLogger.logFailure(user.getShortUserName(), GET_LABELSTONODES, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);

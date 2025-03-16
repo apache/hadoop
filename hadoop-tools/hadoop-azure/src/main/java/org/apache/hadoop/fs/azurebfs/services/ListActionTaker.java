@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.FileSystemOperationUnhandledException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
@@ -119,7 +120,14 @@ public abstract class ListActionTaker {
         LOG.debug("Thread interrupted while taking action on path: {}",
             path.toUri().getPath());
       } catch (ExecutionException e) {
-        executionException = (AzureBlobFileSystemException) e.getCause();
+        LOG.debug("Execution exception while taking action on path: {}",
+            path.toUri().getPath());
+        if (e.getCause() instanceof AzureBlobFileSystemException) {
+          executionException = (AzureBlobFileSystemException) e.getCause();
+        } else {
+          executionException =
+              new FileSystemOperationUnhandledException(executionException);
+        }
       }
     }
     if (executionException != null) {
@@ -261,7 +269,7 @@ public abstract class ListActionTaker {
   protected void addPaths(final List<Path> paths,
       final ListResultSchema retrievedSchema) {
     for (ListResultEntrySchema entry : retrievedSchema.paths()) {
-      Path entryPath = new Path(ROOT_PATH, entry.name());
+      Path entryPath = new Path(ROOT_PATH + entry.name());
       if (!entryPath.equals(this.path)) {
         paths.add(entryPath);
       }

@@ -322,6 +322,10 @@ public enum Statistic {
       TYPE_COUNTER),
 
   /* Stream Reads */
+  STREAM_READ_ANALYTICS_OPENED(
+      StreamStatisticNames.STREAM_READ_ANALYTICS_OPENED,
+      "Total count of times an analytics input stream to object store data was opened",
+      TYPE_COUNTER),
   STREAM_READ_BYTES(
       StreamStatisticNames.STREAM_READ_BYTES,
       "Bytes read from an input stream in read() calls",

@@ -35,9 +35,8 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.metrics.OpportunisticSchedulerMetrics;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +48,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -73,7 +75,7 @@ public class TestDistributedOpportunisticContainerAllocator {
   private static final ExecutionTypeRequest OPPORTUNISTIC_REQ =
       ExecutionTypeRequest.newInstance(ExecutionType.OPPORTUNISTIC, true);
 
-  @Before
+  @BeforeEach
   public void setup() {
     SecurityUtil.setTokenServiceUseIp(false);
     final MasterKey mKey = new MasterKey() {
@@ -126,8 +128,8 @@ public class TestDistributedOpportunisticContainerAllocator {
                 NodeId.newInstance("h1", 1234), "h1:1234", "/r1")));
     List<Container> containers = allocator.allocateContainers(
         blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser");
-    Assert.assertEquals(1, containers.size());
-    Assert.assertEquals(0, oppCntxt.getOutstandingOpReqs().size());
+    assertEquals(1, containers.size());
+    assertEquals(0, oppCntxt.getOutstandingOpReqs().size());
   }
 
   @Test
@@ -149,8 +151,8 @@ public class TestDistributedOpportunisticContainerAllocator {
                 NodeId.newInstance("h2", 1234), "h2:1234", "/r2")));
     List<Container> containers = allocator.allocateContainers(
         blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser");
-    Assert.assertEquals(0, containers.size());
-    Assert.assertEquals(1, oppCntxt.getOutstandingOpReqs().size());
+    assertEquals(0, containers.size());
+    assertEquals(1, oppCntxt.getOutstandingOpReqs().size());
   }
 
   @Test
@@ -197,10 +199,10 @@ public class TestDistributedOpportunisticContainerAllocator {
     for (Container c : containers) {
       allocatedHosts.add(c.getNodeHttpAddress());
     }
-    Assert.assertTrue(allocatedHosts.contains("h1:1234"));
-    Assert.assertTrue(allocatedHosts.contains("h2:1234"));
-    Assert.assertTrue(allocatedHosts.contains("h3:1234"));
-    Assert.assertEquals(3, containers.size());
+    assertTrue(allocatedHosts.contains("h1:1234"));
+    assertTrue(allocatedHosts.contains("h2:1234"));
+    assertTrue(allocatedHosts.contains("h3:1234"));
+    assertEquals(3, containers.size());
   }
 
   @Test
@@ -268,11 +270,11 @@ public class TestDistributedOpportunisticContainerAllocator {
         blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser");
     LOG.info("Containers: {}", containers);
     // all 3 containers should be allocated.
-    Assert.assertEquals(3, containers.size());
+    assertEquals(3, containers.size());
     // container with allocation id 2 and 3 should be allocated on node h1
     for (Container c : containers) {
       if (c.getAllocationRequestId() == 2 || c.getAllocationRequestId() == 3) {
-        Assert.assertEquals("h1:1234", c.getNodeHttpAddress());
+        assertEquals("h1:1234", c.getNodeHttpAddress());
       }
     }
   }
@@ -324,10 +326,10 @@ public class TestDistributedOpportunisticContainerAllocator {
     for (Container c : containers) {
       allocatedHosts.add(c.getNodeHttpAddress());
     }
-    Assert.assertEquals(2, containers.size());
-    Assert.assertTrue(allocatedHosts.contains("h1:1234"));
-    Assert.assertFalse(allocatedHosts.contains("h2:1234"));
-    Assert.assertFalse(allocatedHosts.contains("h3:1234"));
+    assertEquals(2, containers.size());
+    assertTrue(allocatedHosts.contains("h1:1234"));
+    assertFalse(allocatedHosts.contains("h2:1234"));
+    assertFalse(allocatedHosts.contains("h3:1234"));
   }
 
   @Test
@@ -361,10 +363,10 @@ public class TestDistributedOpportunisticContainerAllocator {
     for (Container c : containers) {
       allocatedHosts.add(c.getNodeHttpAddress());
     }
-    Assert.assertTrue(allocatedHosts.contains("h2:1234"));
-    Assert.assertFalse(allocatedHosts.contains("h3:1234"));
-    Assert.assertFalse(allocatedHosts.contains("h4:1234"));
-    Assert.assertEquals(1, containers.size());
+    assertTrue(allocatedHosts.contains("h2:1234"));
+    assertFalse(allocatedHosts.contains("h3:1234"));
+    assertFalse(allocatedHosts.contains("h4:1234"));
+    assertEquals(1, containers.size());
   }
 
   @Test
@@ -431,11 +433,11 @@ public class TestDistributedOpportunisticContainerAllocator {
       allocatedHosts.add(c.getNodeHttpAddress());
     }
     LOG.info("Containers: {}", containers);
-    Assert.assertTrue(allocatedHosts.contains("h2:1234"));
-    Assert.assertTrue(allocatedHosts.contains("h5:1234"));
-    Assert.assertFalse(allocatedHosts.contains("h3:1234"));
-    Assert.assertFalse(allocatedHosts.contains("h4:1234"));
-    Assert.assertEquals(2, containers.size());
+    assertTrue(allocatedHosts.contains("h2:1234"));
+    assertTrue(allocatedHosts.contains("h5:1234"));
+    assertFalse(allocatedHosts.contains("h3:1234"));
+    assertFalse(allocatedHosts.contains("h4:1234"));
+    assertEquals(2, containers.size());
   }
 
   @Test
@@ -472,11 +474,11 @@ public class TestDistributedOpportunisticContainerAllocator {
       allocatedHosts.add(c.getNodeHttpAddress());
     }
     LOG.info("Containers: {}", containers);
-    Assert.assertTrue(allocatedHosts.contains("h2:1234"));
-    Assert.assertTrue(allocatedHosts.contains("h5:1234"));
-    Assert.assertFalse(allocatedHosts.contains("h3:1234"));
-    Assert.assertFalse(allocatedHosts.contains("h4:1234"));
-    Assert.assertEquals(2, containers.size());
+    assertTrue(allocatedHosts.contains("h2:1234"));
+    assertTrue(allocatedHosts.contains("h5:1234"));
+    assertFalse(allocatedHosts.contains("h3:1234"));
+    assertFalse(allocatedHosts.contains("h4:1234"));
+    assertEquals(2, containers.size());
   }
 
   @Test
@@ -509,7 +511,7 @@ public class TestDistributedOpportunisticContainerAllocator {
     List<Container> containers = allocator.allocateContainers(
         blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser");
     LOG.info("Containers: {}", containers);
-    Assert.assertEquals(2, containers.size());
+    assertEquals(2, containers.size());
   }
 
   @Test
@@ -545,7 +547,7 @@ public class TestDistributedOpportunisticContainerAllocator {
       containers.addAll(allocator.allocateContainers(
           blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser"));
     }
-    Assert.assertEquals(1000, containers.size());
+    assertEquals(1000, containers.size());
   }
 
   @Test
@@ -594,7 +596,7 @@ public class TestDistributedOpportunisticContainerAllocator {
       containers.addAll(allocator.allocateContainers(
           blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser"));
     }
-    Assert.assertEquals(100, containers.size());
+    assertEquals(100, containers.size());
   }
 
   @Test
@@ -617,8 +619,8 @@ public class TestDistributedOpportunisticContainerAllocator {
     /* Since there is no node satisfying node label constraints, requests
        won't get fulfilled.
     */
-    Assert.assertEquals(0, containers.size());
-    Assert.assertEquals(1, oppCntxt.getOutstandingOpReqs().size());
+    assertEquals(0, containers.size());
+    assertEquals(1, oppCntxt.getOutstandingOpReqs().size());
 
     oppCntxt.updateNodeList(
         Arrays.asList(
@@ -628,8 +630,8 @@ public class TestDistributedOpportunisticContainerAllocator {
 
     containers = allocator.allocateContainers(
         blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser");
-    Assert.assertEquals(1, containers.size());
-    Assert.assertEquals(0, oppCntxt.getOutstandingOpReqs().size());
+    assertEquals(1, containers.size());
+    assertEquals(0, oppCntxt.getOutstandingOpReqs().size());
   }
 
   /**
@@ -669,12 +671,12 @@ public class TestDistributedOpportunisticContainerAllocator {
     LOG.info("Containers: {}", containers);
     // Although capacity is present, but only 2 containers should be allocated
     // as max allocation per AM heartbeat is set to 2.
-    Assert.assertEquals(2, containers.size());
+    assertEquals(2, containers.size());
     containers = allocator.allocateContainers(
         blacklistRequest, new ArrayList<>(), appAttId, oppCntxt, 1L, "user1");
     LOG.info("Containers: {}", containers);
     // Remaining 1 container should be allocated.
-    Assert.assertEquals(1, containers.size());
+    assertEquals(1, containers.size());
   }
 
   /**
@@ -718,17 +720,17 @@ public class TestDistributedOpportunisticContainerAllocator {
     LOG.info("Containers: {}", containers);
     // Although capacity is present, but only 2 containers should be allocated
     // as max allocation per AM heartbeat is set to 2.
-    Assert.assertEquals(2, containers.size());
+    assertEquals(2, containers.size());
     containers = allocator.allocateContainers(
         blacklistRequest, new ArrayList<>(), appAttId, oppCntxt, 1L, "user1");
     LOG.info("Containers: {}", containers);
     // 2 more containers should be allocated from pending allocation requests.
-    Assert.assertEquals(2, containers.size());
+    assertEquals(2, containers.size());
     containers = allocator.allocateContainers(
         blacklistRequest, new ArrayList<>(), appAttId, oppCntxt, 1L, "user1");
     LOG.info("Containers: {}", containers);
     // Remaining 1 container should be allocated.
-    Assert.assertEquals(1, containers.size());
+    assertEquals(1, containers.size());
   }
 
   /**
@@ -766,7 +768,7 @@ public class TestDistributedOpportunisticContainerAllocator {
         blacklistRequest, reqs, appAttId, oppCntxt, 1L, "user1");
 
     // all containers should be allocated in single heartbeat.
-    Assert.assertEquals(20, containers.size());
+    assertEquals(20, containers.size());
   }
 
   /**
@@ -805,7 +807,7 @@ public class TestDistributedOpportunisticContainerAllocator {
         blacklistRequest, reqs, appAttId, oppCntxt, 1L, "user1");
 
     // all containers should be allocated in single heartbeat.
-    Assert.assertEquals(20, containers.size());
+    assertEquals(20, containers.size());
   }
 
   /**
@@ -845,7 +847,7 @@ public class TestDistributedOpportunisticContainerAllocator {
     List<Container> containers = allocator.allocateContainers(
         blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser");
     LOG.info("Containers: {}", containers);
-    Assert.assertEquals(2, containers.size());
+    assertEquals(2, containers.size());
     // for each allocated container, latency should be added.
     verify(metrics, times(2)).addAllocateOLatencyEntry(anyLong());
   }

@@ -23,11 +23,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Class for testing {@link NodeManagerMXBean} implementation.
@@ -50,7 +51,7 @@ public class TestNodeManagerMXBean {
       // Get attribute "SecurityEnabled"
       boolean securityEnabled = (boolean) mbs.getAttribute(mxbeanName,
               "SecurityEnabled");
-      Assert.assertEquals(nodeManager.isSecurityEnabled(), securityEnabled);
+      assertEquals(nodeManager.isSecurityEnabled(), securityEnabled);
     }
   }
 }

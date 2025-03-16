@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 
@@ -30,10 +34,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
 
 public class TestNodeManager {
 
@@ -44,9 +45,6 @@ public class TestNodeManager {
       throw new IOException("dummy executor init called");
     }
   }
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   @Test
   public void testContainerExecutorInitCall() {
@@ -122,13 +120,13 @@ public class TestNodeManager {
     postCalls = 0;
     NodeManager.NMContext nmContext =
         nodeManager.createNMContext(null, null, null, false, conf);
-    Assert.assertEquals(2, initCalls);
+    assertEquals(2, initCalls);
     nmContext.getContainerStateTransitionListener().preTransition(
         null, null, null);
     nmContext.getContainerStateTransitionListener().postTransition(
         null, null, null, null);
-    Assert.assertEquals(2, preCalls);
-    Assert.assertEquals(2, postCalls);
+    assertEquals(2, preCalls);
+    assertEquals(2, postCalls);
   }
 
   @Test
@@ -139,40 +137,39 @@ public class TestNodeManager {
       Configuration conf = new Configuration();
       NodeLabelsProvider labelsProviderService =
           nodeManager.createNodeLabelsProvider(conf);
-      Assert
-          .assertNull(
-              "LabelsProviderService should not be initialized in default configuration",
-              labelsProviderService);
+
+      assertNull(labelsProviderService,
+          "LabelsProviderService should not be initialized in default configuration");
 
       // With valid className
       conf.set(
           YarnConfiguration.NM_NODE_LABELS_PROVIDER_CONFIG,
           "org.apache.hadoop.yarn.server.nodemanager.nodelabels.ConfigurationNodeLabelsProvider");
       labelsProviderService = nodeManager.createNodeLabelsProvider(conf);
-      Assert.assertNotNull("LabelsProviderService should be initialized When "
-          + "node labels provider class is configured", labelsProviderService);
+      assertNotNull(labelsProviderService, "LabelsProviderService should be initialized When "
+          + "node labels provider class is configured");
 
       // With invalid className
       conf.set(YarnConfiguration.NM_NODE_LABELS_PROVIDER_CONFIG,
           "org.apache.hadoop.yarn.server.nodemanager.NodeManager");
       try {
         labelsProviderService = nodeManager.createNodeLabelsProvider(conf);
-        Assert.fail("Expected to throw IOException on Invalid configuration");
+        fail("Expected to throw IOException on Invalid configuration");
       } catch (IOException e) {
         // exception expected on invalid configuration
       }
-      Assert.assertNotNull("LabelsProviderService should be initialized When "
-          + "node labels provider class is configured", labelsProviderService);
+      assertNotNull(labelsProviderService, "LabelsProviderService should be initialized When "
+          + "node labels provider class is configured");
 
       // With valid whitelisted configurations
       conf.set(YarnConfiguration.NM_NODE_LABELS_PROVIDER_CONFIG,
           YarnConfiguration.CONFIG_NODE_DESCRIPTOR_PROVIDER);
       labelsProviderService = nodeManager.createNodeLabelsProvider(conf);
-      Assert.assertNotNull("LabelsProviderService should be initialized When "
-          + "node labels provider class is configured", labelsProviderService);
+      assertNotNull(labelsProviderService, "LabelsProviderService should be initialized When "
+          + "node labels provider class is configured");
 
     } catch (Exception e) {
-      Assert.fail("Exception caught");
+      fail("Exception caught");
       e.printStackTrace();
     }
   }
@@ -184,18 +181,20 @@ public class TestNodeManager {
    */
   @Test
   public void testUserProvidedUGIConf() throws Exception {
-    thrown.expect(IllegalArgumentException.class);
-    thrown.expectMessage("Invalid attribute value for "
+    IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+      Configuration dummyConf = new YarnConfiguration();
+      dummyConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+              "DUMMYAUTH");
+      NodeManager dummyNodeManager = new NodeManager();
+      try {
+        dummyNodeManager.init(dummyConf);
+      } finally {
+        dummyNodeManager.stop();
+      }
+    });
+
+    assertEquals("Invalid attribute value for "
         + CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION
-        + " of DUMMYAUTH");
-    Configuration dummyConf = new YarnConfiguration();
-    dummyConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
-        "DUMMYAUTH");
-    NodeManager dummyNodeManager = new NodeManager();
-    try {
-      dummyNodeManager.init(dummyConf);
-    } finally {
-      dummyNodeManager.stop();
-    }
+        + " of DUMMYAUTH", exception.getMessage());
   }
 }

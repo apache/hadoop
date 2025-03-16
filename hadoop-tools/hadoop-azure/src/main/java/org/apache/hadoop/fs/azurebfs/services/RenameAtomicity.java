@@ -21,9 +21,6 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Random;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -221,8 +218,7 @@ public class RenameAtomicity {
     abfsClient.append(path.toUri().getPath(), bytes,
         appendRequestParameters, null, null, tracingContext);
 
-        List<String> blockIdList = new ArrayList<>(Collections.singleton(blockId));
-        String blockList = generateBlockListXml(blockIdList);
+    String blockList = generateBlockListXml(blockId);
     // PutBlockList on the path.
     abfsClient.flush(blockList.getBytes(StandardCharsets.UTF_8),
         path.toUri().getPath(), true, null, null, eTag, null, tracingContext);

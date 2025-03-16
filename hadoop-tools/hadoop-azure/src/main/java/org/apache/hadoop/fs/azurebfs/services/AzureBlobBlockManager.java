@@ -30,6 +30,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.store.DataBlocks;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COMMA;
+
 /**
  * Manages Azure Blob blocks for append operations.
  */
@@ -38,9 +40,8 @@ public class AzureBlobBlockManager extends AzureBlockManager {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsOutputStream.class);
 
-
-  /** The list of already committed blocks is stored in this list. */
-  private List<String> committedBlockEntries = new ArrayList<>();
+  /** Cached list of committed block IDs */
+  private final StringBuilder committedBlockEntries = new StringBuilder();
 
   /** The list to store blockId, position, and status. */
   private final LinkedList<BlockEntry> blockEntryList = new LinkedList<>();
@@ -60,7 +61,10 @@ public class AzureBlobBlockManager extends AzureBlockManager {
       throws AzureBlobFileSystemException {
     super(abfsOutputStream, blockFactory, bufferSize);
     if (abfsOutputStream.getPosition() > 0 && !abfsOutputStream.isAppendBlob()) {
-      this.committedBlockEntries = getBlockList(abfsOutputStream.getTracingContext());
+      List<String> committedBlocks = getBlockList(abfsOutputStream.getTracingContext());
+      if (!committedBlocks.isEmpty()) {
+        committedBlockEntries.append(String.join(COMMA, committedBlocks));
+      }
     }
     LOG.debug("Created a new Blob Block Manager for AbfsOutputStream instance {} for path {}",
         abfsOutputStream.getStreamID(), abfsOutputStream.getPath());
@@ -146,11 +150,12 @@ public class AzureBlobBlockManager extends AzureBlockManager {
    * @return whether we have some data to commit or not.
    * @throws IOException if an I/O error occurs
    */
-  protected synchronized boolean hasListToCommit() throws IOException {
+  protected synchronized boolean hasBlocksToCommit() throws IOException {
     // Adds all the committed blocks if available to the list of blocks to be added in putBlockList.
     if (blockEntryList.isEmpty()) {
       return false; // No entries to commit
     }
+
     while (!blockEntryList.isEmpty()) {
       BlockEntry current = blockEntryList.poll();
       if (current.getStatus() != AbfsBlockStatus.SUCCESS) {
@@ -177,7 +182,11 @@ public class AzureBlobBlockManager extends AzureBlockManager {
           throw new IOException(errorMessage);
         }
       }
-      committedBlockEntries.add(current.getBlockId());
+      // Append the current block's ID to the committedBlockBuilder
+      if (committedBlockEntries.length() > 0) {
+        committedBlockEntries.append(COMMA);
+      }
+      committedBlockEntries.append(current.getBlockId());
       LOG.debug("Block {} added to committed entries.", current.getBlockId());
     }
     return true;
@@ -188,7 +197,13 @@ public class AzureBlobBlockManager extends AzureBlockManager {
    *
    * @return the block ID list
    */
-  protected List<String> getBlockIdList() {
-    return committedBlockEntries;
+  protected String getBlockIdToCommit() {
+    return committedBlockEntries.toString();
+  }
+
+  @Override
+  public void close(){
+    super.close();
+    committedBlockEntries.setLength(0);
   }
 }

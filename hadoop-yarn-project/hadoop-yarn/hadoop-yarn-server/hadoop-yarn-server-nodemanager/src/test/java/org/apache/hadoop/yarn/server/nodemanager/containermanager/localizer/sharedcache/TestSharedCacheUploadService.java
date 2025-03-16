@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sharedcache;
 
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestSharedCacheUploadService {
 

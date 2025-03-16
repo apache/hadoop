@@ -87,8 +87,8 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
-import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_FILE_STATUS;
+import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ACQUIRE_LEASE_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.AND_MARK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_BLOB_TYPE;
@@ -459,8 +459,12 @@ public class AbfsBlobClient extends AbfsClient {
       if (isAtomicRenameKey(parentPath.toUri().getPath())) {
         takeGetPathStatusAtomicRenameKeyAction(parentPath, tracingContext);
       }
-      getPathStatus(parentPath.toUri().getPath(), false,
-          tracingContext, null);
+      try {
+        getPathStatus(parentPath.toUri().getPath(), false,
+            tracingContext, null);
+      } finally {
+        getAbfsCounters().incrementCounter(CALL_GET_FILE_STATUS, 1);
+      }
     } catch (AbfsRestOperationException ex) {
       if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
         throw new FileNotFoundException("Cannot create file "
@@ -468,8 +472,6 @@ public class AbfsBlobClient extends AbfsClient {
             + " because parent folder does not exist.");
       }
       throw ex;
-    } finally {
-      getAbfsCounters().incrementCounter(CALL_GET_FILE_STATUS, 1);
     }
   }
 
@@ -824,23 +826,26 @@ public class AbfsBlobClient extends AbfsClient {
     BlobRenameHandler blobRenameHandler = getBlobRenameHandler(source,
         destination, sourceEtag, isAtomicRenameKey(source), tracingContext
     );
-    incrementAbfsRenamePath();
-    if (blobRenameHandler.execute()) {
-      final AbfsUriQueryBuilder abfsUriQueryBuilder
-          = createDefaultUriQueryBuilder();
-      final URL url = createRequestUrl(destination,
-          abfsUriQueryBuilder.toString());
-      final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-      final AbfsRestOperation successOp = getSuccessOp(
-          AbfsRestOperationType.RenamePath, HTTP_METHOD_PUT,
-          url, requestHeaders);
-      return new AbfsClientRenameResult(successOp, true, false);
-    } else {
-      throw new AbfsRestOperationException(HTTP_INTERNAL_ERROR,
-          AzureServiceErrorCode.UNKNOWN.getErrorCode(),
-          ERR_RENAME_BLOB + source + SINGLE_WHITE_SPACE + AND_MARK
-              + SINGLE_WHITE_SPACE + destination,
-          null);
+    try {
+      if (blobRenameHandler.execute()) {
+        final AbfsUriQueryBuilder abfsUriQueryBuilder
+            = createDefaultUriQueryBuilder();
+        final URL url = createRequestUrl(destination,
+            abfsUriQueryBuilder.toString());
+        final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+        final AbfsRestOperation successOp = getSuccessOp(
+            AbfsRestOperationType.RenamePath, HTTP_METHOD_PUT,
+            url, requestHeaders);
+        return new AbfsClientRenameResult(successOp, true, false);
+      } else {
+        throw new AbfsRestOperationException(HTTP_INTERNAL_ERROR,
+            AzureServiceErrorCode.UNKNOWN.getErrorCode(),
+            ERR_RENAME_BLOB + source + SINGLE_WHITE_SPACE + AND_MARK
+                + SINGLE_WHITE_SPACE + destination,
+            null);
+      }
+    } finally {
+      incrementAbfsRenamePath();
     }
   }
 
@@ -1531,8 +1536,24 @@ public class AbfsBlobClient extends AbfsClient {
     final AbfsRestOperation op = getAbfsRestOperation(
         AbfsRestOperationType.DeleteBlob, HTTP_METHOD_DELETE, url,
         requestHeaders);
-    op.execute(tracingContext);
-    return op;
+    try {
+      op.execute(tracingContext);
+      return op;
+    } catch (AzureBlobFileSystemException e) {
+      // If we have no HTTP response, throw the original exception.
+      if (!op.hasResult()) {
+        throw e;
+      }
+      final AbfsRestOperation idempotencyOp = deleteIdempotencyCheckOp(op);
+      if (idempotencyOp.getResult().getStatusCode()
+          == op.getResult().getStatusCode()) {
+        // idempotency did not return different result
+        // throw back the exception
+        throw e;
+      } else {
+        return idempotencyOp;
+      }
+    }
   }
 
   /**
@@ -1843,10 +1864,11 @@ public class AbfsBlobClient extends AbfsClient {
         throw ex;
       }
     }
+    return true;
   }
 
   @VisibleForTesting
-  RenameAtomicity getRedoRenameAtomicity(final Path renamePendingJsonPath,
+  public RenameAtomicity getRedoRenameAtomicity(final Path renamePendingJsonPath,
       int fileLen,
       final TracingContext tracingContext) {
     return new RenameAtomicity(renamePendingJsonPath,
@@ -2031,23 +2053,31 @@ public class AbfsBlobClient extends AbfsClient {
     if (isEmptyList) {
       LOG.debug("List call returned empty results without any continuation token.");
       return true;
+    } else if (result != null && !(result.getListResultSchema() instanceof BlobListResultSchema)) {
+      throw new RuntimeException("List call returned unexpected results over Blob Endpoint.");
     }
     return false;
   }
 
   /**
-   * Generates an XML string representing the block list.
+   * Generate the XML block list using a comma-separated string of block IDs.
    *
-   * @param blockIds the set of block IDs
-   * @return the generated XML string
+   * @param blockIdString The comma-separated block IDs.
+   * @return the XML representation of the block list.
    */
-  public static String generateBlockListXml(List<String> blockIds) {
+  public static String generateBlockListXml(String blockIdString) {
     StringBuilder stringBuilder = new StringBuilder();
     stringBuilder.append(String.format(XML_VERSION));
     stringBuilder.append(String.format(BLOCK_LIST_START_TAG));
-    for (String blockId : blockIds) {
-      stringBuilder.append(String.format(LATEST_BLOCK_FORMAT, blockId));
+
+    // Split the block ID string by commas and generate XML for each block ID
+    if (!blockIdString.isEmpty()) {
+      String[] blockIds = blockIdString.split(",");
+      for (String blockId : blockIds) {
+        stringBuilder.append(String.format(LATEST_BLOCK_FORMAT, blockId));
+      }
     }
+
     stringBuilder.append(String.format(BLOCK_LIST_END_TAG));
     return stringBuilder.toString();
   }
