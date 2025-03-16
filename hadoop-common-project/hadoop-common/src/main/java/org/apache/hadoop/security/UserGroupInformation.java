@@ -1906,7 +1906,7 @@ public class UserGroupInformation {
     } else if (o == null || getClass() != o.getClass()) {
       return false;
     } else {
-      return subject == ((UserGroupInformation) o).subject;
+      return subject.equals(((UserGroupInformation) o).subject);
     }
   }
 
@@ -1915,7 +1915,10 @@ public class UserGroupInformation {
    */
   @Override
   public int hashCode() {
-    return System.identityHashCode(subject);
+    if (subject == null) {
+      return 0;
+    }
+    return subject.hashCode();
   }
 
   /**
