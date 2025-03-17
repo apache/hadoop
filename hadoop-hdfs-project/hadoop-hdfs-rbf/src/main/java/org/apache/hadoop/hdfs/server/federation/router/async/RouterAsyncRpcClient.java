@@ -219,47 +219,45 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
     final ExecutionStatus status = new ExecutionStatus(false, useObserver);
     Map<FederationNamenodeContext, IOException> ioes = new LinkedHashMap<>();
     final ConnectionContext[] connection = new ConnectionContext[1];
-    asyncTry(() -> {
-      asyncForEach(namenodes.iterator(),
-          (foreach, namenode) -> {
-            if (!status.isShouldUseObserver()
-                && (namenode.getState() == FederationNamenodeServiceState.OBSERVER)) {
-              asyncComplete(null);
-              return;
-            }
-            String nsId = namenode.getNameserviceId();
-            String rpcAddress = namenode.getRpcAddress();
-            asyncTry(() -> {
-              connection[0] = getConnection(ugi, nsId, rpcAddress, protocol);
-              NameNodeProxiesClient.ProxyAndInfo<?> client = connection[0].getClient();
-              invoke(namenode, status.isShouldUseObserver(), 0, method,
-                  client.getProxy(), params);
-              asyncApply(res -> {
-                status.setComplete(true);
-                postProcessResult(method, status, namenode, nsId, client);
-                foreach.breakNow();
-                return res;
-              });
-            });
-            asyncCatch((res, ioe) -> {
-              ioes.put(namenode, ioe);
-              handleInvokeMethodIOException(namenode, ioe, status, useObserver);
-              return res;
-            }, IOException.class);
-            asyncFinally(res -> {
-              if (connection[0] != null) {
-                connection[0].release();
-              }
+    asyncForEach(namenodes.iterator(),
+        (foreach, namenode) -> {
+          if (!status.isShouldUseObserver()
+              && (namenode.getState() == FederationNamenodeServiceState.OBSERVER)) {
+            asyncComplete(null);
+            return;
+          }
+          String nsId = namenode.getNameserviceId();
+          String rpcAddress = namenode.getRpcAddress();
+          asyncTry(() -> {
+            connection[0] = getConnection(ugi, nsId, rpcAddress, protocol);
+            NameNodeProxiesClient.ProxyAndInfo<?> client = connection[0].getClient();
+            invoke(namenode, status.isShouldUseObserver(), 0, method,
+                client.getProxy(), params);
+            asyncApply(res -> {
+              status.setComplete(true);
+              postProcessResult(method, status, namenode, nsId, client);
+              foreach.breakNow();
               return res;
             });
           });
+          asyncCatch((res, ioe) -> {
+            ioes.put(namenode, ioe);
+            handleInvokeMethodIOException(namenode, ioe, status, useObserver);
+            return res;
+          }, IOException.class);
+          asyncFinally(res -> {
+            if (connection[0] != null) {
+              connection[0].release();
+            }
+            return res;
+          });
+        });
 
-      asyncApply(res -> {
-        if (status.isComplete()) {
-          return res;
-        }
-        return handlerAllNamenodeFail(namenodes, method, ioes, params);
-      });
+    asyncApply(res -> {
+      if (status.isComplete()) {
+        return res;
+      }
+      return handlerAllNamenodeFail(namenodes, method, ioes, params);
     });
   }
 
