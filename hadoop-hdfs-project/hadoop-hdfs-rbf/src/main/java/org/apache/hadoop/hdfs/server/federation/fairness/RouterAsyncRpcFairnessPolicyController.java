@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.
@@ -69,5 +70,21 @@ public class RouterAsyncRpcFairnessPolicyController extends
 
   private static void logAssignment(String nsId, int count) {
     LOG.info("Assigned {} permits to nsId {} ", count, nsId);
+  }
+
+  @Override
+  public boolean acquirePermit(String nsId) {
+    if (nsId.equals(CONCURRENT_NS)) {
+      return true;
+    }
+    return super.acquirePermit(nsId);
+  }
+
+  @Override
+  public void releasePermit(String nsId) {
+    if (nsId.equals(CONCURRENT_NS)) {
+      return;
+    }
+    super.releasePermit(nsId);
   }
 }
