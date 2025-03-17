@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.TestTrash;
@@ -189,5 +190,27 @@ public class TestHDFSTrash {
     Mockito.when(spyUserFs.getTrashRoot(Mockito.any()))
         .thenReturn(userTrashRoot);
     return new Trash(spyUserFs, config);
+  }
+
+
+  @Test
+  public void testDeleteToTrashWhenInodeNameDuplicate() throws Exception {
+    Configuration testConf = new Configuration(conf);
+    testConf.set(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, "600");
+
+    Path file = new Path(TEST_ROOT, "subdir0");
+    Path dir = new Path(TEST_ROOT, "subdir0/subdir1/subdir2");
+
+    fs = DFSTestUtil.login(fs, testConf, user1);
+
+    FSDataOutputStream out = fs.create(file);
+    out.writeBytes("This is a file");
+    out.close();
+
+    Trash trash = new Trash(testConf);
+    assertTrue(trash.moveToTrash(file));
+
+    fs.mkdirs(dir);
+    assertTrue(trash.moveToTrash(dir));
   }
 }
