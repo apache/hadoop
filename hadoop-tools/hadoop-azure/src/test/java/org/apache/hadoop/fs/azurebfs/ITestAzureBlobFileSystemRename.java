@@ -1518,7 +1518,7 @@ public class ITestAzureBlobFileSystemRename extends
             listCallInvocation[0]++;
             return getFileSystem().getAbfsClient().listPath(answer.getArgument(0),
                 answer.getArgument(1), 1,
-                answer.getArgument(3), answer.getArgument(4), answer.getArgument(6));
+                answer.getArgument(3), answer.getArgument(4), answer.getArgument(5));
           }
           return answer.callRealMethod();
         })
@@ -2089,8 +2089,8 @@ public class ITestAzureBlobFileSystemRename extends
     fs.setWorkingDirectory(new Path(ROOT_PATH));
     fs.create(new Path(path, "file.txt"));
 
-    AzureBlobFileSystemStore.VersionedFileStatus fileStatus
-        = (AzureBlobFileSystemStore.VersionedFileStatus) fs.getFileStatus(path);
+    VersionedFileStatus fileStatus
+        = (VersionedFileStatus) fs.getFileStatus(path);
 
     new RenameAtomicity(path, new Path("/hbase/test4"),
         renameJson, getTestTracingContext(fs, true),
@@ -2303,8 +2303,8 @@ public class ITestAzureBlobFileSystemRename extends
       fs.create(new Path(path2, "file3.txt"));
 
       Path renameJson2 = new Path(path2.getParent(), path2.getName() + SUFFIX);
-      AzureBlobFileSystemStore.VersionedFileStatus fileStatus
-          = (AzureBlobFileSystemStore.VersionedFileStatus) fs.getFileStatus(path2);
+      VersionedFileStatus fileStatus
+          = (VersionedFileStatus) fs.getFileStatus(path2);
 
       new RenameAtomicity(path2, new Path("/hbase/test4"),
           renameJson2, getTestTracingContext(fs, true),

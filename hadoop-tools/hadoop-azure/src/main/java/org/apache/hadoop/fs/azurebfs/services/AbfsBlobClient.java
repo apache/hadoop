@@ -1864,7 +1864,6 @@ public class AbfsBlobClient extends AbfsClient {
         throw ex;
       }
     }
-    return true;
   }
 
   @VisibleForTesting
@@ -1953,11 +1952,11 @@ public class AbfsBlobClient extends AbfsClient {
       if (StringUtils.isNotEmpty(entry.eTag())) {
         // This is a blob entry. It is either a file or a marker blob.
         // In both cases we will add this.
-        nameToEntryMap.put(entry.name(), entry);
-        fileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
-
         if (isRenamePendingJsonPathEntry(entry)) {
           renamePendingJsonPaths.put(entry.path(), entry.contentLength().intValue());
+        } else {
+          nameToEntryMap.put(entry.name(), entry);
+          fileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
         }
       } else {
         // This is a BlobPrefix entry. It is a directory with file inside
@@ -1978,7 +1977,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   private boolean isRenamePendingJsonPathEntry(BlobListResultEntrySchema entry) {
     return entry.path() != null && !entry.path().isRoot()
-        && isAtomicRenameKey(entry.path().toUri().getPath())
+        && isAtomicRenameKey(entry.path().toUri().getPath()) && !entry.isDirectory()
         && entry.path().toUri().getPath().endsWith(RenameAtomicity.SUFFIX);
   }
 
