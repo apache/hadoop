@@ -26,11 +26,15 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.log4j.Logger;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+
+import javax.script.ScriptEngineManager;
 
 /**
  * This class tests the {@code MetricsInvariantChecker} by running it multiple
@@ -44,6 +48,12 @@ public class TestMetricsInvariantChecker {
   private MetricsSystem metricsSystem;
   private MetricsInvariantChecker ic;
   private Configuration conf;
+
+  @BeforeAll
+  public static void checkForJavaScript() {
+    assumeFalse(new ScriptEngineManager().getEngineByName("JavaScript") == null,
+        "JavaScript engine not available (JEP 372)");
+  }
 
   @BeforeEach
   public void setup() {
