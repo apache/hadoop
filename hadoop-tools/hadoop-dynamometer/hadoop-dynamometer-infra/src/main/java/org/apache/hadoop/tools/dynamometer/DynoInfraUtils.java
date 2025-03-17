@@ -320,8 +320,7 @@ public final class DynoInfraUtils {
           .get(getNameNodeHdfsUri(nameNodeProperties), conf);
       log.info("Launching thread to trigger block reports for Datanodes with <"
           + blockThreshold + " blocks reported");
-      Thread blockReportThread = new HadoopThread() {
-        public void work() {
+      Thread blockReportThread = new HadoopThread(() -> {
         // Here we count both Missing and UnderReplicated within under
         // replicated
         long lastUnderRepBlocks = Long.MAX_VALUE;
@@ -378,7 +377,7 @@ public final class DynoInfraUtils {
           // Do nothing; just exit
         }
         log.info("Block reporting thread exiting");
-      }};
+      });
       blockReportThread.setDaemon(true);
       blockReportThread
           .setUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());

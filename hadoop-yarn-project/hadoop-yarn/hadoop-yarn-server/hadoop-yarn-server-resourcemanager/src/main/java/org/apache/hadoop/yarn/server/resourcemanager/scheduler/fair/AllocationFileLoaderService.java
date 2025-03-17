@@ -119,8 +119,7 @@ public class AllocationFileLoaderService extends AbstractService {
     this.allocFile = getAllocationFile(conf);
     if (this.allocFile != null) {
       this.fs = allocFile.getFileSystem(conf);
-      reloadThread = new HadoopThread() {
-        public void work() {
+      reloadThread = new HadoopThread(() -> {
         while (running) {
           try {
             synchronized (this) {
@@ -158,8 +157,7 @@ public class AllocationFileLoaderService extends AbstractService {
                 "Interrupted while waiting to reload alloc configuration");
           }
         }
-        }
-      };
+      });
       reloadThread.setName("AllocationFileReloader");
       reloadThread.setDaemon(true);
     }

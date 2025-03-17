@@ -28,7 +28,8 @@ import org.apache.hadoop.util.SubjectUtil;
 /**
  * Helper class to restore Subject propagation behavior after the JEP411/JEP486 changes
  * 
- * This is shim for the cases where the run() method is directly overridden in the Thread class.
+ * Runnables can be specified normally, but the work() method has to be overridden instead of
+ * run() when subclassing. 
  */
 public class HadoopThread extends Thread {
   
