@@ -41,8 +41,10 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.DfsListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.DfsListResultSchema;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResponseData;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
@@ -74,7 +76,7 @@ import static org.mockito.Mockito.when;
  */
 public class ITestAzureBlobFileSystemListStatus extends
     AbstractAbfsIntegrationTest {
-  private static final int TEST_FILES_NUMBER = 60;
+  private static final int TEST_FILES_NUMBER = 6000;
   private static final String TEST_CONTINUATION_TOKEN = "continuation";
 
   public ITestAzureBlobFileSystemListStatus() throws Exception {
@@ -84,7 +86,7 @@ public class ITestAzureBlobFileSystemListStatus extends
   @Test
   public void testListPath() throws Exception {
     Configuration config = new Configuration(this.getRawConfiguration());
-    config.set(AZURE_LIST_MAX_RESULTS, "50");
+    config.set(AZURE_LIST_MAX_RESULTS, "5000");
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(getFileSystem().getUri(), config);
       final List<Future<Void>> tasks = new ArrayList<>();
@@ -417,6 +419,71 @@ public class ITestAzureBlobFileSystemListStatus extends
     FileStatus[] statuses1 = fs.listStatus(new Path(statuses[0].getPath().toString()));
     Assertions.assertThat(statuses1.length).isGreaterThanOrEqualTo(1);
     assertFileFileStatus(statuses1[0], fs.makeQualified(statuses1[0].getPath()));
+  }
+
+  @Test
+  public void testListStatusOnEmptyDirectory() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path emptyDir = new Path("/emptyDir");
+    fs.mkdirs(emptyDir);
+
+    FileStatus[] statuses = fs.listStatus(emptyDir);
+    Assertions.assertThat(statuses.length).isEqualTo(0);
+  }
+
+  @Test
+  public void testContinuationTokenAcrossListStatus() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path("/testContinuationToken");
+    fs.mkdirs(path);
+    fs.create(new Path(path + "/file1"));
+    fs.create(new Path(path + "/file2"));
+
+    fs.listStatus(path);
+
+    ListResponseData listResponseData = fs.getAbfsStore().getClient().listPath(
+        "/testContinuationToken",false, 1, null, getTestTracingContext(fs, true),
+        fs.getAbfsStore().getUri());
+
+    Assertions.assertThat(listResponseData.getContinuationToken()).isNotNull();
+    Assertions.assertThat(listResponseData.getFileStatusList()).hasSize(1);
+
+    ListResponseData listResponseData1 =  fs.getAbfsStore().getClient().listPath(
+        "/testContinuationToken",false, 1, listResponseData.getContinuationToken(), getTestTracingContext(fs, true),
+        fs.getAbfsStore().getUri());
+
+    Assertions.assertThat(listResponseData1.getContinuationToken()).isNull();
+    Assertions.assertThat(listResponseData1.getFileStatusList()).hasSize(1);
+  }
+
+  @Test
+  public void testInvalidContinuationToken() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path("/testInvalidContinuationToken");
+    fs.mkdirs(path);
+    fs.create(new Path(path + "/file1"));
+    fs.create(new Path(path + "/file2"));
+
+    intercept(AbfsRestOperationException.class,
+        () -> fs.getAbfsStore().getClient().listPath(
+            "/testInvalidContinuationToken", false, 1, "invalidToken",
+            getTestTracingContext(fs, true), fs.getAbfsStore().getUri()));
+  }
+
+  @Test
+  public void testEmptyContinuationToken() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path("/testInvalidContinuationToken");
+    fs.mkdirs(path);
+    fs.create(new Path(path + "/file1"));
+    fs.create(new Path(path + "/file2"));
+
+    ListResponseData listResponseData = fs.getAbfsStore().getClient().listPath(
+        "/testInvalidContinuationToken", false, 1, "",
+        getTestTracingContext(fs, true), fs.getAbfsStore().getUri());
+
+    Assertions.assertThat(listResponseData.getContinuationToken()).isNotNull();
+    Assertions.assertThat(listResponseData.getFileStatusList()).hasSize(1);
   }
 
   private void assertFileFileStatus(final FileStatus fileStatus,
