@@ -1806,8 +1806,8 @@ public abstract class AbfsClient implements Closeable {
    * @throws AzureBlobFileSystemException if transformation fails.
    */
   protected VersionedFileStatus getVersionedFileStatusFromEntry(
-      ListResultEntrySchema entry,
-      URI uri) throws AzureBlobFileSystemException {
+      ListResultEntrySchema entry, URI uri) throws AzureBlobFileSystemException {
+    long blockSize = abfsConfiguration.getAzureBlockSize();
     final String owner, group;
     try{
       if (identityTransformer != null) {
@@ -1820,6 +1820,7 @@ public abstract class AbfsClient implements Closeable {
         group = null;
       }
     } catch (IOException ex) {
+      LOG.error("Failed to get owner/group for path {}", entry.name(), ex);
       throw new AbfsDriverException(ex);
     }
     final String encryptionContext = entry.getXMsEncryptionContext();
@@ -1848,7 +1849,7 @@ public abstract class AbfsClient implements Closeable {
         contentLength,
         isDirectory,
         1,
-        getAbfsConfiguration().getAzureBlockSize(),
+        blockSize,
         lastModifiedMillis,
         entryPath,
         entry.eTag(),

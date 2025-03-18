@@ -1281,8 +1281,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         AbfsRestOperation op = listResponseData.getOp();
         perfInfo.registerResult(op.getResult());
         continuation = listResponseData.getContinuationToken();
-        List<FileStatus> fileStatusList = listResponseData.getFileStatusList();
-        fileStatuses.addAll(fileStatusList);
+        List<FileStatus> fileStatusListInCurrItr = listResponseData.getFileStatusList();
+        fileStatuses.addAll(fileStatusListInCurrItr);
 
         perfInfo.registerSuccess(true);
         countAggregate++;

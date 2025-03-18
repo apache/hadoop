@@ -383,9 +383,15 @@ public class AbfsBlobClient extends AbfsClient {
     ListResponseData listResponseData = parseListPathResults(op.getResult(), uri);
     listResponseData.setOp(op);
 
-    // Filter the paths for which no rename redo operation is performed.
-    retryRenameOnAtomicEntriesInListResults(op, tracingContext,
-        listResponseData.getRenamePendingJsonPaths());
+    // Perform Pending Rename Redo Operation on Atomic Rename Paths.
+    // Crashed HBase log rename recovery can be done by Filesystem.listStatus.
+    if (tracingContext != null
+        && tracingContext.getOpType() == FSOperationType.LISTSTATUS
+        && op.getResult() != null
+        && op.getResult().getStatusCode() == HTTP_OK) {
+      retryRenameOnAtomicEntriesInListResults(tracingContext,
+          listResponseData.getRenamePendingJsonPaths());
+    }
 
     if (isEmptyListResults(op.getResult()) && is404CheckRequired) {
       // If the list operation returns no paths, we need to check if the path is a file.
@@ -400,9 +406,10 @@ public class AbfsBlobClient extends AbfsClient {
       List<FileStatus> fileStatusList = new ArrayList<>();
       Map<Path, Integer> renamePendingJsonPaths = new HashMap<>();
       for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
-        fileStatusList.add(getVersionedFileStatusFromEntry(entry, uri));
         if (isRenamePendingJsonPathEntry(entry)) {
           renamePendingJsonPaths.put(entry.path(), entry.contentLength().intValue());
+        } else {
+          fileStatusList.add(getVersionedFileStatusFromEntry(entry, uri));
         }
       }
       AbfsRestOperation listOp = getAbfsRestOperation(
@@ -423,24 +430,11 @@ public class AbfsBlobClient extends AbfsClient {
   /**
    * Filter the paths for which no rename redo operation is performed.
    * Update BlobListResultSchema path with filtered entries.
-   *
-   * @param op blob list operation
    * @param tracingContext tracing context
    * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
    */
-  private void retryRenameOnAtomicEntriesInListResults(final AbfsRestOperation op,
-                                             final TracingContext tracingContext,
+  private void retryRenameOnAtomicEntriesInListResults(TracingContext tracingContext,
       Map<Path, Integer> renamePendingJsonPaths) throws AzureBlobFileSystemException {
-    /*
-     * Crashed HBase log rename recovery is done by Filesystem.getFileStatus and
-     * Filesystem.listStatus.
-     */
-    if (tracingContext == null
-        || tracingContext.getOpType() != FSOperationType.LISTSTATUS
-        || op == null || op.getResult() == null
-        || op.getResult().getStatusCode() != HTTP_OK) {
-      return;
-    }
     if (renamePendingJsonPaths == null || renamePendingJsonPaths.isEmpty()) {
       return;
     }
@@ -1179,10 +1173,7 @@ public class AbfsBlobClient extends AbfsClient {
       throws AzureBlobFileSystemException {
     AbfsRestOperation op = this.getPathStatus(path, tracingContext,
         contextEncryptionAdapter, true);
-    /*
-     * Crashed HBase log-folder rename can be recovered by FileSystem#getFileStatus
-     * and FileSystem#listStatus calls.
-     */
+    // Crashed HBase log-folder rename can be recovered by FileSystem#getFileStatus
     if (tracingContext.getOpType() == FSOperationType.GET_FILESTATUS
         && op.getResult() != null && checkIsDir(op.getResult())) {
       takeGetPathStatusAtomicRenameKeyAction(new Path(path), tracingContext);
@@ -1785,13 +1776,14 @@ public class AbfsBlobClient extends AbfsClient {
     AbfsRestOperation pendingJsonFileStatus;
     Path pendingJsonPath = new Path(path.getParent(),
         path.toUri().getPath() + RenameAtomicity.SUFFIX);
+    int pendingJsonFileContentLength = 0;
     try {
-      pendingJsonFileStatus = getPathStatus(
-          pendingJsonPath.toUri().getPath(), tracingContext,
-          null, false);
+      pendingJsonFileStatus = getPathStatus(pendingJsonPath.toUri().getPath(),
+          tracingContext, null, false);
       if (checkIsDir(pendingJsonFileStatus.getResult())) {
         return;
       }
+      pendingJsonFileContentLength = Integer.parseInt(pendingJsonFileStatus.getResult().getResponseHeader(CONTENT_LENGTH));
     } catch (AbfsRestOperationException ex) {
       if (ex.getStatusCode() == HTTP_NOT_FOUND) {
         return;
@@ -1802,9 +1794,7 @@ public class AbfsBlobClient extends AbfsClient {
     boolean renameSrcHasChanged;
     try {
       RenameAtomicity renameAtomicity = getRedoRenameAtomicity(
-          pendingJsonPath, Integer.parseInt(pendingJsonFileStatus.getResult()
-              .getResponseHeader(CONTENT_LENGTH)),
-          tracingContext);
+          pendingJsonPath, pendingJsonFileContentLength, tracingContext);
       renameAtomicity.redo();
       renameSrcHasChanged = false;
     } catch (AbfsRestOperationException ex) {
@@ -1976,8 +1966,10 @@ public class AbfsBlobClient extends AbfsClient {
   }
 
   private boolean isRenamePendingJsonPathEntry(BlobListResultEntrySchema entry) {
-    return entry.path() != null && !entry.path().isRoot()
-        && isAtomicRenameKey(entry.path().toUri().getPath()) && !entry.isDirectory()
+    return entry.path() != null
+        && !entry.path().isRoot()
+        && isAtomicRenameKey(entry.path().toUri().getPath())
+        && !entry.isDirectory()
         && entry.path().toUri().getPath().endsWith(RenameAtomicity.SUFFIX);
   }
 
