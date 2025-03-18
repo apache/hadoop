@@ -40,6 +40,8 @@ public class RouterAsyncRpcFairnessPolicyController extends
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterAsyncRpcFairnessPolicyController.class);
 
+  public static final String INIT_MSG = "Max async call permits per nameservice: %d";
+  
   public RouterAsyncRpcFairnessPolicyController(Configuration conf) {
     init(conf);
   }
@@ -52,7 +54,7 @@ public class RouterAsyncRpcFairnessPolicyController extends
     if (maxAsyncCallPermit <= 0) {
       maxAsyncCallPermit = DFS_ROUTER_ASYNC_RPC_MAX_ASYNC_CALL_PERMIT_DEFAULT;
     }
-    LOG.info("Max async call permits per nameservice: {}", maxAsyncCallPermit);
+    LOG.info(String.format(INIT_MSG, maxAsyncCallPermit));
 
     // Get all name services configured.
     Set<String> allConfiguredNS = FederationUtil.getAllConfiguredNS(conf);
