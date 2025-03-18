@@ -25,6 +25,7 @@ import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityLevel;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.DiagnosticsCollector;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -100,15 +101,18 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
    * We will consider stuffs like exclusivity, pending resource, node partition,
    * headroom, etc.
    */
-  private ContainerAllocation preCheckRequest(String nodePartition,
+  private ContainerAllocation preCheckRequest(
+      CandidateNodeSet<FiCaSchedulerNode> candidates,
       SchedulingMode schedulingMode, ResourceLimits resourceLimits,
       SchedulerRequestKey schedulerKey) {
     PendingAsk offswitchPendingAsk = application.getPendingAsk(schedulerKey,
         ResourceRequest.ANY);
+    SchedulerNode recordNode =
+        CandidateNodeSetUtils.getSingleNode(candidates);
 
     if (offswitchPendingAsk.getCount() <= 0) {
       ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
-          activitiesManager, null, application, schedulerKey,
+          activitiesManager, recordNode, application, schedulerKey,
           ActivityDiagnosticConstant.REQUEST_DO_NOT_NEED_RESOURCE,
           ActivityLevel.REQUEST);
       return ContainerAllocation.PRIORITY_SKIPPED;
@@ -120,7 +124,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     // Do we need containers at this 'priority'?
     if (application.getOutstandingAsksCount(schedulerKey) <= 0) {
       ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
-          activitiesManager, null, application, schedulerKey,
+          activitiesManager, recordNode, application, schedulerKey,
           ActivityDiagnosticConstant.REQUEST_DO_NOT_NEED_RESOURCE,
           ActivityLevel.REQUEST);
       return ContainerAllocation.PRIORITY_SKIPPED;
@@ -135,7 +139,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
         application.updateAppSkipNodeDiagnostics(
             "Skipping assigning to Node in Ignore Exclusivity mode. ");
         ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
-            activitiesManager, null, application, schedulerKey,
+            activitiesManager, recordNode, application, schedulerKey,
             ActivityDiagnosticConstant.
                 REQUEST_SKIPPED_IN_IGNORE_EXCLUSIVITY_MODE,
             ActivityLevel.REQUEST);
@@ -147,18 +151,18 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       if (!shouldAllocOrReserveNewContainer(schedulerKey, required)) {
         LOG.debug("doesn't need containers based on reservation algo!");
         ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
-            activitiesManager, null, application, schedulerKey,
+            activitiesManager, recordNode, application, schedulerKey,
             ActivityDiagnosticConstant.REQUEST_SKIPPED_BECAUSE_OF_RESERVATION,
             ActivityLevel.REQUEST);
         return ContainerAllocation.PRIORITY_SKIPPED;
       }
     }
 
-    if (!checkHeadroom(resourceLimits, required, nodePartition)) {
+    if (!checkHeadroom(resourceLimits, required, candidates.getPartition())) {
       LOG.debug("cannot allocate required resource={} because of headroom",
           required);
       ActivitiesLogger.APP.recordAppActivityWithoutAllocation(
-          activitiesManager, null, application, schedulerKey,
+          activitiesManager, recordNode, application, schedulerKey,
           ActivityDiagnosticConstant.QUEUE_DO_NOT_HAVE_ENOUGH_HEADROOM,
           ActivityState.REJECTED,
           ActivityLevel.REQUEST);
@@ -175,7 +179,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       // This is possible when #pending resource decreased by a different
       // thread.
       ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
-          activitiesManager, null, application, schedulerKey,
+          activitiesManager, recordNode, application, schedulerKey,
           ActivityDiagnosticConstant.REQUEST_SKIPPED_BECAUSE_NULL_ANY_REQUEST,
           ActivityLevel.REQUEST);
       return ContainerAllocation.PRIORITY_SKIPPED;
@@ -206,7 +210,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
               + rmContext.getScheduler().getNumClusterNodes());
         }
         ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
-            activitiesManager, null, application, schedulerKey,
+            activitiesManager, recordNode, application, schedulerKey,
             ActivityDiagnosticConstant.
                 REQUEST_SKIPPED_BECAUSE_NON_PARTITIONED_PARTITION_FIRST,
             ActivityLevel.REQUEST);
@@ -861,7 +865,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
 
     // pre-check request
     if (reservedContainer == null) {
-      result = preCheckRequest(candidates.getPartition(),
+      result = preCheckRequest(candidates,
           schedulingMode, resourceLimits, schedulerKey);
       if (null != result) {
         return result;
