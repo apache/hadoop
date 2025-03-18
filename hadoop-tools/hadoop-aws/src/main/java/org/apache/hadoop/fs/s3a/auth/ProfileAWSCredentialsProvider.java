@@ -41,15 +41,15 @@ public class ProfileAWSCredentialsProvider extends AbstractAWSCredentialProvider
   public static final String NAME
       = "org.apache.hadoop.fs.s3a.auth.ProfileAWSCredentialsProvider";
 
-  /** Conf setting for credentials file path*/
+  /** Conf setting for credentials file path.*/
   public static final String PROFILE_FILE = "fs.s3a.auth.profile.file";
 
-  /** Conf setting for profile name*/
+  /** Conf setting for profile name.*/
   public static final String PROFILE_NAME = "fs.s3a.auth.profile.name";
 
-  /** Environment variable for credentials file path*/
+  /** Environment variable for credentials file path.*/
   public static final String CREDENTIALS_FILE_ENV = "AWS_SHARED_CREDENTIALS_FILE";
-  /** Environment variable for profile name*/
+  /** Environment variable for profile name.*/
   public static final String PROFILE_ENV = "AWS_PROFILE";
 
   private final ProfileCredentialsProvider pcp;
@@ -61,15 +61,14 @@ public class ProfileAWSCredentialsProvider extends AbstractAWSCredentialProvider
       if (credentialsFile != null) {
         LOG.debug("Fetched credentials file path from environment variable");
       }
-    }
-    else {
+    } else {
       LOG.debug("Fetched credentials file path from conf");
     }
     if (credentialsFile == null) {
       LOG.debug("Using default credentials file path");
-      return FileSystems.getDefault().getPath(SystemUtils.getUserHome().getPath(),".aws", "credentials");
-    }
-    else {
+      return FileSystems.getDefault().getPath(SystemUtils.getUserHome().getPath(),
+        ".aws", "credentials");
+    } else {
       return FileSystems.getDefault().getPath(credentialsFile);
     }
   }
@@ -81,12 +80,10 @@ public class ProfileAWSCredentialsProvider extends AbstractAWSCredentialProvider
       if (profileName == null) {
         profileName = "default";
         LOG.debug("Using default profile name");
-      }
-      else {
+      } else {
         LOG.debug("Fetched profile name from environment variable");
       }
-    }
-    else {
+    } else {
       LOG.debug("Fetched profile name from conf");
     }
     return profileName;
