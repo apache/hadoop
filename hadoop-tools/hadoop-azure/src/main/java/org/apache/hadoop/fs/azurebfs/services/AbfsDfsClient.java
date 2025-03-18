@@ -1560,12 +1560,17 @@ public class AbfsDfsClient extends AbfsClient {
     try {
       incrementAbfsRenamePath();
       op.execute(tracingContext);
+      // AbfsClientResult contains the AbfsOperation, If recovery happened or
+      // not, and the incompleteMetaDataState is true or false.
+      // If we successfully rename a path and isMetadataIncompleteState was
+      // true, then rename was recovered, else it didn't, this is why
+      // isMetadataIncompleteState is used for renameRecovery(as the 2nd param).
       return new AbfsClientRenameResult(op, isMetadataIncompleteState,
           isMetadataIncompleteState);
     } catch (AzureBlobFileSystemException e) {
-      if (!op.hasResult()) {
-        throw e;
-      }
+      // Handle rename exceptions and retry if applicable
+      handleRenameException(source, destination, continuation,
+          tracingContext, sourceEtag, op, isMetadataIncompleteState, e);
 
       // Check if the operation is a retried request and if the error code indicates
       // that the source path was not found. If so, attempt recovery using CTId.
@@ -1579,10 +1584,6 @@ public class AbfsDfsClient extends AbfsClient {
               true, isMetadataIncompleteState);
         }
       }
-
-      // Handle rename exceptions and retry if applicable
-      handleRenameException(source, destination, continuation,
-          tracingContext, sourceEtag, op, isMetadataIncompleteState);
 
       // Attempt recovery using ETag if applicable
       if (recoveryUsingEtag(source, destination, sourceEtag,
@@ -1617,6 +1618,9 @@ public class AbfsDfsClient extends AbfsClient {
     boolean hasEtag = !isEmpty(sourceEtag);
     boolean shouldAttemptRecovery = isRenameResilience() && getIsNamespaceEnabled();
     if (!hasEtag && shouldAttemptRecovery) {
+      // in case eTag is already not supplied to the API
+      // and rename resilience is expected and it is an HNS enabled account
+      // fetch the source etag to be used later in recovery
       try {
         final AbfsRestOperation srcStatusOp = getPathStatus(source,
             false, tracingContext, null);
@@ -1648,16 +1652,17 @@ public class AbfsDfsClient extends AbfsClient {
     try {
       incrementAbfsRenamePath();
       op.execute(tracingContext);
+      // AbfsClientResult contains the AbfsOperation, If recovery happened or
+      // not, and the incompleteMetaDataState is true or false.
+      // If we successfully rename a path and isMetadataIncompleteState was
+      // true, then rename was recovered, else it didn't, this is why
+      // isMetadataIncompleteState is used for renameRecovery(as the 2nd param).
       return new AbfsClientRenameResult(op, isMetadataIncompleteState,
           isMetadataIncompleteState);
     } catch (AzureBlobFileSystemException e) {
-      if (!op.hasResult()) {
-        throw e;
-      }
-
       // Handle rename exceptions and retry if applicable
       handleRenameException(source, destination, continuation,
-          tracingContext, sourceEtag, op, isMetadataIncompleteState);
+          tracingContext, sourceEtag, op, isMetadataIncompleteState, e);
 
       // Attempt recovery using ETag if applicable
       if (recoveryUsingEtag(source, destination, sourceEtag,
@@ -1781,18 +1786,22 @@ public class AbfsDfsClient extends AbfsClient {
   private void handleRenameException(final String source,
       final String destination, final String continuation,
       final TracingContext tracingContext, final String sourceEtag,
-      final AbfsRestOperation op, boolean isMetadataIncompleteState)
-      throws IOException {
-    // Check if the rename operation failed due to unauthorized overwrite
-    // and if so, throw a FileAlreadyExistsException.
+      final AbfsRestOperation op, boolean isMetadataIncompleteState,
+      AzureBlobFileSystemException e) throws IOException {
+    if (!op.hasResult()) {
+      throw e;
+    }
+
+    // ref: HADOOP-19393. Write permission checks can occur before validating
+    // rename operation's validity. If there is an existing destination path, it may be rejected
+    // with an authorization error. Catching and throwing FileAlreadyExistsException instead.
     if (UNAUTHORIZED_BLOB_OVERWRITE.getErrorCode()
         .equals(op.getResult().getStorageErrorCode())) {
       throw new FileAlreadyExistsException(ERR_FILE_ALREADY_EXISTS);
     }
 
-    // Check if the destination parent path is not found
-    // and if the metadata state is incomplete.
-    // If so, retry the rename operation.
+    // ref: HADOOP-18242. Rename failure occurring due to a rare case of
+    // tracking metadata being in incomplete state.
     if (RENAME_DESTINATION_PARENT_PATH_NOT_FOUND.getErrorCode()
         .equals(op.getResult().getStorageErrorCode())
         && !isMetadataIncompleteState) {
