@@ -25,16 +25,22 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
+import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MultipleDestinationMountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
+import org.apache.hadoop.hdfs.server.federation.resolver.order.LocalResolver;
 import org.apache.hadoop.hdfs.server.federation.router.RemoteMethod;
+import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
 import org.apache.hadoop.hdfs.server.federation.router.RouterClientProtocol;
 import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaUsage;
 import org.apache.hadoop.hdfs.server.federation.router.TestRouterRPCMultipleDestinationMountTableResolver;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -52,14 +58,21 @@ import static org.junit.Assert.assertTrue;
 public class TestRouterAsyncRPCMultipleDestinationMountTableResolver extends
     TestRouterRPCMultipleDestinationMountTableResolver {
 
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestRouterAsyncRPCMultipleDestinationMountTableResolver.class);
+
   @BeforeClass
   public static void setUp() throws Exception {
 
     // Build and start a federated cluster.
     cluster = new StateStoreDFSCluster(false, 3,
         MultipleDestinationMountTableResolver.class);
-    Configuration routerConf =
-        new RouterConfigBuilder().stateStore().admin().quota().rpc().build();
+    Configuration routerConf = new RouterConfigBuilder()
+        .stateStore()
+        .admin()
+        .quota()
+        .rpc()
+        .build();
     routerConf.setBoolean(DFS_ROUTER_ASYNC_RPC_ENABLE_KEY, true);
 
     Configuration hdfsConf = new Configuration(false);
@@ -82,6 +95,43 @@ public class TestRouterAsyncRPCMultipleDestinationMountTableResolver extends
         .getNamenode(cluster.getNameservices().get(2), null).getFileSystem();
     routerFs = (DistributedFileSystem) routerContext.getFileSystem();
     rpcServer =routerContext.getRouter().getRpcServer();
+  }
+
+  @Test
+  public void testLocalResolverGetDatanodesSubcluster() throws IOException {
+    String testPath = "/testLocalResolverGetDatanodesSubcluster";
+    Path path = new Path(testPath);
+    Map<String, String> destMap = new HashMap<>();
+    destMap.put("ns0", testPath);
+    destMap.put("ns1", testPath);
+    nnFs0.mkdirs(path);
+    nnFs1.mkdirs(path);
+    MountTable addEntry =
+        MountTable.newInstance(testPath, destMap);
+    addEntry.setQuota(new RouterQuotaUsage.Builder().build());
+    addEntry.setDestOrder(DestinationOrder.LOCAL);
+    assertTrue(addMountTable(addEntry));
+
+    Map<String, String> datanodesSubcluster = null;
+    try {
+      MultipleDestinationMountTableResolver resolver =
+          (MultipleDestinationMountTableResolver) routerContext.getRouter().getSubclusterResolver();
+      LocalResolver localResolver =
+          (LocalResolver) resolver.getOrderedResolver(DestinationOrder.LOCAL);
+      datanodesSubcluster = localResolver.getDatanodesSubcluster();
+    } catch (Exception e) {
+      LOG.info("Exception occurs when testLocalResolverGetDatanodesSubcluster.", e);
+    } finally {
+      RouterClient client = routerContext.getAdminClient();
+      MountTableManager mountTableManager = client.getMountTableManager();
+      RemoveMountTableEntryRequest req2 =
+          RemoveMountTableEntryRequest.newInstance(testPath);
+      mountTableManager.removeMountTableEntry(req2);
+      nnFs0.delete(new Path(testPath), true);
+      nnFs1.delete(new Path(testPath), true);
+    }
+    assertNotNull(datanodesSubcluster);
+    assertFalse(datanodesSubcluster.isEmpty());
   }
 
   @Override

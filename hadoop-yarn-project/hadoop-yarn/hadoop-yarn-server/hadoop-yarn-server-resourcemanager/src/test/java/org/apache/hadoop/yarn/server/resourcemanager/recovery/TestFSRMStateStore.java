@@ -19,7 +19,12 @@
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -50,8 +55,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestFSRMStateStore extends RMStateStoreTestBase {
 
@@ -71,11 +76,11 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
 
       TestFileSystemRMStore(Configuration conf) throws Exception {
         init(conf);
-        Assert.assertNull(fs);
+        assertNull(fs);
         assertTrue(workingDirPathURI.equals(fsWorkingPath));
         dispatcher.disableExitOnDispatchException();
         start();
-        Assert.assertNotNull(fs);
+        assertNotNull(fs);
       }
 
       public Path getVersionNode() {
@@ -128,11 +133,11 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       this.store = new TestFileSystemRMStore(conf);
       assertThat(store.getNumRetries()).isEqualTo(8);
       assertThat(store.getRetryInterval()).isEqualTo(900L);
-      Assert.assertTrue(store.fs.getConf() == store.fsConf);
+      assertTrue(store.fs.getConf() == store.fsConf);
       FileSystem previousFs = store.fs;
       store.startInternal();
-      Assert.assertTrue(store.fs != previousFs);
-      Assert.assertTrue(store.fs.getConf() == store.fsConf);
+      assertTrue(store.fs != previousFs);
+      assertTrue(store.fs.getConf() == store.fsConf);
       return store;
     }
 
@@ -172,7 +177,8 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
     }
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testFSRMStateStore() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     MiniDFSCluster cluster =
@@ -196,7 +202,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       fsOut.close();
 
       testRMAppStateStore(fsTester);
-      Assert.assertFalse(fsTester.workingDirPathURI
+      assertFalse(fsTester.workingDirPathURI
               .getFileSystem(conf).exists(tempAppAttemptFile));
       testRMDTSecretManagerStateStore(fsTester);
       testCheckVersion(fsTester);
@@ -213,7 +219,8 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testHDFSRMStateStore() throws Exception {
     final HdfsConfiguration conf = new HdfsConfiguration();
     UserGroupInformation yarnAdmin =
@@ -293,11 +300,12 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
         try {
           LOG.warn("\n\n ##Testing path [" + p + "]\n\n");
           fs.open(p);
-          Assert.fail("Super user should not be able to read ["+ UserGroupInformation.getCurrentUser() + "] [" + p.getName() + "]");
+          fail("Super user should not be able to read ["+
+              UserGroupInformation.getCurrentUser() + "] [" + p.getName() + "]");
         } catch (AccessControlException e) {
-          Assert.assertTrue(e.getMessage().contains("superuser is not allowed to perform this operation"));
+          assertTrue(e.getMessage().contains("superuser is not allowed to perform this operation"));
         } catch (Exception e) {
-          Assert.fail("Should get an AccessControlException here");
+          fail("Should get an AccessControlException here");
         }
       }
       if (stat.isDirectory()) {
@@ -310,7 +318,8 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
 
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testCheckMajorVersionChange() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     MiniDFSCluster cluster =
@@ -355,7 +364,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       RMStateStore store = fsTester.getRMStateStore();
       Version defaultVersion = fsTester.getCurrentVersion();
       store.checkVersion();
-      Assert.assertEquals(defaultVersion, store.loadVersion());
+      assertEquals(defaultVersion, store.loadVersion());
     } finally {
       cluster.shutdown();
     }
@@ -391,7 +400,8 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
             nodeCreatePath.getName() + ".new"));
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testFSRMStateStoreClientRetry() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     MiniDFSCluster cluster =
@@ -419,7 +429,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       clientThread.start();
       cluster.restartNameNode();
       clientThread.join();
-      Assert.assertFalse(assertionFailedInThread.get());
+      assertFalse(assertionFailedInThread.get());
     } finally {
       cluster.shutdown();
     }
