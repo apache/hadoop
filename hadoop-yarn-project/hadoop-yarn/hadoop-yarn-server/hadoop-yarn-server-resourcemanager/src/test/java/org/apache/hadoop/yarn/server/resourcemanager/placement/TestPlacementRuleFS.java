@@ -23,9 +23,9 @@ import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueueManager;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -37,10 +37,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementFactory.getPlacementRule;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -75,7 +75,7 @@ public class TestPlacementRuleFS {
   private QueueManager queueManager;
 
 
-  @Before
+  @BeforeEach
   public void initTest() {
     scheduler = mock(FairScheduler.class);
     // needed for all rules that rely on group info
@@ -85,7 +85,7 @@ public class TestPlacementRuleFS {
     when(scheduler.getQueueManager()).thenReturn(queueManager);
   }
 
-  @After
+  @AfterEach
   public void cleanTest() {
     queueManager = null;
     scheduler = null;
@@ -126,26 +126,26 @@ public class TestPlacementRuleFS {
   private void ruleCreateNoConfig(Class <? extends PlacementRule> ruleClass) {
     PlacementRule rule = getPlacementRule(ruleClass, null);
     String name = ruleClass.getName();
-    assertNotNull("Rule object should not be null for " + name, rule);
+    assertNotNull(rule, "Rule object should not be null for " + name);
   }
 
   private void ruleCreateWrongObject(
       Class <? extends PlacementRule> ruleClass) {
     PlacementRule rule = getPlacementRule(ruleClass, "a string object");
     String name = ruleClass.getName();
-    assertNotNull("Rule object should not be null for " + name, rule);
+    assertNotNull(rule, "Rule object should not be null for " + name);
   }
 
   private void ruleCreateBoolean(Class <? extends PlacementRule> ruleClass) {
     PlacementRule rule = getPlacementRule(ruleClass, true);
     String name = ruleClass.getName();
-    assertNotNull("Rule object should not be null for " + name, rule);
-    assertTrue("Create flag was not set to true on " + name,
-        getCreateFlag(rule));
+    assertNotNull(rule, "Rule object should not be null for " + name);
+    assertTrue(getCreateFlag(rule),
+        "Create flag was not set to true on " + name);
     rule = getPlacementRule(ruleClass, false);
-    assertNotNull("Rule object should not be null for " + name, rule);
-    assertFalse("Create flag was not set to false on " + name,
-        getCreateFlag(rule));
+    assertNotNull(rule, "Rule object should not be null for " + name);
+    assertFalse(getCreateFlag(rule),
+        "Create flag was not set to false on " + name);
   }
 
   private void ruleCreateElement(Class <? extends PlacementRule> ruleClass) {
@@ -153,21 +153,21 @@ public class TestPlacementRuleFS {
     Element conf = createConf(str);
     PlacementRule rule = getPlacementRule(ruleClass, conf);
     String name = ruleClass.getName();
-    assertNotNull("Rule object should not be null for " + name, rule);
-    assertTrue("Create flag was not set to true on " + name,
-        getCreateFlag(rule));
+    assertNotNull(rule, "Rule object should not be null for " + name);
+    assertTrue(getCreateFlag(rule),
+        "Create flag was not set to true on " + name);
     str = "<rule name='not used' create=\"false\" />";
     conf = createConf(str);
     rule = getPlacementRule(ruleClass, conf);
-    assertNotNull("Rule object should not be null for " + name, rule);
-    assertFalse("Create flag was not set to false on " + name,
-        getCreateFlag(rule));
+    assertNotNull(rule, "Rule object should not be null for " + name);
+    assertFalse(getCreateFlag(rule),
+        "Create flag was not set to false on " + name);
   }
 
   private void ruleInit(Class <? extends PlacementRule> ruleClass) {
     PlacementRule rule = getPlacementRule(ruleClass, null);
     String name = ruleClass.getName();
-    assertNotNull("Rule object should not be null for " + name, rule);
+    assertNotNull(rule, "Rule object should not be null for " + name);
     try {
       rule.initialize(scheduler);
     } catch (IOException ioe) {
@@ -183,8 +183,8 @@ public class TestPlacementRuleFS {
     } catch (IOException ioe) {
       exceptionThrown = true;
     }
-    assertTrue("Initialize with parent rule should have thrown exception " +
-            name, exceptionThrown);
+    assertTrue(exceptionThrown,
+        "Initialize with parent rule should have thrown exception " + name);
   }
 
   private Element createConf(String str) {

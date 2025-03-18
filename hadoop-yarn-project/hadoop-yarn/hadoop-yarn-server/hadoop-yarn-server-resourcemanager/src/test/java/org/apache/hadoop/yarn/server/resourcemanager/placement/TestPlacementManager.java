@@ -28,16 +28,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerAutoCreatedQueueBase.setupQueueConfiguration;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestPlacementManager {
 
@@ -56,7 +58,7 @@ public class TestPlacementManager {
     return parentQueue + DOT + leafQueue;
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
@@ -96,8 +98,7 @@ public class TestPlacementManager {
     asc.setQueue(YarnConfiguration.DEFAULT_QUEUE_NAME);
     asc.setApplicationName(APP_NAME);
 
-    Assert.assertNull("Placement should be null",
-        pm.placeApplication(asc, USER2));
+    assertNull(pm.placeApplication(asc, USER2), "Placement should be null");
     QueueMapping queueMappingEntity = QueueMapping.QueueMappingBuilder.create()
       .type(MappingType.APPLICATION)
       .source(APP_NAME)
@@ -112,7 +113,7 @@ public class TestPlacementManager {
     queuePlacementRules.add(anRule);
     pm.updateRules(queuePlacementRules);
     ApplicationPlacementContext pc = pm.placeApplication(asc, USER2);
-    Assert.assertNotNull(pc);
+    assertNotNull(pc);
   }
 
   @Test
@@ -135,13 +136,13 @@ public class TestPlacementManager {
 
     // As we are setting placement rule, It shouldn't update default
     // placement rule ie user-group. Number of placement rules should be 1.
-    Assert.assertEquals(1, pm.getPlacementRules().size());
+    assertEquals(1, pm.getPlacementRules().size());
     // Verifying if placement rule set is same as the one we configured
-    Assert.assertEquals(ugRule.getName(),
+    assertEquals(ugRule.getName(),
         pm.getPlacementRules().get(0).getName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (null != mockRM) {
       mockRM.stop();

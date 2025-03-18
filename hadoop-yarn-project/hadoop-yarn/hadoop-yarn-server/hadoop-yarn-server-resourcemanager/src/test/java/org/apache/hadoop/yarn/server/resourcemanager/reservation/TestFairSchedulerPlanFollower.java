@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -50,12 +51,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerTestBase;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.util.Clock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -70,9 +68,6 @@ public class TestFairSchedulerPlanFollower extends
   private Configuration conf;
   private FairSchedulerTestBase testHelper = new FairSchedulerTestBase();
 
-  @Rule
-  public TestName name = new TestName();
-
   protected Configuration createConfiguration() {
     Configuration conf = testHelper.createConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, FairScheduler.class,
@@ -81,7 +76,7 @@ public class TestFairSchedulerPlanFollower extends
     return conf;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = createConfiguration();
     ReservationSystemTestUtil.setupFSAllocationFile(ALLOC_FILE);
@@ -132,7 +127,7 @@ public class TestFairSchedulerPlanFollower extends
 
   @Override
   protected void checkDefaultQueueBeforePlanFollowerRun() {
-    Assert.assertNull(getDefaultQueue());
+    assertNull(getDefaultQueue());
   }
   @Override
   protected void verifyCapacity(Queue defQ) {
@@ -172,7 +167,7 @@ public class TestFairSchedulerPlanFollower extends
             false);
     assertNotNull(q);
     // For now we are setting both to same weight
-    Assert.assertEquals(expectedCapacity, q.getWeight(), 0.01);
+    assertEquals(expectedCapacity, q.getWeight(), 0.01);
   }
 
   @Override
@@ -192,7 +187,7 @@ public class TestFairSchedulerPlanFollower extends
     return new ApplicationACLsManager(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (scheduler != null) {
       fs.stop();

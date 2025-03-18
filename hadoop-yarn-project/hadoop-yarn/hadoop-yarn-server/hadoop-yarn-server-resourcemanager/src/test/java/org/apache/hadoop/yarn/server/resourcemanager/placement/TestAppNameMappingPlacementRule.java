@@ -30,14 +30,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.placement.FairQueuePlacementUtils.DOT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -55,7 +55,7 @@ public class TestAppNameMappingPlacementRule {
 
   private YarnConfiguration conf = new YarnConfiguration();
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
@@ -108,7 +108,7 @@ public class TestAppNameMappingPlacementRule {
     asc.setApplicationName(appName);
     ApplicationPlacementContext ctx = engine.getPlacementForApp(asc,
         user);
-    Assert.assertEquals(expectedQueue,
+    assertEquals(expectedQueue,
         ctx != null ? ctx.getQueue() : inputQueue);
   }
 

@@ -25,14 +25,12 @@ import net.jcip.annotations.NotThreadSafe;
 
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningQuotaException;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * This class tests the {@code CapacityOvertimePolicy} sharing policy.
  */
-@RunWith(value = Parameterized.class)
 @NotThreadSafe
 @SuppressWarnings("VisibilityModifier")
 public class TestCapacityOverTimePolicy extends BaseSharingPolicyTest {
@@ -43,8 +41,16 @@ public class TestCapacityOverTimePolicy extends BaseSharingPolicyTest {
   final static String TWOHOURPERIOD = "7200000";
   final static String ONEDAYPERIOD = "86400000";
 
-  @Parameterized.Parameters(name = "Duration {0}, height {1}," +
-          " numSubmission {2}, periodic {3})")
+  public void initTestCapacityOverTimePolicy(long pDuration,
+      double pHeight, int pNumSubmissions, String pRecurrenceExpression, Class pExpectedError) {
+    this.duration = pDuration;
+    this.height = pHeight;
+    this.numSubmissions = pNumSubmissions;
+    this.recurrenceExpression = pRecurrenceExpression;
+    this.expectedError = pExpectedError;
+    super.setup();
+  }
+
   public static Collection<Object[]> data() {
     return Arrays.asList(new Object[][] {
 
@@ -131,8 +137,14 @@ public class TestCapacityOverTimePolicy extends BaseSharingPolicyTest {
     return policy;
   }
 
-  @Test
-  public void testAllocation() throws IOException, PlanningException {
+  @ParameterizedTest(name = "Duration {0}, height {1}," +
+      " numSubmission {2}, periodic {3})")
+  @MethodSource("data")
+  public void testAllocation(long pDuration, double pHeight, int pNumSubmissions,
+      String pRecurrenceExpression, Class pExpectedError)
+      throws IOException, PlanningException {
+    initTestCapacityOverTimePolicy(pDuration, pHeight, pNumSubmissions,
+        pRecurrenceExpression, pExpectedError);
     runTest();
   }
 
