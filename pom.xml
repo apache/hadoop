@@ -67,6 +67,13 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
         <enabled>false</enabled>
       </snapshots>
     </repository>
+    <repository>
+      <id>thirdparty</id>
+      <url>https://repository.apache.org/content/repositories/orgapachehadoop-1433</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
   </repositories>
 
   <licenses>
