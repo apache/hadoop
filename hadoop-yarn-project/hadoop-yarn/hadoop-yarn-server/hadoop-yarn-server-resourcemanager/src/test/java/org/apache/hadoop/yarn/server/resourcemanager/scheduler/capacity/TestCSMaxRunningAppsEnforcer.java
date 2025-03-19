@@ -18,7 +18,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -43,8 +43,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestCSMaxRunningAppsEnforcer {
   private CapacitySchedulerQueueManager queueManager;
@@ -56,7 +56,7 @@ public class TestCSMaxRunningAppsEnforcer {
   private ActivitiesManager activitiesManager;
   private CapacitySchedulerConfiguration csConfig;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     csConfig = new CapacitySchedulerConfiguration();
     rmContext = mock(RMContext.class);

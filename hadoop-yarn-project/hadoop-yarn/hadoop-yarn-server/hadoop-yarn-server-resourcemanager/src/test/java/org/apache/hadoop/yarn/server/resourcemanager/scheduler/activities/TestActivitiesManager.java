@@ -55,18 +55,22 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
-import org.apache.hadoop.util.SystemClock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.hadoop.yarn.util.SystemClock;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
-import org.mockito.Mockito;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 /**
  * Test class for {@link ActivitiesManager}.
@@ -89,26 +93,26 @@ public class TestActivitiesManager {
 
   private ThreadPoolExecutor threadPoolExecutor;
 
-  @Before
+  @BeforeEach
   public void setup() {
-    rmContext = Mockito.mock(RMContext.class);
+    rmContext = mock(RMContext.class);
     Configuration conf = new Configuration();
-    Mockito.when(rmContext.getYarnConfiguration()).thenReturn(conf);
-    ResourceScheduler scheduler = Mockito.mock(ResourceScheduler.class);
-    Mockito.when(scheduler.getMinimumResourceCapability())
+    when(rmContext.getYarnConfiguration()).thenReturn(conf);
+    ResourceScheduler scheduler = mock(ResourceScheduler.class);
+    when(scheduler.getMinimumResourceCapability())
         .thenReturn(Resources.none());
-    Mockito.when(rmContext.getScheduler()).thenReturn(scheduler);
-    LeafQueue mockQueue = Mockito.mock(LeafQueue.class);
+    when(rmContext.getScheduler()).thenReturn(scheduler);
+    LeafQueue mockQueue = mock(LeafQueue.class);
     Map<ApplicationId, RMApp> rmApps = new ConcurrentHashMap<>();
-    Mockito.doReturn(rmApps).when(rmContext).getRMApps();
+    doReturn(rmApps).when(rmContext).getRMApps();
     apps = new ArrayList<>();
     for (int i = 0; i < NUM_APPS; i++) {
       ApplicationAttemptId appAttemptId =
           TestUtils.getMockApplicationAttemptId(i, 0);
-      RMApp mockApp = Mockito.mock(RMApp.class);
-      Mockito.doReturn(appAttemptId.getApplicationId()).when(mockApp)
+      RMApp mockApp = mock(RMApp.class);
+      doReturn(appAttemptId.getApplicationId()).when(mockApp)
           .getApplicationId();
-      Mockito.doReturn(FinalApplicationStatus.UNDEFINED).when(mockApp)
+      doReturn(FinalApplicationStatus.UNDEFINED).when(mockApp)
           .getFinalApplicationStatus();
       rmApps.put(appAttemptId.getApplicationId(), mockApp);
       FiCaSchedulerApp app =
@@ -163,12 +167,12 @@ public class TestActivitiesManager {
     }
     // Check activities for all nodes should be recorded and every node should
     // have only one allocation information.
-    Assert.assertEquals(NUM_NODES,
+    assertEquals(NUM_NODES,
         activitiesManager.historyNodeAllocations.size());
     for (List<List<NodeAllocation>> nodeAllocationsForThisNode :
         activitiesManager.historyNodeAllocations.values()) {
-      Assert.assertEquals(1, nodeAllocationsForThisNode.size());
-      Assert.assertEquals(1, nodeAllocationsForThisNode.get(0).size());
+      assertEquals(1, nodeAllocationsForThisNode.size());
+      assertEquals(1, nodeAllocationsForThisNode.get(0).size());
     }
   }
 
@@ -207,7 +211,7 @@ public class TestActivitiesManager {
       future.get();
     }
     // Check activities for multi-nodes should be recorded only once
-    Assert.assertEquals(1, activitiesManager.historyNodeAllocations.size());
+    assertEquals(1, activitiesManager.historyNodeAllocations.size());
   }
 
 
@@ -254,13 +258,14 @@ public class TestActivitiesManager {
     Queue<AppAllocation> appAllocations =
         activitiesManager.completedAppAllocations
             .get(randomApp.getApplicationId());
-    Assert.assertEquals(nTasks, appAllocations.size());
+    assertEquals(nTasks, appAllocations.size());
     for(AppAllocation aa : appAllocations) {
-      Assert.assertEquals(NUM_NODES, aa.getAllocationAttempts().size());
+      assertEquals(NUM_NODES, aa.getAllocationAttempts().size());
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppActivitiesTTL() throws Exception {
     long cleanupIntervalMs = 100;
     long appActivitiesTTL = 1000;
@@ -295,7 +300,7 @@ public class TestActivitiesManager {
     AppActivitiesInfo appActivitiesInfo = newActivitiesManager
         .getAppActivitiesInfo(app.getApplicationId(), null, null, null, -1,
             false, 3);
-    Assert.assertEquals(numActivities,
+    assertEquals(numActivities,
         appActivitiesInfo.getAllocations().size());
     // sleep until all app activities expired
     Thread.sleep(cleanupIntervalMs + appActivitiesTTL);
@@ -303,11 +308,12 @@ public class TestActivitiesManager {
     appActivitiesInfo = newActivitiesManager
         .getAppActivitiesInfo(app.getApplicationId(), null, null, null, -1,
             false, 3);
-    Assert.assertEquals(0,
+    assertEquals(0,
         appActivitiesInfo.getAllocations().size());
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppActivitiesPerformance() {
     // start recording activities for first app
     SchedulerApplicationAttempt app = apps.get(0);
@@ -343,12 +349,12 @@ public class TestActivitiesManager {
       AppActivitiesInfo appActivitiesInfo = activitiesManager
           .getAppActivitiesInfo(app.getApplicationId(), null, null, null, -1,
               false, 100);
-      Assert.assertEquals(numActivities,
+      assertEquals(numActivities,
           appActivitiesInfo.getAllocations().size());
-      Assert.assertEquals(1,
+      assertEquals(1,
           appActivitiesInfo.getAllocations().get(0).getChildren()
               .size());
-      Assert.assertEquals(numNodes,
+      assertEquals(numNodes,
           appActivitiesInfo.getAllocations().get(0).getChildren()
               .get(0).getChildren().size());
       return null;
@@ -361,15 +367,15 @@ public class TestActivitiesManager {
       AppActivitiesInfo appActivitiesInfo = activitiesManager
           .getAppActivitiesInfo(app.getApplicationId(), null, null,
               RMWSConsts.ActivitiesGroupBy.DIAGNOSTIC, -1, false, 100);
-      Assert.assertEquals(numActivities,
+      assertEquals(numActivities,
           appActivitiesInfo.getAllocations().size());
-      Assert.assertEquals(1,
+      assertEquals(1,
           appActivitiesInfo.getAllocations().get(0).getChildren()
               .size());
-      Assert.assertEquals(1,
+      assertEquals(1,
           appActivitiesInfo.getAllocations().get(0).getChildren()
               .get(0).getChildren().size());
-      Assert.assertEquals(numNodes,
+      assertEquals(numNodes,
           appActivitiesInfo.getAllocations().get(0).getChildren()
               .get(0).getChildren().get(0).getNodeIds().size());
       return null;
@@ -382,14 +388,14 @@ public class TestActivitiesManager {
       AppActivitiesInfo appActivitiesInfo = activitiesManager
           .getAppActivitiesInfo(app.getApplicationId(), null, null,
               RMWSConsts.ActivitiesGroupBy.DIAGNOSTIC, -1, true, 100);
-      Assert.assertEquals(1, appActivitiesInfo.getAllocations().size());
-      Assert.assertEquals(1,
+      assertEquals(1, appActivitiesInfo.getAllocations().size());
+      assertEquals(1,
           appActivitiesInfo.getAllocations().get(0).getChildren()
               .size());
-      Assert.assertEquals(1,
+      assertEquals(1,
           appActivitiesInfo.getAllocations().get(0).getChildren()
               .get(0).getChildren().size());
-      Assert.assertEquals(numNodes,
+      assertEquals(numNodes,
           appActivitiesInfo.getAllocations().get(0).getChildren()
               .get(0).getChildren().get(0).getNodeIds().size());
       return null;
@@ -398,7 +404,8 @@ public class TestActivitiesManager {
         testingTimes);
   }
 
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testAppActivitiesMaxQueueLengthUpdate()
       throws TimeoutException, InterruptedException {
     Configuration conf = new Configuration();
@@ -413,46 +420,46 @@ public class TestActivitiesManager {
     for (int i = 0; i < numNodes; i++) {
       mockNodes.put(NodeId.newInstance("node" + i, 0), mock(RMNode.class));
     }
-    CapacityScheduler cs = Mockito.mock(CapacityScheduler.class);
-    RMContext mockRMContext = Mockito.mock(RMContext.class);
-    Mockito.when(mockRMContext.getRMNodes()).thenReturn(mockNodes);
-    Mockito.when(mockRMContext.getYarnConfiguration()).thenReturn(conf);
-    Mockito.when(mockRMContext.getScheduler()).thenReturn(cs);
+    CapacityScheduler cs = mock(CapacityScheduler.class);
+    RMContext mockRMContext = mock(RMContext.class);
+    when(mockRMContext.getRMNodes()).thenReturn(mockNodes);
+    when(mockRMContext.getYarnConfiguration()).thenReturn(conf);
+    when(mockRMContext.getScheduler()).thenReturn(cs);
     /*
      * Test for async-scheduling with multi-node placement disabled
      */
-    Mockito.when(cs.isMultiNodePlacementEnabled()).thenReturn(false);
+    when(cs.isMultiNodePlacementEnabled()).thenReturn(false);
     int numAsyncSchedulerThreads = 3;
-    Mockito.when(cs.getNumAsyncSchedulerThreads())
+    when(cs.getNumAsyncSchedulerThreads())
         .thenReturn(numAsyncSchedulerThreads);
     ActivitiesManager newActivitiesManager =
         new ActivitiesManager(mockRMContext);
-    Assert.assertEquals(1,
+    assertEquals(1,
         newActivitiesManager.getAppActivitiesMaxQueueLength());
     newActivitiesManager.init(conf);
     newActivitiesManager.start();
     GenericTestUtils.waitFor(
         () -> newActivitiesManager.getAppActivitiesMaxQueueLength()
             == numNodes * numAsyncSchedulerThreads, 100, 3000);
-    Assert.assertEquals(15,
+    assertEquals(15,
         newActivitiesManager.getAppActivitiesMaxQueueLength());
     /*
      * Test for HB-driven scheduling with multi-node placement disabled
      */
-    Mockito.when(cs.getNumAsyncSchedulerThreads()).thenReturn(0);
+    when(cs.getNumAsyncSchedulerThreads()).thenReturn(0);
     GenericTestUtils.waitFor(
         () -> newActivitiesManager.getAppActivitiesMaxQueueLength()
             == numNodes * 1.2, 100, 3000);
-    Assert.assertEquals(6,
+    assertEquals(6,
         newActivitiesManager.getAppActivitiesMaxQueueLength());
     /*
      * Test for scheduling with multi-node placement enabled
      */
-    Mockito.when(cs.isMultiNodePlacementEnabled()).thenReturn(true);
+    when(cs.isMultiNodePlacementEnabled()).thenReturn(true);
     GenericTestUtils.waitFor(
         () -> newActivitiesManager.getAppActivitiesMaxQueueLength()
             == configuredAppActivitiesMaxQueueLength, 100, 3000);
-    Assert.assertEquals(1,
+    assertEquals(1,
         newActivitiesManager.getAppActivitiesMaxQueueLength());
   }
 
@@ -480,8 +487,8 @@ public class TestActivitiesManager {
 
     public TestingActivitiesManager(RMContext rmContext) {
       super(rmContext);
-      super.completedNodeAllocations = Mockito.spy(new ConcurrentHashMap<>());
-      Mockito.doAnswer((invocationOnMock) -> {
+      super.completedNodeAllocations = spy(new ConcurrentHashMap<>());
+      doAnswer((invocationOnMock) -> {
         NodeId nodeId = (NodeId) invocationOnMock.getArguments()[0];
         List<NodeAllocation> nodeAllocations =
             (List<NodeAllocation>) invocationOnMock.getArguments()[1];

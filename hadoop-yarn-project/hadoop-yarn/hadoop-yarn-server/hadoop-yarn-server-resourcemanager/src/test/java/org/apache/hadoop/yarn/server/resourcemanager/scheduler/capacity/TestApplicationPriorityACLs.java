@@ -37,9 +37,11 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.ACLsTestBase;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestApplicationPriorityACLs extends ACLsTestBase {
 
@@ -143,9 +145,9 @@ public class TestApplicationPriorityACLs extends ACLsTestBase {
         .newInstance(appSubmissionContext);
     try {
       submitterClient.submitApplication(submitRequest);
-      Assert.fail();
+      fail();
     } catch (YarnException ex) {
-      Assert.assertTrue(ex.getCause() instanceof RemoteException);
+      assertTrue(ex.getCause() instanceof RemoteException);
     }
   }
 
@@ -167,10 +169,10 @@ public class TestApplicationPriorityACLs extends ACLsTestBase {
     try {
       GetApplicationReportResponse response = submitterClient
           .getApplicationReport(request);
-      Assert.assertEquals(response.getApplicationReport().getPriority(),
+      assertEquals(response.getApplicationReport().getPriority(),
           Priority.newInstance(priority));
     } catch (YarnException e) {
-      Assert.fail("Application submission should not fail.");
+      fail("Application submission should not fail.");
     }
   }
 
