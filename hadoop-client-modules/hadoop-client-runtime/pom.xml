@@ -160,7 +160,6 @@
                       <exclude>org.eclipse.jetty:jetty-server</exclude>
                       <exclude>org.eclipse.jetty:jetty-http</exclude>
                       <exclude>org.eclipse.jetty:jetty-io</exclude>
-                      <exclude>org.eclipse.jetty:jetty-webapp</exclude>
                       <exclude>org.eclipse.jetty:jetty-continuation</exclude>
                       <exclude>org.ow2.asm:*</exclude>
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
