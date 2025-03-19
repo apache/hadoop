@@ -60,6 +60,8 @@ public class DelegationSASGenerator extends SASGenerator {
       case SASTokenProvider.CREATE_DIRECTORY_OPERATION:
       case SASTokenProvider.WRITE_OPERATION:
       case SASTokenProvider.SET_PROPERTIES_OPERATION:
+      case SASTokenProvider.LEASE_BLOB_OPERATION:
+      case SASTokenProvider.COPY_BLOB_DST_OPERATION:
         sp = "w";
         break;
       case SASTokenProvider.DELETE_OPERATION:
@@ -75,11 +77,16 @@ public class DelegationSASGenerator extends SASGenerator {
       case SASTokenProvider.GET_STATUS_OPERATION:
         sp = "e";
         break;
+      case SASTokenProvider.LIST_OPERATION_BLOB:
+        sp = "l";
+        sr="c";
+        break;
       case SASTokenProvider.LIST_OPERATION:
         sp = "l";
         break;
       case SASTokenProvider.GET_PROPERTIES_OPERATION:
       case SASTokenProvider.READ_OPERATION:
+      case SASTokenProvider.COPY_BLOB_SRC_OPERATION:
         sp = "r";
         break;
       case SASTokenProvider.RENAME_DESTINATION_OPERATION:

@@ -91,7 +91,9 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   public void setup() throws Exception {
     isHNSEnabled = this.getConfiguration().getBoolean(
         TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
-    Assume.assumeTrue(isHNSEnabled);
+    if(!isHNSEnabled){
+      assumeBlobServiceType();
+    }
     createFilesystemForSASTests();
     super.setup();
   }
@@ -99,6 +101,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   @Test
   // Test filesystem operations access, create, mkdirs, setOwner, getFileStatus
   public void testCheckAccess() throws Exception {
+    assumeHnsEnabled();
     final AzureBlobFileSystem fs = getFileSystem();
 
     Path rootPath = new Path("/");
@@ -217,6 +220,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
 
   @Test
   public void checkExceptionForRenameOverwrites() throws Exception {
+    assumeHnsEnabled();
     final AzureBlobFileSystem fs = getFileSystem();
 
     Path src = new Path("a/b/f1.txt");
@@ -315,6 +319,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   // Test filesystem operations setAcl, getAclStatus, removeAcl
   // setPermissions and getFileStatus
   public void testAcl() throws Exception {
+    assumeHnsEnabled();
     final AzureBlobFileSystem fs = getFileSystem();
     Path reqPath = new Path(UUID.randomUUID().toString());
 
@@ -344,6 +349,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   @Test
   // Test getFileStatus and getAclStatus operations on root path
   public void testRootPath() throws Exception {
+    assumeHnsEnabled();
     final AzureBlobFileSystem fs = getFileSystem();
     Path rootPath = new Path(AbfsHttpConstants.ROOT_PATH);
 
@@ -443,6 +449,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   @Test
   // SetPermission should fail when saoid is not the owner and succeed when it is.
   public void testSetPermissionForNonOwner() throws Exception {
+    assumeHnsEnabled();
     final AzureBlobFileSystem fs = getFileSystem();
 
     Path rootPath = new Path("/");
@@ -478,6 +485,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   @Test
   // Without saoid or suoid, setPermission should succeed with sp=p for a non-owner.
   public void testSetPermissionWithoutAgentForNonOwner() throws Exception {
+    assumeHnsEnabled();
     final AzureBlobFileSystem fs = getFileSystem();
     Path path = new Path(MockDelegationSASTokenProvider.NO_AGENT_PATH);
     fs.create(path).close();
