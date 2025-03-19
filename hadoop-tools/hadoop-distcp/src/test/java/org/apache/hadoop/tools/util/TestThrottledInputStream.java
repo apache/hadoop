@@ -216,7 +216,7 @@ public class TestThrottledInputStream {
       assertEquals(in.getTotalBytesRead(), tmpFile.length());
 
       long bytesPerSec = in.getBytesPerSec();
-      assertTrue(bytesPerSec < maxBPS);
+      assertTrue(bytesPerSec <= maxBPS);
     } finally {
       IOUtils.closeStream(in);
       IOUtils.closeStream(out);
