@@ -23,7 +23,7 @@ declare -A rename_configs_map=(
     ["rename.dir"]="rename.key" # fs.azure.atomic.rename.dir to fs.azure.atomic.rename.key
     ["block.blob.buffered.pread.disable"]="buffered.pread.disable" #fs.azure.block.blob.buffered.pread.disable to fs.azure.buffered.pread.disable
     ["fs.azure.sas"]="fs.azure.sas.fixed.token." #fs.azure.sas.CONTAINER_NAME.ACCOUNT_NAME to fs.azure.sas.fixed.token.CONTAINER_NAME.ACCOUNT_NAME
-    ["check.block.md5"]="enable.checksum.validation" #Fs.azure.check.block.md5 to fs.azure.enable.checksum.validation
+    ["check.block.md5"]="enable.checksum.validation" #fs.azure.check.block.md5 to fs.azure.enable.checksum.validation
 )
 
 # Configs not supported in WASB that would throw error
@@ -37,20 +37,28 @@ unsupported_configs_list=(
 # Configurations that are not required in ABFS Driver and can be removed
 obsolete_configs_list=(
     "copyblob.retry" #fs.azure.io.copyblob.retry.min.backoff.interval, fs.azure.io.copyblob.retry.max.backoff.interval, fs.azure.io.copyblob.retry.backoff.interval, fs.azure.io.copyblob.retry.max.retries
-    "fsck.temp.expiry.seconds" #fs.azure.fsck.temp.expiry.seconds
-    "selfthrottling" #fs.azure.selfthrottling.enable, fs.azure.selfthrottling.read.factor, fs.azure.selfthrottling.write.factor
+    "fsck.temp" #fs.azure.fsck.temp.expiry.seconds
+    "azure.selfthrottling" #fs.azure.selfthrottling.enable, fs.azure.selfthrottling.read.factor, fs.azure.selfthrottling.write.factor
     "rename.threads" #fs.azure.rename.threads
     "delete.threads" #fs.azure.delete.threads
     "secure.mode" #fs.azure.secure.mode
     "local.sas.key" #fs.azure.local.sas.key.mode
-    "authorization" #Fs.azure.authorization, Fs.azure.authorization.caching.enable , Fs.azure.authorization.caching.maxentries, Fs.azure.authorization.cacheentry.expiry.period, fs.azure.authorization.remote.service.urls
-    "saskey" #Fs.azure.saskey.cacheentry.expiry.period , fs.azure.saskey.usecontainersaskeyforallaccess
-    "chown" #Fs.azure.chown.allowed.userlist
-    "chmod" #Fs.azure.chmod.allowed.userlist
-    "daemon" #Fs.azure.daemon.userlist
-    "kerberos" #Fs.azure.enable.kerberos.support
-    "emulator" #fs.azure.storage.emulator.account.name
-    "case.sensitive" #Fs.azure.blob.metadata.key.case.sensitive
+    "azure.authorization" #fs.azure.authorization, fs.azure.authorization.caching.enable , fs.azure.authorization.caching.maxentries, fs.azure.authorization.cacheentry.expiry.period, fs.azure.authorization.remote.service.urls
+    "azure.saskey" #fs.azure.saskey.cacheentry.expiry.period , fs.azure.saskey.usecontainersaskeyforallaccess
+    "chown.allowed" #fs.azure.chown.allowed.userlist
+    "chmod.allowed" #fs.azure.chmod.allowed.userlist
+    "daemon.userlist" #fs.azure.daemon.userlist
+    "kerberos.support" #fs.azure.enable.kerberos.support
+    "storage.emulator" #fs.azure.storage.emulator.account.name
+    "case.sensitive" #fs.azure.blob.metadata.key.case.sensitive
+    "permissions.supergroup" #fs.azure.permissions.supergroup 
+    "service.urls" #fs.azure.cred.service.urls , fs.azure.delegation.token.service.urls, fs.azure.authorization.remote.service.urls  
+    "cacheentry.expiry" #fs.azure.cacheentry.expiry.period
+    "storage.timeout" #fs.azure.storage.timeout
+    "override.canonical" #fs.azure.override.canonical.service.name
+    "flatlist.enable" #fs.azure.flatlist.enable
+    "skip.metrics" #fs.azure.skip.metrics
+    "client.logging" #fs.azure.storage.client.logging
 )
 
 # Stop the script if any unsupported config is found
