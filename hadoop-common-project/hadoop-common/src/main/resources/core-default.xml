@@ -2405,6 +2405,16 @@ The switch to turn S3A auditing on or off.
 
 <!-- ipc properties -->
 <property>
+  <name>ipc.client.async.calls.check.enable</name>
+  <value>false</value>
+  <description>
+    Whether property ipc.client.async.calls.max is effective or not.
+    If true, use ipc.client.async.calls.max to limit the number of outstanding async calls.
+    If false, ipc.client.async.calls.max is ignored.
+  </description>
+</property>
+
+<property>
   <name>ipc.client.async.calls.max</name>
   <value>100</value>
   <description>
