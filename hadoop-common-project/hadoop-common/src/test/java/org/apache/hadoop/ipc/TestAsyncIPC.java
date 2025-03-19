@@ -83,7 +83,7 @@ public class TestAsyncIPC {
         new HashMap<Integer, Future<LongWritable>>();
     Map<Integer, Long> expectedValues = new HashMap<Integer, Long>();
 
-    public AsyncCaller(Client client, InetSocketAddress server, int count,
+    AsyncCaller(Client client, InetSocketAddress server, int count,
         boolean checkAsyncCallEnabled) {
       this.client = client;
       client.setAsyncCallCheckEabled(checkAsyncCallEnabled);
