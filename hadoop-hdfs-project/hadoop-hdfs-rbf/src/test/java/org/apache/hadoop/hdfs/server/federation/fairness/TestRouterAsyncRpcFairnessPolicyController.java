@@ -46,7 +46,7 @@ public class TestRouterAsyncRpcFairnessPolicyController {
   private static String nameServices =
       "ns1.nn1, ns1.nn2, ns2.nn1, ns2.nn2";
   private static int perNsPermits = 30;
-  
+
   @Test
   public void testHandlerAllocationEqualAssignment() {
     RouterRpcFairnessPolicyController routerRpcFairnessPolicyController

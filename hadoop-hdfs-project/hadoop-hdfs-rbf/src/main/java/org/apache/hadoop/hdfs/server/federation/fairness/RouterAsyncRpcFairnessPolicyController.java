@@ -41,7 +41,7 @@ public class RouterAsyncRpcFairnessPolicyController extends
       LoggerFactory.getLogger(RouterAsyncRpcFairnessPolicyController.class);
 
   public static final String INIT_MSG = "Max async call permits per nameservice: %d";
-  
+
   public RouterAsyncRpcFairnessPolicyController(Configuration conf) {
     init(conf);
   }
