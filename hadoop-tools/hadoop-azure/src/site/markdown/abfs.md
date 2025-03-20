@@ -663,13 +663,13 @@ To know more about how SAS Authentication works refer to
 [Grant limited access to Azure Storage resources using shared access signatures (SAS)](https://learn.microsoft.com/en-us/azure/storage/common/storage-sas-overview)
 
 There are three types of SAS supported by Azure Storage:
-- [User Delegation SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas): Recommended for use with ABFS Driver with HNS Enabled ADLS Gen2 accounts. It is Identity based SAS that works at blob/directory level)
+- [User Delegation SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas): Recommended for use with ABFS Driver with HNS Enabled ADLS Gen2 accounts or HNS-Disabled Blob Storage accounts. It is Identity based SAS that works at blob/directory level)
 - [Service SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-service-sas): Global and works at container level.
 - [Account SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-account-sas): Global and works at account level.
 
 #### Known Issues With SAS
-- SAS Based Authentication works only with HNS Enabled ADLS Gen2 Accounts which
-is a recommended account type to be used with ABFS.
+- SAS Based Authentication works with HNS Enabled ADLS Gen2 Accounts (which
+is a recommended account type to be used with ABFS) and HNS-Disabled Blob Storage accounts.
 - Certain root level operations are known to fail with SAS Based Authentication.
 
 #### Using User Delegation SAS with ABFS
@@ -737,7 +737,7 @@ the following configurations apart from above two:
 
 - **Security**: More secure than Shared Key and allows granting limited access
 to data without exposing the access key. Recommended to be used only with HNS Enabled,
-ADLS Gen 2 storage accounts.
+ADLS Gen 2 storage accounts or HNS-Disabled Blob Storage accounts.
 
 #### Using Account/Service SAS with ABFS
 
