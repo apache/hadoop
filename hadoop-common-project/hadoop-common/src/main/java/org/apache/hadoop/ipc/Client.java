@@ -202,13 +202,22 @@ public class Client implements AutoCloseable {
   private final boolean fallbackAllowed;
   private final boolean bindToWildCardAddress;
   private final byte[] clientId;
-  private final int maxAsyncCalls;
-  private boolean asyncCallCheckEabled;
+  private int maxAsyncCalls;
   private final AtomicInteger asyncCallCounter = new AtomicInteger(0);
 
   @VisibleForTesting
   public int getAsyncCallCounter() {
     return asyncCallCounter.get();
+  }
+
+  @VisibleForTesting
+  public void setMaxAsyncCalls(int limits) {
+    this.maxAsyncCalls = limits;
+  }
+
+  @VisibleForTesting
+  public boolean isAsyncCallCheckEabled() {
+    return maxAsyncCalls >= 0;
   }
 
   /**
@@ -1377,9 +1386,6 @@ public class Client implements AutoCloseable {
     this.maxAsyncCalls = conf.getInt(
         CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY,
         CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_DEFAULT);
-    this.asyncCallCheckEabled = conf.getBoolean(
-        CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_CHECK_ENABLE_KEY,
-        CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_CHECK_ENABLE_DEFAULT);
   }
 
   /**
@@ -1395,11 +1401,6 @@ public class Client implements AutoCloseable {
   public String toString() {
     return getClass().getSimpleName() + "-"
         + StringUtils.byteToHexString(clientId);
-  }
-
-  @VisibleForTesting
-  public void setAsyncCallCheckEabled(boolean enabled) {
-    this.asyncCallCheckEabled = enabled;
   }
 
   /** Return the socket factory of this client
@@ -1474,7 +1475,7 @@ public class Client implements AutoCloseable {
   }
 
   private void checkAsyncCall() throws IOException {
-    if (isAsynchronousMode() && asyncCallCheckEabled) {
+    if (isAsynchronousMode() && isAsyncCallCheckEabled()) {
       if (asyncCallCounter.incrementAndGet() > maxAsyncCalls) {
         String errMsg = String.format(
             "Exceeded limit of max asynchronous calls: %d, " +
@@ -1532,7 +1533,7 @@ public class Client implements AutoCloseable {
         throw ioe;
       }
     } catch (Exception e) {
-      if (isAsynchronousMode() && asyncCallCheckEabled) {
+      if (isAsynchronousMode() && isAsyncCallCheckEabled()) {
         releaseAsyncCall();
       }
       throw e;
@@ -1541,7 +1542,7 @@ public class Client implements AutoCloseable {
     if (isAsynchronousMode()) {
       CompletableFuture<Writable> result = call.rpcResponseFuture.handle(
           (rpcResponse, e) -> {
-            if (asyncCallCheckEabled) {
+            if (isAsyncCallCheckEabled()) {
               releaseAsyncCall();
             }
             if (e != null) {

@@ -355,9 +355,6 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String  IPC_CLIENT_ASYNC_CALLS_MAX_KEY =
       "ipc.client.async.calls.max";
   public static final int     IPC_CLIENT_ASYNC_CALLS_MAX_DEFAULT = 100;
-  public static final String  IPC_CLIENT_ASYNC_CALLS_CHECK_ENABLE_KEY =
-      "ipc.client.async.calls.check.enable";
-  public static final boolean IPC_CLIENT_ASYNC_CALLS_CHECK_ENABLE_DEFAULT = false;
   public static final String  IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY = "ipc.client.fallback-to-simple-auth-allowed";
   public static final boolean IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT = false;
 

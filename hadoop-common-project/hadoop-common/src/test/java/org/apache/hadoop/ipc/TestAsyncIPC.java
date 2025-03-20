@@ -68,7 +68,6 @@ public class TestAsyncIPC {
   public void setupConf() {
     conf = new Configuration();
     conf.setInt(CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY, 10000);
-    conf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_CHECK_ENABLE_KEY, true);
     Client.setPingInterval(conf, TestIPC.PING_INTERVAL);
     // Set asynchronous mode for main thread.
     Client.setAsynchronousMode(true);
@@ -86,7 +85,7 @@ public class TestAsyncIPC {
     AsyncCaller(Client client, InetSocketAddress server, int count,
         boolean checkAsyncCallEnabled) {
       this.client = client;
-      client.setAsyncCallCheckEabled(checkAsyncCallEnabled);
+      client.setMaxAsyncCalls(-1);
       this.server = server;
       this.count = count;
       // Set asynchronous mode, since AsyncCaller extends Thread.
