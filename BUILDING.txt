@@ -6,7 +6,7 @@ Requirements:
 * Unix System
 * JDK 1.8
 * Maven 3.3 or later
-* Boost 1.72 (if compiling native code)
+* Boost 1.86.0 (if compiling native code)
 * Protocol Buffers 3.21.12 (if compiling native code)
 * CMake 3.19 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
@@ -82,8 +82,8 @@ Refer to  dev-support/docker/Dockerfile):
   $ make -j$(nproc)
   $ sudo make install
 * Boost
-  $ curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2
-  $ tar --bzip2 -xf boost_1_72_0.tar.bz2 && cd boost_1_72_0
+  $ curl -L https://sourceforge.net/projects/boost/files/boost/1.86.0/boost_1_86_0.tar.bz2/download > boost_1_86_0.tar.bz2
+  $ tar --bzip2 -xf boost_1_86_0.tar.bz2 && cd boost_1_86_0
   $ ./bootstrap.sh --prefix=/usr/
   $ ./b2 --without-python
   $ sudo ./b2 --without-python install
@@ -493,9 +493,9 @@ Building on CentOS 8
   $ sudo make install
 
 * Install boost.
-  $ curl -L -o boost_1_72_0.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
-  $ tar xjf boost_1_72_0.tar.bz2
-  $ cd boost_1_72_0
+  $ curl -L -o boost_1_86_0.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.86.0/boost_1_86_0.tar.bz2/download
+  $ tar xjf boost_1_86_0.tar.bz2
+  $ cd boost_1_86_0
   $ ./bootstrap.sh --prefix=/usr/local
   $ ./b2
   $ sudo ./b2 install
@@ -526,7 +526,7 @@ Requirements:
 * Windows 10
 * JDK 1.8
 * Maven 3.0 or later (maven.apache.org)
-* Boost 1.72 (boost.org)
+* Boost 1.86.0 (boost.org)
 * Protocol Buffers 3.21.12 (https://github.com/protocolbuffers/protobuf/tags)
 * CMake 3.19 or newer (cmake.org)
 * Visual Studio 2019 (visualstudio.com)
