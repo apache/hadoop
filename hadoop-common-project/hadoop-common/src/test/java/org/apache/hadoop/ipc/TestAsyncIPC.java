@@ -85,7 +85,10 @@ public class TestAsyncIPC {
     AsyncCaller(Client client, InetSocketAddress server, int count,
         boolean checkAsyncCallEnabled) {
       this.client = client;
-      client.setMaxAsyncCalls(-1);
+      // Disable checkAsyncCall.
+      if (!checkAsyncCallEnabled) {
+        this.client.setMaxAsyncCalls(-1);
+      }
       this.server = server;
       this.count = count;
       // Set asynchronous mode, since AsyncCaller extends Thread.
