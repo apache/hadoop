@@ -385,8 +385,7 @@ public class AbfsBlobClient extends AbfsClient {
 
     // Perform Pending Rename Redo Operation on Atomic Rename Paths.
     // Crashed HBase log rename recovery can be done by Filesystem.listStatus.
-    if (tracingContext != null
-        && tracingContext.getOpType() == FSOperationType.LISTSTATUS
+    if (tracingContext.getOpType() == FSOperationType.LISTSTATUS
         && op.getResult() != null
         && op.getResult().getStatusCode() == HTTP_OK) {
       retryRenameOnAtomicEntriesInListResults(tracingContext,
@@ -1626,14 +1625,14 @@ public class AbfsBlobClient extends AbfsClient {
         throw new AbfsDriverException(e);
       }
     } catch (IOException e) {
-      LOG.error("Unable to deserialize list results", e);
+      LOG.error("Unable to deserialize list results for uri {}", uri, e);
       throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, e);
     }
 
     try {
       return filterDuplicateEntriesAndRenamePendingFiles(listResultSchema, uri);
     } catch (IOException e) {
-      LOG.error("Unable to filter list results", e);
+      LOG.error("Unable to filter list results for uri {}", uri, e);
       throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, e);
     }
   }
@@ -1965,12 +1964,18 @@ public class AbfsBlobClient extends AbfsClient {
     return listResponseData;
   }
 
+  /**
+   * Check if the entry is a rename pending json file path.
+   * @param entry to be checked.
+   * @return true if it is a rename pending json file path.
+   */
   private boolean isRenamePendingJsonPathEntry(BlobListResultEntrySchema entry) {
-    return entry.path() != null
+    String path = entry.path() != null ? entry.path().toUri().getPath() : null;
+    return path != null
         && !entry.path().isRoot()
-        && isAtomicRenameKey(entry.path().toUri().getPath())
+        && isAtomicRenameKey(path)
         && !entry.isDirectory()
-        && entry.path().toUri().getPath().endsWith(RenameAtomicity.SUFFIX);
+        && path.endsWith(RenameAtomicity.SUFFIX);
   }
 
   /**

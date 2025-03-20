@@ -1782,19 +1782,19 @@ public class ITestAzureBlobFileSystemRename extends
   private void validateRename(AzureBlobFileSystem fs, Path src, Path dst,
       boolean isSrcExist, boolean isDstExist, boolean isJsonExist)
       throws IOException {
-    Assertions.assertThat(fs.exists(dst))
-        .describedAs("Renamed Destination directory should exist.")
-        .isEqualTo(isDstExist);
     Assertions.assertThat(fs.exists(new Path(src.getParent(), src.getName() + SUFFIX)))
         .describedAs("Renamed Pending Json file should exist.")
         .isEqualTo(isJsonExist);
     Assertions.assertThat(fs.exists(src))
-        .describedAs("Renamed Destination directory should exist.")
+        .describedAs("Renamed Source directory should exist.")
         .isEqualTo(isSrcExist);
+    Assertions.assertThat(fs.exists(dst))
+        .describedAs("Renamed Destination directory should exist.")
+        .isEqualTo(isDstExist);
   }
 
   /**
-   * Test the renaming of a directory with different parallelism configurations.
+   * Test the renaming of a directory with different parallelism configurations.c
    */
   @Test
   public void testRenameDirWithDifferentParallelismConfig() throws Exception {

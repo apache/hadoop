@@ -29,6 +29,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
@@ -442,14 +443,14 @@ public class ITestAzureBlobFileSystemListStatus extends
     fs.listStatus(path);
 
     ListResponseData listResponseData = fs.getAbfsStore().getClient().listPath(
-        "/testContinuationToken",false, 1, null, getTestTracingContext(fs, true),
+        "/testContinuationToken", false, 1, null, getTestTracingContext(fs, true),
         fs.getAbfsStore().getUri());
 
     Assertions.assertThat(listResponseData.getContinuationToken()).isNotNull();
     Assertions.assertThat(listResponseData.getFileStatusList()).hasSize(1);
 
     ListResponseData listResponseData1 =  fs.getAbfsStore().getClient().listPath(
-        "/testContinuationToken",false, 1, listResponseData.getContinuationToken(), getTestTracingContext(fs, true),
+        "/testContinuationToken", false, 1, listResponseData.getContinuationToken(), getTestTracingContext(fs, true),
         fs.getAbfsStore().getUri());
 
     Assertions.assertThat(listResponseData1.getContinuationToken()).isNull();
@@ -458,6 +459,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
   @Test
   public void testInvalidContinuationToken() throws Exception {
+    assumeHnsDisabled();
     final AzureBlobFileSystem fs = getFileSystem();
     Path path = new Path("/testInvalidContinuationToken");
     fs.mkdirs(path);
