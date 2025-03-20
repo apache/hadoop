@@ -17,9 +17,9 @@
  *******************************************************************************/
 package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -48,7 +48,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePat
 import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestSimpleCapacityReplanner {
 
@@ -93,47 +93,46 @@ public class TestSimpleCapacityReplanner {
     ReservationDefinition rDef =
         ReservationSystemTestUtil.createSimpleReservationDefinition(
             0, 0 + f5.length, f5.length);
-    assertTrue(plan.toString(),
-        plan.addReservation(new InMemoryReservationAllocation(r1, rDef, "u3",
-            "dedicated", 0, 0 + f5.length, generateAllocation(0, f5), res,
-            minAlloc), false));
+    assertTrue(plan.addReservation(
+        new InMemoryReservationAllocation(r1, rDef, "u3",
+        "dedicated", 0, 0 + f5.length, generateAllocation(0, f5), res,
+        minAlloc), false), plan.toString());
     when(clock.getTime()).thenReturn(1L);
     ReservationId r2 = ReservationId.newInstance(ts, 2);
-    assertTrue(plan.toString(),
-        plan.addReservation(new InMemoryReservationAllocation(r2, rDef, "u4",
-            "dedicated", 0, 0 + f5.length, generateAllocation(0, f5), res,
-            minAlloc), false));
+    assertTrue(plan.addReservation(
+        new InMemoryReservationAllocation(r2, rDef, "u4",
+        "dedicated", 0, 0 + f5.length, generateAllocation(0, f5), res,
+        minAlloc), false), plan.toString());
     when(clock.getTime()).thenReturn(2L);
     ReservationId r3 = ReservationId.newInstance(ts, 3);
-    assertTrue(plan.toString(),
-        plan.addReservation(new InMemoryReservationAllocation(r3, rDef, "u5",
-            "dedicated", 0, 0 + f5.length, generateAllocation(0, f5), res,
-            minAlloc), false));
+    assertTrue(plan.addReservation(
+        new InMemoryReservationAllocation(r3, rDef, "u5",
+        "dedicated", 0, 0 + f5.length, generateAllocation(0, f5), res,
+        minAlloc), false), plan.toString());
     when(clock.getTime()).thenReturn(3L);
     ReservationId r4 = ReservationId.newInstance(ts, 4);
-    assertTrue(plan.toString(),
-        plan.addReservation(new InMemoryReservationAllocation(r4, rDef, "u6",
-            "dedicated", 0, 0 + f5.length, generateAllocation(0, f5), res,
-            minAlloc), false));
+    assertTrue(plan.addReservation(
+        new InMemoryReservationAllocation(r4, rDef, "u6",
+        "dedicated", 0, 0 + f5.length, generateAllocation(0, f5), res,
+        minAlloc), false), plan.toString());
     when(clock.getTime()).thenReturn(4L);
     ReservationId r5 = ReservationId.newInstance(ts, 5);
-    assertTrue(plan.toString(),
-        plan.addReservation(new InMemoryReservationAllocation(r5, rDef, "u7",
-            "dedicated", 0, 0 + f5.length, generateAllocation(0, f5), res,
-            minAlloc), false));
+    assertTrue(plan.addReservation(new InMemoryReservationAllocation(r5, rDef, "u7",
+        "dedicated", 0, 0 + f5.length, generateAllocation(0, f5), res,
+        minAlloc), false), plan.toString());
 
     int[] f6 = { 50, 50, 50, 50, 50 };
     ReservationId r6 = ReservationId.newInstance(ts, 6);
-    assertTrue(plan.toString(),
-        plan.addReservation(new InMemoryReservationAllocation(r6, rDef, "u3",
-            "dedicated", 10, 10 + f6.length, generateAllocation(10, f6), res,
-            minAlloc), false));
+    assertTrue(plan.addReservation(
+        new InMemoryReservationAllocation(r6, rDef, "u3",
+        "dedicated", 10, 10 + f6.length, generateAllocation(10, f6), res,
+        minAlloc), false), plan.toString());
     when(clock.getTime()).thenReturn(6L);
     ReservationId r7 = ReservationId.newInstance(ts, 7);
-    assertTrue(plan.toString(),
-        plan.addReservation(new InMemoryReservationAllocation(r7, rDef, "u4",
-            "dedicated", 10, 10 + f6.length, generateAllocation(10, f6), res,
-            minAlloc), false));
+    assertTrue(plan.addReservation(
+        new InMemoryReservationAllocation(r7, rDef, "u4",
+        "dedicated", 10, 10 + f6.length, generateAllocation(10, f6), res,
+        minAlloc), false), plan.toString());
 
     // remove some of the resources (requires replanning)
     plan.setTotalCapacity(Resource.newInstance(70 * 1024, 70));

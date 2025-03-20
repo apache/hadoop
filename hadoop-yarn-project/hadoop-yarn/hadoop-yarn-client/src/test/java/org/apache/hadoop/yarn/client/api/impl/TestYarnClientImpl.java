@@ -50,9 +50,8 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager
         .ParameterizedSchedulerTestBase;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -60,6 +59,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -75,18 +76,20 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
 
   protected static final String YARN_RM = "yarn-rm@EXAMPLE.COM";
 
-  public TestYarnClientImpl(SchedulerType type) throws IOException {
-    super(type);
+  public void initTestYarnClientImpl(SchedulerType type) throws IOException {
+    initParameterizedSchedulerTestBase(type);
+    setup();
   }
 
-  @Before
   public void setup() {
     QueueMetrics.clearQueueMetrics();
     DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
-  @Test
-  public void testStartWithTimelineV15() {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testStartWithTimelineV15(SchedulerType type) throws IOException {
+    initTestYarnClientImpl(type);
     Configuration conf = getConf();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 1.5f);
@@ -96,8 +99,10 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
     client.stop();
   }
 
-  @Test
-  public void testAsyncAPIPollTimeout() {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testAsyncAPIPollTimeout(SchedulerType type) throws IOException {
+    initTestYarnClientImpl(type);
     testAsyncAPIPollTimeoutHelper(null, false);
     testAsyncAPIPollTimeoutHelper(0L, true);
     testAsyncAPIPollTimeoutHelper(1L, true);
@@ -116,16 +121,17 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
 
       client.init(conf);
 
-      Assert.assertEquals(
-              expectedTimeoutEnforcement, client.enforceAsyncAPITimeout());
+      assertEquals(expectedTimeoutEnforcement, client.enforceAsyncAPITimeout());
     } finally {
       IOUtils.closeStream(client);
     }
   }
 
-  @Test
-  public void testBestEffortTimelineDelegationToken()
-          throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testBestEffortTimelineDelegationToken(SchedulerType type)
+      throws Exception {
+    initTestYarnClientImpl(type);
     Configuration conf = getConf();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     SecurityUtil.setAuthenticationMethod(UserGroupInformation.AuthenticationMethod.KERBEROS, conf);
@@ -152,7 +158,7 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
       conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_CLIENT_BEST_EFFORT, false);
       client.serviceInit(conf);
       client.getTimelineDelegationToken();
-      Assert.fail("Get delegation token should have thrown an exception");
+      fail("Get delegation token should have thrown an exception");
     } catch (IOException e) {
       // Success
     }
@@ -161,9 +167,11 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
   // Validates if YarnClientImpl automatically adds HDFS Delegation
   // token for Log Aggregation Path in a cluster setup with fs.DefaultFS
   // set to LocalFileSystem and Log Aggregation Path set to HDFS.
-  @Test
-  public void testAutomaitcLogAggregationDelegationToken()
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testAutomaitcLogAggregationDelegationToken(SchedulerType type)
       throws Exception {
+    initTestYarnClientImpl(type);
     Configuration conf = getConf();
     SecurityUtil.setAuthenticationMethod(
         UserGroupInformation.AuthenticationMethod.KERBEROS, conf);
@@ -262,10 +270,10 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
       }
       Collection<Token<? extends TokenIdentifier>> dTokens =
            credentials.getAllTokens();
-      Assert.assertEquals("Failed to place token for Log Aggregation Path",
-          1, dTokens.size());
-      Assert.assertEquals("Wrong Token for Log Aggregation",
-          hdfsDT.getKind(), dTokens.iterator().next().getKind());
+      assertEquals(1, dTokens.size(),
+          "Failed to place token for Log Aggregation Path");
+      assertEquals(hdfsDT.getKind(), dTokens.iterator().next().getKind(),
+          "Wrong Token for Log Aggregation");
 
     } finally {
       if (hdfsCluster != null) {
@@ -274,9 +282,11 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
     }
   }
 
-  @Test
-  public void testAutomaticTimelineDelegationTokenLoading()
-          throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testAutomaticTimelineDelegationTokenLoading(SchedulerType type)
+      throws Exception {
+    initTestYarnClientImpl(type);
     Configuration conf = getConf();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     SecurityUtil.setAuthenticationMethod(UserGroupInformation.AuthenticationMethod.KERBEROS, conf);
@@ -356,16 +366,19 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
         }
         Collection<Token<? extends TokenIdentifier>> dTokens =
                 credentials.getAllTokens();
-        Assert.assertEquals(1, dTokens.size());
-        Assert.assertEquals(dToken, dTokens.iterator().next());
+        assertEquals(1, dTokens.size());
+        assertEquals(dToken, dTokens.iterator().next());
       }
     } finally {
       client.stop();
     }
   }
 
-  @Test
-  public void testParseTimelineDelegationTokenRenewer() {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testParseTimelineDelegationTokenRenewer(SchedulerType type)
+      throws IOException {
+    initTestYarnClientImpl(type);
     // Client side
     YarnClientImpl client = (YarnClientImpl) YarnClient.createYarnClient();
     Configuration conf = getConf();
@@ -376,7 +389,7 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
     try {
       client.init(conf);
       client.start();
-      Assert.assertEquals("rm/localhost@EXAMPLE.COM", client.timelineDTRenewer);
+      assertEquals("rm/localhost@EXAMPLE.COM", client.timelineDTRenewer);
     } finally {
       client.stop();
     }

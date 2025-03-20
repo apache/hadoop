@@ -18,6 +18,17 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.spy;
+
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.conf.Configuration;
@@ -65,11 +76,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.Candida
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimpleCandidateNodeSet;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.contrib.java.lang.system.internal.NoExitSecurityManager;
-import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -91,7 +101,7 @@ public class TestCapacitySchedulerAsyncScheduling {
           "org.apache.hadoop.yarn.server.resourcemanager.scheduler" +
                   ".placement.ResourceUsageMultiNodeLookupPolicy";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -102,22 +112,26 @@ public class TestCapacitySchedulerAsyncScheduling {
     mgr.init(conf);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testSingleThreadAsyncContainerAllocation() throws Exception {
     testAsyncContainerAllocation(1);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testTwoThreadsAsyncContainerAllocation() throws Exception {
     testAsyncContainerAllocation(2);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testThreeThreadsAsyncContainerAllocation() throws Exception {
     testAsyncContainerAllocation(3);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testAsyncContainerAllocationWithMultiNode() throws Exception {
     conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICIES,
             "resource-based");
@@ -132,7 +146,8 @@ public class TestCapacitySchedulerAsyncScheduling {
     testAsyncContainerAllocation(2);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testAsyncThreadNames() throws Exception {
     conf.setInt(
         CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD,
@@ -156,7 +171,7 @@ public class TestCapacitySchedulerAsyncScheduling {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     for (CapacityScheduler.AsyncScheduleThread thread :
         cs.getAsyncSchedulerThreads()) {
-      Assert.assertTrue(thread.getName()
+      assertTrue(thread.getName()
           .startsWith("AsyncCapacitySchedulerThread"));
     }
   }
@@ -228,7 +243,7 @@ public class TestCapacitySchedulerAsyncScheduling {
       waitTime -= 50;
     }
 
-    Assert.assertEquals(
+    assertEquals(
         rm.getResourceScheduler().getRootQueueMetrics().getAllocatedMB(),
         totalAsked);
 
@@ -236,7 +251,7 @@ public class TestCapacitySchedulerAsyncScheduling {
     // required
     waitTime = 2000; // ms
     while (waitTime > 0) {
-      Assert.assertEquals(
+      assertEquals(
           rm.getResourceScheduler().getRootQueueMetrics().getAllocatedMB(),
           totalAsked);
       waitTime -= 50;
@@ -247,7 +262,8 @@ public class TestCapacitySchedulerAsyncScheduling {
   }
 
   // Testcase for YARN-6714
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testCommitProposalForFailedAppAttempt()
       throws Exception {
     // disable async-scheduling for simulating complex since scene
@@ -270,7 +286,7 @@ public class TestCapacitySchedulerAsyncScheduling {
             .nodeCount() < 2) {
       Thread.sleep(10);
     }
-    Assert.assertEquals(2,
+    assertEquals(2,
         ((AbstractYarnScheduler) rm.getRMContext().getScheduler())
             .getNodeTracker().nodeCount());
     CapacityScheduler scheduler =
@@ -303,8 +319,8 @@ public class TestCapacitySchedulerAsyncScheduling {
 
     // nm1 runs 1 container(app1-container_01/AM)
     // nm2 runs 1 container(app1-container_02)
-    Assert.assertEquals(1, sn1.getNumContainers());
-    Assert.assertEquals(1, sn2.getNumContainers());
+    assertEquals(1, sn1.getNumContainers());
+    assertEquals(1, sn2.getNumContainers());
 
     // kill app attempt1
     scheduler.handle(
@@ -345,14 +361,16 @@ public class TestCapacitySchedulerAsyncScheduling {
     ResourceCommitRequest request =
         new ResourceCommitRequest(null, reservedProposals, null);
     scheduler.tryCommit(scheduler.getClusterResource(), request, true);
-    Assert.assertNull("Outdated proposal should not be accepted!",
-        sn2.getReservedContainer());
+    assertNull(sn2.getReservedContainer(),
+        "Outdated proposal should not be accepted!");
 
     rm.stop();
   }
 
   // Testcase for YARN-6678
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
+  @SuppressWarnings("checkstyle:methodlength")
   public void testCommitOutdatedReservedProposal() throws Exception {
     // disable async-scheduling for simulating complex since scene
     Configuration disableAsyncConf = new Configuration(conf);
@@ -373,7 +391,7 @@ public class TestCapacitySchedulerAsyncScheduling {
       waitTime -= 10;
       Thread.sleep(10);
     }
-    Assert.assertEquals(2,
+    assertEquals(2,
         ((AbstractYarnScheduler) rm.getRMContext().getScheduler())
             .getNodeTracker().nodeCount());
 
@@ -415,8 +433,8 @@ public class TestCapacitySchedulerAsyncScheduling {
     // nm1 runs 3 containers(app1-container_01/AM, app1-container_02,
     //                       app2-container_01/AM)
     // nm2 runs 1 container(app1-container_03)
-    Assert.assertEquals(3, sn1.getNumContainers());
-    Assert.assertEquals(1, sn2.getNumContainers());
+    assertEquals(3, sn1.getNumContainers());
+    assertEquals(1, sn2.getNumContainers());
 
     // reserve 1 container(app1-container_04) for app1 on nm1
     ResourceRequest rr2 = ResourceRequest
@@ -430,15 +448,15 @@ public class TestCapacitySchedulerAsyncScheduling {
       waitTime -= 10;
       Thread.sleep(10);
     }
-    Assert.assertNotNull(sn1.getReservedContainer());
+    assertNotNull(sn1.getReservedContainer());
 
     final CapacityScheduler cs = (CapacityScheduler) scheduler;
-    final CapacityScheduler spyCs = Mockito.spy(cs);
+    final CapacityScheduler spyCs = spy(cs);
     final AtomicBoolean isFirstReserve = new AtomicBoolean(true);
     final AtomicBoolean isChecked = new AtomicBoolean(false);
     // handle CapacityScheduler#tryCommit,
     // reproduce the process that can raise IllegalStateException before
-    Mockito.doAnswer(new Answer<Object>() {
+    doAnswer(new Answer<Object>() {
       public Object answer(InvocationOnMock invocation) throws Exception {
         ResourceCommitRequest request =
             (ResourceCommitRequest) invocation.getArguments()[1];
@@ -452,7 +470,7 @@ public class TestCapacitySchedulerAsyncScheduling {
                       ContainerState.COMPLETE, "",
                       ContainerExitStatus.KILLED_BY_RESOURCEMANAGER),
               RMContainerEventType.KILL);
-          Assert.assertEquals(0, sn2.getCopiedListOfRunningContainers().size());
+          assertEquals(0, sn2.getCopiedListOfRunningContainers().size());
           // unreserve app1-container_04 on nm1
           // and allocate app1-container_05 on nm2
           cs.handle(new NodeUpdateSchedulerEvent(sn2.getRMNode()));
@@ -462,8 +480,8 @@ public class TestCapacitySchedulerAsyncScheduling {
             waitTime -= 10;
             Thread.sleep(10);
           }
-          Assert.assertEquals(1, sn2.getCopiedListOfRunningContainers().size());
-          Assert.assertNull(sn1.getReservedContainer());
+          assertEquals(1, sn2.getCopiedListOfRunningContainers().size());
+          assertNull(sn1.getReservedContainer());
 
           // reserve app2-container_02 on nm1
           ResourceRequest rr3 = ResourceRequest
@@ -476,7 +494,7 @@ public class TestCapacitySchedulerAsyncScheduling {
             waitTime -= 10;
             Thread.sleep(10);
           }
-          Assert.assertNotNull(sn1.getReservedContainer());
+          assertNotNull(sn1.getReservedContainer());
 
           // call real apply
           try {
@@ -484,7 +502,7 @@ public class TestCapacitySchedulerAsyncScheduling {
                 (ResourceCommitRequest) invocation.getArguments()[1], true);
           } catch (Exception e) {
             e.printStackTrace();
-            Assert.fail();
+            fail();
           }
           isChecked.set(true);
         } else {
@@ -493,8 +511,8 @@ public class TestCapacitySchedulerAsyncScheduling {
         }
         return null;
       }
-    }).when(spyCs).tryCommit(Mockito.any(Resource.class),
-        Mockito.any(ResourceCommitRequest.class), Mockito.anyBoolean());
+    }).when(spyCs).tryCommit(any(Resource.class),
+        any(ResourceCommitRequest.class), anyBoolean());
 
     spyCs.handle(new NodeUpdateSchedulerEvent(sn1.getRMNode()));
 
@@ -506,7 +524,8 @@ public class TestCapacitySchedulerAsyncScheduling {
     rm.stop();
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testNodeResourceOverAllocated()
       throws Exception {
     // disable async-scheduling for simulating complex scene
@@ -529,7 +548,7 @@ public class TestCapacitySchedulerAsyncScheduling {
             .nodeCount() < 2) {
       Thread.sleep(10);
     }
-    Assert.assertEquals(2,
+    assertEquals(2,
         ((AbstractYarnScheduler) rm.getRMContext().getScheduler())
             .getNodeTracker().nodeCount());
     CapacityScheduler scheduler =
@@ -584,8 +603,8 @@ public class TestCapacitySchedulerAsyncScheduling {
       scheduler.tryCommit(scheduler.getClusterResource(), request, true);
     }
     // make sure node resource can't be over-allocated!
-    Assert.assertTrue("Node resource is Over-allocated!",
-        sn1.getUnallocatedResource().getMemorySize() > 0);
+    assertTrue(sn1.getUnallocatedResource().getMemorySize() > 0,
+        "Node resource is Over-allocated!");
     rm.stop();
   }
 
@@ -666,9 +685,9 @@ public class TestCapacitySchedulerAsyncScheduling {
     // Make sure that NM5-9 don't have non-AM containers.
     for (int i = 0; i < 9; i++) {
       if (i < 5) {
-        Assert.assertTrue(checkNumNonAMContainersOnNode(cs, nms.get(i)) > 0);
+        assertTrue(checkNumNonAMContainersOnNode(cs, nms.get(i)) > 0);
       } else {
-        Assert.assertTrue(checkNumNonAMContainersOnNode(cs, nms.get(i)) == 0);
+        assertTrue(checkNumNonAMContainersOnNode(cs, nms.get(i)) == 0);
       }
     }
 
@@ -741,12 +760,12 @@ public class TestCapacitySchedulerAsyncScheduling {
           new RMNodeEvent(rmNode.getNodeID(),
               RMNodeEventType.GRACEFUL_DECOMMISSION));
       rm.drainEvents();
-      Assert.assertEquals(NodeState.DECOMMISSIONING, rmNode.getState());
+      assertEquals(NodeState.DECOMMISSIONING, rmNode.getState());
       boolean shouldSkip =
           cs.shouldSkipNodeSchedule(cs.getNode(nms.get(i).getNodeId()),
               cs, true);
       // make sure should skip
-      Assert.assertTrue(shouldSkip);
+      assertTrue(shouldSkip);
     }
 
     for (int i = 5; i < 9; i++) {
@@ -754,7 +773,7 @@ public class TestCapacitySchedulerAsyncScheduling {
           cs.shouldSkipNodeSchedule(cs.getNode(nms.get(i).getNodeId()),
               cs, true);
       // make sure should not skip
-      Assert.assertFalse(shouldSkip);
+      assertFalse(shouldSkip);
     }
 
     pauseNMHeartbeat();
@@ -773,9 +792,9 @@ public class TestCapacitySchedulerAsyncScheduling {
     //Make sure that NM 0-5 don't have non-AM containers.
     for (int i = 0; i < 9; i++) {
       if (i < 5) {
-        Assert.assertTrue(checkNumNonAMContainersOnNode(cs, nms.get(i)) == 0);
+        assertTrue(checkNumNonAMContainersOnNode(cs, nms.get(i)) == 0);
       } else {
-        Assert.assertTrue(checkNumNonAMContainersOnNode(cs, nms.get(i)) > 0);
+        assertTrue(checkNumNonAMContainersOnNode(cs, nms.get(i)) > 0);
       }
     }
     rm.close();
@@ -817,7 +836,8 @@ public class TestCapacitySchedulerAsyncScheduling {
   }
 
   // Testcase for YARN-8127
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testCommitDuplicatedAllocateFromReservedProposals()
       throws Exception {
     // disable async-scheduling for simulating complex scene
@@ -837,7 +857,7 @@ public class TestCapacitySchedulerAsyncScheduling {
             .nodeCount() < 2) {
       Thread.sleep(10);
     }
-    Assert.assertEquals(2,
+    assertEquals(2,
         ((AbstractYarnScheduler) rm.getRMContext().getScheduler())
             .getNodeTracker().nodeCount());
     CapacityScheduler cs =
@@ -867,8 +887,8 @@ public class TestCapacitySchedulerAsyncScheduling {
     // nm1 runs 2 container(container_01/AM, container_02)
     allocateAndLaunchContainers(am, nm1, rm, 1,
         Resources.createResource(6 * GB), 0, 2);
-    Assert.assertEquals(2, sn1.getNumContainers());
-    Assert.assertEquals(1 * GB, sn1.getUnallocatedResource().getMemorySize());
+    assertEquals(2, sn1.getNumContainers());
+    assertEquals(1 * GB, sn1.getUnallocatedResource().getMemorySize());
 
     // app asks 5 * 2G container
     // nm1 reserves 1 * 2G containers
@@ -876,7 +896,7 @@ public class TestCapacitySchedulerAsyncScheduling {
         .newInstance(Priority.newInstance(0), "*",
             Resources.createResource(2 * GB), 5)), null);
     cs.handle(new NodeUpdateSchedulerEvent(sn1.getRMNode()));
-    Assert.assertEquals(1, schedulerApp.getReservedContainers().size());
+    assertEquals(1, schedulerApp.getReservedContainers().size());
 
     // rm kills 1 * 6G container_02
     for (RMContainer rmContainer : sn1.getCopiedListOfRunningContainers()) {
@@ -888,13 +908,13 @@ public class TestCapacitySchedulerAsyncScheduling {
             RMContainerEventType.KILL);
       }
     }
-    Assert.assertEquals(7 * GB, sn1.getUnallocatedResource().getMemorySize());
+    assertEquals(7 * GB, sn1.getUnallocatedResource().getMemorySize());
 
-    final CapacityScheduler spyCs = Mockito.spy(cs);
+    final CapacityScheduler spyCs = spy(cs);
     // handle CapacityScheduler#tryCommit, submit duplicated proposals
     // that do allocation for reserved container for three times,
     // to simulate that case in YARN-8127
-    Mockito.doAnswer(new Answer<Object>() {
+    doAnswer(new Answer<Object>() {
       public Boolean answer(InvocationOnMock invocation) throws Exception {
         ResourceCommitRequest request =
             (ResourceCommitRequest) invocation.getArguments()[1];
@@ -905,14 +925,14 @@ public class TestCapacitySchedulerAsyncScheduling {
                 (ResourceCommitRequest) invocation.getArguments()[1],
                 (Boolean) invocation.getArguments()[2]);
           }
-          Assert.assertEquals(2, sn1.getCopiedListOfRunningContainers().size());
-          Assert.assertEquals(5 * GB,
+          assertEquals(2, sn1.getCopiedListOfRunningContainers().size());
+          assertEquals(5 * GB,
               sn1.getUnallocatedResource().getMemorySize());
         }
         return true;
       }
-    }).when(spyCs).tryCommit(Mockito.any(Resource.class),
-        Mockito.any(ResourceCommitRequest.class), Mockito.anyBoolean());
+    }).when(spyCs).tryCommit(any(Resource.class),
+        any(ResourceCommitRequest.class), anyBoolean());
 
     spyCs.handle(new NodeUpdateSchedulerEvent(sn1.getRMNode()));
 
@@ -920,7 +940,8 @@ public class TestCapacitySchedulerAsyncScheduling {
   }
 
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReleaseOutdatedReservedContainer() throws Exception {
     /*
      * Submit a application, reserved container_02 on nm1,
@@ -966,8 +987,8 @@ public class TestCapacitySchedulerAsyncScheduling {
         cs.getApplicationAttempt(am1.getApplicationAttemptId());
 
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
-    Assert.assertEquals(1, schedulerApp1.getReservedContainers().size());
-    Assert.assertEquals(9 * GB,
+    assertEquals(1, schedulerApp1.getReservedContainers().size());
+    assertEquals(9 * GB,
         defaultQueue.getQueueResourceUsage().getUsed().getMemorySize());
 
     RMContainer reservedContainer =
@@ -977,19 +998,20 @@ public class TestCapacitySchedulerAsyncScheduling {
             sn2, sn1, cs.getRMContext(), reservedContainer);
     boolean tryCommitResult = cs.tryCommit(cs.getClusterResource(),
         allocateFromSameReservedContainerProposal1, true);
-    Assert.assertTrue(tryCommitResult);
+    assertTrue(tryCommitResult);
     ResourceCommitRequest allocateFromSameReservedContainerProposal2 =
         createAllocateFromReservedProposal(4, allocateResource, schedulerApp1,
             sn3, sn1, cs.getRMContext(), reservedContainer);
     tryCommitResult = cs.tryCommit(cs.getClusterResource(),
         allocateFromSameReservedContainerProposal2, true);
-    Assert.assertFalse("This proposal should be rejected because "
-        + "it try to release an outdated reserved container", tryCommitResult);
+    assertFalse(tryCommitResult, "This proposal should be rejected because "
+        + "it try to release an outdated reserved container");
 
     rm1.close();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testCommitProposalsForUnusableNode() throws Exception {
     // disable async-scheduling for simulating complex scene
     Configuration disableAsyncConf = new Configuration(conf);
@@ -1047,17 +1069,17 @@ public class TestCapacitySchedulerAsyncScheduling {
             Resources.createResource(8 * GB), 1)), null);
 
     List<Object> reservedProposalParts = new ArrayList<>();
-    final CapacityScheduler spyCs = Mockito.spy(cs);
+    final CapacityScheduler spyCs = spy(cs);
     // handle CapacityScheduler#tryCommit
-    Mockito.doAnswer(new Answer<Object>() {
+    doAnswer(new Answer<Object>() {
       public Boolean answer(InvocationOnMock invocation) throws Exception {
         for (Object argument : invocation.getArguments()) {
           reservedProposalParts.add(argument);
         }
         return false;
       }
-    }).when(spyCs).tryCommit(Mockito.any(Resource.class),
-        Mockito.any(ResourceCommitRequest.class), Mockito.anyBoolean());
+    }).when(spyCs).tryCommit(any(Resource.class),
+        any(ResourceCommitRequest.class), anyBoolean());
 
     spyCs.handle(new NodeUpdateSchedulerEvent(sn1.getRMNode()));
 
@@ -1066,19 +1088,20 @@ public class TestCapacitySchedulerAsyncScheduling {
     cs.getRMContext().getDispatcher().getEventHandler().handle(
         new RMNodeEvent(nm1.getNodeId(), RMNodeEventType.DECOMMISSION));
     rm.drainEvents();
-    Assert.assertEquals(NodeState.DECOMMISSIONED, rmNode1.getState());
-    Assert.assertNull(cs.getNode(nm1.getNodeId()));
+    assertEquals(NodeState.DECOMMISSIONED, rmNode1.getState());
+    assertNull(cs.getNode(nm1.getNodeId()));
 
     // try commit after nm1 decommissioned
     boolean isSuccess =
         cs.tryCommit((Resource) reservedProposalParts.get(0),
             (ResourceCommitRequest) reservedProposalParts.get(1),
             (Boolean) reservedProposalParts.get(2));
-    Assert.assertFalse(isSuccess);
+    assertFalse(isSuccess);
     rm.stop();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAsyncScheduleThreadExit() throws Exception {
     // init RM & NM
     final MockRM rm = new MockRM(conf);
@@ -1138,7 +1161,8 @@ public class TestCapacitySchedulerAsyncScheduling {
     return new ResourceCommitRequest(allocateProposals, null, null);
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testReturnNullWhenGetSchedulerContainer() throws Exception {
     // disable async-scheduling for simulating complex scenario
     Configuration disableAsyncConf = new Configuration(conf);
@@ -1181,10 +1205,10 @@ public class TestCapacitySchedulerAsyncScheduling {
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 1));
 
     // spy CapacityScheduler
-    final CapacityScheduler spyCs = Mockito.spy(cs);
+    final CapacityScheduler spyCs = spy(cs);
     // hook CapacityScheduler#submitResourceCommitRequest
     List<CSAssignment> assignmentSnapshots = new ArrayList<>();
-    Mockito.doAnswer(new Answer<Object>() {
+    doAnswer(new Answer<Object>() {
       public Boolean answer(InvocationOnMock invocation) throws Exception {
         CSAssignment assignment = (CSAssignment) invocation.getArguments()[1];
         if (cs.getNode(nm1.getNodeId()) != null) {
@@ -1192,8 +1216,8 @@ public class TestCapacitySchedulerAsyncScheduling {
           cs.getRMContext().getDispatcher().getEventHandler().handle(
               new RMNodeEvent(nm1.getNodeId(), RMNodeEventType.DECOMMISSION));
           rm.drainEvents();
-          Assert.assertEquals(NodeState.DECOMMISSIONED, rmNode1.getState());
-          Assert.assertNull(cs.getNode(nm1.getNodeId()));
+          assertEquals(NodeState.DECOMMISSIONED, rmNode1.getState());
+          assertNull(cs.getNode(nm1.getNodeId()));
           assignmentSnapshots.add(assignment);
         } else {
           // add am container on nm1 to containersToKill
@@ -1205,15 +1229,15 @@ public class TestCapacitySchedulerAsyncScheduling {
             assignment);
         return false;
       }
-    }).when(spyCs).submitResourceCommitRequest(Mockito.any(Resource.class),
-        Mockito.any(CSAssignment.class));
+    }).when(spyCs).submitResourceCommitRequest(any(Resource.class),
+        any(CSAssignment.class));
 
     // allocation on nm1, test return null when get scheduler container
     CandidateNodeSet<FiCaSchedulerNode> candidateNodeSet =
         new SimpleCandidateNodeSet(sn1);
     spyCs.allocateContainersToNode(candidateNodeSet, false);
     // make sure unconfirmed resource is decreased correctly
-    Assert.assertTrue(spyCs.getApplicationAttempt(am1.getApplicationAttemptId())
+    assertTrue(spyCs.getApplicationAttempt(am1.getApplicationAttemptId())
         .hasPendingResourceRequest(RMNodeLabelsManager.NO_LABEL,
             SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY));
 
@@ -1223,7 +1247,7 @@ public class TestCapacitySchedulerAsyncScheduling {
         new SimpleCandidateNodeSet(sn2);
     spyCs.allocateContainersToNode(candidateNodeSet, false);
     // make sure unconfirmed resource is decreased correctly
-    Assert.assertTrue(spyCs.getApplicationAttempt(am1.getApplicationAttemptId())
+    assertTrue(spyCs.getApplicationAttempt(am1.getApplicationAttemptId())
         .hasPendingResourceRequest(RMNodeLabelsManager.NO_LABEL,
             SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY));
 
@@ -1266,7 +1290,7 @@ public class TestCapacitySchedulerAsyncScheduling {
     ContainerId lastContainerId = ContainerId
         .newContainerId(am.getApplicationAttemptId(),
             startContainerId + nContainer - 1);
-    Assert.assertTrue(
+    assertTrue(
         rm.waitForState(nm, lastContainerId, RMContainerState.ALLOCATED));
     // Acquire them, and NM report RUNNING
     am.allocate(null, null);
@@ -1281,7 +1305,7 @@ public class TestCapacitySchedulerAsyncScheduling {
         rmContainer.handle(
             new RMContainerEvent(containerId, RMContainerEventType.LAUNCHED));
       } else {
-        Assert.fail("Cannot find RMContainer");
+        fail("Cannot find RMContainer");
       }
       rm.waitForState(nm,
           ContainerId.newContainerId(am.getApplicationAttemptId(), cId),

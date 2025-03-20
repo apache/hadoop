@@ -20,7 +20,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils.createResourceRequest;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -94,19 +99,21 @@ import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 @SuppressWarnings("unchecked")
 public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
-  public TestAbstractYarnScheduler(SchedulerType type) throws IOException {
-    super(type);
+  public void initTestAbstractYarnScheduler(SchedulerType type) throws IOException {
+    initParameterizedSchedulerTestBase(type);
   }
 
-  @Test
-  public void testMaximimumAllocationMemory() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testMaximimumAllocationMemory(SchedulerType type) throws Exception {
+    initTestAbstractYarnScheduler(type);
     final int node1MaxMemory = 15 * 1024;
     final int node2MaxMemory = 5 * 1024;
     final int node3MaxMemory = 6 * 1024;
@@ -150,49 +157,51 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
        final int node1MaxMemory, final int node2MaxMemory,
        final int node3MaxMemory, final int... expectedMaxMemory)
        throws Exception {
-    Assert.assertEquals(6, expectedMaxMemory.length);
+    assertEquals(6, expectedMaxMemory.length);
 
-    Assert.assertEquals(0, scheduler.getNumClusterNodes());
+    assertEquals(0, scheduler.getNumClusterNodes());
     long maxMemory = scheduler.getMaximumResourceCapability().getMemorySize();
-    Assert.assertEquals(expectedMaxMemory[0], maxMemory);
+    assertEquals(expectedMaxMemory[0], maxMemory);
 
     RMNode node1 = MockNodes.newNodeInfo(
         0, Resources.createResource(node1MaxMemory), 1, "127.0.0.2");
     scheduler.handle(new NodeAddedSchedulerEvent(node1));
-    Assert.assertEquals(1, scheduler.getNumClusterNodes());
+    assertEquals(1, scheduler.getNumClusterNodes());
     maxMemory = scheduler.getMaximumResourceCapability().getMemorySize();
-    Assert.assertEquals(expectedMaxMemory[1], maxMemory);
+    assertEquals(expectedMaxMemory[1], maxMemory);
 
     scheduler.handle(new NodeRemovedSchedulerEvent(node1));
-    Assert.assertEquals(0, scheduler.getNumClusterNodes());
+    assertEquals(0, scheduler.getNumClusterNodes());
     maxMemory = scheduler.getMaximumResourceCapability().getMemorySize();
-    Assert.assertEquals(expectedMaxMemory[2], maxMemory);
+    assertEquals(expectedMaxMemory[2], maxMemory);
 
     RMNode node2 = MockNodes.newNodeInfo(
         0, Resources.createResource(node2MaxMemory), 2, "127.0.0.3");
     scheduler.handle(new NodeAddedSchedulerEvent(node2));
-    Assert.assertEquals(1, scheduler.getNumClusterNodes());
+    assertEquals(1, scheduler.getNumClusterNodes());
     maxMemory = scheduler.getMaximumResourceCapability().getMemorySize();
-    Assert.assertEquals(expectedMaxMemory[3], maxMemory);
+    assertEquals(expectedMaxMemory[3], maxMemory);
 
     RMNode node3 = MockNodes.newNodeInfo(
         0, Resources.createResource(node3MaxMemory), 3, "127.0.0.4");
     scheduler.handle(new NodeAddedSchedulerEvent(node3));
-    Assert.assertEquals(2, scheduler.getNumClusterNodes());
+    assertEquals(2, scheduler.getNumClusterNodes());
     maxMemory = scheduler.getMaximumResourceCapability().getMemorySize();
-    Assert.assertEquals(expectedMaxMemory[4], maxMemory);
+    assertEquals(expectedMaxMemory[4], maxMemory);
 
     scheduler.handle(new NodeRemovedSchedulerEvent(node3));
-    Assert.assertEquals(1, scheduler.getNumClusterNodes());
+    assertEquals(1, scheduler.getNumClusterNodes());
     maxMemory = scheduler.getMaximumResourceCapability().getMemorySize();
-    Assert.assertEquals(expectedMaxMemory[5], maxMemory);
+    assertEquals(expectedMaxMemory[5], maxMemory);
 
     scheduler.handle(new NodeRemovedSchedulerEvent(node2));
-    Assert.assertEquals(0, scheduler.getNumClusterNodes());
+    assertEquals(0, scheduler.getNumClusterNodes());
   }
 
-  @Test
-  public void testMaximimumAllocationVCores() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testMaximimumAllocationVCores(SchedulerType type) throws Exception {
+    initTestAbstractYarnScheduler(type);
     final int node1MaxVCores = 15;
     final int node2MaxVCores = 5;
     final int node3MaxVCores = 6;
@@ -236,52 +245,54 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       final int node1MaxVCores, final int node2MaxVCores,
       final int node3MaxVCores, final int... expectedMaxVCores)
       throws Exception {
-    Assert.assertEquals(6, expectedMaxVCores.length);
+    assertEquals(6, expectedMaxVCores.length);
 
-    Assert.assertEquals(0, scheduler.getNumClusterNodes());
+    assertEquals(0, scheduler.getNumClusterNodes());
     int maxVCores = scheduler.getMaximumResourceCapability().getVirtualCores();
-    Assert.assertEquals(expectedMaxVCores[0], maxVCores);
+    assertEquals(expectedMaxVCores[0], maxVCores);
 
     RMNode node1 = MockNodes.newNodeInfo(
         0, Resources.createResource(1024, node1MaxVCores), 1, "127.0.0.2");
     scheduler.handle(new NodeAddedSchedulerEvent(node1));
-    Assert.assertEquals(1, scheduler.getNumClusterNodes());
+    assertEquals(1, scheduler.getNumClusterNodes());
     maxVCores = scheduler.getMaximumResourceCapability().getVirtualCores();
-    Assert.assertEquals(expectedMaxVCores[1], maxVCores);
+    assertEquals(expectedMaxVCores[1], maxVCores);
 
     scheduler.handle(new NodeRemovedSchedulerEvent(node1));
-    Assert.assertEquals(0, scheduler.getNumClusterNodes());
+    assertEquals(0, scheduler.getNumClusterNodes());
     maxVCores = scheduler.getMaximumResourceCapability().getVirtualCores();
-    Assert.assertEquals(expectedMaxVCores[2], maxVCores);
+    assertEquals(expectedMaxVCores[2], maxVCores);
 
     RMNode node2 = MockNodes.newNodeInfo(
         0, Resources.createResource(1024, node2MaxVCores), 2, "127.0.0.3");
     scheduler.handle(new NodeAddedSchedulerEvent(node2));
-    Assert.assertEquals(1, scheduler.getNumClusterNodes());
+    assertEquals(1, scheduler.getNumClusterNodes());
     maxVCores = scheduler.getMaximumResourceCapability().getVirtualCores();
-    Assert.assertEquals(expectedMaxVCores[3], maxVCores);
+    assertEquals(expectedMaxVCores[3], maxVCores);
 
     RMNode node3 = MockNodes.newNodeInfo(
         0, Resources.createResource(1024, node3MaxVCores), 3, "127.0.0.4");
     scheduler.handle(new NodeAddedSchedulerEvent(node3));
-    Assert.assertEquals(2, scheduler.getNumClusterNodes());
+    assertEquals(2, scheduler.getNumClusterNodes());
     maxVCores = scheduler.getMaximumResourceCapability().getVirtualCores();
-    Assert.assertEquals(expectedMaxVCores[4], maxVCores);
+    assertEquals(expectedMaxVCores[4], maxVCores);
 
     scheduler.handle(new NodeRemovedSchedulerEvent(node3));
-    Assert.assertEquals(1, scheduler.getNumClusterNodes());
+    assertEquals(1, scheduler.getNumClusterNodes());
     maxVCores = scheduler.getMaximumResourceCapability().getVirtualCores();
-    Assert.assertEquals(expectedMaxVCores[5], maxVCores);
+    assertEquals(expectedMaxVCores[5], maxVCores);
 
     scheduler.handle(new NodeRemovedSchedulerEvent(node2));
-    Assert.assertEquals(0, scheduler.getNumClusterNodes());
+    assertEquals(0, scheduler.getNumClusterNodes());
   }
 
   /**
    * Test for testing autocorrect container allocation feature.
    */
-  @Test
-  public void testAutoCorrectContainerAllocation() {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testAutoCorrectContainerAllocation(SchedulerType type) throws IOException {
+    initTestAbstractYarnScheduler(type);
     Configuration conf = new Configuration(getConf());
     conf.setBoolean(YarnConfiguration.RM_SCHEDULER_AUTOCORRECT_CONTAINER_ALLOCATION, true);
     conf.setBoolean("yarn.scheduler.capacity.root.auto-create-child-queue.enabled",
@@ -623,8 +634,10 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     assertEquals(4, application.pullNewlyAllocatedContainers().size());
   }
 
-  @Test
-  public void testUpdateMaxAllocationUsesTotal() throws IOException {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testUpdateMaxAllocationUsesTotal(SchedulerType type) throws IOException {
+    initTestAbstractYarnScheduler(type);
     final int configuredMaxVCores = 20;
     final int configuredMaxMemory = 10 * 1024;
     Resource configuredMaximumResource = Resource.newInstance
@@ -677,8 +690,10 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     }
   }
 
-  @Test
-  public void testMaxAllocationAfterUpdateNodeResource() throws IOException {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testMaxAllocationAfterUpdateNodeResource(SchedulerType type) throws IOException {
+    initTestAbstractYarnScheduler(type);
     final int configuredMaxVCores = 20;
     final int configuredMaxMemory = 10 * 1024;
     Resource configuredMaximumResource = Resource.newInstance
@@ -743,8 +758,11 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
    * null (no attempt).
    */
   @SuppressWarnings({ "rawtypes" })
-  @Test(timeout = 10000)
-  public void testReleasedContainerIfAppAttemptisNull() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  @Timeout(10)
+  public void testReleasedContainerIfAppAttemptisNull(SchedulerType type) throws Exception {
+    initTestAbstractYarnScheduler(type);
     YarnConfiguration conf=getConf();
     MockRM rm1 = new MockRM(conf);
     try {
@@ -777,9 +795,9 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
       scheduler.clearPendingContainerCache();
 
-      Assert.assertEquals("Pending containers are not released "
-          + "when one of the application attempt is null !", schedulerApp
-          .getCurrentAppAttempt().getPendingRelease().size(), 0);
+      assertEquals(schedulerApp.getCurrentAppAttempt().getPendingRelease().size(),
+          0, "Pending containers are not released "
+           + "when one of the application attempt is null !");
     } finally {
       if (rm1 != null) {
         rm1.stop();
@@ -787,8 +805,11 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     }
   }
 
-  @Test(timeout = 30000l)
-  public void testContainerReleaseWithAllocationTags() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  @Timeout(30)
+  public void testContainerReleaseWithAllocationTags(SchedulerType type) throws Exception {
+    initTestAbstractYarnScheduler(type);
     // Currently only can be tested against capacity scheduler.
     if (getSchedulerType().equals(SchedulerType.CAPACITY)) {
       final String testTag1 = "some-tag";
@@ -847,13 +868,13 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
         Thread.sleep(1000);
       }
 
-      Assert.assertEquals(4, allocated.size());
+      assertEquals(4, allocated.size());
 
       Set<Container> containers = allocated.stream()
           .filter(container -> container.getAllocationRequestId() == 1l)
           .collect(Collectors.toSet());
-      Assert.assertNotNull(containers);
-      Assert.assertEquals(1, containers.size());
+      assertNotNull(containers);
+      assertEquals(1, containers.size());
       ContainerId cid = containers.iterator().next().getId();
 
       // mock container start
@@ -864,8 +885,8 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       Map<String, Long> nodeTags = rm1.getRMContext()
           .getAllocationTagsManager()
           .getAllocationTagsWithCount(nm1.getNodeId());
-      Assert.assertNotNull(nodeTags.get(testTag1));
-      Assert.assertEquals(1, nodeTags.get(testTag1).intValue());
+      assertNotNull(nodeTags.get(testTag1));
+      assertEquals(1, nodeTags.get(testTag1).intValue());
 
       // release a container
       am1.allocate(new ArrayList<>(), Lists.newArrayList(cid));
@@ -873,9 +894,9 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       // before NM confirms, the tag should still exist
       nodeTags = rm1.getRMContext().getAllocationTagsManager()
           .getAllocationTagsWithCount(nm1.getNodeId());
-      Assert.assertNotNull(nodeTags);
-      Assert.assertNotNull(nodeTags.get(testTag1));
-      Assert.assertEquals(1, nodeTags.get(testTag1).intValue());
+      assertNotNull(nodeTags);
+      assertNotNull(nodeTags.get(testTag1));
+      assertEquals(1, nodeTags.get(testTag1).intValue());
 
       // NM reports back that container is released
       // RM should cleanup the tag
@@ -897,8 +918,11 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
   }
 
 
-  @Test(timeout = 30000L)
-  public void testNodeRemovedWithAllocationTags() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  @Timeout(30)
+  public void testNodeRemovedWithAllocationTags(SchedulerType type) throws Exception {
+    initTestAbstractYarnScheduler(type);
     // Currently only can be tested against capacity scheduler.
     if (getSchedulerType().equals(SchedulerType.CAPACITY)) {
       final String testTag1 = "some-tag";
@@ -948,13 +972,13 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
         Thread.sleep(1000);
       }
 
-      Assert.assertEquals(1, allocated.size());
+      assertEquals(1, allocated.size());
 
       Set<Container> containers = allocated.stream()
           .filter(container -> container.getAllocationRequestId() == 1L)
           .collect(Collectors.toSet());
-      Assert.assertNotNull(containers);
-      Assert.assertEquals(1, containers.size());
+      assertNotNull(containers);
+      assertEquals(1, containers.size());
       ContainerId cid = containers.iterator().next().getId();
 
       // mock container start
@@ -965,8 +989,8 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       Map<String, Long> nodeTags = rm1.getRMContext()
           .getAllocationTagsManager()
           .getAllocationTagsWithCount(nm1.getNodeId());
-      Assert.assertNotNull(nodeTags.get(testTag1));
-      Assert.assertEquals(1, nodeTags.get(testTag1).intValue());
+      assertNotNull(nodeTags.get(testTag1));
+      assertEquals(1, nodeTags.get(testTag1).intValue());
 
       // remove the  node
       RMNode node1 = MockNodes.newNodeInfo(
@@ -977,13 +1001,15 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       // Once the node is removed, the tag should be removed immediately
       nodeTags = rm1.getRMContext().getAllocationTagsManager()
           .getAllocationTagsWithCount(nm1.getNodeId());
-      Assert.assertNull(nodeTags);
+      assertNull(nodeTags);
     }
   }
 
-
-  @Test(timeout=60000)
-  public void testContainerReleasedByNode() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  @Timeout(60)
+  public void testContainerReleasedByNode(SchedulerType type) throws Exception {
+    initTestAbstractYarnScheduler(type);
     System.out.println("Starting testContainerReleasedByNode");
     YarnConfiguration conf = getConf();
     MockRM rm1 = new MockRM(conf);
@@ -1075,15 +1101,15 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       containers = am1.allocate("127.0.0.1", 8192, 1,
           new ArrayList<ContainerId>()).getAllocatedContainers();
       nm1.nodeHeartbeat(true);
-      Assert.assertTrue("new container allocated before node freed old",
-          containers.isEmpty());
+      assertTrue(containers.isEmpty(),
+          "new container allocated before node freed old");
       for (int i = 0; i < 10; ++i) {
         Thread.sleep(10);
         containers = am1.allocate(new ArrayList<ResourceRequest>(),
             new ArrayList<ContainerId>()).getAllocatedContainers();
         nm1.nodeHeartbeat(true);
-        Assert.assertTrue("new container allocated before node freed old",
-            containers.isEmpty());
+        assertTrue(containers.isEmpty(),
+            "new container allocated before node freed old");
       }
 
       // free the old container from the node
@@ -1105,9 +1131,12 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     }
   }
 
-  @Test(timeout = 60000)
-  public void testResourceRequestRestoreWhenRMContainerIsAtAllocated()
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  @Timeout(60)
+  public void testResourceRequestRestoreWhenRMContainerIsAtAllocated(SchedulerType type)
       throws Exception {
+    initTestAbstractYarnScheduler(type);
     YarnConfiguration conf = getConf();
     MockRM rm1 = new MockRM(conf);
     try {
@@ -1203,10 +1232,11 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
    *
    * @throws Exception
    */
-  @Test
-  public void testResourceRequestRecoveryToTheRightAppAttempt()
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testResourceRequestRecoveryToTheRightAppAttempt(SchedulerType type)
       throws Exception {
-
+    initTestAbstractYarnScheduler(type);
     YarnConfiguration conf = getConf();
     MockRM rm = new MockRM(conf);
     try {
@@ -1280,11 +1310,11 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       RMAppAttempt rmAppAttempt2 = MockRM.waitForAttemptScheduled(rmApp, rm);
       ApplicationAttemptId applicationAttemptTwoID =
           rmAppAttempt2.getAppAttemptId();
-      Assert.assertEquals(2, applicationAttemptTwoID.getAttemptId());
+      assertEquals(2, applicationAttemptTwoID.getAttemptId());
 
       // All outstanding allocated containers will be killed (irrespective of
       // keep-alive of container across app-attempts)
-      Assert.assertEquals(RMContainerState.KILLED,
+      assertEquals(RMContainerState.KILLED,
         allocatedContainer.getState());
 
       // The core part of this test
@@ -1292,11 +1322,11 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       // original app-attempt, not the new one
       for (SchedulerRequestKey key : firstSchedulerAppAttempt.getSchedulerKeys()) {
         if (key.getPriority().getPriority() == 0) {
-          Assert.assertEquals(0,
+          assertEquals(0,
               firstSchedulerAppAttempt.getOutstandingAsksCount(key));
         } else if (key.getPriority().getPriority() ==
             ALLOCATED_CONTAINER_PRIORITY) {
-          Assert.assertEquals(1,
+          assertEquals(1,
               firstSchedulerAppAttempt.getOutstandingAsksCount(key));
         }
       }
@@ -1307,8 +1337,8 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       List<Container> transferredContainers =
           rm.getResourceScheduler().getTransferredContainers(
             applicationAttemptTwoID);
-      Assert.assertEquals(1, transferredContainers.size());
-      Assert.assertEquals(runningContainerID, transferredContainers.get(0)
+      assertEquals(1, transferredContainers.size());
+      assertEquals(runningContainerID, transferredContainers.get(0)
         .getId());
 
     } finally {
@@ -1321,9 +1351,9 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
     final Resource schedulerMaximumResourceCapability = scheduler
         .getMaximumResourceCapability();
-    Assert.assertEquals(expectedMaximumResource.getMemorySize(),
+    assertEquals(expectedMaximumResource.getMemorySize(),
         schedulerMaximumResourceCapability.getMemorySize());
-    Assert.assertEquals(expectedMaximumResource.getVirtualCores(),
+    assertEquals(expectedMaximumResource.getVirtualCores(),
         schedulerMaximumResourceCapability.getVirtualCores());
   }
 
@@ -1349,7 +1379,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     RMContext privateContext =
         new RMContextImpl(privateDispatcher, null, null, null, null, null, null,
             null, null, null);
-    privateContext.setNodeLabelManager(Mockito.mock(RMNodeLabelsManager.class));
+    privateContext.setNodeLabelManager(mock(RMNodeLabelsManager.class));
 
     privateDispatcher.register(SchedulerEventType.class, sleepHandler);
     privateDispatcher.register(SchedulerEventType.class,
@@ -1386,8 +1416,11 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
    * that might occur due to the use of the RMNode object.
    * @throws Exception
    */
-  @Test(timeout = 60000)
-  public void testNodemanagerReconnect() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  @Timeout(60)
+  public void testNodemanagerReconnect(SchedulerType type) throws Exception {
+    initTestAbstractYarnScheduler(type);
     Configuration conf = getConf();
     MockRM rm = new MockRM(conf);
     try {
@@ -1418,8 +1451,8 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       privateDispatcher.await();
       Resource clusterResource =
           rm.getResourceScheduler().getClusterResource();
-      Assert.assertEquals("Initial cluster resources don't match", capability,
-          clusterResource);
+      assertEquals(capability,
+          clusterResource, "Initial cluster resources don't match");
 
       Resource newCapability = Resources.createResource(1024);
       RegisterNodeManagerRequest request2 =
@@ -1431,16 +1464,19 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       sleepHandler.sleepFlag = true;
       privateResourceTrackerService.registerNodeManager(request2);
       privateDispatcher.await();
-      Assert.assertEquals("Cluster resources don't match", newCapability,
-          rm.getResourceScheduler().getClusterResource());
+      assertEquals(newCapability, rm.getResourceScheduler().getClusterResource(),
+          "Cluster resources don't match");
       privateResourceTrackerService.stop();
     } finally {
       rm.stop();
     }
   }
 
-  @Test(timeout = 10000)
-  public void testUpdateThreadLifeCycle() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  @Timeout(10)
+  public void testUpdateThreadLifeCycle(SchedulerType type) throws Exception {
+    initTestAbstractYarnScheduler(type);
     MockRM rm = new MockRM(getConf());
     try {
       rm.start();
@@ -1449,7 +1485,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
       if (getSchedulerType().equals(SchedulerType.FAIR)) {
         Thread updateThread = scheduler.updateThread;
-        Assert.assertTrue(updateThread.isAlive());
+        assertTrue(updateThread.isAlive());
         scheduler.stop();
 
         int numRetries = 100;
@@ -1457,12 +1493,12 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
           Thread.sleep(50);
         }
 
-        Assert.assertNotEquals("The Update thread is still alive", 0, numRetries);
+        assertNotEquals(0, numRetries, "The Update thread is still alive");
       } else if (getSchedulerType().equals(SchedulerType.CAPACITY)) {
-        Assert.assertNull("updateThread shouldn't have been created",
-            scheduler.updateThread);
+        assertNull(scheduler.updateThread,
+            "updateThread shouldn't have been created");
       } else {
-        Assert.fail("Unhandled SchedulerType, " + getSchedulerType() +
+        fail("Unhandled SchedulerType, " + getSchedulerType() +
             ", please update this unit test.");
       }
     } finally {
@@ -1470,8 +1506,11 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     }
   }
 
-  @Test(timeout=60000)
-  public void testContainerRecoveredByNode() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  @Timeout(60)
+  public void testContainerRecoveredByNode(SchedulerType type) throws Exception {
+    initTestAbstractYarnScheduler(type);
     System.out.println("Starting testContainerRecoveredByNode");
     final int maxMemory = 10 * 1024;
     YarnConfiguration conf = getConf();
@@ -1521,11 +1560,11 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
       //verify queue name when rmContainer is recovered
       if (scheduler instanceof CapacityScheduler) {
-        Assert.assertEquals(
+        assertEquals(
             app1.getQueue(),
             rmContainer.getQueueName());
       } else {
-        Assert.assertEquals(app1.getQueue(), rmContainer.getQueueName());
+        assertEquals(app1.getQueue(), rmContainer.getQueueName());
       }
 
     } finally {
@@ -1538,8 +1577,10 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
    * Test the order we get the containers to kill. It should respect the order
    * described in {@link SchedulerNode#getContainersToKill()}.
    */
-  @Test
-  public void testGetRunningContainersToKill() {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testGetRunningContainersToKill(SchedulerType type) throws IOException {
+    initTestAbstractYarnScheduler(type);
     final SchedulerNode node = new MockSchedulerNode();
     assertEquals(Collections.emptyList(), node.getContainersToKill());
 

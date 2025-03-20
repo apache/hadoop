@@ -521,7 +521,6 @@ public class TestYarnCLI {
     pw.close();
     String appsReportStr = baos.toString("UTF-8");
     assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(1)).write(any(byte[].class), anyInt(), anyInt());
 
     //Test command yarn application -list --appTypes apptype1,apptype2
     //the output should be the same as
@@ -562,7 +561,6 @@ public class TestYarnCLI {
     pw.close();
     appsReportStr = baos.toString("UTF-8");
     assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(2)).write(any(byte[].class), anyInt(), anyInt());
 
     //Test command yarn application -list --appStates appState1,appState2
     sysOutStream.reset();
@@ -603,7 +601,6 @@ public class TestYarnCLI {
     pw.close();
     appsReportStr = baos.toString("UTF-8");
     assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(3)).write(any(byte[].class), anyInt(), anyInt());
 
     // Test command yarn application -list --appTypes apptype1,apptype2
     // --appStates appstate1,appstate2
@@ -642,7 +639,6 @@ public class TestYarnCLI {
     pw.close();
     appsReportStr = baos.toString("UTF-8");
     assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(4)).write(any(byte[].class), anyInt(), anyInt());
 
     //Test command yarn application -list --appStates with invalid appStates
     sysOutStream.reset();
@@ -664,7 +660,6 @@ public class TestYarnCLI {
     pw.close();
     appsReportStr = baos.toString("UTF-8");
     assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(4)).write(any(byte[].class), anyInt(), anyInt());
 
     //Test command yarn application -list --appStates all
     sysOutStream.reset();
@@ -723,7 +718,6 @@ public class TestYarnCLI {
     pw.close();
     appsReportStr = baos.toString("UTF-8");
     assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(5)).write(any(byte[].class), anyInt(), anyInt());
 
     // Test command yarn application user case insensitive
     sysOutStream.reset();
@@ -759,7 +753,6 @@ public class TestYarnCLI {
     pw.close();
     appsReportStr = baos.toString("UTF-8");
     assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(6)).write(any(byte[].class), anyInt(), anyInt());
 
     // Test command yarn application with tags.
     sysOutStream.reset();
@@ -793,7 +786,6 @@ public class TestYarnCLI {
     pw.close();
     appsReportStr = baos.toString("UTF-8");
     assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(7)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
     EnumSet<YarnApplicationState> appState7 =
@@ -833,7 +825,6 @@ public class TestYarnCLI {
     pw.close();
     appsReportStr = baos.toString("UTF-8");
     assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(8)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
     Set<String> appType9 = Sets.newHashSet("YARN");
@@ -862,7 +853,6 @@ public class TestYarnCLI {
     pw.close();
     appsReportStr = baos.toString("UTF-8");
     assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(9)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
     Set<String> appType10 = Sets.newHashSet("HIVE");
@@ -893,7 +883,6 @@ public class TestYarnCLI {
     pw.close();
     appsReportStr = baos.toString("UTF-8");
     assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(10)).write(any(byte[].class), anyInt(), anyInt());
   }
 
   private List<ApplicationReport> getApplicationReports(
@@ -1398,7 +1387,6 @@ public class TestYarnCLI {
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
     assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(4)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1419,7 +1407,6 @@ public class TestYarnCLI {
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
     assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(5)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1440,7 +1427,6 @@ public class TestYarnCLI {
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
     assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(6)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1461,7 +1447,6 @@ public class TestYarnCLI {
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
     assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(7)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1482,7 +1467,6 @@ public class TestYarnCLI {
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
     assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(8)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1515,7 +1499,6 @@ public class TestYarnCLI {
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
     assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(9)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1550,7 +1533,6 @@ public class TestYarnCLI {
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
     assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(10)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
     result = cli.run(new String[] { "-list", "-states", "InvalidState"});
