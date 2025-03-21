@@ -715,6 +715,7 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
     if (Shell.isJavaVersionAtLeast(17)) {
+      // Added by ContainerLocalizer for JDK17+ (MAPREDUCE-7456)
       assertTrue(javaOpts.contains("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
       assertTrue(javaOpts.contains("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
     }
@@ -733,6 +734,7 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
     if (Shell.isJavaVersionAtLeast(17)) {
+      // Added by ContainerLocalizer for JDK17+ (MAPREDUCE-7456)
       assertFalse(javaOpts.contains("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
       assertFalse(javaOpts.contains("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
     }
@@ -752,6 +754,7 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
     if (Shell.isJavaVersionAtLeast(17)) {
+      // Added by ContainerLocalizer for JDK17+ (MAPREDUCE-7456)
       assertTrue(javaOpts.remove("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
       assertTrue(javaOpts.remove("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
     }
@@ -773,6 +776,7 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
     if (Shell.isJavaVersionAtLeast(17)) {
+      // Added by ContainerLocalizer for JDK17+ (MAPREDUCE-7456)
       assertTrue(javaOpts.remove("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
       assertTrue(javaOpts.remove("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
     }
@@ -793,6 +797,7 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
     if (Shell.isJavaVersionAtLeast(17)) {
+      // Added by ContainerLocalizer for JDK17+ (MAPREDUCE-7456)
       assertTrue(javaOpts.remove("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
       assertTrue(javaOpts.remove("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
     }
@@ -810,6 +815,7 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
     if (Shell.isJavaVersionAtLeast(17)) {
+      // Added by ContainerLocalizer for JDK17+ (MAPREDUCE-7456)
       assertTrue(javaOpts.remove("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
       assertTrue(javaOpts.remove("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
     }

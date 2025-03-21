@@ -314,6 +314,7 @@ public class TestLinuxContainerExecutorWithMocks {
       List<String> result=readMockParams();
 
       if (Shell.isJavaVersionAtLeast(17)) {
+        // Added by ContainerLocalizer for JDK17+ (MAPREDUCE-7456)
         assertTrue(result.remove("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
         assertTrue(result.remove("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
       }
