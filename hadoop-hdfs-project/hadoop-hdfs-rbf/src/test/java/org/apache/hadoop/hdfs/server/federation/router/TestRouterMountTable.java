@@ -70,16 +70,16 @@ import org.junit.Test;
  */
 public class TestRouterMountTable {
 
-  private static StateStoreDFSCluster cluster;
-  private static NamenodeContext nnContext0;
-  private static NamenodeContext nnContext1;
-  private static RouterContext routerContext;
-  private static MountTableResolver mountTable;
-  private static ClientProtocol routerProtocol;
-  private static long startTime;
-  private static FileSystem nnFs0;
-  private static FileSystem nnFs1;
-  private static FileSystem routerFs;
+  protected static StateStoreDFSCluster cluster;
+  protected static NamenodeContext nnContext0;
+  protected static NamenodeContext nnContext1;
+  protected static RouterContext routerContext;
+  protected static MountTableResolver mountTable;
+  protected static ClientProtocol routerProtocol;
+  protected static long startTime;
+  protected static FileSystem nnFs0;
+  protected static FileSystem nnFs1;
+  protected static FileSystem routerFs;
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
@@ -179,7 +179,7 @@ public class TestRouterMountTable {
    * @return If it was succesfully added.
    * @throws IOException Problems adding entries.
    */
-  private boolean addMountTable(final MountTable entry) throws IOException {
+  protected boolean addMountTable(final MountTable entry) throws IOException {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTableManager = client.getMountTableManager();
     AddMountTableEntryRequest addRequest =

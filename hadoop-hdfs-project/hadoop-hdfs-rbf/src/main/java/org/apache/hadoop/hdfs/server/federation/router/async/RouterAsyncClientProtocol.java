@@ -405,118 +405,121 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
     getListingInt(src, startAfter, needLocation);
     asyncApply((AsyncApplyFunction<List<RemoteResult<RemoteLocation, DirectoryListing>>, Object>)
         listings -> {
-        TreeMap<byte[], HdfsFileStatus> nnListing = new TreeMap<>(comparator);
-        int totalRemainingEntries = 0;
-        final int[] remainingEntries = {0};
-        boolean namenodeListingExists = false;
-        // Check the subcluster listing with the smallest name to make sure
-        // no file is skipped across subclusters
-        byte[] lastName = null;
-        if (listings != null) {
-          for (RemoteResult<RemoteLocation, DirectoryListing> result : listings) {
-            if (result.hasException()) {
-              IOException ioe = result.getException();
-              if (ioe instanceof FileNotFoundException) {
-                RemoteLocation location = result.getLocation();
-                LOG.debug("Cannot get listing from {}", location);
-              } else if (!allowPartialList) {
-                throw ioe;
+          TreeMap<byte[], HdfsFileStatus> nnListing = new TreeMap<>(comparator);
+          int totalRemainingEntries = 0;
+          final int[] remainingEntries = {0};
+          boolean namenodeListingExists = false;
+          // Check the subcluster listing with the smallest name to make sure
+          // no file is skipped across subclusters
+          byte[] lastName = null;
+          if (listings != null) {
+            for (RemoteResult<RemoteLocation, DirectoryListing> result : listings) {
+              if (result.hasException()) {
+                IOException ioe = result.getException();
+                if (ioe instanceof FileNotFoundException) {
+                  RemoteLocation location = result.getLocation();
+                  LOG.debug("Cannot get listing from {}", location);
+                } else if (!allowPartialList) {
+                  throw ioe;
+                }
+              } else if (result.getResult() != null) {
+                DirectoryListing listing = result.getResult();
+                totalRemainingEntries += listing.getRemainingEntries();
+                HdfsFileStatus[] partialListing = listing.getPartialListing();
+                int length = partialListing.length;
+                if (length > 0) {
+                  HdfsFileStatus lastLocalEntry = partialListing[length-1];
+                  byte[] lastLocalName = lastLocalEntry.getLocalNameInBytes();
+                  if (lastName == null ||
+                      comparator.compare(lastName, lastLocalName) > 0) {
+                    lastName = lastLocalName;
+                  }
+                }
               }
-            } else if (result.getResult() != null) {
+            }
+
+            // Add existing entries
+            for (RemoteResult<RemoteLocation, DirectoryListing> result : listings) {
               DirectoryListing listing = result.getResult();
-              totalRemainingEntries += listing.getRemainingEntries();
-              HdfsFileStatus[] partialListing = listing.getPartialListing();
-              int length = partialListing.length;
-              if (length > 0) {
-                HdfsFileStatus lastLocalEntry = partialListing[length-1];
-                byte[] lastLocalName = lastLocalEntry.getLocalNameInBytes();
-                if (lastName == null ||
-                    comparator.compare(lastName, lastLocalName) > 0) {
-                  lastName = lastLocalName;
+              if (listing != null) {
+                namenodeListingExists = true;
+                for (HdfsFileStatus file : listing.getPartialListing()) {
+                  byte[] filename = file.getLocalNameInBytes();
+                  if (totalRemainingEntries > 0 &&
+                      comparator.compare(filename, lastName) > 0) {
+                    // Discarding entries further than the lastName
+                    remainingEntries[0]++;
+                  } else {
+                    nnListing.put(filename, file);
+                  }
                 }
+                remainingEntries[0] += listing.getRemainingEntries();
               }
             }
           }
 
-          // Add existing entries
-          for (RemoteResult<RemoteLocation, DirectoryListing> result : listings) {
-            DirectoryListing listing = result.getResult();
-            if (listing != null) {
-              namenodeListingExists = true;
-              for (HdfsFileStatus file : listing.getPartialListing()) {
-                byte[] filename = file.getLocalNameInBytes();
-                if (totalRemainingEntries > 0 &&
-                    comparator.compare(filename, lastName) > 0) {
-                  // Discarding entries further than the lastName
-                  remainingEntries[0]++;
-                } else {
-                  nnListing.put(filename, file);
-                }
+          // Add mount points at this level in the tree
+          final List<String> children = subclusterResolver.getMountPoints(src);
+          if (children != null) {
+            // Get the dates for each mount point
+            Map<String, Long> dates = getMountPointDates(src);
+            byte[] finalLastName = lastName;
+            asyncForEach(children.iterator(), (forEachRun, child) -> {
+              long date = 0;
+              if (dates != null && dates.containsKey(child)) {
+                date = dates.get(child);
               }
-              remainingEntries[0] += listing.getRemainingEntries();
-            }
-          }
-        }
-
-        // Add mount points at this level in the tree
-        final List<String> children = subclusterResolver.getMountPoints(src);
-        if (children != null) {
-          // Get the dates for each mount point
-          Map<String, Long> dates = getMountPointDates(src);
-          byte[] finalLastName = lastName;
-          asyncForEach(children.iterator(), (forEachRun, child) -> {
-            long date = 0;
-            if (dates != null && dates.containsKey(child)) {
-              date = dates.get(child);
-            }
-            Path childPath = new Path(src, child);
-            getMountPointStatus(childPath.toString(), 0, date);
-            asyncApply((ApplyFunction<HdfsFileStatus, Object>) dirStatus -> {
-              // if there is no subcluster path, always add mount point
-              byte[] bChild = DFSUtil.string2Bytes(child);
-              if (finalLastName == null) {
-                nnListing.put(bChild, dirStatus);
-              } else {
-                if (shouldAddMountPoint(bChild,
-                    finalLastName, startAfter, remainingEntries[0])) {
-                  // This may overwrite existing listing entries with the mount point
-                  // TODO don't add if already there?
+              Path childPath = new Path(src, child);
+              getMountPointStatus(childPath.toString(), 0, date);
+              asyncApply((ApplyFunction<HdfsFileStatus, Object>) dirStatus -> {
+                // if there is no subcluster path, always add mount point
+                byte[] bChild = DFSUtil.string2Bytes(child);
+                if (finalLastName == null) {
                   nnListing.put(bChild, dirStatus);
+                } else {
+                  if (shouldAddMountPoint(bChild,
+                      finalLastName, startAfter, remainingEntries[0])) {
+                    // This may overwrite existing listing entries with the mount point
+                    // TODO don't add if already there?
+                    nnListing.put(bChild, dirStatus);
+                  }
                 }
-              }
-              return null;
+                return null;
+              });
             });
-          });
-          asyncApply(o -> {
-            // Update the remaining count to include left mount points
-            if (nnListing.size() > 0) {
-              byte[] lastListing = nnListing.lastKey();
-              for (int i = 0; i < children.size(); i++) {
-                byte[] bChild = DFSUtil.string2Bytes(children.get(i));
-                if (comparator.compare(bChild, lastListing) > 0) {
-                  remainingEntries[0] += (children.size() - i);
-                  break;
+            boolean finalNamenodeListingExists = namenodeListingExists;
+            asyncApply(o -> {
+              // Update the remaining count to include left mount points
+              if (nnListing.size() > 0) {
+                byte[] lastListing = nnListing.lastKey();
+                for (int i = 0; i < children.size(); i++) {
+                  byte[] bChild = DFSUtil.string2Bytes(children.get(i));
+                  if (comparator.compare(bChild, lastListing) > 0) {
+                    remainingEntries[0] += (children.size() - i);
+                    break;
+                  }
                 }
               }
-            }
-            return null;
-          });
-        }
-        asyncComplete(namenodeListingExists);
-        asyncApply((ApplyFunction<Boolean, Object>) exists -> {
-          if (!exists && nnListing.size() == 0 && children == null) {
-            // NN returns a null object if the directory cannot be found and has no
-            // listing. If we didn't retrieve any NN listing data, and there are no
-            // mount points here, return null.
-            return null;
+              return finalNamenodeListingExists;
+            });
+          } else {
+            asyncComplete(namenodeListingExists);
           }
 
-          // Generate combined listing
-          HdfsFileStatus[] combinedData = new HdfsFileStatus[nnListing.size()];
-          combinedData = nnListing.values().toArray(combinedData);
-          return new DirectoryListing(combinedData, remainingEntries[0]);
+          asyncApply((ApplyFunction<Boolean, Object>) exists -> {
+            if (!exists && nnListing.size() == 0 && children == null) {
+              // NN returns a null object if the directory cannot be found and has no
+              // listing. If we didn't retrieve any NN listing data, and there are no
+              // mount points here, return null.
+              return null;
+            }
+
+            // Generate combined listing
+            HdfsFileStatus[] combinedData = new HdfsFileStatus[nnListing.size()];
+            combinedData = nnListing.values().toArray(combinedData);
+            return new DirectoryListing(combinedData, remainingEntries[0]);
+          });
         });
-      });
     return asyncReturn(DirectoryListing.class);
   }
 

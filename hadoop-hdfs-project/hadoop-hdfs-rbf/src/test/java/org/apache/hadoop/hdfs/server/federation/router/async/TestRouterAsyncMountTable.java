@@ -18,9 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation.router.async;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
@@ -28,13 +26,12 @@ import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
+import org.apache.hadoop.hdfs.server.federation.router.TestRouterMountTable;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
-import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -42,7 +39,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collections;
 
@@ -52,16 +48,12 @@ import static org.junit.Assert.assertTrue;
 /**
  * Test a router end-to-end including the MountTable using async rpc.
  */
-public class TestRouterAsyncMountTable {
+public class TestRouterAsyncMountTable extends TestRouterMountTable {
   public static final Logger LOG = LoggerFactory.getLogger(TestRouterAsyncMountTable.class);
-
-  private static StateStoreDFSCluster cluster;
-  private static MiniRouterDFSCluster.RouterContext routerContext;
-  private static MountTableResolver mountTable;
-  private static FileSystem routerFs;
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
+    startTime = Time.now();
     // Build and start a federated cluster.
     cluster = new StateStoreDFSCluster(false, 2);
     Configuration conf = new RouterConfigBuilder()
@@ -76,9 +68,15 @@ public class TestRouterAsyncMountTable {
     cluster.startRouters();
     cluster.waitClusterUp();
 
+    // Get the end points
+    nnContext0 = cluster.getNamenode("ns0", null);
+    nnContext1 = cluster.getNamenode("ns1", null);
+    nnFs0 = nnContext0.getFileSystem();
+    nnFs1 = nnContext1.getFileSystem();
     routerContext = cluster.getRandomRouter();
     routerFs = routerContext.getFileSystem();
     Router router = routerContext.getRouter();
+    routerProtocol = routerContext.getClient().getNamenode();
     mountTable = (MountTableResolver) router.getSubclusterResolver();
   }
 
@@ -107,26 +105,6 @@ public class TestRouterAsyncMountTable {
     mountTable.setDefaultNSEnable(true);
   }
 
-  /**
-   * Add a mount table entry to the mount table through the admin API.
-   * @param entry Mount table entry to add.
-   * @return If it was succesfully added.
-   * @throws IOException Problems adding entries.
-   */
-  private boolean addMountTable(final MountTable entry) throws IOException {
-    RouterClient client = routerContext.getAdminClient();
-    MountTableManager mountTableManager = client.getMountTableManager();
-    AddMountTableEntryRequest addRequest =
-        AddMountTableEntryRequest.newInstance(entry);
-    AddMountTableEntryResponse addResponse =
-        mountTableManager.addMountTableEntry(addRequest);
-
-    // Reload the Router cache.
-    mountTable.loadCache(true);
-
-    return addResponse.getStatus();
-  }
-
   @Test
   public void testGetEnclosingRoot() throws Exception {
     // Add a read only entry.
@@ -150,12 +128,4 @@ public class TestRouterAsyncMountTable {
     assertEquals(routerFs.getEnclosingRoot(new Path("/regular/pathDNE")), new Path("/regular"));
   }
 
-  @Test
-  public void testListNonExistPath() throws Exception {
-    mountTable.setDefaultNSEnable(false);
-    LambdaTestUtils.intercept(FileNotFoundException.class,
-        "File /base does not exist.",
-        "Expect FileNotFoundException.",
-        () -> routerFs.listStatus(new Path("/base")));
-  }
 }
