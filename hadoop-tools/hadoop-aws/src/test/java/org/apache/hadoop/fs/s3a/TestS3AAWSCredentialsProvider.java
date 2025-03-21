@@ -152,11 +152,11 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
     try (FileWriter fileWriter = new FileWriter(tempFile);
         BufferedWriter bufferedWriter = new BufferedWriter(fileWriter)) {
       bufferedWriter.write("[default]\n"
-        + "aws_access_key_id = defaultaccesskeyid\n"
-        + "aws_secret_access_key = defaultsecretkeyid\n");
+          + "aws_access_key_id = defaultaccesskeyid\n"
+          + "aws_secret_access_key = defaultsecretkeyid\n");
       bufferedWriter.write("[nondefault]\n"
-        + "aws_access_key_id = nondefaultaccesskeyid\n"
-        + "aws_secret_access_key = nondefaultsecretkeyid\n");
+          + "aws_access_key_id = nondefaultaccesskeyid\n"
+          + "aws_secret_access_key = nondefaultsecretkeyid\n");
     }
     conf.set(ProfileAWSCredentialsProvider.PROFILE_FILE, tempFile.getAbsolutePath());
     URI testUri = new URI("s3a://bucket1");
