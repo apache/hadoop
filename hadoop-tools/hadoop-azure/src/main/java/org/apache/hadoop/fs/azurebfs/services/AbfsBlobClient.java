@@ -392,7 +392,7 @@ public class AbfsBlobClient extends AbfsClient {
           listResponseData.getRenamePendingJsonPaths());
     }
 
-    if (isEmptyListResults(op.getResult()) && is404CheckRequired) {
+    if (isEmptyListResults(listResponseData) && is404CheckRequired) {
       // If the list operation returns no paths, we need to check if the path is a file.
       // If it is a file, we need to return the file in the list.
       // If it is a non-existing path, we need to throw a FileNotFoundException.
@@ -2032,25 +2032,23 @@ public class AbfsBlobClient extends AbfsClient {
     // This method is only called internally to determine state of a path
     // and hence don't need identity transformation to happen.
     ListResponseData listResponseData = listPath(path, false, 1, null, tracingContext, null, false);
-    return !isEmptyListResults(listResponseData.getOp().getResult());
+    return !isEmptyListResults(listResponseData);
   }
 
   /**
    * Check if the list call returned empty results without any continuation token.
-   * @param result The response of listing API from the server.
+   * @param listResponseData The response of listing API from the server.
    * @return True if empty results without continuation token.
    */
-  private boolean isEmptyListResults(AbfsHttpOperation result) {
+  private boolean isEmptyListResults(ListResponseData listResponseData) {
+    AbfsHttpOperation result = listResponseData.getOp().getResult();
     boolean isEmptyList = result != null && result.getStatusCode() == HTTP_OK && // List Call was successful
         result.getListResultSchema() != null && // Parsing of list response was successful
-        result.getListResultSchema().paths().isEmpty() && // No paths were returned
-        result.getListResultSchema() instanceof BlobListResultSchema && // It is safe to typecast to BlobListResultSchema
-        ((BlobListResultSchema) result.getListResultSchema()).getNextMarker() == null; // No continuation token was returned
+        listResponseData.getFileStatusList().isEmpty() && listResponseData.getRenamePendingJsonPaths().isEmpty() &&// No paths were returned
+        StringUtils.isEmpty(listResponseData.getContinuationToken()); // No continuation token was returned
     if (isEmptyList) {
       LOG.debug("List call returned empty results without any continuation token.");
       return true;
-    } else if (result != null && !(result.getListResultSchema() instanceof BlobListResultSchema)) {
-      throw new RuntimeException("List call returned unexpected results over Blob Endpoint.");
     }
     return false;
   }

@@ -45,8 +45,10 @@ import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
+import static org.apache.hadoop.fs.azurebfs.ITestAzureBlobFileSystemListStatus.TEST_CONTINUATION_TOKEN;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_XML;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCKLIST;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
@@ -76,7 +78,7 @@ public final class AbfsClientTestUtil {
 
   }
 
-  public static void setMockAbfsRestOperationForListPathOperation(
+  public static void setMockAbfsRestOperationForListOperation(
       final AbfsClient spiedClient,
       FunctionRaisingIOE<AbfsJdkHttpOperation, AbfsJdkHttpOperation> functionRaisingIOE)
       throws Exception {
@@ -92,16 +94,29 @@ public final class AbfsClientTestUtil {
         new ArrayList<>(),
         spiedClient.getAbfsConfiguration()
     ));
-    ListResponseData listResponseData = Mockito.spy(new ListResponseData());
-    listResponseData.setRenamePendingJsonPaths(null);
-    listResponseData.setOp(abfsRestOperation);
-    listResponseData.setFileStatusList(new ArrayList<>());
+    ListResponseData listResponseData1 = Mockito.spy(new ListResponseData());
+    listResponseData1.setRenamePendingJsonPaths(null);
+    listResponseData1.setOp(abfsRestOperation);
+    listResponseData1.setFileStatusList(new ArrayList<>());
+    listResponseData1.setContinuationToken(TEST_CONTINUATION_TOKEN);
+
+    ListResponseData listResponseData2 = Mockito.spy(new ListResponseData());
+    listResponseData2.setRenamePendingJsonPaths(null);
+    listResponseData2.setOp(abfsRestOperation);
+    listResponseData2.setFileStatusList(new ArrayList<>());
+    listResponseData2.setContinuationToken(EMPTY_STRING);
 
     Mockito.doReturn(abfsRestOperation).when(spiedClient).getAbfsRestOperation(
         eq(AbfsRestOperationType.ListPaths), any(), any(), any());
+    Mockito.doReturn(abfsRestOperation).when(spiedClient).getAbfsRestOperation(
+        eq(AbfsRestOperationType.ListBlobs), any(), any(), any());
 
-    addGeneralMockBehaviourToAbfsClient(spiedClient, exponentialRetryPolicy, staticRetryPolicy, intercept, listResponseData);
+    addGeneralMockBehaviourToAbfsClient(spiedClient, exponentialRetryPolicy, staticRetryPolicy, intercept, listResponseData1);
     addGeneralMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
+
+    Mockito.doReturn(listResponseData1).doReturn(listResponseData2)
+        .when(spiedClient)
+        .parseListPathResults(any(), any());
 
     functionRaisingIOE.apply(httpOperation);
   }

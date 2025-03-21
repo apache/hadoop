@@ -78,7 +78,7 @@ import static org.mockito.Mockito.when;
 public class ITestAzureBlobFileSystemListStatus extends
     AbstractAbfsIntegrationTest {
   private static final int TEST_FILES_NUMBER = 6000;
-  private static final String TEST_CONTINUATION_TOKEN = "continuation";
+  public static final String TEST_CONTINUATION_TOKEN = "continuation";
 
   public ITestAzureBlobFileSystemListStatus() throws Exception {
     super();
@@ -128,43 +128,20 @@ public class ITestAzureBlobFileSystemListStatus extends
    */
   @Test
   public void testListPathTracingContext() throws Exception {
-    assumeDfsServiceType();
-    final AzureBlobFileSystem fs = getFileSystem();
-    final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
-    final AzureBlobFileSystemStore spiedStore = Mockito.spy(fs.getAbfsStore());
-    final AbfsClient spiedClient = Mockito.spy(fs.getAbfsClient());
+    final AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
+    final AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
+    final AbfsClient spiedClient = Mockito.spy(spiedFs.getAbfsClient());
     final TracingContext spiedTracingContext = Mockito.spy(
         new TracingContext(
-            fs.getClientCorrelationId(), fs.getFileSystemId(),
+            spiedFs.getClientCorrelationId(), spiedFs.getFileSystemId(),
             FSOperationType.LISTSTATUS, true, TracingHeaderFormat.ALL_ID_FORMAT, null));
 
     Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
-    spiedStore.setClient(spiedClient);
+    Mockito.doReturn(spiedClient).when(spiedStore).getClient();
     spiedFs.setWorkingDirectory(new Path("/"));
 
-    AbfsClientTestUtil.setMockAbfsRestOperationForListPathOperation(spiedClient,
+    AbfsClientTestUtil.setMockAbfsRestOperationForListOperation(spiedClient,
         (httpOperation) -> {
-
-          ListResultEntrySchema entry = new DfsListResultEntrySchema()
-              .withName("a")
-              .withIsDirectory(true);
-          List<ListResultEntrySchema> paths = new ArrayList<>();
-          paths.add(entry);
-          paths.clear();
-          entry = new DfsListResultEntrySchema()
-              .withName("abc.txt")
-              .withIsDirectory(false);
-          paths.add(entry);
-          ListResultSchema schema1 = new DfsListResultSchema().withPaths(paths);
-          ListResultSchema schema2 = new DfsListResultSchema().withPaths(paths);
-
-          when(httpOperation.getListResultSchema()).thenReturn(schema1)
-              .thenReturn(schema2);
-          when(httpOperation.getResponseHeader(
-              HttpHeaderConfigurations.X_MS_CONTINUATION))
-              .thenReturn(TEST_CONTINUATION_TOKEN)
-              .thenReturn(EMPTY_STRING);
-
           Stubber stubber = Mockito.doThrow(
               new SocketTimeoutException(CONNECTION_TIMEOUT_JDK_MESSAGE));
           stubber.doNothing().when(httpOperation).processResponse(
