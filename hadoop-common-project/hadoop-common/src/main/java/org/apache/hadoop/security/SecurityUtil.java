@@ -54,6 +54,9 @@ import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ZKUtil;
+import org.apache.hadoop.util.ExpiringCache;
+import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.util.SystemClock;
 import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.common.ClientX509Util;
 import org.slf4j.Logger;
@@ -90,6 +93,7 @@ public final class SecurityUtil {
 
   private static boolean logSlowLookups;
   private static int slowLookupThresholdMs;
+  private static int cachingInterval = 0;
 
   static {
     setConfigurationInternal(new Configuration());
@@ -106,6 +110,9 @@ public final class SecurityUtil {
     boolean useIp = conf.getBoolean(
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP,
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT);
+    cachingInterval = conf.getInt(CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_INTERVAL,
+        CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_INTERVAL_DEFAULT);
+
     setTokenServiceUseIp(useIp);
 
     logSlowLookups = conf.getBoolean(
@@ -139,8 +146,8 @@ public final class SecurityUtil {
     }
     useIpForTokenService = flag;
     hostResolver = !useIpForTokenService
-        ? new QualifiedHostResolver()
-        : new StandardHostResolver();
+        ? new QualifiedHostResolver(SystemClock.getInstance(), cachingInterval)
+        : new StandardHostResolver(SystemClock.getInstance(), cachingInterval);
   }
   
   /**
@@ -588,16 +595,62 @@ public final class SecurityUtil {
   }
   
   interface HostResolver {
-    InetAddress getByName(String host) throws UnknownHostException;    
+    InetAddress getByName(String host) throws UnknownHostException;
+  }
+
+  static class CacheableHostResolver implements HostResolver {
+    private ExpiringCache<String, InetAddress> cache;
+    private ExpiringCache.Loader<String, InetAddress> loader;
+
+    @VisibleForTesting
+    public ExpiringCache<String, InetAddress> getCache() {
+      return cache;
+    }
+
+    public void setCache(ExpiringCache<String, InetAddress> cache) {
+      this.cache = cache;
+    }
+
+    public void setLoader(ExpiringCache.Loader<String, InetAddress> loader) {
+      this.loader = loader;
+    }
+
+    @Override
+    public InetAddress getByName(String host) throws UnknownHostException {
+      try {
+        if (cache != null) {
+          return cache.get(host);
+        }
+        return loader.load(host);
+      } catch (Exception e) {
+        throw new UnknownHostException(host);
+      }
+    }
   }
   
   /**
    * Uses standard java host resolution
    */
-  static class StandardHostResolver implements HostResolver {
-    @Override
-    public InetAddress getByName(String host) throws UnknownHostException {
-      return InetAddress.getByName(host);
+  static class StandardHostResolver extends CacheableHostResolver {
+
+    class StandardLoader implements ExpiringCache.Loader<String, InetAddress> {
+      @Override
+      public InetAddress load(String host) throws UnknownHostException {
+        return InetAddress.getByName(host);
+      }
+    }
+
+    public StandardHostResolver() {
+      this(SystemClock.getInstance(), 0);
+    }
+
+    public StandardHostResolver(Clock clock, int expiryIntervalSecs) {
+      ExpiringCache.Loader loader = new StandardLoader();
+      setLoader(loader);
+      if (expiryIntervalSecs > 0) {
+        setCache(new ExpiringCache<String, InetAddress>(this.getClass().getSimpleName(),
+            clock, expiryIntervalSecs, loader));
+      }
     }
   }
   
@@ -623,65 +676,80 @@ public final class SecurityUtil {
    * NOTE: this resolver is only used if:
    *       hadoop.security.token.service.use_ip=false 
    */
-  protected static class QualifiedHostResolver implements HostResolver {
+  protected static class QualifiedHostResolver extends CacheableHostResolver {
+
+    class QualifiedHostLoader implements ExpiringCache.Loader<String, InetAddress> {
+
+      /**
+       * Create an InetAddress with a fully qualified hostname of the given
+       * hostname.  InetAddress does not qualify an incomplete hostname that
+       * is resolved via the domain search list.
+       * {@link InetAddress#getCanonicalHostName()} will fully qualify the
+       * hostname, but it always return the A record whereas the given hostname
+       * may be a CNAME.
+       *
+       * @param host a hostname or ip address
+       * @return InetAddress with the fully qualified hostname or ip
+       * @throws UnknownHostException if host does not exist
+       */
+      @Override
+      public InetAddress load(String host) throws UnknownHostException {
+        InetAddress addr = null;
+
+        if (InetAddresses.isInetAddress(host)) {
+          // valid ip address. use it as-is
+          addr = InetAddresses.forString(host);
+          // set hostname
+          addr = InetAddress.getByAddress(host, addr.getAddress());
+        } else if (host.endsWith(".")) {
+          // a rooted host ends with a dot, ex. "host."
+          // rooted hosts never use the search path, so only try an exact lookup
+          addr = getByExactName(host);
+        } else if (host.contains(".")) {
+          // the host contains a dot (domain), ex. "host.domain"
+          // try an exact host lookup, then fallback to search list
+          addr = getByExactName(host);
+          if (addr == null) {
+            addr = getByNameWithSearch(host);
+          }
+        } else {
+          // it's a simple host with no dots, ex. "host"
+          // try the search list, then fallback to exact host
+          InetAddress loopback = InetAddress.getByName(null);
+          if (host.equalsIgnoreCase(loopback.getHostName())) {
+            addr = InetAddress.getByAddress(host, loopback.getAddress());
+          } else {
+            addr = getByNameWithSearch(host);
+            if (addr == null) {
+              addr = getByExactName(host);
+            }
+          }
+        }
+        // unresolvable!
+        if (addr == null) {
+          throw new UnknownHostException(host);
+        }
+        return addr;
+      }
+    }
+
     private List<String> searchDomains = new ArrayList<>();
-    {
+
+    public QualifiedHostResolver() {
+      this(SystemClock.getInstance(), 0);
+    }
+
+    public QualifiedHostResolver(Clock clock, int expiryIntervalSecs) {
       ResolverConfig resolverConfig = ResolverConfig.getCurrentConfig();
       for (Name name : resolverConfig.searchPath()) {
         searchDomains.add(name.toString());
       }
-    }
-
-    /**
-     * Create an InetAddress with a fully qualified hostname of the given
-     * hostname.  InetAddress does not qualify an incomplete hostname that
-     * is resolved via the domain search list.
-     * {@link InetAddress#getCanonicalHostName()} will fully qualify the
-     * hostname, but it always return the A record whereas the given hostname
-     * may be a CNAME.
-     * 
-     * @param host a hostname or ip address
-     * @return InetAddress with the fully qualified hostname or ip
-     * @throws UnknownHostException if host does not exist
-     */
-    @Override
-    public InetAddress getByName(String host) throws UnknownHostException {
-      InetAddress addr = null;
-
-      if (InetAddresses.isInetAddress(host)) {
-        // valid ip address. use it as-is
-        addr = InetAddresses.forString(host);
-        // set hostname
-        addr = InetAddress.getByAddress(host, addr.getAddress());
-      } else if (host.endsWith(".")) {
-        // a rooted host ends with a dot, ex. "host."
-        // rooted hosts never use the search path, so only try an exact lookup
-        addr = getByExactName(host);
-      } else if (host.contains(".")) {
-        // the host contains a dot (domain), ex. "host.domain"
-        // try an exact host lookup, then fallback to search list
-        addr = getByExactName(host);
-        if (addr == null) {
-          addr = getByNameWithSearch(host);
-        }
-      } else {
-        // it's a simple host with no dots, ex. "host"
-        // try the search list, then fallback to exact host
-        InetAddress loopback = InetAddress.getByName(null);
-        if (host.equalsIgnoreCase(loopback.getHostName())) {
-          addr = InetAddress.getByAddress(host, loopback.getAddress());
-        } else {
-          addr = getByNameWithSearch(host);
-          if (addr == null) {
-            addr = getByExactName(host);
-          }
-        }
+      ExpiringCache.Loader loader = new QualifiedHostResolver.QualifiedHostLoader();
+      setLoader(loader);
+      if (expiryIntervalSecs > 0) {
+        setCache(new ExpiringCache<String, InetAddress>(this.getClass().getSimpleName(),
+            clock, expiryIntervalSecs, loader));
       }
-      // unresolvable!
-      if (addr == null) {
-        throw new UnknownHostException(host);
-      }
-      return addr;
     }
 
     InetAddress getByExactName(String host) {
