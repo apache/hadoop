@@ -27,10 +27,10 @@ import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -68,7 +68,7 @@ public class TestRouterClientMetrics {
   /** Filesystem interface to the Namenode. */
   private FileSystem nnFS;
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     cluster = new MiniRouterDFSCluster(false, NUM_SUBCLUSTERS);
     cluster.setNumDatanodesPerNameservice(NUM_DNS);
@@ -88,7 +88,7 @@ public class TestRouterClientMetrics {
 
   }
 
-  @Before
+  @BeforeEach
   public void testSetup() throws Exception {
     // Create mock locations
     cluster.installMockLocations();
@@ -115,7 +115,7 @@ public class TestRouterClientMetrics {
 
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     cluster.shutdown();
   }

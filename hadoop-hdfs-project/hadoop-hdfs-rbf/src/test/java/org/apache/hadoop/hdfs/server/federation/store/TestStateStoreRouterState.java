@@ -19,10 +19,10 @@ package org.apache.hadoop.hdfs.server.federation.store;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verifyException;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.clearRecords;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -39,9 +39,9 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.RouterHeartbeatRe
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the basic {@link StateStoreService} {@link RouterStore} functionality.
@@ -50,7 +50,7 @@ public class TestStateStoreRouterState extends TestStateStoreBase {
 
   private static RouterStore routerStore;
 
-  @BeforeClass
+  @BeforeAll
   public static void create() {
     // Reduce expirations to 2 seconds
     getConf().setTimeDuration(
@@ -62,7 +62,7 @@ public class TestStateStoreRouterState extends TestStateStoreBase {
         2, TimeUnit.SECONDS);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException, InterruptedException {
 
     if (routerStore == null) {

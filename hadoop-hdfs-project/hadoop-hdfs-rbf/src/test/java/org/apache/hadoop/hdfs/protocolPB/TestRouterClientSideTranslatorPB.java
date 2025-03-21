@@ -42,11 +42,11 @@ import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolPB;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.util.Lists;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -64,9 +64,9 @@ import static org.apache.hadoop.fs.permission.FsAction.READ;
 import static org.apache.hadoop.fs.permission.FsAction.READ_WRITE;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestRouterClientSideTranslatorPB {
   private static MiniDFSCluster cluster = null;
@@ -80,7 +80,7 @@ public class TestRouterClientSideTranslatorPB {
   private static final String TEST_DIR_PATH = "/test";
   private boolean mode;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     AsyncRpcProtocolPBUtil.setAsyncResponderExecutor(ForkJoinPool.commonPool());
     conf = new HdfsConfiguration();
@@ -98,7 +98,7 @@ public class TestRouterClientSideTranslatorPB {
         createProxy(RefreshUserMappingsProtocolPB.class));
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (clientProtocolTranslatorPB != null) {
       clientProtocolTranslatorPB.close();
@@ -117,13 +117,13 @@ public class TestRouterClientSideTranslatorPB {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setAsync() {
     mode = Client.isAsynchronousMode();
     Client.setAsynchronousMode(true);
   }
 
-  @After
+  @AfterEach
   public void unsetAsync() {
     Client.setAsynchronousMode(mode);
   }
