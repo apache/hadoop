@@ -202,8 +202,23 @@ public class Client implements AutoCloseable {
   private final boolean fallbackAllowed;
   private final boolean bindToWildCardAddress;
   private final byte[] clientId;
-  private final int maxAsyncCalls;
+  private int maxAsyncCalls;
   private final AtomicInteger asyncCallCounter = new AtomicInteger(0);
+
+  @VisibleForTesting
+  public int getAsyncCallCounter() {
+    return asyncCallCounter.get();
+  }
+
+  @VisibleForTesting
+  public void setMaxAsyncCalls(int limits) {
+    this.maxAsyncCalls = limits;
+  }
+
+  @VisibleForTesting
+  public boolean isAsyncCallCheckEabled() {
+    return maxAsyncCalls >= 0;
+  }
 
   /**
    * set the ping interval value in configuration
@@ -1460,7 +1475,7 @@ public class Client implements AutoCloseable {
   }
 
   private void checkAsyncCall() throws IOException {
-    if (isAsynchronousMode()) {
+    if (isAsynchronousMode() && isAsyncCallCheckEabled()) {
       if (asyncCallCounter.incrementAndGet() > maxAsyncCalls) {
         String errMsg = String.format(
             "Exceeded limit of max asynchronous calls: %d, " +
@@ -1518,7 +1533,7 @@ public class Client implements AutoCloseable {
         throw ioe;
       }
     } catch (Exception e) {
-      if (isAsynchronousMode()) {
+      if (isAsynchronousMode() && isAsyncCallCheckEabled()) {
         releaseAsyncCall();
       }
       throw e;
@@ -1527,7 +1542,9 @@ public class Client implements AutoCloseable {
     if (isAsynchronousMode()) {
       CompletableFuture<Writable> result = call.rpcResponseFuture.handle(
           (rpcResponse, e) -> {
-            releaseAsyncCall();
+            if (isAsyncCallCheckEabled()) {
+              releaseAsyncCall();
+            }
             if (e != null) {
               IOException ioe = (IOException) e;
               throw new CompletionException(warpIOException(ioe, connection));
