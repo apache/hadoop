@@ -88,6 +88,9 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_ASYNC_RPC_RESPONDER_COUNT_KEY =
           FEDERATION_ROUTER_ASYNC_RPC_PREFIX + "responder.count";
   public static final int DFS_ROUTER_ASYNCRPC_RESPONDER_COUNT_DEFAULT = 10;
+  public static final String DFS_ROUTER_ASYNC_RPC_MAX_ASYNCCALL_PERMIT_KEY =
+      FEDERATION_ROUTER_ASYNC_RPC_PREFIX + "max.asynccall.permit";
+  public static final int DFS_ROUTER_ASYNC_RPC_MAX_ASYNC_CALL_PERMIT_DEFAULT = 20000;
 
   public static final String DFS_ROUTER_METRICS_ENABLE =
       FEDERATION_ROUTER_PREFIX + "metrics.enable";

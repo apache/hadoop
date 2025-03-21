@@ -153,6 +153,15 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.async.rpc.max.asynccall.permit</name>
+    <value>20000</value>
+    <description>
+      Maximum number of asynchronous RPC requests the Router can send to
+      one downstream nameservice.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.connection.creator.queue-size</name>
     <value>100</value>
     <description>
