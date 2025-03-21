@@ -703,7 +703,10 @@ public class DatanodeManager {
     return host2DatanodeMap.getDatanodeByHost(host);
   }
 
-  /** @return the datanode descriptor for the host. */
+  /**
+   * @param hostname hostname of the datanode
+   * @return the datanode descriptor for the host.
+   */
   public DatanodeDescriptor getDatanodeByHostName(final String hostname) {
     return host2DatanodeMap.getDataNodeByHostName(hostname);
   }
