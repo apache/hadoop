@@ -633,18 +633,18 @@ public final class SecurityUtil {
    */
   static class StandardHostResolver extends CacheableHostResolver {
 
-    class StandardLoader implements ExpiringCache.Loader<String, InetAddress> {
+    static class StandardLoader implements ExpiringCache.Loader<String, InetAddress> {
       @Override
       public InetAddress load(String host) throws UnknownHostException {
         return InetAddress.getByName(host);
       }
     }
 
-    public StandardHostResolver() {
+    StandardHostResolver() {
       this(SystemClock.getInstance(), 0);
     }
 
-    public StandardHostResolver(Clock clock, int expiryIntervalSecs) {
+    StandardHostResolver(Clock clock, int expiryIntervalSecs) {
       ExpiringCache.Loader loader = new StandardLoader();
       setLoader(loader);
       if (expiryIntervalSecs > 0) {

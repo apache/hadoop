@@ -24,21 +24,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 // Unit test class for ExpiringCache
 public class TestExpiringCache {
 
-  // Test that the cache loads the value on the first call, then retrieves it from the cache,
-  // and that removing the entry forces a reload.
+  // Test that the cache loads the value on the first call, then retrieves it
+  // from the cache, and that removing the entry forces a reload.
   @Test
   public void testCacheLoadAndRetrieval() throws Exception {
     ControlledClock testClock = new ControlledClock(SystemClock.getInstance());
     AtomicInteger loadCounter = new AtomicInteger(0);
 
-    // Define a loader that increments the counter each time it is invoked and returns a specific string.
+    // Define a loader that increments the counter each time it is invoked and
+    // returns a specific string.
     ExpiringCache.Loader<String, String> loader = key -> {
       loadCounter.incrementAndGet();
       return "value_" + key;
     };
 
     // Use a long expiration interval to avoid expiration during this test.
-    ExpiringCache<String, String> cache = new ExpiringCache<>("TestExpiringCache", testClock, 60, loader);
+    ExpiringCache<String, String> cache = new ExpiringCache<>("TestExpiringCache",
+        testClock, 60, loader);
 
     // First call should invoke the loader.
     String value1 = cache.get("key1");
@@ -72,7 +74,8 @@ public class TestExpiringCache {
       return "value_" + key;
     };
 
-    ExpiringCache<String, String> cache = new ExpiringCache<>("TestCacheExpiry", testClock, 1, loader);
+    ExpiringCache<String, String> cache = new ExpiringCache<>("TestCacheExpiry",
+        testClock, 1, loader);
 
     // Load the value and store it in the cache with the current timestamp.
     String value1 = cache.get("key1");
@@ -103,7 +106,8 @@ public class TestExpiringCache {
       throw new Exception("Loading error for key: " + key);
     };
 
-    ExpiringCache<String, String> cache = new ExpiringCache<>("TestCacheException", testClock, 60, loader);
+    ExpiringCache<String, String> cache = new ExpiringCache<>("TestCacheException",
+        testClock, 60, loader);
 
     Exception thrown = assertThrows(Exception.class, () -> {
       cache.get("key_exception");

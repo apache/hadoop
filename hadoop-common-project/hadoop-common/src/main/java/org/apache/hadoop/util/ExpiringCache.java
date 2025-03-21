@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.util;
 
 import org.slf4j.Logger;
@@ -32,8 +31,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ExpiringCache <K, V> {
   private static final Logger LOG = LoggerFactory.getLogger(ExpiringCache.class);
   public static class CacheEntry<V> {
-    V value;
-    long timestamp;
+    private V value;
+    private long timestamp;
 
     CacheEntry(V value, long timestamp) {
       this.value = value;
