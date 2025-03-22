@@ -495,7 +495,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
   @MethodSource("guiceConfigs")
   @ParameterizedTest
-  public void testSameTimeIntervalRequestListReservation(int run, boolean recurrence) throws Exception {
+  public void testSameTimeIntervalRequestListReservation(int run, boolean recurrence)
+      throws Exception {
     initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
@@ -693,7 +694,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
   @MethodSource("guiceConfigs")
   @ParameterizedTest
-  public void testInvalidStartTimeRequestListReservation(int run, boolean recurrence) throws Exception {
+  public void testInvalidStartTimeRequestListReservation(int run, boolean recurrence)
+      throws Exception {
     initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
@@ -739,7 +741,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
   @MethodSource("guiceConfigs")
   @ParameterizedTest
-  public void testEmptyStartTimeRequestListReservation(int run, boolean recurrence) throws Exception {
+  public void testEmptyStartTimeRequestListReservation(int run, boolean recurrence)
+      throws Exception {
     initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
@@ -862,7 +865,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
   @MethodSource("guiceConfigs")
   @ParameterizedTest
-  public void testReservationIdRequestListReservation(int run, boolean recurrence) throws Exception {
+  public void testReservationIdRequestListReservation(int run, boolean recurrence)
+      throws Exception {
     initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);

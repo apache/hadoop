@@ -67,7 +67,7 @@ public final class AppInfoXmlVerifications {
             .getFinalApplicationStatus().toString(),
             getXmlString(info, "finalStatus"));
     assertEquals(0, getXmlFloat(info, "progress"),
-        0.0,"progress doesn't match");
+        0.0, "progress doesn't match");
     if ("UNASSIGNED".equals(getXmlString(info, "trackingUI"))) {
       checkStringMatch("trackingUI", "UNASSIGNED",
               getXmlString(info, "trackingUI"));

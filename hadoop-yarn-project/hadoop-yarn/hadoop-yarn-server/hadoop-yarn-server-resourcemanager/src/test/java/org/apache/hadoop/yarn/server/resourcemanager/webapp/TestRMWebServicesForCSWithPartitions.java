@@ -470,8 +470,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
         Element partitionCapacitiesInfo = (Element) capacitiesListInfos.item(0);
         String partitionName = WebServicesTestUtils
             .getXmlString(partitionCapacitiesInfo, "partitionName");
-        assertTrue(
-           partitionName.isEmpty(), "invalid PartitionCapacityInfo");
+        assertTrue(partitionName.isEmpty(), "invalid PartitionCapacityInfo");
         verifyPartitionCapacityInfoXML(partitionCapacitiesInfo, 30, 0, 50, 30,
             0, 50);
       } else if (queueChildElem.getTagName().equals("resources")) {
@@ -610,7 +609,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     assertEquals(capacity, WebServicesTestUtils.getXmlFloat(partitionInfo, "capacity"),
         EPSILON, "capacity doesn't match");
     assertEquals(usedCapacity, WebServicesTestUtils.getXmlFloat(partitionInfo, "usedCapacity"),
-        EPSILON,"capacity doesn't match");
+        EPSILON, "capacity doesn't match");
     assertEquals(maxCapacity, WebServicesTestUtils.getXmlFloat(partitionInfo, "maxCapacity"),
         EPSILON, "capacity doesn't match");
     assertEquals(absoluteCapacity,
@@ -813,14 +812,14 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       JSONObject partitionCapacityInfoJson, float capacity, float usedCapacity,
       float maxCapacity, float absoluteCapacity, float absoluteUsedCapacity,
       float absoluteMaxCapacity) throws JSONException {
-    assertEquals(capacity,
-        (float) partitionCapacityInfoJson.getDouble("capacity"), EPSILON, "capacity doesn't match");
-    assertEquals(usedCapacity,
-        (float) partitionCapacityInfoJson.getDouble("usedCapacity"), EPSILON, "capacity doesn't match");
-    assertEquals(maxCapacity,
-        (float) partitionCapacityInfoJson.getDouble("maxCapacity"), EPSILON, "capacity doesn't match");
-    assertEquals(absoluteCapacity,
-        (float) partitionCapacityInfoJson.getDouble("absoluteCapacity"), EPSILON, "capacity doesn't match");
+    assertEquals(capacity, (float) partitionCapacityInfoJson.getDouble("capacity"),
+        EPSILON, "capacity doesn't match");
+    assertEquals(usedCapacity, (float) partitionCapacityInfoJson.getDouble("usedCapacity"),
+        EPSILON, "capacity doesn't match");
+    assertEquals(maxCapacity, (float) partitionCapacityInfoJson.getDouble("maxCapacity"),
+        EPSILON, "capacity doesn't match");
+    assertEquals(absoluteCapacity, (float) partitionCapacityInfoJson.getDouble("absoluteCapacity"),
+        EPSILON, "capacity doesn't match");
     assertEquals(absoluteUsedCapacity,
         (float) partitionCapacityInfoJson.getDouble("absoluteUsedCapacity"),
         1e-3f, "capacity doesn't match");

@@ -102,7 +102,7 @@ public class TestRMWebServicesCapacitySchedDefaultLabel extends JerseyTestBase {
   }
 
   public void initTestRMWebServicesCapacitySchedDefaultLabel(boolean pLegacyQueueMode)
-    throws Exception {
+      throws Exception {
     this.legacyQueueMode = pLegacyQueueMode;
     backupSchedulerConfigFileInTarget();
     setUp();

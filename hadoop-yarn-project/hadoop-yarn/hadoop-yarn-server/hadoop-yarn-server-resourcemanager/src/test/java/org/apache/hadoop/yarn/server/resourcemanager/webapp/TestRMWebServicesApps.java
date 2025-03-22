@@ -405,7 +405,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     array = apps.getJSONArray("app");
     assertEquals(2, array.length(), "incorrect number of elements");
     assertTrue(
-       (array.getJSONObject(0).getString("state").equals("ACCEPTED") &&
+        (array.getJSONObject(0).getString("state").equals("ACCEPTED") &&
         array.getJSONObject(1).getString("state").equals("KILLED")) ||
         (array.getJSONObject(0).getString("state").equals("KILLED") &&
         array.getJSONObject(1).getString("state").equals("ACCEPTED")),
@@ -1869,7 +1869,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         state);
     WebServicesTestUtils.checkStringMatch("finalStatus", app
         .getFinalApplicationStatus().toString(), finalStatus);
-    assertEquals( 0, progress, 0.0, "progress doesn't match");
+    assertEquals(0, progress, 0.0, "progress doesn't match");
     if ("UNASSIGNED".equals(trackingUI)) {
       WebServicesTestUtils.checkStringMatch("trackingUI", "UNASSIGNED",
           trackingUI);
@@ -1939,8 +1939,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       String nodeLabelExpression, int numContainers, boolean relaxLocality,
       int priority, String resourceName, long memory, long vCores,
       String executionType, boolean enforceExecutionType) {
-    assertEquals(
-       request.getNodeLabelExpression(), nodeLabelExpression, "nodeLabelExpression doesn't match");
+    assertEquals(request.getNodeLabelExpression(), nodeLabelExpression,
+        "nodeLabelExpression doesn't match");
     assertEquals(request.getNumContainers(),
         numContainers, "numContainers doesn't match");
     assertEquals(request.getRelaxLocality(),

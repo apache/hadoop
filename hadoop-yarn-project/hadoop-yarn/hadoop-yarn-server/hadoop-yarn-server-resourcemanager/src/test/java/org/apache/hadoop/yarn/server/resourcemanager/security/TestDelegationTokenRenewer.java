@@ -494,7 +494,7 @@ public class TestDelegationTokenRenewer {
         ";Counter = " + Renewer.counter + ";t="+  Renewer.lastRenewed);
     assertEquals(numberOfExpectedRenewals, Renewer.counter,
         "renew wasn't called as many times as expected(4):");
-    assertEquals(Renewer.lastRenewed, 
+    assertEquals(Renewer.lastRenewed,
         token1, "most recently renewed token mismatch");
     
     // Test 2. 
@@ -943,7 +943,7 @@ public class TestDelegationTokenRenewer {
 
   }
 
-  @Test                                                         
+  @Test
   @Timeout(value = 20)
   public void testConcurrentAddApplication()                                  
       throws IOException, InterruptedException, BrokenBarrierException {       

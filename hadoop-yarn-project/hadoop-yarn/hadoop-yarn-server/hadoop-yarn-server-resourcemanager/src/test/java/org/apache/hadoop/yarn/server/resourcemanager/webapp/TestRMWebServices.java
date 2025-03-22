@@ -528,11 +528,10 @@ public class TestRMWebServices extends JerseyTestBase {
 
     assertEquals(0, containersAlloc, "containersAllocated doesn't match");
     assertEquals(totalMBExpect, totalMB, "totalMB doesn't match");
-    assertEquals(
-       clusterMetrics.getNumActiveNMs() + clusterMetrics.getNumLostNMs()
-            + clusterMetrics.getNumDecommisionedNMs()
-            + clusterMetrics.getNumRebootedNMs()
-            + clusterMetrics.getUnhealthyNMs(), totalNodes, "totalNodes doesn't match");
+    assertEquals(clusterMetrics.getNumActiveNMs() + clusterMetrics.getNumLostNMs()
+        + clusterMetrics.getNumDecommisionedNMs()
+        + clusterMetrics.getNumRebootedNMs()
+        + clusterMetrics.getUnhealthyNMs(), totalNodes, "totalNodes doesn't match");
     assertEquals(clusterMetrics.getNumLostNMs(), lostNodes, "lostNodes doesn't match");
     assertEquals(clusterMetrics.getUnhealthyNMs(), unhealthyNodes,
         "unhealthyNodes doesn't match");

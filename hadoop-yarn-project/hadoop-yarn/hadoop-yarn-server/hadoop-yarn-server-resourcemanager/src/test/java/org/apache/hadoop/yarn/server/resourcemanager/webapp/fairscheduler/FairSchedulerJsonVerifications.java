@@ -81,7 +81,8 @@ public class FairSchedulerJsonVerifications {
   private void verifyResourcesContainCustomResourceTypes(JSONObject queue,
       Set<String> resourceCategories) throws JSONException {
     for (String resourceCategory : resourceCategories) {
-      assertTrue(queue.has(resourceCategory), "Queue " + queue + " does not have resource category key: "
+      assertTrue(queue.has(resourceCategory),
+          "Queue " + queue + " does not have resource category key: "
           + resourceCategory);
       verifyResourceContainsAllCustomResourceTypes(
           queue.getJSONObject(resourceCategory));
@@ -103,9 +104,8 @@ public class FairSchedulerJsonVerifications {
         resourceInformations.getJSONArray("resourceInformation");
 
     // customResources will include vcores / memory as well
-    assertEquals(
-    
-       customResourceTypes.size(), customResources.length() - 2, "Different number of custom resource types found than expected");
+    assertEquals(customResourceTypes.size(), customResources.length() - 2,
+       "Different number of custom resource types found than expected");
 
     for (int i = 0; i < customResources.length(); i++) {
       JSONObject customResource = customResources.getJSONObject(i);

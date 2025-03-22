@@ -501,8 +501,8 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
             } else {
               verifyAppStateXML(response, RMAppState.KILLED);
             }
-            assertTrue(
-               app.getDiagnostics().toString().contains(diagnostic), "Diagnostic message is incorrect");
+            assertTrue(app.getDiagnostics().toString().contains(diagnostic),
+                "Diagnostic message is incorrect");
             break;
           }
         }

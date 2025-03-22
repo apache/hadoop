@@ -81,7 +81,8 @@ public class FairSchedulerXmlVerifications {
   private void verifyResourcesContainCustomResourceTypes(Element queue,
       Set<String> resourceCategories) {
     for (String resourceCategory : resourceCategories) {
-      assertTrue(hasChild(queue, resourceCategory), "Queue " + queue + " does not have key for resourceCategory: "
+      assertTrue(hasChild(queue, resourceCategory),
+          "Queue " + queue + " does not have key for resourceCategory: "
           + resourceCategory);
       verifyResourceContainsCustomResourceTypes(
               (Element) queue.getElementsByTagName(resourceCategory).item(0));

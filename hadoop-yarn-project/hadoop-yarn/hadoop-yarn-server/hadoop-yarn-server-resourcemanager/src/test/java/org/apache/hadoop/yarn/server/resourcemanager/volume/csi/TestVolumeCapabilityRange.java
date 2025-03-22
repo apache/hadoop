@@ -32,21 +32,21 @@ public class TestVolumeCapabilityRange {
   @Test
   public void testInvalidMinCapability() throws InvalidVolumeException {
     assertThrows(InvalidVolumeException.class, () -> {
-      VolumeCapabilityRange.newBuilder()
-        .minCapacity(-1L)
-        .maxCapacity(5L)
-        .unit("Gi")
-        .build();
+        VolumeCapabilityRange.newBuilder()
+          .minCapacity(-1L)
+          .maxCapacity(5L)
+          .unit("Gi")
+          .build();
     });
   }
 
   @Test
   public void testMissingMinCapability() throws InvalidVolumeException {
     assertThrows(InvalidVolumeException.class, () -> {
-      VolumeCapabilityRange.newBuilder()
-        .maxCapacity(5L)
-        .unit("Gi")
-        .build();
+        VolumeCapabilityRange.newBuilder()
+          .maxCapacity(5L)
+          .unit("Gi")
+          .build();
     });
 
   }
@@ -54,10 +54,10 @@ public class TestVolumeCapabilityRange {
   @Test
   public void testMissingUnit() throws InvalidVolumeException {
     assertThrows(InvalidVolumeException.class, () -> {
-      VolumeCapabilityRange.newBuilder()
-        .minCapacity(0L)
-        .maxCapacity(5L)
-        .build();
+        VolumeCapabilityRange.newBuilder()
+          .minCapacity(0L)
+          .maxCapacity(5L)
+          .build();
     });
   }
 

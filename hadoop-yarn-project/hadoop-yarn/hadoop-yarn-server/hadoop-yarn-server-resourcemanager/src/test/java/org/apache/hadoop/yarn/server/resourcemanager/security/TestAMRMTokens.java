@@ -302,8 +302,7 @@ public class TestAMRMTokens {
 
       MasterKeyData newKey = appTokenSecretManager.getMasterKey();
       assertNotNull(newKey);
-      assertFalse(
-       oldKey.equals(newKey), "Master key should have changed!");
+      assertFalse(oldKey.equals(newKey), "Master key should have changed!");
 
       // Another allocate call with old AMRMToken. Should continue to work.
       rpc.stopProxy(rmClient, conf); // To avoid using cached client
