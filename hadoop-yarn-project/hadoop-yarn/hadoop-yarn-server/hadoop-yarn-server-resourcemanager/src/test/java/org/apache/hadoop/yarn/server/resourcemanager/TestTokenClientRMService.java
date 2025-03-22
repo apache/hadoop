@@ -39,10 +39,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class TestTokenClientRMService {
 
@@ -69,7 +69,7 @@ public class TestTokenClientRMService {
   private static final UserGroupInformation otherKerb = UserGroupInformation
       .createRemoteUser(otherPrincipal, AuthMethod.KERBEROS);
 
-  @BeforeClass
+  @BeforeAll
   public static void setupSecretManager() throws IOException {
     ResourceManager rm = mock(ResourceManager.class);
     RMContext rmContext = mock(RMContext.class);
@@ -88,7 +88,7 @@ public class TestTokenClientRMService {
        .setAuthenticationMethod(AuthenticationMethod.KERBEROS);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownSecretManager() {
     if (dtsm != null) {
       dtsm.stopThreads();
@@ -128,9 +128,9 @@ public class TestTokenClientRMService {
             checkTokenRenewal(owner, other);
             return null;
           } catch (YarnException ex) {
-            Assert.assertTrue(ex.getMessage().contains(
+            Assertions.assertTrue(ex.getMessage().contains(
                 owner.getUserName() + " tries to renew a token"));
-            Assert.assertTrue(ex.getMessage().contains(
+            Assertions.assertTrue(ex.getMessage().contains(
                 "with non-matching renewer " + other.getUserName()));
             throw ex;
           }
@@ -139,7 +139,7 @@ public class TestTokenClientRMService {
     } catch (Exception e) {
       return;
     }
-    Assert.fail("renew should have failed");
+    Assertions.fail("renew should have failed");
   }
 
   @Test
@@ -219,12 +219,12 @@ public class TestTokenClientRMService {
             public Void run() throws Exception {
               try {
                 checkTokenCancellation(rmService, tokOwner, tokRenewer);
-                Assert.fail("We should not reach here; token owner = "
+                Assertions.fail("We should not reach here; token owner = "
                     + tokOwner.getUserName() + ", renewer = "
                     + tokRenewer.getUserName());
                 return null;
               } catch (YarnException e) {
-                Assert.assertTrue(e.getMessage().contains(
+                Assertions.assertTrue(e.getMessage().contains(
                     testerKerb.getUserName()
                         + " is not authorized to cancel the token"));
                 return null;
@@ -232,7 +232,7 @@ public class TestTokenClientRMService {
             }
           });
         } catch (Exception e) {
-          Assert.fail("Unexpected exception; " + e.getMessage());
+          Assertions.fail("Unexpected exception; " + e.getMessage());
         }
       }
     }
@@ -249,12 +249,12 @@ public class TestTokenClientRMService {
             public Void run() throws Exception {
               try {
                 checkTokenCancellation(tokOwner, tokRenewer);
-                Assert.fail("We should not reach here; token owner = "
+                Assertions.fail("We should not reach here; token owner = "
                     + tokOwner.getUserName() + ", renewer = "
                     + tokRenewer.getUserName());
                 return null;
               } catch (YarnException ex) {
-                Assert.assertTrue(ex.getMessage().contains(
+                Assertions.assertTrue(ex.getMessage().contains(
                     tester.getUserName()
                         + " is not authorized to cancel the token"));
                 return null;
@@ -262,7 +262,7 @@ public class TestTokenClientRMService {
             }
           });
         } catch (Exception e) {
-          Assert.fail("Unexpected exception; " + e.getMessage());
+          Assertions.fail("Unexpected exception; " + e.getMessage());
         }
       }
     }

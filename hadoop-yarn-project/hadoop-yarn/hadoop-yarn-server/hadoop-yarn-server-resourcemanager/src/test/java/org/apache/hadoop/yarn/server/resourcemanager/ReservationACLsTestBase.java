@@ -58,9 +58,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
     .allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -82,7 +82,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     useFullQueuePath = useFullPath;
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (resourceManager != null) {
       resourceManager.stop();
@@ -258,7 +258,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     try {
       ReservationId reservationId = createReservation(submitter);
       submitReservation(submitter, queueName, reservationId);
-      Assert.fail("Submit reservation by the enemy should fail!");
+      Assertions.fail("Submit reservation by the enemy should fail!");
     } catch (YarnException e) {
       handleAdministerException(e, submitter, queueName, ReservationACL
               .SUBMIT_RESERVATIONS.name());
@@ -286,7 +286,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
 
     try {
       listReservation(lister, queueName);
-      Assert.fail("List reservation by the enemy should fail!");
+      Assertions.fail("List reservation by the enemy should fail!");
     } catch (YarnException e) {
       handleAdministerException(e, lister, queueName, ReservationACL
               .LIST_RESERVATIONS.name());
@@ -316,7 +316,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     submitReservation(originalSubmitter, queueName, reservationId);
     try {
       listReservationById(lister, reservationId, queueName);
-      Assert.fail("List reservation by the enemy should fail!");
+      Assertions.fail("List reservation by the enemy should fail!");
     } catch (YarnException e) {
       handleAdministerException(e, lister, queueName, ReservationACL
               .LIST_RESERVATIONS.name());
@@ -341,7 +341,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
 
     try {
       deleteReservation(killer, reservationId);
-      Assert.fail("Reservation deletion by the enemy should fail!");
+      Assertions.fail("Reservation deletion by the enemy should fail!");
     } catch (YarnException e) {
       handleAdministerException(e, killer, queueName, ReservationACL
               .ADMINISTER_RESERVATIONS.name());
@@ -378,7 +378,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     ApplicationClientProtocol unauthorizedClient = getRMClientForUser(updater);
     try {
       unauthorizedClient.updateReservation(updateRequest);
-      Assert.fail("Reservation updating by the enemy should fail.");
+      Assertions.fail("Reservation updating by the enemy should fail.");
     } catch (YarnException e) {
       handleAdministerException(e, updater, queueName, ReservationACL
               .ADMINISTER_RESERVATIONS.name());
@@ -454,7 +454,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
   private void handleAdministerException(Exception e, String user, String
           queue, String operation) {
     LOG.info("Got exception while killing app as the enemy", e);
-    Assert.assertTrue(e.getMessage().contains("User " + user
+    Assertions.assertTrue(e.getMessage().contains("User " + user
             + " cannot perform operation " + operation + " on queue "
             + queue));
   }
@@ -477,13 +477,13 @@ public class ReservationACLsTestBase extends ACLsTestBase {
         Thread.sleep(100);
       } while (attempts-- > 0);
       if (attempts <= 0) {
-        Assert.fail("Exhausted attempts in checking if node capacity was "
+        Assertions.fail("Exhausted attempts in checking if node capacity was "
                 + "added to the plan");
       }
 
     } catch (Exception e) {
       e.printStackTrace();
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
   }
 

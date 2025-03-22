@@ -53,8 +53,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -112,22 +112,22 @@ public class TestRMServerUtils {
     ContainerUpdates containerUpdates =
         RMServerUtils.validateAndSplitUpdateResourceRequests(rmContext,
             allocateRequest, maxAllocation, updateErrors);
-    Assert.assertEquals(1, updateErrors.size());
-    Assert.assertEquals(resource + 1, updateErrors.get(0)
+    Assertions.assertEquals(1, updateErrors.size());
+    Assertions.assertEquals(resource + 1, updateErrors.get(0)
         .getUpdateContainerRequest().getCapability().getMemorySize());
-    Assert.assertEquals(resource + 1, updateErrors.get(0)
+    Assertions.assertEquals(resource + 1, updateErrors.get(0)
         .getUpdateContainerRequest().getCapability().getVirtualCores());
-    Assert.assertEquals(RESOURCE_OUTSIDE_ALLOWED_RANGE,
+    Assertions.assertEquals(RESOURCE_OUTSIDE_ALLOWED_RANGE,
         updateErrors.get(0).getReason());
 
-    Assert.assertEquals(1, containerUpdates.getIncreaseRequests().size());
+    Assertions.assertEquals(1, containerUpdates.getIncreaseRequests().size());
     UpdateContainerRequest increaseRequest =
         containerUpdates.getIncreaseRequests().get(0);
-    Assert.assertEquals(capabilityOk.getVirtualCores(),
+    Assertions.assertEquals(capabilityOk.getVirtualCores(),
         increaseRequest.getCapability().getVirtualCores());
-    Assert.assertEquals(capabilityOk.getMemorySize(),
+    Assertions.assertEquals(capabilityOk.getMemorySize(),
         increaseRequest.getCapability().getMemorySize());
-    Assert.assertEquals(containerIdOk, increaseRequest.getContainerId());
+    Assertions.assertEquals(containerIdOk, increaseRequest.getContainerId());
   }
 
   @Test
@@ -142,22 +142,22 @@ public class TestRMServerUtils {
     when(rmContext.getInactiveRMNodes()).thenReturn(inactiveList);
     List<RMNode> result = RMServerUtils.queryRMNodes(rmContext,
         EnumSet.of(NodeState.SHUTDOWN));
-    Assert.assertTrue(result.size() != 0);
+    Assertions.assertTrue(result.size() != 0);
     assertThat(result.get(0)).isEqualTo(rmNode1);
     when(rmNode1.getState()).thenReturn(NodeState.DECOMMISSIONED);
     result = RMServerUtils.queryRMNodes(rmContext,
         EnumSet.of(NodeState.DECOMMISSIONED));
-    Assert.assertTrue(result.size() != 0);
+    Assertions.assertTrue(result.size() != 0);
     assertThat(result.get(0)).isEqualTo(rmNode1);
     when(rmNode1.getState()).thenReturn(NodeState.LOST);
     result = RMServerUtils.queryRMNodes(rmContext,
         EnumSet.of(NodeState.LOST));
-    Assert.assertTrue(result.size() != 0);
+    Assertions.assertTrue(result.size() != 0);
     assertThat(result.get(0)).isEqualTo(rmNode1);
     when(rmNode1.getState()).thenReturn(NodeState.REBOOTED);
     result = RMServerUtils.queryRMNodes(rmContext,
         EnumSet.of(NodeState.REBOOTED));
-    Assert.assertTrue(result.size() != 0);
+    Assertions.assertTrue(result.size() != 0);
     assertThat(result.get(0)).isEqualTo(rmNode1);
   }
 
@@ -187,46 +187,46 @@ public class TestRMServerUtils {
         true, null);
     List<ResourceRequest> reqs = new ArrayList<>();
     reqs.add(anyReq);
-    Assert.assertEquals(100,
+    Assertions.assertEquals(100,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
 
     ResourceRequest rackReq = createResourceRequest("/rack1", true, null);
     reqs.add(rackReq);
-    Assert.assertEquals(30,
+    Assertions.assertEquals(30,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     anyReq.setRelaxLocality(false);
-    Assert.assertEquals(30,
+    Assertions.assertEquals(30,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     rackReq.setRelaxLocality(false);
-    Assert.assertEquals(100,
+    Assertions.assertEquals(100,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
 
     ResourceRequest node1Req = createResourceRequest("node1", false, null);
     reqs.add(node1Req);
-    Assert.assertEquals(100,
+    Assertions.assertEquals(100,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     node1Req.setRelaxLocality(true);
-    Assert.assertEquals(1,
+    Assertions.assertEquals(1,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     rackReq.setRelaxLocality(true);
-    Assert.assertEquals(31,
+    Assertions.assertEquals(31,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
 
     ResourceRequest node2Req = createResourceRequest("node2", false, null);
     reqs.add(node2Req);
-    Assert.assertEquals(31,
+    Assertions.assertEquals(31,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     node2Req.setRelaxLocality(true);
-    Assert.assertEquals(31,
+    Assertions.assertEquals(31,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     rackReq.setRelaxLocality(false);
-    Assert.assertEquals(2,
+    Assertions.assertEquals(2,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     node1Req.setRelaxLocality(false);
-    Assert.assertEquals(1,
+    Assertions.assertEquals(1,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     node2Req.setRelaxLocality(false);
-    Assert.assertEquals(100,
+    Assertions.assertEquals(100,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
   }
 
@@ -261,10 +261,10 @@ public class TestRMServerUtils {
         true, null);
     List<ResourceRequest> reqs = new ArrayList<>();
     reqs.add(anyReq);
-    Assert.assertEquals(80,
+    Assertions.assertEquals(80,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     anyReq.setNodeLabelExpression("label1");
-    Assert.assertEquals(10,
+    Assertions.assertEquals(10,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
   }
 
@@ -320,46 +320,46 @@ public class TestRMServerUtils {
         true, null);
     List<ResourceRequest> reqs = new ArrayList<>();
     reqs.add(anyReq);
-    Assert.assertEquals(80,
+    Assertions.assertEquals(80,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
 
     ResourceRequest rackReq = createResourceRequest("/rack1", true, null);
     reqs.add(rackReq);
-    Assert.assertEquals(20,
+    Assertions.assertEquals(20,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     anyReq.setRelaxLocality(false);
-    Assert.assertEquals(20,
+    Assertions.assertEquals(20,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     rackReq.setRelaxLocality(false);
-    Assert.assertEquals(80,
+    Assertions.assertEquals(80,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
 
     ResourceRequest node1Req = createResourceRequest("node1", false, null);
     reqs.add(node1Req);
-    Assert.assertEquals(80,
+    Assertions.assertEquals(80,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     node1Req.setRelaxLocality(true);
-    Assert.assertEquals(0,
+    Assertions.assertEquals(0,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     rackReq.setRelaxLocality(true);
-    Assert.assertEquals(20,
+    Assertions.assertEquals(20,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
 
     ResourceRequest node2Req = createResourceRequest("node2", false, null);
     reqs.add(node2Req);
-    Assert.assertEquals(20,
+    Assertions.assertEquals(20,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     node2Req.setRelaxLocality(true);
-    Assert.assertEquals(20,
+    Assertions.assertEquals(20,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     rackReq.setRelaxLocality(false);
-    Assert.assertEquals(1,
+    Assertions.assertEquals(1,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     node1Req.setRelaxLocality(false);
-    Assert.assertEquals(1,
+    Assertions.assertEquals(1,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     node2Req.setRelaxLocality(false);
-    Assert.assertEquals(80,
+    Assertions.assertEquals(80,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
 
     anyReq.setNodeLabelExpression("label1");
@@ -369,65 +369,65 @@ public class TestRMServerUtils {
     anyReq.setRelaxLocality(true);
     reqs = new ArrayList<>();
     reqs.add(anyReq);
-    Assert.assertEquals(15,
+    Assertions.assertEquals(15,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
 
     rackReq.setRelaxLocality(true);
     reqs.add(rackReq);
-    Assert.assertEquals(10,
+    Assertions.assertEquals(10,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     anyReq.setRelaxLocality(false);
-    Assert.assertEquals(10,
+    Assertions.assertEquals(10,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     rackReq.setRelaxLocality(false);
-    Assert.assertEquals(15,
+    Assertions.assertEquals(15,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
 
     node1Req.setRelaxLocality(false);
     reqs.add(node1Req);
-    Assert.assertEquals(15,
+    Assertions.assertEquals(15,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     node1Req.setRelaxLocality(true);
-    Assert.assertEquals(1,
+    Assertions.assertEquals(1,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     rackReq.setRelaxLocality(true);
-    Assert.assertEquals(11,
+    Assertions.assertEquals(11,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
 
     node2Req.setRelaxLocality(false);
     reqs.add(node2Req);
-    Assert.assertEquals(11,
+    Assertions.assertEquals(11,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     node2Req.setRelaxLocality(true);
-    Assert.assertEquals(11,
+    Assertions.assertEquals(11,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     rackReq.setRelaxLocality(false);
-    Assert.assertEquals(1,
+    Assertions.assertEquals(1,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     node1Req.setRelaxLocality(false);
-    Assert.assertEquals(0,
+    Assertions.assertEquals(0,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
     node2Req.setRelaxLocality(false);
-    Assert.assertEquals(15,
+    Assertions.assertEquals(15,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
   }
   @Test
   public void testConvertRmAppAttemptStateToYarnApplicationAttemptState() {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         YarnApplicationAttemptState.FAILED,
         RMServerUtils.convertRmAppAttemptStateToYarnApplicationAttemptState(
             RMAppAttemptState.FINAL_SAVING,
             RMAppAttemptState.FAILED
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         YarnApplicationAttemptState.SCHEDULED,
         RMServerUtils.convertRmAppAttemptStateToYarnApplicationAttemptState(
             RMAppAttemptState.FINAL_SAVING,
             RMAppAttemptState.SCHEDULED
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         YarnApplicationAttemptState.NEW,
         RMServerUtils.convertRmAppAttemptStateToYarnApplicationAttemptState(
             RMAppAttemptState.NEW,

@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -185,10 +185,11 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -251,10 +252,10 @@ public class TestClientRMService {
         GetClusterNodesRequest.newInstance(
             EnumSet.of(NodeState.DECOMMISSIONING)))
         .getNodeReports();
-    Assert.assertEquals(1, nodeReports.size());
+    Assertions.assertEquals(1, nodeReports.size());
     NodeReport nr = nodeReports.iterator().next();
-    Assert.assertEquals(decommissioningTimeout, nr.getDecommissioningTimeout());
-    Assert.assertNull(nr.getNodeUpdateType());
+    Assertions.assertEquals(decommissioningTimeout, nr.getDecommissioningTimeout());
+    Assertions.assertNull(nr.getNodeUpdateType());
   }
 
   @Test
@@ -299,14 +300,14 @@ public class TestClientRMService {
         GetClusterNodesRequest.newInstance(EnumSet.of(NodeState.RUNNING));
     List<NodeReport> nodeReports =
         client.getClusterNodes(request).getNodeReports();
-    Assert.assertEquals(1, nodeReports.size());
-    Assert.assertNotSame("Node is expected to be healthy!", NodeState.UNHEALTHY,
-        nodeReports.get(0).getNodeState());
+    Assertions.assertEquals(1, nodeReports.size());
+    Assertions.assertNotSame(NodeState.UNHEALTHY
+,         nodeReports.get(0).getNodeState(), "Node is expected to be healthy!");
 
     // Check node's label = x
-    Assert.assertTrue(nodeReports.get(0).getNodeLabels().contains("x"));
-    Assert.assertNull(nodeReports.get(0).getDecommissioningTimeout());
-    Assert.assertNull(nodeReports.get(0).getNodeUpdateType());
+    Assertions.assertTrue(nodeReports.get(0).getNodeLabels().contains("x"));
+    Assertions.assertNull(nodeReports.get(0).getDecommissioningTimeout());
+    Assertions.assertNull(nodeReports.get(0).getNodeUpdateType());
 
     // Now make the node unhealthy.
     node.nodeHeartbeat(false);
@@ -314,8 +315,8 @@ public class TestClientRMService {
 
     // Call again
     nodeReports = client.getClusterNodes(request).getNodeReports();
-    Assert.assertEquals("Unhealthy nodes should not show up by default", 0,
-        nodeReports.size());
+    Assertions.assertEquals(0
+,         nodeReports.size(), "Unhealthy nodes should not show up by default");
 
     // Change label of host1 to y
     map = new HashMap<NodeId, Set<String>>();
@@ -325,13 +326,13 @@ public class TestClientRMService {
     // Now query for UNHEALTHY nodes
     request = GetClusterNodesRequest.newInstance(EnumSet.of(NodeState.UNHEALTHY));
     nodeReports = client.getClusterNodes(request).getNodeReports();
-    Assert.assertEquals(1, nodeReports.size());
-    Assert.assertEquals("Node is expected to be unhealthy!", NodeState.UNHEALTHY,
-        nodeReports.get(0).getNodeState());
+    Assertions.assertEquals(1, nodeReports.size());
+    Assertions.assertEquals(NodeState.UNHEALTHY
+,         nodeReports.get(0).getNodeState(), "Node is expected to be unhealthy!");
 
-    Assert.assertTrue(nodeReports.get(0).getNodeLabels().contains("y"));
-    Assert.assertNull(nodeReports.get(0).getDecommissioningTimeout());
-    Assert.assertNull(nodeReports.get(0).getNodeUpdateType());
+    Assertions.assertTrue(nodeReports.get(0).getNodeLabels().contains("y"));
+    Assertions.assertNull(nodeReports.get(0).getDecommissioningTimeout());
+    Assertions.assertNull(nodeReports.get(0).getNodeUpdateType());
 
     // Remove labels of host1
     map = new HashMap<NodeId, Set<String>>();
@@ -342,14 +343,14 @@ public class TestClientRMService {
     rm.registerNode("host3:1236", 1024);
     request = GetClusterNodesRequest.newInstance(EnumSet.allOf(NodeState.class));
     nodeReports = client.getClusterNodes(request).getNodeReports();
-    Assert.assertEquals(3, nodeReports.size());
+    Assertions.assertEquals(3, nodeReports.size());
 
     // All host1-3's label should be empty (instead of null)
     for (NodeReport report : nodeReports) {
-      Assert.assertTrue(report.getNodeLabels() != null
+      Assertions.assertTrue(report.getNodeLabels() != null
           && report.getNodeLabels().isEmpty());
-      Assert.assertNull(report.getDecommissioningTimeout());
-      Assert.assertNull(report.getNodeUpdateType());
+      Assertions.assertNull(report.getDecommissioningTimeout());
+      Assertions.assertNull(report.getNodeUpdateType());
     }
   }
 
@@ -365,9 +366,9 @@ public class TestClientRMService {
     request.setApplicationId(ApplicationId.newInstance(0, 0));
     try {
       rmService.getApplicationReport(request);
-      Assert.fail();
+      Assertions.fail();
     } catch (ApplicationNotFoundException ex) {
-      Assert.assertEquals(ex.getMessage(),
+      Assertions.assertEquals(ex.getMessage(),
           "Application with id '" + request.getApplicationId()
               + "' doesn't exist in RM. Please check that the "
               + "job submission was successful.");
@@ -398,10 +399,10 @@ public class TestClientRMService {
       ApplicationReport report = response.getApplicationReport();
       ApplicationResourceUsageReport usageReport =
           report.getApplicationResourceUsageReport();
-      Assert.assertEquals(10, usageReport.getMemorySeconds());
-      Assert.assertEquals(3, usageReport.getVcoreSeconds());
-      Assert.assertEquals("<Not set>", report.getAmNodeLabelExpression());
-      Assert.assertEquals("<Not set>", report.getAppNodeLabelExpression());
+      Assertions.assertEquals(10, usageReport.getMemorySeconds());
+      Assertions.assertEquals(3, usageReport.getVcoreSeconds());
+      Assertions.assertEquals("<Not set>", report.getAmNodeLabelExpression());
+      Assertions.assertEquals("<Not set>", report.getAppNodeLabelExpression());
 
       // if application has am node label set to blank
       ApplicationId appId2 = getApplicationId(2);
@@ -411,9 +412,9 @@ public class TestClientRMService {
       response = rmService.getApplicationReport(request);
       report = response.getApplicationReport();
 
-      Assert.assertEquals(NodeLabel.DEFAULT_NODE_LABEL_PARTITION,
+      Assertions.assertEquals(NodeLabel.DEFAULT_NODE_LABEL_PARTITION,
           report.getAmNodeLabelExpression());
-      Assert.assertEquals(NodeLabel.NODE_LABEL_EXPRESSION_NOT_SET,
+      Assertions.assertEquals(NodeLabel.NODE_LABEL_EXPRESSION_NOT_SET,
           report.getAppNodeLabelExpression());
 
       // if application has am node label set to blank
@@ -425,8 +426,8 @@ public class TestClientRMService {
       response = rmService.getApplicationReport(request);
       report = response.getApplicationReport();
 
-      Assert.assertEquals("high-mem", report.getAmNodeLabelExpression());
-      Assert.assertEquals("high-mem", report.getAppNodeLabelExpression());
+      Assertions.assertEquals("high-mem", report.getAmNodeLabelExpression());
+      Assertions.assertEquals("high-mem", report.getAppNodeLabelExpression());
 
       // if application id is null
       GetApplicationReportRequest invalidRequest = recordFactory
@@ -437,7 +438,7 @@ public class TestClientRMService {
       } catch (YarnException e) {
         // rmService should return a ApplicationNotFoundException
         // when a null application id is provided
-        Assert.assertTrue(e instanceof ApplicationNotFoundException);
+        Assertions.assertTrue(e instanceof ApplicationNotFoundException);
       }
     } finally {
       rmService.close();
@@ -457,10 +458,10 @@ public class TestClientRMService {
     try {
       GetApplicationAttemptReportResponse response = rmService
           .getApplicationAttemptReport(request);
-      Assert.assertEquals(attemptId, response.getApplicationAttemptReport()
+      Assertions.assertEquals(attemptId, response.getApplicationAttemptReport()
           .getApplicationAttemptId());
     } catch (ApplicationNotFoundException ex) {
-      Assert.fail(ex.getMessage());
+      Assertions.fail(ex.getMessage());
     }
   }
 
@@ -498,12 +499,12 @@ public class TestClientRMService {
     try {
       GetApplicationAttemptsResponse response = rmService
           .getApplicationAttempts(request);
-      Assert.assertEquals(1, response.getApplicationAttemptList().size());
-      Assert.assertEquals(attemptId, response.getApplicationAttemptList()
+      Assertions.assertEquals(1, response.getApplicationAttemptList().size());
+      Assertions.assertEquals(attemptId, response.getApplicationAttemptList()
           .get(0).getApplicationAttemptId());
 
     } catch (ApplicationNotFoundException ex) {
-      Assert.fail(ex.getMessage());
+      Assertions.fail(ex.getMessage());
     }
   }
 
@@ -520,10 +521,10 @@ public class TestClientRMService {
     try {
       GetContainerReportResponse response = rmService
           .getContainerReport(request);
-      Assert.assertEquals(containerId, response.getContainerReport()
+      Assertions.assertEquals(containerId, response.getContainerReport()
           .getContainerId());
     } catch (ApplicationNotFoundException ex) {
-      Assert.fail(ex.getMessage());
+      Assertions.fail(ex.getMessage());
     }
   }
 
@@ -538,10 +539,10 @@ public class TestClientRMService {
     request.setApplicationAttemptId(attemptId);
     try {
       GetContainersResponse response = rmService.getContainers(request);
-      Assert.assertEquals(containerId, response.getContainerList().get(0)
+      Assertions.assertEquals(containerId, response.getContainerList().get(0)
           .getContainerId());
     } catch (ApplicationNotFoundException ex) {
-      Assert.fail(ex.getMessage());
+      Assertions.fail(ex.getMessage());
     }
   }
 
@@ -584,9 +585,9 @@ public class TestClientRMService {
         KillApplicationRequest.newInstance(applicationId);
     try {
       rmService.forceKillApplication(request);
-      Assert.fail();
+      Assertions.fail();
     } catch (ApplicationNotFoundException ex) {
-      Assert.assertEquals(ex.getMessage(),
+      Assertions.assertEquals(ex.getMessage(),
           "Trying to kill an absent " +
               "application " + request.getApplicationId());
     }
@@ -631,9 +632,9 @@ public class TestClientRMService {
         new HashSet<String>(tags));
     try {
       rmService.submitApplication(submitRequest);
-      Assert.fail();
+      Assertions.fail();
     } catch (Exception ex) {
-      Assert.assertTrue(ex.getMessage().contains(errorMsg));
+      Assertions.assertTrue(ex.getMessage().contains(errorMsg));
     }
   }
 
@@ -657,8 +658,8 @@ public class TestClientRMService {
             .build();
     RMApp app2 = MockRMAppSubmitter.submit(rm, data);
 
-    assertEquals("Incorrect number of apps in the RM", 0,
-        rmService.getApplications(getRequest).getApplicationList().size());
+    assertEquals(0
+,         rmService.getApplications(getRequest).getApplicationList().size(), "Incorrect number of apps in the RM");
 
     KillApplicationRequest killRequest1 =
         KillApplicationRequest.newInstance(app1.getApplicationId());
@@ -677,17 +678,17 @@ public class TestClientRMService {
       }
       Thread.sleep(10);
     }
-    assertTrue("Kill attempt count should be greater than 1 for managed AMs",
-        killAttemptCount > 1);
-    assertEquals("Incorrect number of apps in the RM", 1,
-        rmService.getApplications(getRequest).getApplicationList().size());
-    assertTrue("Diagnostic message is incorrect",
-        app1.getDiagnostics().toString().contains(diagnostic));
+    assertTrue(
+       killAttemptCount > 1, "Kill attempt count should be greater than 1 for managed AMs");
+    assertEquals(1
+,         rmService.getApplications(getRequest).getApplicationList().size(), "Incorrect number of apps in the RM");
+    assertTrue(
+       app1.getDiagnostics().toString().contains(diagnostic), "Diagnostic message is incorrect");
 
     KillApplicationResponse killResponse2 =
         rmService.forceKillApplication(killRequest2);
-    assertTrue("Killing UnmanagedAM should falsely acknowledge true",
-        killResponse2.getIsKillCompleted());
+    assertTrue(
+       killResponse2.getIsKillCompleted(), "Killing UnmanagedAM should falsely acknowledge true");
     for (int i = 0; i < 100; i++) {
       if (2 ==
           rmService.getApplications(getRequest).getApplicationList().size()) {
@@ -695,23 +696,25 @@ public class TestClientRMService {
       }
       Thread.sleep(10);
     }
-    assertEquals("Incorrect number of apps in the RM", 2,
-        rmService.getApplications(getRequest).getApplicationList().size());
+    assertEquals(2
+,         rmService.getApplications(getRequest).getApplicationList().size(), "Incorrect number of apps in the RM");
   }
 
-  @Test (expected = ApplicationNotFoundException.class)
+  @Test
   public void testMoveAbsentApplication() throws YarnException {
-    RMContext rmContext = mock(RMContext.class);
-    when(rmContext.getRMApps()).thenReturn(
+      Assertions.assertThrows(ApplicationNotFoundException.class, () -> {
+          RMContext rmContext = mock(RMContext.class);
+          when(rmContext.getRMApps()).thenReturn(
         new ConcurrentHashMap<ApplicationId, RMApp>());
-    ClientRMService rmService = new ClientRMService(rmContext, null, null,
+          ClientRMService rmService = new ClientRMService(rmContext, null, null,
         null, null, null);
-    ApplicationId applicationId =
+          ApplicationId applicationId =
         BuilderUtils.newApplicationId(System.currentTimeMillis(), 0);
-    MoveApplicationAcrossQueuesRequest request =
+          MoveApplicationAcrossQueuesRequest request =
         MoveApplicationAcrossQueuesRequest.newInstance(applicationId,
             "newqueue");
-    rmService.moveApplicationAcrossQueues(request);
+          rmService.moveApplicationAcrossQueues(request);
+      });
   }
 
   @Test
@@ -739,10 +742,10 @@ public class TestClientRMService {
 
     try {
       rmService.moveApplicationAcrossQueues(moveAppRequest);
-      Assert.fail("The request should fail with an AccessControlException");
+      Assertions.fail("The request should fail with an AccessControlException");
     } catch (YarnException rex) {
-      Assert.assertTrue("AccessControlException is expected",
-          rex.getCause() instanceof AccessControlException);
+      Assertions.assertTrue(
+         rex.getCause() instanceof AccessControlException, "AccessControlException is expected");
     }
 
     // ACL is owned by "moveuser", move is performed as a different user
@@ -761,10 +764,10 @@ public class TestClientRMService {
             newInstance(applicationId, "move_queue");
     try {
       rmService2.moveApplicationAcrossQueues(moveAppRequest2);
-      Assert.fail("The request should fail with an AccessControlException");
+      Assertions.fail("The request should fail with an AccessControlException");
     } catch (YarnException rex) {
-      Assert.assertTrue("AccessControlException is expected",
-          rex.getCause() instanceof AccessControlException);
+      Assertions.assertTrue(
+         rex.getCause() instanceof AccessControlException, "AccessControlException is expected");
     }
 
     // execute the move as the acl owner
@@ -800,10 +803,10 @@ public class TestClientRMService {
 
     try {
       rmService.moveApplicationAcrossQueues(moveAppRequest);
-      Assert.fail("The request should fail with an AccessControlException");
+      Assertions.fail("The request should fail with an AccessControlException");
     } catch (YarnException rex) {
-      Assert.assertTrue("AccessControlException is expected",
-          rex.getCause() instanceof AccessControlException);
+      Assertions.assertTrue(
+         rex.getCause() instanceof AccessControlException, "AccessControlException is expected");
     }
 
     // ACL is owned by "moveuser", move is performed as a different user
@@ -823,10 +826,10 @@ public class TestClientRMService {
 
     try {
       rmService2.moveApplicationAcrossQueues(moveAppRequest2);
-      Assert.fail("The request should fail with an AccessControlException");
+      Assertions.fail("The request should fail with an AccessControlException");
     } catch (YarnException rex) {
-      Assert.assertTrue("AccessControlException is expected",
-          rex.getCause() instanceof AccessControlException);
+      Assertions.assertTrue(
+         rex.getCause() instanceof AccessControlException, "AccessControlException is expected");
     }
 
     // execute the move as the acl owner
@@ -839,21 +842,23 @@ public class TestClientRMService {
     });
   }
 
-  @Test (expected = YarnException.class)
+  @Test
   public void testNonExistingQueue() throws Exception {
-    ApplicationId applicationId = getApplicationId(1);
-    UserGroupInformation aclUGI = UserGroupInformation.getCurrentUser();
-    QueueACLsManager queueAclsManager = getQueueAclManager();
-    ApplicationACLsManager appAclsManager = getAppAclManager();
-    ClientRMService rmService =
+      Assertions.assertThrows(YarnException.class, () -> {
+          ApplicationId applicationId = getApplicationId(1);
+          UserGroupInformation aclUGI = UserGroupInformation.getCurrentUser();
+          QueueACLsManager queueAclsManager = getQueueAclManager();
+          ApplicationACLsManager appAclsManager = getAppAclManager();
+          ClientRMService rmService =
         createClientRMServiceForMoveApplicationRequest(applicationId,
             aclUGI.getShortUserName(), appAclsManager, queueAclsManager);
-
-    MoveApplicationAcrossQueuesRequest moveAppRequest =
+          MoveApplicationAcrossQueuesRequest moveAppRequest =
         MoveApplicationAcrossQueuesRequest.newInstance(applicationId,
             "unknown_queue");
-    rmService.moveApplicationAcrossQueues(moveAppRequest);
-  }
+          rmService.moveApplicationAcrossQueues(moveAppRequest);
+      });
+  
+}
 
   /**
    * Create an instance of ClientRMService for testing
@@ -990,17 +995,17 @@ public class TestClientRMService {
     GetQueueInfoResponse queueInfo = rmService.getQueueInfo(request);
     List<ApplicationReport> applications = queueInfo.getQueueInfo()
         .getApplications();
-    Assert.assertEquals(2, applications.size());
+    Assertions.assertEquals(2, applications.size());
     Map<String, QueueConfigurations> queueConfigsByPartition =
         queueInfo.getQueueInfo().getQueueConfigurations();
-    Assert.assertEquals(1, queueConfigsByPartition.size());
-    Assert.assertTrue(queueConfigsByPartition.containsKey("*"));
+    Assertions.assertEquals(1, queueConfigsByPartition.size());
+    Assertions.assertTrue(queueConfigsByPartition.containsKey("*"));
     QueueConfigurations queueConfigs = queueConfigsByPartition.get("*");
-    Assert.assertEquals(0.5f, queueConfigs.getCapacity(), 0.0001f);
-    Assert.assertEquals(0.1f, queueConfigs.getAbsoluteCapacity(), 0.0001f);
-    Assert.assertEquals(1.0f, queueConfigs.getMaxCapacity(), 0.0001f);
-    Assert.assertEquals(1.0f, queueConfigs.getAbsoluteMaxCapacity(), 0.0001f);
-    Assert.assertEquals(0.2f, queueConfigs.getMaxAMPercentage(), 0.0001f);
+    Assertions.assertEquals(0.5f, queueConfigs.getCapacity(), 0.0001f);
+    Assertions.assertEquals(0.1f, queueConfigs.getAbsoluteCapacity(), 0.0001f);
+    Assertions.assertEquals(1.0f, queueConfigs.getMaxCapacity(), 0.0001f);
+    Assertions.assertEquals(1.0f, queueConfigs.getAbsoluteMaxCapacity(), 0.0001f);
+    Assertions.assertEquals(0.2f, queueConfigs.getMaxAMPercentage(), 0.0001f);
 
     request.setQueueName("nonexistentqueue");
     request.setIncludeApplications(true);
@@ -1027,10 +1032,11 @@ public class TestClientRMService {
     GetQueueInfoResponse queueInfo1 = rmService1.getQueueInfo(request);
     List<ApplicationReport> applications1 = queueInfo1.getQueueInfo()
         .getApplications();
-    Assert.assertEquals(0, applications1.size());
+    Assertions.assertEquals(0, applications1.size());
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   @SuppressWarnings ("rawtypes")
   public void testAppSubmitWithSubmissionPreProcessor() throws Exception {
     ResourceScheduler scheduler = mockResourceScheduler();
@@ -1095,16 +1101,16 @@ public class TestClientRMService {
     try {
       rmService.submitApplication(submitRequest1);
     } catch (YarnException e) {
-      Assert.fail("Exception is not expected.");
+      Assertions.fail("Exception is not expected.");
     }
     RMApp app1 = rmContext.getRMApps().get(appId1);
-    Assert.assertNotNull("app doesn't exist", app1);
-    Assert.assertEquals("app name doesn't match",
-        YarnConfiguration.DEFAULT_APPLICATION_NAME, app1.getName());
-    Assert.assertTrue("custom tag not present",
-        app1.getApplicationTags().contains("cluster:cluster1"));
-    Assert.assertEquals("app queue doesn't match", "bar", app1.getQueue());
-    Assert.assertEquals("app node label doesn't match",
+    Assertions.assertNotNull(app1, "app doesn't exist");
+    Assertions.assertEquals(
+       YarnConfiguration.DEFAULT_APPLICATION_NAME, app1.getName(), "app name doesn't match");
+    Assertions.assertTrue(
+       app1.getApplicationTags().contains("cluster:cluster1"), "custom tag not present");
+    Assertions.assertEquals("app queue doesn't match", "bar", app1.getQueue());
+    Assertions.assertEquals("app node label doesn't match",
         "foo", app1.getApplicationSubmissionContext().getNodeLabelExpression());
     setupCurrentCall("host.cluster2.com");
     ApplicationId appId2 = getApplicationId(101);
@@ -1118,18 +1124,18 @@ public class TestClientRMService {
     try {
       rmService.submitApplication(submitRequest2);
     } catch (YarnException e) {
-      Assert.fail("Exception is not expected.");
+      Assertions.fail("Exception is not expected.");
     }
     RMApp app2 = rmContext.getRMApps().get(appId2);
-    Assert.assertNotNull("app doesn't exist", app2);
-    Assert.assertEquals("app name doesn't match",
-        YarnConfiguration.DEFAULT_APPLICATION_NAME, app2.getName());
-    Assert.assertTrue("client tag not present",
-        app2.getApplicationTags().contains(APPLICATION_TAG_SC_PREPROCESSOR));
-    Assert.assertTrue("custom tag not present",
-        app2.getApplicationTags().contains("cluster:cluster2"));
-    Assert.assertEquals("app queue doesn't match", "hello", app2.getQueue());
-    Assert.assertEquals("app node label doesn't match",
+    Assertions.assertNotNull(app2, "app doesn't exist");
+    Assertions.assertEquals(
+       YarnConfiguration.DEFAULT_APPLICATION_NAME, app2.getName(), "app name doesn't match");
+    Assertions.assertTrue(
+       app2.getApplicationTags().contains(APPLICATION_TAG_SC_PREPROCESSOR), "client tag not present");
+    Assertions.assertTrue(
+       app2.getApplicationTags().contains("cluster:cluster2"), "custom tag not present");
+    Assertions.assertEquals("app queue doesn't match", "hello", app2.getQueue());
+    Assertions.assertEquals("app node label doesn't match",
         "zuess",
         app2.getApplicationSubmissionContext().getNodeLabelExpression());
     // Test Default commands
@@ -1143,18 +1149,18 @@ public class TestClientRMService {
     try {
       rmService.submitApplication(submitRequest3);
     } catch (YarnException e) {
-      Assert.fail("Exception is not expected.");
+      Assertions.fail("Exception is not expected.");
     }
     RMApp app3 = rmContext.getRMApps().get(appId3);
-    Assert.assertNotNull("app doesn't exist", app3);
-    Assert.assertEquals("app name doesn't match",
-        YarnConfiguration.DEFAULT_APPLICATION_NAME, app3.getName());
-    Assert.assertTrue("client tag not present",
-        app3.getApplicationTags().contains(APPLICATION_TAG_SC_PREPROCESSOR));
-    Assert.assertTrue("custom tag not present",
-        app3.getApplicationTags().contains("cluster:other"));
-    Assert.assertEquals("app queue doesn't match", "default", app3.getQueue());
-    Assert.assertEquals("app node label doesn't match",
+    Assertions.assertNotNull(app3, "app doesn't exist");
+    Assertions.assertEquals(
+       YarnConfiguration.DEFAULT_APPLICATION_NAME, app3.getName(), "app name doesn't match");
+    Assertions.assertTrue(
+       app3.getApplicationTags().contains(APPLICATION_TAG_SC_PREPROCESSOR), "client tag not present");
+    Assertions.assertTrue(
+       app3.getApplicationTags().contains("cluster:other"), "custom tag not present");
+    Assertions.assertEquals("app queue doesn't match", "default", app3.getQueue());
+    Assertions.assertEquals("app node label doesn't match",
         "barfoo",
         app3.getApplicationSubmissionContext().getNodeLabelExpression());
     // Test regex
@@ -1165,12 +1171,12 @@ public class TestClientRMService {
     try {
       rmService.submitApplication(submitRequest4);
     } catch (YarnException e) {
-      Assert.fail("Exception is not expected.");
+      Assertions.fail("Exception is not expected.");
     }
     RMApp app4 = rmContext.getRMApps().get(appId4);
-    Assert.assertTrue("custom tag not present",
-        app4.getApplicationTags().contains("cluster:reg"));
-    Assert.assertEquals("app node label doesn't match",
+    Assertions.assertTrue(
+       app4.getApplicationTags().contains("cluster:reg"), "custom tag not present");
+    Assertions.assertEquals("app node label doesn't match",
         "reg", app4.getApplicationSubmissionContext().getNodeLabelExpression());
     testSubmissionContextWithAbsentTAG(rmService, rmContext);
     rmService.serviceStop();
@@ -1185,14 +1191,14 @@ public class TestClientRMService {
     try {
       rmService.submitApplication(submitRequest5);
     } catch (YarnException e) {
-      Assert.fail("Exception is not expected.");
+      Assertions.fail("Exception is not expected.");
     }
     RMApp app5 = rmContext.getRMApps().get(appId5);
-    Assert.assertEquals("custom tag  present",
-        app5.getApplicationTags().size(), 0);
-    Assert.assertNull("app node label present",
-        app5.getApplicationSubmissionContext().getNodeLabelExpression());
-    Assert.assertEquals("Queue name is not present",
+    Assertions.assertEquals(
+       app5.getApplicationTags().size(), 0, "custom tag  present");
+    Assertions.assertNull(
+       app5.getApplicationSubmissionContext().getNodeLabelExpression(), "app node label present");
+    Assertions.assertEquals("Queue name is not present",
         app5.getQueue(), "default");
   }
   private void setupCurrentCall(String hostName) throws UnknownHostException {
@@ -1203,7 +1209,8 @@ public class TestClientRMService {
     Server.getCurCall().set(mockCall);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   @SuppressWarnings ("rawtypes")
   public void testAppSubmit() throws Exception {
     ResourceScheduler scheduler = mockResourceScheduler();
@@ -1244,14 +1251,14 @@ public class TestClientRMService {
     try {
       rmService.submitApplication(submitRequest1);
     } catch (YarnException e) {
-      Assert.fail("Exception is not expected.");
+      Assertions.fail("Exception is not expected.");
     }
     RMApp app1 = rmContext.getRMApps().get(appId1);
-    Assert.assertNotNull("app doesn't exist", app1);
-    Assert.assertEquals("app name doesn't match",
-        YarnConfiguration.DEFAULT_APPLICATION_NAME, app1.getName());
-    Assert.assertEquals("app queue doesn't match",
-        YarnConfiguration.DEFAULT_QUEUE_NAME, app1.getQueue());
+    Assertions.assertNotNull(app1, "app doesn't exist");
+    Assertions.assertEquals(
+       YarnConfiguration.DEFAULT_APPLICATION_NAME, app1.getName(), "app name doesn't match");
+    Assertions.assertEquals(
+       YarnConfiguration.DEFAULT_QUEUE_NAME, app1.getQueue(), "app queue doesn't match");
 
     // with name and queue
     String name = MockApps.newAppName();
@@ -1264,25 +1271,25 @@ public class TestClientRMService {
     try {
       rmService.submitApplication(submitRequest2);
     } catch (YarnException e) {
-      Assert.fail("Exception is not expected.");
+      Assertions.fail("Exception is not expected.");
     }
     RMApp app2 = rmContext.getRMApps().get(appId2);
-    Assert.assertNotNull("app doesn't exist", app2);
-    Assert.assertEquals("app name doesn't match", name, app2.getName());
-    Assert.assertEquals("app queue doesn't match", queue, app2.getQueue());
+    Assertions.assertNotNull(app2, "app doesn't exist");
+    Assertions.assertEquals(name, app2.getName(), "app name doesn't match");
+    Assertions.assertEquals(queue, app2.getQueue(), "app queue doesn't match");
 
     // duplicate appId
     try {
       rmService.submitApplication(submitRequest2);
     } catch (YarnException e) {
-      Assert.fail("Exception is not expected.");
+      Assertions.fail("Exception is not expected.");
     }
 
     GetApplicationsRequest getAllAppsRequest =
         GetApplicationsRequest.newInstance(new HashSet<String>());
     GetApplicationsResponse getAllApplicationsResponse =
         rmService.getApplications(getAllAppsRequest);
-    Assert.assertEquals(5,
+    Assertions.assertEquals(5,
         getAllApplicationsResponse.getApplicationList().size());
 
     Set<String> appTypes = new HashSet<String>();
@@ -1291,9 +1298,9 @@ public class TestClientRMService {
     getAllAppsRequest = GetApplicationsRequest.newInstance(appTypes);
     getAllApplicationsResponse =
         rmService.getApplications(getAllAppsRequest);
-    Assert.assertEquals(1,
+    Assertions.assertEquals(1,
         getAllApplicationsResponse.getApplicationList().size());
-    Assert.assertEquals(appId2,
+    Assertions.assertEquals(appId2,
         getAllApplicationsResponse.getApplicationList()
             .get(0).getApplicationId());
 
@@ -1303,9 +1310,9 @@ public class TestClientRMService {
     getAllAppsRequest = GetApplicationsRequest.newInstance(appTypes);
     getAllApplicationsResponse =
         rmService.getApplications(getAllAppsRequest);
-    Assert.assertEquals(1,
+    Assertions.assertEquals(1,
         getAllApplicationsResponse.getApplicationList().size());
-    Assert.assertEquals(appId2,
+    Assertions.assertEquals(appId2,
         getAllApplicationsResponse.getApplicationList()
             .get(0).getApplicationId());
   }
@@ -1370,31 +1377,31 @@ public class TestClientRMService {
 
     // Test different cases of ClientRMService#getApplications()
     GetApplicationsRequest request = GetApplicationsRequest.newInstance();
-    assertEquals("Incorrect total number of apps", 6,
-        rmService.getApplications(request).getApplicationList().size());
+    assertEquals(6
+,         rmService.getApplications(request).getApplicationList().size(), "Incorrect total number of apps");
 
     // Check limit
     request.setLimit(1L);
-    assertEquals("Failed to limit applications", 1,
-        rmService.getApplications(request).getApplicationList().size());
+    assertEquals(1
+,         rmService.getApplications(request).getApplicationList().size(), "Failed to limit applications");
 
     // Check start range
     request = GetApplicationsRequest.newInstance();
     request.setStartRange(submitTimeMillis[0] + 1, System.currentTimeMillis());
 
     // 2 applications are submitted after first timeMills
-    assertEquals("Incorrect number of matching start range",
-        2, rmService.getApplications(request).getApplicationList().size());
+    assertEquals(
+       2, rmService.getApplications(request).getApplicationList().size(), "Incorrect number of matching start range");
 
     // 1 application is submitted after the second timeMills
     request.setStartRange(submitTimeMillis[1] + 1, System.currentTimeMillis());
-    assertEquals("Incorrect number of matching start range",
-        1, rmService.getApplications(request).getApplicationList().size());
+    assertEquals(
+       1, rmService.getApplications(request).getApplicationList().size(), "Incorrect number of matching start range");
 
     // no application is submitted after the third timeMills
     request.setStartRange(submitTimeMillis[2] + 1, System.currentTimeMillis());
-    assertEquals("Incorrect number of matching start range",
-        0, rmService.getApplications(request).getApplicationList().size());
+    assertEquals(
+       0, rmService.getApplications(request).getApplicationList().size(), "Incorrect number of matching start range");
 
     // Check queue
     request = GetApplicationsRequest.newInstance();
@@ -1402,14 +1409,14 @@ public class TestClientRMService {
     request.setQueues(queueSet);
 
     queueSet.add(queues[0]);
-    assertEquals("Incorrect number of applications in queue", 3,
-        rmService.getApplications(request).getApplicationList().size());
-    assertEquals("Incorrect number of applications in queue", 3,
-        rmService.getApplications(request).getApplicationList().size());
+    assertEquals(3
+,         rmService.getApplications(request).getApplicationList().size(), "Incorrect number of applications in queue");
+    assertEquals(3
+,         rmService.getApplications(request).getApplicationList().size(), "Incorrect number of applications in queue");
 
     queueSet.add(queues[1]);
-    assertEquals("Incorrect number of applications in queue", 3,
-        rmService.getApplications(request).getApplicationList().size());
+    assertEquals(3
+,         rmService.getApplications(request).getApplicationList().size(), "Incorrect number of applications in queue");
 
     // Check user
     request = GetApplicationsRequest.newInstance();
@@ -1417,17 +1424,17 @@ public class TestClientRMService {
     request.setUsers(userSet);
 
     userSet.add("random-user-name");
-    assertEquals("Incorrect number of applications for user", 0,
-        rmService.getApplications(request).getApplicationList().size());
+    assertEquals(0
+,         rmService.getApplications(request).getApplicationList().size(), "Incorrect number of applications for user");
 
     userSet.add(UserGroupInformation.getCurrentUser().getShortUserName());
-    assertEquals("Incorrect number of applications for user", 3,
-        rmService.getApplications(request).getApplicationList().size());
+    assertEquals(3
+,         rmService.getApplications(request).getApplicationList().size(), "Incorrect number of applications for user");
 
     rmService.setDisplayPerUserApps(true);
     userSet.clear();
-    assertEquals("Incorrect number of applications for user", 6,
-        rmService.getApplications(request).getApplicationList().size());
+    assertEquals(6
+,         rmService.getApplications(request).getApplicationList().size(), "Incorrect number of applications for user");
     rmService.setDisplayPerUserApps(false);
 
     // Check tags
@@ -1436,37 +1443,38 @@ public class TestClientRMService {
         null, null);
     Set<String> tagSet = new HashSet<String>();
     request.setApplicationTags(tagSet);
-    assertEquals("Incorrect number of matching tags", 6,
-        rmService.getApplications(request).getApplicationList().size());
+    assertEquals(6
+,         rmService.getApplications(request).getApplicationList().size(), "Incorrect number of matching tags");
 
     tagSet = Sets.newHashSet(tags.get(0));
     request.setApplicationTags(tagSet);
-    assertEquals("Incorrect number of matching tags", 3,
-        rmService.getApplications(request).getApplicationList().size());
+    assertEquals(3
+,         rmService.getApplications(request).getApplicationList().size(), "Incorrect number of matching tags");
 
     tagSet = Sets.newHashSet(tags.get(1));
     request.setApplicationTags(tagSet);
-    assertEquals("Incorrect number of matching tags", 2,
-        rmService.getApplications(request).getApplicationList().size());
+    assertEquals(2
+,         rmService.getApplications(request).getApplicationList().size(), "Incorrect number of matching tags");
 
     tagSet = Sets.newHashSet(tags.get(2));
     request.setApplicationTags(tagSet);
-    assertEquals("Incorrect number of matching tags", 1,
-        rmService.getApplications(request).getApplicationList().size());
+    assertEquals(1
+,         rmService.getApplications(request).getApplicationList().size(), "Incorrect number of matching tags");
 
     // Check scope
     request = GetApplicationsRequest.newInstance(
         ApplicationsRequestScope.VIEWABLE);
-    assertEquals("Incorrect number of applications for the scope", 6,
-        rmService.getApplications(request).getApplicationList().size());
+    assertEquals(6
+,         rmService.getApplications(request).getApplicationList().size(), "Incorrect number of applications for the scope");
 
     request = GetApplicationsRequest.newInstance(
         ApplicationsRequestScope.OWN);
-    assertEquals("Incorrect number of applications for the scope", 3,
-        rmService.getApplications(request).getApplicationList().size());
+    assertEquals(3
+,         rmService.getApplications(request).getApplicationList().size(), "Incorrect number of applications for the scope");
   }
 
-  @Test(timeout=4000)
+  @Test
+  @Timeout(value = 4)
   public void testConcurrentAppSubmit()
       throws IOException, InterruptedException, BrokenBarrierException,
       YarnException {
@@ -1753,7 +1761,7 @@ public class TestClientRMService {
       // allow plan follower to synchronize
       Thread.sleep(1050);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
     return rm;
   }
@@ -1769,7 +1777,7 @@ public class TestClientRMService {
       reservationID = clientService.getNewReservation(newReservationRequest)
           .getReservationId();
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
     ReservationSubmissionRequest sRequest =
         ReservationSystemTestUtil.createSimpleReservationRequest(reservationID,
@@ -1777,10 +1785,10 @@ public class TestClientRMService {
     try {
       sResponse = clientService.submitReservation(sRequest);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(sResponse);
-    Assert.assertNotNull(reservationID);
+    Assertions.assertNotNull(sResponse);
+    Assertions.assertNotNull(reservationID);
     System.out.println("Submit reservation response: " + reservationID);
     return sRequest;
   }
@@ -1801,7 +1809,7 @@ public class TestClientRMService {
     try {
       clientService.submitReservation(sRequest);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
 
     // Submit the reservation with the same reservation id but different
@@ -1812,11 +1820,11 @@ public class TestClientRMService {
     sRequest.setReservationDefinition(rDef);
     try {
       clientService.submitReservation(sRequest);
-      Assert.fail("Reservation submission should fail if a duplicate "
+      Assertions.fail("Reservation submission should fail if a duplicate "
           + "reservation id is used, but the reservation definition has been "
           + "updated.");
     } catch (Exception e) {
-      Assert.assertTrue(e instanceof YarnException);
+      Assertions.assertTrue(e instanceof YarnException);
     }
   }
 
@@ -1848,9 +1856,9 @@ public class TestClientRMService {
     try {
       uResponse = clientService.updateReservation(uRequest);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(uResponse);
+    Assertions.assertNotNull(uResponse);
     System.out.println("Update reservation response: " + uResponse);
   }
 
@@ -1873,13 +1881,13 @@ public class TestClientRMService {
     try {
       response = clientService.listReservations(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(response);
-    Assert.assertEquals(1, response.getReservationAllocationState().size());
-    Assert.assertEquals(response.getReservationAllocationState().get(0)
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(1, response.getReservationAllocationState().size());
+    Assertions.assertEquals(response.getReservationAllocationState().get(0)
         .getReservationId().getId(), reservationID.getId());
-    Assert.assertEquals(response.getReservationAllocationState().get(0)
+    Assertions.assertEquals(response.getReservationAllocationState().get(0)
         .getResourceAllocationRequests().size(), 0);
   }
 
@@ -1906,11 +1914,11 @@ public class TestClientRMService {
     try {
       response = clientService.listReservations(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(response);
-    Assert.assertEquals(1, response.getReservationAllocationState().size());
-    Assert.assertEquals(response.getReservationAllocationState().get(0)
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(1, response.getReservationAllocationState().size());
+    Assertions.assertEquals(response.getReservationAllocationState().get(0)
         .getReservationId().getId(), reservationID.getId());
     // List reservations, search by time within reservation interval.
     request = ReservationListRequest.newInstance(
@@ -1920,23 +1928,23 @@ public class TestClientRMService {
     try {
       response = clientService.listReservations(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(response);
-    Assert.assertEquals(1, response.getReservationAllocationState().size());
-    Assert.assertEquals(response.getReservationAllocationState().get(0)
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(1, response.getReservationAllocationState().size());
+    Assertions.assertEquals(response.getReservationAllocationState().get(0)
         .getReservationId().getId(), reservationID.getId());
     // Verify that the full resource allocations exist.
-    Assert.assertTrue(response.getReservationAllocationState().get(0)
+    Assertions.assertTrue(response.getReservationAllocationState().get(0)
         .getResourceAllocationRequests().size() > 0);
 
     // Verify that the full RDL is returned.
     ReservationRequests reservationRequests =
         response.getReservationAllocationState().get(0)
             .getReservationDefinition().getReservationRequests();
-    Assert.assertEquals("R_ALL",
+    Assertions.assertEquals("R_ALL",
         reservationRequests.getInterpreter().toString());
-    Assert.assertTrue(reservationRequests.getReservationResources().get(0)
+    Assertions.assertTrue(reservationRequests.getReservationResources().get(0)
         .getDuration() == duration);
   }
 
@@ -1959,11 +1967,11 @@ public class TestClientRMService {
     try {
       response = clientService.listReservations(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(response);
-    Assert.assertEquals(1, response.getReservationAllocationState().size());
-    Assert.assertEquals(response.getReservationAllocationState().get(0)
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(1, response.getReservationAllocationState().size());
+    Assertions.assertEquals(response.getReservationAllocationState().get(0)
         .getReservationId().getId(), sRequest.getReservationId().getId());
 
     // List reservations, search by invalid end time < -1.
@@ -1974,11 +1982,11 @@ public class TestClientRMService {
     try {
       response = clientService.listReservations(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(response);
-    Assert.assertEquals(1, response.getReservationAllocationState().size());
-    Assert.assertEquals(response.getReservationAllocationState().get(0)
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(1, response.getReservationAllocationState().size());
+    Assertions.assertEquals(response.getReservationAllocationState().get(0)
         .getReservationId().getId(), sRequest.getReservationId().getId());
   }
 
@@ -2001,11 +2009,11 @@ public class TestClientRMService {
     try {
       response = clientService.listReservations(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
 
     // Ensure all reservations are filtered out.
-    Assert.assertNotNull(response);
+    Assertions.assertNotNull(response);
     assertThat(response.getReservationAllocationState()).isEmpty();
 
     duration = 30000;
@@ -2021,11 +2029,11 @@ public class TestClientRMService {
     try {
       response = clientService.listReservations(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
 
     // Ensure all reservations are filtered out.
-    Assert.assertNotNull(response);
+    Assertions.assertNotNull(response);
     assertThat(response.getReservationAllocationState()).isEmpty();
 
     arrival = clock.getTime();
@@ -2039,11 +2047,11 @@ public class TestClientRMService {
     try {
       response = clientService.listReservations(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
 
     // Ensure all reservations are filtered out.
-    Assert.assertNotNull(response);
+    Assertions.assertNotNull(response);
     assertThat(response.getReservationAllocationState()).isEmpty();
 
     // List reservations, search by very small end time.
@@ -2054,11 +2062,11 @@ public class TestClientRMService {
     try {
       response = clientService.listReservations(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
 
     // Ensure all reservations are filtered out.
-    Assert.assertNotNull(response);
+    Assertions.assertNotNull(response);
     assertThat(response.getReservationAllocationState()).isEmpty();
   }
 
@@ -2081,9 +2089,9 @@ public class TestClientRMService {
     try {
       dResponse = clientService.deleteReservation(dRequest);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(dResponse);
+    Assertions.assertNotNull(dResponse);
     System.out.println("Delete reservation response: " + dResponse);
 
     // List reservations, search by non-existent reservationID
@@ -2095,10 +2103,10 @@ public class TestClientRMService {
     try {
       response = clientService.listReservations(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(response);
-    Assert.assertEquals(0, response.getReservationAllocationState().size());
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(0, response.getReservationAllocationState().size());
   }
 
   @Test
@@ -2136,21 +2144,21 @@ public class TestClientRMService {
     // Get node labels collection
     GetClusterNodeLabelsResponse response = client
         .getClusterNodeLabels(GetClusterNodeLabelsRequest.newInstance());
-    Assert.assertTrue(response.getNodeLabelList().containsAll(
+    Assertions.assertTrue(response.getNodeLabelList().containsAll(
         Arrays.asList(labelX, labelY)));
 
     // Get node labels mapping
     GetNodesToLabelsResponse response1 = client
         .getNodeToLabels(GetNodesToLabelsRequest.newInstance());
     Map<NodeId, Set<String>> nodeToLabels = response1.getNodeToLabels();
-    Assert.assertTrue(nodeToLabels.keySet().containsAll(
+    Assertions.assertTrue(nodeToLabels.keySet().containsAll(
         Arrays.asList(node1, node2)));
-    Assert.assertTrue(nodeToLabels.get(node1)
+    Assertions.assertTrue(nodeToLabels.get(node1)
         .containsAll(Arrays.asList(labelX.getName())));
-    Assert.assertTrue(nodeToLabels.get(node2)
+    Assertions.assertTrue(nodeToLabels.get(node2)
         .containsAll(Arrays.asList(labelY.getName())));
     // Below label "x" is not present in the response as exclusivity is true
-    Assert.assertFalse(nodeToLabels.get(node1).containsAll(
+    Assertions.assertFalse(nodeToLabels.get(node1).containsAll(
         Arrays.asList(NodeLabel.newInstance("x"))));
   }
 
@@ -2197,20 +2205,20 @@ public class TestClientRMService {
     // Get node labels collection
     GetClusterNodeLabelsResponse response = client
         .getClusterNodeLabels(GetClusterNodeLabelsRequest.newInstance());
-    Assert.assertTrue(response.getNodeLabelList().containsAll(
+    Assertions.assertTrue(response.getNodeLabelList().containsAll(
         Arrays.asList(labelX, labelY, labelZ)));
 
     // Get labels to nodes mapping
     GetLabelsToNodesResponse response1 = client
         .getLabelsToNodes(GetLabelsToNodesRequest.newInstance());
     Map<String, Set<NodeId>> labelsToNodes = response1.getLabelsToNodes();
-    Assert.assertTrue(labelsToNodes.keySet().containsAll(
+    Assertions.assertTrue(labelsToNodes.keySet().containsAll(
         Arrays.asList(labelX.getName(), labelY.getName(), labelZ.getName())));
-    Assert.assertTrue(labelsToNodes.get(labelX.getName()).containsAll(
+    Assertions.assertTrue(labelsToNodes.get(labelX.getName()).containsAll(
         Arrays.asList(node1A)));
-    Assert.assertTrue(labelsToNodes.get(labelY.getName()).containsAll(
+    Assertions.assertTrue(labelsToNodes.get(labelY.getName()).containsAll(
         Arrays.asList(node2A, node3A)));
-    Assert.assertTrue(labelsToNodes.get(labelZ.getName()).containsAll(
+    Assertions.assertTrue(labelsToNodes.get(labelZ.getName()).containsAll(
         Arrays.asList(node1B, node3B)));
 
     // Get labels to nodes mapping for specific labels
@@ -2219,16 +2227,17 @@ public class TestClientRMService {
     GetLabelsToNodesResponse response2 = client
         .getLabelsToNodes(GetLabelsToNodesRequest.newInstance(setlabels));
     labelsToNodes = response2.getLabelsToNodes();
-    Assert.assertTrue(labelsToNodes.keySet().containsAll(
+    Assertions.assertTrue(labelsToNodes.keySet().containsAll(
         Arrays.asList(labelX.getName(), labelZ.getName())));
-    Assert.assertTrue(labelsToNodes.get(labelX.getName()).containsAll(
+    Assertions.assertTrue(labelsToNodes.get(labelX.getName()).containsAll(
         Arrays.asList(node1A)));
-    Assert.assertTrue(labelsToNodes.get(labelZ.getName()).containsAll(
+    Assertions.assertTrue(labelsToNodes.get(labelZ.getName()).containsAll(
         Arrays.asList(node1B, node3B)));
     assertThat(labelsToNodes.get(labelY.getName())).isNull();
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testGetClusterNodeAttributes() throws IOException, YarnException {
     Configuration newConf = NodeAttributeTestUtils.getRandomDirConf(null);
     MockRM rm = new MockRM(newConf) {
@@ -2270,14 +2279,15 @@ public class TestClientRMService {
     GetClusterNodeAttributesResponse response =
         client.getClusterNodeAttributes(request);
     Set<NodeAttributeInfo> attributes = response.getNodeAttributes();
-    Assert.assertEquals("Size not correct", 3, attributes.size());
-    Assert.assertTrue(attributes.contains(NodeAttributeInfo.newInstance(gpu)));
-    Assert.assertTrue(attributes.contains(NodeAttributeInfo.newInstance(os)));
-    Assert
+    Assertions.assertEquals(3, attributes.size(), "Size not correct");
+    Assertions.assertTrue(attributes.contains(NodeAttributeInfo.newInstance(gpu)));
+    Assertions.assertTrue(attributes.contains(NodeAttributeInfo.newInstance(os)));
+    Assertions
         .assertTrue(attributes.contains(NodeAttributeInfo.newInstance(docker)));
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testGetAttributesToNodes() throws IOException, YarnException {
     Configuration newConf = NodeAttributeTestUtils.getRandomDirConf(null);
     MockRM rm = new MockRM(newConf) {
@@ -2327,11 +2337,11 @@ public class TestClientRMService {
     assertThat(attrs.get(dist.getAttributeKey())).hasSize(2);
     assertThat(attrs.get(os.getAttributeKey())).hasSize(1);
     assertThat(attrs.get(gpu.getAttributeKey())).hasSize(1);
-    Assert.assertTrue(findHostnameAndValInMapping(node1, "3_0_2",
+    Assertions.assertTrue(findHostnameAndValInMapping(node1, "3_0_2",
         attrs.get(dist.getAttributeKey())));
-    Assert.assertTrue(findHostnameAndValInMapping(node2, "3_0_2",
+    Assertions.assertTrue(findHostnameAndValInMapping(node2, "3_0_2",
         attrs.get(dist.getAttributeKey())));
-    Assert.assertTrue(findHostnameAndValInMapping(node2, "docker0",
+    Assertions.assertTrue(findHostnameAndValInMapping(node2, "docker0",
         attrs.get(docker.getAttributeKey())));
 
     GetAttributesToNodesRequest request2 = GetAttributesToNodesRequest
@@ -2341,7 +2351,7 @@ public class TestClientRMService {
     Map<NodeAttributeKey, List<NodeToAttributeValue>> attrs2 =
         response2.getAttributesToNodes();
     assertThat(attrs2).hasSize(1);
-    Assert.assertTrue(findHostnameAndValInMapping(node2, "docker0",
+    Assertions.assertTrue(findHostnameAndValInMapping(node2, "docker0",
         attrs2.get(docker.getAttributeKey())));
 
     GetAttributesToNodesRequest request3 =
@@ -2352,9 +2362,9 @@ public class TestClientRMService {
     Map<NodeAttributeKey, List<NodeToAttributeValue>> attrs3 =
         response3.getAttributesToNodes();
     assertThat(attrs3).hasSize(2);
-    Assert.assertTrue(findHostnameAndValInMapping(node1, "windows64",
+    Assertions.assertTrue(findHostnameAndValInMapping(node1, "windows64",
         attrs3.get(os.getAttributeKey())));
-    Assert.assertTrue(findHostnameAndValInMapping(node2, "docker0",
+    Assertions.assertTrue(findHostnameAndValInMapping(node2, "docker0",
         attrs3.get(docker.getAttributeKey())));
   }
 
@@ -2368,7 +2378,8 @@ public class TestClientRMService {
     return false;
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testGetNodesToAttributes() throws IOException, YarnException {
     Configuration newConf = NodeAttributeTestUtils.getRandomDirConf(null);
     MockRM rm = new MockRM(newConf) {
@@ -2415,11 +2426,11 @@ public class TestClientRMService {
         client.getNodesToAttributes(request1);
     Map<String, Set<NodeAttribute>> hostToAttrs =
         response1.getNodeToAttributes();
-    Assert.assertEquals(2, hostToAttrs.size());
+    Assertions.assertEquals(2, hostToAttrs.size());
 
-    Assert.assertTrue(hostToAttrs.get(node2).contains(dist));
-    Assert.assertTrue(hostToAttrs.get(node2).contains(docker));
-    Assert.assertTrue(hostToAttrs.get(node1).contains(dist));
+    Assertions.assertTrue(hostToAttrs.get(node2).contains(dist));
+    Assertions.assertTrue(hostToAttrs.get(node2).contains(docker));
+    Assertions.assertTrue(hostToAttrs.get(node1).contains(dist));
 
     // Specify particular node
     GetNodesToAttributesRequest request2 =
@@ -2427,8 +2438,8 @@ public class TestClientRMService {
     GetNodesToAttributesResponse response2 =
         client.getNodesToAttributes(request2);
     hostToAttrs = response2.getNodeToAttributes();
-    Assert.assertEquals(1, response2.getNodeToAttributes().size());
-    Assert.assertTrue(hostToAttrs.get(node1).contains(dist));
+    Assertions.assertEquals(1, response2.getNodeToAttributes().size());
+    Assertions.assertTrue(hostToAttrs.get(node1).contains(dist));
 
     // Test queury with empty set
     GetNodesToAttributesRequest request3 =
@@ -2436,11 +2447,11 @@ public class TestClientRMService {
     GetNodesToAttributesResponse response3 =
         client.getNodesToAttributes(request3);
     hostToAttrs = response3.getNodeToAttributes();
-    Assert.assertEquals(2, hostToAttrs.size());
+    Assertions.assertEquals(2, hostToAttrs.size());
 
-    Assert.assertTrue(hostToAttrs.get(node2).contains(dist));
-    Assert.assertTrue(hostToAttrs.get(node2).contains(docker));
-    Assert.assertTrue(hostToAttrs.get(node1).contains(dist));
+    Assertions.assertTrue(hostToAttrs.get(node2).contains(dist));
+    Assertions.assertTrue(hostToAttrs.get(node2).contains(docker));
+    Assertions.assertTrue(hostToAttrs.get(node1).contains(dist));
 
     // test invalid hostname
     GetNodesToAttributesRequest request4 =
@@ -2448,10 +2459,11 @@ public class TestClientRMService {
     GetNodesToAttributesResponse response4 =
         client.getNodesToAttributes(request4);
     hostToAttrs = response4.getNodeToAttributes();
-    Assert.assertEquals(0, hostToAttrs.size());
+    Assertions.assertEquals(0, hostToAttrs.size());
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testUpdatePriorityAndKillAppWithZeroClusterResource()
       throws Exception {
     int maxPriority = 10;
@@ -2477,7 +2489,8 @@ public class TestClientRMService {
     rm.waitForState(app1.getApplicationId(), RMAppState.KILLED);
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testUpdateApplicationPriorityRequest() throws Exception {
     int maxPriority = 10;
     int appPriority = 5;
@@ -2499,8 +2512,8 @@ public class TestClientRMService {
         .build();
     RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
-    Assert.assertEquals("Incorrect priority has been set to application",
-        appPriority, app1.getApplicationPriority().getPriority());
+    Assertions.assertEquals(
+       appPriority, app1.getApplicationPriority().getPriority(), "Incorrect priority has been set to application");
 
     appPriority = 11;
     ClientRMService rmService = rm.getClientRMService();
@@ -2520,7 +2533,7 @@ public class TestClientRMService {
             Priority.newInstance(appPriority));
     try {
       rmService.updateApplicationPriority(updateRequest);
-      Assert.fail("ApplicationNotFoundException should be thrown "
+      Assertions.fail("ApplicationNotFoundException should be thrown "
           + "for invalid application id");
     } catch (ApplicationNotFoundException e) {
       // Expected
@@ -2529,9 +2542,9 @@ public class TestClientRMService {
     updateRequest =
         UpdateApplicationPriorityRequest.newInstance(app1.getApplicationId(),
             Priority.newInstance(11));
-    Assert.assertEquals("Incorrect priority has been set to application",
-        appPriority, rmService.updateApplicationPriority(updateRequest)
-            .getApplicationPriority().getPriority());
+    Assertions.assertEquals(
+       appPriority, rmService.updateApplicationPriority(updateRequest)
+            .getApplicationPriority().getPriority(), "Incorrect priority has been set to application");
   }
 
   private void testApplicationPriorityUpdation(ClientRMService rmService,
@@ -2544,11 +2557,11 @@ public class TestClientRMService {
     UpdateApplicationPriorityResponse updateApplicationPriority =
         rmService.updateApplicationPriority(updateRequest);
 
-    Assert.assertEquals("Incorrect priority has been set to application",
-        expected, app1.getApplicationSubmissionContext().getPriority()
-            .getPriority());
-    Assert.assertEquals("Incorrect priority has been returned", expected,
-        updateApplicationPriority.getApplicationPriority().getPriority());
+    Assertions.assertEquals(
+       expected, app1.getApplicationSubmissionContext().getPriority()
+            .getPriority(), "Incorrect priority has been set to application");
+    Assertions.assertEquals(expected
+,         updateApplicationPriority.getApplicationPriority().getPriority(), "Incorrect priority has been returned");
   }
 
   private File createExcludeFile(File testDir) throws IOException {
@@ -2562,7 +2575,7 @@ public class TestClientRMService {
   @Test
   public void testRMStartWithDecommissionedNode() throws Exception {
     File testDir = GenericTestUtils.getRandomizedTestDir();
-    assertTrue("Failed to create test directory: " + testDir.getAbsolutePath(), testDir.mkdirs());
+    assertTrue(testDir.mkdirs(), "Failed to create test directory: " + testDir.getAbsolutePath());
     try {
       File excludeFile = createExcludeFile(testDir);
       conf = new YarnConfiguration();
@@ -2619,18 +2632,18 @@ public class TestClientRMService {
         GetAllResourceTypeInfoRequest.newInstance();
     GetAllResourceTypeInfoResponse response = client.getResourceTypeInfo(request);
 
-    Assert.assertEquals(2, response.getResourceTypeInfo().size());
+    Assertions.assertEquals(2, response.getResourceTypeInfo().size());
 
     // Check memory
-    Assert.assertEquals(ResourceInformation.MEMORY_MB.getName(),
+    Assertions.assertEquals(ResourceInformation.MEMORY_MB.getName(),
         response.getResourceTypeInfo().get(0).getName());
-    Assert.assertEquals(ResourceInformation.MEMORY_MB.getUnits(),
+    Assertions.assertEquals(ResourceInformation.MEMORY_MB.getUnits(),
         response.getResourceTypeInfo().get(0).getDefaultUnit());
 
     // Check vcores
-    Assert.assertEquals(ResourceInformation.VCORES.getName(),
+    Assertions.assertEquals(ResourceInformation.VCORES.getName(),
         response.getResourceTypeInfo().get(1).getName());
-    Assert.assertEquals(ResourceInformation.VCORES.getUnits(),
+    Assertions.assertEquals(ResourceInformation.VCORES.getUnits(),
         response.getResourceTypeInfo().get(1).getDefaultUnit());
   }
 
@@ -2693,12 +2706,12 @@ public class TestClientRMService {
 
     // Test different cases of ClientRMService#getApplications()
     GetApplicationsRequest request = GetApplicationsRequest.newInstance();
-    assertEquals("Incorrect total number of apps", 6,
-        rmService.getApplications(request).getApplicationList().size());
+    assertEquals(6
+,         rmService.getApplications(request).getApplicationList().size(), "Incorrect total number of apps");
 
     rmService.setDisplayPerUserApps(true);
-    assertEquals("Incorrect number of applications for user", 0,
-        rmService.getApplications(request).getApplicationList().size());
+    assertEquals(0
+,         rmService.getApplications(request).getApplicationList().size(), "Incorrect number of applications for user");
     rmService.setDisplayPerUserApps(false);
   }
 
@@ -2752,30 +2765,30 @@ public class TestClientRMService {
         GetClusterNodesRequest.newInstance(EnumSet.of(NodeState.RUNNING));
     List<NodeReport> nodeReports =
         client.getClusterNodes(request).getNodeReports();
-    Assert.assertEquals(1, nodeReports.size());
-    Assert.assertNotSame("Node is expected to be healthy!", NodeState.UNHEALTHY,
-        nodeReports.get(0).getNodeState());
-    Assert.assertEquals(1, nodeReports.size());
+    Assertions.assertEquals(1, nodeReports.size());
+    Assertions.assertNotSame(NodeState.UNHEALTHY
+,         nodeReports.get(0).getNodeState(), "Node is expected to be healthy!");
+    Assertions.assertEquals(1, nodeReports.size());
 
     //Resource 'resource1' has been passed as 1T while registering NM.
     //1T should be converted to 1000G
-    Assert.assertEquals("G", nodeReports.get(0).getCapability().
+    Assertions.assertEquals("G", nodeReports.get(0).getCapability().
         getResourceInformation("resource1").getUnits());
-    Assert.assertEquals(1000, nodeReports.get(0).getCapability().
+    Assertions.assertEquals(1000, nodeReports.get(0).getCapability().
         getResourceInformation("resource1").getValue());
 
     //Resource 'resource2' has been passed as 1M while registering NM
     //1M should be converted to 1000000000M
-    Assert.assertEquals("m", nodeReports.get(0).getCapability().
+    Assertions.assertEquals("m", nodeReports.get(0).getCapability().
         getResourceInformation("resource2").getUnits());
-    Assert.assertEquals(1000000000, nodeReports.get(0).getCapability().
+    Assertions.assertEquals(1000000000, nodeReports.get(0).getCapability().
         getResourceInformation("resource2").getValue());
 
     //Resource 'memory-mb' has been passed as 976562G while registering NM
     //976562G should be converted to 976562Mi
-    Assert.assertEquals("Mi", nodeReports.get(0).getCapability().
+    Assertions.assertEquals("Mi", nodeReports.get(0).getCapability().
         getResourceInformation("memory-mb").getUnits());
-    Assert.assertEquals(976562, nodeReports.get(0).getCapability().
+    Assertions.assertEquals(976562, nodeReports.get(0).getCapability().
         getResourceInformation("memory-mb").getValue());
   }
 
@@ -2811,17 +2824,17 @@ public class TestClientRMService {
     YarnClusterMetrics ymetrics = client.getClusterMetrics(
         GetClusterMetricsRequest.newInstance()).getClusterMetrics();
 
-    Assert.assertEquals(0, ymetrics.getNumNodeManagers());
-    Assert.assertEquals(1, ymetrics.getNumDecommissioningNodeManagers());
-    Assert.assertEquals(2, ymetrics.getNumDecommissionedNodeManagers());
-    Assert.assertEquals(3, ymetrics.getNumActiveNodeManagers());
-    Assert.assertEquals(4, ymetrics.getNumLostNodeManagers());
-    Assert.assertEquals(5, ymetrics.getNumUnhealthyNodeManagers());
-    Assert.assertEquals(6, ymetrics.getNumRebootedNodeManagers());
-    Assert.assertEquals(7, ymetrics.getNumShutdownNodeManagers());
+    Assertions.assertEquals(0, ymetrics.getNumNodeManagers());
+    Assertions.assertEquals(1, ymetrics.getNumDecommissioningNodeManagers());
+    Assertions.assertEquals(2, ymetrics.getNumDecommissionedNodeManagers());
+    Assertions.assertEquals(3, ymetrics.getNumActiveNodeManagers());
+    Assertions.assertEquals(4, ymetrics.getNumLostNodeManagers());
+    Assertions.assertEquals(5, ymetrics.getNumUnhealthyNodeManagers());
+    Assertions.assertEquals(6, ymetrics.getNumRebootedNodeManagers());
+    Assertions.assertEquals(7, ymetrics.getNumShutdownNodeManagers());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (resourceTypesFile != null && resourceTypesFile.exists()) {
       resourceTypesFile.delete();

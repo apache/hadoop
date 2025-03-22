@@ -27,8 +27,8 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_PROXY_USER_PREFIX;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -94,7 +94,7 @@ public class TestRMProxyUsersConf {
             ipAddress);
       } catch (AuthorizationException e) {
         // Exception is not expected
-        Assert.fail();
+        Assertions.fail();
       }
     } finally {
       if (rm != null) {

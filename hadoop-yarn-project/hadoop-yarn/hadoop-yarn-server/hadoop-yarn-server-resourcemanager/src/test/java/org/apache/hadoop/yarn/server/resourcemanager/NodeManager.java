@@ -38,7 +38,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RestartContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RollbackResponse;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -225,10 +225,10 @@ public class NodeManager implements ContainerManagementProtocol {
 
   synchronized public void checkResourceUsage() {
     LOG.info("Checking resource usage for " + containerManagerAddress);
-    Assert.assertEquals(available.getMemorySize(),
+    Assertions.assertEquals(available.getMemorySize(),
         resourceManager.getResourceScheduler().getNodeReport(
             this.nodeId).getAvailableResource().getMemorySize());
-    Assert.assertEquals(used.getMemorySize(),
+    Assertions.assertEquals(used.getMemorySize(),
         resourceManager.getResourceScheduler().getNodeReport(
             this.nodeId).getUsedResource().getMemorySize());
   }

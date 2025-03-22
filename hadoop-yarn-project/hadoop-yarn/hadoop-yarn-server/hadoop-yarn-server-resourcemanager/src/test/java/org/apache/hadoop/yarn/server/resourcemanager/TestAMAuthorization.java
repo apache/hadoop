@@ -75,11 +75,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -96,7 +96,7 @@ public class TestAMAuthorization {
   // Note : Any test case in ResourceManager package that creates a proxy has
   // to be run with enabling hadoop.security.token.service.use_ip. And reset
   // to false at the end of test class. See YARN-5208
-  @BeforeClass
+  @BeforeAll
   public static void setUp() {
     Configuration conf = new Configuration();
     conf.setBoolean(
@@ -104,7 +104,7 @@ public class TestAMAuthorization {
     SecurityUtil.setConfiguration(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void resetConf() {
     Configuration conf = new Configuration();
     conf.setBoolean(
@@ -127,7 +127,7 @@ public class TestAMAuthorization {
     UserGroupInformation.setConfiguration(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (rm != null) {
       rm.stop();
@@ -285,7 +285,7 @@ public class TestAMAuthorization {
       LOG.info("Waiting for AM Launch to happen..");
       Thread.sleep(1000);
     }
-    Assert.assertNotNull(containerManager.containerTokens);
+    Assertions.assertNotNull(containerManager.containerTokens);
 
     RMAppAttempt attempt = app.getCurrentAppAttempt();
     ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
@@ -317,12 +317,12 @@ public class TestAMAuthorization {
         .newRecord(RegisterApplicationMasterRequest.class);
     RegisterApplicationMasterResponse response =
         client.registerApplicationMaster(request);
-    Assert.assertNotNull(response.getClientToAMTokenMasterKey());
+    Assertions.assertNotNull(response.getClientToAMTokenMasterKey());
     if (UserGroupInformation.isSecurityEnabled()) {
-      Assert
+      Assertions
         .assertTrue(response.getClientToAMTokenMasterKey().array().length > 0);
     }
-    Assert.assertEquals("Register response has bad ACLs", "*",
+    Assertions.assertEquals("Register response has bad ACLs", "*",
         response.getApplicationACLs().get(ApplicationAccessType.VIEW_APP));
   }
 
@@ -343,7 +343,7 @@ public class TestAMAuthorization {
       LOG.info("Waiting for AM Launch to happen..");
       Thread.sleep(1000);
     }
-    Assert.assertNotNull(containerManager.containerTokens);
+    Assertions.assertNotNull(containerManager.containerTokens);
 
     RMAppAttempt attempt = app.getCurrentAppAttempt();
     ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
@@ -373,7 +373,7 @@ public class TestAMAuthorization {
         .newRecord(RegisterApplicationMasterRequest.class);
     try {
       client.registerApplicationMaster(request);
-      Assert.fail("Should fail with authorization error");
+      Assertions.fail("Should fail with authorization error");
     } catch (Exception e) {
       if (isCause(AccessControlException.class, e)) {
         // Because there are no tokens, the request should be rejected as the
@@ -385,7 +385,7 @@ public class TestAMAuthorization {
           expectedMessage =
               "SIMPLE authentication is not enabled.  Available:[TOKEN]";
         }
-        Assert.assertTrue(e.getCause().getMessage().contains(expectedMessage)); 
+        Assertions.assertTrue(e.getCause().getMessage().contains(expectedMessage)); 
       } else {
         throw e;
       }
@@ -441,7 +441,7 @@ public class TestAMAuthorization {
           + "Current state is " + attempt.getAppAttemptState());
       Thread.sleep(1000);
     }
-    Assert.assertEquals(attempt.getAppAttemptState(),
+    Assertions.assertEquals(attempt.getAppAttemptState(),
         RMAppAttemptState.LAUNCHED);
   }
 }

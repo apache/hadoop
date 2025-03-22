@@ -33,13 +33,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestRMDispatcher {
 
   @SuppressWarnings("unchecked")
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testSchedulerEventDispatcherForPreemptionEvents() {
     AsyncDispatcher rmDispatcher = new AsyncDispatcher();
     CapacityScheduler sched = spy(new CapacityScheduler());
@@ -73,7 +75,7 @@ public class TestRMDispatcher {
       verify(sched).markContainerForPreemption(appAttemptId, container);
       verify(sched).markContainerForKillable(container);
     } catch (InterruptedException e) {
-      Assert.fail();
+      Assertions.fail();
     } finally {
       schedulerDispatcher.stop();
       rmDispatcher.stop();
