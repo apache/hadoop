@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.volume.csi;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
@@ -54,7 +60,6 @@ import org.apache.hadoop.yarn.server.volume.csi.exception.InvalidVolumeException
 import org.apache.hadoop.yarn.server.volume.csi.exception.VolumeException;
 import org.apache.hadoop.yarn.server.volume.csi.exception.VolumeProvisioningException;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -193,7 +198,7 @@ public class TestVolumeProcessor {
     am1.allocate(ar);
     VolumeStates volumeStates =
         rm.getRMContext().getVolumeManager().getVolumeStates();
-    Assertions.assertNotNull(volumeStates);
+    assertNotNull(volumeStates);
     VolumeState volumeState = VolumeState.NEW;
     while (volumeState != VolumeState.NODE_READY) {
       Volume volume = volumeStates
@@ -244,9 +249,9 @@ public class TestVolumeProcessor {
 
     try {
       am1.allocate(ar);
-      Assertions.fail("allocate should fail because invalid request received");
+      fail("allocate should fail because invalid request received");
     } catch (Exception e) {
-      Assertions.assertTrue(e instanceof InvalidVolumeException);
+      assertTrue(e instanceof InvalidVolumeException);
     }
     rm.stop();
   }
@@ -295,9 +300,9 @@ public class TestVolumeProcessor {
 
     try {
       am1.allocate(ar);
-      Assertions.fail("allocate should fail");
+      fail("allocate should fail");
     } catch (Exception e) {
-      Assertions.assertTrue(e instanceof VolumeProvisioningException);
+      assertTrue(e instanceof VolumeProvisioningException);
     }
     rm.stop();
   }
@@ -349,13 +354,13 @@ public class TestVolumeProcessor {
       Thread.sleep(500);
     }
 
-    Assertions.assertEquals(1, allocated.size());
+    assertEquals(1, allocated.size());
     Container alloc = allocated.get(0);
     assertThat(alloc.getResource().getMemorySize()).isEqualTo(1024);
     assertThat(alloc.getResource().getVirtualCores()).isEqualTo(1);
     ResourceInformation allocatedVolume =
         alloc.getResource().getResourceInformation(VOLUME_RESOURCE_NAME);
-    Assertions.assertNotNull(allocatedVolume);
+    assertNotNull(allocatedVolume);
     assertThat(allocatedVolume.getValue()).isEqualTo(1024);
     assertThat(allocatedVolume.getUnits()).isEqualTo("Mi");
     rm.stop();
