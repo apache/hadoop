@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -59,12 +62,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
     .allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
 public class ReservationACLsTestBase extends ACLsTestBase {
 
   private final int defaultDuration = 600000;
@@ -77,9 +77,16 @@ public class ReservationACLsTestBase extends ACLsTestBase {
   private Configuration configuration;
   private boolean useFullQueuePath;
 
-  public ReservationACLsTestBase(Configuration conf, boolean useFullPath) {
+  @Override
+  public void setup() throws InterruptedException, IOException {
+    super.setup();
+  }
+
+  public void initReservationACLsTestBase(Configuration conf, boolean useFullPath)
+      throws IOException, InterruptedException {
     configuration = conf;
     useFullQueuePath = useFullPath;
+    setup();
   }
 
   @AfterEach
@@ -89,7 +96,6 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     }
   }
 
-  @Parameterized.Parameters
   public static Collection<Object[]> data() throws IOException {
     return Arrays.asList(new Object[][] {
             { createCapacitySchedulerConfiguration(), false },
@@ -97,8 +103,10 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     });
   }
 
-  @Test
-  public void testApplicationACLs() throws Exception {
+  @ParameterizedTest
+  @MethodSource("data")
+  public void testApplicationACLs(Configuration conf, boolean useFullPath) throws Exception {
+    initReservationACLsTestBase(conf, useFullPath);
     registerNode("test:1234", 8192, 8);
     String queueA = !useFullQueuePath? QUEUEA : CapacitySchedulerConfiguration
             .ROOT + "." + QUEUEA;
@@ -258,7 +266,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     try {
       ReservationId reservationId = createReservation(submitter);
       submitReservation(submitter, queueName, reservationId);
-      Assertions.fail("Submit reservation by the enemy should fail!");
+      fail("Submit reservation by the enemy should fail!");
     } catch (YarnException e) {
       handleAdministerException(e, submitter, queueName, ReservationACL
               .SUBMIT_RESERVATIONS.name());
@@ -286,7 +294,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
 
     try {
       listReservation(lister, queueName);
-      Assertions.fail("List reservation by the enemy should fail!");
+      fail("List reservation by the enemy should fail!");
     } catch (YarnException e) {
       handleAdministerException(e, lister, queueName, ReservationACL
               .LIST_RESERVATIONS.name());
@@ -316,7 +324,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     submitReservation(originalSubmitter, queueName, reservationId);
     try {
       listReservationById(lister, reservationId, queueName);
-      Assertions.fail("List reservation by the enemy should fail!");
+      fail("List reservation by the enemy should fail!");
     } catch (YarnException e) {
       handleAdministerException(e, lister, queueName, ReservationACL
               .LIST_RESERVATIONS.name());
@@ -341,7 +349,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
 
     try {
       deleteReservation(killer, reservationId);
-      Assertions.fail("Reservation deletion by the enemy should fail!");
+      fail("Reservation deletion by the enemy should fail!");
     } catch (YarnException e) {
       handleAdministerException(e, killer, queueName, ReservationACL
               .ADMINISTER_RESERVATIONS.name());
@@ -378,7 +386,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     ApplicationClientProtocol unauthorizedClient = getRMClientForUser(updater);
     try {
       unauthorizedClient.updateReservation(updateRequest);
-      Assertions.fail("Reservation updating by the enemy should fail.");
+      fail("Reservation updating by the enemy should fail.");
     } catch (YarnException e) {
       handleAdministerException(e, updater, queueName, ReservationACL
               .ADMINISTER_RESERVATIONS.name());
@@ -454,9 +462,9 @@ public class ReservationACLsTestBase extends ACLsTestBase {
   private void handleAdministerException(Exception e, String user, String
           queue, String operation) {
     LOG.info("Got exception while killing app as the enemy", e);
-    Assertions.assertTrue(e.getMessage().contains("User " + user
-            + " cannot perform operation " + operation + " on queue "
-            + queue));
+    assertTrue(e.getMessage().contains("User " + user
+        + " cannot perform operation " + operation + " on queue "
+        + queue));
   }
 
   private void registerNode(String host, int memory, int vCores) throws
@@ -477,13 +485,13 @@ public class ReservationACLsTestBase extends ACLsTestBase {
         Thread.sleep(100);
       } while (attempts-- > 0);
       if (attempts <= 0) {
-        Assertions.fail("Exhausted attempts in checking if node capacity was "
-                + "added to the plan");
+        fail("Exhausted attempts in checking if node capacity was "
+            + "added to the plan");
       }
 
     } catch (Exception e) {
       e.printStackTrace();
-      Assertions.fail(e.getMessage());
+      fail(e.getMessage());
     }
   }
 

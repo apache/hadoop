@@ -19,6 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
@@ -100,7 +103,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -239,7 +241,7 @@ public class MockRM extends ResourceManager {
       throws InterruptedException {
     drainEventsImplicitly();
     RMApp app = getRMContext().getRMApps().get(appId);
-    Assertions.assertNotNull(app, "app shouldn't be null");
+    assertNotNull(app, "app shouldn't be null");
     final int timeoutMsecs = 80 * SECOND;
     int timeWaiting = 0;
     while (!finalStates.contains(app.getState())) {
@@ -254,8 +256,8 @@ public class MockRM extends ResourceManager {
     }
 
     LOG.info("App State is : " + app.getState());
-    Assertions.assertTrue(
-       finalStates.contains(app.getState()), "App State is not correct (timeout).");
+    assertTrue(finalStates.contains(app.getState()),
+        "App State is not correct (timeout).");
   }
 
   /**
@@ -270,7 +272,7 @@ public class MockRM extends ResourceManager {
       throws InterruptedException {
     drainEventsImplicitly();
     RMApp app = getRMContext().getRMApps().get(appId);
-    Assertions.assertNotNull(app, "app shouldn't be null");
+    assertNotNull(app, "app shouldn't be null");
     final int timeoutMsecs = 80 * SECOND;
     int timeWaiting = 0;
     while (!finalState.equals(app.getState())) {
@@ -285,8 +287,8 @@ public class MockRM extends ResourceManager {
     }
 
     LOG.info("App State is : " + app.getState());
-    Assertions.assertEquals(finalState
-,       app.getState(), "App State is not correct (timeout).");
+    assertEquals(finalState,
+        app.getState(), "App State is not correct (timeout).");
   }
 
   /**
@@ -316,7 +318,7 @@ public class MockRM extends ResourceManager {
       throws InterruptedException {
     drainEventsImplicitly();
     RMApp app = getRMContext().getRMApps().get(attemptId.getApplicationId());
-    Assertions.assertNotNull(app, "app shouldn't be null");
+    assertNotNull(app, "app shouldn't be null");
     RMAppAttempt attempt = app.getRMAppAttempt(attemptId);
     MockRM.waitForState(attempt, finalState, timeoutMsecs);
   }
@@ -359,8 +361,8 @@ public class MockRM extends ResourceManager {
     }
 
     LOG.info("Attempt State is : " + attempt.getAppAttemptState());
-    Assertions.assertEquals(finalState
-,         attempt.getState(), "Attempt state is not correct (timeout).");
+    assertEquals(finalState,
+        attempt.getState(), "Attempt state is not correct (timeout).");
   }
 
   public void waitForContainerToComplete(RMAppAttempt attempt,
@@ -384,7 +386,7 @@ public class MockRM extends ResourceManager {
   public MockAM waitForNewAMToLaunchAndRegister(ApplicationId appId, int attemptSize,
       MockNM nm) throws Exception {
     RMApp app = getRMContext().getRMApps().get(appId);
-    Assertions.assertNotNull(app);
+    assertNotNull(app);
     int timeWaiting = 0;
     while (app.getAppAttempts().size() != attemptSize) {
       if (timeWaiting >= TIMEOUT_MS_FOR_ATTEMPT) {
@@ -607,7 +609,7 @@ public class MockRM extends ResourceManager {
       Thread.sleep(WAIT_MS_PER_LOOP);
       timeWaiting += WAIT_MS_PER_LOOP;
     }
-    Assertions.assertNotNull(node, "node shouldn't be null (timedout)");
+    assertNotNull(node, "node shouldn't be null (timedout)");
     while (!finalState.equals(node.getState())) {
       if (timeWaiting >= TIMEOUT_MS_FOR_CONTAINER_AND_NODE) {
         break;
@@ -620,22 +622,22 @@ public class MockRM extends ResourceManager {
     }
 
     LOG.info("Node " + nodeId + " State is : " + node.getState());
-    Assertions.assertEquals(finalState
-,         node.getState(), "Node state is not correct (timedout)");
+    assertEquals(finalState,
+        node.getState(), "Node state is not correct (timedout)");
   }
 
   public void sendNodeGracefulDecommission(
       MockNM nm, int timeout) throws Exception {
     RMNodeImpl node = (RMNodeImpl)
         getRMContext().getRMNodes().get(nm.getNodeId());
-    Assertions.assertNotNull(node, "node shouldn't be null");
+    assertNotNull(node, "node shouldn't be null");
     node.handle(new RMNodeDecommissioningEvent(nm.getNodeId(), timeout));
   }
 
   public void sendNodeEvent(MockNM nm, RMNodeEventType event) throws Exception {
     RMNodeImpl node = (RMNodeImpl)
         getRMContext().getRMNodes().get(nm.getNodeId());
-    Assertions.assertNotNull(node, "node shouldn't be null");
+    assertNotNull(node, "node shouldn't be null");
     node.handle(new RMNodeEvent(nm.getNodeId(), event));
   }
 
@@ -883,7 +885,7 @@ public class MockRM extends ResourceManager {
       }
       tick++;
     }
-    Assertions.assertNotNull(((AbstractYarnScheduler)
+    assertNotNull(((AbstractYarnScheduler)
         rm.getResourceScheduler()).getApplicationAttempt(attemptId), "Timed out waiting for SchedulerApplicationAttempt=" +
       attemptId + " to be added.");
   }
@@ -1033,8 +1035,8 @@ public class MockRM extends ResourceManager {
       Thread.sleep(WAIT_MS_PER_LOOP);
       timeWaiting += WAIT_MS_PER_LOOP;
     }
-    Assertions.assertTrue(
-       !apps.containsKey(appId), "app is not removed from scheduler (timeout).");
+    assertTrue(!apps.containsKey(appId),
+        "app is not removed from scheduler (timeout).");
     LOG.info("app is removed from scheduler, " + appId);
   }
 
