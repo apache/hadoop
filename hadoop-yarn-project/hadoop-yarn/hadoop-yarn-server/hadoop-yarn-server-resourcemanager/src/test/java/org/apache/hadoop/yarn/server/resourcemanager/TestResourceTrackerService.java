@@ -556,10 +556,8 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.getNodesListManager().refreshNodes(conf);
     checkShutdownNMCount(rm, ++initialMetricCount);
     nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assertions.assertEquals(
-    
-       NodeAction.NORMAL
-,         nodeHeartbeat.getNodeAction(), "Node should not have been shutdown.");
+    Assertions.assertEquals(NodeAction.NORMAL,
+        nodeHeartbeat.getNodeAction(), "Node should not have been shutdown.");
     NodeState nodeState =
         rm.getRMContext().getInactiveRMNodes().get(nm2.getNodeId()).getState();
     Assertions.assertEquals(NodeState.SHUTDOWN, nodeState, "Node should have been shutdown but is in state" +
@@ -593,15 +591,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.getNodesListManager().refreshNodes(conf);
     checkDecommissionedNMCount(rm, ++initialMetricCount);
     nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assertions.assertEquals(
-    
-       NodeAction.NORMAL
-,         nodeHeartbeat.getNodeAction(), "Node should not have been decommissioned.");
+    Assertions.assertEquals(NodeAction.NORMAL,
+        nodeHeartbeat.getNodeAction(), "Node should not have been decommissioned.");
     nodeHeartbeat = nm2.nodeHeartbeat(true);
-    Assertions.assertEquals(
-    
-       NodeAction.SHUTDOWN, nodeHeartbeat.getNodeAction(), "Node should have been decommissioned but is in state"
-            + nodeHeartbeat.getNodeAction());
+    Assertions.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat.getNodeAction(),
+        "Node should have been decommissioned but is in state"
+        + nodeHeartbeat.getNodeAction());
   }
 
   @Test
@@ -717,13 +712,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(registerReq);
 
-    Assertions.assertEquals(
-    
-       NodeAction.NORMAL, response.getNodeAction(), "On Invalid Node Labels action is expected to be normal");
+    Assertions.assertEquals(NodeAction.NORMAL, response.getNodeAction(),
+        "On Invalid Node Labels action is expected to be normal");
     Assertions.assertNull(nodeLabelsMgr.getNodeLabels().get(nodeId));
     Assertions.assertNotNull(response.getDiagnosticsMessage());
-    Assertions.assertFalse(
-       response.getAreNodeLabelsAcceptedByRM(), "Node Labels should not accepted by RM If Invalid");
+    Assertions.assertFalse(response.getAreNodeLabelsAcceptedByRM(),
+        "Node Labels should not accepted by RM If Invalid");
 
     if (rm != null) {
       rm.stop();
@@ -770,13 +764,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(req);
 
-    Assertions.assertEquals(
-    
-       NodeAction.NORMAL, response.getNodeAction(), "On Invalid Node Labels action is expected to be normal");
+    Assertions.assertEquals(NodeAction.NORMAL, response.getNodeAction(),
+        "On Invalid Node Labels action is expected to be normal");
     Assertions.assertNull(nodeLabelsMgr.getNodeLabels().get(nodeId));
     Assertions.assertNotNull(response.getDiagnosticsMessage());
-    Assertions.assertFalse(
-       response.getAreNodeLabelsAcceptedByRM(), "Node Labels should not accepted by RM If Invalid");
+    Assertions.assertFalse(response.getAreNodeLabelsAcceptedByRM(),
+        "Node Labels should not accepted by RM If Invalid");
 
     if (rm != null) {
       rm.stop();
@@ -823,11 +816,9 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     // registered to RM with central label config
     Assertions.assertEquals(NodeAction.NORMAL, response.getNodeAction());
     Assertions.assertNull(nodeLabelsMgr.getNodeLabels().get(nodeId));
-    Assertions
-        .assertFalse(
-    
-           response.getAreNodeLabelsAcceptedByRM(), "Node Labels should not accepted by RM If its configured with " +
-                "Central configuration");
+    Assertions.assertFalse(response.getAreNodeLabelsAcceptedByRM(),
+        "Node Labels should not accepted by RM If its configured with " +
+        "Central configuration");
     if (rm != null) {
       rm.stop();
     }

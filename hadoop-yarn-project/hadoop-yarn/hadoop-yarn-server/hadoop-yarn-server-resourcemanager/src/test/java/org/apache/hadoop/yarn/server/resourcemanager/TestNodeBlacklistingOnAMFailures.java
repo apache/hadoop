@@ -183,19 +183,17 @@ public class TestNodeBlacklistingOnAMFailures {
     nodeWhereAMRan = rmContainer.getAllocatedNode();
 
     // The other node should now receive the assignment
-    Assertions.assertEquals(
-    
-       otherNode.getNodeId(), nodeWhereAMRan, "After blacklisting, AM should have run on the other node");
+    Assertions.assertEquals(otherNode.getNodeId(), nodeWhereAMRan,
+        "After blacklisting, AM should have run on the other node");
 
     am2.registerAppAttempt();
     rm.waitForState(app.getApplicationId(), RMAppState.RUNNING);
 
     List<Container> allocatedContainers =
         TestAMRestart.allocateContainers(currentNode, am2, 1);
-    Assertions.assertEquals(
-    
-       currentNode.getNodeId(), allocatedContainers.get(0).getNodeId(), "Even though AM is blacklisted from the node, application can "
-            + "still allocate non-AM containers there");
+    Assertions.assertEquals(currentNode.getNodeId(), allocatedContainers.get(0).getNodeId(),
+        "Even though AM is blacklisted from the node, application can "
+        + "still allocate non-AM containers there");
   }
 
   @Test

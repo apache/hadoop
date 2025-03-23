@@ -748,9 +748,8 @@ public class TestRMHA {
     checkActiveRMFunctionality();
 
     // 5. Check ResourceProfilesManager
-    Assertions.assertNotNull(
-    
-       rm.getRMContext().getResourceProfilesManager(), "ResourceProfilesManager should not be null!");
+    Assertions.assertNotNull(rm.getRMContext().getResourceProfilesManager(),
+        "ResourceProfilesManager should not be null!");
   }
 
   @Test
@@ -878,13 +877,13 @@ public class TestRMHA {
         assertEquals(
            RM3_ADDRESS, conf.get(HAUtil.addSuffix(confKey, RM3_NODE_ID)), "RPC address not set for " + confKey);
         if (includeBindHost) {
-          assertEquals("Web address misconfigured WITH bind-host",
-                       rm.webAppAddress.substring(0, 7), "9.9.9.9");
+          assertEquals(rm.webAppAddress.substring(0, 7), "9.9.9.9",
+              "Web address misconfigured WITH bind-host");
         } else {
           //YarnConfiguration tries to figure out which rm host it's on by binding to it,
           //which doesn't happen for any of these fake addresses, so we end up with 0.0.0.0
-          assertEquals("Web address misconfigured WITHOUT bind-host",
-                       rm.webAppAddress.substring(0, 7), "0.0.0.0");
+          assertEquals(rm.webAppAddress.substring(0, 7), "0.0.0.0",
+              "Web address misconfigured WITHOUT bind-host");
         }
       }
     } catch (YarnRuntimeException e) {
@@ -904,13 +903,12 @@ public class TestRMHA {
       Configuration conf = new YarnConfiguration(configuration);
       rm = new MockRM(conf);
       rm.init(conf);
-      assertEquals("RPC address not set for " + YarnConfiguration.RM_ADDRESS,
-          "1.1.1.1:8032",
-          conf.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, RM1_NODE_ID)));
-      assertEquals("RPC address not set for " + YarnConfiguration.RM_ADDRESS,
-          "0.0.0.0:8032",
-          conf.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, RM2_NODE_ID)));
-
+      assertEquals("1.1.1.1:8032",
+          conf.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, RM1_NODE_ID)),
+          "RPC address not set for " + YarnConfiguration.RM_ADDRESS);
+      assertEquals("0.0.0.0:8032",
+          conf.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, RM2_NODE_ID)),
+          "RPC address not set for " + YarnConfiguration.RM_ADDRESS);
     } catch (YarnRuntimeException e) {
       fail("Should not throw any exceptions.");
     }

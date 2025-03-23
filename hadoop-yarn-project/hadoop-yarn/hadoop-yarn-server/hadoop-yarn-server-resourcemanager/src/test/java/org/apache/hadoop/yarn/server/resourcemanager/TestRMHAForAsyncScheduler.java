@@ -32,10 +32,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerAsyncScheduling;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -44,7 +43,7 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
   private TestCapacitySchedulerAsyncScheduling.NMHeartbeatThread
       nmHeartbeatThread = null;
 
-  @BeforeEach
+  @Before
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -83,8 +82,7 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
     }
   }
 
-  @Test
-  @Timeout(value = 60)
+  @Test(timeout = 60000)
   public void testAsyncScheduleThreadStateAfterRMHATransit() throws Exception {
     // start two RMs, and transit rm1 to active, rm2 to standby
     startRMs();
@@ -116,9 +114,9 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
             HAServiceProtocol.RequestSource.REQUEST_BY_USER);
     rm2.adminService.transitionToStandby(requestInfo);
     rm1.adminService.transitionToActive(requestInfo);
-    Assertions.assertTrue(rm2.getRMContext().getHAServiceState()
+    Assert.assertTrue(rm2.getRMContext().getHAServiceState()
         == HAServiceProtocol.HAServiceState.STANDBY);
-    Assertions.assertTrue(rm1.getRMContext().getHAServiceState()
+    Assert.assertTrue(rm1.getRMContext().getHAServiceState()
         == HAServiceProtocol.HAServiceState.ACTIVE);
     // check async schedule threads
     checkAsyncSchedulerThreads(Thread.currentThread());
@@ -138,8 +136,7 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
     rm2.stop();
   }
 
-  @Test
-  @Timeout(value = 30)
+  @Test(timeout = 30000)
   public void testAsyncScheduleThreadExit() throws Exception {
     // start two RMs, and transit rm1 to active, rm2 to standby
     startRMs();
@@ -244,10 +241,10 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
         }
       }
     }
-    Assertions.assertEquals(1, numResourceCommitterService);
-    Assertions.assertEquals(1, numAsyncScheduleThread);
-    Assertions.assertNotNull(asyncScheduleThread);
-    Assertions.assertNotNull(resourceCommitterService);
+    Assert.assertEquals(1, numResourceCommitterService);
+    Assert.assertEquals(1, numAsyncScheduleThread);
+    Assert.assertNotNull(asyncScheduleThread);
+    Assert.assertNotNull(resourceCommitterService);
   }
 
 }

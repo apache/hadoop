@@ -97,9 +97,9 @@ public class ReservationACLsTestBase extends ACLsTestBase {
   }
 
   public static Collection<Object[]> data() throws IOException {
-    return Arrays.asList(new Object[][] {
-            { createCapacitySchedulerConfiguration(), false },
-            { createFairSchedulerConfiguration(), true }
+    return Arrays.asList(new Object[][]{
+        {createCapacitySchedulerConfiguration(), true},
+        {createFairSchedulerConfiguration(), true}
     });
   }
 

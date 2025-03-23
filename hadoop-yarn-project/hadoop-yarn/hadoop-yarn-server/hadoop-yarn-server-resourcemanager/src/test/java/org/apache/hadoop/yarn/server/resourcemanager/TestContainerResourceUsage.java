@@ -83,14 +83,12 @@ public class TestContainerResourceUsage {
     RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm);
 
     RMAppMetrics rmAppMetrics = app0.getRMAppMetrics();
-    Assertions.assertTrue(
-    
-       rmAppMetrics.getMemorySeconds() == 0, "Before app submittion, memory seconds should have been 0 but was "
-                          + rmAppMetrics.getMemorySeconds());
-    Assertions.assertTrue(
-    
-       rmAppMetrics.getVcoreSeconds() == 0, "Before app submission, vcore seconds should have been 0 but was "
-                          + rmAppMetrics.getVcoreSeconds());
+    Assertions.assertTrue(rmAppMetrics.getMemorySeconds() == 0,
+        "Before app submittion, memory seconds should have been 0 but was "
+        + rmAppMetrics.getMemorySeconds());
+    Assertions.assertTrue(rmAppMetrics.getVcoreSeconds() == 0,
+        "Before app submission, vcore seconds should have been 0 but was "
+        + rmAppMetrics.getVcoreSeconds());
 
     RMAppAttempt attempt0 = app0.getCurrentAppAttempt();
 
@@ -111,14 +109,12 @@ public class TestContainerResourceUsage {
     }
 
     rmAppMetrics = app0.getRMAppMetrics();
-    Assertions.assertTrue(
-    
-       rmAppMetrics.getMemorySeconds() > 0, "While app is running, memory seconds should be >0 but is "
-            + rmAppMetrics.getMemorySeconds());
-    Assertions.assertTrue(
-    
-       rmAppMetrics.getVcoreSeconds() > 0, "While app is running, vcore seconds should be >0 but is "
-            + rmAppMetrics.getVcoreSeconds());
+    Assertions.assertTrue(rmAppMetrics.getMemorySeconds() > 0,
+        "While app is running, memory seconds should be >0 but is "
+        + rmAppMetrics.getMemorySeconds());
+    Assertions.assertTrue(rmAppMetrics.getVcoreSeconds() > 0,
+        "While app is running, vcore seconds should be >0 but is "
+        + rmAppMetrics.getVcoreSeconds());
 
     MockRM.finishAMAndVerifyAppState(app0, rm, nm, am0);
 

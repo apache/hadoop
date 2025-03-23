@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -42,8 +40,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
 
 
 public abstract class RMHATestBase extends ClientBaseWithFixes{
@@ -58,7 +57,7 @@ public abstract class RMHATestBase extends ClientBaseWithFixes{
   Configuration confForRM1;
   Configuration confForRM2;
 
-  @BeforeEach
+  @Before
   public void setup() throws Exception {
     configuration.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     configuration.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
@@ -84,7 +83,7 @@ public abstract class RMHATestBase extends ClientBaseWithFixes{
     confForRM2.set(YarnConfiguration.RM_HA_ID, "rm2");
   }
 
-  @AfterEach
+  @After
   public void teardown() {
     if (rm1 != null) {
       rm1.stop();
@@ -198,9 +197,9 @@ public abstract class RMHATestBase extends ClientBaseWithFixes{
   protected void explicitFailover() throws IOException {
     rm1.adminService.transitionToStandby(requestInfo);
     rm2.adminService.transitionToActive(requestInfo);
-    assertTrue(rm1.getRMContext().getHAServiceState()
+    Assert.assertTrue(rm1.getRMContext().getHAServiceState()
         == HAServiceState.STANDBY);
-    assertTrue(rm2.getRMContext().getHAServiceState()
+    Assert.assertTrue(rm2.getRMContext().getHAServiceState()
         == HAServiceState.ACTIVE);
   }
 
@@ -208,16 +207,16 @@ public abstract class RMHATestBase extends ClientBaseWithFixes{
       Configuration confForRM2) throws IOException {
     rm1.init(confForRM1);
     rm1.start();
-    assertTrue(rm1.getRMContext().getHAServiceState()
+    Assert.assertTrue(rm1.getRMContext().getHAServiceState()
         == HAServiceState.STANDBY);
 
     rm2.init(confForRM2);
     rm2.start();
-    assertTrue(rm2.getRMContext().getHAServiceState()
+    Assert.assertTrue(rm2.getRMContext().getHAServiceState()
         == HAServiceState.STANDBY);
 
     rm1.adminService.transitionToActive(requestInfo);
-    assertTrue(rm1.getRMContext().getHAServiceState()
+    Assert.assertTrue(rm1.getRMContext().getHAServiceState()
         == HAServiceState.ACTIVE);
   }
 }

@@ -853,8 +853,8 @@ public class TestRMNodeTransitions {
     node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null,
         nodeStatus));
 
-    Assertions.assertEquals(
-       initialUnhealthy + 1, cm.getUnhealthyNMs(), "Unhealthy Nodes");
+    Assertions.assertEquals(initialUnhealthy + 1, cm.getUnhealthyNMs(),
+        "Unhealthy Nodes");
     Assertions.assertEquals(initialActive, cm.getNumActiveNMs(), "Active Nodes");
     Assertions.assertEquals(initialLost, cm.getNumLostNMs(), "Lost Nodes");
     Assertions.assertEquals(
@@ -1056,7 +1056,7 @@ public class TestRMNodeTransitions {
        initialRebooted, cm.getNumRebootedNMs(), "Rebooted Nodes");
     Assertions.assertEquals(NodeState.RUNNING, node.getState());
     Assertions.assertNotNull(nodesListManagerEvent);
-    Assertions.assertEquals(NodesListManagerEventType.NODE_USABLE, 
+    Assertions.assertEquals(NodesListManagerEventType.NODE_USABLE,
         nodesListManagerEvent.getType());
   }
 
