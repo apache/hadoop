@@ -508,16 +508,16 @@ function dockermode
     echo "RUN groupadd --non-unique -g ${group_id} ${user_name}; exit 0;"
     echo "RUN useradd -g ${group_id} -u ${user_id} -m ${user_name}; exit 0;"
     echo "RUN chown -R ${user_name} /home/${user_name}; exit 0;"
-    echo "ENV HOME /home/${user_name}"
+    echo "ENV HOME=/home/${user_name}"
     echo "RUN mkdir -p /maven"
     echo "RUN chown -R ${user_name} /maven"
 
     # we always force build with the OpenJDK JDK
     # but with the correct version
     if [[ "$CPU_ARCH" = "aarch64" || "$CPU_ARCH" = "arm64" ]]; then
-      echo "ENV JAVA_HOME /usr/lib/jvm/java-${JVM_VERSION}-openjdk-arm64"
+      echo "ENV JAVA_HOME=/usr/lib/jvm/java-${JVM_VERSION}-openjdk-arm64"
     else
-      echo "ENV JAVA_HOME /usr/lib/jvm/java-${JVM_VERSION}-openjdk-amd64"
+      echo "ENV JAVA_HOME=/usr/lib/jvm/java-${JVM_VERSION}-openjdk-amd64"
     fi
 
     echo "USER ${user_name}"

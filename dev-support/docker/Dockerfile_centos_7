@@ -61,37 +61,37 @@ SHELL ["/bin/bash", "--login", "-c"]
 # Set the environment variables needed for CMake
 # to find and use GCC 9 for compilation
 ######
-ENV GCC_HOME "/opt/rh/devtoolset-9"
-ENV CC "${GCC_HOME}/root/usr/bin/gcc"
-ENV CXX "${GCC_HOME}/root/usr/bin/g++"
-ENV SHLVL 1
-ENV LD_LIBRARY_PATH "${GCC_HOME}/root/usr/lib64:${GCC_HOME}/root/usr/lib:${GCC_HOME}/root/usr/lib64/dyninst:${GCC_HOME}/root/usr/lib/dyninst:${GCC_HOME}/root/usr/lib64:${GCC_HOME}/root/usr/lib:/usr/lib:/usr/lib64"
-ENV PCP_DIR "${GCC_HOME}/root"
-ENV MANPATH "${GCC_HOME}/root/usr/share/man:"
-ENV PATH "${GCC_HOME}/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-ENV PKG_CONFIG_PATH "${GCC_HOME}/root/usr/lib64/pkgconfig"
-ENV INFOPATH "${GCC_HOME}/root/usr/share/info"
+ENV GCC_HOME="/opt/rh/devtoolset-9"
+ENV CC="${GCC_HOME}/root/usr/bin/gcc"
+ENV CXX="${GCC_HOME}/root/usr/bin/g++"
+ENV SHLVL=1
+ENV LD_LIBRARY_PATH="${GCC_HOME}/root/usr/lib64:${GCC_HOME}/root/usr/lib:${GCC_HOME}/root/usr/lib64/dyninst:${GCC_HOME}/root/usr/lib/dyninst:${GCC_HOME}/root/usr/lib64:${GCC_HOME}/root/usr/lib:/usr/lib:/usr/lib64"
+ENV PCP_DIR="${GCC_HOME}/root"
+ENV MANPATH="${GCC_HOME}/root/usr/share/man:"
+ENV PATH="${GCC_HOME}/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ENV PKG_CONFIG_PATH="${GCC_HOME}/root/usr/lib64/pkgconfig"
+ENV INFOPATH="${GCC_HOME}/root/usr/share/info"
 
 # TODO: Set locale
 
 ######
 # Set env vars required to build Hadoop
 ######
-ENV MAVEN_HOME /opt/maven
-ENV PATH "${PATH}:${MAVEN_HOME}/bin"
+ENV MAVEN_HOME=/opt/maven
+ENV PATH="${PATH}:${MAVEN_HOME}/bin"
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
-ENV JAVA_HOME /usr/lib/jvm/java-1.8.0
+ENV JAVA_HOME=/usr/lib/jvm/java-1.8.0
 
 #######
 # Set env vars for SpotBugs
 #######
-ENV SPOTBUGS_HOME /opt/spotbugs
+ENV SPOTBUGS_HOME=/opt/spotbugs
 
 #######
 # Set env vars for Google Protobuf 3.21.12
 #######
-ENV PROTOBUF_HOME /opt/protobuf
-ENV PATH "${PATH}:/opt/protobuf/bin"
+ENV PROTOBUF_HOME=/opt/protobuf
+ENV PATH="${PATH}:/opt/protobuf/bin"
 
 ######
 # Install packages
