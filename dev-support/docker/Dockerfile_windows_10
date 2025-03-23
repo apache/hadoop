@@ -115,12 +115,12 @@ COPY pkg-resolver pkg-resolver
 ## Install Python 3.11.8.
 # The Python installation steps below are derived from -
 # https://github.com/docker-library/python/blob/105d6f34e7d70aad6f8c3e249b8208efa591916a/3.11/windows/windowsservercore-ltsc2022/Dockerfile
-ENV PYTHONIOENCODING UTF-8
-ENV PYTHON_VERSION 3.11.8
-ENV PYTHON_PIP_VERSION 24.0
-ENV PYTHON_SETUPTOOLS_VERSION 65.5.1
-ENV PYTHON_GET_PIP_URL https://github.com/pypa/get-pip/raw/dbf0c85f76fb6e1ab42aa672ffca6f0a675d9ee4/public/get-pip.py
-ENV PYTHON_GET_PIP_SHA256 dfe9fd5c28dc98b5ac17979a953ea550cec37ae1b47a5116007395bfacff2ab9
+ENV PYTHONIOENCODING=UTF-8
+ENV PYTHON_VERSION=3.11.8
+ENV PYTHON_PIP_VERSION=24.0
+ENV PYTHON_SETUPTOOLS_VERSION=65.5.1
+ENV PYTHON_GET_PIP_URL=https://github.com/pypa/get-pip/raw/dbf0c85f76fb6e1ab42aa672ffca6f0a675d9ee4/public/get-pip.py
+ENV PYTHON_GET_PIP_SHA256=dfe9fd5c28dc98b5ac17979a953ea550cec37ae1b47a5116007395bfacff2ab9
 RUN powershell Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 RUN powershell pkg-resolver\install-python.ps1
 RUN powershell pkg-resolver\install-pip.ps1
@@ -137,10 +137,10 @@ RUN powershell Remove-Item -Force "C:\secpol.cfg" -Confirm:$false
 
 # Login as HadoopBuilder and set the necessary environment and PATH variables.
 USER HadoopBuilder
-ENV PROTOBUF_HOME "C:\vcpkg\installed\x64-windows"
-ENV JAVA_HOME "C:\Java\zulu8.62.0.19-ca-jdk8.0.332-win_x64"
-ENV MAVEN_OPTS '-Xmx2048M -Xss128M'
-ENV IS_WINDOWS 1
+ENV PROTOBUF_HOME="C:\vcpkg\installed\x64-windows"
+ENV JAVA_HOME="C:\Java\zulu8.62.0.19-ca-jdk8.0.332-win_x64"
+ENV MAVEN_OPTS="-Xmx2048M -Xss128M"
+ENV IS_WINDOWS=1
 RUN setx PATH "%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
 RUN setx PATH "%PATH%;%JAVA_HOME%\bin"
 RUN setx PATH "%PATH%;C:\Maven\apache-maven-3.8.8\bin"
