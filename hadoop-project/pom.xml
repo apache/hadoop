@@ -118,7 +118,6 @@
     <ldap-api.version>2.0.0</ldap-api.version>
 
     <!-- Apache Commons dependencies -->
-    <commons-beanutils.version>1.9.4</commons-beanutils.version>
     <commons-cli.version>1.9.0</commons-cli.version>
     <commons-codec.version>1.15</commons-codec.version>
     <commons-collections4.version>4.4</commons-collections4.version>
@@ -1286,11 +1285,6 @@
         <version>${commons-collections4.version}</version>
       </dependency>
       <dependency>
-        <groupId>commons-beanutils</groupId>
-        <artifactId>commons-beanutils</artifactId>
-        <version>${commons-beanutils.version}</version>
-      </dependency>
-      <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-configuration2</artifactId>
         <version>2.10.1</version>
@@ -1674,10 +1668,6 @@
           <exclusion>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>commons-beanutils</groupId>
-            <artifactId>commons-beanutils</artifactId>
           </exclusion>
           <exclusion>
             <groupId>org.apache.commons</groupId>
