@@ -27,12 +27,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -47,9 +49,7 @@ import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.LocalJavaKeyStoreProvider;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.util.ControlledClock;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -561,26 +561,10 @@ public class TestSecurityUtil {
    */
   @Test
   public void testQualifiedHostResolverCachingEnabled() throws Exception {
-    // Create a TestClock with current time
-    ControlledClock testClock = new ControlledClock(SystemClock.getInstance());
-    testClock.setTime(System.currentTimeMillis());
     // Create a QualifiedHostResolver with expiry interval > 0
     SecurityUtil.QualifiedHostResolver
-        resolver = new SecurityUtil.QualifiedHostResolver(testClock, 1);
-
-    // Call getByName twice with the same host; loader should be invoked only once
-    InetAddress addr1 = resolver.getByName("127.0.0.1");
-    InetAddress addr2 = resolver.getByName("127.0.0.1");
-    assertNotNull(addr1);
-    assertNotNull(addr2);
-    // Both addresses should be the same instance (cached value)
-    assertSame(addr1, addr2);
-
-    testClock.tickSec(2);
-    Thread.sleep(1000);
-    InetAddress addr3 = resolver.getByName("127.0.0.1");
-    assertNotNull(addr3);
-    assertNotSame(addr1, addr3);
+        resolver = new SecurityUtil.QualifiedHostResolver(1);
+    testCacheableResolve(resolver);
   }
 
   /**
@@ -588,13 +572,14 @@ public class TestSecurityUtil {
    */
   @Test
   public void testStandardHostResolverCachingEnabled() throws Exception {
-    // Create a TestClock with current time
-    ControlledClock testClock = new ControlledClock(SystemClock.getInstance());
-    testClock.setTime(System.currentTimeMillis());
     // Create a StandardHostResolver with expiry interval > 0
     SecurityUtil.StandardHostResolver
-        resolver = new SecurityUtil.StandardHostResolver(testClock, 1);
+        resolver = new SecurityUtil.StandardHostResolver(1);
+    testCacheableResolve(resolver);
+  }
 
+  private void  testCacheableResolve(SecurityUtil.CacheableHostResolver resolver)
+      throws Exception {
     // Call getByName twice with the same host
     InetAddress addr1 = resolver.getByName("127.0.0.1");
     InetAddress addr2 = resolver.getByName("127.0.0.1");
@@ -603,11 +588,29 @@ public class TestSecurityUtil {
     // Both addresses should be the same instance (cached value)
     assertSame(addr1, addr2);
 
-    testClock.tickSec(2);
-    Thread.sleep(1000);
+    // wait for timeout of cache item
+    Thread.sleep(1500);
     InetAddress addr3 = resolver.getByName("127.0.0.1");
     assertNotNull(addr3);
     assertNotSame(addr1, addr3);
   }
 
+  /**
+   * Test resolving non-existent hostname, show throw UnknownHostException
+   */
+  @Test
+  public void testInvalidHostThrowsException() {
+    SecurityUtil.StandardHostResolver
+        standardHostResolver = new SecurityUtil.StandardHostResolver(10);
+    String invalidHost = "invalid_host_name_which_does_not_exist";
+    assertThrows(UnknownHostException.class, () -> {
+      standardHostResolver.getByName(invalidHost);
+    }, "Resolving an invalid host should throw UnknownHostException");
+
+    SecurityUtil.QualifiedHostResolver
+        qualifiedHostResolver = new SecurityUtil.QualifiedHostResolver(10);
+    assertThrows(UnknownHostException.class, () -> {
+      qualifiedHostResolver.getByName(invalidHost);
+    }, "Resolving an invalid host should throw UnknownHostException");
+  }
 }
