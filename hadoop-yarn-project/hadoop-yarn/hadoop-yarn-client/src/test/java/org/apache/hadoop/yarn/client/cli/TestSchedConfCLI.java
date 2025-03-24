@@ -23,8 +23,10 @@ import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.JerseyTest;
 import org.glassfish.jersey.test.TestProperties;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.After;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -58,10 +60,10 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Application;
 
 import static org.apache.hadoop.yarn.webapp.JerseyTestBase.JERSEY_RANDOM_PORT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -139,7 +141,7 @@ public class TestSchedConfCLI extends JerseyTest {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     cli = new SchedConfCLI();
@@ -154,7 +156,8 @@ public class TestSchedConfCLI extends JerseyTest {
     config.setMaximumCapacity(a, 100f);
   }
 
-  private void cleanUp() throws Exception {
+  @After
+  public void cleanUp() throws Exception {
     if (rm != null) {
       rm.stop();
     }
@@ -171,52 +174,49 @@ public class TestSchedConfCLI extends JerseyTest {
     super.tearDown();
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testGetSchedulerConf() throws Exception {
     ByteArrayOutputStream sysOutStream = new ByteArrayOutputStream();
     PrintStream sysOut = new PrintStream(sysOutStream);
     System.setOut(sysOut);
-    try {
-      int exitCode = cli.getSchedulerConf("", target());
-      assertEquals("SchedConfCLI failed to run", 0, exitCode);
-      assertTrue("Failed to get scheduler configuration",
-          sysOutStream.toString().contains("testqueue"));
-    } finally {
-      cleanUp();
-    }
+
+    int exitCode = cli.getSchedulerConf("", target());
+    assertEquals(0, exitCode, "SchedConfCLI failed to run");
+    assertTrue(sysOutStream.toString().contains("testqueue"),
+        "Failed to get scheduler configuration");
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testFormatSchedulerConf() throws Exception {
-    try {
-      ResourceScheduler scheduler = rm.getResourceScheduler();
-      MutableConfigurationProvider provider =
-          ((MutableConfScheduler) scheduler).getMutableConfProvider();
 
-      SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
-      HashMap<String, String> globalUpdates = new HashMap<>();
-      globalUpdates.put("schedKey1", "schedVal1");
-      schedUpdateInfo.setGlobalParams(globalUpdates);
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+    MutableConfigurationProvider provider =
+        ((MutableConfScheduler) scheduler).getMutableConfProvider();
 
-      LogMutation log = provider.logAndApplyMutation(
-          UserGroupInformation.getCurrentUser(), schedUpdateInfo);
-      rm.getRMContext().getRMAdminService().refreshQueues();
-      provider.confirmPendingMutation(log, true);
+    SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
+    HashMap<String, String> globalUpdates = new HashMap<>();
+    globalUpdates.put("schedKey1", "schedVal1");
+    schedUpdateInfo.setGlobalParams(globalUpdates);
 
-      Configuration schedulerConf = provider.getConfiguration();
-      assertEquals("schedVal1", schedulerConf.get("schedKey1"));
+    LogMutation log = provider.logAndApplyMutation(
+        UserGroupInformation.getCurrentUser(), schedUpdateInfo);
+    rm.getRMContext().getRMAdminService().refreshQueues();
+    provider.confirmPendingMutation(log, true);
 
-      int exitCode = cli.formatSchedulerConf("", target());
-      assertEquals(0, exitCode);
+    Configuration schedulerConf = provider.getConfiguration();
+    assertEquals("schedVal1", schedulerConf.get("schedKey1"));
 
-      schedulerConf = provider.getConfiguration();
-      assertNull(schedulerConf.get("schedKey1"));
-    } finally {
-      cleanUp();
-    }
+    int exitCode = cli.formatSchedulerConf("", target());
+    assertEquals(0, exitCode);
+
+    schedulerConf = provider.getConfiguration();
+    assertNull(schedulerConf.get("schedKey1"));
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testInvalidConf() throws Exception {
     ByteArrayOutputStream sysErrStream = new ByteArrayOutputStream();
     PrintStream sysErr = new PrintStream(sysErrStream);
@@ -232,12 +232,13 @@ public class TestSchedConfCLI extends JerseyTest {
   private void executeCommand(ByteArrayOutputStream sysErrStream, String op,
       String queueConf) throws Exception {
     int exitCode = cli.run(new String[] {op, queueConf});
-    assertNotEquals("Should return an error code", 0, exitCode);
+    assertNotEquals(0, exitCode, "Should return an error code");
     assertTrue(sysErrStream.toString()
         .contains("Specify configuration key " + "value as confKey=confVal."));
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testAddQueues() {
     SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
     cli.addQueues("root.a:a1=aVal1,a2=aVal2,a3=", schedUpdateInfo);
@@ -260,7 +261,8 @@ public class TestSchedConfCLI extends JerseyTest {
     validateQueueConfigInfo(addQueueInfo, 1, "root.c", paramValues);
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testAddQueuesWithCommaInValue() {
     SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
     cli.addQueues("root.a:a1=a1Val1\\,a1Val2 a1Val3,a2=a2Val1\\,a2Val2",
@@ -272,7 +274,8 @@ public class TestSchedConfCLI extends JerseyTest {
     validateQueueConfigInfo(addQueueInfo, 0, "root.a", params);
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testRemoveQueues() {
     SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
     cli.removeQueues("root.a;root.b;root.c.c1", schedUpdateInfo);
@@ -283,7 +286,8 @@ public class TestSchedConfCLI extends JerseyTest {
     assertEquals("root.c.c1", removeInfo.get(2));
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testUpdateQueues() {
     SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
     Map<String, String> paramValues = new HashMap<>();
@@ -317,7 +321,8 @@ public class TestSchedConfCLI extends JerseyTest {
     paramValues.forEach((k, v) -> assertEquals(v, params.get(k)));
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testUpdateQueuesWithCommaInValue() {
     SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
     cli.updateQueues("root.a:a1=a1Val1\\,a1Val2 a1Val3,a2=a2Val1\\,a2Val2",
@@ -330,7 +335,8 @@ public class TestSchedConfCLI extends JerseyTest {
     validateQueueConfigInfo(updateQueueInfo, 0, "root.a", paramValues);
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testGlobalUpdate() {
     SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
     cli.globalUpdates("schedKey1=schedVal1,schedKey2=schedVal2",
@@ -341,7 +347,8 @@ public class TestSchedConfCLI extends JerseyTest {
     validateGlobalParams(schedUpdateInfo, paramValues);
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testGlobalUpdateWithCommaInValue() {
     SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
     cli.globalUpdates(

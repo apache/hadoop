@@ -167,4 +167,12 @@ public abstract class AzureBlockManager {
       activeBlock = null;
     }
   }
+
+  // Used to clear any resources used by the block manager.
+  void close() {
+    if (hasActiveBlock()) {
+      clearActiveBlock();
+    }
+    LOG.debug("AzureBlockManager closed.");
+  }
 }

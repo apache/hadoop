@@ -38,10 +38,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,20 +56,15 @@ import static org.mockito.Mockito.mock;
 /**
  * General purpose ReservationAgent tester.
  */
-@RunWith(Parameterized.class)
 @SuppressWarnings("VisibilityModifier")
 public class TestReservationAgents {
 
-  @Parameterized.Parameter(value = 0)
   public Class agentClass;
 
-  @Parameterized.Parameter(value = 1)
   public boolean allocateLeft;
 
-  @Parameterized.Parameter(value = 2)
   public String recurrenceExpression;
 
-  @Parameterized.Parameter(value = 3)
   public int numOfNodes;
 
   private long step;
@@ -87,8 +80,15 @@ public class TestReservationAgents {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestReservationAgents.class);
 
-  @Parameterized.Parameters(name = "Testing: agent {0}, allocateLeft: {1}," +
-          " recurrenceExpression: {2}, numNodes: {3})")
+  public void initTestReservationAgents(Class pAgentClass, boolean pAllocateLeft,
+      String pRecurrenceExpression, int pNumOfNodes) throws Exception {
+    this.agentClass = pAgentClass;
+    this.allocateLeft = pAllocateLeft;
+    this.recurrenceExpression = pRecurrenceExpression;
+    this.numOfNodes = pNumOfNodes;
+    setup();
+  }
+
   public static Collection<Object[]> data() {
     return Arrays.asList(
         new Object[][] {{GreedyReservationAgent.class, true, "0", 100 },
@@ -105,7 +105,6 @@ public class TestReservationAgents {
             {AlignedPlannerWithGreedy.class, false, "86400000", 100 } });
   }
 
-  @Before
   public void setup() throws Exception {
 
     long seed = rand.nextLong();
@@ -141,8 +140,12 @@ public class TestReservationAgents {
         resCalc, minAlloc, maxAlloc, "dedicated", null, true, context);
   }
 
-  @Test
-  public void test() throws Exception {
+  @ParameterizedTest(name = "Testing: agent {0}, allocateLeft: {1}," +
+      " recurrenceExpression: {2}, numNodes: {3}")
+  @MethodSource("data")
+  public void test(Class pAgentClass, boolean pAllocateLeft,
+      String pRecurrenceExpression, int pNumOfNodes) throws Exception {
+    initTestReservationAgents(pAgentClass, pAllocateLeft, pRecurrenceExpression, pNumOfNodes);
 
     long period = Long.parseLong(recurrenceExpression);
     for (int i = 0; i < 1000; i++) {

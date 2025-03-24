@@ -16,11 +16,11 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the docker rm command and any command
@@ -35,7 +35,7 @@ public class TestDockerRmCommand {
   private static final String CONTAINER_NAME = "foo";
   private static final String CGROUP_HIERARCHY_NAME = "hadoop-yarn";
 
-  @Before
+  @BeforeEach
   public void setUp() {
     dockerRmCommand = new DockerRmCommand(CONTAINER_NAME, null);
     dockerRmCommandWithCgroupArg =

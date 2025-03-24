@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.StringJoiner;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -180,5 +181,12 @@ public class BufferedFSInputStream extends BufferedInputStream
   public void readVectored(List<? extends FileRange> ranges,
                            IntFunction<ByteBuffer> allocate) throws IOException {
     ((PositionedReadable) in).readVectored(ranges, allocate);
+  }
+
+  @Override
+  public void readVectored(final List<? extends FileRange> ranges,
+      final IntFunction<ByteBuffer> allocate,
+      final Consumer<ByteBuffer> release) throws IOException {
+    ((PositionedReadable) in).readVectored(ranges, allocate, release);
   }
 }

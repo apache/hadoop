@@ -132,5 +132,11 @@ public final class HttpHeaderConfigurations {
      */
   public static final String X_MS_COPY_STATUS = "x-ms-copy-status";
 
+  /**
+   * Http Request Header for create rename idempotence.
+   * {@value}
+   */
+  public static final String X_MS_CLIENT_TRANSACTION_ID = "x-ms-client-transaction-id";
+
   private HttpHeaderConfigurations() {}
 }

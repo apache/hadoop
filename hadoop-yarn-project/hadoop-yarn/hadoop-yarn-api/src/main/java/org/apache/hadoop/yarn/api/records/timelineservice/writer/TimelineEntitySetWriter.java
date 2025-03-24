@@ -43,11 +43,13 @@ import java.util.Set;
 public class TimelineEntitySetWriter implements MessageBodyWriter<Set<TimelineEntity>> {
 
   private ObjectMapper objectMapper = new ObjectMapper();
+  private String timelineEntityType =
+      "java.util.Set<org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity>";
 
   @Override
   public boolean isWriteable(Class<?> type, Type genericType,
       Annotation[] annotations, MediaType mediaType) {
-    return true;
+    return timelineEntityType.equals(genericType.getTypeName());
   }
 
   @Override

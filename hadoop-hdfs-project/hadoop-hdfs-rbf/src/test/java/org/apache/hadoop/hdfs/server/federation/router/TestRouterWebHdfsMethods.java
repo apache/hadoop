@@ -47,13 +47,14 @@ import org.slf4j.LoggerFactory;
 /**
  * Test suite for Router Web Hdfs methods.
  */
+@SuppressWarnings("checkstyle:visibilitymodifier")
 public class TestRouterWebHdfsMethods {
   static final Logger LOG =
       LoggerFactory.getLogger(TestRouterWebHdfsMethods.class);
 
-  private static StateStoreDFSCluster cluster;
-  private static RouterContext router;
-  private static String httpUri;
+  protected static StateStoreDFSCluster cluster;
+  protected static RouterContext router;
+  protected static String httpUri;
 
   @BeforeClass
   public static void globalSetUp() throws Exception {

@@ -20,6 +20,7 @@ package org.apache.hadoop.util;
 import static org.apache.hadoop.util.RunJar.MATCH_ANY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -195,6 +196,24 @@ public class TestRunJar {
     assertFalse(new File(unjarDir, TestRunJar.FOOBAR_TXT).exists(),
         "unjar dir shouldn't exist at test start");
     return unjarDir;
+  }
+
+  /**
+   * Tests the creation of the temp working directory into which the jars are
+   * unjarred.
+   */
+  @Test
+  public void testCreateWorkDirectory() throws Exception {
+    File workDir = null;
+    try {
+      workDir = RunJar.createWorkDirectory();
+
+      assertNotNull(workDir, "Work directory should exist and not null");
+    } finally {
+      if (workDir != null) {
+        FileUtil.fullyDelete(workDir);
+      }
+    }
   }
 
   /**

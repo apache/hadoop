@@ -22,8 +22,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DeviceRuntimeSpec;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.YarnRuntimeType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +39,10 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anySet;
@@ -90,7 +93,7 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
         .setMajorNumber(195)
         .setMinorNumber(1).build());
     Set<Device> devices = plugin.getDevices();
-    Assert.assertEquals(expectedDevices, devices);
+    assertEquals(expectedDevices, devices);
   }
 
   @Test
@@ -100,7 +103,7 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
 
     DeviceRuntimeSpec spec = plugin.onDevicesAllocated(allocatedDevices,
         YarnRuntimeType.RUNTIME_DEFAULT);
-    Assert.assertNull(spec);
+    assertNull(spec);
 
     // allocate one device
     allocatedDevices.add(Device.Builder.newInstance()
@@ -111,8 +114,8 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
         .setMinorNumber(0).build());
     spec = plugin.onDevicesAllocated(allocatedDevices,
         YarnRuntimeType.RUNTIME_DOCKER);
-    Assert.assertEquals("nvidia", spec.getContainerRuntime());
-    Assert.assertEquals("0", spec.getEnvs().get("NVIDIA_VISIBLE_DEVICES"));
+    assertEquals("nvidia", spec.getContainerRuntime());
+    assertEquals("0", spec.getEnvs().get("NVIDIA_VISIBLE_DEVICES"));
 
     // two device allowed
     allocatedDevices.add(Device.Builder.newInstance()
@@ -123,8 +126,8 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
         .setMinorNumber(1).build());
     spec = plugin.onDevicesAllocated(allocatedDevices,
         YarnRuntimeType.RUNTIME_DOCKER);
-    Assert.assertEquals("nvidia", spec.getContainerRuntime());
-    Assert.assertEquals("0,1", spec.getEnvs().get("NVIDIA_VISIBLE_DEVICES"));
+    assertEquals("nvidia", spec.getContainerRuntime());
+    assertEquals("0,1", spec.getEnvs().get("NVIDIA_VISIBLE_DEVICES"));
   }
 
   private NvidiaGPUPluginForRuntimeV2 mockEightGPUPlugin() throws IOException {
@@ -268,7 +271,7 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
         1, env);
     assertThat(allocation).hasSize(1);
     verify(spyPlugin).basicSchedule(anySet(), anyInt(), anySet());
-    Assert.assertFalse(spyPlugin.isTopoInitialized());
+    assertFalse(spyPlugin.isTopoInitialized());
 
     // Case 1. allocate 1 device
     reset(spyPlugin);
@@ -279,7 +282,7 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     reset(spyPlugin);
     // Case 2. allocate all available
     allocation = spyPlugin.allocateDevices(allDevices, allDevices.size(), env);
-    Assert.assertEquals(allocation.size(), allDevices.size());
+    assertEquals(allocation.size(), allDevices.size());
     verify(spyPlugin).basicSchedule(anySet(), anyInt(), anySet());
     // Case 3. allocate 2 devices
     reset(spyPlugin);
@@ -289,14 +292,14 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     assertThat(allocation).hasSize(count);
     // the costTable should be init and used topology scheduling
     verify(spyPlugin).initCostTable();
-    Assert.assertTrue(spyPlugin.isTopoInitialized());
+    assertTrue(spyPlugin.isTopoInitialized());
     verify(spyPlugin).topologyAwareSchedule(anySet(), anyInt(), anyMap(),
         anySet(), anyMap());
     assertThat(allocation).hasSize(count);
     Device[] allocatedDevices =
         allocation.toArray(new Device[count]);
     // Check weights
-    Assert.assertEquals(NvidiaGPUPluginForRuntimeV2.DeviceLinkType
+    assertEquals(NvidiaGPUPluginForRuntimeV2.DeviceLinkType
         .P2PLinkSameCPUSocket.getWeight(),
         spyPlugin.computeCostOfDevices(allocatedDevices));
     // Case 4. allocate 3 devices
@@ -306,7 +309,7 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     assertThat(allocation).hasSize(count);
     // the costTable should be init and used topology scheduling
     verify(spyPlugin, times(0)).initCostTable();
-    Assert.assertTrue(spyPlugin.isTopoInitialized());
+    assertTrue(spyPlugin.isTopoInitialized());
     verify(spyPlugin).topologyAwareSchedule(anySet(), anyInt(), anyMap(),
         anySet(), anyMap());
     assertThat(allocation).hasSize(count);
@@ -318,7 +321,7 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
             .P2PLinkSameCPUSocket.getWeight()
             + 2 * NvidiaGPUPluginForRuntimeV2.DeviceLinkType
             .P2PLinkCrossCPUSocket.getWeight();
-    Assert.assertEquals(expectedWeight,
+    assertEquals(expectedWeight,
         spyPlugin.computeCostOfDevices(allocatedDevices));
     // Case 5. allocate 2 GPUs from three available devices
     reset(spyPlugin);
@@ -331,24 +334,24 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     assertThat(allocation).hasSize(count);
     // the costTable should be init and used topology scheduling
     verify(spyPlugin, times(0)).initCostTable();
-    Assert.assertTrue(spyPlugin.isTopoInitialized());
+    assertTrue(spyPlugin.isTopoInitialized());
     verify(spyPlugin).topologyAwareSchedule(anySet(), anyInt(), anyMap(),
         anySet(), anyMap());
     assertThat(allocation).hasSize(count);
     allocatedDevices =
         allocation.toArray(new Device[count]);
     // check weights
-    Assert.assertEquals(NvidiaGPUPluginForRuntimeV2.DeviceLinkType
+    assertEquals(NvidiaGPUPluginForRuntimeV2.DeviceLinkType
             .P2PLinkSameCPUSocket.getWeight(),
         spyPlugin.computeCostOfDevices(allocatedDevices));
     // it should allocate GPU 2 and 3
     for (Device device : allocation) {
       if (device.getMinorNumber() == 2) {
-        Assert.assertTrue(true);
+        assertTrue(true);
       } else if (device.getMinorNumber() == 3) {
-        Assert.assertTrue(true);
+        assertTrue(true);
       } else {
-        Assert.assertTrue("Should allocate GPU 2 and 3", false);
+        assertTrue(false, "Should allocate GPU 2 and 3");
       }
     }
   }
@@ -366,12 +369,12 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     // Case 1. allocate 1 device
     Set<Device> allocation = spyPlugin.allocateDevices(allDevices, 1, env);
     // ensure no topology scheduling needed
-    Assert.assertEquals(allocation.size(), 1);
+    assertEquals(allocation.size(), 1);
     verify(spyPlugin).basicSchedule(anySet(), anyInt(), anySet());
     reset(spyPlugin);
     // Case 2. allocate all available
     allocation = spyPlugin.allocateDevices(allDevices, allDevices.size(), env);
-    Assert.assertEquals(allocation.size(), allDevices.size());
+    assertEquals(allocation.size(), allDevices.size());
     verify(spyPlugin).basicSchedule(anySet(), anyInt(), anySet());
     // Case 3. allocate 2 devices
     reset(spyPlugin);
@@ -381,14 +384,14 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     assertThat(allocation).hasSize(count);
     // the costTable should be init and used topology scheduling
     verify(spyPlugin).initCostTable();
-    Assert.assertTrue(spyPlugin.isTopoInitialized());
+    assertTrue(spyPlugin.isTopoInitialized());
     verify(spyPlugin).topologyAwareSchedule(anySet(), anyInt(), anyMap(),
         anySet(), anyMap());
     assertThat(allocation).hasSize(count);
     Device[] allocatedDevices =
         allocation.toArray(new Device[count]);
     // Check weights
-    Assert.assertEquals(NvidiaGPUPluginForRuntimeV2.DeviceLinkType
+    assertEquals(NvidiaGPUPluginForRuntimeV2.DeviceLinkType
         .P2PLinkCrossCPUSocket.getWeight(),
         spyPlugin.computeCostOfDevices(allocatedDevices));
     // Case 4. allocate 3 devices
@@ -398,7 +401,7 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     assertThat(allocation).hasSize(count);
     // the costTable should be init and used topology scheduling
     verify(spyPlugin, times(0)).initCostTable();
-    Assert.assertTrue(spyPlugin.isTopoInitialized());
+    assertTrue(spyPlugin.isTopoInitialized());
     verify(spyPlugin).topologyAwareSchedule(anySet(), anyInt(), anyMap(),
         anySet(), anyMap());
     assertThat(allocation).hasSize(count);
@@ -410,7 +413,7 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
             .P2PLinkSameCPUSocket.getWeight()
             + 2 * NvidiaGPUPluginForRuntimeV2.DeviceLinkType
             .P2PLinkCrossCPUSocket.getWeight();
-    Assert.assertEquals(expectedWeight,
+    assertEquals(expectedWeight,
         spyPlugin.computeCostOfDevices(allocatedDevices));
     // Case 5. allocate 2 GPUs from three available devices
     reset(spyPlugin);
@@ -423,20 +426,20 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     assertThat(allocation).hasSize(count);
     // the costTable should be init and used topology scheduling
     verify(spyPlugin, times(0)).initCostTable();
-    Assert.assertTrue(spyPlugin.isTopoInitialized());
+    assertTrue(spyPlugin.isTopoInitialized());
     verify(spyPlugin).topologyAwareSchedule(anySet(), anyInt(), anyMap(),
         anySet(), anyMap());
     assertThat(allocation).hasSize(count);
     allocatedDevices =
         allocation.toArray(new Device[count]);
     // check weights
-    Assert.assertEquals(NvidiaGPUPluginForRuntimeV2.DeviceLinkType
+    assertEquals(NvidiaGPUPluginForRuntimeV2.DeviceLinkType
             .P2PLinkCrossCPUSocket.getWeight(),
         spyPlugin.computeCostOfDevices(allocatedDevices));
     // it should allocate GPU 1 and 2
     for (Device device : allocation) {
       if (device.getMinorNumber() == 0) {
-        Assert.assertTrue("Shouldn't allocate GPU 0", false);
+        assertTrue(false, "Shouldn't allocate GPU 0");
       }
     }
   }
@@ -449,7 +452,7 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     spyPlugin.initCostTable();
     Map<String, Integer> devicePairToWeight = spyPlugin.getDevicePairToWeight();
     // 12 combinations when choose 2 GPUs from 8 respect the order. 8!/6!
-    Assert.assertEquals(56, devicePairToWeight.size());
+    assertEquals(56, devicePairToWeight.size());
     int sameCPUWeight =
         NvidiaGPUPluginForRuntimeV2.DeviceLinkType
             .P2PLinkSameCPUSocket.getWeight();
@@ -460,33 +463,33 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
         NvidiaGPUPluginForRuntimeV2.DeviceLinkType
             .P2PLinkNVLink2.getWeight();
 
-    Assert.assertEquals(nv1Weight, (int)devicePairToWeight.get("0-1"));
-    Assert.assertEquals(nv1Weight, (int)devicePairToWeight.get("1-0"));
+    assertEquals(nv1Weight, (int)devicePairToWeight.get("0-1"));
+    assertEquals(nv1Weight, (int)devicePairToWeight.get("1-0"));
 
-    Assert.assertEquals(nv2Weight, (int)devicePairToWeight.get("0-4"));
-    Assert.assertEquals(nv2Weight, (int)devicePairToWeight.get("4-0"));
+    assertEquals(nv2Weight, (int)devicePairToWeight.get("0-4"));
+    assertEquals(nv2Weight, (int)devicePairToWeight.get("4-0"));
 
-    Assert.assertEquals(nv2Weight, (int)devicePairToWeight.get("0-3"));
-    Assert.assertEquals(nv2Weight, (int)devicePairToWeight.get("3-0"));
+    assertEquals(nv2Weight, (int)devicePairToWeight.get("0-3"));
+    assertEquals(nv2Weight, (int)devicePairToWeight.get("3-0"));
 
-    Assert.assertEquals(sameCPUWeight, (int)devicePairToWeight.get("6-3"));
-    Assert.assertEquals(sameCPUWeight, (int)devicePairToWeight.get("3-6"));
+    assertEquals(sameCPUWeight, (int)devicePairToWeight.get("6-3"));
+    assertEquals(sameCPUWeight, (int)devicePairToWeight.get("3-6"));
 
-    Assert.assertEquals(nv2Weight, (int)devicePairToWeight.get("6-7"));
-    Assert.assertEquals(nv2Weight, (int)devicePairToWeight.get("7-6"));
+    assertEquals(nv2Weight, (int)devicePairToWeight.get("6-7"));
+    assertEquals(nv2Weight, (int)devicePairToWeight.get("7-6"));
 
-    Assert.assertEquals(nv1Weight, (int)devicePairToWeight.get("1-3"));
-    Assert.assertEquals(nv1Weight, (int)devicePairToWeight.get("3-1"));
+    assertEquals(nv1Weight, (int)devicePairToWeight.get("1-3"));
+    assertEquals(nv1Weight, (int)devicePairToWeight.get("3-1"));
 
     // verify cost Table
     Map<Integer, List<Map.Entry<Set<Device>, Integer>>> costTable =
         spyPlugin.getCostTable();
-    Assert.assertNull(costTable.get(1));
+    assertNull(costTable.get(1));
     // C8:2 = 8!/2!/6! = 28
-    Assert.assertEquals(28, costTable.get(2).size());
+    assertEquals(28, costTable.get(2).size());
     // C8:4 = 8!/4!/4! = 70
-    Assert.assertEquals(70, costTable.get(4).size());
-    Assert.assertNull(costTable.get(8));
+    assertEquals(70, costTable.get(4).size());
+    assertNull(costTable.get(8));
 
     Set<Device> allDevices = spyPlugin.getDevices();
     Map<String, String> env = new HashMap<>();
@@ -507,38 +510,38 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     spyPlugin.initCostTable();
     Map<String, Integer> devicePairToWeight = spyPlugin.getDevicePairToWeight();
     // 12 combinations when choose 2 GPUs from 4 respect the order. 4!/2!
-    Assert.assertEquals(12, devicePairToWeight.size());
+    assertEquals(12, devicePairToWeight.size());
     int sameCPUWeight =
         NvidiaGPUPluginForRuntimeV2.DeviceLinkType
             .P2PLinkSameCPUSocket.getWeight();
     int crossCPUWeight =
         NvidiaGPUPluginForRuntimeV2.DeviceLinkType
             .P2PLinkCrossCPUSocket.getWeight();
-    Assert.assertEquals(sameCPUWeight, (int)devicePairToWeight.get("0-1"));
-    Assert.assertEquals(sameCPUWeight, (int)devicePairToWeight.get("1-0"));
+    assertEquals(sameCPUWeight, (int)devicePairToWeight.get("0-1"));
+    assertEquals(sameCPUWeight, (int)devicePairToWeight.get("1-0"));
 
-    Assert.assertEquals(crossCPUWeight, (int)devicePairToWeight.get("0-2"));
-    Assert.assertEquals(crossCPUWeight, (int)devicePairToWeight.get("2-0"));
+    assertEquals(crossCPUWeight, (int)devicePairToWeight.get("0-2"));
+    assertEquals(crossCPUWeight, (int)devicePairToWeight.get("2-0"));
 
-    Assert.assertEquals(crossCPUWeight, (int)devicePairToWeight.get("0-3"));
-    Assert.assertEquals(crossCPUWeight, (int)devicePairToWeight.get("3-0"));
+    assertEquals(crossCPUWeight, (int)devicePairToWeight.get("0-3"));
+    assertEquals(crossCPUWeight, (int)devicePairToWeight.get("3-0"));
 
-    Assert.assertEquals(crossCPUWeight, (int)devicePairToWeight.get("1-2"));
-    Assert.assertEquals(crossCPUWeight, (int)devicePairToWeight.get("2-1"));
+    assertEquals(crossCPUWeight, (int)devicePairToWeight.get("1-2"));
+    assertEquals(crossCPUWeight, (int)devicePairToWeight.get("2-1"));
 
-    Assert.assertEquals(crossCPUWeight, (int)devicePairToWeight.get("1-3"));
-    Assert.assertEquals(crossCPUWeight, (int)devicePairToWeight.get("3-1"));
+    assertEquals(crossCPUWeight, (int)devicePairToWeight.get("1-3"));
+    assertEquals(crossCPUWeight, (int)devicePairToWeight.get("3-1"));
 
-    Assert.assertEquals(sameCPUWeight, (int)devicePairToWeight.get("2-3"));
-    Assert.assertEquals(sameCPUWeight, (int)devicePairToWeight.get("3-2"));
+    assertEquals(sameCPUWeight, (int)devicePairToWeight.get("2-3"));
+    assertEquals(sameCPUWeight, (int)devicePairToWeight.get("3-2"));
 
     // verify cost Table
     Map<Integer, List<Map.Entry<Set<Device>, Integer>>> costTable =
         spyPlugin.getCostTable();
-    Assert.assertNull(costTable.get(1));
-    Assert.assertEquals(6, costTable.get(2).size());
-    Assert.assertEquals(4, costTable.get(3).size());
-    Assert.assertNull(costTable.get(4));
+    assertNull(costTable.get(1));
+    assertEquals(6, costTable.get(2).size());
+    assertEquals(4, costTable.get(3).size());
+    assertNull(costTable.get(4));
   }
   /**
    * Test GPU topology allocation.

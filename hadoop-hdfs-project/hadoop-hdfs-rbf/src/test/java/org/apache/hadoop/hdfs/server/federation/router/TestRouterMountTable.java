@@ -132,6 +132,7 @@ public class TestRouterMountTable {
           RemoveMountTableEntryRequest.newInstance(entry.getSourcePath());
       mountTableManager.removeMountTableEntry(req2);
     }
+    mountTable.setDefaultNSEnable(true);
   }
 
   @Test

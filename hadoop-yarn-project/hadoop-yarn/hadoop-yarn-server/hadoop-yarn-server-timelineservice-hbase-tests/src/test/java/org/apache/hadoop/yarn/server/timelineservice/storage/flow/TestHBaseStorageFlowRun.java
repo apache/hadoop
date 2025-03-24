@@ -251,7 +251,7 @@ public class TestHBaseStorageFlowRun {
           new TimelineDataToRetrieve());
       assertTrue(TimelineEntityType.YARN_FLOW_RUN.matches(entity.getType()));
       FlowRunEntity flowRun = (FlowRunEntity)entity;
-      assertEquals(minStartTs, flowRun.getStartTime());
+      assertEquals(minStartTs, flowRun.getStartTime().longValue());
       assertEquals(endTs, flowRun.getMaxEndTime());
     } finally {
       if (hbr != null) {

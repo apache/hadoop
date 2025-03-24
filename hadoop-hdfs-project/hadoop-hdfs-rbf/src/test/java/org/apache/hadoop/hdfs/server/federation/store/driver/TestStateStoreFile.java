@@ -27,25 +27,23 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Test the FileSystem (e.g., HDFS) implementation of the State Store driver.
  */
-@RunWith(Parameterized.class)
 public class TestStateStoreFile extends TestStateStoreDriverBase {
 
-  private final String numFileAsyncThreads;
+  private String numFileAsyncThreads;
 
-  public TestStateStoreFile(String numFileAsyncThreads) {
-    this.numFileAsyncThreads = numFileAsyncThreads;
+  public void initTestStateStoreFile(String pBumFileAsyncThreads) throws Exception {
+    this.numFileAsyncThreads = pBumFileAsyncThreads;
+    setupCluster(numFileAsyncThreads);
+    removeAll(getStateStoreDriver());
   }
 
-  @Parameterized.Parameters(name = "numFileAsyncThreads-{0}")
   public static List<String[]> data() {
     return Arrays.asList(new String[][] {{"20"}, {"0"}});
   }
@@ -56,50 +54,60 @@ public class TestStateStoreFile extends TestStateStoreDriverBase {
     getStateStore(conf);
   }
 
-  @Before
   public void startup() throws Exception {
     setupCluster(numFileAsyncThreads);
     removeAll(getStateStoreDriver());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     tearDownCluster();
   }
 
-  @Test
-  public void testInsert()
-      throws IllegalArgumentException, IllegalAccessException, IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testInsert(String pBumFileAsyncThreads)
+      throws Exception {
+    initTestStateStoreFile(pBumFileAsyncThreads);
     testInsert(getStateStoreDriver());
   }
 
-  @Test
-  public void testUpdate()
-      throws IllegalArgumentException, ReflectiveOperationException,
-      IOException, SecurityException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testUpdate(String pBumFileAsyncThreads)
+      throws Exception {
+    initTestStateStoreFile(pBumFileAsyncThreads);
     testPut(getStateStoreDriver());
   }
 
-  @Test
-  public void testDelete()
-      throws IllegalArgumentException, IllegalAccessException, IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testDelete(String pBumFileAsyncThreads)
+      throws Exception {
+    initTestStateStoreFile(pBumFileAsyncThreads);
     testRemove(getStateStoreDriver());
   }
 
-  @Test
-  public void testFetchErrors()
-      throws IllegalArgumentException, IllegalAccessException, IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testFetchErrors(String pBumFileAsyncThreads)
+      throws Exception {
+    initTestStateStoreFile(pBumFileAsyncThreads);
     testFetchErrors(getStateStoreDriver());
   }
 
-  @Test
-  public void testMetrics()
-      throws IllegalArgumentException, IllegalAccessException, IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testMetrics(String pBumFileAsyncThreads)
+      throws Exception {
+    initTestStateStoreFile(pBumFileAsyncThreads);
     testMetrics(getStateStoreDriver());
   }
 
-  @Test
-  public void testCacheLoadMetrics() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testCacheLoadMetrics(String pBumFileAsyncThreads) throws Exception {
+    initTestStateStoreFile(pBumFileAsyncThreads);
     // inject value of CacheMountTableLoad as -1 initially, if tests get CacheMountTableLoadAvgTime
     // value as -1 ms, that would mean no other sample with value >= 0 would have been received and
     // hence this would be failure to assert that mount table avg load time is higher than -1

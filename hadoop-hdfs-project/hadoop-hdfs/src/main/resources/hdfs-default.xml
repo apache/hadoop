@@ -6446,6 +6446,15 @@
   </property>
 
   <property>
+    <name>dfs.namenode.random.node.order.enabled</name>
+    <value>false</value>
+    <description>
+      Whether to randomized the order of data nodes of a block or sort by network
+      distance (default behavior) before returning to clients.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.journalnode.edits.dir.perm</name>
     <value>700</value>
     <description>

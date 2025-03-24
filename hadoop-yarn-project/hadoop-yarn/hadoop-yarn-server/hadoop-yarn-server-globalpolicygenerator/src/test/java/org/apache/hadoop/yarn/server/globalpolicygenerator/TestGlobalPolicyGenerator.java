@@ -24,21 +24,23 @@ import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit test for GlobalPolicyGenerator.
  */
 public class TestGlobalPolicyGenerator {
 
-  @Test(timeout = 1000)
+  @Test
+  @Timeout(value = 1)
   public void testNonFederation() {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, false);

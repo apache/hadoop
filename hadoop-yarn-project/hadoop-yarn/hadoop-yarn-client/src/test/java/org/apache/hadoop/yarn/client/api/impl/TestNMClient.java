@@ -56,8 +56,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Records;
 
-import org.junit.Test;
-import org.junit.function.ThrowingRunnable;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -69,11 +70,11 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestNMClient {
   private static final String IS_NOT_HANDLED_BY_THIS_NODEMANAGER =
@@ -197,7 +198,8 @@ public class TestNMClient {
     yarnCluster.stop();
   }
 
-  @Test (timeout = 180_000)
+  @Test
+  @Timeout(value = 180)
   public void testNMClientNoCleanupOnStop()
       throws YarnException, IOException, InterruptedException, TimeoutException {
     runTest(() -> {
@@ -208,7 +210,8 @@ public class TestNMClient {
     });
   }
 
-  @Test (timeout = 200_000)
+  @Test
+  @Timeout(value = 200)
   public void testNMClient()
       throws YarnException, IOException, InterruptedException, TimeoutException {
     runTest(() -> {
@@ -232,7 +235,7 @@ public class TestNMClient {
   }
 
   private void stopNmClient() {
-    assertNotNull("Null nmClient", nmClient);
+    assertNotNull(nmClient, "Null nmClient");
     // leave one unclosed
     assertEquals(1, nmClient.startedContainers.size());
     // default true
@@ -383,13 +386,13 @@ public class TestNMClient {
       // container status
       if (status.getState() == state) {
         assertEquals(container.getId(), status.getContainerId());
-        assertTrue(index + ": " + status.getDiagnostics(),
-                status.getDiagnostics().contains(diagnostics));
+        assertTrue(status.getDiagnostics().contains(diagnostics),
+            index + ": " + status.getDiagnostics());
 
-        assertTrue("Exit Statuses are supposed to be in: " + exitStatuses +
-                        ", but the actual exit status code is: " +
-                        status.getExitStatus(),
-                exitStatuses.contains(status.getExitStatus()));
+        assertTrue(exitStatuses.contains(status.getExitStatus()),
+            "Exit Statuses are supposed to be in: " + exitStatuses +
+            ", but the actual exit status code is: " +
+            status.getExitStatus());
         break;
       }
     }
@@ -434,10 +437,11 @@ public class TestNMClient {
     nmClient.reInitializeContainer(container.getId(), clc, autoCommit);
   }
 
-  private void assertYarnException(ThrowingRunnable runnable, String text) {
+  private void assertYarnException(Executable runnable, String text) {
     YarnException e = assertThrows(YarnException.class, runnable);
-    assertTrue(String.format("The thrown exception is not expected cause it has text [%s]"
-        + ", what not contains text [%s]", e.getMessage(), text), e.getMessage().contains(text));
+    assertTrue(e.getMessage().contains(text),
+        String.format("The thrown exception is not expected cause it has text [%s]"
+        + ", what not contains text [%s]", e.getMessage(), text));
   }
 
   private void sleep(int sleepTime) {

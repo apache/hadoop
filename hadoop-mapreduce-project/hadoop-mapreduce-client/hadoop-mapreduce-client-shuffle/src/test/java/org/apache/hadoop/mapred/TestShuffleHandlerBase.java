@@ -84,6 +84,13 @@ public class TestShuffleHandlerBase {
 
   @AfterEach
   public void teardown() {
+    //Trigger GC so that we get the leak warnings early
+    System.gc();
+    try {
+      // Wait for logger to flush
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+    }
     System.setOut(standardOut);
     System.out.print(outputStreamCaptor);
     // For this to work ch.qos.logback.classic is needed for some reason

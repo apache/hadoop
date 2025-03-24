@@ -78,6 +78,7 @@ import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.INCORRECT_INGRESS_TYPE;
 
 /**
  * Configuration for Azure Blob FileSystem.
@@ -448,6 +449,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME)
   private long maxApacheHttpClientConnectionIdleTime;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID)
+  private boolean enableClientTransactionId;
+
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
@@ -564,6 +569,10 @@ public class AbfsConfiguration{
     } else if (isHNSEnabled && fsConfiguredServiceType == AbfsServiceType.BLOB) {
       throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY,
           "Blob Endpoint Url Cannot be used to initialize filesystem for HNS Account");
+    } else if (getFsConfiguredServiceType() == AbfsServiceType.BLOB
+        && getIngressServiceType() == AbfsServiceType.DFS) {
+      throw new InvalidConfigurationValueException(
+          FS_AZURE_INGRESS_SERVICE_TYPE, INCORRECT_INGRESS_TYPE);
     }
   }
 
@@ -1083,6 +1092,10 @@ public class AbfsConfiguration{
    */
   public long getMaxApacheHttpClientConnectionIdleTime() {
     return maxApacheHttpClientConnectionIdleTime;
+  }
+
+  public boolean getIsClientTransactionIdEnabled() {
+    return enableClientTransactionId;
   }
 
   /**

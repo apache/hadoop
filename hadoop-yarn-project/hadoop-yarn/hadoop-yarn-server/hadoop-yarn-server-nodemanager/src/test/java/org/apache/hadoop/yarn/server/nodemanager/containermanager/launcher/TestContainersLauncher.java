@@ -30,9 +30,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManag
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -45,8 +44,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests to verify all the Container's Launcher Events in
@@ -98,7 +104,7 @@ public class TestContainersLauncher {
 
   private ContainersLauncher spy;
 
-  @Before
+  @BeforeEach
   public void setup() throws IllegalArgumentException, IllegalAccessException {
     MockitoAnnotations.initMocks(this);
     ContainersLauncher tempContainersLauncher = new ContainersLauncher(
@@ -206,8 +212,7 @@ public class TestContainersLauncher {
       return null;
     }).when(spy).cleanup(any(), any(), anyBoolean());
     spy.handle(event);
-    Assert.assertEquals("container not cleaned", containerId,
-        cleanedContainers.get(0));
+    assertEquals(containerId, cleanedContainers.get(0), "container not cleaned");
   }
 
   @Test

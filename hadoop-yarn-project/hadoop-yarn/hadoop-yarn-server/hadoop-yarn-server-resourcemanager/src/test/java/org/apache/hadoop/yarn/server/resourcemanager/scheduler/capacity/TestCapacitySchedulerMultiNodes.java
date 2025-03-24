@@ -20,6 +20,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.waitforNMRegistered;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -53,9 +57,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeRepo
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.MultiNodeSorter;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.MultiNodeSortingManager;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test class for Multi Node scheduling related tests.
@@ -69,7 +73,7 @@ public class TestCapacitySchedulerMultiNodes {
   private static final String POLICY_CLASS_NAME =
       "org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.ResourceUsageMultiNodeLookupPolicy";
 
-  @Before
+  @BeforeEach
   public void setUp() {
     CapacitySchedulerConfiguration config =
         new CapacitySchedulerConfiguration();
@@ -109,7 +113,7 @@ public class TestCapacitySchedulerMultiNodes {
     sorter.reSortClusterNodes();
     Set<SchedulerNode> nodes = sorter.getMultiNodeLookupPolicy()
         .getNodesPerPartition("");
-    Assert.assertEquals(4, nodes.size());
+    assertEquals(4, nodes.size());
     rm.stop();
   }
 
@@ -132,7 +136,7 @@ public class TestCapacitySchedulerMultiNodes {
 
     Set<SchedulerNode> nodes = sorter.getMultiNodeLookupPolicy()
         .getNodesPerPartition("");
-    Assert.assertEquals(4, nodes.size());
+    assertEquals(4, nodes.size());
 
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(2048, rm)
@@ -148,8 +152,8 @@ public class TestCapacitySchedulerMultiNodes {
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
 
     // check node report
-    Assert.assertEquals(2 * GB, reportNm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(8 * GB,
+    assertEquals(2 * GB, reportNm1.getUsedResource().getMemorySize());
+    assertEquals(8 * GB,
         reportNm1.getAvailableResource().getMemorySize());
 
     // Ideally thread will invoke this, but thread operates every 1sec.
@@ -170,8 +174,8 @@ public class TestCapacitySchedulerMultiNodes {
         rm.getResourceScheduler().getNodeReport(nm2.getNodeId());
 
     // check node report
-    Assert.assertEquals(1 * GB, reportNm2.getUsedResource().getMemorySize());
-    Assert.assertEquals(9 * GB,
+    assertEquals(1 * GB, reportNm2.getUsedResource().getMemorySize());
+    assertEquals(9 * GB,
         reportNm2.getAvailableResource().getMemorySize());
 
     // Ideally thread will invoke this, but thread operates every 1sec.
@@ -192,12 +196,13 @@ public class TestCapacitySchedulerMultiNodes {
     int i = 0;
     while (it.hasNext()) {
       current = it.next();
-      Assert.assertEquals(current.getNodeID(), currentNodes.get(i++));
+      assertEquals(current.getNodeID(), currentNodes.get(i++));
     }
     rm.stop();
   }
 
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testExcessReservationWillBeUnreserved() throws Exception {
     CapacitySchedulerConfiguration newConf =
         new CapacitySchedulerConfiguration(conf);
@@ -253,10 +258,10 @@ public class TestCapacitySchedulerMultiNodes {
     cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
 
     // Check containers of app1 and app2.
-    Assert.assertNotNull(cs.getNode(nm2.getNodeId()).getReservedContainer());
-    Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(1, schedulerApp1.getReservedContainers().size());
-    Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
+    assertNotNull(cs.getNode(nm2.getNodeId()).getReservedContainer());
+    assertEquals(1, schedulerApp1.getLiveContainers().size());
+    assertEquals(1, schedulerApp1.getReservedContainers().size());
+    assertEquals(1, schedulerApp2.getLiveContainers().size());
 
     // Cancel ask of the reserved container.
     am1.allocate("*", 6 * GB, 0, new ArrayList<>());
@@ -266,24 +271,25 @@ public class TestCapacitySchedulerMultiNodes {
     // Trigger scheduling to release reserved container
     // whose ask has been cancelled.
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
-    Assert.assertNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
-    Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(0, schedulerApp1.getReservedContainers().size());
-    Assert.assertEquals(2, schedulerApp2.getLiveContainers().size());
-    Assert.assertEquals(7 * GB,
+    assertNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
+    assertEquals(1, schedulerApp1.getLiveContainers().size());
+    assertEquals(0, schedulerApp1.getReservedContainers().size());
+    assertEquals(2, schedulerApp2.getLiveContainers().size());
+    assertEquals(7 * GB,
         cs.getNode(nm1.getNodeId()).getAllocatedResource().getMemorySize());
-    Assert.assertEquals(12 * GB,
+    assertEquals(12 * GB,
         cs.getRootQueue().getQueueResourceUsage().getUsed().getMemorySize());
-    Assert.assertEquals(0,
+    assertEquals(0,
         cs.getRootQueue().getQueueResourceUsage().getReserved()
             .getMemorySize());
-    Assert.assertEquals(0,
+    assertEquals(0,
         leafQueue.getQueueResourceUsage().getReserved().getMemorySize());
 
     rm1.close();
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAllocateForReservedContainer() throws Exception {
     CapacitySchedulerConfiguration newConf =
         new CapacitySchedulerConfiguration(conf);
@@ -337,23 +343,24 @@ public class TestCapacitySchedulerMultiNodes {
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
 
     // Check containers of app1 and app2.
-    Assert.assertNotNull(cs.getNode(nm2.getNodeId()).getReservedContainer());
-    Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
-    Assert.assertEquals(1, schedulerApp2.getReservedContainers().size());
+    assertNotNull(cs.getNode(nm2.getNodeId()).getReservedContainer());
+    assertEquals(1, schedulerApp1.getLiveContainers().size());
+    assertEquals(1, schedulerApp2.getLiveContainers().size());
+    assertEquals(1, schedulerApp2.getReservedContainers().size());
 
     // Kill app1 to release resource on nm1.
     rm1.killApp(app1.getApplicationId());
 
     // Trigger scheduling to allocate for reserved container on nm1.
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
-    Assert.assertNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
-    Assert.assertEquals(2, schedulerApp2.getLiveContainers().size());
+    assertNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
+    assertEquals(2, schedulerApp2.getLiveContainers().size());
 
     rm1.close();
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAllocateOfReservedContainerFromAnotherNode()
       throws Exception {
     CapacitySchedulerConfiguration newConf =
@@ -410,7 +417,7 @@ public class TestCapacitySchedulerMultiNodes {
           MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nm1);
           result.set(true);
         } catch (Exception e) {
-          Assert.fail("Failed to allocate the reserved container");
+          fail("Failed to allocate the reserved container");
         }
       }
     };
@@ -420,8 +427,8 @@ public class TestCapacitySchedulerMultiNodes {
     // Validate if app3 has got RESERVED container
     FiCaSchedulerApp schedulerApp =
         cs.getApplicationAttempt(app3.getCurrentAppAttempt().getAppAttemptId());
-    Assert.assertEquals("App3 failed to get reserved container", 1,
-        schedulerApp.getReservedContainers().size());
+    assertEquals(1, schedulerApp.getReservedContainers().size(),
+        "App3 failed to get reserved container");
 
     // Free the Space on other node where Reservation has not happened
     if (cs.getNode(rmNode1.getNodeID()).getReservedContainer() != null) {
@@ -441,10 +448,10 @@ public class TestCapacitySchedulerMultiNodes {
     // Validate release of reserved containers
     schedulerApp =
         cs.getApplicationAttempt(app3.getCurrentAppAttempt().getAppAttemptId());
-    Assert.assertEquals("App3 failed to release Reserved container", 0,
-        schedulerApp.getReservedContainers().size());
-    Assert.assertNull(cs.getNode(rmNode1.getNodeID()).getReservedContainer());
-    Assert.assertNull(cs.getNode(rmNode2.getNodeID()).getReservedContainer());
+    assertEquals(0, schedulerApp.getReservedContainers().size(),
+        "App3 failed to release Reserved container");
+    assertNull(cs.getNode(rmNode1.getNodeID()).getReservedContainer());
+    assertNull(cs.getNode(rmNode2.getNodeID()).getReservedContainer());
 
     rm1.close();
   }
@@ -471,19 +478,20 @@ public class TestCapacitySchedulerMultiNodes {
 
     Iterator<SchedulerNode> nodeIterator = mns.getMultiNodeSortIterator(
         nodes, partition, POLICY_CLASS_NAME);
-    Assert.assertEquals(4, Iterators.size(nodeIterator));
+    assertEquals(4, Iterators.size(nodeIterator));
 
     // Validate the count after missing 3 node heartbeats
     Thread.sleep(YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS * 3);
 
     nodeIterator = mns.getMultiNodeSortIterator(
         nodes, partition, POLICY_CLASS_NAME);
-    Assert.assertEquals(0, Iterators.size(nodeIterator));
+    assertEquals(0, Iterators.size(nodeIterator));
 
     rm.stop();
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testSkipAllocationOnNodeReservedByAnotherApp() throws Exception {
     CapacitySchedulerConfiguration newConf =
         new CapacitySchedulerConfiguration(conf);
@@ -533,7 +541,7 @@ public class TestCapacitySchedulerMultiNodes {
     // Check containers of app1 and app2.
     Set<RMNode> reservedContainers = checkReservedContainers(cs,
         rm1.getRMContext().getRMNodes(), 1);
-    Assert.assertEquals(1, reservedContainers.size());
+    assertEquals(1, reservedContainers.size());
     RMNode nodeWithReservedContainer = reservedContainers.iterator().next();
     LOG.debug("Reserved container on: {}", nodeWithReservedContainer);
 
@@ -541,12 +549,12 @@ public class TestCapacitySchedulerMultiNodes {
     if (nodeWithReservedContainer.getNodeID().getHost().startsWith("127.0.0.2")) {
       moveReservation(cs, rm1, nm1, nm2, am1);
     }
-    Assert.assertNotNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
-    Assert.assertNull(cs.getNode(nm2.getNodeId()).getReservedContainer());
+    assertNotNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
+    assertNull(cs.getNode(nm2.getNodeId()).getReservedContainer());
 
-    Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
-    Assert.assertEquals(1, schedulerApp1.getReservedContainers().size());
+    assertEquals(1, schedulerApp1.getLiveContainers().size());
+    assertEquals(1, schedulerApp2.getLiveContainers().size());
+    assertEquals(1, schedulerApp1.getReservedContainers().size());
 
     //Make sure to have available headroom on the child queue,
     // see: RegularContainerAllocator#checkHeadroom,
@@ -558,8 +566,8 @@ public class TestCapacitySchedulerMultiNodes {
     // nm1 has a reservation for another app
     am2.allocate("*", 4 * GB, 1, new ArrayList<>());
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
-    Assert.assertNotNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
-    Assert.assertNotNull(cs.getNode(nm2.getNodeId()).getReservedContainer());
+    assertNotNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
+    assertNotNull(cs.getNode(nm2.getNodeId()).getReservedContainer());
 
     rm1.close();
   }
@@ -586,7 +594,7 @@ public class TestCapacitySchedulerMultiNodes {
       }
     }
 
-    Assert.assertEquals(expectedNumberOfContainers, result.size());
+    assertEquals(expectedNumberOfContainers, result.size());
     return result;
   }
 }

@@ -20,9 +20,11 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
@@ -70,10 +72,10 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
-import org.junit.Assert;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -141,7 +143,7 @@ public class TestLinuxContainerExecutorWithMocks {
         executorAbsolutePath);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException, ContainerExecutionException,
       URISyntaxException {
     assumeNotWindows();
@@ -169,7 +171,7 @@ public class TestLinuxContainerExecutorWithMocks {
     mockExecMockRuntime.setConf(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     deleteMockParamFile();
   }
@@ -262,7 +264,8 @@ public class TestLinuxContainerExecutorWithMocks {
     }
   }
 
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testContainerLaunchWithPriority()
       throws IOException, ConfigurationException, URISyntaxException {
 
@@ -274,24 +277,25 @@ public class TestLinuxContainerExecutorWithMocks {
     mockExec.setConf(conf);
     List<String> command = new ArrayList<String>();
     mockExec.addSchedPriorityCommand(command);
-    assertEquals("first should be nice", "nice", command.get(0));
-    assertEquals("second should be -n", "-n", command.get(1));
-    assertEquals("third should be the priority", Integer.toString(2),
-                 command.get(2));
+    assertEquals("nice", command.get(0), "first should be nice");
+    assertEquals("-n", command.get(1), "second should be -n");
+    assertEquals(Integer.toString(2), command.get(2), "third should be the priority");
 
     testContainerLaunchWithoutHTTPS();
   }
 
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testLaunchCommandWithoutPriority() throws IOException {
     // make sure the command doesn't contain the nice -n since priority
     // not specified
     List<String> command = new ArrayList<String>();
     mockExec.addSchedPriorityCommand(command);
-    assertEquals("addSchedPriority should be empty", 0, command.size());
+    assertEquals(0, command.size(), "addSchedPriority should be empty");
   }
   
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testStartLocalizer() throws IOException {
     InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", 8040);
     Path nmPrivateCTokensPath= new Path("file:///bin/nmPrivateCTokensPath");
@@ -338,7 +342,7 @@ public class TestLinuxContainerExecutorWithMocks {
 
     } catch (ConfigurationException | InterruptedException e) {
       LOG.error("Error:"+e.getMessage(),e);
-      Assert.fail();
+      fail();
     }
   }
   
@@ -377,8 +381,8 @@ public class TestLinuxContainerExecutorWithMocks {
             public Object answer(InvocationOnMock invocationOnMock)
                 throws Throwable {
               String diagnostics = (String) invocationOnMock.getArguments()[0];
-              assertTrue("Invalid Diagnostics message: " + diagnostics,
-                  diagnostics.contains(expecetedMessage[j]));
+              assertTrue(diagnostics.contains(expecetedMessage[j]),
+                  "Invalid Diagnostics message: " + diagnostics);
               return null;
             }
           }
@@ -408,9 +412,8 @@ public class TestLinuxContainerExecutorWithMocks {
               ContainerDiagnosticsUpdateEvent event =
                   (ContainerDiagnosticsUpdateEvent) invocationOnMock
                       .getArguments()[0];
-              assertTrue("Invalid Diagnostics message: " +
-                      event.getDiagnosticsUpdate(),
-                  event.getDiagnosticsUpdate().contains(expecetedMessage[j]));
+              assertTrue(event.getDiagnosticsUpdate().contains(expecetedMessage[j]),
+                  "Invalid Diagnostics message: " + event.getDiagnosticsUpdate());
               return null;
             }
           }
@@ -445,7 +448,7 @@ public class TestLinuxContainerExecutorWithMocks {
             .setApplicationLocalDirs(new ArrayList<>())
             .build());
 
-        Assert.assertNotSame(0, ret);
+        assertNotSame(0, ret);
         assertEquals(Arrays.asList(YarnConfiguration.
                 DEFAULT_NM_NONSECURE_MODE_LOCAL_USER,
             appSubmitter, cmd, appId, containerId,
@@ -457,11 +460,11 @@ public class TestLinuxContainerExecutorWithMocks {
                 dirsHandler.getLogDirs()),
             "cgroups=none"), readMockParams());
 
-        assertNotEquals("Expected YarnRuntimeException",
-            MOCK_EXECUTOR_WITH_CONFIG_ERROR, executor[i]);
+        assertNotEquals(MOCK_EXECUTOR_WITH_CONFIG_ERROR, executor[i],
+            "Expected YarnRuntimeException");
       } catch (ConfigurationException ex) {
         assertEquals(MOCK_EXECUTOR_WITH_CONFIG_ERROR, executor[i]);
-        Assert.assertEquals("Linux Container Executor reached unrecoverable " +
+        assertEquals("Linux Container Executor reached unrecoverable " +
             "exception", ex.getMessage());
       }
     }
@@ -639,10 +642,10 @@ public class TestLinuxContainerExecutorWithMocks {
 
     try {
       lce.startLocalizer(lsc);
-      Assert.fail("startLocalizer should have thrown an exception");
+      fail("startLocalizer should have thrown an exception");
     } catch (IOException e) {
-      assertTrue("Unexpected exception " + e,
-          e.getMessage().contains("exitCode"));
+      assertTrue(e.getMessage().contains("exitCode"),
+          "Unexpected exception " + e);
     }
 
     final int[] exitCodesToThrow = {
@@ -658,10 +661,10 @@ public class TestLinuxContainerExecutorWithMocks {
 
       try {
         lce.startLocalizer(lsc);
-        Assert.fail("startLocalizer should have thrown a ConfigurationException");
+        fail("startLocalizer should have thrown a ConfigurationException");
       } catch (ConfigurationException e) {
-        assertTrue("Unexpected exception " + e,
-            e.getMessage().contains("exitCode=" + exitCode));
+        assertTrue(e.getMessage().contains("exitCode=" + exitCode),
+            "Unexpected exception " + e);
       }
     }
 
@@ -676,10 +679,10 @@ public class TestLinuxContainerExecutorWithMocks {
 
     try {
       lce.startLocalizer(lsc);
-      Assert.fail("startLocalizer should have thrown an ConfigurationException");
+      fail("startLocalizer should have thrown an ConfigurationException");
     } catch (ConfigurationException e) {
-      assertTrue("Unexpected exception " + e,
-          e.getMessage().contains("Container executor not found"));
+      assertTrue(e.getMessage().contains("Container executor not found"),
+          "Unexpected exception " + e);
     }
 
     // Assert that we do not catch every IOException as a misconfiguration
@@ -691,12 +694,11 @@ public class TestLinuxContainerExecutorWithMocks {
 
     try {
       lce.startLocalizer(lsc);
-      Assert.fail("startLocalizer should have thrown an IOException");
+      fail("startLocalizer should have thrown an IOException");
     } catch (ConfigurationException e) {
-      Assert.fail("startLocalizer should not have thrown a ConfigurationException");
+      fail("startLocalizer should not have thrown a ConfigurationException");
     } catch (IOException e) {
-      assertTrue("Unexpected exception " + e,
-          e.getMessage().contains("exitCode"));
+      assertTrue(e.getMessage().contains("exitCode"), "Unexpected exception " + e);
     }
 
     doThrow(new PrivilegedOperationException("interrupted"))
@@ -728,10 +730,10 @@ public class TestLinuxContainerExecutorWithMocks {
 
     try {
       lce.mountCgroups(new ArrayList<String>(), "hierarchy");
-      Assert.fail("mountCgroups should have thrown an exception");
+      fail("mountCgroups should have thrown an exception");
     } catch (IOException e) {
-      assertTrue("Unexpected exception " + e,
-          e.getMessage().contains("exit code"));
+      assertTrue(e.getMessage().contains("exit code"),
+          "Unexpected exception " + e);
     }
   }
 

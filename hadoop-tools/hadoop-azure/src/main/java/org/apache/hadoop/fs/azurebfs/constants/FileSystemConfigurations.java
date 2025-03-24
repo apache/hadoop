@@ -202,5 +202,7 @@ public final class FileSystemConfigurations {
 
   public static final int DEFAULT_WRITE_THREADPOOL_CORE_POOL_SIZE = 1;
 
+  public static final boolean DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = false;
+
   private FileSystemConfigurations() {}
 }

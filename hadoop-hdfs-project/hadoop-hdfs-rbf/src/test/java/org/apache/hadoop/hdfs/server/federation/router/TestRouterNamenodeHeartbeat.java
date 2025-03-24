@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeConte
 import org.apache.hadoop.net.MockDomainNameResolver;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.util.Shell;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -216,18 +217,34 @@ public class TestRouterNamenodeHeartbeat {
 
   @Test
   public void testNamenodeHeartbeatServiceHAServiceProtocolProxy(){
-    testNamenodeHeartbeatServiceHAServiceProtocol(
-        "test-ns", "nn", 1000, -1, -1, 1003,
-        "host01.test:1000", "host02.test:1000");
-    testNamenodeHeartbeatServiceHAServiceProtocol(
-        "test-ns", "nn", 1000, 1001, -1, 1003,
-        "host01.test:1001", "host02.test:1001");
-    testNamenodeHeartbeatServiceHAServiceProtocol(
-        "test-ns", "nn", 1000, -1, 1002, 1003,
-        "host01.test:1002", "host02.test:1002");
-    testNamenodeHeartbeatServiceHAServiceProtocol(
-        "test-ns", "nn", 1000, 1001, 1002, 1003,
-        "host01.test:1002", "host02.test:1002");
+    // JDK-8225499. The string format of unresolved address has been changed.
+    if (Shell.isJavaVersionAtLeast(14)) {
+      testNamenodeHeartbeatServiceHAServiceProtocol(
+          "test-ns", "nn", 1000, -1, -1, 1003,
+          "host01.test/<unresolved>:1000", "host02.test/<unresolved>:1000");
+      testNamenodeHeartbeatServiceHAServiceProtocol(
+          "test-ns", "nn", 1000, 1001, -1, 1003,
+          "host01.test/<unresolved>:1001", "host02.test/<unresolved>:1001");
+      testNamenodeHeartbeatServiceHAServiceProtocol(
+          "test-ns", "nn", 1000, -1, 1002, 1003,
+          "host01.test/<unresolved>:1002", "host02.test/<unresolved>:1002");
+      testNamenodeHeartbeatServiceHAServiceProtocol(
+          "test-ns", "nn", 1000, 1001, 1002, 1003,
+          "host01.test/<unresolved>:1002", "host02.test/<unresolved>:1002");
+    } else {
+      testNamenodeHeartbeatServiceHAServiceProtocol(
+          "test-ns", "nn", 1000, -1, -1, 1003,
+          "host01.test:1000", "host02.test:1000");
+      testNamenodeHeartbeatServiceHAServiceProtocol(
+          "test-ns", "nn", 1000, 1001, -1, 1003,
+          "host01.test:1001", "host02.test:1001");
+      testNamenodeHeartbeatServiceHAServiceProtocol(
+          "test-ns", "nn", 1000, -1, 1002, 1003,
+          "host01.test:1002", "host02.test:1002");
+      testNamenodeHeartbeatServiceHAServiceProtocol(
+          "test-ns", "nn", 1000, 1001, 1002, 1003,
+          "host01.test:1002", "host02.test:1002");
+    }
   }
 
   private void testNamenodeHeartbeatServiceHAServiceProtocol(

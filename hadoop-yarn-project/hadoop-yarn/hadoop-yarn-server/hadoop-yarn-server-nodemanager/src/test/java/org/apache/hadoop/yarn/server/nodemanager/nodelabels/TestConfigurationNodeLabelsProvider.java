@@ -31,12 +31,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.NodeLabelTestBase;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestConfigurationNodeLabelsProvider extends NodeLabelTestBase {
 
@@ -53,7 +55,7 @@ public class TestConfigurationNodeLabelsProvider extends NodeLabelTestBase {
 
   private static ClassLoader classContextClassLoader;
 
-  @BeforeClass
+  @BeforeAll
   public static void create() {
     classContextClassLoader = Thread.currentThread().getContextClassLoader();
     loader =
@@ -63,12 +65,12 @@ public class TestConfigurationNodeLabelsProvider extends NodeLabelTestBase {
     Thread.currentThread().setContextClassLoader(loader);
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     nodeLabelsProvider = new ConfigurationNodeLabelsProvider();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (nodeLabelsProvider != null) {
       nodeLabelsProvider.close();
@@ -76,7 +78,7 @@ public class TestConfigurationNodeLabelsProvider extends NodeLabelTestBase {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void remove() throws Exception {
     if (classContextClassLoader != null) {
       // testcases will fail after testcases present in this class, as
@@ -118,10 +120,8 @@ public class TestConfigurationNodeLabelsProvider extends NodeLabelTestBase {
             .DISABLE_NODE_DESCRIPTORS_PROVIDER_FETCH_TIMER);
     nodeLabelsProvider.init(conf);
     nodeLabelsProvider.start();
-    Assert
-        .assertNull("Timer is not expected to be"
-                + " created when interval is configured as -1",
-            nodeLabelsProvider.getScheduler());
+    assertNull(nodeLabelsProvider.getScheduler(), "Timer is not expected to be"
+        + " created when interval is configured as -1");
     // Ensure that even though timer is not run, node labels
     // are fetched at least once so that NM registers/updates Labels with RM
     assertNLCollectionEquals(toNodeLabelSet("A"),
@@ -168,7 +168,7 @@ public class TestConfigurationNodeLabelsProvider extends NodeLabelTestBase {
           return nodeLabelsConfigFile.toURI().toURL();
         } catch (MalformedURLException e) {
           e.printStackTrace();
-          Assert.fail();
+          fail();
         }
       }
       return super.getResource(name);

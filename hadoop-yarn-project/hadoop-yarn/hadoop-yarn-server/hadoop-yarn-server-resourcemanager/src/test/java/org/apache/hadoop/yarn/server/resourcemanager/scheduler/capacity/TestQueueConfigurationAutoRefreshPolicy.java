@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -27,10 +32,9 @@ import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -55,7 +59,7 @@ public class TestQueueConfigurationAutoRefreshPolicy  {
         YarnConfiguration.DR_CONFIGURATION_FILE);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     QueueMetrics.clearQueueMetrics();
     DefaultMetricsSystem.setMiniClusterMode(true);
@@ -94,7 +98,7 @@ public class TestQueueConfigurationAutoRefreshPolicy  {
         confFile.delete();
       }
       if (!confFile.createNewFile()) {
-        Assert.fail("Can not create " + confXMLName);
+        fail("Can not create " + confXMLName);
       }
       output = new DataOutputStream(
           new FileOutputStream(confFile));
@@ -249,15 +253,15 @@ public class TestQueueConfigurationAutoRefreshPolicy  {
     policy.editSchedule();
 
     // Make sure refresh successfully.
-    Assert.assertFalse(policy.getLastReloadAttemptFailed());
+    assertFalse(policy.getLastReloadAttemptFailed());
     long oldModified = policy.getLastModified();
     long oldSuccess = policy.getLastReloadAttempt();
 
-    Assert.assertTrue(oldSuccess > oldModified);
+    assertTrue(oldSuccess > oldModified);
 
     int maxAppsAfter = cs.getConfiguration().getMaximumSystemApplications();
-    Assert.assertEquals(maxAppsAfter, 5000);
-    Assert.assertTrue(maxAppsAfter != maxAppsBefore);
+    assertEquals(maxAppsAfter, 5000);
+    assertTrue(maxAppsAfter != maxAppsBefore);
 
     // Trigger interval for refresh.
     GenericTestUtils.waitFor(() -> (policy.getClock().getTime() -
@@ -277,11 +281,11 @@ public class TestQueueConfigurationAutoRefreshPolicy  {
         500, 3000);
 
     // Make sure refresh successfully.
-    Assert.assertFalse(policy.getLastReloadAttemptFailed());
+    assertFalse(policy.getLastReloadAttemptFailed());
     oldModified = policy.getLastModified();
     oldSuccess = policy.getLastReloadAttempt();
-    Assert.assertTrue(oldSuccess > oldModified);
-    Assert.assertEquals(cs.getConfiguration().
+    assertTrue(oldSuccess > oldModified);
+    assertEquals(cs.getConfiguration().
         getMaximumSystemApplications(), 3000);
 
     // Trigger interval for refresh.
@@ -291,13 +295,13 @@ public class TestQueueConfigurationAutoRefreshPolicy  {
 
     // Without modified
     policy.editSchedule();
-    Assert.assertEquals(oldModified,
+    assertEquals(oldModified,
         policy.getLastModified());
-    Assert.assertEquals(oldSuccess,
+    assertEquals(oldSuccess,
         policy.getLastReloadAttempt());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (rm != null) {
       rm.stop();

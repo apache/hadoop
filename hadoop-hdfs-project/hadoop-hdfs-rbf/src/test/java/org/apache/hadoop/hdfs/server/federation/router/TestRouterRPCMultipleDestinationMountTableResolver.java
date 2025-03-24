@@ -75,17 +75,18 @@ import org.junit.Test;
 /**
  * Tests router rpc with multiple destination mount table resolver.
  */
+@SuppressWarnings("checkstyle:visibilitymodifier")
 public class TestRouterRPCMultipleDestinationMountTableResolver {
-  private static final List<String> NS_IDS = Arrays.asList("ns0", "ns1", "ns2");
+  protected static final List<String> NS_IDS = Arrays.asList("ns0", "ns1", "ns2");
 
-  private static StateStoreDFSCluster cluster;
-  private static RouterContext routerContext;
-  private static MountTableResolver resolver;
-  private static DistributedFileSystem nnFs0;
-  private static DistributedFileSystem nnFs1;
-  private static DistributedFileSystem nnFs2;
-  private static DistributedFileSystem routerFs;
-  private static RouterRpcServer rpcServer;
+  protected static StateStoreDFSCluster cluster;
+  protected static RouterContext routerContext;
+  protected static MountTableResolver resolver;
+  protected static DistributedFileSystem nnFs0;
+  protected static DistributedFileSystem nnFs1;
+  protected static DistributedFileSystem nnFs2;
+  protected static DistributedFileSystem routerFs;
+  protected static RouterRpcServer rpcServer;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -408,7 +409,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
    * @return If it was successfully added.
    * @throws IOException + * Problems adding entries.
    */
-  private boolean addMountTable(final MountTable entry) throws IOException {
+  protected boolean addMountTable(final MountTable entry) throws IOException {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTableManager = client.getMountTableManager();
     AddMountTableEntryRequest addRequest =

@@ -1,3 +1,4 @@
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -15,14 +16,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.util;
 
-package org.apache.hadoop.mapred;
+import java.util.Calendar;
+import java.util.TimeZone;
+
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 /**
- * A clock class - can be mocked out for testing.
+ * Implementation of {@link Clock} that gives the current UTC time in
+ * milliseconds.
  */
-class Clock {
-  long getTime() {
-    return System.currentTimeMillis();
+@Public
+@Evolving
+public class UTCClock implements Clock {
+
+  private final TimeZone utcZone = TimeZone.getTimeZone("UTC");
+
+  public long getTime() {
+    return Calendar.getInstance(utcZone).getTimeInMillis();
   }
 }

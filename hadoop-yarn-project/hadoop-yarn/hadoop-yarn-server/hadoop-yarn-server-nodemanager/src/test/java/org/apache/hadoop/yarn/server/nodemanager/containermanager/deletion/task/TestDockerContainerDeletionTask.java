@@ -18,10 +18,10 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task
 
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -36,7 +36,7 @@ public class TestDockerContainerDeletionTask {
   private DeletionService deletionService;
   private DockerContainerDeletionTask deletionTask;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     deletionService = mock(DeletionService.class);
     deletionTask = new DockerContainerDeletionTask(ID, deletionService, USER,
