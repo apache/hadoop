@@ -84,16 +84,16 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
 import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -101,6 +101,7 @@ import org.mockito.stubbing.Answer;
 import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -141,7 +142,8 @@ import static org.mockito.Mockito.when;
  */
 
 public class TestAppManager extends AppManagerTestBase{
-  @Rule
+
+  @RegisterExtension
   public UseCapacitySchedulerRule shouldUseCs = new UseCapacitySchedulerRule();
 
   private static final Logger LOG =
@@ -2103,13 +2105,13 @@ public class TestAppManager extends AppManagerTestBase{
     asContext.setApplicationTags(applicationTags);
   }
 
-  private class UseCapacitySchedulerRule extends TestWatcher {
+  private class UseCapacitySchedulerRule implements BeforeEachCallback {
     private boolean useCapacityScheduler;
 
     @Override
-    protected void starting(Description d) {
-      useCapacityScheduler =
-          d.getAnnotation(UseMockCapacityScheduler.class) != null;
+    public void beforeEach(ExtensionContext context) throws Exception {
+      Method testMethod = context.getRequiredTestMethod();
+      useCapacityScheduler = testMethod.getAnnotation(UseMockCapacityScheduler.class) != null;
     }
 
     public boolean useCapacityScheduler() {
