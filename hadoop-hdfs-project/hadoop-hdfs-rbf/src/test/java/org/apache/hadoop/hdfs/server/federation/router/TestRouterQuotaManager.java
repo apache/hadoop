@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Set;
 
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for class {@link RouterQuotaManager}.
@@ -34,12 +34,12 @@ import org.junit.Test;
 public class TestRouterQuotaManager {
   private static RouterQuotaManager manager;
 
-  @Before
+  @BeforeEach
   public void setup() {
     manager = new RouterQuotaManager();
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     manager.clear();
   }

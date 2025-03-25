@@ -24,8 +24,8 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.resolver.MultipleDestinationMountTableResolver;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.net.HttpURLConnection;
@@ -34,15 +34,15 @@ import java.util.Iterator;
 import java.util.Map;
 
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HTTP_ENABLE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestRouterNetworkTopologyServlet {
 
   private static StateStoreDFSCluster clusterWithDatanodes;
   private static StateStoreDFSCluster clusterNoDatanodes;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     // Builder configuration
     Configuration routerConf =

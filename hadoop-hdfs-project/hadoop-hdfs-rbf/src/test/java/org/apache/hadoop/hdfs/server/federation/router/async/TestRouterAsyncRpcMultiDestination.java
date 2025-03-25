@@ -25,22 +25,22 @@ import org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessPolicy
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.TestRouterRpcMultiDestination;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 /**
  * Testing the asynchronous RPC functionality of the router with multiple mounts.
  */
 public class TestRouterAsyncRpcMultiDestination extends TestRouterRpcMultiDestination {
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     // Start routers with only an RPC service
     Configuration routerConf = new RouterConfigBuilder()

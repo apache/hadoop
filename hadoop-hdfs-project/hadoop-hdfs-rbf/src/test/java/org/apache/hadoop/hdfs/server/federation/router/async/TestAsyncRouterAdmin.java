@@ -30,7 +30,7 @@ import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.federation.router.TestRouterAdmin;
 import org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil;
 import org.apache.hadoop.util.Lists;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -43,7 +43,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 
 public class TestAsyncRouterAdmin extends TestRouterAdmin {
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     cluster = new StateStoreDFSCluster(false, 1);
     // Build and start a router with State Store + admin + RPC.

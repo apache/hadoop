@@ -27,10 +27,10 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.ipc.CallerContext;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -40,7 +40,7 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMEN
 import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.DEFAULT_HEARTBEAT_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_RESPONDER_COUNT_KEY;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Used to test the functionality of async router rps.
@@ -58,7 +58,7 @@ public class RouterAsyncProtocolTestBase {
   private RouterRpcServer routerAsyncRpcServer;
   protected static final String TEST_DIR_PATH = "/testdir";
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpCluster() throws Exception {
     cluster = new MiniRouterDFSCluster(true, 1, 2,
         DEFAULT_HEARTBEAT_INTERVAL_MS, 1000);
@@ -96,14 +96,14 @@ public class RouterAsyncProtocolTestBase {
     ns0 = cluster.getNameservices().get(0);
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdownCluster() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     router = cluster.getRandomRouter();
     routerFs = router.getFileSystem();
@@ -124,7 +124,7 @@ public class RouterAsyncProtocolTestBase {
     routerFs.mkdirs(new Path(TEST_DIR_PATH), permission);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     // clear client context
     CallerContext.setCurrent(null);

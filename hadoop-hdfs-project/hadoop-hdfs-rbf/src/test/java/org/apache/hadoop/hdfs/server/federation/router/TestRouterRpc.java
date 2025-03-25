@@ -30,14 +30,14 @@ import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.TEST
 import static org.apache.hadoop.ipc.CallerContext.PROXY_USER_PORT;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -140,11 +140,11 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -213,7 +213,7 @@ public class TestRouterRpc {
   private String nnFile;
 
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     // Start routers with only an RPC service
     Configuration routerConf = new RouterConfigBuilder()
@@ -273,18 +273,18 @@ public class TestRouterRpc {
         .getDatanodeManager().setHeartbeatExpireInterval(3000);
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     // clear client context
     CallerContext.setCurrent(null);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     cluster.shutdown();
   }
 
-  @Before
+  @BeforeEach
   public void testSetup() throws Exception {
 
     // Create mock locations
@@ -797,9 +797,8 @@ public class TestRouterRpc {
 
     // Verify the root listing has the item via the router
     FileStatus[] files = routerFS.listStatus(new Path("/"));
-    assertEquals(Arrays.toString(files) + " should be " +
-        Arrays.toString(filesInitial) + " + " + dirPath,
-        filesInitial.length + 1, files.length);
+    assertEquals(filesInitial.length + 1, files.length, Arrays.toString(files) + " should be " +
+        Arrays.toString(filesInitial) + " + " + dirPath);
     assertTrue(verifyFileExists(routerFS, dirPath));
 
     // Verify the directory is present in only 1 Namenode
@@ -1716,8 +1715,8 @@ public class TestRouterRpc {
       assertEquals(1, stats.getCorruptBlocks());
     }
     ReplicatedBlockStats routerStat = routerProtocol.getReplicatedBlockStats();
-    assertEquals("There should be 1 corrupt blocks for each NN",
-        cluster.getNameservices().size(), routerStat.getCorruptBlocks());
+    assertEquals(cluster.getNameservices().size(), routerStat.getCorruptBlocks(),
+        "There should be 1 corrupt blocks for each NN");
   }
 
   @Test
@@ -2183,15 +2182,15 @@ public class TestRouterRpc {
     // Login user, which is used as the router's user, is different from the realUser.
     assertNotEquals(loginUser.getUserName(), realUser.getUserName());
     // Login user is used in the audit log's ugi field.
-    assertTrue("The login user is the proxyUser in the UGI field",
-         logOutput.contains(String.format("ugi=%s (auth:PROXY) via %s (auth:SIMPLE)",
+    assertTrue(
+        logOutput.contains(String.format("ugi=%s (auth:PROXY) via %s (auth:SIMPLE)",
              proxyUser.getUserName(),
-             loginUser.getUserName())));
+             loginUser.getUserName())), "The login user is the proxyUser in the UGI field");
     // Real user is added to the caller context.
-    assertTrue("The audit log should contain the real user.",
-        logOutput.contains(String.format("realUser:%s", realUser.getUserName())));
-    assertTrue("The audit log should contain the proxyuser port.",
-        logOutput.contains(PROXY_USER_PORT));
+    assertTrue(logOutput.contains(String.format("realUser:%s", realUser.getUserName())),
+        "The audit log should contain the real user.");
+    assertTrue(logOutput.contains(PROXY_USER_PORT),
+        "The audit log should contain the proxyuser port.");
   }
 
   @Test

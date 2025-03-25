@@ -19,10 +19,10 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -41,8 +41,8 @@ import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.service.Service.STATE;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * The safe mode for the {@link Router} controlled by
@@ -52,7 +52,7 @@ public class TestRouter {
 
   private static Configuration conf;
 
-  @BeforeClass
+  @BeforeAll
   public static void create() throws IOException {
     // Basic configuration without the state store
     conf = new Configuration();
