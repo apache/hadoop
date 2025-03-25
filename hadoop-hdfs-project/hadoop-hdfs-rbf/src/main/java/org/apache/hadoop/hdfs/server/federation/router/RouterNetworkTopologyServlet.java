@@ -58,7 +58,7 @@ public class RouterNetworkTopologyServlet extends NetworkTopologyServlet {
       try {
         datanodeReport = syncReturn(DatanodeInfo[].class);
       } catch (Exception e) {
-        throw new RuntimeException(e);
+        throw new IOException(e);
       }
     } else {
       datanodeReport = router.getRpcServer().getDatanodeReport(
