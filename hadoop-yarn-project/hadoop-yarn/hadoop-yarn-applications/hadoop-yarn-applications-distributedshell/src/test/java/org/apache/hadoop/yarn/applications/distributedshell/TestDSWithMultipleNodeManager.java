@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.client.api.YarnClient;
@@ -320,7 +321,7 @@ public class TestDSWithMultipleNodeManager {
           new Client(
               new Configuration(distShellTest.getYarnClusterConfiguration()));
       dsClient.init(argsA);
-      Thread dsClientRunner = new Thread(() -> {
+      Thread dsClientRunner = new HadoopThread(() -> {
         try {
           dsClient.run();
         } catch (Exception e) {

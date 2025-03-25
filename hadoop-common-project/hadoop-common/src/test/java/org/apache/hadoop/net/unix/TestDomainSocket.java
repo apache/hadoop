@@ -47,7 +47,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.unix.DomainSocket.DomainChannel;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
-
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -783,7 +783,7 @@ public class TestDomainSocket {
         }
       }
     };
-    Thread readerThread = new Thread(reader);
+    Thread readerThread = new HadoopThread(reader);
     readerThread.start();
     socks[0].getOutputStream().write(1);
     socks[0].getOutputStream().write(2);

@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -67,7 +68,7 @@ public class ITestNativeAzureFileSystemLive extends
     for (int i = 0; i < 10; i++) {
       final int threadNumber = i;
       Path src = path("test" + threadNumber);
-      threads.add(new Thread(() -> {
+      threads.add(new HadoopThread(() -> {
         try {
           latch.await(Long.MAX_VALUE, TimeUnit.SECONDS);
         } catch (InterruptedException e) {

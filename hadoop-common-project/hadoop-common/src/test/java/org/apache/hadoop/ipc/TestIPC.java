@@ -103,6 +103,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -996,7 +997,7 @@ public class TestIPC {
     // instantiate the threads, will start in batches
     Thread[] threads = new Thread[clients];
     for (int i=0; i<clients; i++) {
-      threads[i] = new Thread(new Runnable() {
+      threads[i] = new HadoopThread(new Runnable() {
         @Override
         public void run() {
           Client client = new Client(LongWritable.class, conf);
@@ -1129,7 +1130,7 @@ public class TestIPC {
       final Configuration clientConf = new Configuration();
       clientConf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY, 10000);
       for (int i=0; i < clients; i++) {
-        threads[i] = new Thread(new Runnable(){
+        threads[i] = new HadoopThread(new Runnable(){
           @Override
           public void run() {
             Client client = new Client(LongWritable.class, clientConf);
@@ -1687,7 +1688,7 @@ public class TestIPC {
     final AtomicBoolean callStarted = new AtomicBoolean(false);
 
     // Call a random function asynchronously so that we can call stop()
-    new Thread(new Runnable() {
+    new HadoopThread(new Runnable() {
       public void run() {
         try {
           callStarted.set(true);

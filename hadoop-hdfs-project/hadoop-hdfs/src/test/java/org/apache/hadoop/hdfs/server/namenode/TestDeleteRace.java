@@ -59,6 +59,7 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.Whitebox;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
@@ -456,14 +457,14 @@ public class TestDeleteRace {
       // 6.release writeLock, it's fair lock so open thread gets read lock.
       // 7.open thread unlocks, rename gets write lock and does rename.
       // 8.rename thread unlocks, open thread gets write lock and update time.
-      Thread open = new Thread(() -> {
+      Thread open = new HadoopThread(() -> {
         try {
           openSem.release();
           fsn.getBlockLocations("foo", src, 0, 5);
         } catch (IOException e) {
         }
       });
-      Thread rename = new Thread(() -> {
+      Thread rename = new HadoopThread(() -> {
         try {
           openSem.acquire();
           renameSem.release();

@@ -26,6 +26,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -253,7 +254,7 @@ public class TestInstrumentedLock {
 
   private Thread lockUnlockThread(Lock lock) throws InterruptedException {
     CountDownLatch countDownLatch = new CountDownLatch(1);
-    Thread t = new Thread(() -> {
+    Thread t = new HadoopThread(() -> {
       try {
         assertFalse(lock.tryLock());
         countDownLatch.countDown();

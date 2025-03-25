@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
@@ -866,7 +867,7 @@ public class TestClientProtocolForPipelineRecovery {
       dataNodes[0].shutdown();
 
       // Shutdown the second datanode when the pipeline is closing.
-      new Thread(() -> {
+      new HadoopThread(() -> {
         try {
           GenericTestUtils.waitFor(new Supplier<Boolean>() {
             @Override

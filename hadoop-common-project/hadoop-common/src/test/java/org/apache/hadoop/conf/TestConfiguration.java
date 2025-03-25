@@ -81,6 +81,7 @@ import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.LocalJavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
@@ -2746,7 +2747,7 @@ public class TestConfiguration {
   @Test
   public void testConcurrentModificationDuringIteration() throws InterruptedException {
     Configuration configuration = new Configuration();
-    new Thread(() -> {
+    new HadoopThread(() -> {
       while (true) {
         configuration.set(String.valueOf(Math.random()), String.valueOf(Math.random()));
       }
@@ -2754,7 +2755,7 @@ public class TestConfiguration {
 
     AtomicBoolean exceptionOccurred = new AtomicBoolean(false);
 
-    new Thread(() -> {
+    new HadoopThread(() -> {
       while (true) {
         try {
           configuration.iterator();

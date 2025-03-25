@@ -64,6 +64,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
@@ -995,7 +996,7 @@ public class TestDecommissionWithStriped {
     // Handle decommission nodes in a new thread.
     // Verify that nodes are decommissioned.
     final CountDownLatch decomStarted = new CountDownLatch(0);
-    new Thread(
+    new HadoopThread(
         () -> {
           try {
             decomStarted.countDown();

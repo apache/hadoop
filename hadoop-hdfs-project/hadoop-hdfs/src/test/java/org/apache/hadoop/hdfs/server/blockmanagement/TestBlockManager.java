@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
@@ -1522,7 +1523,7 @@ public class TestBlockManager {
       Thread[] writers = new Thread[numWriters];
       for (int i=0; i < writers.length; i++) {
         final Path p = new Path("/writer"+i);
-        writers[i] = new Thread(new Runnable() {
+        writers[i] = new HadoopThread(new Runnable() {
           @Override
           public void run() {
             try {

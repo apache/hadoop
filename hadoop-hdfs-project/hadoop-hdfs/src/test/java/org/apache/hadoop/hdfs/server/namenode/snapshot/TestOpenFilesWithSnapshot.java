@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -700,7 +701,7 @@ public class TestOpenFilesWithSnapshot {
     final AtomicBoolean writerError = new AtomicBoolean(false);
     final CountDownLatch startLatch = new CountDownLatch(1);
     final CountDownLatch deleteLatch = new CountDownLatch(1);
-    Thread t = new Thread(new Runnable() {
+    Thread t = new HadoopThread(new Runnable() {
       @Override
       public void run() {
         try {
