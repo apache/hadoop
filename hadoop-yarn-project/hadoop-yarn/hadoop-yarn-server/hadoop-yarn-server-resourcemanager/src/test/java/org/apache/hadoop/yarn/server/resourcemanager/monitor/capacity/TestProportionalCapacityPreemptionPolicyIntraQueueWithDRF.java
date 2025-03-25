@@ -187,7 +187,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueWithDRF
         .getResourceLimitForAllUsers(any(), any(), any(), any())
     ).thenReturn(ul);
     policy.editSchedule();
-    verify(eventHandler, times(29)).handle(argThat(
+    verify(eventHandler, times(59)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -267,7 +267,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueWithDRF
         .getResourceLimitForAllUsers(any(), any(), any(), any())
     ).thenReturn(ul);
     policy.editSchedule();
-    verify(eventHandler, times(29)).handle(argThat(
+    verify(eventHandler, times(59)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
