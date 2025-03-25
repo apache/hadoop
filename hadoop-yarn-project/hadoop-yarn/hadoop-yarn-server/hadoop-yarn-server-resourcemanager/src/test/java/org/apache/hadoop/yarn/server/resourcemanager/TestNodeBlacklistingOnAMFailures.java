@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,7 +51,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -162,10 +164,9 @@ public class TestNodeBlacklistingOnAMFailures {
       currentNode.nodeHeartbeat(true);
       rm.drainEvents();
 
-      Assertions.assertEquals(
-      RMAppAttemptState.SCHEDULED
-,           attempt.getAppAttemptState(), "AppAttemptState should still be SCHEDULED if currentNode is "
-              + "blacklisted correctly");
+      assertEquals(RMAppAttemptState.SCHEDULED,
+          attempt.getAppAttemptState(), "AppAttemptState should still be SCHEDULED if currentNode is "
+          + "blacklisted correctly");
     }
 
     // Now try the other node
@@ -183,7 +184,7 @@ public class TestNodeBlacklistingOnAMFailures {
     nodeWhereAMRan = rmContainer.getAllocatedNode();
 
     // The other node should now receive the assignment
-    Assertions.assertEquals(otherNode.getNodeId(), nodeWhereAMRan,
+    assertEquals(otherNode.getNodeId(), nodeWhereAMRan,
         "After blacklisting, AM should have run on the other node");
 
     am2.registerAppAttempt();
@@ -191,7 +192,7 @@ public class TestNodeBlacklistingOnAMFailures {
 
     List<Container> allocatedContainers =
         TestAMRestart.allocateContainers(currentNode, am2, 1);
-    Assertions.assertEquals(currentNode.getNodeId(), allocatedContainers.get(0).getNodeId(),
+    assertEquals(currentNode.getNodeId(), allocatedContainers.get(0).getNodeId(),
         "Even though AM is blacklisted from the node, application can "
         + "still allocate non-AM containers there");
   }
@@ -252,7 +253,7 @@ public class TestNodeBlacklistingOnAMFailures {
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 1);
     RMContainer rmContainer = scheduler.getRMContainer(amContainerId);
     NodeId nodeWhereAMRan = rmContainer.getAllocatedNode();
-    Assertions.assertEquals(nm2.getNodeId(), nodeWhereAMRan);
+    assertEquals(nm2.getNodeId(), nodeWhereAMRan);
 
     // Set the exist status to INVALID so that we can verify that the system
     // automatically blacklisting the node
@@ -278,7 +279,7 @@ public class TestNodeBlacklistingOnAMFailures {
     // The second AM should be on the same node because the strict locality
     // made the eligible nodes only 1, so the blacklisting threshold kicked in
     System.out.println("AM ran on " + nodeWhereAMRan);
-    Assertions.assertEquals(nm2.getNodeId(), nodeWhereAMRan);
+    assertEquals(nm2.getNodeId(), nodeWhereAMRan);
 
     am2.registerAppAttempt();
     rm.waitForState(app.getApplicationId(), RMAppState.RUNNING);
@@ -340,7 +341,7 @@ public class TestNodeBlacklistingOnAMFailures {
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 1);
     RMContainer rmContainer = scheduler.getRMContainer(amContainerId);
     NodeId nodeWhereAMRan = rmContainer.getAllocatedNode();
-    Assertions.assertEquals(nm2.getNodeId(), nodeWhereAMRan);
+    assertEquals(nm2.getNodeId(), nodeWhereAMRan);
 
     // Set the exist status to INVALID so that we can verify that the system
     // automatically blacklisting the node
@@ -370,7 +371,7 @@ public class TestNodeBlacklistingOnAMFailures {
     // The second AM should be on a different node because the relaxed locality
     // made the app schedulable on other nodes and nm2 is blacklisted
     System.out.println("AM ran on " + nodeWhereAMRan);
-    Assertions.assertNotEquals(nm2.getNodeId(), nodeWhereAMRan);
+    assertNotEquals(nm2.getNodeId(), nodeWhereAMRan);
 
     am2.registerAppAttempt();
     rm.waitForState(app.getApplicationId(), RMAppState.RUNNING);

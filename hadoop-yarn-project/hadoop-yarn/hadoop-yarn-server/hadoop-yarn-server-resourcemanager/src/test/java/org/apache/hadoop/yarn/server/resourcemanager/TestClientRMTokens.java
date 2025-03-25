@@ -42,7 +42,6 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMDelegationTokenIdentifierData;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -149,7 +148,7 @@ public class TestClientRMTokens {
       // Create a user for the renewr and fake the authentication-method
       UserGroupInformation loggedInUser = UserGroupInformation
           .createRemoteUser("testrenewer@APACHE.ORG");
-      Assertions.assertEquals("testrenewer", loggedInUser.getShortUserName());
+      assertEquals("testrenewer", loggedInUser.getShortUserName());
       // Default realm is APACHE.ORG
       loggedInUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
 

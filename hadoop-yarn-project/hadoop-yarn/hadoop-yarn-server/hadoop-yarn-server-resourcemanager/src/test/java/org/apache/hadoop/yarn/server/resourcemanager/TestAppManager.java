@@ -88,7 +88,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
 import org.junit.jupiter.api.Test;
@@ -119,8 +118,11 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.A
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes.getAutoCreatedQueueTemplateConfPrefix;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes.getQueuePrefix;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -511,7 +513,7 @@ public class TestAppManager extends AppManagerTestBase{
         ((CapacityScheduler) newMockRM.getResourceScheduler());
     cs.getCapacitySchedulerQueueManager().createQueue(user2QueuePath);
     AutoCreatedLeafQueue autoCreatedLeafQueue = (AutoCreatedLeafQueue) cs.getQueue("user2");
-    Assertions.assertNotNull(autoCreatedLeafQueue, "Auto Creation of Queue failed");
+    assertNotNull(autoCreatedLeafQueue, "Auto Creation of Queue failed");
     ManagedParentQueue parentQueue = (ManagedParentQueue) cs.getQueue("parent");
     assertEquals(parentQueue, autoCreatedLeafQueue.getParent());
     // reinitialize to load the ACLs for the queue
@@ -600,12 +602,12 @@ public class TestAppManager extends AppManagerTestBase{
     cs.getCapacitySchedulerQueueManager().createQueue(new QueuePath("root.parent.user2.user3"));
 
     ParentQueue autoCreatedParentQueue = (ParentQueue) cs.getQueue("user2");
-    Assertions.assertNotNull(autoCreatedParentQueue, "Auto Creation of Queue failed");
+    assertNotNull(autoCreatedParentQueue, "Auto Creation of Queue failed");
     ParentQueue parentQueue = (ParentQueue) cs.getQueue("parent");
     assertEquals(parentQueue, autoCreatedParentQueue.getParent());
 
     LeafQueue autoCreatedLeafQueue = (LeafQueue) cs.getQueue("user3");
-    Assertions.assertNotNull(autoCreatedLeafQueue, "Auto Creation of Queue failed");
+    assertNotNull(autoCreatedLeafQueue, "Auto Creation of Queue failed");
     assertEquals(autoCreatedParentQueue, autoCreatedLeafQueue.getParent());
 
     // reinitialize to load the ACLs for the queue
@@ -723,12 +725,12 @@ public class TestAppManager extends AppManagerTestBase{
     cs.getCapacitySchedulerQueueManager().createQueue(new QueuePath("root.parent.user2.user3"));
 
     ParentQueue autoCreatedParentQueue = (ParentQueue) cs.getQueue("user2");
-    Assertions.assertNotNull(autoCreatedParentQueue, "Auto Creation of Queue failed");
+    assertNotNull(autoCreatedParentQueue, "Auto Creation of Queue failed");
     ParentQueue parentQueue = (ParentQueue) cs.getQueue("parent");
     assertEquals(parentQueue, autoCreatedParentQueue.getParent());
 
     LeafQueue autoCreatedLeafQueue = (LeafQueue) cs.getQueue("user3");
-    Assertions.assertNotNull(autoCreatedLeafQueue, "Auto Creation of Queue failed");
+    assertNotNull(autoCreatedLeafQueue, "Auto Creation of Queue failed");
     assertEquals(autoCreatedParentQueue, autoCreatedLeafQueue.getParent());
 
     // reinitialize to load the ACLs for the queue
@@ -823,7 +825,7 @@ public class TestAppManager extends AppManagerTestBase{
 
     ParentQueue autoCreatedParentQueue = (ParentQueue) cs.getQueue("parent");
     LeafQueue autoCreatedLeafQueue = (LeafQueue) cs.getQueue("user2");
-    Assertions.assertNotNull(autoCreatedLeafQueue, "Auto Creation of Queue failed");
+    assertNotNull(autoCreatedLeafQueue, "Auto Creation of Queue failed");
     assertEquals(autoCreatedParentQueue, autoCreatedLeafQueue.getParent());
 
     // reinitialize to load the ACLs for the queue
@@ -917,12 +919,12 @@ public class TestAppManager extends AppManagerTestBase{
     cs.getCapacitySchedulerQueueManager().createQueue(new QueuePath("root.user2.user3"));
 
     ParentQueue autoCreatedParentQueue = (ParentQueue) cs.getQueue("user2");
-    Assertions.assertNotNull(autoCreatedParentQueue, "Auto Creation of Queue failed");
+    assertNotNull(autoCreatedParentQueue, "Auto Creation of Queue failed");
     ParentQueue parentQueue = (ParentQueue) cs.getQueue("root");
     assertEquals(parentQueue, autoCreatedParentQueue.getParent());
 
     LeafQueue autoCreatedLeafQueue = (LeafQueue) cs.getQueue("user3");
-    Assertions.assertNotNull(autoCreatedLeafQueue, "Auto Creation of Queue failed");
+    assertNotNull(autoCreatedLeafQueue, "Auto Creation of Queue failed");
     assertEquals(autoCreatedParentQueue, autoCreatedLeafQueue.getParent());
 
     // reinitialize to load the ACLs for the queue
@@ -995,16 +997,16 @@ public class TestAppManager extends AppManagerTestBase{
     cs.getCapacitySchedulerQueueManager().createQueue(new QueuePath("root.user2.user3.queue"));
 
     ParentQueue autoCreatedParentQueue = (ParentQueue) cs.getQueue("user2");
-    Assertions.assertNotNull(autoCreatedParentQueue, "Auto Creation of Queue failed");
+    assertNotNull(autoCreatedParentQueue, "Auto Creation of Queue failed");
     ParentQueue parentQueue = (ParentQueue) cs.getQueue("root");
     assertEquals(parentQueue, autoCreatedParentQueue.getParent());
 
     ParentQueue autoCreatedParentQueue2 = (ParentQueue) cs.getQueue("user3");
-    Assertions.assertNotNull(autoCreatedParentQueue2, "Auto Creation of Queue failed");
+    assertNotNull(autoCreatedParentQueue2, "Auto Creation of Queue failed");
     assertEquals(autoCreatedParentQueue, autoCreatedParentQueue2.getParent());
 
     LeafQueue autoCreatedLeafQueue = (LeafQueue) cs.getQueue("queue");
-    Assertions.assertNotNull(autoCreatedLeafQueue, "Auto Creation of Queue failed");
+    assertNotNull(autoCreatedLeafQueue, "Auto Creation of Queue failed");
     assertEquals(autoCreatedParentQueue, autoCreatedParentQueue2.getParent());
 
     // reinitialize to load the ACLs for the queue
@@ -1047,7 +1049,7 @@ public class TestAppManager extends AppManagerTestBase{
                                                  String user) {
     try {
       appManager.submitApplication(submission, user);
-      Assertions.fail(
+      fail(
           String.format("should fail since %s does not have permission to submit to queue", user));
     } catch (YarnException e) {
       assertTrue(e.getCause() instanceof AccessControlException);
@@ -1061,8 +1063,8 @@ public class TestAppManager extends AppManagerTestBase{
                                           String expectedQueue) throws YarnException {
     appManager.submitApplication(submission, user);
     RMApp app = rmContext.getRMApps().get(submission.getApplicationId());
-    Assertions.assertNotNull(app, "app should not be null");
-    Assertions.assertEquals(
+    assertNotNull(app, "app should not be null");
+    assertEquals(
        expectedQueue
 ,         app.getQueue(), String.format("the queue should be placed on '%s' queue", expectedQueue));
   }
@@ -1097,7 +1099,7 @@ public class TestAppManager extends AppManagerTestBase{
     conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS, 10);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext,conf);
 
-    Assertions.assertEquals(
+    assertEquals(
        10, rmContext.getRMApps().size(), "Number of apps incorrect before checkAppTimeLimit");
 
     // add them to completed apps list
@@ -1105,9 +1107,9 @@ public class TestAppManager extends AppManagerTestBase{
 
     // shouldn't  have to many apps
     appMonitor.checkAppNumCompletedLimit();
-    Assertions.assertEquals(10
+    assertEquals(10
 ,         rmContext.getRMApps().size(), "Number of apps incorrect after # completed check");
-    Assertions.assertEquals(10
+    assertEquals(10
 ,         appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect after check");
     verify(rmContext.getStateStore(), never()).removeApplication(
       isA(RMApp.class));
@@ -1142,7 +1144,7 @@ public class TestAppManager extends AppManagerTestBase{
       if (e instanceof YarnException) {
         assertTrue(e.getCause() instanceof AccessControlException);
       } else {
-        Assertions.fail("Yarn exception is expected : " + e.getMessage());
+        fail("Yarn exception is expected : " + e.getMessage());
       }
     } finally {
       mockRM.close();
@@ -1159,7 +1161,7 @@ public class TestAppManager extends AppManagerTestBase{
     conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS, 3);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext, conf);
 
-    Assertions.assertEquals(10, rmContext
+    assertEquals(10, rmContext
         .getRMApps().size(), "Number of apps incorrect before");
 
     // add them to completed apps list
@@ -1167,9 +1169,9 @@ public class TestAppManager extends AppManagerTestBase{
 
     // shouldn't  have to many apps
     appMonitor.checkAppNumCompletedLimit();
-    Assertions.assertEquals(3
+    assertEquals(3
 ,         rmContext.getRMApps().size(), "Number of apps incorrect after # completed check");
-    Assertions.assertEquals(3
+    assertEquals(3
 ,         appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect after check");
     verify(rmContext.getStateStore(), times(7)).removeApplication(
       isA(RMApp.class));
@@ -1189,7 +1191,7 @@ public class TestAppManager extends AppManagerTestBase{
 
     // clear out applications map
     rmContext.getRMApps().clear();
-    Assertions.assertEquals(0, rmContext.getRMApps().size(), "map isn't empty");
+    assertEquals(0, rmContext.getRMApps().size(), "map isn't empty");
 
     // 6 applications are in final state, 4 are not in final state.
     // / set with various finished states
@@ -1216,7 +1218,7 @@ public class TestAppManager extends AppManagerTestBase{
     app = new MockRMApp(9, now - 20000, RMAppState.FAILED);
     rmContext.getRMApps().put(app.getApplicationId(), app);
 
-    Assertions.assertEquals(10, rmContext
+    assertEquals(10, rmContext
         .getRMApps().size(), "Number of apps incorrect before");
 
     // add them to completed apps list
@@ -1224,9 +1226,9 @@ public class TestAppManager extends AppManagerTestBase{
 
     // shouldn't  have to many apps
     appMonitor.checkAppNumCompletedLimit();
-    Assertions.assertEquals(6
+    assertEquals(6
 ,         rmContext.getRMApps().size(), "Number of apps incorrect after # completed check");
-    Assertions.assertEquals(2
+    assertEquals(2
 ,         appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect after check");
     // 6 applications in final state, 4 of them are removed
     verify(rmContext.getStateStore(), times(4)).removeApplication(
@@ -1240,12 +1242,12 @@ public class TestAppManager extends AppManagerTestBase{
     RMContext rmContext = mockRMContext(10, now - 20000);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext, new Configuration());
 
-    Assertions.assertEquals(10, rmContext
+    assertEquals(10, rmContext
         .getRMApps().size(), "Number of apps incorrect before");
 
     appMonitor.finishApplication(null);
 
-    Assertions.assertEquals(0
+    assertEquals(0
 ,         appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect after check");
   }
 
@@ -1258,18 +1260,18 @@ public class TestAppManager extends AppManagerTestBase{
     conf.setInt(YarnConfiguration.RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS, 0);
     conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS, 0);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext, conf);
-    Assertions.assertEquals(10, rmContext
+    assertEquals(10, rmContext
         .getRMApps().size(), "Number of apps incorrect before");
 
     addToCompletedApps(appMonitor, rmContext);
-    Assertions.assertEquals(10
+    assertEquals(10
 ,         appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect");
 
     appMonitor.checkAppNumCompletedLimit();
 
-    Assertions.assertEquals(0
+    assertEquals(0
 ,         rmContext.getRMApps().size(), "Number of apps incorrect after # completed check");
-    Assertions.assertEquals(0
+    assertEquals(0
 ,         appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect after check");
     verify(rmContext.getStateStore(), times(10)).removeApplication(
       isA(RMApp.class));
@@ -1289,19 +1291,19 @@ public class TestAppManager extends AppManagerTestBase{
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext, conf);
 
     addToCompletedApps(appMonitor, rmContext);
-    Assertions.assertEquals(allApps
+    assertEquals(allApps
 ,         appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect");
     appMonitor.checkAppNumCompletedLimit();
 
-    Assertions.assertEquals(
+    assertEquals(
      maxAppsInMemory, rmContext.getRMApps().size(), "Number of apps incorrect after # completed check");
-    Assertions.assertEquals(
+    assertEquals(
      maxAppsInMemory, appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect after check");
 
     int numRemoveAppsFromStateStore = 10 - maxAppsInStateStore;
     verify(rmContext.getStateStore(), times(numRemoveAppsFromStateStore))
       .removeApplication(isA(RMApp.class));
-    Assertions.assertEquals(maxAppsInStateStore,
+    assertEquals(maxAppsInStateStore,
       appMonitor.getNumberOfCompletedAppsInStateStore());
   }
 
@@ -1318,18 +1320,18 @@ public class TestAppManager extends AppManagerTestBase{
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext, conf);
 
     addToCompletedApps(appMonitor, rmContext);
-    Assertions.assertEquals(allApps
+    assertEquals(allApps
 ,         appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect");
     appMonitor.checkAppNumCompletedLimit();
 
     int numRemoveApps = allApps - maxAppsInMemory;
-    Assertions.assertEquals(
+    assertEquals(
      maxAppsInMemory, rmContext.getRMApps().size(), "Number of apps incorrect after # completed check");
-    Assertions.assertEquals(
+    assertEquals(
      maxAppsInMemory, appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect after check");
     verify(rmContext.getStateStore(), times(numRemoveApps)).removeApplication(
       isA(RMApp.class));
-    Assertions.assertEquals(maxAppsInMemory,
+    assertEquals(maxAppsInMemory,
       appMonitor.getNumberOfCompletedAppsInStateStore());
   }
 
@@ -1341,7 +1343,7 @@ public class TestAppManager extends AppManagerTestBase{
     rmContext.getDispatcher().register(RMAppManagerEventType.class, testAppManagerDispatcher);
     ((Service)rmContext.getDispatcher()).init(conf);
     ((Service)rmContext.getDispatcher()).start();
-    Assertions.assertEquals(RMAppEventType.KILL, appEventType, "app event type is wrong before");
+    assertEquals(RMAppEventType.KILL, appEventType, "app event type is wrong before");
   }
 
   @SuppressWarnings("deprecation")
@@ -1361,8 +1363,8 @@ public class TestAppManager extends AppManagerTestBase{
     asContext.setAMContainerResourceRequests(cloneResourceRequests(reqs));
     // getAMContainerResourceRequest uses the first entry of
     // getAMContainerResourceRequests
-    Assertions.assertEquals(reqs.get(0), asContext.getAMContainerResourceRequest());
-    Assertions.assertEquals(reqs, asContext.getAMContainerResourceRequests());
+    assertEquals(reqs.get(0), asContext.getAMContainerResourceRequest());
+    assertEquals(reqs, asContext.getAMContainerResourceRequests());
     RMApp app = testRMAppSubmit();
     for (ResourceRequest req : reqs) {
       req.setNodeLabelExpression(RMNodeLabelsManager.NO_LABEL);
@@ -1370,7 +1372,7 @@ public class TestAppManager extends AppManagerTestBase{
 
     // setAMContainerResourceRequests has priority over
     // setAMContainerResourceRequest and setResource
-    Assertions.assertEquals(reqs, app.getAMResourceRequests());
+    assertEquals(reqs, app.getAMResourceRequests());
   }
 
   @SuppressWarnings("deprecation")
@@ -1385,12 +1387,12 @@ public class TestAppManager extends AppManagerTestBase{
     asContext.setAMContainerResourceRequest(ResourceRequest.clone(req));
     // getAMContainerResourceRequests uses a singleton list of
     // getAMContainerResourceRequest
-    Assertions.assertEquals(req, asContext.getAMContainerResourceRequest());
-    Assertions.assertEquals(req, asContext.getAMContainerResourceRequests().get(0));
-    Assertions.assertEquals(1, asContext.getAMContainerResourceRequests().size());
+    assertEquals(req, asContext.getAMContainerResourceRequest());
+    assertEquals(req, asContext.getAMContainerResourceRequests().get(0));
+    assertEquals(1, asContext.getAMContainerResourceRequests().size());
     RMApp app = testRMAppSubmit();
     // setAMContainerResourceRequest has priority over setResource
-    Assertions.assertEquals(Collections.singletonList(req),
+    assertEquals(Collections.singletonList(req),
         app.getAMResourceRequests());
   }
 
@@ -1417,7 +1419,7 @@ public class TestAppManager extends AppManagerTestBase{
 
     RMApp app = rmContext.getRMApps().get(appId);
     waitUntilEventProcessed();
-    Assertions.assertEquals(defaultAMNodeLabel,
+    assertEquals(defaultAMNodeLabel,
         app.getAMResourceRequests().get(0).getNodeLabelExpression());
   }
 
@@ -1428,7 +1430,7 @@ public class TestAppManager extends AppManagerTestBase{
     RMApp app = testRMAppSubmit();
 
     // setResource
-    Assertions.assertEquals(Collections.singletonList(
+    assertEquals(Collections.singletonList(
         ResourceRequest.newInstance(RMAppAttemptImpl.AM_CONTAINER_PRIORITY,
         ResourceRequest.ANY, Resources.createResource(1024), 1, true,
             "")),
@@ -1441,9 +1443,9 @@ public class TestAppManager extends AppManagerTestBase{
     asContext.setAMContainerResourceRequests(null);
     try {
       testRMAppSubmit();
-      Assertions.fail("Should have failed due to no ResourceRequest");
+      fail("Should have failed due to no ResourceRequest");
     } catch (InvalidResourceRequestException e) {
-      Assertions.assertEquals(
+      assertEquals(
           "Invalid resource request, no resources requested",
           e.getMessage());
     }
@@ -1477,7 +1479,7 @@ public class TestAppManager extends AppManagerTestBase{
       req.setNumContainers(1);
       req.setPriority(Priority.newInstance(0));
     }
-    Assertions.assertEquals(reqs, app.getAMResourceRequests());
+    assertEquals(reqs, app.getAMResourceRequests());
   }
 
   @Test
@@ -1492,12 +1494,12 @@ public class TestAppManager extends AppManagerTestBase{
     asContext.setAMContainerResourceRequests(cloneResourceRequests(reqs));
     // getAMContainerResourceRequest uses the first entry of
     // getAMContainerResourceRequests
-    Assertions.assertEquals(reqs, asContext.getAMContainerResourceRequests());
+    assertEquals(reqs, asContext.getAMContainerResourceRequests());
     try {
       testRMAppSubmit();
-      Assertions.fail("Should have failed due to missing ANY ResourceRequest");
+      fail("Should have failed due to missing ANY ResourceRequest");
     } catch (InvalidResourceRequestException e) {
-      Assertions.assertEquals(
+      assertEquals(
           "Invalid resource request, no resource request specified with *",
           e.getMessage());
     }
@@ -1515,12 +1517,12 @@ public class TestAppManager extends AppManagerTestBase{
     asContext.setAMContainerResourceRequests(cloneResourceRequests(reqs));
     // getAMContainerResourceRequest uses the first entry of
     // getAMContainerResourceRequests
-    Assertions.assertEquals(reqs, asContext.getAMContainerResourceRequests());
+    assertEquals(reqs, asContext.getAMContainerResourceRequests());
     try {
       testRMAppSubmit();
-      Assertions.fail("Should have failed due to too many ANY ResourceRequests");
+      fail("Should have failed due to too many ANY ResourceRequests");
     } catch (InvalidResourceRequestException e) {
-      Assertions.assertEquals(
+      assertEquals(
           "Invalid resource request, only one resource request with * is " +
               "allowed", e.getMessage());
     }
@@ -1533,16 +1535,16 @@ public class TestAppManager extends AppManagerTestBase{
 
   private RMApp waitUntilEventProcessed() throws InterruptedException {
     RMApp app = rmContext.getRMApps().get(appId);
-    Assertions.assertNotNull(app, "app is null");
-    Assertions.assertEquals(appId, app.getApplicationId(), "app id doesn't match");
-    Assertions.assertEquals(RMAppState.NEW, app.getState(), "app state doesn't match");
+    assertNotNull(app, "app is null");
+    assertEquals(appId, app.getApplicationId(), "app id doesn't match");
+    assertEquals(RMAppState.NEW, app.getState(), "app state doesn't match");
     // wait for event to be processed
     int timeoutSecs = 0;
     while ((getAppEventType() == RMAppEventType.KILL) &&
         timeoutSecs++ < 20) {
       Thread.sleep(1000);
     }
-    Assertions.assertEquals(RMAppEventType.START
+    assertEquals(RMAppEventType.START
 ,         getAppEventType(), "app event type sent is wrong");
     return app;
   }
@@ -1560,7 +1562,7 @@ public class TestAppManager extends AppManagerTestBase{
     asContext.getAMContainerSpec().setTokens(securityTokens);
     try {
       appMonitor.submitApplication(asContext, "test");
-      Assertions.fail("Application submission should fail because" +
+      fail("Application submission should fail because" +
           " Tokens are invalid.");
     } catch (YarnException e) {
       // Exception is expected
@@ -1573,7 +1575,7 @@ public class TestAppManager extends AppManagerTestBase{
         timeoutSecs++ < 20) {
       Thread.sleep(1000);
     }
-    Assertions.assertEquals(
+    assertEquals(
        RMAppEventType.APP_REJECTED, getAppEventType(), "app event type sent is wrong");
     asContext.getAMContainerSpec().setTokens(null);
   }
@@ -1609,7 +1611,7 @@ public class TestAppManager extends AppManagerTestBase{
         }
         appMonitor.submitApplication(asContext, "test");
         RMApp app = rmContext.getRMApps().get(appID);
-        Assertions.assertEquals(
+        assertEquals(
            expectedNums[i][j], app.getMaxAppAttempts(), "max application attempts doesn't match");
 
         // wait for event to be processed
@@ -1635,7 +1637,7 @@ public class TestAppManager extends AppManagerTestBase{
     // our testApp1 should be rejected and original app with same id should be left in place
     try {
       appMonitor.submitApplication(asContext, "test");
-      Assertions.fail("Exception is expected when applicationId is duplicate.");
+      fail("Exception is expected when applicationId is duplicate.");
     } catch (YarnException e) {
       assertTrue(
          e.getMessage().contains("Cannot add a duplicate!"), "The thrown exception is not the expectd one.");
@@ -1643,10 +1645,10 @@ public class TestAppManager extends AppManagerTestBase{
 
     // make sure original app didn't get removed
     RMApp app = rmContext.getRMApps().get(appId);
-    Assertions.assertNotNull(app, "app is null");
-    Assertions.assertEquals(
+    assertNotNull(app, "app is null");
+    assertEquals(
        appId, app.getApplicationId(), "app id doesn't match");
-    Assertions.assertEquals(
+    assertEquals(
        RMAppState.FINISHED, app.getState(), "app state doesn't match");
   }
 
@@ -1660,7 +1662,7 @@ public class TestAppManager extends AppManagerTestBase{
     // submit an app
     try {
       appMonitor.submitApplication(asContext, "test");
-      Assertions.fail("Application submission should fail because resource" +
+      fail("Application submission should fail because resource" +
           " request is invalid.");
     } catch (YarnException e) {
       // Exception is expected
@@ -1714,8 +1716,8 @@ public class TestAppManager extends AppManagerTestBase{
         new RMAppManager.ApplicationSummary().createAppSummary(app);
     String msg = summary.toString();
     LOG.info("summary: " + msg);
-    Assertions.assertFalse(msg.contains("\n"));
-    Assertions.assertFalse(msg.contains("\r"));
+    assertFalse(msg.contains("\n"));
+    assertFalse(msg.contains("\r"));
 
     String escaped = "\\n\\n\\r\\r";
     assertTrue(msg.contains("Multiline" + escaped +"AppName"));
@@ -1764,15 +1766,15 @@ public class TestAppManager extends AppManagerTestBase{
     event = new RMAppEvent(appId, RMAppEventType.APP_NEW_SAVED);
     rmContext.getRMApps().get(appId).handle(event);
 
-    Assertions.assertNotNull(app, "app is null");
-    Assertions.assertEquals("newQueue", asContext.getQueue());
+    assertNotNull(app, "app is null");
+    assertEquals("newQueue", asContext.getQueue());
 
     // wait for event to be processed
     int timeoutSecs = 0;
     while ((getAppEventType() == RMAppEventType.KILL) && timeoutSecs++ < 20) {
       Thread.sleep(1000);
     }
-    Assertions.assertEquals(RMAppEventType.START
+    assertEquals(RMAppEventType.START
 ,         getAppEventType(), "app event type sent is wrong");
   }
 
@@ -2017,7 +2019,7 @@ public class TestAppManager extends AppManagerTestBase{
             .thenReturn(null);
     String userNameForPlacement = appMonitor
             .getUserNameForPlacement(user, asContext, placementMgr);
-    Assertions.assertEquals(expectedUser, userNameForPlacement);
+    assertEquals(expectedUser, userNameForPlacement);
   }
 
   @Test
@@ -2095,7 +2097,7 @@ public class TestAppManager extends AppManagerTestBase{
             .thenReturn(appContext);
     String userNameForPlacement = appMonitor
             .getUserNameForPlacement(submittingUser, asContext, placementMgr);
-    Assertions.assertEquals(expectedUser, userNameForPlacement);
+    assertEquals(expectedUser, userNameForPlacement);
   }
 
   private void setApplicationTags(String... tags) {

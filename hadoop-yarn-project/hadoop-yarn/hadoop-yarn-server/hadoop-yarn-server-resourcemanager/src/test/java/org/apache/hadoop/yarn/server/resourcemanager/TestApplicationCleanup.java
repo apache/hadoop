@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,7 +55,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -70,7 +73,7 @@ public class TestApplicationCleanup {
     UserGroupInformation.setConfiguration(conf);
     conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
     conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
-    Assertions.assertTrue(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS > 1);
+    assertTrue(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS > 1);
   }
 
   @SuppressWarnings("resource")
@@ -111,7 +114,7 @@ public class TestApplicationCleanup {
       contReceived += conts.size();
       nm1.nodeHeartbeat(true);
     }
-    Assertions.assertEquals(request, contReceived);
+    assertEquals(request, contReceived);
     
     am.unregisterAppAttempt();
     NodeHeartbeatResponse resp = nm1.nodeHeartbeat(attempt.getAppAttemptId(), 1,
@@ -143,10 +146,10 @@ public class TestApplicationCleanup {
       numCleanedApps = appsToCleanup.size();
     }
     
-    Assertions.assertEquals(1, appsToCleanup.size());
-    Assertions.assertEquals(app.getApplicationId(), appsToCleanup.get(0));
-    Assertions.assertEquals(1, numCleanedApps);
-    Assertions.assertEquals(2, numCleanedContainers);
+    assertEquals(1, appsToCleanup.size());
+    assertEquals(app.getApplicationId(), appsToCleanup.get(0));
+    assertEquals(1, numCleanedApps);
+    assertEquals(2, numCleanedContainers);
 
     rm.stop();
   }
@@ -191,7 +194,7 @@ public class TestApplicationCleanup {
       contReceived += conts.size();
       nm1.nodeHeartbeat(true);
     }
-    Assertions.assertEquals(request, contReceived);
+    assertEquals(request, contReceived);
 
     // Release a container.
     ArrayList<ContainerId> release = new ArrayList<ContainerId>();
@@ -253,7 +256,7 @@ public class TestApplicationCleanup {
     } else {
       LOG.info("Got cleanup for " + contsToClean.get(0));
     }
-    Assertions.assertEquals(1, cleanedConts);
+    assertEquals(1, cleanedConts);
   }
 
   private void waitForAppCleanupMessageRecved(MockNM nm, ApplicationId appId)
@@ -478,7 +481,7 @@ public class TestApplicationCleanup {
         am0.allocateAndWaitForContainers(noOfContainers, containerMemory, nm1);
 
     // 3. Verify for number of container allocated by RM
-    Assertions.assertEquals(noOfContainers, allocateContainers.size());
+    assertEquals(noOfContainers, allocateContainers.size());
     Container container = allocateContainers.get(0);
 
     nm1.nodeHeartbeat(am0.getApplicationAttemptId(), 1, ContainerState.RUNNING);
@@ -491,7 +494,7 @@ public class TestApplicationCleanup {
     // requested memory. 1024 + 2048=3072
     ResourceScheduler rs = rm1.getRMContext().getScheduler();
     long allocatedMB = rs.getRootQueueMetrics().getAllocatedMB();
-    Assertions.assertEquals(amMemory + containerMemory, allocatedMB);
+    assertEquals(amMemory + containerMemory, allocatedMB);
 
     // 5. Re-register NM by sending completed container status
     List<NMContainerStatus> nMContainerStatusForApp =
@@ -502,7 +505,7 @@ public class TestApplicationCleanup {
     waitForClusterMemory(nm1, rs, amMemory);
 
     // 6. Verify for Memory Used, it should be 1024
-    Assertions.assertEquals(amMemory, rs.getRootQueueMetrics().getAllocatedMB());
+    assertEquals(amMemory, rs.getRootQueueMetrics().getAllocatedMB());
 
     // 7. Send AM heatbeat to RM. Allocated response should contain completed
     // container
@@ -512,7 +515,7 @@ public class TestApplicationCleanup {
     AllocateResponse allocate = am0.allocate(req);
     List<ContainerStatus> completedContainersStatuses =
         allocate.getCompletedContainersStatuses();
-    Assertions.assertEquals(noOfContainers, completedContainersStatuses.size());
+    assertEquals(noOfContainers, completedContainersStatuses.size());
 
     // Application clean up should happen Cluster memory used is 0
     nm1.nodeHeartbeat(am0.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
@@ -529,7 +532,7 @@ public class TestApplicationCleanup {
 
       Thread.sleep(100);
       if (counter++ == 50) {
-        Assertions.fail("Wait for cluster memory is timed out.Expected="
+        fail("Wait for cluster memory is timed out.Expected="
             + clusterMemory + " Actual="
             + rs.getRootQueueMetrics().getAllocatedMB());
       }

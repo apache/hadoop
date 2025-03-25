@@ -388,7 +388,7 @@ public class TestAMAuthorization {
           expectedMessage =
               "SIMPLE authentication is not enabled.  Available:[TOKEN]";
         }
-        assertTrue(e.getCause().getMessage().contains(expectedMessage)); 
+        assertTrue(e.getCause().getMessage().contains(expectedMessage));
       } else {
         throw e;
       }

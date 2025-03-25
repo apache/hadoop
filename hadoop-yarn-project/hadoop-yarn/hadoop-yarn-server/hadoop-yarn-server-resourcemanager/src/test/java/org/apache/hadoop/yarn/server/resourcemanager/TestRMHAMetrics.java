@@ -23,7 +23,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -32,6 +31,7 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
@@ -78,19 +78,19 @@ public class TestRMHAMetrics {
     ObjectName mxbeanName =
         new ObjectName("Hadoop:service=ResourceManager,name=RMInfo");
 
-    Assertions.assertEquals("initializing",
+    assertEquals("initializing",
         (String) mbs.getAttribute(mxbeanName, "State"));
 
     rm.start();
-    Assertions.assertEquals("standby",
+    assertEquals("standby",
         (String) mbs.getAttribute(mxbeanName, "State"));
 
     rm.transitionToActive();
-    Assertions.assertEquals("active",
+    assertEquals("active",
             (String) mbs.getAttribute(mxbeanName, "State"));
 
     rm.transitionToStandby(true);
-    Assertions.assertEquals("standby",
+    assertEquals("standby",
         (String) mbs.getAttribute(mxbeanName, "State"));
 
     assertNotNull(DefaultMetricsSystem.instance().getSource("JvmMetrics"));

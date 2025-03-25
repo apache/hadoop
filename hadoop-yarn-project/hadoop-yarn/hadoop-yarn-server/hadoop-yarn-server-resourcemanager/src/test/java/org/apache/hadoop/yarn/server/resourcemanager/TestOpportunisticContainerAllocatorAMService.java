@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
@@ -99,7 +104,6 @@ import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -238,7 +242,7 @@ public class TestOpportunisticContainerAllocatorAMService {
         null);
     List<Container> allocatedContainers = allocateResponse
         .getAllocatedContainers();
-    Assertions.assertEquals(2, allocatedContainers.size());
+    assertEquals(2, allocatedContainers.size());
     Container container = allocatedContainers.get(0);
     MockNM allocNode = nodes.get(container.getNodeId());
     MockNM sameHostDiffNode = null;
@@ -260,7 +264,7 @@ public class TestOpportunisticContainerAllocatorAMService {
     sameHostDiffNode.nodeHeartbeat(oppContainersStatus, true);
     rm.drainEvents();
     allocateResponse =  am1.allocate(new ArrayList<>(), new ArrayList<>());
-    Assertions.assertEquals(0, allocateResponse.getUpdatedContainers().size());
+    assertEquals(0, allocateResponse.getUpdatedContainers().size());
 
     // Wait for scheduler to process all events
     dispatcher.waitForEventThreadToWait();
@@ -273,11 +277,11 @@ public class TestOpportunisticContainerAllocatorAMService {
         Arrays.asList(UpdateContainerRequest.newInstance(0,
             container.getId(), ContainerUpdateType.PROMOTE_EXECUTION_TYPE,
             null, ExecutionType.GUARANTEED)));
-    Assertions.assertEquals(0, allocateResponse.getUpdatedContainers().size());
-    Assertions.assertEquals(1, allocateResponse.getUpdateErrors().size());
-    Assertions.assertEquals("UPDATE_OUTSTANDING_ERROR",
+    assertEquals(0, allocateResponse.getUpdatedContainers().size());
+    assertEquals(1, allocateResponse.getUpdateErrors().size());
+    assertEquals("UPDATE_OUTSTANDING_ERROR",
         allocateResponse.getUpdateErrors().get(0).getReason());
-    Assertions.assertEquals(container.getId(),
+    assertEquals(container.getId(),
         allocateResponse.getUpdateErrors().get(0)
             .getUpdateContainerRequest().getContainerId());
 
@@ -288,14 +292,14 @@ public class TestOpportunisticContainerAllocatorAMService {
             container.getId(), ContainerUpdateType.PROMOTE_EXECUTION_TYPE,
             null, ExecutionType.GUARANTEED)));
 
-    Assertions.assertEquals(0, allocateResponse.getUpdatedContainers().size());
-    Assertions.assertEquals(1, allocateResponse.getUpdateErrors().size());
-    Assertions.assertEquals("INCORRECT_CONTAINER_VERSION_ERROR",
+    assertEquals(0, allocateResponse.getUpdatedContainers().size());
+    assertEquals(1, allocateResponse.getUpdateErrors().size());
+    assertEquals("INCORRECT_CONTAINER_VERSION_ERROR",
         allocateResponse.getUpdateErrors().get(0).getReason());
-    Assertions.assertEquals(0,
+    assertEquals(0,
         allocateResponse.getUpdateErrors().get(0)
             .getCurrentContainerVersion());
-    Assertions.assertEquals(container.getId(),
+    assertEquals(container.getId(),
         allocateResponse.getUpdateErrors().get(0)
             .getUpdateContainerRequest().getContainerId());
 
@@ -303,12 +307,12 @@ public class TestOpportunisticContainerAllocatorAMService {
     allocNode.nodeHeartbeat(oppContainersStatus, true);
     rm.drainEvents();
     allocateResponse =  am1.allocate(new ArrayList<>(), new ArrayList<>());
-    Assertions.assertEquals(1, allocateResponse.getUpdatedContainers().size());
+    assertEquals(1, allocateResponse.getUpdatedContainers().size());
     Container uc =
         allocateResponse.getUpdatedContainers().get(0).getContainer();
-    Assertions.assertEquals(ExecutionType.GUARANTEED, uc.getExecutionType());
-    Assertions.assertEquals(uc.getId(), container.getId());
-    Assertions.assertEquals(uc.getVersion(), container.getVersion() + 1);
+    assertEquals(ExecutionType.GUARANTEED, uc.getExecutionType());
+    assertEquals(uc.getId(), container.getId());
+    assertEquals(uc.getVersion(), container.getVersion() + 1);
 
     // Verify Metrics After OPP allocation :
     // Allocated cores+mem should have increased, available should decrease
@@ -324,7 +328,7 @@ public class TestOpportunisticContainerAllocatorAMService {
     RMContainer rmContainer = ((CapacityScheduler) scheduler)
         .getApplicationAttempt(
         uc.getId().getApplicationAttemptId()).getRMContainer(uc.getId());
-    Assertions.assertEquals(RMContainerState.ACQUIRED, rmContainer.getState());
+    assertEquals(RMContainerState.ACQUIRED, rmContainer.getState());
 
     // Now demote the container back..
     allocateResponse = am1.sendContainerUpdateRequest(
@@ -332,11 +336,11 @@ public class TestOpportunisticContainerAllocatorAMService {
             uc.getId(), ContainerUpdateType.DEMOTE_EXECUTION_TYPE,
             null, ExecutionType.OPPORTUNISTIC)));
     // This should happen in the same heartbeat..
-    Assertions.assertEquals(1, allocateResponse.getUpdatedContainers().size());
+    assertEquals(1, allocateResponse.getUpdatedContainers().size());
     uc = allocateResponse.getUpdatedContainers().get(0).getContainer();
-    Assertions.assertEquals(ExecutionType.OPPORTUNISTIC, uc.getExecutionType());
-    Assertions.assertEquals(uc.getId(), container.getId());
-    Assertions.assertEquals(uc.getVersion(), container.getVersion() + 2);
+    assertEquals(ExecutionType.OPPORTUNISTIC, uc.getExecutionType());
+    assertEquals(uc.getId(), container.getId());
+    assertEquals(uc.getVersion(), container.getVersion() + 2);
 
     // Wait for scheduler to finish processing events
     dispatcher.waitForEventThreadToWait();
@@ -396,7 +400,7 @@ public class TestOpportunisticContainerAllocatorAMService {
         null);
     List<Container> allocatedContainers = allocateResponse
         .getAllocatedContainers();
-    Assertions.assertEquals(2, allocatedContainers.size());
+    assertEquals(2, allocatedContainers.size());
     Container container = allocatedContainers.get(0);
     MockNM allocNode = nodes.get(container.getNodeId());
 
@@ -412,7 +416,7 @@ public class TestOpportunisticContainerAllocatorAMService {
         .getApplicationAttempt(
             container.getId().getApplicationAttemptId()).getRMContainer(
             container.getId());
-    Assertions.assertEquals(RMContainerState.RUNNING, rmContainer.getState());
+    assertEquals(RMContainerState.RUNNING, rmContainer.getState());
 
     // Verify Metrics After OPP allocation (Nothing should change)
     verifyMetrics(metrics, 7168, 7, 1024, 1, 1);
@@ -430,11 +434,11 @@ public class TestOpportunisticContainerAllocatorAMService {
         Arrays.asList(UpdateContainerRequest.newInstance(0,
             container.getId(), ContainerUpdateType.PROMOTE_EXECUTION_TYPE,
             null, ExecutionType.GUARANTEED)));
-    Assertions.assertEquals(0, allocateResponse.getUpdatedContainers().size());
-    Assertions.assertEquals(1, allocateResponse.getUpdateErrors().size());
-    Assertions.assertEquals("UPDATE_OUTSTANDING_ERROR",
+    assertEquals(0, allocateResponse.getUpdatedContainers().size());
+    assertEquals(1, allocateResponse.getUpdateErrors().size());
+    assertEquals("UPDATE_OUTSTANDING_ERROR",
         allocateResponse.getUpdateErrors().get(0).getReason());
-    Assertions.assertEquals(container.getId(),
+    assertEquals(container.getId(),
         allocateResponse.getUpdateErrors().get(0)
             .getUpdateContainerRequest().getContainerId());
 
@@ -446,18 +450,18 @@ public class TestOpportunisticContainerAllocatorAMService {
     rm.drainEvents();
 
     allocateResponse =  am1.allocate(new ArrayList<>(), new ArrayList<>());
-    Assertions.assertEquals(1, allocateResponse.getUpdatedContainers().size());
+    assertEquals(1, allocateResponse.getUpdatedContainers().size());
     Container uc =
         allocateResponse.getUpdatedContainers().get(0).getContainer();
-    Assertions.assertEquals(ExecutionType.GUARANTEED, uc.getExecutionType());
-    Assertions.assertEquals(uc.getId(), container.getId());
-    Assertions.assertEquals(uc.getVersion(), container.getVersion() + 1);
+    assertEquals(ExecutionType.GUARANTEED, uc.getExecutionType());
+    assertEquals(uc.getId(), container.getId());
+    assertEquals(uc.getVersion(), container.getVersion() + 1);
 
     // Verify that the Container is still in RUNNING state wrt RM..
     rmContainer = ((CapacityScheduler) scheduler)
         .getApplicationAttempt(
             uc.getId().getApplicationAttemptId()).getRMContainer(uc.getId());
-    Assertions.assertEquals(RMContainerState.RUNNING, rmContainer.getState());
+    assertEquals(RMContainerState.RUNNING, rmContainer.getState());
 
     // Verify Metrics After OPP allocation :
     // Allocated cores+mem should have increased, available should decrease
@@ -515,7 +519,7 @@ public class TestOpportunisticContainerAllocatorAMService {
         null);
     List<Container> allocatedContainers = allocateResponse
         .getAllocatedContainers();
-    Assertions.assertEquals(2, allocatedContainers.size());
+    assertEquals(2, allocatedContainers.size());
     Container container = allocatedContainers.get(0);
     MockNM allocNode = nodes.get(container.getNodeId());
 
@@ -531,7 +535,7 @@ public class TestOpportunisticContainerAllocatorAMService {
         .getApplicationAttempt(
             container.getId().getApplicationAttemptId()).getRMContainer(
             container.getId());
-    Assertions.assertEquals(RMContainerState.RUNNING, rmContainer.getState());
+    assertEquals(RMContainerState.RUNNING, rmContainer.getState());
 
     // Container Completed in the NM
     allocNode.nodeHeartbeat(Arrays.asList(
@@ -545,7 +549,7 @@ public class TestOpportunisticContainerAllocatorAMService {
         .getApplicationAttempt(
             container.getId().getApplicationAttemptId()).getRMContainer(
             container.getId());
-    Assertions.assertNull(rmContainer);
+    assertNull(rmContainer);
 
     // Verify Metrics After OPP allocation (Nothing should change)
     verifyMetrics(metrics, 7168, 7, 1024, 1, 1);
@@ -557,16 +561,16 @@ public class TestOpportunisticContainerAllocatorAMService {
             container.getId(), ContainerUpdateType.PROMOTE_EXECUTION_TYPE,
             null, ExecutionType.GUARANTEED)));
 
-    Assertions.assertEquals(1,
+    assertEquals(1,
         allocateResponse.getCompletedContainersStatuses().size());
-    Assertions.assertEquals(container.getId(),
+    assertEquals(container.getId(),
         allocateResponse.getCompletedContainersStatuses().get(0)
             .getContainerId());
-    Assertions.assertEquals(0, allocateResponse.getUpdatedContainers().size());
-    Assertions.assertEquals(1, allocateResponse.getUpdateErrors().size());
-    Assertions.assertEquals("INVALID_CONTAINER_ID",
+    assertEquals(0, allocateResponse.getUpdatedContainers().size());
+    assertEquals(1, allocateResponse.getUpdateErrors().size());
+    assertEquals("INVALID_CONTAINER_ID",
         allocateResponse.getUpdateErrors().get(0).getReason());
-    Assertions.assertEquals(container.getId(),
+    assertEquals(container.getId(),
         allocateResponse.getUpdateErrors().get(0)
             .getUpdateContainerRequest().getContainerId());
 
@@ -613,7 +617,7 @@ public class TestOpportunisticContainerAllocatorAMService {
         allocateResponse.getAllocatedContainers();
     allocatedContainers.addAll(
         am1.allocate(null, null).getAllocatedContainers());
-    Assertions.assertEquals(2, allocatedContainers.size());
+    assertEquals(2, allocatedContainers.size());
     Container container = allocatedContainers.get(0);
     // Start Container in NM
     nm1.nodeHeartbeat(Arrays.asList(ContainerStatus
@@ -625,7 +629,7 @@ public class TestOpportunisticContainerAllocatorAMService {
     RMContainer rmContainer = ((CapacityScheduler) scheduler)
         .getApplicationAttempt(container.getId().getApplicationAttemptId())
         .getRMContainer(container.getId());
-    Assertions.assertEquals(RMContainerState.RUNNING, rmContainer.getState());
+    assertEquals(RMContainerState.RUNNING, rmContainer.getState());
 
     // Send Promotion req... this should result in update error
     // Since the container doesn't exist anymore..
@@ -641,17 +645,17 @@ public class TestOpportunisticContainerAllocatorAMService {
     // Get the update response on next allocate
     allocateResponse = am1.allocate(new ArrayList<>(), new ArrayList<>());
     // Check the update response from YARNRM
-    Assertions.assertEquals(1, allocateResponse.getUpdatedContainers().size());
+    assertEquals(1, allocateResponse.getUpdatedContainers().size());
     UpdatedContainer uc = allocateResponse.getUpdatedContainers().get(0);
-    Assertions.assertEquals(container.getId(), uc.getContainer().getId());
-    Assertions.assertEquals(ExecutionType.GUARANTEED,
+    assertEquals(container.getId(), uc.getContainer().getId());
+    assertEquals(ExecutionType.GUARANTEED,
         uc.getContainer().getExecutionType());
     // Check that the container is updated in NM through NM heartbeat response
     NodeHeartbeatResponse response = nm1.nodeHeartbeat(true);
-    Assertions.assertEquals(1, response.getContainersToUpdate().size());
+    assertEquals(1, response.getContainersToUpdate().size());
     Container containersFromNM = response.getContainersToUpdate().get(0);
-    Assertions.assertEquals(container.getId(), containersFromNM.getId());
-    Assertions.assertEquals(ExecutionType.GUARANTEED,
+    assertEquals(container.getId(), containersFromNM.getId());
+    assertEquals(ExecutionType.GUARANTEED,
         containersFromNM.getExecutionType());
 
     //Increase resources
@@ -667,10 +671,10 @@ public class TestOpportunisticContainerAllocatorAMService {
     if (allocateResponse.getUpdatedContainers().size() == 0) {
       allocateResponse = am1.allocate(new ArrayList<>(), new ArrayList<>());
     }
-    Assertions.assertEquals(1, allocateResponse.getUpdatedContainers().size());
+    assertEquals(1, allocateResponse.getUpdatedContainers().size());
     uc = allocateResponse.getUpdatedContainers().get(0);
-    Assertions.assertEquals(container.getId(), uc.getContainer().getId());
-    Assertions.assertEquals(Resource.newInstance(2 * GB, 1),
+    assertEquals(container.getId(), uc.getContainer().getId());
+    assertEquals(Resource.newInstance(2 * GB, 1),
         uc.getContainer().getResource());
     rm.drainEvents();
 
@@ -679,8 +683,8 @@ public class TestOpportunisticContainerAllocatorAMService {
     if (response.getContainersToUpdate().size() == 0) {
       response = nm1.nodeHeartbeat(true);
     }
-    Assertions.assertEquals(1, response.getContainersToUpdate().size());
-    Assertions.assertEquals(Resource.newInstance(2 * GB, 1),
+    assertEquals(1, response.getContainersToUpdate().size());
+    assertEquals(Resource.newInstance(2 * GB, 1),
         response.getContainersToUpdate().get(0).getResource());
 
     //Decrease resources
@@ -688,14 +692,14 @@ public class TestOpportunisticContainerAllocatorAMService {
         UpdateContainerRequest.newInstance(2, container.getId(),
             ContainerUpdateType.DECREASE_RESOURCE,
             Resources.createResource(1 * GB, 1), null)));
-    Assertions.assertEquals(1, allocateResponse.getUpdatedContainers().size());
+    assertEquals(1, allocateResponse.getUpdatedContainers().size());
     rm.drainEvents();
 
     // Check that the container resources are decreased
     // in NM through NM heartbeat response
     response = nm1.nodeHeartbeat(true);
-    Assertions.assertEquals(1, response.getContainersToUpdate().size());
-    Assertions.assertEquals(Resource.newInstance(1 * GB, 1),
+    assertEquals(1, response.getContainersToUpdate().size());
+    assertEquals(Resource.newInstance(1 * GB, 1),
         response.getContainersToUpdate().get(0).getResource());
 
     nm1.nodeHeartbeat(oppContainersStatus, true);
@@ -714,27 +718,27 @@ public class TestOpportunisticContainerAllocatorAMService {
       allocateResponse = am1.allocate(new ArrayList<>(), new ArrayList<>());
     }
     // Check the update response from YARNRM
-    Assertions.assertEquals(1, allocateResponse.getUpdatedContainers().size());
+    assertEquals(1, allocateResponse.getUpdatedContainers().size());
     uc = allocateResponse.getUpdatedContainers().get(0);
-    Assertions.assertEquals(ExecutionType.OPPORTUNISTIC,
+    assertEquals(ExecutionType.OPPORTUNISTIC,
         uc.getContainer().getExecutionType());
     // Check that the container is updated in NM through NM heartbeat response
     if (response.getContainersToUpdate().size() == 0) {
       response = nm1.nodeHeartbeat(oppContainersStatus, true);
     }
-    Assertions.assertEquals(1, response.getContainersToUpdate().size());
-    Assertions.assertEquals(ExecutionType.OPPORTUNISTIC,
+    assertEquals(1, response.getContainersToUpdate().size());
+    assertEquals(ExecutionType.OPPORTUNISTIC,
         response.getContainersToUpdate().get(0).getExecutionType());
   }
 
   private void verifyMetrics(QueueMetrics metrics, long availableMB,
       int availableVirtualCores, long allocatedMB,
       int allocatedVirtualCores, int allocatedContainers) {
-    Assertions.assertEquals(availableMB, metrics.getAvailableMB());
-    Assertions.assertEquals(availableVirtualCores, metrics.getAvailableVirtualCores());
-    Assertions.assertEquals(allocatedMB, metrics.getAllocatedMB());
-    Assertions.assertEquals(allocatedVirtualCores, metrics.getAllocatedVirtualCores());
-    Assertions.assertEquals(allocatedContainers, metrics.getAllocatedContainers());
+    assertEquals(availableMB, metrics.getAvailableMB());
+    assertEquals(availableVirtualCores, metrics.getAvailableVirtualCores());
+    assertEquals(allocatedMB, metrics.getAllocatedMB());
+    assertEquals(allocatedVirtualCores, metrics.getAllocatedVirtualCores());
+    assertEquals(allocatedContainers, metrics.getAllocatedContainers());
   }
 
   @Test
@@ -789,12 +793,12 @@ public class TestOpportunisticContainerAllocatorAMService {
 
     List<Container> allocatedContainers = allocateResponse
         .getAllocatedContainers();
-    Assertions.assertEquals(2, allocatedContainers.size());
+    assertEquals(2, allocatedContainers.size());
 
-    Assertions.assertEquals(allocContainers + 2, metrics.getAllocatedContainers());
-    Assertions.assertEquals(aggrAllocatedContainers + 2,
+    assertEquals(allocContainers + 2, metrics.getAllocatedContainers());
+    assertEquals(aggrAllocatedContainers + 2,
         metrics.getAggregatedAllocatedContainers());
-    Assertions.assertEquals(aggrOffSwitchContainers + 2,
+    assertEquals(aggrOffSwitchContainers + 2,
         metrics.getAggregatedOffSwitchContainers());
 
     Container container = allocatedContainers.get(0);
@@ -812,7 +816,7 @@ public class TestOpportunisticContainerAllocatorAMService {
         .getApplicationAttempt(
             container.getId().getApplicationAttemptId()).getRMContainer(
             container.getId());
-    Assertions.assertEquals(RMContainerState.RUNNING, rmContainer.getState());
+    assertEquals(RMContainerState.RUNNING, rmContainer.getState());
 
     // Container Completed in the NM
     allocNode.nodeHeartbeat(Arrays.asList(
@@ -826,10 +830,10 @@ public class TestOpportunisticContainerAllocatorAMService {
         .getApplicationAttempt(
             container.getId().getApplicationAttemptId()).getRMContainer(
             container.getId());
-    Assertions.assertNull(rmContainer);
+    assertNull(rmContainer);
 
-    Assertions.assertEquals(allocContainers + 1, metrics.getAllocatedContainers());
-    Assertions.assertEquals(aggrReleasedContainers + 1,
+    assertEquals(allocContainers + 1, metrics.getAllocatedContainers());
+    assertEquals(aggrReleasedContainers + 1,
         metrics.getAggregatedReleasedContainers());
   }
 
@@ -878,7 +882,7 @@ public class TestOpportunisticContainerAllocatorAMService {
             ExecutionType.OPPORTUNISTIC, -1);
 
     // Make sure that numbers start with 0
-    Assertions.assertEquals(0, metrics.getAllocatedContainers());
+    assertEquals(0, metrics.getAllocatedContainers());
 
     // Recover one OContainer only
     rm.registerNode("h2:1234", 4096, 1,
@@ -886,7 +890,7 @@ public class TestOpportunisticContainerAllocatorAMService {
             appAttemptId.getApplicationId()),
         Collections.singletonList(recoverOContainerReport1));
 
-    Assertions.assertEquals(1, metrics.getAllocatedContainers());
+    assertEquals(1, metrics.getAllocatedContainers());
 
     // Recover two OContainers at once
     final ContainerId recoverOContainerId3 = ContainerId.newContainerId(
@@ -915,7 +919,7 @@ public class TestOpportunisticContainerAllocatorAMService {
             appAttemptId.getApplicationId()),
         Arrays.asList(recoverOContainerReport2, recoverOContainerReport3));
 
-    Assertions.assertEquals(3, metrics.getAllocatedContainers());
+    assertEquals(3, metrics.getAllocatedContainers());
 
     // Make sure that the recovered GContainer
     // does not increment OContainer count
@@ -935,7 +939,7 @@ public class TestOpportunisticContainerAllocatorAMService {
             appAttemptId.getApplicationId()),
         Collections.singletonList(recoverGContainerReport));
 
-    Assertions.assertEquals(3, metrics.getAllocatedContainers());
+    assertEquals(3, metrics.getAllocatedContainers());
 
     final ContainerId completedOContainerId = ContainerId.newContainerId(
         appAttemptId, 6);
@@ -954,7 +958,7 @@ public class TestOpportunisticContainerAllocatorAMService {
             appAttemptId.getApplicationId()),
         Collections.singletonList(completedOContainerReport));
 
-    Assertions.assertEquals(3, metrics.getAllocatedContainers());
+    assertEquals(3, metrics.getAllocatedContainers());
   }
 
   @Test
@@ -1040,7 +1044,7 @@ public class TestOpportunisticContainerAllocatorAMService {
       }
       Thread.sleep(50);
     }
-    Assertions.assertEquals(2, ctxt.getNodeMap().size());
+    assertEquals(2, ctxt.getNodeMap().size());
     // Remove node from scheduler but not from AM Service.
     scheduler.handle(new NodeRemovedSchedulerEvent(rmNode1));
     // After removal of node 1, only 1 node will be applicable for scheduling.
@@ -1051,14 +1055,14 @@ public class TestOpportunisticContainerAllocatorAMService {
                 "*", Resources.createResource(1 * GB), 2)),
             null);
       } catch (Exception e) {
-        Assertions.fail("Allocate request should be handled on node removal");
+        fail("Allocate request should be handled on node removal");
       }
       if (ctxt.getNodeMap().size() == 1) {
         break;
       }
       Thread.sleep(50);
     }
-    Assertions.assertEquals(1, ctxt.getNodeMap().size());
+    assertEquals(1, ctxt.getNodeMap().size());
   }
 
   @Test
@@ -1198,7 +1202,7 @@ public class TestOpportunisticContainerAllocatorAMService {
                 ((RegisterApplicationMasterRequestPBImpl)factory
                     .newRecordInstance(
                         RegisterApplicationMasterRequest.class)).getProto()));
-    Assertions.assertEquals("dummyQueue", regResp.getQueue());
+    assertEquals("dummyQueue", regResp.getQueue());
     FinishApplicationMasterResponse finishResp =
         new FinishApplicationMasterResponsePBImpl(
             ampProxy.finishApplicationMaster(null,
@@ -1206,7 +1210,7 @@ public class TestOpportunisticContainerAllocatorAMService {
                     .newRecordInstance(
                         FinishApplicationMasterRequest.class)).getProto()
             ));
-    Assertions.assertEquals(false, finishResp.getIsUnregistered());
+    assertEquals(false, finishResp.getIsUnregistered());
     AllocateResponse allocResp =
         new AllocateResponsePBImpl(
             ampProxy.allocate(null,
@@ -1214,10 +1218,10 @@ public class TestOpportunisticContainerAllocatorAMService {
                     .newRecordInstance(AllocateRequest.class)).getProto())
         );
     List<Container> allocatedContainers = allocResp.getAllocatedContainers();
-    Assertions.assertEquals(1, allocatedContainers.size());
-    Assertions.assertEquals(ExecutionType.OPPORTUNISTIC,
+    assertEquals(1, allocatedContainers.size());
+    assertEquals(ExecutionType.OPPORTUNISTIC,
         allocatedContainers.get(0).getExecutionType());
-    Assertions.assertEquals(12345, allocResp.getNumClusterNodes());
+    assertEquals(12345, allocResp.getNumClusterNodes());
 
 
     // Verify that the DistrubutedSchedulingService can handle the
@@ -1234,12 +1238,12 @@ public class TestOpportunisticContainerAllocatorAMService {
                 ((RegisterApplicationMasterRequestPBImpl)factory
                     .newRecordInstance(RegisterApplicationMasterRequest.class))
                     .getProto()));
-    Assertions.assertEquals(54321l, dsRegResp.getContainerIdStart());
-    Assertions.assertEquals(4,
+    assertEquals(54321l, dsRegResp.getContainerIdStart());
+    assertEquals(4,
         dsRegResp.getMaxContainerResource().getVirtualCores());
-    Assertions.assertEquals(1024,
+    assertEquals(1024,
         dsRegResp.getMinContainerResource().getMemorySize());
-    Assertions.assertEquals(2,
+    assertEquals(2,
         dsRegResp.getIncrContainerResource().getVirtualCores());
 
     DistributedSchedulingAllocateRequestPBImpl distAllReq =
@@ -1251,9 +1255,9 @@ public class TestOpportunisticContainerAllocatorAMService {
         new DistributedSchedulingAllocateResponsePBImpl(
             dsProxy.allocateForDistributedScheduling(null,
                 distAllReq.getProto()));
-    Assertions.assertEquals(
+    assertEquals(
         "h1", dsAllocResp.getNodesForScheduling().get(0).getNodeId().getHost());
-    Assertions.assertEquals(
+    assertEquals(
         "l1", dsAllocResp.getNodesForScheduling().get(1).getNodePartition());
 
     FinishApplicationMasterResponse dsfinishResp =
@@ -1262,7 +1266,7 @@ public class TestOpportunisticContainerAllocatorAMService {
                 ((FinishApplicationMasterRequestPBImpl) factory
                     .newRecordInstance(FinishApplicationMasterRequest.class))
                     .getProto()));
-    Assertions.assertEquals(
+    assertEquals(
         false, dsfinishResp.getIsUnregistered());
   }
 
@@ -1324,11 +1328,11 @@ public class TestOpportunisticContainerAllocatorAMService {
         List<ResourceRequest> askList =
             request.getAllocateRequest().getAskList();
         List<Container> allocatedContainers = request.getAllocatedContainers();
-        Assertions.assertEquals(1, allocatedContainers.size());
-        Assertions.assertEquals(ExecutionType.OPPORTUNISTIC,
+        assertEquals(1, allocatedContainers.size());
+        assertEquals(ExecutionType.OPPORTUNISTIC,
             allocatedContainers.get(0).getExecutionType());
-        Assertions.assertEquals(1, askList.size());
-        Assertions.assertTrue(askList.get(0)
+        assertEquals(1, askList.size());
+        assertTrue(askList.get(0)
             .getExecutionTypeRequest().getEnforceExecutionType());
         DistributedSchedulingAllocateResponse resp = factory
             .newRecordInstance(DistributedSchedulingAllocateResponse.class);

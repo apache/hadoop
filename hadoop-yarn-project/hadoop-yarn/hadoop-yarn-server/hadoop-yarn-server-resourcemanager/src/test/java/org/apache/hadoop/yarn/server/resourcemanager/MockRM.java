@@ -287,8 +287,8 @@ public class MockRM extends ResourceManager {
     }
 
     LOG.info("App State is : " + app.getState());
-    assertEquals(finalState,
-        app.getState(), "App State is not correct (timeout).");
+    assertEquals(finalState, app.getState(),
+        "App State is not correct (timeout).");
   }
 
   /**
@@ -361,8 +361,8 @@ public class MockRM extends ResourceManager {
     }
 
     LOG.info("Attempt State is : " + attempt.getAppAttemptState());
-    assertEquals(finalState,
-        attempt.getState(), "Attempt state is not correct (timeout).");
+    assertEquals(finalState, attempt.getState(),
+        "Attempt state is not correct (timeout).");
   }
 
   public void waitForContainerToComplete(RMAppAttempt attempt,
@@ -622,8 +622,8 @@ public class MockRM extends ResourceManager {
     }
 
     LOG.info("Node " + nodeId + " State is : " + node.getState());
-    assertEquals(finalState,
-        node.getState(), "Node state is not correct (timedout)");
+    assertEquals(finalState, node.getState(),
+        "Node state is not correct (timedout)");
   }
 
   public void sendNodeGracefulDecommission(
@@ -886,8 +886,9 @@ public class MockRM extends ResourceManager {
       tick++;
     }
     assertNotNull(((AbstractYarnScheduler)
-        rm.getResourceScheduler()).getApplicationAttempt(attemptId), "Timed out waiting for SchedulerApplicationAttempt=" +
-      attemptId + " to be added.");
+        rm.getResourceScheduler()).getApplicationAttempt(attemptId),
+        "Timed out waiting for SchedulerApplicationAttempt=" +
+        attemptId + " to be added.");
   }
 
   public static MockAM launchAMWhenAsyncSchedulingEnabled(RMApp app, MockRM rm)

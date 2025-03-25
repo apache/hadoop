@@ -16,6 +16,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceContext;
@@ -37,7 +39,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -203,17 +204,17 @@ public class TestApplicationMasterServiceInterceptor {
             .getContainerToken());
     am1.unregisterAppAttempt();
 
-    Assertions.assertEquals(1, beforeRegCount.get());
-    Assertions.assertEquals(1, afterRegCount.get());
+    assertEquals(1, beforeRegCount.get());
+    assertEquals(1, afterRegCount.get());
 
     // The allocate calls should be incremented twice
-    Assertions.assertEquals(allocCount * 2, beforeAllocCount.get());
-    Assertions.assertEquals(allocCount * 2, afterAllocCount.get());
+    assertEquals(allocCount * 2, beforeAllocCount.get());
+    assertEquals(allocCount * 2, afterAllocCount.get());
 
     // Finish should only be called once, since the FirstInterceptor
     // does not forward the call.
-    Assertions.assertEquals(1, beforeFinishCount.get());
-    Assertions.assertEquals(1, afterFinishCount.get());
+    assertEquals(1, beforeFinishCount.get());
+    assertEquals(1, afterFinishCount.get());
     rm.stop();
   }
 }

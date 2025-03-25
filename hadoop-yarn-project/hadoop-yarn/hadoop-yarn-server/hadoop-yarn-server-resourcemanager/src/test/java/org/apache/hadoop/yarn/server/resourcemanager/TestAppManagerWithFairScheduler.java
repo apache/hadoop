@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException.InvalidResourceType.GREATER_THEN_MAX_ALLOCATION;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -56,7 +58,6 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -131,9 +132,9 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
         .thenReturn(new ApplicationPlacementContext("limited"));
     try {
       rmAppManager.submitApplication(asContext, "test");
-      Assertions.fail("Test should fail on too high allocation!");
+      fail("Test should fail on too high allocation!");
     } catch (InvalidResourceRequestException e) {
-      Assertions.assertEquals(GREATER_THEN_MAX_ALLOCATION,
+      assertEquals(GREATER_THEN_MAX_ALLOCATION,
           e.getInvalidResourceType());
     }
 
@@ -176,7 +177,7 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
         .thenReturn(new ApplicationPlacementContext("noaccess"));
     try {
       rmAppManager.submitApplication(asContext, "test");
-      Assertions.fail("Test should have failed with access denied");
+      fail("Test should have failed with access denied");
     } catch (YarnException e) {
       assertTrue(
          e.getCause() instanceof AccessControlException, "Access exception not found");
@@ -249,7 +250,7 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
         .thenReturn(new ApplicationPlacementContext("root.noaccess.child"));
     try {
       rmAppManager.submitApplication(asContext, "test");
-      Assertions.fail("Test should have failed with access denied");
+      fail("Test should have failed with access denied");
     } catch (YarnException e) {
       assertTrue(
          e.getCause() instanceof AccessControlException, "Access exception not found");

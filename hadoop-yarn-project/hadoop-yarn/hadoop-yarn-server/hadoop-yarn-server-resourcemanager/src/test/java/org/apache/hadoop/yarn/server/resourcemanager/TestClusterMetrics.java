@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.function.Supplier;
@@ -40,15 +41,15 @@ public class TestClusterMetrics {
   @Test
   public void testAmMetrics() throws Exception {
     assert(metrics != null);
-    Assertions.assertTrue(!metrics.aMLaunchDelay.changed());
-    Assertions.assertTrue(!metrics.aMRegisterDelay.changed());
-    Assertions.assertTrue(!metrics.getAMContainerAllocationDelay().changed());
+    assertTrue(!metrics.aMLaunchDelay.changed());
+    assertTrue(!metrics.aMRegisterDelay.changed());
+    assertTrue(!metrics.getAMContainerAllocationDelay().changed());
     metrics.addAMLaunchDelay(1);
     metrics.addAMRegisterDelay(1);
     metrics.addAMContainerAllocationDelay(1);
-    Assertions.assertTrue(metrics.aMLaunchDelay.changed());
-    Assertions.assertTrue(metrics.aMRegisterDelay.changed());
-    Assertions.assertTrue(metrics.getAMContainerAllocationDelay().changed());
+    assertTrue(metrics.aMLaunchDelay.changed());
+    assertTrue(metrics.aMRegisterDelay.changed());
+    assertTrue(metrics.getAMContainerAllocationDelay().changed());
   }
 
   @BeforeEach
@@ -69,7 +70,7 @@ public class TestClusterMetrics {
 
   @Test
   public void testClusterMetrics() throws Exception {
-    Assertions.assertTrue(!metrics.containerAssignedPerSecond.changed());
+    assertTrue(!metrics.containerAssignedPerSecond.changed());
     metrics.incrNumContainerAssigned();
     metrics.incrNumContainerAssigned();
     GenericTestUtils.waitFor(new Supplier<Boolean>() {

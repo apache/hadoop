@@ -47,7 +47,6 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -58,6 +57,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils.toSet;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -144,8 +144,8 @@ public class TestApplicationMasterServiceCapacity extends
                   ContainerId.newContainerId(attempt1.getAppAttemptId(), 1),
                   ContainerUpdateType.INCREASE_RESOURCE,
                   Resources.createResource(-1), null)));
-      Assertions.assertEquals(1, response.getUpdateErrors().size());
-      Assertions.assertEquals("RESOURCE_OUTSIDE_ALLOWED_RANGE",
+      assertEquals(1, response.getUpdateErrors().size());
+      assertEquals("RESOURCE_OUTSIDE_ALLOWED_RANGE",
           response.getUpdateErrors().get(0).getReason());
 
       // Target resource is more than maxAllocation, should fail
@@ -156,8 +156,8 @@ public class TestApplicationMasterServiceCapacity extends
               Resources.add(
                   registerResponse.getMaximumResourceCapability(),
                   Resources.createResource(1)), null)));
-      Assertions.assertEquals(1, response.getUpdateErrors().size());
-      Assertions.assertEquals("RESOURCE_OUTSIDE_ALLOWED_RANGE",
+      assertEquals(1, response.getUpdateErrors().size());
+      assertEquals("RESOURCE_OUTSIDE_ALLOWED_RANGE",
           response.getUpdateErrors().get(0).getReason());
 
       // Contains multiple increase/decrease requests for same containerId
@@ -170,8 +170,8 @@ public class TestApplicationMasterServiceCapacity extends
               ContainerId.newContainerId(attempt1.getAppAttemptId(), 1),
               ContainerUpdateType.DECREASE_RESOURCE,
               Resources.createResource(1024, 1), null)));
-      Assertions.assertEquals(1, response.getUpdateErrors().size());
-      Assertions.assertEquals("UPDATE_OUTSTANDING_ERROR",
+      assertEquals(1, response.getUpdateErrors().size());
+      assertEquals("UPDATE_OUTSTANDING_ERROR",
           response.getUpdateErrors().get(0).getReason());
     }
   }
@@ -209,7 +209,7 @@ public class TestApplicationMasterServiceCapacity extends
     allocateRequest.setAskList(ask);
 
     AllocateResponse response1 = am1.allocate(allocateRequest);
-    Assertions.assertEquals(appPriority1, response1.getApplicationPriority());
+    assertEquals(appPriority1, response1.getApplicationPriority());
 
     // Change the priority of App1 to 8
     Priority appPriority2 = Priority.newInstance(8);
@@ -219,7 +219,7 @@ public class TestApplicationMasterServiceCapacity extends
         appPriority2);
 
     AllocateResponse response2 = am1.allocate(allocateRequest);
-    Assertions.assertEquals(appPriority2, response2.getApplicationPriority());
+    assertEquals(appPriority2, response2.getApplicationPriority());
     rm.stop();
   }
 
@@ -256,7 +256,7 @@ public class TestApplicationMasterServiceCapacity extends
     allocateRequest.setAskList(ask);
 
     AllocateResponse response1 = am1.allocate(allocateRequest);
-    Assertions.assertEquals(3, response1.getNumClusterNodes());
+    assertEquals(3, response1.getNumClusterNodes());
 
     rm.stop();
   }
@@ -373,10 +373,10 @@ public class TestApplicationMasterServiceCapacity extends
     }
 
     //has 3 nodes with node label "x"
-    Assertions.assertEquals(3, response1.getNumClusterNodes());
+    assertEquals(3, response1.getNumClusterNodes());
 
     //has 1 node with node label "y"
-    Assertions.assertEquals(1, response2.getNumClusterNodes());
+    assertEquals(1, response2.getNumClusterNodes());
 
     rm.stop();
   }

@@ -307,7 +307,7 @@ public class TestClientRMService {
         client.getClusterNodes(request).getNodeReports();
     assertEquals(1, nodeReports.size());
     assertNotSame(NodeState.UNHEALTHY, nodeReports.get(0).getNodeState(),
-            "Node is expected to be healthy!");
+        "Node is expected to be healthy!");
 
     // Check node's label = x
     assertTrue(nodeReports.get(0).getNodeLabels().contains("x"));
@@ -663,8 +663,7 @@ public class TestClientRMService {
             .build();
     RMApp app2 = MockRMAppSubmitter.submit(rm, data);
 
-    assertEquals(0,
-        rmService.getApplications(getRequest).getApplicationList().size(),
+    assertEquals(0, rmService.getApplications(getRequest).getApplicationList().size(),
         "Incorrect number of apps in the RM");
 
     KillApplicationRequest killRequest1 =
