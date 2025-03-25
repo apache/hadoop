@@ -600,11 +600,11 @@ public final class SecurityUtil {
   static abstract class CacheableHostResolver implements HostResolver {
     private volatile LoadingCache<String, InetAddress> cache;
 
-    public CacheableHostResolver(int expiryIntervalSecs) {
+    CacheableHostResolver(int expiryIntervalSecs) {
       if (expiryIntervalSecs > 0) {
         cache = CacheBuilder.newBuilder()
             .expireAfterWrite(expiryIntervalSecs, TimeUnit.SECONDS)
-            .build( new CacheLoader<String, InetAddress>() {
+            .build(new CacheLoader<String, InetAddress>() {
               @Override
               public InetAddress load(String key) throws Exception {
                 return resolve(key);

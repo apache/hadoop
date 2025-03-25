@@ -596,7 +596,7 @@ public class TestSecurityUtil {
   }
 
   /**
-   * Test resolving non-existent hostname, show throw UnknownHostException
+   * Test resolving non-existent hostname, show throw UnknownHostException.
    */
   @Test
   public void testInvalidHostThrowsException() {
