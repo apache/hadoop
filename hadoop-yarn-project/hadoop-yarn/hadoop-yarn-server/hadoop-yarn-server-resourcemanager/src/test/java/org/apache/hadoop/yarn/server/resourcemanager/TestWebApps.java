@@ -112,13 +112,12 @@ public class TestWebApps {
   @Test
   public void testWebAppInitializersOrdering() throws Exception {
     String[] filterNamesArray = {"NoCacheFilter", "safety",
-        "RMAuthenticationFilter", "SpnegoFilter",
-        "org.apache.hadoop.security.http.XFrameOptionsFilter", "guice"};
+        "RMAuthenticationFilter", "guice"};
 
     HttpServer2 server = rm.getWebapp().httpServer();
     WebAppContext context = server.getWebAppContext();
     FilterHolder[] filterHolders = context.getServletHandler().getFilters();
-    Assert.assertEquals(filterHolders.length, 6);
+    Assert.assertEquals(filterHolders.length, 4);
     for (int index = 0; index < filterHolders.length; index++) {
       Assert.assertTrue(
           filterHolders[index].getName().equals(filterNamesArray[index]));
