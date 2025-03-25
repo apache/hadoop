@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -67,9 +67,8 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
@@ -158,7 +157,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   }
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
   }
@@ -435,8 +434,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   private void assertLabelsToNodesInfo(LabelsToNodesInfo labelsToNodesInfo, int size,
       List<Pair<Pair<String, Boolean>, List<String>>> nodeLabelsToNodesList) {
     Map<NodeLabelInfo, NodeIDsInfo> labelsToNodes = labelsToNodesInfo.getLabelsToNodes();
-    assertNotNull("Labels to nodes mapping should not be null.", labelsToNodes);
-    assertEquals("Size of label to nodes mapping is not the expected.", size, labelsToNodes.size());
+    assertNotNull(labelsToNodes, "Labels to nodes mapping should not be null.");
+    assertEquals(size, labelsToNodes.size(), "Size of label to nodes mapping is not the expected.");
 
     for (Pair<Pair<String, Boolean>, List<String>> nodeLabelToNodes : nodeLabelsToNodesList) {
       Pair<String, Boolean> expectedNLData = nodeLabelToNodes.getLeft();
@@ -444,11 +443,12 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
       NodeLabelInfo expectedNLInfo = new NodeLabelInfo(expectedNLData.getLeft(),
           expectedNLData.getRight());
       NodeIDsInfo actualNodes = labelsToNodes.get(expectedNLInfo);
-      assertNotNull(String.format("Node info not found. Expected NodeLabel data: %s",
-          expectedNLData), actualNodes);
+      assertNotNull(actualNodes, String.format("Node info not found. Expected NodeLabel data: %s",
+          expectedNLData));
       for (String expectedNode : expectedNodes) {
-        assertTrue(String.format("Can't find node ID in actual Node IDs list: %s",
-                actualNodes.getNodeIDs()), actualNodes.getNodeIDs().contains(expectedNode));
+        assertTrue(actualNodes.getNodeIDs().contains(expectedNode),
+            String.format("Can't find node ID in actual Node IDs list: %s",
+            actualNodes.getNodeIDs()));
       }
     }
   }
@@ -477,17 +477,17 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   private void assertNodeLabelsInfoContains(NodeLabelsInfo nodeLabelsInfo,
       Pair<String, Boolean> nlInfo) {
     NodeLabelInfo nodeLabelInfo = new NodeLabelInfo(nlInfo.getLeft(), nlInfo.getRight());
-    assertTrue(String.format("Cannot find nodeLabelInfo '%s' among items of node label info list:" +
-            " %s", nodeLabelInfo, nodeLabelsInfo.getNodeLabelsInfo()),
-        nodeLabelsInfo.getNodeLabelsInfo().contains(nodeLabelInfo));
+    assertTrue(nodeLabelsInfo.getNodeLabelsInfo().contains(nodeLabelInfo),
+        String.format("Cannot find nodeLabelInfo '%s' among items of node label info list:" +
+        " %s", nodeLabelInfo, nodeLabelsInfo.getNodeLabelsInfo()));
   }
 
   private void assertNodeLabelsInfoDoesNotContain(NodeLabelsInfo nodeLabelsInfo, Pair<String,
       Boolean> nlInfo) {
     NodeLabelInfo nodeLabelInfo = new NodeLabelInfo(nlInfo.getLeft(), nlInfo.getRight());
-    assertFalse(String.format("Should have not found nodeLabelInfo '%s' among " +
-        "items of node label info list: %s", nodeLabelInfo, nodeLabelsInfo.getNodeLabelsInfo()),
-        nodeLabelsInfo.getNodeLabelsInfo().contains(nodeLabelInfo));
+    assertFalse(nodeLabelsInfo.getNodeLabelsInfo().contains(nodeLabelInfo),
+        String.format("Should have not found nodeLabelInfo '%s' among " +
+        "items of node label info list: %s", nodeLabelInfo, nodeLabelsInfo.getNodeLabelsInfo()));
   }
 
   private void assertNodeLabelsSize(NodeLabelsInfo nodeLabelsInfo, int expectedSize) {
@@ -622,11 +622,11 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   private void validateJsonExceptionContent(Response response,
       String expectedMessage)
       throws JSONException {
-    Assert.assertEquals(BAD_REQUEST_CODE, response.getStatus());
+    assertEquals(BAD_REQUEST_CODE, response.getStatus());
     JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
     String message = exception.getString("message");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
     WebServicesTestUtils.checkStringMatch("exception type",

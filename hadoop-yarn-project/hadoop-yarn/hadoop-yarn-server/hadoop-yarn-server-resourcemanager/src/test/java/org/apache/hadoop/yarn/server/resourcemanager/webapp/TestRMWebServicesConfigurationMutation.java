@@ -46,11 +46,11 @@ import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,10 +76,10 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServic
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.backupSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.restoreSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ORDERING_POLICY;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -156,18 +156,18 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
   }
 
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
     backupSchedulerConfigFileInTarget();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() {
     restoreSchedulerConfigFileInTarget();
   }
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
   }
@@ -409,8 +409,8 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         .getConfiguration();
     bOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
         + "root.b" + CapacitySchedulerConfiguration.DOT + ORDERING_POLICY;
-    assertNull("Failed to unset Parent Queue OrderingPolicy",
-        newCSConf.get(bOrderingPolicy));
+    assertNull(newCSConf.get(bOrderingPolicy),
+        "Failed to unset Parent Queue OrderingPolicy");
   }
 
   @Test
@@ -453,8 +453,8 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         .getConfiguration();
     cOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
         + "root.c" + CapacitySchedulerConfiguration.DOT + ORDERING_POLICY;
-    assertNull("Failed to unset Leaf Queue OrderingPolicy",
-        newCSConf.get(cOrderingPolicy));
+    assertNull(newCSConf.get(cOrderingPolicy),
+        "Failed to unset Leaf Queue OrderingPolicy");
   }
 
   @Test
@@ -477,10 +477,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
         ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
-    assertEquals("Failed to remove the queue",
-        1, newCSConf.getQueues(ROOT_A).size());
-    assertEquals("Failed to remove the right queue",
-        "a1", newCSConf.getQueues(ROOT_A).get(0));
+    assertEquals(1, newCSConf.getQueues(ROOT_A).size(),
+        "Failed to remove the queue");
+    assertEquals("a1", newCSConf.getQueues(ROOT_A).get(0),
+        "Failed to remove the right queue");
   }
 
   @Test
@@ -520,8 +520,8 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
     // Validate Queue 'mappedqueue' exists before deletion
-    assertNotNull("Failed to setup CapacityScheduler Configuration",
-        cs.getQueue("mappedqueue"));
+    assertNotNull(cs.getQueue("mappedqueue"),
+        "Failed to setup CapacityScheduler Configuration");
 
     // Set state of queue 'mappedqueue' to STOPPED.
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
@@ -547,8 +547,8 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     CapacitySchedulerConfiguration newCSConf =
         ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
     assertEquals(4, newCSConf.getQueues(ROOT).size());
-    assertNotNull("CapacityScheduler Configuration is corrupt",
-        cs.getQueue("mappedqueue"));
+    assertNotNull(cs.getQueue("mappedqueue"),
+        "CapacityScheduler Configuration is corrupt");
   }
 
   @Test
@@ -1034,7 +1034,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
   }
 
   @Override
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (rm != null) {
       rm.stop();

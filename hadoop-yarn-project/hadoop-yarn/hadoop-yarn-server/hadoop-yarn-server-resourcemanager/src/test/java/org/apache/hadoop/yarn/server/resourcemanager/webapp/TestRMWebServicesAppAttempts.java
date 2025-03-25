@@ -43,7 +43,8 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -65,8 +66,8 @@ import java.util.Collection;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.checkStringMatch;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -126,7 +127,8 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test (timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testCompletedAppAttempt() throws Exception {
     Configuration conf = rm.getConfig();
     String logServerUrl = "http://localhost:19888/jobhistory/logs";
@@ -167,7 +169,8 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test (timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testMultipleAppAttempts() throws Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 8192);
@@ -197,8 +200,8 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
       am = MockRM.launchAndRegisterAM(app1, rm, amNodeManager);
       numAttempt++;
     }
-    assertEquals("incorrect number of attempts", maxAppAttempts,
-        app1.getAppAttempts().values().size());
+    assertEquals(maxAppAttempts,
+        app1.getAppAttempts().values().size(), "incorrect number of attempts");
     testAppAttemptsHelper(app1.getApplicationId().toString(), app1,
         MediaType.APPLICATION_JSON);
     rm.stop();
@@ -247,7 +250,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
           response.getMediaType().toString());
       JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
+      assertEquals(3, exception.length(), "incorrect number of elements");
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
@@ -284,7 +287,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
           response.getMediaType().toString());
       JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
+      assertEquals(3, exception.length(), "incorrect number of elements");
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
@@ -325,7 +328,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
 
       JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
+      assertEquals(3, exception.length(), "incorrect number of elements");
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
@@ -348,14 +351,14 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject jsonAppAttempts = json.getJSONObject("appAttempts");
-    assertEquals("incorrect number of elements", 1, jsonAppAttempts.length());
+    assertEquals(1, jsonAppAttempts.length(), "incorrect number of elements");
     JSONArray jsonArray = parseJsonAppAttempt(jsonAppAttempts);
 
     Collection<RMAppAttempt> attempts = app.getAppAttempts().values();
-    assertEquals("incorrect number of elements", attempts.size(),
-        jsonArray.length());
+    assertEquals(attempts.size(), jsonArray.length(),
+        "incorrect number of elements");
 
     // Verify these parallel arrays are the same
     int i = 0;
@@ -406,9 +409,9 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList nodes = dom.getElementsByTagName("appAttempts");
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
     NodeList attempt = dom.getElementsByTagName("appAttempt");
-    assertEquals("incorrect number of elements", 1, attempt.getLength());
+    assertEquals(1, attempt.getLength(), "incorrect number of elements");
     verifyAppAttemptsXML(attempt, app1.getCurrentAppAttempt(), user);
     rm.stop();
   }
@@ -435,7 +438,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
           String user)
           throws Exception {
 
-    assertEquals("incorrect number of elements", 12, info.length());
+    assertEquals(12, info.length(), "incorrect number of elements");
 
     verifyAppAttemptInfoGeneric(appAttempt, info.getInt("id"),
             info.getLong("startTime"), info.getString("containerId"),
@@ -449,21 +452,19 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
           nodeId, String logsLink, String user, String exportPorts,
           String appAttemptState) {
 
-    assertEquals("id doesn't match", appAttempt.getAppAttemptId()
-            .getAttemptId(), id);
-    assertEquals("startedTime doesn't match", appAttempt.getStartTime(),
-            startTime);
+    assertEquals(appAttempt.getAppAttemptId()
+        .getAttemptId(), id, "id doesn't match");
+    assertEquals(appAttempt.getStartTime(),
+        startTime, "startedTime doesn't match");
     checkStringMatch("containerId", appAttempt
             .getMasterContainer().getId().toString(), containerId);
     checkStringMatch("nodeHttpAddress", appAttempt
             .getMasterContainer().getNodeHttpAddress(), nodeHttpAddress);
     checkStringMatch("nodeId", appAttempt
             .getMasterContainer().getNodeId().toString(), nodeId);
-    assertTrue("logsLink doesn't match ", logsLink.startsWith("http://"));
-    assertTrue(
-            "logsLink doesn't contain user info", logsLink.endsWith("/"
-                    + user));
-    assertEquals("appAttemptState doesn't match", appAttemptState, appAttempt
-            .getAppAttemptState().toString());
+    assertTrue(logsLink.startsWith("http://"), "logsLink doesn't match ");
+    assertTrue(logsLink.endsWith("/" + user), "logsLink doesn't contain user info");
+    assertEquals(appAttemptState, appAttempt.getAppAttemptState().toString(),
+        "appAttemptState doesn't match");
   }
 }
