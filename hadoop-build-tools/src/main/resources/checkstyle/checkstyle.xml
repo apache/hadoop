@@ -75,7 +75,7 @@
 
     <module name="RegexpSingleline">
         <property name="format" value="\s+$"/>
-        <property name="severity" value="warn"/>
+        <property name="severity" value="warning"/>
     </module>
 
     <module name="TreeWalker">
