@@ -34,18 +34,17 @@ import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration.parseResourceConfigValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests fair scheduler configuration.
@@ -77,49 +76,57 @@ public class TestFairSchedulerConfiguration {
     }
   }
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
-  private void expectMissingResource(String resource) {
-    exception.expect(AllocationConfigurationException.class);
-    exception.expectMessage("Missing resource: " + resource);
+  private void expectMissingResource(String resource, Executable call) {
+    AllocationConfigurationException exception =
+        assertThrows(AllocationConfigurationException.class, call);
+    assertTrue(exception.getMessage().
+        contains("Missing resource: " + resource));
   }
 
-  private void expectUnparsableResource(String resource) {
-    exception.expect(AllocationConfigurationException.class);
-    exception.expectMessage("Cannot parse resource values from input: "
-        + resource);
+  private void expectUnparsableResource(String resource, Executable call) {
+    AllocationConfigurationException exception =
+        assertThrows(AllocationConfigurationException.class, call);
+    assertTrue(exception.getMessage().
+        contains("Cannot parse resource values from input: " + resource));
   }
 
-  private void expectInvalidResource(String resource) {
-    exception.expect(AllocationConfigurationException.class);
-    exception.expectMessage("Invalid value of " + resource + ": ");
+  private void expectInvalidResource(String resource, Executable call) {
+    AllocationConfigurationException exception =
+        assertThrows(AllocationConfigurationException.class, call);
+    assertTrue(exception.getMessage().
+        contains("Invalid value of " + resource + ": "));
   }
 
-  private void expectInvalidResourcePercentage(String resource) {
-    exception.expect(AllocationConfigurationException.class);
-    exception.expectMessage("Invalid percentage of " + resource + ": ");
+  private void expectInvalidResourcePercentage(String resource, Executable call) {
+    AllocationConfigurationException exception =
+        assertThrows(AllocationConfigurationException.class, call);
+    assertTrue(exception.getMessage().
+        contains("Invalid percentage of " + resource + ": "));
   }
 
-  private void expectInvalidResourcePercentageNewStyle(String value) {
-    exception.expect(AllocationConfigurationException.class);
-    exception.expectMessage("\"" + value + "\" is either " +
-        "not a non-negative number");
+  private void expectInvalidResourcePercentageNewStyle(String value, Executable call) {
+    AllocationConfigurationException exception =
+        assertThrows(AllocationConfigurationException.class, call);
+    assertTrue(exception.getMessage().
+        contains("\"" + value + "\" is either " + "not a non-negative number"));
   }
 
-  private void expectNegativePercentageOldStyle() {
-    exception.expect(AllocationConfigurationException.class);
-    exception.expectMessage("percentage should not be negative");
+  private void expectNegativePercentageOldStyle(Executable call) {
+    AllocationConfigurationException exception =
+        assertThrows(AllocationConfigurationException.class, call);
+    assertTrue(exception.getMessage().contains("percentage should not be negative"));
   }
 
-  private void expectNegativePercentageNewStyle() {
-    exception.expect(AllocationConfigurationException.class);
-    exception.expectMessage("is either not a non-negative number");
+  private void expectNegativePercentageNewStyle(Executable call) {
+    AllocationConfigurationException exception =
+        assertThrows(AllocationConfigurationException.class, call);
+    assertTrue(exception.getMessage().contains("is either not a non-negative number"));
   }
 
-  private void expectNegativeValueOfResource(String resource) {
-    exception.expect(AllocationConfigurationException.class);
-    exception.expectMessage("Invalid value of " + resource);
+  private void expectNegativeValueOfResource(String resource, Executable call) {
+    AllocationConfigurationException exception =
+        assertThrows(AllocationConfigurationException.class, call);
+    assertTrue(exception.getMessage().contains("Invalid value of " + resource));
   }
 
   @Test
@@ -270,181 +277,210 @@ public class TestFairSchedulerConfiguration {
   @Test
   public void testNoUnits() throws Exception {
     String value = "1024";
-    expectUnparsableResource(value);
-    parseResourceConfigValue(value);
+    expectUnparsableResource(value, () -> {
+      parseResourceConfigValue(value);
+    });
   }
 
   @Test
   public void testOnlyMemory() throws Exception {
     String value = "1024mb";
-    expectUnparsableResource(value);
-    parseResourceConfigValue(value);
+    expectUnparsableResource(value, () -> {
+      parseResourceConfigValue(value);
+    });
   }
 
   @Test
   public void testOnlyCPU() throws Exception {
     String value = "1024vcores";
-    expectUnparsableResource(value);
-    parseResourceConfigValue(value);
+    expectUnparsableResource(value, () -> {
+      parseResourceConfigValue(value);
+    });
   }
 
   @Test
   public void testGibberish() throws Exception {
     String value = "1o24vc0res";
-    expectUnparsableResource(value);
-    parseResourceConfigValue(value);
+    expectUnparsableResource(value, () -> {
+      parseResourceConfigValue(value);
+    });
   }
 
   @Test
   public void testNoUnitsPercentage() throws Exception {
-    expectMissingResource("cpu");
-    parseResourceConfigValue("95%, 50% memory");
+    expectMissingResource("cpu", () -> {
+      parseResourceConfigValue("95%, 50% memory");
+    });
   }
 
   @Test
   public void testInvalidNumPercentage() throws Exception {
-    expectInvalidResourcePercentage("cpu");
-    parseResourceConfigValue("95A% cpu, 50% memory");
+    expectInvalidResourcePercentage("cpu", () -> {
+      parseResourceConfigValue("95A% cpu, 50% memory");
+    });
   }
 
   @Test
   public void testCpuPercentageMemoryAbsolute() throws Exception {
-    expectMissingResource("memory");
-    parseResourceConfigValue("50% cpu, 1024 mb");
+    expectMissingResource("memory", () -> {
+      parseResourceConfigValue("50% cpu, 1024 mb");
+    });
   }
 
   @Test
   public void testMemoryPercentageCpuAbsolute() throws Exception {
-    expectMissingResource("cpu");
-    parseResourceConfigValue("50% memory, 2 vcores");
+    expectMissingResource("cpu", () -> {
+      parseResourceConfigValue("50% memory, 2 vcores");
+    });
   }
 
   @Test
   public void testDuplicateVcoresDefinitionAbsolute() throws Exception {
-    expectInvalidResource("vcores");
-    parseResourceConfigValue("1024 mb, 2 4 vcores");
+    expectInvalidResource("vcores", () -> {
+      parseResourceConfigValue("1024 mb, 2 4 vcores");
+    });
   }
 
   @Test
   public void testDuplicateMemoryDefinitionAbsolute() throws Exception {
-    expectInvalidResource("memory");
-    parseResourceConfigValue("2048 1024 mb, 2 vcores");
+    expectInvalidResource("memory", () -> {
+      parseResourceConfigValue("2048 1024 mb, 2 vcores");
+    });
   }
 
   @Test
   public void testDuplicateVcoresDefinitionPercentage() throws Exception {
-    expectInvalidResourcePercentage("cpu");
-    parseResourceConfigValue("50% memory, 50% 100%cpu");
+    expectInvalidResourcePercentage("cpu", () -> {
+      parseResourceConfigValue("50% memory, 50% 100%cpu");
+    });
   }
 
   @Test
   public void testDuplicateMemoryDefinitionPercentage() throws Exception {
-    expectInvalidResourcePercentage("memory");
-    parseResourceConfigValue("50% 80% memory, 100%cpu");
+    expectInvalidResourcePercentage("memory", () -> {
+      parseResourceConfigValue("50% 80% memory, 100%cpu");
+    });
   }
 
   @Test
   public void testParseNewStyleDuplicateMemoryDefinitionPercentage()
       throws Exception {
-    expectInvalidResourcePercentageNewStyle("40% 80%");
-    parseResourceConfigValue("vcores = 75%, memory-mb = 40% 80%");
+    expectInvalidResourcePercentageNewStyle("40% 80%", () -> {
+      parseResourceConfigValue("vcores = 75%, memory-mb = 40% 80%");
+    });
   }
 
   @Test
   public void testParseNewStyleDuplicateVcoresDefinitionPercentage()
-      throws Exception {
-    expectInvalidResourcePercentageNewStyle("75% 65%");
-    parseResourceConfigValue("vcores = 75% 65%, memory-mb = 40%");
+          throws Exception {
+    expectInvalidResourcePercentageNewStyle("75% 65%", () -> {
+      parseResourceConfigValue("vcores = 75% 65%, memory-mb = 40%");
+    });
   }
 
   @Test
   public void testMemoryPercentageNegativeValue() throws Exception {
-    expectNegativePercentageOldStyle();
-    parseResourceConfigValue("-10% memory, 50% cpu");
+    expectNegativePercentageOldStyle(() -> {
+      parseResourceConfigValue("-10% memory, 50% cpu");
+    });
   }
 
   @Test
   public void testCpuPercentageNegativeValue() throws Exception {
-    expectNegativePercentageOldStyle();
-    parseResourceConfigValue("10% memory, -10% cpu");
+    expectNegativePercentageOldStyle(() -> {
+      parseResourceConfigValue("10% memory, -10% cpu");
+    });
   }
 
   @Test
   public void testMemoryAndCpuPercentageNegativeValue() throws Exception {
-    expectNegativePercentageOldStyle();
-    parseResourceConfigValue("-20% memory, -10% cpu");
+    expectNegativePercentageOldStyle(() -> {
+      parseResourceConfigValue("-20% memory, -10% cpu");
+    });
   }
 
   @Test
   public void testCpuPercentageMemoryAbsoluteCpuNegative() throws Exception {
-    expectMissingResource("memory");
-    parseResourceConfigValue("-50% cpu, 1024 mb");
+    expectMissingResource("memory", () -> {
+      parseResourceConfigValue("-50% cpu, 1024 mb");
+    });
   }
 
   @Test
   public void testCpuPercentageMemoryAbsoluteMemoryNegative() throws Exception {
-    expectMissingResource("memory");
-    parseResourceConfigValue("50% cpu, -1024 mb");
+    expectMissingResource("memory", () -> {
+      parseResourceConfigValue("50% cpu, -1024 mb");
+    });
   }
 
   @Test
   public void testMemoryPercentageCpuAbsoluteCpuNegative() throws Exception {
-    expectMissingResource("cpu");
-    parseResourceConfigValue("50% memory, -2 vcores");
+    expectMissingResource("cpu", () -> {
+      parseResourceConfigValue("50% memory, -2 vcores");
+    });
   }
 
   @Test
   public void testMemoryPercentageCpuAbsoluteMemoryNegative() throws Exception {
-    expectNegativePercentageOldStyle();
-    parseResourceConfigValue("-50% memory, 2 vcores");
+    expectNegativePercentageOldStyle(() -> {
+      parseResourceConfigValue("-50% memory, 2 vcores");
+    });
   }
 
   @Test
   public void testAbsoluteVcoresNegative() throws Exception {
-    expectNegativeValueOfResource("vcores");
-    parseResourceConfigValue("-2 vcores,5120 mb");
+    expectNegativeValueOfResource("vcores", () -> {
+      parseResourceConfigValue("-2 vcores,5120 mb");
+    });
   }
 
   @Test
   public void testAbsoluteMemoryNegative() throws Exception {
-    expectNegativeValueOfResource("memory");
-    parseResourceConfigValue("2 vcores,-5120 mb");
+    expectNegativeValueOfResource("memory", () -> {
+      parseResourceConfigValue("2 vcores,-5120 mb");
+    });
   }
 
   @Test
   public void testAbsoluteVcoresNegativeWithSpaces() throws Exception {
-    expectNegativeValueOfResource("vcores");
-    parseResourceConfigValue("-2 vcores, 5120 mb");
+    expectNegativeValueOfResource("vcores", () -> {
+      parseResourceConfigValue("-2 vcores, 5120 mb");
+    });
   }
 
   @Test
   public void testAbsoluteMemoryNegativeWithSpaces() throws Exception {
-    expectNegativeValueOfResource("memory");
-    parseResourceConfigValue("2 vcores, -5120 mb");
+    expectNegativeValueOfResource("memory", () -> {
+      parseResourceConfigValue("2 vcores, -5120 mb");
+    });
   }
 
   @Test
   public void testAbsoluteVcoresNegativeWithMoreSpaces() throws Exception {
-    expectNegativeValueOfResource("vcores");
-    parseResourceConfigValue("5120mb   mb, -2    vcores");
+    expectNegativeValueOfResource("vcores", () -> {
+      parseResourceConfigValue("5120mb   mb, -2    vcores");
+    });
   }
 
   @Test
   public void testAbsoluteMemoryNegativeWithMoreSpaces() throws Exception {
-    expectNegativeValueOfResource("memory");
-    parseResourceConfigValue("-5120mb   mb, 2    vcores");
+    expectNegativeValueOfResource("memory", () -> {
+      parseResourceConfigValue("-5120mb   mb, 2    vcores");
+    });
   }
 
   @Test
   public void testAbsoluteVcoresNegativeFractional() throws Exception {
-    expectNegativeValueOfResource("vcores");
-    parseResourceConfigValue("  5120.3 mb, -2.35 vcores  ");
+    expectNegativeValueOfResource("vcores", () -> {
+      parseResourceConfigValue("  5120.3 mb, -2.35 vcores  ");
+    });
   }
 
   @Test
   public void testAbsoluteMemoryNegativeFractional() throws Exception {
-    expectNegativeValueOfResource("memory");
-    parseResourceConfigValue("  -5120.3 mb, 2.35 vcores  ");
+    expectNegativeValueOfResource("memory", () -> {
+      parseResourceConfigValue("  -5120.3 mb, 2.35 vcores  ");
+    });
   }
 
   @Test
@@ -455,136 +491,155 @@ public class TestFairSchedulerConfiguration {
   @Test
   public void testOldStyleResourcesSeparatedBySpacesInvalid() throws Exception {
     String value = "2 vcores 5120 mb 555 mb";
-    expectUnparsableResource(value);
-    parseResourceConfigValue(value);
+    expectUnparsableResource(value, () -> {
+      parseResourceConfigValue(value);
+    });
   }
 
   @Test
   public void testOldStyleResourcesSeparatedBySpacesInvalidUppercaseUnits()
-      throws Exception {
+          throws Exception {
     String value = "2 vcores 5120 MB 555 GB";
-    expectUnparsableResource(value);
-    parseResourceConfigValue(value);
+    expectUnparsableResource(value, () -> {
+      parseResourceConfigValue(value);
+    });
   }
 
   @Test
   public void testParseNewStyleResourceMemoryNegative() throws Exception {
-    expectNegativeValueOfResource("memory");
-    parseResourceConfigValue("memory-mb=-5120,vcores=2");
+    expectNegativeValueOfResource("memory", () -> {
+      parseResourceConfigValue("memory-mb=-5120,vcores=2");
+    });
   }
 
   @Test
   public void testParseNewStyleResourceVcoresNegative() throws Exception {
-    expectNegativeValueOfResource("vcores");
-    parseResourceConfigValue("memory-mb=5120,vcores=-2");
+    expectNegativeValueOfResource("vcores", () -> {
+      parseResourceConfigValue("memory-mb=5120,vcores=-2");
+    });
   }
 
   @Test
   public void testParseNewStyleResourceMemoryNegativeWithSpaces()
       throws Exception {
-    expectNegativeValueOfResource("memory");
-    parseResourceConfigValue("memory-mb=-5120, vcores=2");
+    expectNegativeValueOfResource("memory", () -> {
+      parseResourceConfigValue("memory-mb=-5120, vcores=2");
+    });
   }
 
   @Test
   public void testParseNewStyleResourceVcoresNegativeWithSpaces()
       throws Exception {
-    expectNegativeValueOfResource("vcores");
-    parseResourceConfigValue("memory-mb=5120, vcores=-2");
+    expectNegativeValueOfResource("vcores", () -> {
+      parseResourceConfigValue("memory-mb=5120, vcores=-2");
+    });
   }
 
   @Test
   public void testParseNewStyleResourceMemoryNegativeWithMoreSpaces()
       throws Exception {
-    expectNegativeValueOfResource("memory");
-    parseResourceConfigValue(" vcores = 2 ,  memory-mb = -5120 ");
+    expectNegativeValueOfResource("memory", () -> {
+      parseResourceConfigValue(" vcores = 2 ,  memory-mb = -5120 ");
+    });
   }
 
   @Test
   public void testParseNewStyleResourceVcoresNegativeWithMoreSpaces()
       throws Exception {
-    expectNegativeValueOfResource("vcores");
-    parseResourceConfigValue(" vcores = -2 ,  memory-mb = 5120 ");
+    expectNegativeValueOfResource("vcores", () -> {
+      parseResourceConfigValue(" vcores = -2 ,  memory-mb = 5120 ");
+    });
   }
 
   @Test
   public void testParseNewStyleResourceWithCustomResourceMemoryNegative()
       throws Exception {
-    expectNegativeValueOfResource("memory");
-    parseResourceConfigValue("vcores=2,memory-mb=-5120,test1=4");
+    expectNegativeValueOfResource("memory", () -> {
+      parseResourceConfigValue("vcores=2,memory-mb=-5120,test1=4");
+    });
   }
 
   @Test
   public void testParseNewStyleResourceWithCustomResourceVcoresNegative()
       throws Exception {
-    expectNegativeValueOfResource("vcores");
-    parseResourceConfigValue("vcores=-2,memory-mb=-5120,test1=4");
+    expectNegativeValueOfResource("vcores", () -> {
+      parseResourceConfigValue("vcores=-2,memory-mb=-5120,test1=4");
+    });
   }
 
   @Test
   public void testParseNewStyleResourceWithCustomResourceNegative()
       throws Exception {
-    expectNegativeValueOfResource("test1");
-    parseResourceConfigValue("vcores=2,memory-mb=5120,test1=-4");
+    expectNegativeValueOfResource("test1", () -> {
+      parseResourceConfigValue("vcores=2,memory-mb=5120,test1=-4");
+    });
   }
 
   @Test
   public void testParseNewStyleResourceWithCustomResourceNegativeWithSpaces()
       throws Exception {
-    expectNegativeValueOfResource("test1");
-    parseResourceConfigValue(" vcores = 2 , memory-mb = 5120 , test1 = -4 ");
+    expectNegativeValueOfResource("test1", () -> {
+      parseResourceConfigValue(" vcores = 2 , memory-mb = 5120 , test1 = -4 ");
+    });
   }
 
   @Test
   public void testParseNewStyleResourceWithPercentagesVcoresNegative() throws
       Exception {
-    expectNegativePercentageNewStyle();
-    parseResourceConfigValue("vcores=-75%,memory-mb=40%");
+    expectNegativePercentageNewStyle(() -> {
+      parseResourceConfigValue("vcores=-75%,memory-mb=40%");
+    });
   }
 
   @Test
   public void testParseNewStyleResourceWithPercentagesMemoryNegative() throws
-      Exception {
-    expectNegativePercentageNewStyle();
-    parseResourceConfigValue("vcores=75%,memory-mb=-40%");
+          Exception {
+    expectNegativePercentageNewStyle(() -> {
+      parseResourceConfigValue("vcores=75%,memory-mb=-40%");
+    });
   }
 
   @Test
   public void testParseNewStyleResourceWithPercentagesVcoresNegativeWithSpaces()
       throws Exception {
-    expectNegativePercentageNewStyle();
-    parseResourceConfigValue("vcores=-75%, memory-mb=40%");
+    expectNegativePercentageNewStyle(() -> {
+      parseResourceConfigValue("vcores=-75%, memory-mb=40%");
+    });
   }
 
   @Test
   public void testParseNewStyleResourceWithPercentagesMemoryNegativeWithSpaces()
       throws Exception {
-    expectNegativePercentageNewStyle();
-    parseResourceConfigValue("vcores=75%, memory-mb=-40%");
+    expectNegativePercentageNewStyle(() -> {
+      parseResourceConfigValue("vcores=75%, memory-mb=-40%");
+    });
   }
 
   @Test
   public void
   testParseNewStyleResourceWithPercentagesVcoresNegativeWithMoreSpaces()
       throws Exception {
-    expectNegativePercentageNewStyle();
-    parseResourceConfigValue("vcores = -75%, memory-mb = 40%");
+    expectNegativePercentageNewStyle(() -> {
+      parseResourceConfigValue("vcores = -75%, memory-mb = 40%");
+    });
   }
 
   @Test
   public void
   testParseNewStyleResourceWithPercentagesMemoryNegativeWithMoreSpaces()
       throws Exception {
-    expectNegativePercentageNewStyle();
-    parseResourceConfigValue("vcores = 75%, memory-mb = -40%");
+    expectNegativePercentageNewStyle(() -> {
+      parseResourceConfigValue("vcores = 75%, memory-mb = -40%");
+    });
   }
 
   @Test
   public void
   testParseNewStyleResourceWithPercentagesCustomResourceNegativeWithSpaces()
       throws Exception {
-    expectNegativeValueOfResource("test1");
-    parseResourceConfigValue(" vcores = 2 , memory-mb = 5120 , test1 = -4 ");
+    expectNegativeValueOfResource("test1", () -> {
+      parseResourceConfigValue(" vcores = 2 , memory-mb = 5120 , test1 = -4 ");
+    });
   }
 
   @Test
@@ -638,13 +693,15 @@ public class TestFairSchedulerConfiguration {
           .getMemorySize());
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test
   public void testAllocationIncrementInvalidUnit() throws Exception {
-    Configuration conf = new Configuration();
-    conf.set(YarnConfiguration.RESOURCE_TYPES + "." +
-        ResourceInformation.MEMORY_MB.getName() +
-        FairSchedulerConfiguration.INCREMENT_ALLOCATION, "1 Xi");
-    new FairSchedulerConfiguration(conf).getIncrementAllocation();
+    assertThrows(IllegalArgumentException.class, ()->{
+      Configuration conf = new Configuration();
+      conf.set(YarnConfiguration.RESOURCE_TYPES + "." +
+              ResourceInformation.MEMORY_MB.getName() +
+              FairSchedulerConfiguration.INCREMENT_ALLOCATION, "1 Xi");
+      new FairSchedulerConfiguration(conf).getIncrementAllocation();
+    });
   }
 
   @Test
@@ -762,14 +819,15 @@ public class TestFairSchedulerConfiguration {
           FairSchedulerConfiguration.INCREMENT_ALLOCATION, "13");
       FairSchedulerConfiguration fsc = new FairSchedulerConfiguration(conf);
       Resource increment = fsc.getIncrementAllocation();
-      Assert.assertEquals(13L, increment.getMemorySize());
-      assertTrue("Warning message is not logged when specifying memory " +
-          "increment via multiple properties",
+      assertEquals(13L, increment.getMemorySize());
+      assertTrue(
           testAppender.getLogEvents().stream().anyMatch(
             e -> e.getLevel() == Level.WARN && ("Configuration " +
-              "yarn.resource-types.memory-mb.increment-allocation=13 is " +
-              "overriding the yarn.scheduler.increment-allocation-mb=7 " +
-              "property").equals(e.getMessage())));
+            "yarn.resource-types.memory-mb.increment-allocation=13 is " +
+            "overriding the yarn.scheduler.increment-allocation-mb=7 " +
+            "property").equals(e.getMessage())),
+            "Warning message is not logged when specifying memory " +
+            "increment via multiple properties");
     } finally {
       logger.removeAppender(testAppender);
     }
@@ -788,14 +846,15 @@ public class TestFairSchedulerConfiguration {
           FairSchedulerConfiguration.INCREMENT_ALLOCATION, "13");
       FairSchedulerConfiguration fsc = new FairSchedulerConfiguration(conf);
       Resource increment = fsc.getIncrementAllocation();
-      Assert.assertEquals(13, increment.getVirtualCores());
-      assertTrue("Warning message is not logged when specifying CPU vCores " +
-          "increment via multiple properties",
+      assertEquals(13, increment.getVirtualCores());
+      assertTrue(
           testAppender.getLogEvents().stream().anyMatch(
             e -> e.getLevel() == Level.WARN && ("Configuration " +
-              "yarn.resource-types.vcores.increment-allocation=13 is " +
-              "overriding the yarn.scheduler.increment-allocation-vcores=7 " +
-              "property").equals(e.getMessage())));
+            "yarn.resource-types.vcores.increment-allocation=13 is " +
+            "overriding the yarn.scheduler.increment-allocation-vcores=7 " +
+            "property").equals(e.getMessage())),
+            "Warning message is not logged when specifying CPU vCores " +
+            "increment via multiple properties");
     } finally {
       logger.removeAppender(testAppender);
     }

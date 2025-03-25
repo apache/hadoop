@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.federation.policies;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 
 import java.nio.ByteBuffer;
@@ -50,6 +51,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegister
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.junit.jupiter.api.Test;
+import org.mockito.exceptions.base.MockitoException;
 
 /**
  * Base class for policies tests, tests for common reinitialization cases.
@@ -100,10 +102,17 @@ public abstract class BaseFederationPoliciesTest {
 
   @Test
   public void testReinitilializeBad3() throws YarnException {
+    ByteBuffer bufTmp = null;
+    try {
+      bufTmp = mock(ByteBuffer.class);
+    } catch (MockitoException e) {
+      assumeTrue(false, "Cannot mock ByteBuffer on Java 19+");
+    }
+    final ByteBuffer buf = bufTmp;
+
     assertThrows(FederationPolicyInitializationException.class, () -> {
       FederationPolicyInitializationContext fpc =
           new FederationPolicyInitializationContext();
-      ByteBuffer buf = mock(ByteBuffer.class);
       fpc.setSubClusterPolicyConfiguration(SubClusterPolicyConfiguration
           .newInstance("queue1", "WrongPolicyName", buf));
       fpc.setFederationSubclusterResolver(
