@@ -32,13 +32,13 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnRWHelp
 import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainColumn;
 import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainTableRW;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test for timeline domain.
@@ -47,7 +47,7 @@ public class TestHBaseTimelineStorageDomain {
 
   private static HBaseTestingUtility util;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
@@ -125,7 +125,7 @@ public class TestHBaseTimelineStorageDomain {
     assertEquals("writer1,writer2", writers);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (util != null) {
       util.shutdownMiniCluster();
