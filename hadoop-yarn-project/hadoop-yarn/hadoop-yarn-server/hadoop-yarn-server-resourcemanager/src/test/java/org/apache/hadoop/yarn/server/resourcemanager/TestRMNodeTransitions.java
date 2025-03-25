@@ -384,9 +384,9 @@ public class TestRMNodeTransitions {
     node2.handle(statusEventFromNode2_2);
 
     assertEquals(2, completedContainers.size());
-    assertEquals(completedContainerIdFromNode2_1,completedContainers.get(0)
-        .getContainerId()); 
-    assertEquals(completedContainerIdFromNode2_2,completedContainers.get(1)
+    assertEquals(completedContainerIdFromNode2_1, completedContainers.get(0)
+        .getContainerId());
+    assertEquals(completedContainerIdFromNode2_2, completedContainers.get(1)
         .getContainerId());
   }
 

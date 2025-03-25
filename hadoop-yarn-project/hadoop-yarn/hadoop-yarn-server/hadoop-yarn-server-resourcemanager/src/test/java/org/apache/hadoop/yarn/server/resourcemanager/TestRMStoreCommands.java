@@ -53,7 +53,8 @@ public class TestRMStoreCommands {
       rm.getRMContext().getRMAdminService().transitionToActive(req);
       String zkStateRoot = ZKRMStateStore.ROOT_ZNODE_NAME;
       assertEquals(zkStateRoot, curatorFramework.getChildren().forPath(
-              YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH).get(0), "RM State store parent path should have a child node " +
+          YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH).get(0),
+          "RM State store parent path should have a child node " +
           zkStateRoot);
       rm.close();
       try {
@@ -62,9 +63,9 @@ public class TestRMStoreCommands {
         fail("Exception should not be thrown during format rm state store" +
             " operation.");
       }
-      assertTrue(
-         curatorFramework.getChildren().forPath(
-          YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH).isEmpty(), "After store format parent path should have no child nodes");
+      assertTrue(curatorFramework.getChildren().forPath(
+          YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH).isEmpty(),
+          "After store format parent path should have no child nodes");
     }
   }
 
@@ -86,8 +87,8 @@ public class TestRMStoreCommands {
           YarnConfiguration.RM_SCHEDCONF_STORE_ZK_PARENT_PATH,
           YarnConfiguration.DEFAULT_RM_SCHEDCONF_STORE_ZK_PARENT_PATH)
           + "/CONF_STORE";
-      assertNotNull(
-         curatorFramework.checkExists().forPath(confStorePath), "Failed to initialize ZKConfigurationStore");
+      assertNotNull(curatorFramework.checkExists().forPath(confStorePath),
+          "Failed to initialize ZKConfigurationStore");
 
       rm.close();
       try {
@@ -96,8 +97,8 @@ public class TestRMStoreCommands {
         fail("Exception should not be thrown during format rm conf store" +
             " operation.");
       }
-      assertNull(
-         curatorFramework.checkExists().forPath(confStorePath), "Failed to format ZKConfigurationStore");
+      assertNull(curatorFramework.checkExists().forPath(confStorePath),
+          "Failed to format ZKConfigurationStore");
     }
   }
 
@@ -126,8 +127,8 @@ public class TestRMStoreCommands {
         if (path.equals(ZKRMStateStore.RM_APP_ROOT_HIERARCHIES)) {
           continue;
         }
-        assertEquals(
-           appId, path, "Application node for " + appId + " should exist");
+        assertEquals(appId, path,
+            "Application node for " + appId + " should exist");
       }
       try {
         ResourceManager.removeApplication(conf, appId);
@@ -136,9 +137,10 @@ public class TestRMStoreCommands {
             "rm state store.");
       }
       assertTrue(
-         curatorFramework.getChildren().forPath(appRootPath).size() == 1 &&
+          curatorFramework.getChildren().forPath(appRootPath).size() == 1 &&
           curatorFramework.getChildren().forPath(appRootPath).get(0).equals(
-              ZKRMStateStore.RM_APP_ROOT_HIERARCHIES), "After remove app from store there should be no child nodes" +
+          ZKRMStateStore.RM_APP_ROOT_HIERARCHIES),
+          "After remove app from store there should be no child nodes" +
           " for application in app root path");
     }
   }

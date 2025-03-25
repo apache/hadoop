@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.junit.jupiter.api.Assertions;
+import org.junit.Assert;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,8 +29,7 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.Test;
 
 
 public class TestSubmitApplicationWithRMHA extends RMHATestBase{
@@ -92,9 +91,9 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
     YarnApplicationState state =
         rm.getApplicationReport(app.getApplicationId())
             .getYarnApplicationState();
-    Assertions.assertTrue(state == YarnApplicationState.ACCEPTED
+    Assert.assertTrue(state == YarnApplicationState.ACCEPTED
         || state == YarnApplicationState.SUBMITTED);
-    Assertions.assertEquals(expectedAppId, app.getApplicationId());
+    Assert.assertEquals(expectedAppId, app.getApplicationId());
   }
 
   // There are two scenarios when RM failover happens
@@ -125,7 +124,7 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
         rm2.getApplicationReport(app0.getApplicationId());
 
     // verify previous submission is successful.
-    Assertions.assertTrue(appReport.getYarnApplicationState()
+    Assert.assertTrue(appReport.getYarnApplicationState()
         == YarnApplicationState.ACCEPTED ||
         appReport.getYarnApplicationState()
         == YarnApplicationState.SUBMITTED);
@@ -172,7 +171,7 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
     // Expect ApplicationNotFoundException by calling getApplicationReport().
     try {
       rm2.getApplicationReport(app0.getApplicationId());
-      Assertions.fail("Should get ApplicationNotFoundException here");
+      Assert.fail("Should get ApplicationNotFoundException here");
     } catch (ApplicationNotFoundException ex) {
       // expected ApplicationNotFoundException
     }
@@ -218,7 +217,7 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
 
     ApplicationReport appReport1 =
         rm1.getApplicationReport(app.getApplicationId());
-    Assertions.assertTrue(appReport1.getYarnApplicationState() ==
+    Assert.assertTrue(appReport1.getYarnApplicationState() ==
         YarnApplicationState.ACCEPTED ||
         appReport1.getYarnApplicationState() ==
         YarnApplicationState.SUBMITTED);
@@ -226,9 +225,9 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
     // call getApplicationReport again
     ApplicationReport appReport2 =
         rm1.getApplicationReport(app.getApplicationId());
-    Assertions.assertEquals(appReport1.getApplicationId(),
+    Assert.assertEquals(appReport1.getApplicationId(),
         appReport2.getApplicationId());
-    Assertions.assertEquals(appReport1.getYarnApplicationState(),
+    Assert.assertEquals(appReport1.getYarnApplicationState(),
         appReport2.getYarnApplicationState());
 
     // Do the failover
@@ -237,17 +236,17 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
     // call getApplicationReport
     ApplicationReport appReport3 =
         rm2.getApplicationReport(app.getApplicationId());
-    Assertions.assertEquals(appReport1.getApplicationId(),
+    Assert.assertEquals(appReport1.getApplicationId(),
         appReport3.getApplicationId());
-    Assertions.assertEquals(appReport1.getYarnApplicationState(),
+    Assert.assertEquals(appReport1.getYarnApplicationState(),
         appReport3.getYarnApplicationState());
 
     // call getApplicationReport again
     ApplicationReport appReport4 =
         rm2.getApplicationReport(app.getApplicationId());
-    Assertions.assertEquals(appReport3.getApplicationId(),
+    Assert.assertEquals(appReport3.getApplicationId(),
         appReport4.getApplicationId());
-    Assertions.assertEquals(appReport3.getYarnApplicationState(),
+    Assert.assertEquals(appReport3.getYarnApplicationState(),
         appReport4.getYarnApplicationState());
   }
 
@@ -255,8 +254,7 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
   // during SubmitApplication Call:
   // 1) RMStateStore already saved the ApplicationState when failover happens
   // 2) RMStateStore did not save the ApplicationState when failover happens
-  @Test
-  @Timeout(value = 50)
+  @Test (timeout = 50000)
   public void
       testHandleRMHADuringSubmitApplicationCallWithSavedApplicationState()
           throws Exception {
@@ -276,7 +274,7 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
     // before failover happens, the current active rm can load the previous
     // applicationState.
     // This RMApp should exist in the RMContext of current active RM
-    Assertions.assertTrue(rm2.getRMContext().getRMApps()
+    Assert.assertTrue(rm2.getRMContext().getRMApps()
         .containsKey(app0.getApplicationId()));
 
     // When we re-submit the application with same applicationId, it will
@@ -300,11 +298,10 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
                 .withApplicationId(app0.getApplicationId())
                 .build());
 
-    Assertions.assertEquals(app1.getApplicationId(), app0.getApplicationId());
+    Assert.assertEquals(app1.getApplicationId(), app0.getApplicationId());
   }
 
-  @Test
-  @Timeout(value = 50)
+  @Test (timeout = 50000)
   public void
       testHandleRMHADuringSubmitApplicationCallWithoutSavedApplicationState()
           throws Exception {
@@ -342,7 +339,7 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
     // When failover happens, the RMStateStore has not saved applicationState.
     // The applicationState of this RMApp is lost.
     // We should not find the RMApp in the RMContext of current active rm.
-    Assertions.assertFalse(rm2.getRMContext().getRMApps()
+    Assert.assertFalse(rm2.getRMContext().getRMApps()
         .containsKey(app0.getApplicationId()));
 
     // Submit the application with previous ApplicationId to current active RM
@@ -369,7 +366,7 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
                 .build());
 
     verifySubmitApp(rm2, app1, app0.getApplicationId());
-    Assertions.assertTrue(rm2.getRMContext().getRMApps()
+    Assert.assertTrue(rm2.getRMContext().getRMApps()
         .containsKey(app0.getApplicationId()));
   }
 }

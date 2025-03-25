@@ -164,8 +164,8 @@ public class TestNodeBlacklistingOnAMFailures {
       currentNode.nodeHeartbeat(true);
       rm.drainEvents();
 
-      assertEquals(RMAppAttemptState.SCHEDULED,
-          attempt.getAppAttemptState(), "AppAttemptState should still be SCHEDULED if currentNode is "
+      assertEquals(RMAppAttemptState.SCHEDULED, attempt.getAppAttemptState(),
+          "AppAttemptState should still be SCHEDULED if currentNode is "
           + "blacklisted correctly");
     }
 

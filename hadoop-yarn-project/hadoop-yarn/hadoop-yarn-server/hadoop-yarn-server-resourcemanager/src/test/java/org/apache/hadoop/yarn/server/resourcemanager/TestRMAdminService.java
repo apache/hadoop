@@ -1591,7 +1591,8 @@ public class TestRMAdminService {
         .getClusterNodeLabels(GetClusterNodeLabelsRequest.newInstance());
     NodeLabel labelX = NodeLabel.newInstance("a");
     NodeLabel labelY = NodeLabel.newInstance("b");
-    assertTrue(response.getNodeLabelList().containsAll(Arrays.asList(labelX, labelY)));
+    assertTrue(response.getNodeLabelList().containsAll(
+        Arrays.asList(labelX, labelY)));
   }
 
   @Test
@@ -1660,9 +1661,9 @@ public class TestRMAdminService {
         .removeNodeAttributes(Mockito.anyMap());
 
     // Assert node to attributes mappings are empty.
-    assertTrue(
-       rm.getRMContext().getNodeAttributesManager()
-            .getAttributesForNode("host4").isEmpty(), "Attributes of host4 should be empty");
+    assertTrue(rm.getRMContext().getNodeAttributesManager()
+        .getAttributesForNode("host4").isEmpty(),
+        "Attributes of host4 should be empty");
     // remove non existing attributes.
     request = NodesToAttributesMappingRequest
         .newInstance(AttributeMappingOperationType.REMOVE, ImmutableList

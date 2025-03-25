@@ -1064,9 +1064,8 @@ public class TestAppManager extends AppManagerTestBase{
     appManager.submitApplication(submission, user);
     RMApp app = rmContext.getRMApps().get(submission.getApplicationId());
     assertNotNull(app, "app should not be null");
-    assertEquals(
-       expectedQueue
-,         app.getQueue(), String.format("the queue should be placed on '%s' queue", expectedQueue));
+    assertEquals(expectedQueue, app.getQueue(),
+        String.format("the queue should be placed on '%s' queue", expectedQueue));
   }
 
   private static ApplicationSubmissionContext createAppSubmissionContext(ApplicationId id) {
@@ -1099,18 +1098,18 @@ public class TestAppManager extends AppManagerTestBase{
     conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS, 10);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext,conf);
 
-    assertEquals(
-       10, rmContext.getRMApps().size(), "Number of apps incorrect before checkAppTimeLimit");
+    assertEquals(10, rmContext.getRMApps().size(),
+        "Number of apps incorrect before checkAppTimeLimit");
 
     // add them to completed apps list
     addToCompletedApps(appMonitor, rmContext);
 
     // shouldn't  have to many apps
     appMonitor.checkAppNumCompletedLimit();
-    assertEquals(10
-,         rmContext.getRMApps().size(), "Number of apps incorrect after # completed check");
-    assertEquals(10
-,         appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect after check");
+    assertEquals(10, rmContext.getRMApps().size(),
+        "Number of apps incorrect after # completed check");
+    assertEquals(10, appMonitor.getCompletedAppsListSize(),
+        "Number of completed apps incorrect after check");
     verify(rmContext.getStateStore(), never()).removeApplication(
       isA(RMApp.class));
   }
@@ -1169,10 +1168,10 @@ public class TestAppManager extends AppManagerTestBase{
 
     // shouldn't  have to many apps
     appMonitor.checkAppNumCompletedLimit();
-    assertEquals(3
-,         rmContext.getRMApps().size(), "Number of apps incorrect after # completed check");
-    assertEquals(3
-,         appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect after check");
+    assertEquals(3, rmContext.getRMApps().size(),
+        "Number of apps incorrect after # completed check");
+    assertEquals(3, appMonitor.getCompletedAppsListSize(),
+        "Number of completed apps incorrect after check");
     verify(rmContext.getStateStore(), times(7)).removeApplication(
       isA(RMApp.class));
   }
@@ -1226,10 +1225,10 @@ public class TestAppManager extends AppManagerTestBase{
 
     // shouldn't  have to many apps
     appMonitor.checkAppNumCompletedLimit();
-    assertEquals(6
-,         rmContext.getRMApps().size(), "Number of apps incorrect after # completed check");
-    assertEquals(2
-,         appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect after check");
+    assertEquals(6, rmContext.getRMApps().size(),
+        "Number of apps incorrect after # completed check");
+    assertEquals(2, appMonitor.getCompletedAppsListSize(),
+        "Number of completed apps incorrect after check");
     // 6 applications in final state, 4 of them are removed
     verify(rmContext.getStateStore(), times(4)).removeApplication(
       isA(RMApp.class));
@@ -1247,8 +1246,8 @@ public class TestAppManager extends AppManagerTestBase{
 
     appMonitor.finishApplication(null);
 
-    assertEquals(0
-,         appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect after check");
+    assertEquals(0, appMonitor.getCompletedAppsListSize(),
+        "Number of completed apps incorrect after check");
   }
 
   @Test
@@ -1264,15 +1263,15 @@ public class TestAppManager extends AppManagerTestBase{
         .getRMApps().size(), "Number of apps incorrect before");
 
     addToCompletedApps(appMonitor, rmContext);
-    assertEquals(10
-,         appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect");
+    assertEquals(10, appMonitor.getCompletedAppsListSize(),
+        "Number of completed apps incorrect");
 
     appMonitor.checkAppNumCompletedLimit();
 
-    assertEquals(0
-,         rmContext.getRMApps().size(), "Number of apps incorrect after # completed check");
-    assertEquals(0
-,         appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect after check");
+    assertEquals(0, rmContext.getRMApps().size(),
+        "Number of apps incorrect after # completed check");
+    assertEquals(0, appMonitor.getCompletedAppsListSize(),
+        "Number of completed apps incorrect after check");
     verify(rmContext.getStateStore(), times(10)).removeApplication(
       isA(RMApp.class));
   }
@@ -1291,14 +1290,14 @@ public class TestAppManager extends AppManagerTestBase{
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext, conf);
 
     addToCompletedApps(appMonitor, rmContext);
-    assertEquals(allApps
-,         appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect");
+    assertEquals(allApps, appMonitor.getCompletedAppsListSize(),
+        "Number of completed apps incorrect");
     appMonitor.checkAppNumCompletedLimit();
 
-    assertEquals(
-     maxAppsInMemory, rmContext.getRMApps().size(), "Number of apps incorrect after # completed check");
-    assertEquals(
-     maxAppsInMemory, appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect after check");
+    assertEquals(maxAppsInMemory, rmContext.getRMApps().size(),
+        "Number of apps incorrect after # completed check");
+    assertEquals(maxAppsInMemory, appMonitor.getCompletedAppsListSize(),
+        "Number of completed apps incorrect after check");
 
     int numRemoveAppsFromStateStore = 10 - maxAppsInStateStore;
     verify(rmContext.getStateStore(), times(numRemoveAppsFromStateStore))
@@ -1320,15 +1319,15 @@ public class TestAppManager extends AppManagerTestBase{
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext, conf);
 
     addToCompletedApps(appMonitor, rmContext);
-    assertEquals(allApps
-,         appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect");
+    assertEquals(allApps, appMonitor.getCompletedAppsListSize(),
+        "Number of completed apps incorrect");
     appMonitor.checkAppNumCompletedLimit();
 
     int numRemoveApps = allApps - maxAppsInMemory;
-    assertEquals(
-     maxAppsInMemory, rmContext.getRMApps().size(), "Number of apps incorrect after # completed check");
-    assertEquals(
-     maxAppsInMemory, appMonitor.getCompletedAppsListSize(), "Number of completed apps incorrect after check");
+    assertEquals(maxAppsInMemory, rmContext.getRMApps().size(),
+        "Number of apps incorrect after # completed check");
+    assertEquals(maxAppsInMemory, appMonitor.getCompletedAppsListSize(),
+        "Number of completed apps incorrect after check");
     verify(rmContext.getStateStore(), times(numRemoveApps)).removeApplication(
       isA(RMApp.class));
     assertEquals(maxAppsInMemory,
@@ -1544,8 +1543,8 @@ public class TestAppManager extends AppManagerTestBase{
         timeoutSecs++ < 20) {
       Thread.sleep(1000);
     }
-    assertEquals(RMAppEventType.START
-,         getAppEventType(), "app event type sent is wrong");
+    assertEquals(RMAppEventType.START, getAppEventType(),
+        "app event type sent is wrong");
     return app;
   }
 
@@ -1566,17 +1565,16 @@ public class TestAppManager extends AppManagerTestBase{
           " Tokens are invalid.");
     } catch (YarnException e) {
       // Exception is expected
-      assertTrue(
-         e.getMessage().contains("java.io.EOFException"), "The thrown exception is not" +
-          " java.io.EOFException");
+      assertTrue(e.getMessage().contains("java.io.EOFException"),
+          "The thrown exception is not java.io.EOFException");
     }
     int timeoutSecs = 0;
     while ((getAppEventType() == RMAppEventType.KILL) &&
         timeoutSecs++ < 20) {
       Thread.sleep(1000);
     }
-    assertEquals(
-       RMAppEventType.APP_REJECTED, getAppEventType(), "app event type sent is wrong");
+    assertEquals(RMAppEventType.APP_REJECTED, getAppEventType(),
+        "app event type sent is wrong");
     asContext.getAMContainerSpec().setTokens(null);
   }
 
@@ -1611,8 +1609,8 @@ public class TestAppManager extends AppManagerTestBase{
         }
         appMonitor.submitApplication(asContext, "test");
         RMApp app = rmContext.getRMApps().get(appID);
-        assertEquals(
-           expectedNums[i][j], app.getMaxAppAttempts(), "max application attempts doesn't match");
+        assertEquals(expectedNums[i][j], app.getMaxAppAttempts(),
+            "max application attempts doesn't match");
 
         // wait for event to be processed
         int timeoutSecs = 0;
@@ -1632,15 +1630,15 @@ public class TestAppManager extends AppManagerTestBase{
     asContext.setApplicationId(appId);
     RMApp appOrig = rmContext.getRMApps().get(appId);
     assertTrue("testApp1" != appOrig.getName(), "app name matches "
-            + "but shouldn't");
+        + "but shouldn't");
 
     // our testApp1 should be rejected and original app with same id should be left in place
     try {
       appMonitor.submitApplication(asContext, "test");
       fail("Exception is expected when applicationId is duplicate.");
     } catch (YarnException e) {
-      assertTrue(
-         e.getMessage().contains("Cannot add a duplicate!"), "The thrown exception is not the expectd one.");
+      assertTrue(e.getMessage().contains("Cannot add a duplicate!"),
+          "The thrown exception is not the expectd one.");
     }
 
     // make sure original app didn't get removed
@@ -1648,8 +1646,7 @@ public class TestAppManager extends AppManagerTestBase{
     assertNotNull(app, "app is null");
     assertEquals(
        appId, app.getApplicationId(), "app id doesn't match");
-    assertEquals(
-       RMAppState.FINISHED, app.getState(), "app state doesn't match");
+    assertEquals(RMAppState.FINISHED, app.getState(), "app state doesn't match");
   }
 
   @SuppressWarnings("deprecation")
@@ -1668,8 +1665,8 @@ public class TestAppManager extends AppManagerTestBase{
       // Exception is expected
       // TODO Change this to assert the expected exception type - post YARN-142
       // sub-task related to specialized exceptions.
-      assertTrue(
-         e.getMessage().contains("Invalid resource request"), "The thrown exception is not" +
+      assertTrue(e.getMessage().contains("Invalid resource request"),
+          "The thrown exception is not" +
           " InvalidResourceRequestException");
     }
   }
@@ -1774,8 +1771,8 @@ public class TestAppManager extends AppManagerTestBase{
     while ((getAppEventType() == RMAppEventType.KILL) && timeoutSecs++ < 20) {
       Thread.sleep(1000);
     }
-    assertEquals(RMAppEventType.START
-,         getAppEventType(), "app event type sent is wrong");
+    assertEquals(RMAppEventType.START, getAppEventType(),
+        "app event type sent is wrong");
   }
 
   private static ResourceScheduler mockResourceScheduler() {

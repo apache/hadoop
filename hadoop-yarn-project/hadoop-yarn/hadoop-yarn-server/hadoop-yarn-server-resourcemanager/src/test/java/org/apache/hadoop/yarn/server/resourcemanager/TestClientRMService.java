@@ -702,22 +702,22 @@ public class TestClientRMService {
       }
       Thread.sleep(10);
     }
-    assertEquals(2
-,         rmService.getApplications(getRequest).getApplicationList().size(), "Incorrect number of apps in the RM");
+    assertEquals(2, rmService.getApplications(getRequest).getApplicationList().size(),
+        "Incorrect number of apps in the RM");
   }
 
   @Test
   public void testMoveAbsentApplication() throws YarnException {
     assertThrows(ApplicationNotFoundException.class, () -> {
-        RMContext rmContext = mock(RMContext.class);
-        when(rmContext.getRMApps()).thenReturn(
-      new ConcurrentHashMap<ApplicationId, RMApp>());
-        ClientRMService rmService = new ClientRMService(rmContext, null, null,
-      null, null, null);
+      RMContext rmContext = mock(RMContext.class);
+      when(rmContext.getRMApps()).thenReturn(
+        new ConcurrentHashMap<ApplicationId, RMApp>());
+          ClientRMService rmService = new ClientRMService(rmContext, null, null,
+        null, null, null);
         ApplicationId applicationId =
-      BuilderUtils.newApplicationId(System.currentTimeMillis(), 0);
-        MoveApplicationAcrossQueuesRequest request =
-      MoveApplicationAcrossQueuesRequest.newInstance(applicationId,
+        BuilderUtils.newApplicationId(System.currentTimeMillis(), 0);
+          MoveApplicationAcrossQueuesRequest request =
+        MoveApplicationAcrossQueuesRequest.newInstance(applicationId,
           "newqueue");
         rmService.moveApplicationAcrossQueues(request);
     });
@@ -851,19 +851,19 @@ public class TestClientRMService {
   @Test
   public void testNonExistingQueue() throws Exception {
     assertThrows(YarnException.class, () -> {
-        ApplicationId applicationId = getApplicationId(1);
-        UserGroupInformation aclUGI = UserGroupInformation.getCurrentUser();
-        QueueACLsManager queueAclsManager = getQueueAclManager();
-        ApplicationACLsManager appAclsManager = getAppAclManager();
-        ClientRMService rmService =
-      createClientRMServiceForMoveApplicationRequest(applicationId,
-          aclUGI.getShortUserName(), appAclsManager, queueAclsManager);
-        MoveApplicationAcrossQueuesRequest moveAppRequest =
-      MoveApplicationAcrossQueuesRequest.newInstance(applicationId,
-          "unknown_queue");
-        rmService.moveApplicationAcrossQueues(moveAppRequest);
+      ApplicationId applicationId = getApplicationId(1);
+      UserGroupInformation aclUGI = UserGroupInformation.getCurrentUser();
+      QueueACLsManager queueAclsManager = getQueueAclManager();
+      ApplicationACLsManager appAclsManager = getAppAclManager();
+      ClientRMService rmService =
+        createClientRMServiceForMoveApplicationRequest(applicationId,
+        aclUGI.getShortUserName(), appAclsManager, queueAclsManager);
+      MoveApplicationAcrossQueuesRequest moveAppRequest =
+        MoveApplicationAcrossQueuesRequest.newInstance(applicationId,
+        "unknown_queue");
+      rmService.moveApplicationAcrossQueues(moveAppRequest);
     });
-}
+  }
 
   /**
    * Create an instance of ClientRMService for testing

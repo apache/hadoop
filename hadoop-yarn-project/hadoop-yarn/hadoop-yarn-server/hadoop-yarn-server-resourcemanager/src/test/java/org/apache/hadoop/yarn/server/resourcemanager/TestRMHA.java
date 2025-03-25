@@ -658,8 +658,8 @@ public class TestRMHA {
       rm.adminService.transitionToActive(requestInfo);
       fail("Transition to Active should have failed for refreshAll()");
     } catch (Exception e) {
-      assertTrue(
-         e instanceof ServiceFailedException, "Service fail Exception expected");
+      assertTrue(e instanceof ServiceFailedException,
+          "Service fail Exception expected");
     }
     // Since refreshAll failed we are expecting fatal event to be send
     // Then fatal event is send RM will shutdown
@@ -868,12 +868,12 @@ public class TestRMHA {
       rm = new MockRM(conf);
       rm.init(conf);
       for (String confKey : YarnConfiguration.getServiceAddressConfKeys(conf)) {
-        assertEquals(
-           RM1_ADDRESS, conf.get(HAUtil.addSuffix(confKey, RM1_NODE_ID)), "RPC address not set for " + confKey);
-        assertEquals(
-           RM2_ADDRESS, conf.get(HAUtil.addSuffix(confKey, RM2_NODE_ID)), "RPC address not set for " + confKey);
-        assertEquals(
-           RM3_ADDRESS, conf.get(HAUtil.addSuffix(confKey, RM3_NODE_ID)), "RPC address not set for " + confKey);
+        assertEquals(RM1_ADDRESS, conf.get(HAUtil.addSuffix(confKey, RM1_NODE_ID)),
+            "RPC address not set for " + confKey);
+        assertEquals(RM2_ADDRESS, conf.get(HAUtil.addSuffix(confKey, RM2_NODE_ID)),
+            "RPC address not set for " + confKey);
+        assertEquals(RM3_ADDRESS, conf.get(HAUtil.addSuffix(confKey, RM3_NODE_ID)),
+            "RPC address not set for " + confKey);
         if (includeBindHost) {
           assertEquals(rm.webAppAddress.substring(0, 7), "9.9.9.9",
               "Web address misconfigured WITH bind-host");

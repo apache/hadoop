@@ -184,6 +184,7 @@ public class TestOpportunisticContainerAllocatorAMService {
 
   @Test
   @Timeout(value = 600)
+  @SuppressWarnings("checkstyle:MethodLength")
   public void testContainerPromoteAndDemoteBeforeContainerStart() throws Exception {
     HashMap<NodeId, MockNM> nodes = new HashMap<>();
     MockNM nm1 = new MockNM("h1:1234", 4096, rm.getResourceTrackerService());
@@ -1238,7 +1239,7 @@ public class TestOpportunisticContainerAllocatorAMService {
                 ((RegisterApplicationMasterRequestPBImpl)factory
                     .newRecordInstance(RegisterApplicationMasterRequest.class))
                     .getProto()));
-    assertEquals(54321l, dsRegResp.getContainerIdStart());
+    assertEquals(54321L, dsRegResp.getContainerIdStart());
     assertEquals(4,
         dsRegResp.getMaxContainerResource().getVirtualCores());
     assertEquals(1024,

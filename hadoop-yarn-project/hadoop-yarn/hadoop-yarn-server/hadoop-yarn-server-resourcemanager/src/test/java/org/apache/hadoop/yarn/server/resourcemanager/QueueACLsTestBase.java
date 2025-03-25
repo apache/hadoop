@@ -260,8 +260,8 @@ public abstract class QueueACLsTestBase extends ACLsTestBase {
     } catch (YarnException e) {
       LOG.info("Got exception while killing app as the enemy", e);
       assertTrue(e.getMessage().contains(
-        "User " + killer + " cannot perform operation MODIFY_APP on "
-        + applicationId));
+          "User " + killer + " cannot perform operation MODIFY_APP on "
+          + applicationId));
     }
 
     getRMClientForUser(submitter).forceKillApplication(finishAppRequest);
