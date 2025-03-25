@@ -539,4 +539,16 @@ public class TestPath {
     Assert.assertNull(root.getParent());
     Assert.assertEquals(new Path("/bar"), root.suffix("bar"));
   }
+
+  @Test(timeout = 30000)
+  public void testSchemeAndAuthorityForSuffixFromRoot() {
+    Path rootBucketPath = new Path("s3://foo");
+    Path rootBucketPathWithSlash = new Path("s3://foo/");
+    Assert.assertNull(rootBucketPath.getParent());
+    Assert.assertNull(rootBucketPathWithSlash.getParent());
+    Assert.assertEquals(new Path("s3://foo/bar"), rootBucketPath.suffix("bar"));
+    Assert.assertEquals(new Path("s3://foo/bar"), rootBucketPath.suffix("/bar"));
+    Assert.assertEquals(new Path("s3://foo/bar"), rootBucketPathWithSlash.suffix("bar"));
+    Assert.assertEquals(new Path("s3://foo/bar"), rootBucketPathWithSlash.suffix("/bar"));
+  }
 }

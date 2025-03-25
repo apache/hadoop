@@ -467,7 +467,7 @@ public class Path
   public Path suffix(String suffix) {
     Path parent = getParent();
     if (parent == null) {
-      return new Path("/", getName() + suffix);
+      return new Path(uri.getScheme(), uri.getAuthority(), "/" + getName() + suffix);
     }
 
     return new Path(parent, getName() + suffix);
