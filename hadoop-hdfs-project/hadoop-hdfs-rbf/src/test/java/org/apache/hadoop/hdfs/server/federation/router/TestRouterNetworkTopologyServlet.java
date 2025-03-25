@@ -47,10 +47,11 @@ import static org.apache.hadoop.hdfs.server.federation.router.TestRouterNetworkT
 import static org.apache.hadoop.hdfs.server.federation.router.TestRouterNetworkTopologyServlet.clusterWithDatanodes;
 import static org.apache.hadoop.hdfs.server.federation.router.TestRouterNetworkTopologyServlet.setUp;
 
+@SuppressWarnings("checkstyle:VisibilityModifier")
 public class TestRouterNetworkTopologyServlet {
 
-  static StateStoreDFSCluster clusterWithDatanodes;
-  static StateStoreDFSCluster clusterNoDatanodes;
+  public static StateStoreDFSCluster clusterWithDatanodes;
+  public static StateStoreDFSCluster clusterNoDatanodes;
 
   public static final String ASYNC_MODE = "ASYNC";
   public static final String SYNC_MODE = "SYNC";
