@@ -28,7 +28,6 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -39,6 +38,8 @@ import java.util.concurrent.TimeoutException;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_SERVICE_READER_STORAGE_MONITOR_INTERVAL_MS;
 import static org.apache.hadoop.yarn.server.timelineservice.storage.HBaseStorageMonitor.DATA_TO_RETRIEVE;
 import static org.apache.hadoop.yarn.server.timelineservice.storage.HBaseStorageMonitor.MONITOR_FILTERS;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestTimelineReaderHBaseDown {
 
@@ -183,9 +184,9 @@ public class TestTimelineReaderHBaseDown {
         }
       }, 1000, 150000);
       checkQuery(htr);
-      Assertions.fail("Query should fail when HBase is down");
+      fail("Query should fail when HBase is down");
     } catch (IOException e) {
-      Assertions.assertEquals("HBase is down", e.getMessage());
+      assertEquals("HBase is down", e.getMessage());
     }
   }
 

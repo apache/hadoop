@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.timelineservice.reader;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -43,7 +44,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.DataGeneratorForTest;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
-import org.junit.jupiter.api.Assertions;
 
 /**
  * Test Base for TimelineReaderServer HBase tests.
@@ -101,7 +101,7 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
       server.start();
       serverPort = server.getWebServerPort();
     } catch (Exception e) {
-      Assertions.fail("Web server failed to start");
+      fail("Web server failed to start");
     }
   }
 

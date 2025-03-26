@@ -21,7 +21,6 @@ import java.io.IOException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -33,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_SERVICE_READER_STORAGE_MONITOR_INTERVAL_MS;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * This class tests HbaseTimelineWriter with Hbase Down.
@@ -60,7 +60,7 @@ public class TestTimelineWriterHBaseDown {
       try {
         storageMonitor.checkStorageIsUp();
       } catch(IOException e) {
-        Assertions.fail("HBaseStorageMonitor failed to detect HBase Up");
+        fail("HBaseStorageMonitor failed to detect HBase Up");
       }
 
       util.shutdownMiniHBaseCluster();

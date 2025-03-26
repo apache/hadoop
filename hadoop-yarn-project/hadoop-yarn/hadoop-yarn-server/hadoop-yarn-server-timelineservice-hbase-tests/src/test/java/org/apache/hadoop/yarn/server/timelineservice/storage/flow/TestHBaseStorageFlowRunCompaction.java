@@ -20,9 +20,10 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.flow;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -60,7 +61,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelin
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimestampGenerator;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -490,7 +490,7 @@ public class TestHBaseStorageFlowRunCompaction {
         assertTrue(returnTs >= currentTimestamp);
       } else {
         // raise a failure since we expect only these two values back
-        Assertions.fail();
+        fail();
       }
     }
   }
@@ -576,7 +576,7 @@ public class TestHBaseStorageFlowRunCompaction {
         assertTrue(returnTs <= cellTsNotFinalStart * count);
       } else {
         // raise a failure since we expect only these values back
-        Assertions.fail();
+        fail();
       }
     }
   }
@@ -691,7 +691,7 @@ public class TestHBaseStorageFlowRunCompaction {
         assertTrue(returnTs <= cellTsFinalStartNotExpire + countFinalNotExpire);
       } else {
         // raise a failure since we expect only these values back
-        Assertions.fail();
+        fail();
       }
     }
   }
@@ -755,7 +755,7 @@ public class TestHBaseStorageFlowRunCompaction {
       assertTrue(returnTs != inputTs1);
     } else {
       // raise a failure since we expect only these two values back
-      Assertions.fail();
+      fail();
     }
   }
 

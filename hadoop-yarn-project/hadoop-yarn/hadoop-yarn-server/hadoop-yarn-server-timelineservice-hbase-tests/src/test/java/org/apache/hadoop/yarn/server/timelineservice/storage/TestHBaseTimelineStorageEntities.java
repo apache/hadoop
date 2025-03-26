@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -83,7 +84,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubA
 import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationTableRW;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -723,7 +723,7 @@ public class TestHBaseTimelineStorageEntities {
     for (TimelineEntity entity : entities) {
       if (!entity.getId().equals("hello") && !entity.getId().equals("hello1") &&
           !entity.getId().equals("hello2")) {
-        Assertions.fail("Entities with ids' hello, hello1 and hello2 should be" +
+        fail("Entities with ids' hello, hello1 and hello2 should be" +
             " present");
       }
     }
@@ -737,7 +737,7 @@ public class TestHBaseTimelineStorageEntities {
     for (TimelineEntity entity : entities) {
       if (!entity.getId().equals("hello1") &&
           !entity.getId().equals("hello2")) {
-        Assertions.fail("Entities with ids' hello1 and hello2 should be present");
+        fail("Entities with ids' hello1 and hello2 should be present");
       }
     }
     entities = reader.getEntities(
@@ -749,7 +749,7 @@ public class TestHBaseTimelineStorageEntities {
     assertEquals(1, entities.size());
     for (TimelineEntity entity : entities) {
       if (!entity.getId().equals("hello")) {
-        Assertions.fail("Entity with id hello should be present");
+        fail("Entity with id hello should be present");
       }
     }
   }
@@ -789,7 +789,7 @@ public class TestHBaseTimelineStorageEntities {
       isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
       relatesToCnt += timelineEntity.getRelatesToEntities().size();
       if (!timelineEntity.getId().equals("hello2")) {
-        Assertions.fail("Entity id should have been hello2");
+        fail("Entity id should have been hello2");
       }
     }
     assertEquals(0, eventCnt);
@@ -815,7 +815,7 @@ public class TestHBaseTimelineStorageEntities {
     for (TimelineEntity timelineEntity : entities) {
       eventCnt += timelineEntity.getEvents().size();
       if (!timelineEntity.getId().equals("hello2")) {
-        Assertions.fail("Entity id should have been hello2");
+        fail("Entity id should have been hello2");
       }
     }
     assertEquals(1, eventCnt);
@@ -835,7 +835,7 @@ public class TestHBaseTimelineStorageEntities {
     for (TimelineEntity timelineEntity : entities) {
       eventCnt += timelineEntity.getEvents().size();
       if (!timelineEntity.getId().equals("hello2")) {
-        Assertions.fail("Entity id should have been hello2");
+        fail("Entity id should have been hello2");
       }
     }
     assertEquals(0, eventCnt);
@@ -854,7 +854,7 @@ public class TestHBaseTimelineStorageEntities {
       eventCnt += timelineEntity.getEvents().size();
       if (!timelineEntity.getId().equals("hello") &&
           !timelineEntity.getId().equals("hello2")) {
-        Assertions.fail("Entity ids' should have been hello and hello2");
+        fail("Entity ids' should have been hello and hello2");
       }
     }
     assertEquals(0, eventCnt);
@@ -890,7 +890,7 @@ public class TestHBaseTimelineStorageEntities {
     for (TimelineEntity timelineEntity : entities) {
       eventCnt += timelineEntity.getEvents().size();
       if (!timelineEntity.getId().equals("hello")) {
-        Assertions.fail("Entity id should have been hello");
+        fail("Entity id should have been hello");
       }
     }
     assertEquals(0, eventCnt);
@@ -910,7 +910,7 @@ public class TestHBaseTimelineStorageEntities {
     for (TimelineEntity timelineEntity : entities) {
       eventCnt += timelineEntity.getEvents().size();
       if (!timelineEntity.getId().equals("hello")) {
-        Assertions.fail("Entity id should have been hello");
+        fail("Entity id should have been hello");
       }
     }
     assertEquals(0, eventCnt);
@@ -937,7 +937,7 @@ public class TestHBaseTimelineStorageEntities {
       isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
       if (!timelineEntity.getId().equals("hello") &&
           !timelineEntity.getId().equals("hello1")) {
-        Assertions.fail("Entity ids' should have been hello and hello1");
+        fail("Entity ids' should have been hello and hello1");
       }
     }
     assertEquals(3, isRelatedToCnt);
@@ -959,7 +959,7 @@ public class TestHBaseTimelineStorageEntities {
     for (TimelineEntity timelineEntity : entities) {
       isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
       if (!timelineEntity.getId().equals("hello2")) {
-        Assertions.fail("Entity id should have been hello2");
+        fail("Entity id should have been hello2");
       }
     }
     assertEquals(0, isRelatedToCnt);
@@ -982,7 +982,7 @@ public class TestHBaseTimelineStorageEntities {
       isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
       if (!timelineEntity.getId().equals("hello") &&
           !timelineEntity.getId().equals("hello1")) {
-        Assertions.fail("Entity ids' should have been hello and hello1");
+        fail("Entity ids' should have been hello and hello1");
       }
     }
     assertEquals(0, isRelatedToCnt);
@@ -1001,7 +1001,7 @@ public class TestHBaseTimelineStorageEntities {
     for (TimelineEntity timelineEntity : entities) {
       isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
       if (!timelineEntity.getId().equals("hello1")) {
-        Assertions.fail("Entity id should have been hello1");
+        fail("Entity id should have been hello1");
       }
     }
     assertEquals(0, isRelatedToCnt);
@@ -1053,7 +1053,7 @@ public class TestHBaseTimelineStorageEntities {
     for (TimelineEntity timelineEntity : entities) {
       isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
       if (!timelineEntity.getId().equals("hello1")) {
-        Assertions.fail("Entity id should have been hello1");
+        fail("Entity id should have been hello1");
       }
     }
     assertEquals(0, isRelatedToCnt);
@@ -1080,7 +1080,7 @@ public class TestHBaseTimelineStorageEntities {
       relatesToCnt += timelineEntity.getRelatesToEntities().size();
       if (!timelineEntity.getId().equals("hello") &&
           !timelineEntity.getId().equals("hello2")) {
-        Assertions.fail("Entity ids' should have been hello and hello2");
+        fail("Entity ids' should have been hello and hello2");
       }
     }
     assertEquals(3, relatesToCnt);
@@ -1102,7 +1102,7 @@ public class TestHBaseTimelineStorageEntities {
     for (TimelineEntity timelineEntity : entities) {
       relatesToCnt += timelineEntity.getRelatesToEntities().size();
       if (!timelineEntity.getId().equals("hello1")) {
-        Assertions.fail("Entity id should have been hello1");
+        fail("Entity id should have been hello1");
       }
     }
     assertEquals(0, relatesToCnt);
@@ -1125,7 +1125,7 @@ public class TestHBaseTimelineStorageEntities {
       relatesToCnt += timelineEntity.getRelatesToEntities().size();
       if (!timelineEntity.getId().equals("hello") &&
           !timelineEntity.getId().equals("hello2")) {
-        Assertions.fail("Entity ids' should have been hello and hello2");
+        fail("Entity ids' should have been hello and hello2");
       }
     }
     assertEquals(0, relatesToCnt);
@@ -1144,7 +1144,7 @@ public class TestHBaseTimelineStorageEntities {
     for (TimelineEntity timelineEntity : entities) {
       relatesToCnt += timelineEntity.getRelatesToEntities().size();
       if (!timelineEntity.getId().equals("hello")) {
-        Assertions.fail("Entity id should have been hello");
+        fail("Entity id should have been hello");
       }
     }
     assertEquals(0, relatesToCnt);
@@ -1196,7 +1196,7 @@ public class TestHBaseTimelineStorageEntities {
     for (TimelineEntity timelineEntity : entities) {
       relatesToCnt += timelineEntity.getRelatesToEntities().size();
       if (!timelineEntity.getId().equals("hello")) {
-        Assertions.fail("Entity id should have been hello");
+        fail("Entity id should have been hello");
       }
     }
     assertEquals(0, relatesToCnt);
@@ -1231,7 +1231,7 @@ public class TestHBaseTimelineStorageEntities {
     for (TimelineEntity timelineEntity : entities) {
       relatesToCnt += timelineEntity.getRelatesToEntities().size();
       if (!timelineEntity.getId().equals("hello1")) {
-        Assertions.fail("Entity id should have been hello1");
+        fail("Entity id should have been hello1");
       }
     }
     assertEquals(0, relatesToCnt);
