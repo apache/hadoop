@@ -714,6 +714,7 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
     if (Shell.isJavaVersionAtLeast(17)) {
+      // Added by ContainerLocalizer for JDK17+ (MAPREDUCE-7456)
       Assert.assertTrue(javaOpts.contains("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
       Assert.assertTrue(javaOpts.contains("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
     }
@@ -732,6 +733,7 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
     if (Shell.isJavaVersionAtLeast(17)) {
+      // Added by ContainerLocalizer for JDK17+ (MAPREDUCE-7456)
       Assert.assertFalse(javaOpts.contains("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
       Assert.assertFalse(javaOpts.contains("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
     }
@@ -750,6 +752,11 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
         " userOption1 userOption2");
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
+    if (Shell.isJavaVersionAtLeast(17)) {
+      // Added by ContainerLocalizer for JDK17+ (MAPREDUCE-7456)
+      Assert.assertTrue(javaOpts.remove("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
+      Assert.assertTrue(javaOpts.remove("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
+    }
     Assert.assertEquals(4, javaOpts.size());
     Assert.assertTrue(javaOpts.get(0).equals("adminOption1"));
     Assert.assertTrue(javaOpts.get(1).equals("adminOption2"));
@@ -767,6 +774,11 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
         "adminOption1 adminOption2");
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
+    if (Shell.isJavaVersionAtLeast(17)) {
+      // Added by ContainerLocalizer for JDK17+ (MAPREDUCE-7456)
+      Assert.assertTrue(javaOpts.remove("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
+      Assert.assertTrue(javaOpts.remove("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
+    }
     Assert.assertEquals(3, javaOpts.size());
     Assert.assertTrue(javaOpts.get(0).equals("adminOption1"));
     Assert.assertTrue(javaOpts.get(1).equals("adminOption2"));
@@ -783,6 +795,11 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
         "userOption1 userOption2");
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
+    if (Shell.isJavaVersionAtLeast(17)) {
+      // Added by ContainerLocalizer for JDK17+ (MAPREDUCE-7456)
+      Assert.assertTrue(javaOpts.remove("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
+      Assert.assertTrue(javaOpts.remove("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
+    }
     Assert.assertEquals(2, javaOpts.size());
     Assert.assertTrue(javaOpts.get(0).equals("userOption1"));
     Assert.assertTrue(javaOpts.get(1).equals("userOption2"));
@@ -796,6 +813,11 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     Configuration conf = new Configuration();
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
+    if (Shell.isJavaVersionAtLeast(17)) {
+      // Added by ContainerLocalizer for JDK17+ (MAPREDUCE-7456)
+      Assert.assertTrue(javaOpts.remove("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
+      Assert.assertTrue(javaOpts.remove("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
+    }
     Assert.assertEquals(1, javaOpts.size());
     Assert.assertTrue(javaOpts.get(0).equals("-Xmx256m"));
   }
