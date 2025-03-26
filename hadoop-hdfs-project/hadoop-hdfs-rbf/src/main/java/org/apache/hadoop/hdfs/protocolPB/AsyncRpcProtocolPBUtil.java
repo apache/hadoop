@@ -98,7 +98,6 @@ public final class AsyncRpcProtocolPBUtil {
         throw warpCompletionException(ex);
       }
     }, asyncResponderExecutor));
-    CallerContext.setCurrent(null);
     return asyncReturn(clazz);
   }
 
