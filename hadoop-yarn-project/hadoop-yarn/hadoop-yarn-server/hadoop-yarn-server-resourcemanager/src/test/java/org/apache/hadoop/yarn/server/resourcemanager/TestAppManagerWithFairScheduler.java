@@ -179,8 +179,8 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
       rmAppManager.submitApplication(asContext, "test");
       fail("Test should have failed with access denied");
     } catch (YarnException e) {
-      assertTrue(
-         e.getCause() instanceof AccessControlException, "Access exception not found");
+      assertTrue(e.getCause() instanceof AccessControlException,
+          "Access exception not found");
     }
     // Submit to submit access queue
     when(placementMgr.placeApplication(any(), any(), any(Boolean.class)))
@@ -252,8 +252,8 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
       rmAppManager.submitApplication(asContext, "test");
       fail("Test should have failed with access denied");
     } catch (YarnException e) {
-      assertTrue(
-         e.getCause() instanceof AccessControlException, "Access exception not found");
+      assertTrue(e.getCause() instanceof AccessControlException,
+          "Access exception not found");
     }
     // Submit to submitonly parent with non existent child queue
     when(placementMgr.placeApplication(any(), any(), any(Boolean.class)))

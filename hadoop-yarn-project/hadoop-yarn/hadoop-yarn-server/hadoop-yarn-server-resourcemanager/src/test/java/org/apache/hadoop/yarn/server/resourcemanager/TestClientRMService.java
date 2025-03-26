@@ -711,15 +711,15 @@ public class TestClientRMService {
     assertThrows(ApplicationNotFoundException.class, () -> {
       RMContext rmContext = mock(RMContext.class);
       when(rmContext.getRMApps()).thenReturn(
-        new ConcurrentHashMap<ApplicationId, RMApp>());
+          new ConcurrentHashMap<ApplicationId, RMApp>());
           ClientRMService rmService = new ClientRMService(rmContext, null, null,
-        null, null, null);
-        ApplicationId applicationId =
-        BuilderUtils.newApplicationId(System.currentTimeMillis(), 0);
-          MoveApplicationAcrossQueuesRequest request =
-        MoveApplicationAcrossQueuesRequest.newInstance(applicationId,
+         null, null, null);
+      ApplicationId applicationId =
+      BuilderUtils.newApplicationId(System.currentTimeMillis(), 0);
+         MoveApplicationAcrossQueuesRequest request =
+      MoveApplicationAcrossQueuesRequest.newInstance(applicationId,
           "newqueue");
-        rmService.moveApplicationAcrossQueues(request);
+      rmService.moveApplicationAcrossQueues(request);
     });
   }
 

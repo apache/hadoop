@@ -766,7 +766,8 @@ public class TestRMNodeTransitions {
     assertEquals(initialLost, cm.getNumLostNMs(), "Lost Nodes");
     assertEquals(initialUnhealthy - 1, cm.getUnhealthyNMs(), "Unhealthy Nodes");
     assertEquals(initialDecommissioned, cm.getNumDecommisionedNMs(), "Decommissioned Nodes");
-    assertEquals(initialDecommissioning + 1, cm.getNumDecommissioningNMs(), "Decommissioning Nodes");
+    assertEquals(initialDecommissioning + 1, cm.getNumDecommissioningNMs(),
+        "Decommissioning Nodes");
     assertEquals(initialRebooted, cm.getNumRebootedNMs(), "Rebooted Nodes");
     assertEquals(NodeState.DECOMMISSIONING, node.getState());
   }

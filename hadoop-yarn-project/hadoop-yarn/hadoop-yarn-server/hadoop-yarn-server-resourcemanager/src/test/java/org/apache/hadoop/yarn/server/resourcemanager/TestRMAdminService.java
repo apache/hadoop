@@ -1224,24 +1224,24 @@ public class TestRMAdminService {
   public void testModifyLabelsOnNodesWithCentralizedConfigurationDisabled()
       throws IOException, YarnException {
     assertThrows(YarnException.class, () -> {
-        // create RM and set it's ACTIVE, and set distributed node label
-        // configuration to true
-        MockRM rm = new MockRM();
-        rm.adminService.isCentralizedNodeLabelConfiguration = false;
+      // create RM and set it's ACTIVE, and set distributed node label
+      // configuration to true
+      MockRM rm = new MockRM();
+      rm.adminService.isCentralizedNodeLabelConfiguration = false;
 
-        ((RMContextImpl) rm.getRMContext())
-        .setHAServiceState(HAServiceState.ACTIVE);
-        RMNodeLabelsManager labelMgr = rm.rmContext.getNodeLabelManager();
+      ((RMContextImpl) rm.getRMContext())
+      .setHAServiceState(HAServiceState.ACTIVE);
+      RMNodeLabelsManager labelMgr = rm.rmContext.getNodeLabelManager();
 
-        // by default, distributed configuration for node label is disabled, this
-        // should pass
-        labelMgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
-        rm.adminService.replaceLabelsOnNode(ReplaceLabelsOnNodeRequest
-  .newInstance(ImmutableMap.of(NodeId.newInstance("host", 0),
-      (Set<String>) ImmutableSet.of("x"))));
-        rm.close();
+      // by default, distributed configuration for node label is disabled, this
+      // should pass
+      labelMgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
+      rm.adminService.replaceLabelsOnNode(ReplaceLabelsOnNodeRequest
+        .newInstance(ImmutableMap.of(NodeId.newInstance("host", 0),
+           (Set<String>) ImmutableSet.of("x"))));
+      rm.close();
     });
-}
+  }
 
   @Test
   public void testModifyLabelsOnUnknownNodes() throws IOException,

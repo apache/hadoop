@@ -1646,8 +1646,7 @@ public class TestAppManager extends AppManagerTestBase{
     // make sure original app didn't get removed
     RMApp app = rmContext.getRMApps().get(appId);
     assertNotNull(app, "app is null");
-    assertEquals(
-       appId, app.getApplicationId(), "app id doesn't match");
+    assertEquals(appId, app.getApplicationId(), "app id doesn't match");
     assertEquals(RMAppState.FINISHED, app.getState(), "app state doesn't match");
   }
 
@@ -2062,8 +2061,8 @@ public class TestAppManager extends AppManagerTestBase{
     verify(scheduler).checkAccess(any(UserGroupInformation.class),
         any(QueueACL.class), queueNameCaptor.capture());
 
-    assertEquals(
-       expectedQueue, queueNameCaptor.getValue(), "Expected access check for queue");
+    assertEquals(expectedQueue, queueNameCaptor.getValue(),
+        "Expected access check for queue");
   }
 
   private void enableApplicationTagPlacement(boolean userHasAccessToQueue,

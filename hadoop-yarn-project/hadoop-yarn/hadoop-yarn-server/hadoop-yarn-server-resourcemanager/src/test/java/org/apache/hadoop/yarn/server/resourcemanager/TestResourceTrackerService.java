@@ -239,7 +239,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
 
     nodeHeartbeat = nm1.nodeHeartbeat(true);
     assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
-    
+
     assertEquals(1, ClusterMetrics.getMetrics().getNumShutdownNMs());
 
     nodeHeartbeat = nm2.nodeHeartbeat(true);
@@ -1541,7 +1541,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     req.setNMVersion(nmVersion);
     // trying to register a invalid node.
     RegisterNodeManagerResponse response = resourceTrackerService.registerNodeManager(req);
-    assertEquals(NodeAction.SHUTDOWN,response.getNodeAction());
+    assertEquals(NodeAction.SHUTDOWN, response.getNodeAction());
     assertTrue(response.getDiagnosticsMessage().contains("Disallowed NodeManager Version " +
         nmVersion + ", is less than the minimum version "),
         "Diagnostic message did not contain: 'Disallowed NodeManager " +
@@ -1566,7 +1566,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     req.setHttpPort(1234);
     // trying to register a invalid node.
     RegisterNodeManagerResponse response = resourceTrackerService.registerNodeManager(req);
-    assertEquals(NodeAction.SHUTDOWN,response.getNodeAction());
+    assertEquals(NodeAction.SHUTDOWN, response.getNodeAction());
     assertEquals(
         "Disallowed NodeManager from  host2, Sending SHUTDOWN signal to the NodeManager.",
         response.getDiagnosticsMessage());
@@ -1606,28 +1606,28 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     req.setResource(capability);
     RegisterNodeManagerResponse response1 =
         resourceTrackerService.registerNodeManager(req);
-    assertEquals(NodeAction.SHUTDOWN,response1.getNodeAction());
+    assertEquals(NodeAction.SHUTDOWN, response1.getNodeAction());
     
     capability.setMemorySize(2048);
     capability.setVirtualCores(1);
     req.setResource(capability);
     RegisterNodeManagerResponse response2 =
         resourceTrackerService.registerNodeManager(req);
-    assertEquals(NodeAction.SHUTDOWN,response2.getNodeAction());
+    assertEquals(NodeAction.SHUTDOWN, response2.getNodeAction());
     
     capability.setMemorySize(1024);
     capability.setVirtualCores(4);
     req.setResource(capability);
     RegisterNodeManagerResponse response3 =
         resourceTrackerService.registerNodeManager(req);
-    assertEquals(NodeAction.SHUTDOWN,response3.getNodeAction());
+    assertEquals(NodeAction.SHUTDOWN, response3.getNodeAction());
     
     capability.setMemorySize(2048);
     capability.setVirtualCores(4);
     req.setResource(capability);
     RegisterNodeManagerResponse response4 =
         resourceTrackerService.registerNodeManager(req);
-    assertEquals(NodeAction.NORMAL,response4.getNodeAction());
+    assertEquals(NodeAction.NORMAL, response4.getNodeAction());
   }
 
   @Test
@@ -2423,8 +2423,8 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
       nm3.nodeHeartbeat(true);
       nm1.nodeHeartbeat(true);
     }
-    assertNotEquals(
-       rmContext.getInactiveRMNodes().get(nm2.getNodeId()), null, "host2 should be a lost NM!");
+    assertNotEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()),
+       null, "host2 should be a lost NM!");
     assertEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()).getState(),
         NodeState.LOST, "host2 should be a lost NM!");
     assertEquals(clusterMetrics.getNumLostNMs(), 1, "There should be 1 Lost NM!");
@@ -2454,8 +2454,10 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     }
     assertEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()), null,
         "host2 should have been forgotten!");
-    assertEquals(clusterMetrics.getNumLostNMs(), 0, "There should be no Lost NMs!");
-    assertEquals(clusterMetrics.getNumActiveNMs(), 2, "There should be 2 Active NM!");
+    assertEquals(clusterMetrics.getNumLostNMs(), 0,
+        "There should be no Lost NMs!");
+    assertEquals(clusterMetrics.getNumActiveNMs(), 2,
+        "There should be 2 Active NM!");
     rm.stop();
   }
 
@@ -2521,8 +2523,10 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     }
     assertEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()), null,
         "host2 should have been forgotten!");
-    assertEquals(clusterMetrics.getNumRebootedNMs(), 0, "There should be no Rebooted NMs!");
-    assertEquals(clusterMetrics.getNumActiveNMs(), 2, "There should be 2 Active NM!");
+    assertEquals(clusterMetrics.getNumRebootedNMs(), 0,
+        "There should be no Rebooted NMs!");
+    assertEquals(clusterMetrics.getNumActiveNMs(), 2,
+        "There should be 2 Active NM!");
     rm.stop();
   }
 
@@ -2573,8 +2577,8 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     nm3.nodeHeartbeat(true);
     rm.drainEvents();
     if (!doGraceful) {
-      assertNotEquals(
-         rmContext.getInactiveRMNodes().get(nm2.getNodeId()), null, "host2 should be a shutdown NM!");
+      assertNotEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()), null,
+          "host2 should be a shutdown NM!");
       assertEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()).getState(),
           NodeState.SHUTDOWN, "host2 should be a shutdown NM!");
     }
@@ -2923,7 +2927,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
             NodeId.newInstance("host1" + System.currentTimeMillis(), 1234),
             1236, Resource.newInstance(10000, 10), "2", new ArrayList<>(),
             new ArrayList<>()));
-    
+
     assertEquals(NodeAction.SHUTDOWN,
         response.getNodeAction(), "Shutdown signal should be received");
     assertTrue(response.getDiagnosticsMessage()
