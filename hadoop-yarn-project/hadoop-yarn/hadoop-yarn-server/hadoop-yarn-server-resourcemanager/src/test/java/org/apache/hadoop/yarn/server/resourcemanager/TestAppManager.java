@@ -144,7 +144,7 @@ import static org.mockito.Mockito.when;
 public class TestAppManager extends AppManagerTestBase{
 
   @RegisterExtension
-  public UseCapacitySchedulerRule shouldUseCs = new UseCapacitySchedulerRule();
+  private UseCapacitySchedulerRule shouldUseCs = new UseCapacitySchedulerRule();
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestAppManager.class);

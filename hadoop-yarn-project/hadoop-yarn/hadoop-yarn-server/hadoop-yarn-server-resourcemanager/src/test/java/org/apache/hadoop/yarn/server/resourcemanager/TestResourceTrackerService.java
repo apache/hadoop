@@ -2424,7 +2424,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
       nm1.nodeHeartbeat(true);
     }
     assertNotEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()),
-       null, "host2 should be a lost NM!");
+        null, "host2 should be a lost NM!");
     assertEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()).getState(),
         NodeState.LOST, "host2 should be a lost NM!");
     assertEquals(clusterMetrics.getNumLostNMs(), 1, "There should be 1 Lost NM!");

@@ -711,13 +711,13 @@ public class TestClientRMService {
     assertThrows(ApplicationNotFoundException.class, () -> {
       RMContext rmContext = mock(RMContext.class);
       when(rmContext.getRMApps()).thenReturn(
-          new ConcurrentHashMap<ApplicationId, RMApp>());
-          ClientRMService rmService = new ClientRMService(rmContext, null, null,
-         null, null, null);
+        new ConcurrentHashMap<ApplicationId, RMApp>());
+      ClientRMService rmService = new ClientRMService(rmContext, null, null,
+          null, null, null);
       ApplicationId applicationId =
-      BuilderUtils.newApplicationId(System.currentTimeMillis(), 0);
-         MoveApplicationAcrossQueuesRequest request =
-      MoveApplicationAcrossQueuesRequest.newInstance(applicationId,
+          BuilderUtils.newApplicationId(System.currentTimeMillis(), 0);
+      MoveApplicationAcrossQueuesRequest request =
+          MoveApplicationAcrossQueuesRequest.newInstance(applicationId,
           "newqueue");
       rmService.moveApplicationAcrossQueues(request);
     });
@@ -856,11 +856,11 @@ public class TestClientRMService {
       QueueACLsManager queueAclsManager = getQueueAclManager();
       ApplicationACLsManager appAclsManager = getAppAclManager();
       ClientRMService rmService =
-        createClientRMServiceForMoveApplicationRequest(applicationId,
-        aclUGI.getShortUserName(), appAclsManager, queueAclsManager);
+          createClientRMServiceForMoveApplicationRequest(applicationId,
+          aclUGI.getShortUserName(), appAclsManager, queueAclsManager);
       MoveApplicationAcrossQueuesRequest moveAppRequest =
-        MoveApplicationAcrossQueuesRequest.newInstance(applicationId,
-        "unknown_queue");
+          MoveApplicationAcrossQueuesRequest.newInstance(applicationId,
+          "unknown_queue");
       rmService.moveApplicationAcrossQueues(moveAppRequest);
     });
   }

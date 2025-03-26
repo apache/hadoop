@@ -1226,20 +1226,20 @@ public class TestRMAdminService {
     assertThrows(YarnException.class, () -> {
       // create RM and set it's ACTIVE, and set distributed node label
       // configuration to true
-      MockRM rm = new MockRM();
-      rm.adminService.isCentralizedNodeLabelConfiguration = false;
+      MockRM mockRM = new MockRM();
+      mockRM.adminService.isCentralizedNodeLabelConfiguration = false;
 
-      ((RMContextImpl) rm.getRMContext())
+      ((RMContextImpl) mockRM.getRMContext())
       .setHAServiceState(HAServiceState.ACTIVE);
-      RMNodeLabelsManager labelMgr = rm.rmContext.getNodeLabelManager();
+      RMNodeLabelsManager labelMgr = mockRM.rmContext.getNodeLabelManager();
 
       // by default, distributed configuration for node label is disabled, this
       // should pass
       labelMgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
-      rm.adminService.replaceLabelsOnNode(ReplaceLabelsOnNodeRequest
-        .newInstance(ImmutableMap.of(NodeId.newInstance("host", 0),
-           (Set<String>) ImmutableSet.of("x"))));
-      rm.close();
+      mockRM.adminService.replaceLabelsOnNode(ReplaceLabelsOnNodeRequest
+          .newInstance(ImmutableMap.of(NodeId.newInstance("host", 0),
+          (Set<String>) ImmutableSet.of("x"))));
+      mockRM.close();
     });
   }
 
@@ -1597,6 +1597,7 @@ public class TestRMAdminService {
 
   @Test
   @Timeout(value = 30)
+  @SuppressWarnings("checkstyle:MethodLength")
   public void testMapAttributesToNodes() throws Exception, YarnException {
     // 1. Need to test for the Invalid Node
     // 1.1. Need to test for active nodes
