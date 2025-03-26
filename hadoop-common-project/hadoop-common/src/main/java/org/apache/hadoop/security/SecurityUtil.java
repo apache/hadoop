@@ -110,8 +110,9 @@ public final class SecurityUtil {
     boolean useIp = conf.getBoolean(
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP,
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT);
-    cachingInterval = conf.getInt(CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_INTERVAL,
-        CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_INTERVAL_DEFAULT);
+    cachingInterval = conf.getInt(
+        CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS,
+        CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS_DEFAULT);
     setTokenServiceUseIp(useIp);
 
     logSlowLookups = conf.getBoolean(
@@ -624,8 +625,8 @@ public final class SecurityUtil {
           if (cause instanceof UnknownHostException) {
             throw (UnknownHostException) cause;
           }
-          throw new UnknownHostException("Error resolving host " + host +
-              ": " + cause.getMessage());
+          String message = (cause != null ? cause.getMessage() : "Unknown error");
+          throw new UnknownHostException("Error resolving host " + host + ": " + message);
         }
       } else {
         return resolve(host);
