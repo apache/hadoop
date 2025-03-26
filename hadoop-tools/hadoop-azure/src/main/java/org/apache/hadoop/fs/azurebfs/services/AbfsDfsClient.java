@@ -1493,14 +1493,6 @@ public class AbfsDfsClient extends AbfsClient {
         throw new AbfsDriverException(ex);
       }
 
-      if (listResultSchema == null) {
-        throw new AbfsRestOperationException(
-            AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
-            AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-            "listStatusAsync path not found",
-            null);
-      }
-
       List<FileStatus> fileStatuses = new ArrayList<>();
       for (DfsListResultEntrySchema entry : listResultSchema.paths()) {
         fileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
