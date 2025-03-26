@@ -159,6 +159,7 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
  * Tests covering the functionality of RouterRPCServer with
  * multi nameServices.
  */
+@SuppressWarnings("checkstyle:VisibilityModifier")
 public class TestRouterRpc {
 
   private static final Logger LOG =
@@ -192,7 +193,7 @@ public class TestRouterRpc {
   private NamenodeContext namenode;
 
   /** Client interface to the Router. */
-  private ClientProtocol routerProtocol;
+  protected ClientProtocol routerProtocol;
   /** Client interface to the Namenode. */
   private ClientProtocol nnProtocol;
 
@@ -203,7 +204,7 @@ public class TestRouterRpc {
   private NamenodeProtocol nnNamenodeProtocol1;
 
   /** Filesystem interface to the Router. */
-  private FileSystem routerFS;
+  protected FileSystem routerFS;
   /** Filesystem interface to the Namenode. */
   private FileSystem nnFS;
 

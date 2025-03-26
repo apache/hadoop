@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.server.federation.router.ThreadLocalContext;
 import org.apache.hadoop.hdfs.server.federation.router.async.utils.ApplyFunction;
 import org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncApplyFunction;
 import org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncCatchFunction;
-import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
