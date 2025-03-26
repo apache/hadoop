@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.NodeLabelsInfoReader;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -57,7 +57,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -99,10 +100,10 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTes
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfNodes;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyQueueOrder;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyStateOfAllocations;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -144,7 +145,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
   public TestRMWebServicesSchedulerActivities() {
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -866,7 +867,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testInsufficientResourceDiagnostic() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -930,7 +932,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testPlacementConstraintDiagnostic() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler)rm.getResourceScheduler();
@@ -998,7 +1001,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppInsufficientResourceDiagnostic() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -1050,7 +1054,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppPlacementConstraintDiagnostic() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -1108,7 +1113,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppFilterByRequestPrioritiesAndAllocationRequestIds()
       throws Exception {
     rm.start();
@@ -1247,7 +1253,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppLimit() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -1322,7 +1329,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppActions() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -1426,7 +1434,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppSummary() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -1677,7 +1686,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testSchedulerBulkActivities() throws Exception {
     rm.start();
 
@@ -1703,8 +1713,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       JSONObject activitiesJson = restClient.getOutput().getJSONObject(
           FN_SCHEDULER_BULK_ACT_ROOT);
       Object activities = activitiesJson.get(FN_SCHEDULER_ACT_ROOT);
-      assertEquals("Number of activities is wrong", expectedCount,
-          ((JSONArray) activities).length());
+      assertEquals(expectedCount,
+          ((JSONArray) activities).length(), "Number of activities is wrong");
 
 
       // Validate if response does not exceed max 500
@@ -1717,9 +1727,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       activitiesJson = restClient.getOutput().getJSONObject(
           FN_SCHEDULER_BULK_ACT_ROOT);
       activities = activitiesJson.get(FN_SCHEDULER_ACT_ROOT);
-      assertEquals("Max Activities Limit does not work",
-          RMWebServices.MAX_ACTIVITIES_COUNT,
-          ((JSONArray) activities).length());
+      assertEquals(RMWebServices.MAX_ACTIVITIES_COUNT,
+          ((JSONArray) activities).length(), "Max Activities Limit does not work");
 
     } finally {
       rm.stop();

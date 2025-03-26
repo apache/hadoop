@@ -39,7 +39,8 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.client.WebTarget;
@@ -47,8 +48,8 @@ import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -86,6 +87,7 @@ public class TestRMWebServicesFairScheduler extends JerseyTestBase {
     }
   }
 
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -149,11 +151,11 @@ public class TestRMWebServicesFairScheduler extends JerseyTestBase {
   }
 
   private void verifyClusterScheduler(JSONObject json) throws JSONException {
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject info = json.getJSONObject("scheduler");
-    assertEquals("incorrect number of elements", 1, info.length());
+    assertEquals(1, info.length(), "incorrect number of elements");
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements", 2, info.length());
+    assertEquals(2, info.length(), "incorrect number of elements");
     JSONObject rootQueue = info.getJSONObject("rootQueue");
     assertEquals("root", rootQueue.getString("queueName"));
   }

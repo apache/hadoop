@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -79,12 +79,7 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
 
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
@@ -92,8 +87,9 @@ import org.glassfish.jersey.jettison.JettisonJaxbContext;
 import org.glassfish.jersey.jettison.JettisonUnmarshaller;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.TestProperties;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
 public class TestRMWebServicesReservation extends JerseyTestBase {
 
   private String webserviceUserName = "testuser";
@@ -275,19 +271,17 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     return new FairTestServletModule(true);
   }
 
-  @Parameters
   public static Collection<Object[]> guiceConfigs() {
     return Arrays.asList(new Object[][] {{0, true}, {1, true}, {2, true},
         {3, true}, {0, false}, {1, false}, {2, false}, {3, false}});
   }
 
-  @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
   }
 
-  public TestRMWebServicesReservation(int run, boolean recurrence) {
+  public void initTestRMWebServicesReservation(int run, boolean recurrence) throws Exception {
     enableRecurrence = recurrence;
     switch (run) {
     case 0:
@@ -308,6 +302,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       config.register(getSimpleAuthInjectorFair());
       break;
     }
+    setUp();
   }
 
   private boolean isAuthenticationEnabled() {
@@ -329,7 +324,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     return this.constructWebResource(target, paths);
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() throws Exception {
     if (rm != null) {
@@ -338,8 +333,10 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     super.tearDown();
   }
 
-  @Test
-  public void testSubmitReservation() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testSubmitReservation(int run, boolean recurrence) throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -353,8 +350,10 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testSubmitDuplicateReservation() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testSubmitDuplicateReservation(int run, boolean recurrence) throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -382,8 +381,11 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testSubmitDifferentReservationWithSameId() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testSubmitDifferentReservationWithSameId(int run, boolean recurrence)
+      throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -412,8 +414,10 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testFailedSubmitReservation() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testFailedSubmitReservation(int run, boolean recurrence) throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     // setup a cluster too small to accept the reservation
     setupCluster(1);
@@ -427,8 +431,10 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testUpdateReservation() throws JSONException, Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testUpdateReservation(int run, boolean recurrence) throws JSONException, Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -444,8 +450,10 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testTimeIntervalRequestListReservation() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testTimeIntervalRequestListReservation(int run, boolean recurrence) throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -485,9 +493,11 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testSameTimeIntervalRequestListReservation() throws Exception {
-
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testSameTimeIntervalRequestListReservation(int run, boolean recurrence)
+      throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -531,9 +541,12 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     rm.stop();
   }
-  @Test
-  public void testInvalidTimeIntervalRequestListReservation() throws
-          Exception {
+
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testInvalidTimeIntervalRequestListReservation(int run, boolean recurrence) throws
+      Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -572,8 +585,11 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testInvalidEndTimeRequestListReservation() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testInvalidEndTimeRequestListReservation(int run, boolean recurrence)
+      throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -624,8 +640,10 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testEmptyEndTimeRequestListReservation() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testEmptyEndTimeRequestListReservation(int run, boolean recurrence) throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -674,8 +692,11 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testInvalidStartTimeRequestListReservation() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testInvalidStartTimeRequestListReservation(int run, boolean recurrence)
+      throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -718,8 +739,11 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testEmptyStartTimeRequestListReservation() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testEmptyStartTimeRequestListReservation(int run, boolean recurrence)
+      throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -759,8 +783,10 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testQueueOnlyRequestListReservation() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testQueueOnlyRequestListReservation(int run, boolean recurrence) throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -791,8 +817,10 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testEmptyQueueRequestListReservation() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testEmptyQueueRequestListReservation(int run, boolean recurrence) throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -811,8 +839,11 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testNonExistentQueueRequestListReservation() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testNonExistentQueueRequestListReservation(int run, boolean recurrence)
+      throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -832,8 +863,11 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testReservationIdRequestListReservation() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testReservationIdRequestListReservation(int run, boolean recurrence)
+      throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -873,9 +907,11 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testInvalidReservationIdRequestListReservation() throws
-          Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testInvalidReservationIdRequestListReservation(int run, boolean recurrence)
+      throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -897,8 +933,10 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testIncludeResourceAllocations() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testIncludeResourceAllocations(int run, boolean recurrence) throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -933,8 +971,10 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testExcludeResourceAllocations() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testExcludeResourceAllocations(int run, boolean recurrence) throws Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     setupCluster(100);
 
@@ -971,8 +1011,10 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.stop();
   }
 
-  @Test
-  public void testDeleteReservation() throws JSONException, Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testDeleteReservation(int run, boolean recurrence) throws JSONException, Exception {
+    initTestRMWebServicesReservation(run, recurrence);
     rm.start();
     for (int i = 0; i < 100; i++) {
       MockNM amNodeManager =
@@ -1027,7 +1069,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
         readEntity(JSONObject.class).
         getJSONObject("new-reservation");
 
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     ReservationId rid = null;
     try {
       rid = ReservationId.parseReservationId(json.getString("reservation-id"));

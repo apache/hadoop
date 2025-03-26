@@ -26,7 +26,13 @@ import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.maxCardin
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.and;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.or;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets.allocationTag;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.util.AbstractMap;
@@ -67,12 +73,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.DiagnosticsCollector;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.GenericDiagnosticsCollector;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.mockito.Mockito;
 
 /**
  * Test the PlacementConstraint Utility class functionality.
@@ -89,7 +93,7 @@ public class TestPlacementConstraintsUtil {
       constraintMap2, constraintMap3, constraintMap4;
   private AtomicLong requestID = new AtomicLong(0);
 
-  @Before
+  @BeforeEach
   public void setup() {
     MockRM rm = new MockRM();
     rm.start();
@@ -196,9 +200,9 @@ public class TestPlacementConstraintsUtil {
       SchedulerNode schedulerNode =newSchedulerNode(currentNode.getHostName(),
           currentNode.getRackName(), currentNode.getNodeID());
 
-      Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+      assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
           createSchedulingRequest(sourceTag1), schedulerNode, pcm, tm));
-      Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+      assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
           createSchedulingRequest(sourceTag2), schedulerNode, pcm, tm));
     }
     /**
@@ -225,24 +229,24 @@ public class TestPlacementConstraintsUtil {
     tm.addContainer(n0_r1.getNodeID(), hbase_m, ImmutableSet.of("hbase-m"));
 
     // 'spark' placement on Node0 should now SUCCEED
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode0, pcm, tm));
     // FAIL on the rest of the nodes
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode1, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode2, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode3, pcm, tm));
 
     // Test diagnostics collector
     DiagnosticsCollector collector =
         new GenericDiagnosticsCollector();
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode1, pcm, tm,
         Optional.of(collector)));
-    Assert.assertNotNull(collector.getDiagnostics());
-    Assert.assertTrue(collector.getDiagnostics().contains("ALLOCATION_TAG"));
+    assertNotNull(collector.getDiagnostics());
+    assertTrue(collector.getDiagnostics().contains("ALLOCATION_TAG"));
   }
 
   @Test
@@ -296,13 +300,13 @@ public class TestPlacementConstraintsUtil {
 
     // n0 and n1 has A/B so they cannot satisfy the PC
     // n2 and n3 doesn't have A or B, so they can satisfy the PC
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(st1), schedulerNode0, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(st1), schedulerNode1, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(st1), schedulerNode2, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(st1), schedulerNode3, pcm, tm));
 
     /**
@@ -318,13 +322,13 @@ public class TestPlacementConstraintsUtil {
     tm.addContainer(n2_r2.getNodeID(), cb1, ImmutableSet.of("B"));
 
     // Only n2 has both A and B so only it can satisfy the PC
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(st2), schedulerNode0, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(st2), schedulerNode1, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(st2), schedulerNode2, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(st2), schedulerNode3, pcm, tm));
   }
 
@@ -360,15 +364,15 @@ public class TestPlacementConstraintsUtil {
         n3_r2.getRackName(), n3_r2.getNodeID());
 
     // 'zk' placement on Rack1 should now SUCCEED
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag2), schedulerNode0, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag2), schedulerNode1, pcm, tm));
 
     // FAIL on the rest of the RACKs
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag2), schedulerNode2, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag2), schedulerNode3, pcm, tm));
   }
 
@@ -405,14 +409,14 @@ public class TestPlacementConstraintsUtil {
     tm.addContainer(n0_r1.getNodeID(), hbase_m, ImmutableSet.of("hbase-m"));
 
     // 'spark' placement on Node0 should now FAIL
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode0, pcm, tm));
     // SUCCEED on the rest of the nodes
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode1, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode2, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode3, pcm, tm));
   }
 
@@ -448,15 +452,15 @@ public class TestPlacementConstraintsUtil {
         n3_r2.getRackName(), n3_r2.getNodeID());
 
     // 'zk' placement on Rack1 should FAIL
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag2), schedulerNode0, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag2), schedulerNode1, pcm, tm));
 
     // SUCCEED on the rest of the RACKs
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag2), schedulerNode2, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag2), schedulerNode3, pcm, tm));
   }
 
@@ -484,9 +488,9 @@ public class TestPlacementConstraintsUtil {
         newContainerId(appId1, 1), ImmutableSet.of("hbase-m"));
     tm.addContainer(n2r2.getNodeID(),
         newContainerId(appId1, 2), ImmutableSet.of("hbase-rs"));
-    Assert.assertEquals(1L, tm.getAllocationTagsWithCount(n0r1.getNodeID())
+    assertEquals(1L, tm.getAllocationTagsWithCount(n0r1.getNodeID())
         .get("hbase-m").longValue());
-    Assert.assertEquals(1L, tm.getAllocationTagsWithCount(n2r2.getNodeID())
+    assertEquals(1L, tm.getAllocationTagsWithCount(n2r2.getNodeID())
         .get("hbase-rs").longValue());
 
     SchedulerNode schedulerNode0 =newSchedulerNode(n0r1.getHostName(),
@@ -500,13 +504,13 @@ public class TestPlacementConstraintsUtil {
 
     // n0 and n2 should be qualified for allocation as
     // they either have hbase-m or hbase-rs tag
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode0, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode1, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode2, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode3, pcm, tm));
 
     /**
@@ -519,7 +523,7 @@ public class TestPlacementConstraintsUtil {
     tm.addContainer(n3r2.getNodeID(),
         newContainerId(appId1, 2), ImmutableSet.of("hbase-rs"));
     // n3 is qualified now because it is allocated with hbase-rs tag
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode3, pcm, tm));
 
     /**
@@ -534,13 +538,13 @@ public class TestPlacementConstraintsUtil {
         newContainerId(appId1, 3), ImmutableSet.of("spark"));
     // According to constraint, "zk" is allowed to be placed on a node
     // has "hbase-m" tag OR a node has both "hbase-rs" and "spark" tags.
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag2), schedulerNode0, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag2), schedulerNode1, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag2), schedulerNode2, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag2), schedulerNode3, pcm, tm));
   }
 
@@ -568,9 +572,9 @@ public class TestPlacementConstraintsUtil {
         newContainerId(appId1, 0), ImmutableSet.of("hbase-m"));
     tm.addContainer(n2r2.getNodeID(),
         newContainerId(appId1, 1), ImmutableSet.of("hbase-m"));
-    Assert.assertEquals(1L, tm.getAllocationTagsWithCount(n0r1.getNodeID())
+    assertEquals(1L, tm.getAllocationTagsWithCount(n0r1.getNodeID())
         .get("hbase-m").longValue());
-    Assert.assertEquals(1L, tm.getAllocationTagsWithCount(n2r2.getNodeID())
+    assertEquals(1L, tm.getAllocationTagsWithCount(n2r2.getNodeID())
         .get("hbase-m").longValue());
 
     SchedulerNode schedulerNode0 =newSchedulerNode(n0r1.getHostName(),
@@ -584,13 +588,13 @@ public class TestPlacementConstraintsUtil {
 
     // Anti-affinity with hbase-m so it should not be able to be placed
     // onto n0 and n2 as they already have hbase-m allocated.
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode0, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode1, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode2, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode3, pcm, tm));
 
     /**
@@ -604,17 +608,17 @@ public class TestPlacementConstraintsUtil {
       tm.addContainer(n1r1.getNodeID(),
           newContainerId(appId1, i+2), ImmutableSet.of("spark"));
     }
-    Assert.assertEquals(4L, tm.getAllocationTagsWithCount(n1r1.getNodeID())
+    assertEquals(4L, tm.getAllocationTagsWithCount(n1r1.getNodeID())
         .get("spark").longValue());
 
     // Violate cardinality constraint
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode0, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode1, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode2, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode3, pcm, tm));
   }
 
@@ -684,16 +688,16 @@ public class TestPlacementConstraintsUtil {
     constraintMap.put(srcTags1, constraint1);
     pcm.registerApplication(application1, constraintMap);
 
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
         application1, createSchedulingRequest(srcTags1),
         schedulerNode0, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
         application1, createSchedulingRequest(srcTags1),
         schedulerNode1, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
         application1, createSchedulingRequest(srcTags1),
         schedulerNode2, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
         application1, createSchedulingRequest(srcTags1),
         schedulerNode3, pcm, tm));
 
@@ -710,16 +714,16 @@ public class TestPlacementConstraintsUtil {
     constraintMap.put(srcTags2, constraint2);
     pcm.registerApplication(application2, constraintMap);
 
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
         application2, createSchedulingRequest(srcTags2),
         schedulerNode0, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
         application2, createSchedulingRequest(srcTags2),
         schedulerNode1, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
         application2, createSchedulingRequest(srcTags2),
         schedulerNode2, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
         application2, createSchedulingRequest(srcTags2),
         schedulerNode3, pcm, tm));
 
@@ -736,16 +740,16 @@ public class TestPlacementConstraintsUtil {
     constraintMap.put(srcTags3, constraint3);
     pcm.registerApplication(application3, constraintMap);
 
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
         application3, createSchedulingRequest(srcTags3),
         schedulerNode0, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
         application3, createSchedulingRequest(srcTags3),
         schedulerNode1, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
         application3, createSchedulingRequest(srcTags3),
         schedulerNode2, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
         application3, createSchedulingRequest(srcTags3),
         schedulerNode3, pcm, tm));
 
@@ -768,7 +772,7 @@ public class TestPlacementConstraintsUtil {
     allApps.put(application3, new MockRMApp(125, 1002,
         RMAppState.NEW, "userA", ImmutableSet.of("")));
 
-    RMContext mockedContext = Mockito.spy(rmContext);
+    RMContext mockedContext = spy(rmContext);
     when(mockedContext.getRMApps()).thenReturn(allApps);
 
     AllocationTagsManager tm = new AllocationTagsManager(mockedContext);
@@ -831,16 +835,16 @@ public class TestPlacementConstraintsUtil {
     constraintMap.put(srcTags1, constraint1);
     pcm.registerApplication(application1, constraintMap);
 
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
         application1, createSchedulingRequest(srcTags1),
         schedulerNode0, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
         application1, createSchedulingRequest(srcTags1),
         schedulerNode1, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
         application1, createSchedulingRequest(srcTags1),
         schedulerNode2, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
         application1, createSchedulingRequest(srcTags1),
         schedulerNode3, pcm, tm));
 
@@ -859,16 +863,16 @@ public class TestPlacementConstraintsUtil {
     cm2.put(srcTags2, constraint2);
     pcm.registerApplication(application1, cm2);
 
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
         application1, createSchedulingRequest(srcTags2),
         schedulerNode0, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
         application1, createSchedulingRequest(srcTags2),
         schedulerNode1, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
         application1, createSchedulingRequest(srcTags2),
         schedulerNode2, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
         application1, createSchedulingRequest(srcTags2),
         schedulerNode3, pcm, tm));
 
@@ -906,9 +910,9 @@ public class TestPlacementConstraintsUtil {
         newContainerId(application1, 0), ImmutableSet.of("hbase-m"));
     tm.addContainer(n2r2.getNodeID(),
         newContainerId(application1, 1), ImmutableSet.of("hbase-m"));
-    Assert.assertEquals(1L, tm.getAllocationTagsWithCount(n0r1.getNodeID())
+    assertEquals(1L, tm.getAllocationTagsWithCount(n0r1.getNodeID())
         .get("hbase-m").longValue());
-    Assert.assertEquals(1L, tm.getAllocationTagsWithCount(n2r2.getNodeID())
+    assertEquals(1L, tm.getAllocationTagsWithCount(n2r2.getNodeID())
         .get("hbase-m").longValue());
 
     SchedulerNode schedulerNode0 =newSchedulerNode(n0r1.getHostName(),
@@ -935,16 +939,16 @@ public class TestPlacementConstraintsUtil {
 
     // Anti-affinity with app1/hbase-m so it should not be able to be placed
     // onto n0 and n2 as they already have hbase-m allocated.
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
         application2, createSchedulingRequest(srcTags2),
         schedulerNode0, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
         application2, createSchedulingRequest(srcTags2),
         schedulerNode1, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
         application2, createSchedulingRequest(srcTags2),
         schedulerNode2, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
         application2, createSchedulingRequest(srcTags2),
         schedulerNode3, pcm, tm));
 
@@ -971,16 +975,16 @@ public class TestPlacementConstraintsUtil {
         newContainerId(application3, 0), ImmutableSet.of("hbase-m"));
 
     // Anti-affinity to self/hbase-m
-    Assert.assertFalse(PlacementConstraintsUtil
+    assertFalse(PlacementConstraintsUtil
         .canSatisfyConstraints(application3, createSchedulingRequest(srcTags3),
             schedulerNode0, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil
+    assertTrue(PlacementConstraintsUtil
         .canSatisfyConstraints(application3, createSchedulingRequest(srcTags3),
             schedulerNode1, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil
+    assertTrue(PlacementConstraintsUtil
         .canSatisfyConstraints(application3, createSchedulingRequest(srcTags3),
             schedulerNode2, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil
+    assertTrue(PlacementConstraintsUtil
         .canSatisfyConstraints(application3, createSchedulingRequest(srcTags3),
             schedulerNode3, pcm, tm));
 
@@ -996,7 +1000,7 @@ public class TestPlacementConstraintsUtil {
 
     // app1: test-tag
     // app2: N/A
-    RMContext mockedContext = Mockito.spy(rmContext);
+    RMContext mockedContext = spy(rmContext);
     ConcurrentMap<ApplicationId, RMApp> allApps = new ConcurrentHashMap<>();
     allApps.put(application1, new MockRMApp(123, 1000,
         RMAppState.NEW, "userA", ImmutableSet.of("test-tag")));
@@ -1052,16 +1056,16 @@ public class TestPlacementConstraintsUtil {
     // Anti-affinity with app-tag/test-tag/hbase-m,
     // app1 has tag "test-tag" so the constraint is equally to work on app1
     // onto n1 and n3 as they don't have "hbase-m" from app1.
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
         application2, createSchedulingRequest(srcTags2),
         schedulerNode0, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
         application2, createSchedulingRequest(srcTags2),
         schedulerNode1, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
         application2, createSchedulingRequest(srcTags2),
         schedulerNode2, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
         application2, createSchedulingRequest(srcTags2),
         schedulerNode3, pcm, tm));
 
@@ -1094,10 +1098,10 @@ public class TestPlacementConstraintsUtil {
       PlacementConstraintsUtil.canSatisfyConstraints(application1,
           createSchedulingRequest(srcTags1, constraint1), schedulerNode0,
           pcm, tm);
-      Assert.fail("This should fail because we gave an invalid namespace");
+      fail("This should fail because we gave an invalid namespace");
     } catch (Exception e) {
-      Assert.assertTrue(e instanceof InvalidAllocationTagsQueryException);
-      Assert.assertTrue(e.getMessage()
+      assertTrue(e instanceof InvalidAllocationTagsQueryException);
+      assertTrue(e.getMessage()
           .contains("Invalid namespace prefix: unknown_namespace"));
     }
   }

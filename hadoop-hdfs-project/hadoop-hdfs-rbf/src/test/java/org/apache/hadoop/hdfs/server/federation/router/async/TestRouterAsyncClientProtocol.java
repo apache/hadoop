@@ -30,8 +30,8 @@ import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.router.RouterClientProtocol;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.util.Lists;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.EnumSet;
@@ -46,9 +46,9 @@ import static org.apache.hadoop.fs.permission.FsAction.READ;
 import static org.apache.hadoop.fs.permission.FsAction.READ_WRITE;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Used to test the functionality of {@link RouterAsyncClientProtocol}.
@@ -58,7 +58,7 @@ public class TestRouterAsyncClientProtocol extends RouterAsyncProtocolTestBase {
   private RouterClientProtocol clientProtocol;
   private final String testPath = TEST_DIR_PATH + "/test";
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     asyncClientProtocol = new RouterAsyncClientProtocol(getRouterConf(), getRouterAsyncRpcServer());
     clientProtocol = new RouterClientProtocol(getRouterConf(), getRouterRpcServer());

@@ -28,13 +28,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSchedulingUpdate extends FairSchedulerTestBase {
 
@@ -49,7 +50,7 @@ public class TestSchedulingUpdate extends FairSchedulerTestBase {
     return conf;
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf = createConfiguration();
     resourceManager = new MockRM(conf);
@@ -58,7 +59,7 @@ public class TestSchedulingUpdate extends FairSchedulerTestBase {
     scheduler = (FairScheduler) resourceManager.getResourceScheduler();
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     if (resourceManager != null) {
       resourceManager.stop();
@@ -66,7 +67,8 @@ public class TestSchedulingUpdate extends FairSchedulerTestBase {
     }
   }
 
-  @Test (timeout = 3000)
+  @Test
+  @Timeout(value = 3)
   public void testSchedulingUpdateOnNodeJoinLeave() throws InterruptedException {
 
     verifyNoCalls();
@@ -102,34 +104,33 @@ public class TestSchedulingUpdate extends FairSchedulerTestBase {
       count++;
       Thread.sleep(10);
     }
-    assertTrue("Update Thread has not run based on its metrics",
-        scheduler.fsOpDurations.hasUpdateThreadRunChanged());
-    assertEquals("Root queue metrics memory does not have expected value",
-        memory, scheduler.getRootQueueMetrics().getAvailableMB());
-    assertEquals("Root queue metrics cpu does not have expected value",
-        vcores, scheduler.getRootQueueMetrics().getAvailableVirtualCores());
+    assertTrue(scheduler.fsOpDurations.hasUpdateThreadRunChanged(),
+        "Update Thread has not run based on its metrics");
+    assertEquals(memory, scheduler.getRootQueueMetrics().getAvailableMB(),
+        "Root queue metrics memory does not have expected value");
+    assertEquals(vcores, scheduler.getRootQueueMetrics().getAvailableVirtualCores(),
+        "Root queue metrics cpu does not have expected value");
 
     MetricsCollectorImpl collector = new MetricsCollectorImpl();
     scheduler.fsOpDurations.getMetrics(collector, true);
     MetricsRecord record = collector.getRecords().get(0);
     for (AbstractMetric abstractMetric : record.metrics()) {
       if (abstractMetric.name().contains("UpdateThreadRunNumOps")) {
-        assertEquals("Update Thread did not run expected number of times " +
-                "based on metric record count",
-            expectedCalls,
-            abstractMetric.value());
+        assertEquals(expectedCalls, abstractMetric.value(),
+            "Update Thread did not run expected number of times " +
+            "based on metric record count");
         verified = true;
       }
     }
-    assertTrue("Did not find metric for UpdateThreadRunNumOps", verified);
+    assertTrue(verified, "Did not find metric for UpdateThreadRunNumOps");
   }
 
   private void verifyNoCalls() {
-    assertFalse("Update thread should not have executed",
-        scheduler.fsOpDurations.hasUpdateThreadRunChanged());
-    assertEquals("Scheduler queue memory should not have been updated",
-        0, scheduler.getRootQueueMetrics().getAvailableMB());
-    assertEquals("Scheduler queue cpu should not have been updated",
-        0,scheduler.getRootQueueMetrics().getAvailableVirtualCores());
+    assertFalse(scheduler.fsOpDurations.hasUpdateThreadRunChanged(),
+        "Update thread should not have executed");
+    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB(),
+        "Scheduler queue memory should not have been updated");
+    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableVirtualCores(),
+        "Scheduler queue cpu should not have been updated");
   }
 }

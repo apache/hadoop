@@ -28,24 +28,24 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.retry.RetryInvocationHandler;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_IP_PROXY_USERS;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestRouterRetryCache {
   /** Federated HDFS cluster. */
   private MiniRouterDFSCluster cluster;
 
-  @Before
+  @BeforeEach
   public  void setup() throws Exception {
     UserGroupInformation routerUser = UserGroupInformation.getLoginUser();
     Configuration conf = new Configuration();
@@ -81,7 +81,7 @@ public class TestRouterRetryCache {
     cluster.waitActiveNamespaces();
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();

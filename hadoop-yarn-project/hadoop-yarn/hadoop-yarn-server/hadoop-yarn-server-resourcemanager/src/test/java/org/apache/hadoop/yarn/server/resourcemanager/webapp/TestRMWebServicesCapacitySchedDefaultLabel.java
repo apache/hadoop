@@ -31,11 +31,9 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -53,16 +51,14 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServic
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith(Parameterized.class)
 public class TestRMWebServicesCapacitySchedDefaultLabel extends JerseyTestBase {
 
   private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
   private static final QueuePath A = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".a");
-  private final boolean legacyQueueMode;
+  private boolean legacyQueueMode;
   private MockRM rm;
   private ResourceConfig config;
 
-  @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
   public static Collection<Boolean> getParameters() {
     return Arrays.asList(true, false);
   }
@@ -100,24 +96,27 @@ public class TestRMWebServicesCapacitySchedDefaultLabel extends JerseyTestBase {
     }
   }
 
-  @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
   }
 
-  public TestRMWebServicesCapacitySchedDefaultLabel(boolean legacyQueueMode) {
-    this.legacyQueueMode = legacyQueueMode;
+  public void initTestRMWebServicesCapacitySchedDefaultLabel(boolean pLegacyQueueMode)
+      throws Exception {
+    this.legacyQueueMode = pLegacyQueueMode;
     backupSchedulerConfigFileInTarget();
+    setUp();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() {
     restoreSchedulerConfigFileInTarget();
   }
 
-  @Test
-  public void testNodeLabelDefaultAPI() throws Exception {
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testNodeLabelDefaultAPI(boolean pLegacyQueueMode) throws Exception {
+    initTestRMWebServicesCapacitySchedDefaultLabel(pLegacyQueueMode);
     rm.registerNode("h1:1234", 32 * GB, 32);
     Response response = target().path("ws/v1/cluster/scheduler")
         .request(MediaType.APPLICATION_XML).get(Response.class);

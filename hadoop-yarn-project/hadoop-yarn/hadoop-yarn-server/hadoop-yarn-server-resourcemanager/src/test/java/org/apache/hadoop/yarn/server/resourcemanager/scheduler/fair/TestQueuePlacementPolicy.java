@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -44,10 +48,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserPlacementRule;
 import org.apache.hadoop.util.SystemClock;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -66,13 +70,13 @@ public class TestQueuePlacementPolicy {
   private ApplicationSubmissionContext asc;
   private ApplicationPlacementContext context;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() {
     CONF.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
   }
 
-  @Before
+  @BeforeEach
   public void initTest() {
     SystemClock clock = SystemClock.getInstance();
     RMContext rmContext = mock(RMContext.class);
@@ -90,7 +94,7 @@ public class TestQueuePlacementPolicy {
     when(scheduler.getQueueManager()).thenReturn(queueManager);
   }
 
-  @After
+  @AfterEach
   public void cleanTest() {
     placementManager = null;
     queueManager = null;
@@ -155,7 +159,7 @@ public class TestQueuePlacementPolicy {
     assertEquals("root.specifiedq", context.getQueue());
     asc = newAppSubmissionContext("default");
     context = placementManager.placeApplication(asc, "someuser");
-    assertNull("Assignment should have been rejected and was not", context);
+    assertNull(context, "Assignment should have been rejected and was not");
   }
 
   @Test
@@ -265,8 +269,8 @@ public class TestQueuePlacementPolicy {
     PlacementRule nested = placementManager.getPlacementRules().get(0);
     if (nested instanceof UserPlacementRule) {
       PlacementRule parent = ((FSPlacementRule)nested).getParentRule();
-      assertTrue("Nested rule should have been Default rule",
-          parent instanceof DefaultPlacementRule);
+      assertTrue(parent instanceof DefaultPlacementRule,
+          "Nested rule should have been Default rule");
     } else {
       fail("Policy parsing failed: rule with multiple parents not set");
     }
@@ -374,7 +378,7 @@ public class TestQueuePlacementPolicy {
     createQueue(FSQueueType.LEAF, "root.user3group");
     asc = newAppSubmissionContext("default");
     context = placementManager.placeApplication(asc, "user3");
-    assertNull("Submission should have failed and did not", context);
+    assertNull(context, "Submission should have failed and did not");
   }
 
   @Test
@@ -520,7 +524,7 @@ public class TestQueuePlacementPolicy {
     createPolicy(sb.toString());
     asc = newAppSubmissionContext("default");
     context = placementManager.placeApplication(asc, "user1");
-    assertNull("Submission should have failed and did not", context);
+    assertNull(context, "Submission should have failed and did not");
   }
 
   @Test
@@ -642,7 +646,7 @@ public class TestQueuePlacementPolicy {
   private void createQueue(FSQueueType type, String name) {
     // Create a queue as if it is in the config.
     FSQueue queue = queueManager.createQueue(name, type);
-    assertNotNull("Queue not created", queue);
+    assertNotNull(queue, "Queue not created");
     // walk up the list till we have a non dynamic queue
     // root is always non dynamic
     do {
