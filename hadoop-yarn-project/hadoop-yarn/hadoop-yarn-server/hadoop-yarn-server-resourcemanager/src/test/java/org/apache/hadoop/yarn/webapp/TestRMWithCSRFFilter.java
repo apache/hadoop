@@ -209,14 +209,14 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
                                    String resourceManagerBuildVersion,
                                    String resourceManagerVersion) {
 
-    assertEquals(
-                ResourceManager.getClusterTimeStamp(), clusterid, "clusterId doesn't match: ");
-    assertEquals(
-                ResourceManager.getClusterTimeStamp(), startedon, "startedOn doesn't match: ");
-    assertTrue(
-              state.matches(STATE.INITED.toString()), "stated doesn't match: " + state);
-    assertTrue(
-              haState.matches("INITIALIZING"), "HA state doesn't match: " + haState);
+    assertEquals(ResourceManager.getClusterTimeStamp(), clusterid,
+        "clusterId doesn't match: ");
+    assertEquals(ResourceManager.getClusterTimeStamp(), startedon,
+        "startedOn doesn't match: ");
+    assertTrue(state.matches(STATE.INITED.toString()),
+        "stated doesn't match: " + state);
+    assertTrue(haState.matches("INITIALIZING"),
+        "HA state doesn't match: " + haState);
 
     WebServicesTestUtils.checkStringMatch("hadoopVersionBuiltOn",
                                           VersionInfo.getDate(), hadoopVersionBuiltOn);

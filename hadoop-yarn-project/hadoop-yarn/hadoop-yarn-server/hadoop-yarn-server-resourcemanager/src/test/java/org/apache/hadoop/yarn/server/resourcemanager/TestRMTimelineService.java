@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -28,7 +31,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.metrics.TimelineServiceV2Pu
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -41,7 +43,7 @@ public class TestRMTimelineService {
   private void setup(boolean v1Enabled, boolean v2Enabled,
                      boolean systemMetricEnabled) {
     Configuration conf = new YarnConfiguration(new Configuration(false));
-    Assertions.assertFalse(YarnConfiguration.timelineServiceEnabled(conf));
+    assertFalse(YarnConfiguration.timelineServiceEnabled(conf));
 
     conf.setBoolean(YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED,
         systemMetricEnabled);
@@ -87,11 +89,11 @@ public class TestRMTimelineService {
     }
 
     if(systemMetricEnabled) {
-      Assertions.assertEquals(v1Enabled, v1PublisherServiceFound);
-      Assertions.assertEquals(v2Enabled, v2PublisherServiceFound);
+      assertEquals(v1Enabled, v1PublisherServiceFound);
+      assertEquals(v2Enabled, v2PublisherServiceFound);
     } else {
-      Assertions.assertEquals(false, v1PublisherServiceFound);
-      Assertions.assertEquals(false, v2PublisherServiceFound);
+      assertEquals(false, v1PublisherServiceFound);
+      assertEquals(false, v2PublisherServiceFound);
     }
   }
 

@@ -316,9 +316,9 @@ public class TestApplicationMasterLauncher {
             attempt, AMLauncherEventType.LAUNCH, rm.getConfig()) {
         @Override
         public void onAMLaunchFailed(ContainerId containerId, Exception e) {
-          assertFalse(
-                  e instanceof NullPointerException, "NullPointerException happens "
-                 + " while launching " + containerId);
+          assertFalse(e instanceof NullPointerException,
+              "NullPointerException happens "
+              + " while launching " + containerId);
         }
         @Override
         protected ContainerManagementProtocol getContainerMgrProxy(
