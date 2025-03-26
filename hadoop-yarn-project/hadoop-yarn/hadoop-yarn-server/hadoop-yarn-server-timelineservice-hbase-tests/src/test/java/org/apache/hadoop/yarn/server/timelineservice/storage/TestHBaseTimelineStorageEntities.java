@@ -1312,8 +1312,7 @@ public class TestHBaseTimelineStorageEntities {
     for (TimelineEntity entity : es1) {
       cfgCnt += entity.getConfigs().size();
       for (String confKey : entity.getConfigs().keySet()) {
-        assertTrue(
-           confKey.startsWith("cfg_"), "Config key returned should start with cfg_");
+        assertTrue(confKey.startsWith("cfg_"), "Config key returned should start with cfg_");
       }
     }
     assertEquals(3, cfgCnt);
@@ -1449,7 +1448,7 @@ public class TestHBaseTimelineStorageEntities {
       cfgCnt += entity.getConfigs().size();
       for (String confKey : entity.getConfigs().keySet()) {
         assertTrue(
-           confKey.startsWith("cfg_"), "Config key returned should start with cfg_");
+            confKey.startsWith("cfg_"), "Config key returned should start with cfg_");
       }
     }
     assertEquals(2, cfgCnt);
@@ -1481,7 +1480,7 @@ public class TestHBaseTimelineStorageEntities {
       cfgCnt += entity.getConfigs().size();
       for (String confKey : entity.getConfigs().keySet()) {
         assertTrue(
-           confKey.startsWith("config_"), "Config key returned should start with config_");
+            confKey.startsWith("config_"), "Config key returned should start with config_");
       }
     }
     assertEquals(2, cfgCnt);
@@ -1508,7 +1507,7 @@ public class TestHBaseTimelineStorageEntities {
       metricCnt += entity.getMetrics().size();
       for (TimelineMetric metric : entity.getMetrics()) {
         assertTrue(
-           metric.getId().startsWith("MAP1_"), "Metric Id returned should start with MAP1_");
+            metric.getId().startsWith("MAP1_"), "Metric Id returned should start with MAP1_");
       }
     }
     assertEquals(2, metricCnt);
@@ -1701,7 +1700,7 @@ public class TestHBaseTimelineStorageEntities {
       metricCnt += entity.getMetrics().size();
       for (TimelineMetric metric : entity.getMetrics()) {
         assertTrue(
-           metric.getId().startsWith("MAP1_"), "Metric Id returned should start with MAP1_");
+            metric.getId().startsWith("MAP1_"), "Metric Id returned should start with MAP1_");
       }
     }
     assertEquals(1, metricCnt);
@@ -1733,7 +1732,7 @@ public class TestHBaseTimelineStorageEntities {
         assertEquals(TimelineMetric.Type.SINGLE_VALUE, metric.getType());
         assertEquals(1, metric.getValues().size());
         assertTrue(
-           metric.getId().startsWith("MAP1_"), "Metric Id returned should start with MAP1_");
+            metric.getId().startsWith("MAP1_"), "Metric Id returned should start with MAP1_");
       }
     }
     assertEquals(2, metricCnt);
@@ -1753,7 +1752,7 @@ public class TestHBaseTimelineStorageEntities {
       for (TimelineMetric metric : entity.getMetrics()) {
         metricValCnt += metric.getValues().size();
         assertTrue(
-           metric.getId().startsWith("MAP1_"), "Metric Id returned should start with MAP1_");
+            metric.getId().startsWith("MAP1_"), "Metric Id returned should start with MAP1_");
       }
     }
     assertEquals(2, metricCnt);

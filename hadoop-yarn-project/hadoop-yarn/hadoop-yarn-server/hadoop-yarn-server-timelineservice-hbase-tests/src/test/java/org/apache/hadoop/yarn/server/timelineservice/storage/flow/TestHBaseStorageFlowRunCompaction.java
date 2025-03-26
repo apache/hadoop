@@ -335,8 +335,8 @@ public class TestHBaseStorageFlowRunCompaction {
     // flush and compact all the regions of the primary table
     int regionNum = HBaseTimelineServerUtils.flushCompactTableRegions(
         server, flowRunTable);
-    assertTrue(
-       regionNum > 0, "Didn't find any regions for primary table!");
+    assertTrue(regionNum > 0,
+        "Didn't find any regions for primary table!");
 
     // check flow run for one flow many apps
     checkFlowRunTable(cluster, user, flow, runid, c1, 4);

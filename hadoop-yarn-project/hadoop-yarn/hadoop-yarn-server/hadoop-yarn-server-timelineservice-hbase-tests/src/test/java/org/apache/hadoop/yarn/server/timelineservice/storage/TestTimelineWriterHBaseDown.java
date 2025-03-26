@@ -85,7 +85,7 @@ public class TestTimelineWriterHBaseDown {
         }
       }
       assertTrue(
-         exceptionCaught, "HBaseStorageMonitor failed to detect HBase Down");
+          exceptionCaught, "HBaseStorageMonitor failed to detect HBase Down");
     } finally {
       writer.stop();
       util.shutdownMiniCluster();
