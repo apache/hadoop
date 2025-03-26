@@ -660,6 +660,10 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     return connectionDisconnectedOnError;
   }
 
+  /**
+   * Sets the list result schema after parsing done on Client.
+   * @param listResultSchema ListResultSchema
+   */
   protected void setListResultSchema(final ListResultSchema listResultSchema) {
     this.listResultSchema = listResultSchema;
   }

@@ -16,14 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.contracts.services;
+package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 
 /**
  * This class is used to hold the response data for list operations.

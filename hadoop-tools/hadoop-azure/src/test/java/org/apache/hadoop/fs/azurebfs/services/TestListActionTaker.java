@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsTestWithTimeout;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultSchema;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ListResponseData;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 

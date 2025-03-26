@@ -74,7 +74,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListXmlParser;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ListResponseData;
 import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSchema;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
@@ -404,13 +403,8 @@ public class AbfsBlobClient extends AbfsClient {
       BlobListResultSchema listResultSchema = getListResultSchemaFromPathStatus(relativePath, pathStatus);
       LOG.debug("ListBlob attempted on a file path. Returning file status.");
       List<FileStatus> fileStatusList = new ArrayList<>();
-      Map<Path, Integer> renamePendingJsonPaths = new HashMap<>();
       for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
-        if (isRenamePendingJsonPathEntry(entry)) {
-          renamePendingJsonPaths.put(entry.path(), entry.contentLength().intValue());
-        } else {
-          fileStatusList.add(getVersionedFileStatusFromEntry(entry, uri));
-        }
+        fileStatusList.add(getVersionedFileStatusFromEntry(entry, uri));
       }
       AbfsRestOperation listOp = getAbfsRestOperation(
           AbfsRestOperationType.ListBlobs,
@@ -420,7 +414,7 @@ public class AbfsBlobClient extends AbfsClient {
       listOp.hardSetGetListStatusResult(HTTP_OK, listResultSchema);
       listResponseData.setFileStatusList(fileStatusList);
       listResponseData.setContinuationToken(null);
-      listResponseData.setRenamePendingJsonPaths(renamePendingJsonPaths);
+      listResponseData.setRenamePendingJsonPaths(null);
       listResponseData.setOp(listOp);
       return listResponseData;
     }
@@ -1629,14 +1623,14 @@ public class AbfsBlobClient extends AbfsClient {
         throw new AbfsDriverException(e);
       }
     } catch (IOException e) {
-      LOG.error("Unable to deserialize list results for uri {}", uri, e);
+      LOG.error("Unable to deserialize list results for uri {}", uri.toString(), e);
       throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, e);
     }
 
     try {
       return filterDuplicateEntriesAndRenamePendingFiles(listResultSchema, uri);
     } catch (IOException e) {
-      LOG.error("Unable to filter list results for uri {}", uri, e);
+      LOG.error("Unable to filter list results for uri {}", uri.toString(), e);
       throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, e);
     }
   }

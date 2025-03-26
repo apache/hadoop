@@ -106,15 +106,27 @@ public class VersionedFileStatus extends FileStatus implements EtagSource {
     return this.version;
   }
 
+  /**
+   * Returns the etag of this FileStatus.
+   * @return a string value for the FileStatus etag.
+   */
   @Override
   public String getEtag() {
     return getVersion();
   }
 
+  /**
+   * Returns the encryption context of this FileStatus
+   * @return a string value for the FileStatus encryption context
+   */
   public String getEncryptionContext() {
     return encryptionContext;
   }
 
+  /**
+   * Returns a string representation of the object.
+   * @return a string representation of the object
+   */
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(

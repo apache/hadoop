@@ -76,7 +76,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriAuthorityExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ListResponseData;
+import org.apache.hadoop.fs.azurebfs.services.ListResponseData;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
@@ -1282,8 +1282,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         perfInfo.registerResult(op.getResult());
         continuation = listResponseData.getContinuationToken();
         List<FileStatus> fileStatusListInCurrItr = listResponseData.getFileStatusList();
-        fileStatuses.addAll(fileStatusListInCurrItr);
-
+        if (fileStatusListInCurrItr != null && !fileStatusListInCurrItr.isEmpty()) {
+          fileStatuses.addAll(fileStatusListInCurrItr);
+        }
         perfInfo.registerSuccess(true);
         countAggregate++;
         shouldContinue =
