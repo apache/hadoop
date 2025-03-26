@@ -1486,6 +1486,9 @@ public class AbfsDfsClient extends AbfsClient {
         listResultSchema = objectMapper.readValue(listResultInputStream,
             DfsListResultSchema.class);
         result.setListResultSchema(listResultSchema);
+        LOG.debug("ListPath listed {} paths with {} as continuation token",
+            listResultSchema.paths().size(),
+            getContinuationFromResponse(result));
       } catch (IOException ex) {
         throw new AbfsDriverException(ex);
       }

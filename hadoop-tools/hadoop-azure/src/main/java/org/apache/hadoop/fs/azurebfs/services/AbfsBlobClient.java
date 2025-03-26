@@ -402,6 +402,7 @@ public class AbfsBlobClient extends AbfsClient {
       }
       AbfsRestOperation pathStatus = this.getPathStatus(relativePath, tracingContext, null, false);
       BlobListResultSchema listResultSchema = getListResultSchemaFromPathStatus(relativePath, pathStatus);
+      LOG.debug("ListBlob attempted on a file path. Returning file status.");
       List<FileStatus> fileStatusList = new ArrayList<>();
       Map<Path, Integer> renamePendingJsonPaths = new HashMap<>();
       for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
@@ -1621,6 +1622,9 @@ public class AbfsBlobClient extends AbfsClient {
         saxParser.parse(stream,
             new BlobListXmlParser(listResultSchema, getBaseUrl().toString()));
         result.setListResultSchema(listResultSchema);
+        LOG.debug("ListBlobs listed {} blobs with {} as continuation token",
+            listResultSchema.paths().size(),
+            listResultSchema.getNextMarker());
       } catch (SAXException | IOException e) {
         throw new AbfsDriverException(e);
       }
