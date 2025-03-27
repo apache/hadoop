@@ -185,7 +185,7 @@ public class TestAsyncDispatcher {
       }
       Thread.sleep(2000);
       //Make sure more than one event to take
-      assertEquals(dispatcher.lastTriggered, "Latest dispatch event type: TestEventType");
+      assertEquals(dispatcher.getLastTriggered(), "Latest dispatch event type: TestEventType");
     } finally {
       //... restore logger object
       dispatcher.stop();
@@ -392,11 +392,16 @@ public class TestAsyncDispatcher {
   }
 
   private class AsyncDispatcherForTest extends AsyncDispatcher {
-    public String lastTriggered = "";
+    private String lastTriggered = "";
+
     @Override
     protected void logTriggered(String message) {
       LOG.info(message);
       lastTriggered = message;
+    }
+
+    public String getLastTriggered() {
+      return lastTriggered;
     }
   };
 }
