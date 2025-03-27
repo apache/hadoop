@@ -2236,6 +2236,13 @@ The switch to turn S3A auditing on or off.
   </description>
 </property>
 
+<!-- GS properties -->
+<property>
+  <name>fs.gs.application.name.suffix</name>
+  <value>; Cloudera-Data-Platform/7.3.1 (GPN:Cloudera;)</value>
+  <description>Suffix that will be added to HTTP User-Agent header set in all Google Cloud Storage requests.</description>
+</property>
+
   <!-- Azure file system properties -->
 <property>
   <name>fs.AbstractFileSystem.wasb.impl</name>
