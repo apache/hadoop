@@ -238,9 +238,9 @@
     <yarnpkg.version>v1.22.5</yarnpkg.version>
     <apache-ant.version>1.10.13</apache-ant.version>
     <jmh.version>1.20</jmh.version>
-    <gcs.version>1.9.0.3.0.0.0-SNAPSHOT</gcs.version>
-    <knox.version>1.0.0.3.0.100.0-SNAPSHOT</knox.version>
-    <ranger.version>2.0.0.7.1.1.0-SNAPSHOT</ranger.version>
+    <gcs.version>2.1.2.7.3.2.0-SNAPSHOT</gcs.version>
+    <knox.version>2.0.0.7.3.2.0-SNAPSHOT</knox.version>
+    <ranger.version>2.4.0.7.3.2.0-SNAPSHOT</ranger.version>
     <t9000-core.version>1.0.0.7.3.1.0-SNAPSHOT</t9000-core.version>
   </properties>
 
