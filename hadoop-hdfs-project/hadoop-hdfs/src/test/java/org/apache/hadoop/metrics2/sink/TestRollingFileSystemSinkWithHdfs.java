@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsSystem;
-import org.apache.hadoop.metrics2.sink.RollingFileSystemSinkTestBase.MyMetrics1;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -293,7 +292,7 @@ public class TestRollingFileSystemSinkWithHdfs
       }
 
       Calendar now = Calendar.getInstance();
-      Path currentDir = new Path(path, DATE_FORMAT.format(now.getTime()) + "00");
+      Path currentDir = new Path(path, DATE_FORMAT.format(now.getTime().toInstant()));
       FileSystem fs = FileSystem.newInstance(new URI(path), new Configuration());
       Path currentFile =
           findMostRecentLogFile(fs, new Path(currentDir, getLogFilename()));

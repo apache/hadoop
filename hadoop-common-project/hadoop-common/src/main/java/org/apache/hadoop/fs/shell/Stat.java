@@ -19,13 +19,15 @@
 package org.apache.hadoop.fs.shell;
 
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
+
+import static java.time.ZoneOffset.UTC;
 
 /**
  * Print statistics about path in specified format.
@@ -69,10 +71,8 @@ class Stat extends FsCommand {
     "%X and %Y show milliseconds since January 1, 1970 UTC." + NEWLINE +
     "If the format is not specified, %y is used by default." + NEWLINE;
 
-  protected final SimpleDateFormat timeFmt;
-  {
-    timeFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-  }
+  protected final DateTimeFormatter timeFmt =
+          DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(UTC);
 
   // default format string
   protected String format = "%y";
@@ -129,13 +129,13 @@ class Stat extends FsCommand {
             buf.append(stat.getOwner());
             break;
           case 'x':
-            buf.append(timeFmt.format(new Date(stat.getAccessTime())));
+            buf.append(timeFmt.format(Instant.ofEpochMilli(stat.getAccessTime())));
             break;
           case 'X':
             buf.append(stat.getAccessTime());
             break;
           case 'y':
-            buf.append(timeFmt.format(new Date(stat.getModificationTime())));
+            buf.append(timeFmt.format(Instant.ofEpochMilli(stat.getModificationTime())));
             break;
           case 'Y':
             buf.append(stat.getModificationTime());

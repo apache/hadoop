@@ -22,6 +22,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -37,7 +39,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.SystemUtils;
-import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -372,11 +373,12 @@ public class StringUtils {
    * @param startTime  start time
    * @return formatted value.
    */
-  public static String getFormattedTimeWithDiff(FastDateFormat dateFormat,
+  public static String getFormattedTimeWithDiff(DateTimeFormatter dateFormat,
       long finishTime, long startTime) {
-    String formattedFinishTime = dateFormat.format(finishTime);
+    String formattedFinishTime = dateFormat.format(Instant.ofEpochMilli(finishTime));
     return getFormattedTimeWithDiff(formattedFinishTime, finishTime, startTime);
   }
+
   /**
    * Formats time in ms and appends difference (finishTime - startTime)
    * as returned by formatTimeDiff().

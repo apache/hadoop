@@ -24,9 +24,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MonitorInfo;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 import org.apache.hadoop.util.StringUtils;
@@ -64,8 +62,7 @@ public class TimedOutTestsListener {
     StringWriter sw = new StringWriter();
     PrintWriter output = new PrintWriter(sw);
     
-    DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss,SSS");
-    output.println(String.format("Timestamp: %s", dateFormat.format(new Date())));
+    output.println(String.format("Timestamp: %s", LocalDateTime.now()));
     output.println();
     output.println(buildThreadDump());
     

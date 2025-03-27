@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.shell;
 
+import static java.time.ZoneId.systemDefault;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,7 +37,8 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedList;
@@ -1177,8 +1179,8 @@ public class TestLs {
 
   // test class representing a file to be listed
   static class TestFile {
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(
-        "yyyy-MM-dd HH:mm");
+    private static final DateTimeFormatter DATE_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(systemDefault());
 
     private static final boolean DEFAULT_ISDIR = false;
     private static final String DEFAULT_MODE = "750";
@@ -1332,41 +1334,37 @@ public class TestLs {
     }
 
     /**
-     * Returns a formated output line based on the given format mask, file
-     * status and file name.
+     * Returns a formated output line based on the given format mask and file modified time.
      *
-     * @param lineFormat
-     *          format mask
-     * @param fileStatus
-     *          file status
-     * @param fileName
-     *          file name
+     * @param lineFormat format mask
      * @return formated line
      */
     private String formatLineMtime(String lineFormat) {
-      return String.format(lineFormat, (isDir() ? "d" : "-"), getPermission(),
-          (isFile() ? getReplication() : "-"), getOwner(), getGroup(),
-          String.valueOf(getLength()),
-          DATE_FORMAT.format(new Date(getMtime())), getPathname());
+      return formatLineTime(lineFormat, getMtime());
+
     }
 
     /**
-     * Returns a formated output line based on the given format mask, file
-     * status and file name.
+     * Returns a formated output line based on the given format mask and file access time.
      *
-     * @param lineFormat
-     *          format mask
-     * @param fileStatus
-     *          file status
-     * @param fileName
-     *          file name
+     * @param lineFormat format mask
      * @return formated line
      */
     private String formatLineAtime(String lineFormat) {
+      return formatLineTime(lineFormat, getAtime());
+    }
+
+    /**
+     * Returns a formated output line based on the given format mask and time.
+     *
+     * @param lineFormat format mask
+     * @param time file time
+     * @return formated line
+     */
+    private String formatLineTime(String lineFormat, long time) {
       return String.format(lineFormat, (isDir() ? "d" : "-"), getPermission(),
-          (isFile() ? getReplication() : "-"), getOwner(), getGroup(),
-          String.valueOf(getLength()),
-          DATE_FORMAT.format(new Date(getAtime())), getPathname());
+          (isFile() ? getReplication() : "-"), getOwner(), getGroup(), getLength(),
+          DATE_FORMAT.format(Instant.ofEpochMilli(time)), getPathname());
     }
 
     public FileStatus getFileStatus() {

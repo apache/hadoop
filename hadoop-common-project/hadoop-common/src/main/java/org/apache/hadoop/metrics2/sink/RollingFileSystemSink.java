@@ -26,9 +26,9 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ThreadLocalRandom;
@@ -37,7 +37,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.configuration2.SubsetConfiguration;
-import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -53,6 +52,8 @@ import org.apache.hadoop.metrics2.MetricsSink;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+
+import static java.time.ZoneOffset.UTC;
 
 /**
  * <p>This class is a metrics sink that uses
@@ -161,8 +162,8 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
   private static final int DEFAULT_ROLL_OFFSET_INTERVAL_MILLIS = 30000;
   private static final String SOURCE_DEFAULT = "unknown";
   private static final String BASEPATH_DEFAULT = "/tmp";
-  private static final FastDateFormat DATE_FORMAT =
-      FastDateFormat.getInstance("yyyyMMddHHmm", TimeZone.getTimeZone("GMT"));
+  private static final DateTimeFormatter DATE_FORMAT =
+          DateTimeFormatter.ofPattern("yyyyMMddHHmm").withZone(UTC);
   private final Object lock = new Object();
   private boolean initialized = false;
   private SubsetConfiguration properties;
@@ -552,7 +553,7 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
     long offset = ((now.getTime() - nextFlush.getTimeInMillis())
         / rollIntervalMillis) * rollIntervalMillis;
     String currentDir =
-        DATE_FORMAT.format(new Date(nextFlush.getTimeInMillis() + offset));
+        DATE_FORMAT.format(nextFlush.getTime().toInstant().plusMillis(offset));
 
     return new Path(basePath, currentDir);
   }

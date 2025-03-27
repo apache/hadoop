@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.Date;
 
 import org.junit.AfterClass;
@@ -229,11 +231,11 @@ public class TestDFSShellTouch {
   }
 
   private String formatTimestamp(long timeInMillis) {
-    return (new TouchCommands.Touch()).getDateFormat().format(new Date(timeInMillis));
+    return (new TouchCommands.Touch()).getDateFormat().format(Instant.ofEpochMilli(timeInMillis));
   }
 
-  private Date parseTimestamp(String tstamp) throws ParseException {
-    return (new TouchCommands.Touch()).getDateFormat().parse(tstamp);
+  private Date parseTimestamp(String tstamp) throws DateTimeParseException {
+    return Date.from((new TouchCommands.Touch()).getDateFormat().parse(tstamp, Instant::from));
   }
 
 }

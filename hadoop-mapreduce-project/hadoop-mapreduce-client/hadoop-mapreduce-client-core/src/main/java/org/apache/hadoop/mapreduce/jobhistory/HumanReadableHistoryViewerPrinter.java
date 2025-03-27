@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.mapreduce.jobhistory;
 
-import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapred.JobStatus;
@@ -33,12 +32,13 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.text.DecimalFormat;
 import java.text.Format;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.TimeZone;
 
 /**
  * Used by the {@link HistoryViewer} to print job history in a human-readable
@@ -49,22 +49,22 @@ import java.util.TimeZone;
 class HumanReadableHistoryViewerPrinter implements HistoryViewerPrinter {
 
   private JobHistoryParser.JobInfo job;
-  private final FastDateFormat dateFormat;
+  private final DateTimeFormatter dateFormat;
   private boolean printAll;
   private String scheme;
 
   HumanReadableHistoryViewerPrinter(JobHistoryParser.JobInfo job,
                                     boolean printAll, String scheme) {
-    this(job, printAll, scheme, TimeZone.getDefault());
+    this(job, printAll, scheme, ZoneId.systemDefault());
   }
 
   HumanReadableHistoryViewerPrinter(JobHistoryParser.JobInfo job,
                                     boolean printAll, String scheme,
-                                    TimeZone tz) {
+                                    ZoneId tz) {
     this.job = job;
     this.printAll = printAll;
     this.scheme = scheme;
-    this.dateFormat = FastDateFormat.getInstance("d-MMM-yyyy HH:mm:ss", tz);
+    this.dateFormat = DateTimeFormatter.ofPattern("d-MMM-yyyy HH:mm:ss").withZone(tz);
   }
 
   /**

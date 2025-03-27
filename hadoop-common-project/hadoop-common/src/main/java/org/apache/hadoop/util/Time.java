@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.util;
 
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.TimeZone;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import static java.time.ZoneId.systemDefault;
 
 /**
  * Utility methods for getting the time and computing intervals.
@@ -38,13 +41,8 @@ public final class Time {
 
   private static final TimeZone UTC_ZONE = TimeZone.getTimeZone("UTC");
 
-  private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT =
-      new ThreadLocal<SimpleDateFormat>() {
-    @Override
-    protected SimpleDateFormat initialValue() {
-      return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSSZ");
-    }
-  };
+  private static final DateTimeFormatter DATE_FORMAT =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSSZ").withZone(systemDefault());
 
   /**
    * Current system time.  Do not use this to calculate a duration or interval
@@ -80,13 +78,13 @@ public final class Time {
   }
 
   /**
-   * Convert time in millisecond to human readable format.
+   * Convert time in millisecond to human readable format, in system default time zone.
    *
    * @param millis millisecond.
    * @return a human readable string for the input time
    */
   public static String formatTime(long millis) {
-    return DATE_FORMAT.get().format(millis);
+    return DATE_FORMAT.format(Instant.ofEpochMilli(millis));
   }
 
   /**

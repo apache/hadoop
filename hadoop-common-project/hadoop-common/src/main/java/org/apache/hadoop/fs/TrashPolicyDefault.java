@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import static java.time.ZoneId.systemDefault;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CHECKPOINT_INTERVAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CLEAN_TRASHROOT_ENABLE_DEFAULT;
@@ -26,12 +27,13 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERV
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Collection;
 import java.util.Date;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -64,10 +66,8 @@ public class TrashPolicyDefault extends TrashPolicy {
   private static final FsPermission PERMISSION =
     new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE);
 
-  private static final DateFormat CHECKPOINT = new SimpleDateFormat("yyMMddHHmmss");
-  /** Format of checkpoint directories used prior to Hadoop 0.23. */
-  private static final DateFormat OLD_CHECKPOINT =
-      new SimpleDateFormat("yyMMddHHmm");
+  /** Seconds are optional to support format of checkpoint directories used prior to Hadoop 0.23. */
+  private static final DateTimeFormatter CHECKPOINT = DateTimeFormatter.ofPattern("yyMMddHHmm[ss]").withZone(systemDefault());
   private static final int MSECS_PER_MINUTE = 60*1000;
 
   private long emptierInterval;
@@ -336,10 +336,7 @@ public class TrashPolicyDefault extends TrashPolicy {
     if (!fs.exists(new Path(trashRoot, CURRENT))) {
       return;
     }
-    Path checkpointBase;
-    synchronized (CHECKPOINT) {
-      checkpointBase = new Path(trashRoot, CHECKPOINT.format(date));
-    }
+    Path checkpointBase = new Path(trashRoot, CHECKPOINT.format(date.toInstant()));
     Path checkpoint = checkpointBase;
     Path current = new Path(trashRoot, CURRENT);
 
@@ -381,7 +378,7 @@ public class TrashPolicyDefault extends TrashPolicy {
       long time;
       try {
         time = getTimeFromCheckpoint(name);
-      } catch (ParseException e) {
+      } catch (DateTimeParseException e) {
         if (cleanNonCheckpointUnderTrashRoot) {
           fs.delete(path, true);
           LOG.warn("Unexpected item in trash: " + dir + ". Deleting.");
@@ -402,21 +399,9 @@ public class TrashPolicyDefault extends TrashPolicy {
     }
   }
 
-  private long getTimeFromCheckpoint(String name) throws ParseException {
-    long time;
+  private long getTimeFromCheckpoint(String name) throws DateTimeParseException {
+    name = StringUtils.substringBefore(name, "-");
 
-    try {
-      synchronized (CHECKPOINT) {
-        time = CHECKPOINT.parse(name).getTime();
-      }
-    } catch (ParseException pe) {
-      // Check for old-style checkpoint directories left over
-      // after an upgrade from Hadoop 1.x
-      synchronized (OLD_CHECKPOINT) {
-        time = OLD_CHECKPOINT.parse(name).getTime();
-      }
-    }
-
-    return time;
+    return CHECKPOINT.parse(name, Instant::from).toEpochMilli();
   }
 }

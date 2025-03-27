@@ -27,7 +27,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
@@ -59,6 +60,8 @@ import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.junit.Before;
 import org.junit.BeforeClass;
+
+import static java.time.ZoneOffset.UTC;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -71,8 +74,8 @@ public class RollingFileSystemSinkTestBase {
   protected static final String SINK_KEYTAB_FILE_KEY = "rfssink.keytab";
   protected static final File ROOT_TEST_DIR = GenericTestUtils.getTestDir(
       "RollingFileSystemSinkTest");
-  protected static final SimpleDateFormat DATE_FORMAT =
-      new SimpleDateFormat("yyyyMMddHH");
+  protected static final DateTimeFormatter DATE_FORMAT =
+          DateTimeFormatter.ofPattern("yyyyMMddHH'00'").withZone(UTC);
   protected static File methodDir;
 
   /**
@@ -121,7 +124,6 @@ public class RollingFileSystemSinkTestBase {
    */
   @BeforeClass
   public static void setup() {
-    DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("GMT"));
     FileUtil.fullyDelete(ROOT_TEST_DIR);
   }
 
@@ -213,7 +215,7 @@ public class RollingFileSystemSinkTestBase {
    */
   protected String doWriteTest(MetricsSystem ms, String path, int count)
       throws IOException, URISyntaxException {
-    final String then = DATE_FORMAT.format(new Date()) + "00";
+    final String then = DATE_FORMAT.format(Instant.now());
 
     MyMetrics1 mm1 = new MyMetrics1().registerWith(ms);
     new MyMetrics2().registerWith(ms);
@@ -246,7 +248,7 @@ public class RollingFileSystemSinkTestBase {
    */
   protected String readLogFile(String path, String then, int count)
       throws IOException, URISyntaxException {
-    final String now = DATE_FORMAT.format(new Date()) + "00";
+    final String now = DATE_FORMAT.format(Instant.now());
     final String logFile = getLogFilename();
     FileSystem fs = FileSystem.get(new URI(path), new Configuration());
     StringBuilder metrics = new StringBuilder();
@@ -433,7 +435,7 @@ public class RollingFileSystemSinkTestBase {
     Calendar now = getNowNotTopOfHour();
 
     FileSystem fs = FileSystem.get(new URI(path), new Configuration());
-    Path dir = new Path(path, DATE_FORMAT.format(now.getTime()) + "00");
+    Path dir = new Path(path, DATE_FORMAT.format(now.getTime().toInstant()));
 
     fs.mkdirs(dir);
 

@@ -18,6 +18,8 @@
 package org.apache.hadoop.fs;
 
 
+import static java.time.ZoneId.systemDefault;
+import static java.time.temporal.ChronoUnit.MINUTES;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 
@@ -26,8 +28,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
@@ -406,10 +408,10 @@ public class TestTrash {
       // to be deleted on the next expunge and one that isn't.
       long trashInterval = conf.getLong(FS_TRASH_INTERVAL_KEY,
           FS_TRASH_INTERVAL_DEFAULT);
-      long now = Time.now();
-      DateFormat oldCheckpointFormat = new SimpleDateFormat("yyMMddHHmm");
+      Instant now = Instant.now();
+      DateTimeFormatter oldCheckpointFormat = DateTimeFormatter.ofPattern("yyMMddHHmm").withZone(systemDefault());
       Path dirToDelete = new Path(trashRoot.getParent(),
-          oldCheckpointFormat.format(now - (trashInterval * 60 * 1000) - 1));
+          oldCheckpointFormat.format(now.minus(trashInterval, MINUTES).minusMillis(1)));
       Path dirToKeep = new Path(trashRoot.getParent(),
           oldCheckpointFormat.format(now));
       mkdir(trashRootFs, dirToDelete);
@@ -431,10 +433,10 @@ public class TestTrash {
       // to be deleted on the next expunge and one that isn't.
       long trashInterval = conf.getLong(FS_TRASH_INTERVAL_KEY,
           FS_TRASH_INTERVAL_DEFAULT);
-      long now = Time.now();
-      DateFormat checkpointFormat = new SimpleDateFormat("yyMMddHHmm");
+      Instant now = Instant.now();
+      DateTimeFormatter checkpointFormat = DateTimeFormatter.ofPattern("yyMMddHHmm").withZone(systemDefault());
       Path oldCheckpoint = new Path(trashRoot.getParent(),
-          checkpointFormat.format(now - (trashInterval * 60 * 1000) - 1));
+          checkpointFormat.format(now.minus(trashInterval, MINUTES).minusMillis(1)));
       Path recentCheckpoint = new Path(trashRoot.getParent(),
           checkpointFormat.format(now));
       Path currentFolder = new Path(trashRoot.getParent(), "Current");
@@ -480,10 +482,10 @@ public class TestTrash {
 
       long trashInterval = config.getLong(FS_TRASH_INTERVAL_KEY,
           FS_TRASH_INTERVAL_DEFAULT);
-      long now = Time.now();
-      DateFormat checkpointFormat = new SimpleDateFormat("yyMMddHHmm");
+      Instant now = Instant.now();
+      DateTimeFormatter checkpointFormat = DateTimeFormatter.ofPattern("yyMMddHHmm").withZone(systemDefault());
       Path oldCheckpoint = new Path(trashRoot.getParent(),
-          checkpointFormat.format(now - (trashInterval * 60 * 1000) - 1));
+          checkpointFormat.format(now.minus(trashInterval, MINUTES).minusMillis(1)));
       Path recentCheckpoint = new Path(trashRoot.getParent(),
           checkpointFormat.format(now));
       Path currentFolder = new Path(trashRoot.getParent(), "Current");
