@@ -156,7 +156,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
     Path finalOutputPath = requireNonNull(getOutputPath(),
         "Output path cannot be null");
     S3AFileSystem fs = getS3AFileSystem(finalOutputPath,
-       context.getConfiguration(), false);
+        context.getConfiguration(), false);
     s3KeyPrefix = fs.pathToKey(finalOutputPath);
     LOG.debug("{}: final output path is {}", getRole(), finalOutputPath);
     // forces evaluation and caching of the resolution mode.

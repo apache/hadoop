@@ -225,7 +225,8 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     TaskAttemptContext tContext = new TaskAttemptContextImpl(
             getConfiguration(),
             getTaskAttempt0());
-    JobContext jobContext = new JobContextImpl(new JobConf(getConfiguration()), tContext.getJobID());
+    JobContext jobContext = new JobContextImpl(
+        new JobConf(getConfiguration()), tContext.getJobID());
     MagicS3GuardCommitter committer1 = createCommitter(getOutDir(), tContext);
     MagicS3GuardCommitter committer2 = new MagicS3GuardCommitter(getOutDir(), jobContext);
     //Task specific segment of working path is 3 levels deep beyond the job specific segment

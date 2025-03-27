@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.fs.s3a.commit.magic.mapred;
 
 import org.apache.hadoop.fs.Path;
@@ -28,18 +29,26 @@ import java.io.IOException;
 
 public class MagicS3GuardCommitter extends OutputCommitter {
 
-  org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter committer = null;
+  private org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter committer = null;
 
-  private org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter getWrapped(JobContext context) throws IOException {
+  private org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter getWrapped(
+          JobContext context) throws IOException {
     if (committer == null) {
-      committer = (org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter) PathOutputCommitterFactory.createCommitter(new Path(context.getConfiguration().get("mapred.output.dir")), context);
+      committer = (org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter)
+        PathOutputCommitterFactory.createCommitter(
+          new Path(context.getConfiguration().get("mapred.output.dir")),
+          context);
     }
     return committer;
   }
 
-  private org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter getWrapped(TaskAttemptContext context) throws IOException {
+  private org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter getWrapped(
+          TaskAttemptContext context) throws IOException {
     if (committer == null) {
-      committer = (org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter) MagicS3GuardCommitterFactory.createCommitter(new Path(context.getConfiguration().get("mapred.output.dir")), context);
+      committer = (org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter)
+          MagicS3GuardCommitterFactory.createCommitter(
+          new Path(context.getConfiguration().get("mapred.output.dir")),
+          context);
     }
     return committer;
   }
