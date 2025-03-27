@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.mapreduce.filecache;
 
-import java.io.*;
-import java.util.*;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
@@ -31,7 +28,10 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 
+import java.io.IOException;
 import java.net.URI;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Distribute application-specific large, read-only files efficiently.

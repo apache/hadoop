@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 
-import java.util.*;
+import java.util.Comparator;
 
 /**
  * A Comparator which orders SchedulableEntities by input order

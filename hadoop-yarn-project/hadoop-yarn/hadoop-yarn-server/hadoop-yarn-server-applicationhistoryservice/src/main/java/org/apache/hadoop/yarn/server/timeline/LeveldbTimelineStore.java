@@ -49,8 +49,18 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -484,7 +494,7 @@ public class LeveldbTimelineStore extends AbstractService
     }
     // create a lexicographically-ordered map from start time to entities
     Map<byte[], List<EntityIdentifier>> startTimeMap = new TreeMap<byte[],
-        List<EntityIdentifier>>(new Comparator<byte[]>() {
+            List<EntityIdentifier>>(new Comparator<byte[]>() {
           @Override
           public int compare(byte[] o1, byte[] o2) {
             return WritableComparator.compareBytes(o1, 0, o1.length, o2, 0,

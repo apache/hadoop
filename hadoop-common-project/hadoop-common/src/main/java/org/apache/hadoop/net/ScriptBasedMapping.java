@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.net;
 
-import java.util.*;
-import java.io.*;
-
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -28,6 +25,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.StringTokenizer;
 
 /**
  * This class implements the {@link DNSToSwitchMapping} interface using a 

@@ -18,14 +18,18 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
-import java.util.*;
-
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @XmlRootElement(name = "nodeLabelsInfo")
 @XmlAccessorType(XmlAccessType.FIELD)

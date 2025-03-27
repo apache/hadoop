@@ -18,8 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 
-import java.util.*;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
 
 
 /**

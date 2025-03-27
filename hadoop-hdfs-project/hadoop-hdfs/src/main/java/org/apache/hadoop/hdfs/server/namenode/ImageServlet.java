@@ -17,6 +17,20 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
 import org.apache.hadoop.hdfs.server.common.Util;
@@ -29,8 +43,6 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.net.HttpURLConnection;
 import java.security.PrivilegedExceptionAction;
-import java.util.*;
-import java.io.*;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;

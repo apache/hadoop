@@ -18,10 +18,16 @@
 
 package org.apache.hadoop.examples.dancing;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
-
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.StringTokenizer;
 
 /**
  * This class uses the dancing links algorithm from Knuth to solve sudoku
@@ -112,7 +118,7 @@ public class Sudoku {
      * @param solution a list of list of column names
      */
     void rawWrite(List solution) {
-      for (Iterator itr=solution.iterator(); itr.hasNext(); ) {
+      for (Iterator itr = solution.iterator(); itr.hasNext(); ) {
         Iterator subitr = ((List) itr.next()).iterator();
         while (subitr.hasNext()) {
           System.out.print(subitr.next().toString() + " ");

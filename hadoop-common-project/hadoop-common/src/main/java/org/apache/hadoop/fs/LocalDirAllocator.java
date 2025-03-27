@@ -18,16 +18,25 @@
 
 package org.apache.hadoop.fs;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Random;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.hadoop.util.*;
+import org.apache.hadoop.util.BasicDiskValidator;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.DiskValidator;
+import org.apache.hadoop.util.DiskValidatorFactory;
+import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +78,7 @@ public class LocalDirAllocator {
   //A Map from the config item names like "mapred.local.dir"
   //to the instance of the AllocatorPerContext. This
   //is a static object to make sure there exists exactly one instance per JVM
-  private static Map <String, AllocatorPerContext> contexts = 
+  private static Map<String, AllocatorPerContext> contexts = 
                  new TreeMap<String, AllocatorPerContext>();
   private String contextCfgItemName;
 

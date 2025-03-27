@@ -18,16 +18,18 @@
 
 package org.apache.hadoop.io;
 
-import java.io.*;
-import java.util.*;
-
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.conf.*;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Random;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;

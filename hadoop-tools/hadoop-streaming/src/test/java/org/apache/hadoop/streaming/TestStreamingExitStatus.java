@@ -20,13 +20,13 @@ package org.apache.hadoop.streaming;
 
 import org.junit.Test;
 import org.junit.Before;
-import static org.junit.Assert.*;
 
-import java.io.*;
-import java.util.*;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * This class tests if hadoopStreaming fails a job when the mapper or

@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
 
 //Some policies will use multiple comparators joined together
 class CompoundComparator implements Comparator<SchedulableEntity> {

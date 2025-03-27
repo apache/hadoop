@@ -46,7 +46,12 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /** JSON Utilities */
 public class JsonUtil {

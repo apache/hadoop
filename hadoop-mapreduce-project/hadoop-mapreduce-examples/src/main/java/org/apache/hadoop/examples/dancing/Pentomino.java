@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.examples.dancing;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.StringTokenizer;
 
 public class Pentomino {
   public static final String DEPTH = "mapreduce.pentomino.depth";
@@ -444,7 +447,7 @@ public class Pentomino {
     int height = 10;
     Pentomino model = new Pentomino(width, height);
     List splits = model.getSplits(2);
-    for(Iterator splitItr=splits.iterator(); splitItr.hasNext(); ) {
+    for(Iterator splitItr = splits.iterator(); splitItr.hasNext(); ) {
       int[] choices = (int[]) splitItr.next();
       System.out.print("split:");
       for(int i=0; i < choices.length; ++i) {

@@ -18,15 +18,42 @@
 
 package org.apache.hadoop.io;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.EOFException;
+import java.io.Flushable;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
 import java.rmi.server.UID;
 import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ChecksumException;
+import org.apache.hadoop.fs.ChecksumFileSystem;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
+import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.util.Options;
-import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.io.compress.CodecPool;
@@ -41,7 +68,6 @@ import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -842,7 +868,7 @@ public class SequenceFile {
   
   /** Write key/value pairs to a sequence-format file. */
   public static class Writer implements java.io.Closeable, Syncable,
-                  Flushable, StreamCapabilities {
+      Flushable, StreamCapabilities {
     private Configuration conf;
     FSDataOutputStream out;
     boolean ownOutputStream = true;
@@ -2013,7 +2039,7 @@ public class SequenceFile {
     
     /**
      * Initialize the {@link Reader}
-     * @param tmpReader <code>true</code> if we are constructing a temporary
+     * @param tempReader <code>true</code> if we are constructing a temporary
      *                  reader {@link SequenceFile.Sorter.cloneFileAttributes}, 
      *                  and hence do not initialize every component; 
      *                  <code>false</code> otherwise.
@@ -3328,7 +3354,7 @@ public class SequenceFile {
      * @return RawKeyValueIteratorMergeQueue
      * @throws IOException raised on errors performing I/O.
      */
-    public RawKeyValueIterator merge(Path [] inNames, boolean deleteInputs,
+    public RawKeyValueIterator merge(Path[] inNames, boolean deleteInputs,
                                      Path tmpDir) 
       throws IOException {
       return merge(inNames, deleteInputs, 
@@ -3350,7 +3376,7 @@ public class SequenceFile {
                                      int factor, Path tmpDir) 
       throws IOException {
       //get the segments from inNames
-      ArrayList <SegmentDescriptor> a = new ArrayList <SegmentDescriptor>();
+      ArrayList<SegmentDescriptor> a = new ArrayList <SegmentDescriptor>();
       for (int i = 0; i < inNames.length; i++) {
         SegmentDescriptor s = new SegmentDescriptor(0,
             fs.getFileStatus(inNames[i]).getLen(), inNames[i]);

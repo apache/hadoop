@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.client.impl;
 
-import java.util.*;
-
 import org.apache.hadoop.thirdparty.com.google.common.primitives.SignedBytes;
 
 import org.apache.hadoop.util.ChunkedArrayList;
@@ -26,6 +24,13 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing.DiffReportListi
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
+
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
  * This class represents to end users the difference between two snapshots of
  * the same directory, or the difference between a snapshot of the directory and
