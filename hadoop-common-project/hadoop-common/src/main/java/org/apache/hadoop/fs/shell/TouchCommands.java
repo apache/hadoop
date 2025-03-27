@@ -19,9 +19,9 @@
 package org.apache.hadoop.fs.shell;
 
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.LinkedList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -32,6 +32,8 @@ import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+
+import static java.time.ZoneId.systemDefault;
 
 /**
  * Unix touch like commands
@@ -122,12 +124,12 @@ public class TouchCommands extends FsCommand {
     private boolean changeAccessTime = false;
     private boolean doNotCreate = false;
     private String timestamp;
-    private final SimpleDateFormat dateFormat =
-        new SimpleDateFormat("yyyyMMdd:HHmmss");
+    private final String dateFormatPattern = "yyyyMMdd:HHmmss";
+    private final DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern(dateFormatPattern).withZone(systemDefault());
 
     @InterfaceAudience.Private
     @VisibleForTesting
-    public DateFormat getDateFormat() {
+    public DateTimeFormatter getDateFormat() {
       return dateFormat;
     }
 
@@ -178,11 +180,11 @@ public class TouchCommands extends FsCommand {
       long time = System.currentTimeMillis();
       if (timestamp != null) {
         try {
-          time = dateFormat.parse(timestamp).getTime();
-        } catch (ParseException e) {
+          time = dateFormat.parse(timestamp, Instant::from).toEpochMilli();
+        } catch (DateTimeParseException e) {
           throw new IllegalArgumentException(
               "Unable to parse the specified timestamp "+ timestamp
-              + ". The expected format is " + dateFormat.toPattern(), e);
+              + ". The expected format is " + dateFormatPattern, e);
         }
       }
       if (changeModTime ^ changeAccessTime) {

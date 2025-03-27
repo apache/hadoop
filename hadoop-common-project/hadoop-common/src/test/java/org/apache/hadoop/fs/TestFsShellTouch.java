@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.fs;
 
-import java.text.ParseException;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
@@ -275,10 +276,10 @@ public class TestFsShellTouch {
   }
 
   private String formatTimestamp(long timeInMillis) {
-    return (new Touch()).getDateFormat().format(new Date(timeInMillis));
+    return (new Touch()).getDateFormat().format(Instant.ofEpochMilli(timeInMillis));
   }
 
-  private Date parseTimestamp(String tstamp) throws ParseException {
-    return (new Touch()).getDateFormat().parse(tstamp);
+  private Date parseTimestamp(String tstamp) throws DateTimeParseException {
+    return Date.from((new Touch()).getDateFormat().parse(tstamp, Instant::from));
   }
 }

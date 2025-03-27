@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.util;
 
+import static java.time.ZoneId.systemDefault;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,22 +32,16 @@ import org.junit.jupiter.api.Test;
  */
 public class TestTime {
 
-  private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT =
-      new ThreadLocal<SimpleDateFormat>() {
-    @Override
-    protected SimpleDateFormat initialValue() {
-      return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSSZ");
-    }
-  };
-
   /**
    * Test formatTime.
-   * @throws IOException
    */
   @Test
   public void testFormatTime() {
-    long time = Time.now();
-    assertEquals(Time.formatTime(time),
-        DATE_FORMAT.get().format(time));
+    ZonedDateTime time = LocalDateTime.of(1999, 12, 31,
+            23, 59, 59, 999000000).atZone(systemDefault());
+    long timeMillis = time.toInstant().toEpochMilli();
+    String zoneSuffix = DateTimeFormatter.ofPattern("Z").format(time);
+    String expected = "1999-12-31 23:59:59,999" + zoneSuffix;
+    assertEquals(expected, Time.formatTime(timeMillis));
   }
 }

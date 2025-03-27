@@ -19,10 +19,10 @@
 package org.apache.hadoop.fs.shell;
 
 import java.io.IOException;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.LinkedList;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -34,6 +34,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.ContentSummary;
+
+import static java.time.ZoneId.systemDefault;
 
 /**
  * Get a listing of all files in that match the file patterns.
@@ -98,8 +100,8 @@ class Ls extends FsCommand {
           "  -" + OPTION_ECPOLICY +
           "  Display the erasure coding policy of files and directories.\n";
 
-  protected final SimpleDateFormat dateFormat =
-    new SimpleDateFormat("yyyy-MM-dd HH:mm");
+  protected final DateTimeFormatter dateFormat =
+          DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(systemDefault());
 
   protected int maxRepl = 3, maxLen = 10, maxOwner = 0, maxGroup = 0;
   protected String lineFormat;
@@ -289,6 +291,10 @@ class Ls extends FsCommand {
       return;
     }
     FileStatus stat = item.stat;
+    long statTime = isUseAtime()
+            ? stat.getAccessTime()
+            : stat.getModificationTime();
+    String formattedTime = dateFormat.format(Instant.ofEpochMilli(statTime));
     if (displayECPolicy) {
       ContentSummary contentSummary = item.fs.getContentSummary(item.path);
       String line = String.format(lineFormat,
@@ -299,9 +305,7 @@ class Ls extends FsCommand {
           stat.getGroup(),
           contentSummary.getErasureCodingPolicy(),
           formatSize(stat.getLen()),
-          dateFormat.format(new Date(isUseAtime()
-              ? stat.getAccessTime()
-              : stat.getModificationTime())),
+          formattedTime,
           isHideNonPrintable() ? new PrintableString(item.toString()) : item);
       out.println(line);
     } else {
@@ -312,9 +316,7 @@ class Ls extends FsCommand {
           stat.getOwner(),
           stat.getGroup(),
           formatSize(stat.getLen()),
-          dateFormat.format(new Date(isUseAtime()
-              ? stat.getAccessTime()
-              : stat.getModificationTime())),
+          formattedTime,
           isHideNonPrintable() ? new PrintableString(item.toString()) : item);
       out.println(line);
     }

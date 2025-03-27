@@ -28,13 +28,13 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.NoSuchAlgorithmException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.time.ZoneOffset.UTC;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -77,9 +77,9 @@ public class TestKeyProvider {
 
   @Test
   public void testMetadata() throws Exception {
-    //Metadata without description
-    DateFormat format = new SimpleDateFormat("y/m/d");
-    Date date = format.parse("2013/12/25");
+    Date date = Date.from(LocalDate.of(2013, 12, 25).atStartOfDay().toInstant(UTC));
+
+    // Metadata without description
     KeyProvider.Metadata meta = new KeyProvider.Metadata("myCipher", 100, null,
         null, date, 123);
     assertEquals("myCipher", meta.getCipher());
@@ -99,9 +99,7 @@ public class TestKeyProvider {
     assertEquals(124, second.getVersions());
     assertEquals(123, meta.getVersions());
 
-    //Metadata with description
-    format = new SimpleDateFormat("y/m/d");
-    date = format.parse("2013/12/25");
+    // Metadata with description
     Map<String, String> attributes = new HashMap<String, String>();
     attributes.put("a", "A");
     meta = new KeyProvider.Metadata("myCipher", 100,

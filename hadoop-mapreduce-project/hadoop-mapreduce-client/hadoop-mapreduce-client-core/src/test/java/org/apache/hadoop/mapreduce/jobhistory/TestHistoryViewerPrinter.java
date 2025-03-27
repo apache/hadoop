@@ -37,9 +37,9 @@ import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.TimeZone;
 import java.util.Locale;
 
+import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -67,8 +67,7 @@ public class TestHistoryViewerPrinter {
   public void testHumanPrinter() throws Exception {
     JobHistoryParser.JobInfo job = createJobInfo();
     HumanReadableHistoryViewerPrinter printer =
-        new HumanReadableHistoryViewerPrinter(job, false, "http://",
-            TimeZone.getTimeZone("GMT"));
+        new HumanReadableHistoryViewerPrinter(job, false, "http://", UTC);
     String outStr = run(printer);
     assertEquals("\n" +
         "Hadoop job: job_1317928501754_0001\n" +
@@ -176,8 +175,7 @@ public class TestHistoryViewerPrinter {
   public void testHumanPrinterAll() throws Exception {
     JobHistoryParser.JobInfo job = createJobInfo();
     HumanReadableHistoryViewerPrinter printer =
-        new HumanReadableHistoryViewerPrinter(job, true, "http://",
-            TimeZone.getTimeZone("GMT"));
+        new HumanReadableHistoryViewerPrinter(job, true, "http://", UTC);
     String outStr = run(printer);
     if (System.getProperty("java.version").startsWith("1.7")) {
       assertEqualLines("\n" +
@@ -1024,8 +1022,7 @@ public class TestHistoryViewerPrinter {
     // Counters are only part of the overview so printAll can be false or true
     // this does not affect the test, task counters are not printed
     HumanReadableHistoryViewerPrinter printer =
-        new HumanReadableHistoryViewerPrinter(job, false, "http://",
-            TimeZone.getTimeZone("GMT"));
+        new HumanReadableHistoryViewerPrinter(job, false, "http://", UTC);
     String outStr = run(printer);
     // We are not interested in anything but the duplicate counter
     int count1 = outStr.indexOf(

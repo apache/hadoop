@@ -18,8 +18,8 @@
 package org.apache.hadoop.io.file.tfile;
 
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.Random;
 import java.util.StringTokenizer;
 
@@ -47,6 +47,8 @@ import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner.Entry;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 
+import static java.time.ZoneId.systemDefault;
+
 public class TestTFileSeqFileComparison {
   MyOptions options;
 
@@ -54,7 +56,7 @@ public class TestTFileSeqFileComparison {
   private Configuration conf;
   private long startTimeEpoch;
   private long finishTimeEpoch;
-  private DateFormat formatter;
+  private DateTimeFormatter formatter;
   byte[][] dictionary;
 
   @Before
@@ -68,7 +70,7 @@ public class TestTFileSeqFileComparison {
     conf.setInt("tfile.fs.output.buffer.size", options.fsOutputBufferSize);
     Path path = new Path(options.rootDir);
     fs = path.getFileSystem(conf);
-    formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(systemDefault());
     setUpDictionary();
   }
 
@@ -107,15 +109,8 @@ public class TestTFileSeqFileComparison {
     System.out.println(formatTime() + "  " + message);
   }
 
-  /*
-   * Format millis into minutes and seconds.
-   */
-  public String formatTime(long milis) {
-    return formatter.format(milis);
-  }
-
   public String formatTime() {
-    return formatTime(Time.now());
+    return formatter.format(Instant.now());
   }
 
   private interface KVAppendable {

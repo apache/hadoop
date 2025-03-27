@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.util;
 
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
+import static java.time.ZoneId.systemDefault;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.StringUtils.STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG;
 import static org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix.long2String;
@@ -45,7 +47,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.test.UnitTestcaseTimeLimit;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 
@@ -64,8 +65,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
   final private static String ESCAPED_STR_WITH_BOTH2 = 
     "\\,A\\\\\\,\\,B\\\\\\\\\\,";
 
-  final private static FastDateFormat FAST_DATE_FORMAT =
-      FastDateFormat.getInstance("d-MMM-yyyy HH:mm:ss");
+  final private static DateTimeFormatter DATE_FORMAT =
+          DateTimeFormatter.ofPattern("d-MMM-yyyy HH:mm:ss").withZone(systemDefault());
   
   @Test
   @Timeout(value = 30)
@@ -477,9 +478,9 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
           final long end = System.currentTimeMillis();
           final long start = end - 30000;
           String formattedTime1 = StringUtils.getFormattedTimeWithDiff(
-              FAST_DATE_FORMAT, start, end);
+                  DATE_FORMAT, start, end);
           String formattedTime2 = StringUtils.getFormattedTimeWithDiff(
-              FAST_DATE_FORMAT, start, end);
+                  DATE_FORMAT, start, end);
           assertTrue(formattedTime1.equals(formattedTime2),
               "Method returned inconsistent results indicative of a race condition");
 
