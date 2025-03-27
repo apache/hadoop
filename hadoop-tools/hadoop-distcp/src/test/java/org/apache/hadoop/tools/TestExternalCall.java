@@ -84,10 +84,16 @@ public class TestExternalCall {
 
   @AfterEach
   public void tearDown() {
-    System.setSecurityManager(securityManager);
+    try {
+      System.setSecurityManager(securityManager);
+    } catch (UnsupportedOperationException e) {
+      // JUnit 5 calls @AfterEach even if @BeforeEach has thrown TestAbortedException
+      // The test has already been already skipped
+    }
   }
+
 /**
- * test methods run end execute of DistCp class. silple copy file
+ * test methods run end execute of DistCp class. simple copy file
  * @throws Exception 
  */
   @Test
