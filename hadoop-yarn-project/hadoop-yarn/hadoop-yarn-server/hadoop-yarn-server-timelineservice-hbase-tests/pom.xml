@@ -550,6 +550,8 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <forkCount>0</forkCount>
+          <trimStackTrace>false</trimStackTrace>
+          <argLine>${maven-surefire-plugin.argLine}</argLine>
         </configuration>
       </plugin>
     </plugins>
