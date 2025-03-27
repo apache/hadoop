@@ -37,7 +37,7 @@ do
 done
 
 #change value of default FS from WASB to ABFS
-sed -i '/<name>fs.defaultFS<\/name>/!b;n;s|<value>wasb://\([^@]*\)@\([^<]*\).blob.core.windows.net</value>|<value>abfs://\1@\2.'"$endpoint"'.core.windows.net</value>|' "$OUTPUT_FILE"
+sed -i '/<name>fs.defaultFS<\/name>/!b;n;s|<value>wasb\(s\?\)://\([^@]*\)@\([^<]*\).blob.core.windows.net</value>|<value>abfs\1://\2@\3.'"$endpoint"'.core.windows.net</value>|' "$OUTPUT_FILE"
 
 # Mapping for renaming configurations
 declare -A rename_configs_map=(
@@ -100,7 +100,7 @@ done
 
 # Remove the obsolete configs
 for key in "${obsolete_configs_list[@]}"; do
-    sed -i "/<name>.*$key.*<\/name>/d" "$OUTPUT_FILE"
+    sed -i "/<name>.*$key.*<\/name>/d;g" "$OUTPUT_FILE"
 done
 
 #change the endpoints for properties if migration is to HNS

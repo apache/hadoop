@@ -32,7 +32,7 @@
   </property>
   <property>
     <name>fs.defaultFS</name>
-    <value>wasb://CONTAINER@ACCOUNT.blob.core.windows.net</value>
+    <value>wasbs://CONTAINER@ACCOUNT.blob.core.windows.net</value>
   </property>
   <property>
     <name>wasb://CONTAINER@ACCOUNT.blob.core.windows.net</name>
