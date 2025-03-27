@@ -48,8 +48,18 @@ import org.apache.hadoop.net.ConnectTimeoutException;
 
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.hadoop.io.retry.RetryPolicies.*;
-import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_RETRY_HTTP_5XX_ERRORS;
+import static org.apache.hadoop.fs.s3a.Constants.RETRY_HTTP_5XX_ERRORS;
+import static org.apache.hadoop.fs.s3a.Constants.RETRY_INTERVAL;
+import static org.apache.hadoop.fs.s3a.Constants.RETRY_INTERVAL_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
+import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.RETRY_THROTTLE_INTERVAL;
+import static org.apache.hadoop.fs.s3a.Constants.RETRY_THROTTLE_INTERVAL_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.RETRY_THROTTLE_LIMIT;
+import static org.apache.hadoop.fs.s3a.Constants.RETRY_THROTTLE_LIMIT_DEFAULT;
+import static org.apache.hadoop.io.retry.RetryPolicies.exponentialBackoffRetry;
+import static org.apache.hadoop.io.retry.RetryPolicies.retryByException;
 
 
 /**

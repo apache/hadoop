@@ -18,7 +18,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 
 import javax.servlet.ServletContext;
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;

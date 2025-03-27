@@ -77,7 +77,23 @@ import java.util.concurrent.ExecutionException;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.AWSCredentialProviderList.maybeTranslateCredentialException;
-import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Constants.ACCESS_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
+import static org.apache.hadoop.fs.s3a.Constants.BUCKET_REGION_HEADER;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_FAST_UPLOAD_BUFFER;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MULTIPART_UPLOAD_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER;
+import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_DISK;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_BUCKET_PREFIX;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PREFIX;
+import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_UPLOADS_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.S3A_SECURITY_CREDENTIAL_PROVIDER_PATH;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.SECRET_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.maybeTranslateAuditException;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeProcessEncryptionClientException;
@@ -119,14 +135,14 @@ public final class S3AUtils {
   public static final String SSE_C_NO_KEY_ERROR =
       S3AEncryptionMethods.SSE_C.getMethod()
           + " is enabled but no encryption key was declared in "
-          + Constants.S3_ENCRYPTION_KEY;
+          + S3_ENCRYPTION_KEY;
   /**
    * Encryption SSE-S3 is used but the caller also set an encryption key.
    */
   public static final String SSE_S3_WITH_KEY_ERROR =
       S3AEncryptionMethods.SSE_S3.getMethod()
           + " is enabled but an encryption key was set in "
-          + Constants.S3_ENCRYPTION_KEY;
+          + S3_ENCRYPTION_KEY;
   public static final String EOF_MESSAGE_IN_XML_PARSER
       = "Failed to sanitize XML document destined for handler class";
 

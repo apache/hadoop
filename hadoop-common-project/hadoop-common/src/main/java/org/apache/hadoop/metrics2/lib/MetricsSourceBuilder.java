@@ -22,8 +22,6 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-import static org.apache.hadoop.util.Preconditions.*;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsException;
@@ -34,6 +32,8 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**
  * Helper class to build {@link MetricsSource} object from annotations.

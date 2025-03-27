@@ -23,7 +23,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
-import org.apache.hadoop.metrics2.lib.*;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MutableCounterInt;
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,8 +39,10 @@ import static org.apache.hadoop.metrics2.lib.Interns.info;
  */
 @InterfaceAudience.Private
 public class ReadWriteDiskValidatorMetrics {
-  @Metric("# of disk failure") MutableCounterInt failureCount;
-  @Metric("Time of last failure") MutableGaugeLong lastFailureTime;
+  @Metric("# of disk failure")
+  MutableCounterInt failureCount;
+  @Metric("Time of last failure")
+  MutableGaugeLong lastFailureTime;
 
   private final MetricsRegistry registry;
   private static final MetricsInfo RECORD_INFO =

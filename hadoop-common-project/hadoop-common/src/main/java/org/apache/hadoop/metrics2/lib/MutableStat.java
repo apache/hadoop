@@ -26,7 +26,7 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.util.SampleStat;
 import org.apache.hadoop.util.Time;
 
-import static org.apache.hadoop.metrics2.lib.Interns.*;
+import static org.apache.hadoop.metrics2.lib.Interns.info;
 
 /**
  * A mutable metric with stats.

@@ -22,8 +22,9 @@ import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.InputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.security.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;

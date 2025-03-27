@@ -30,7 +30,11 @@ import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterFactory;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.COMMITTER_NAME_DIRECTORY;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.COMMITTER_NAME_FILE;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.COMMITTER_NAME_MAGIC;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.COMMITTER_NAME_PARTITIONED;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_NAME;
 
 /**
  * The S3A committer factory which chooses the committer based on the

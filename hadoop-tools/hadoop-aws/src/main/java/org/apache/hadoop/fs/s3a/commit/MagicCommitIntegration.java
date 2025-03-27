@@ -31,7 +31,9 @@ import org.apache.hadoop.fs.s3a.commit.magic.S3MagicCommitTracker;
 import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
 import org.apache.hadoop.fs.s3a.statistics.PutTrackerStatistics;
 
-import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
+import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.elementsToKey;
+import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.isMagicPath;
+import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.splitPathToElements;
 import static org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTrackerUtils.isTrackMagicCommitsInMemoryEnabled;
 
 /**

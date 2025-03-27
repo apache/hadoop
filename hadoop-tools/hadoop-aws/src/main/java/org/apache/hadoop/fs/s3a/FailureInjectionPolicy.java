@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 
-import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Constants.FAIL_INJECT_THROTTLE_PROBABILITY;
 
 /**
  * Simple object which stores current failure injection settings.

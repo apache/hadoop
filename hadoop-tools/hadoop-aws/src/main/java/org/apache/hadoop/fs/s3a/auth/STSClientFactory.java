@@ -52,7 +52,11 @@ import org.apache.hadoop.fs.s3a.Retries;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_STS;
-import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.*;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DEFAULT_DELEGATION_TOKEN_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DEFAULT_DELEGATION_TOKEN_REGION;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_REGION;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.STS_STANDARD;
 
 /**
  * Factory for creating STS Clients.

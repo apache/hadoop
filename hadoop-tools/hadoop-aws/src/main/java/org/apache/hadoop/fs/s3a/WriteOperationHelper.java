@@ -25,6 +25,7 @@ import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.fs.s3a.Invoker.Retried;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
@@ -54,8 +55,8 @@ import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
+import static org.apache.hadoop.fs.s3a.Invoker.once;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
-import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.store.audit.AuditingFunctions.withinAuditSpan;
 
 /**

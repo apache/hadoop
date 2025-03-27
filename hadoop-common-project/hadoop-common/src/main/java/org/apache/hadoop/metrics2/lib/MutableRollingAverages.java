@@ -44,7 +44,7 @@ import org.apache.hadoop.util.Time;
 
 import javax.annotation.Nullable;
 
-import static org.apache.hadoop.metrics2.lib.Interns.*;
+import static org.apache.hadoop.metrics2.lib.Interns.info;
 
 /**
  * <p>

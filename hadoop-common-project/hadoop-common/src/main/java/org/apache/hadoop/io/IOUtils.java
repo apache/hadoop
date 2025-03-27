@@ -18,7 +18,17 @@
 
 package org.apache.hadoop.io;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.EOFException;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.lang.reflect.Constructor;
 import java.net.Socket;
 import java.nio.ByteBuffer;

@@ -13,16 +13,20 @@
  */
 package org.apache.hadoop.security.authentication.server;
 
+import static org.apache.hadoop.security.authentication.server.HttpConstants.AUTHORIZATION_HEADER;
+import static org.apache.hadoop.security.authentication.server.HttpConstants.BASIC;
+import static org.apache.hadoop.security.authentication.server.HttpConstants.NEGOTIATE;
+import static org.apache.hadoop.security.authentication.server.HttpConstants.WWW_AUTHENTICATE_HEADER;
 import static org.apache.hadoop.security.authentication.server.LdapAuthenticationHandler.BASE_DN;
 import static org.apache.hadoop.security.authentication.server.LdapAuthenticationHandler.PROVIDER_URL;
 import static org.apache.hadoop.security.authentication.server.LdapAuthenticationHandler.TYPE;
+import static org.apache.hadoop.security.authentication.server.LdapConstants.LDAP_BASE_DN;
+import static org.apache.hadoop.security.authentication.server.LdapConstants.LDAP_SERVER_ADDR;
 import static org.apache.hadoop.security.authentication.server.MultiSchemeAuthenticationHandler.SCHEMES_PROPERTY;
 import static org.apache.hadoop.security.authentication.server.MultiSchemeAuthenticationHandler.AUTH_HANDLER_PROPERTY;
 import static org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler.PRINCIPAL;
 import static org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler.KEYTAB;
 import static org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler.NAME_RULES;
-import static org.apache.hadoop.security.authentication.server.LdapConstants.*;
-import static org.apache.hadoop.security.authentication.server.HttpConstants.*;
 
 import java.io.File;
 import java.util.Properties;

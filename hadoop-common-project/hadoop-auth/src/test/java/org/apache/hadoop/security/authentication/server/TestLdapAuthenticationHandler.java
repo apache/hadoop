@@ -18,8 +18,12 @@ import java.util.Properties;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import static org.apache.hadoop.security.authentication.server.LdapAuthenticationHandler.*;
-import static org.apache.hadoop.security.authentication.server.LdapConstants.*;
+import static org.apache.hadoop.security.authentication.server.AuthenticationHandler.WWW_AUTHENTICATE;
+import static org.apache.hadoop.security.authentication.server.LdapAuthenticationHandler.BASE_DN;
+import static org.apache.hadoop.security.authentication.server.LdapAuthenticationHandler.PROVIDER_URL;
+import static org.apache.hadoop.security.authentication.server.LdapConstants.LDAP_BASE_DN;
+import static org.apache.hadoop.security.authentication.server.LdapConstants.LDAP_SERVER_ADDR;
+import static org.apache.hadoop.security.authentication.server.TestAuthenticationFilter.DummyAuthenticationHandler.TYPE;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.directory.server.annotations.CreateLdapServer;

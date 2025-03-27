@@ -29,7 +29,7 @@ import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsFilter;
 import org.apache.hadoop.util.Lists;
 
-import static org.apache.hadoop.metrics2.lib.Interns.*;
+import static org.apache.hadoop.metrics2.lib.Interns.info;
 
 @InterfaceAudience.Private
 @VisibleForTesting

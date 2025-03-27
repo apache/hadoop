@@ -18,11 +18,15 @@
 
 package org.apache.hadoop.io;
 
-import java.io.*;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.Preconditions;
+
+import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 
 /** A reusable {@link DataOutput} implementation that writes to an in-memory
  * buffer.

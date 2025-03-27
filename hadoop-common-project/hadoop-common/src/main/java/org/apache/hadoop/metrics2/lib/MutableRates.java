@@ -22,12 +22,13 @@ import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.apache.hadoop.util.Preconditions.*;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**
  * Helper class to manage a group of mutable rate metrics

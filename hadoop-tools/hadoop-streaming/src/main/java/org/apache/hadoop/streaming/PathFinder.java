@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.streaming;
 
-import java.io.*;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileUtil;
+
+import java.io.File;
+import java.io.IOException;
 
 /**
  * Maps a relative pathname to an absolute pathname using the PATH environment.

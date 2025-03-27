@@ -75,7 +75,7 @@ import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MAX_TOTAL_TASKS;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.MAX_TOTAL_TASKS;
 import static org.apache.hadoop.fs.s3a.Invoker.ignoreIOExceptions;
-import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.deleteQuietly;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_COMMIT_JOB;
 import static org.apache.hadoop.fs.audit.CommonAuditContext.currentAuditContext;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;

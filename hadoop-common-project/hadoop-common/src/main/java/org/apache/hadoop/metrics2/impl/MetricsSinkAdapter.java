@@ -20,7 +20,8 @@ package org.apache.hadoop.metrics2.impl;
 
 import java.io.Closeable;
 import java.util.Random;
-import java.util.concurrent.*;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.util.Preconditions.*;
 

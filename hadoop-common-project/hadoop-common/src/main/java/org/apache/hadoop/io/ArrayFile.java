@@ -18,13 +18,15 @@
 
 package org.apache.hadoop.io;
 
-import java.io.*;
-import org.apache.hadoop.fs.*;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.*;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.util.Progressable;
+
+import java.io.IOException;
 
 
 /** A dense file-based mapping from integers to values. */

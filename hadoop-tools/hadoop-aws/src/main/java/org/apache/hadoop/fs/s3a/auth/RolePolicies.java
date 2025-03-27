@@ -23,12 +23,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.hadoop.fs.s3a.auth.RoleModel.Statement;
 import org.apache.hadoop.util.Lists;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
+import static org.apache.hadoop.fs.s3a.auth.RoleModel.statement;
 
 /**
  * Operations, statements and policies covering the operations

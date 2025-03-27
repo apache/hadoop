@@ -53,7 +53,16 @@ import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Sets;
 
-import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_ARN;
+import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_CREDENTIALS_PROVIDER;
+import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_EXTERNAL_ID;
+import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_POLICY;
+import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_SESSION_DURATION;
+import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_SESSION_DURATION_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_SESSION_NAME;
+import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_STS_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_STS_ENDPOINT_REGION;
+import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_STS_ENDPOINT_REGION_DEFAULT;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.buildAWSProviderList;
 
 /**

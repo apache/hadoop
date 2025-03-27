@@ -20,13 +20,12 @@ package org.apache.hadoop.metrics2.impl;
 
 import java.util.List;
 
-import static org.apache.hadoop.util.Preconditions.*;
-
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsTag;
 import static org.apache.hadoop.metrics2.util.Contracts.*;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 @VisibleForTesting
 public class MetricsRecordImpl extends AbstractMetricsRecord {

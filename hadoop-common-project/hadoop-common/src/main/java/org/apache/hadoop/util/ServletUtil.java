@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.util;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Calendar;
 
-import javax.servlet.*;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.hadoop.classification.InterfaceAudience;

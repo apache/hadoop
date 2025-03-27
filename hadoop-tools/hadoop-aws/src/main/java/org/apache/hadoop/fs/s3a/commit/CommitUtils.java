@@ -28,7 +28,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
-import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.*;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.E_BAD_PATH;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.E_NORMAL_FS;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.E_WRONG_FS;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.MR_JOB_ID;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.SPARK_WRITE_UUID;
 import static org.apache.hadoop.fs.s3a.commit.ValidationFailure.verify;
 
 /**

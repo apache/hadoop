@@ -42,7 +42,9 @@ import org.apache.hadoop.util.DirectBufferPool;
 import org.apache.hadoop.util.functional.BiFunctionRaisingIOE;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.*;
+import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.Closed;
+import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.Upload;
+import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.Writing;
 import static org.apache.hadoop.fs.s3a.impl.UploadContentProviders.byteArrayContentProvider;
 import static org.apache.hadoop.fs.s3a.impl.UploadContentProviders.byteBufferContentProvider;
 import static org.apache.hadoop.fs.s3a.impl.UploadContentProviders.fileContentProvider;

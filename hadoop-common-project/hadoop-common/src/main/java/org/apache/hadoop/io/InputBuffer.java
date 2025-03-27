@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.io;
 
-import java.io.*;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import java.io.ByteArrayInputStream;
+import java.io.FilterInputStream;
 
 
 /** A reusable {@link InputStream} implementation that reads from an in-memory

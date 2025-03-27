@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
-import static org.apache.hadoop.crypto.key.kms.server.KMSConfiguration.*;
+import static org.apache.hadoop.crypto.key.kms.server.KMSConfiguration.DEFAULT_KEY_ACL_PREFIX;
+import static org.apache.hadoop.crypto.key.kms.server.KMSConfiguration.WHITELIST_KEY_ACL_PREFIX;
 import static org.apache.hadoop.crypto.key.kms.server.KeyAuthorizationKeyProvider.KEY_ACL;
 import static org.apache.hadoop.crypto.key.kms.server.KeyAuthorizationKeyProvider.KeyOpType;
 

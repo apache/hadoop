@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.io;
 
-import java.io.*;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 /** 
  * A WritableComparable for booleans. 

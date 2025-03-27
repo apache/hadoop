@@ -20,7 +20,6 @@ package org.apache.hadoop.metrics2.lib;
 
 import java.lang.reflect.Method;
 
-import static org.apache.hadoop.util.Preconditions.*;
 import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.metrics2.MetricsException;
@@ -31,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.metrics2.util.Contracts.*;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**
  * Metric generated from a method, mostly used by annotation

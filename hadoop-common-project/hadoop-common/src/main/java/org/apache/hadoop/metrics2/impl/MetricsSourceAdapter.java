@@ -29,7 +29,6 @@ import javax.management.MBeanInfo;
 import javax.management.ObjectName;
 import javax.management.ReflectionException;
 
-import static org.apache.hadoop.util.Preconditions.*;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -45,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.metrics2.util.Contracts.*;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**
  * An adapter class for metrics source and associated filter and jmx impl
@@ -241,14 +241,14 @@ class MetricsSourceAdapter implements DynamicMBean {
   }
 
   private void updateInfoCache(Iterable<MetricsRecordImpl> lastRecs) {
-    Preconditions.checkNotNull(lastRecs, "LastRecs should not be null");
+    checkNotNull(lastRecs, "LastRecs should not be null");
     LOG.debug("Updating info cache...");
     infoCache = infoBuilder.reset(lastRecs).get();
     LOG.debug("Done");
   }
 
   private int updateAttrCache(Iterable<MetricsRecordImpl> lastRecs) {
-    Preconditions.checkNotNull(lastRecs, "LastRecs should not be null");
+    checkNotNull(lastRecs, "LastRecs should not be null");
     LOG.debug("Updating attr cache...");
     int recNo = 0;
     int numMetrics = 0;

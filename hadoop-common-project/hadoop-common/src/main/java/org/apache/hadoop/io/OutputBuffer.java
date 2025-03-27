@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.io;
 
-import java.io.*;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import java.io.ByteArrayOutputStream;
+import java.io.FilterOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 /** A reusable {@link OutputStream} implementation that writes to an in-memory
  * buffer.

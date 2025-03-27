@@ -22,7 +22,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.net.URLClassLoader;
-import static java.security.AccessController.*;
 
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedAction;
@@ -48,6 +47,8 @@ import org.apache.hadoop.metrics2.filter.GlobFilter;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static java.security.AccessController.doPrivileged;
 
 /**
  * Metrics configuration for MetricsSystemImpl

@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.fs.protocolPB;
 
+import org.apache.hadoop.fs.FSProtos;
+import org.apache.hadoop.fs.FSProtos.FileStatusProto;
+import org.apache.hadoop.fs.FSProtos.FsPermissionProto;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.StringInterner;
 
 import java.io.IOException;
-
-import static org.apache.hadoop.fs.FSProtos.*;
 
 /**
  * Utility methods aiding conversion of fs data structures.

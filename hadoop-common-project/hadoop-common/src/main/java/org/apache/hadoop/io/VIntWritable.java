@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.io;
 
-import java.io.*;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 /** A WritableComparable for integer values stored in variable-length format.
  * Such values take between one and five bytes.  Smaller values take fewer bytes.

@@ -24,10 +24,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
-import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
-import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.util.Daemon;
@@ -35,6 +32,17 @@ import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_CHECK_INTERVAL_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_CHECK_INTERVAL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_CONNECT_RETRY_INTERVAL_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_CONNECT_RETRY_INTERVAL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_CONNECT_MAX_RETRIES_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_CONNECT_MAX_RETRIES_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_SLEEP_AFTER_DISCONNECT_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_SLEEP_AFTER_DISCONNECT_KEY;
 
 /**
  * This class is a daemon which runs in a loop, periodically heartbeating

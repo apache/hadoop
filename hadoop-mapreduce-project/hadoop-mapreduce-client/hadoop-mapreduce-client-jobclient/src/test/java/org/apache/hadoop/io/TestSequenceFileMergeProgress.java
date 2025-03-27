@@ -20,13 +20,14 @@ package org.apache.hadoop.io;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Sorter.RawKeyValueIterator;
 import org.apache.hadoop.io.compress.DefaultCodec;
-import org.apache.hadoop.mapred.*;
 
+import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.mapred.JobConf;
 import org.slf4j.Logger;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;

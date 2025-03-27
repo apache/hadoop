@@ -27,7 +27,11 @@ import java.util.Random;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
@@ -174,7 +178,7 @@ public class TestMapCollection {
   }
 
   public static class SpillReducer
-      extends Reducer<KeyWritable,ValWritable,NullWritable,NullWritable> {
+      extends Reducer<KeyWritable,ValWritable,NullWritable, NullWritable> {
 
     private int numrecs;
     private int expected;

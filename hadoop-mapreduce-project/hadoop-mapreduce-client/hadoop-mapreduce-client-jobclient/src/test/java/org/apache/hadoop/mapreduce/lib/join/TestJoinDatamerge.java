@@ -28,7 +28,10 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.Utils;
-import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MapReduceTestUtil;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
@@ -110,7 +113,7 @@ public class TestJoinDatamerge {
   }
 
   private static abstract class SimpleCheckerMapBase<V extends Writable>
-      extends Mapper<IntWritable, V, IntWritable, IntWritable>{
+      extends Mapper<IntWritable, V, IntWritable, IntWritable> {
     protected final static IntWritable one = new IntWritable(1);
     int srcs;
 

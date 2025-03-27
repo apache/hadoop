@@ -23,9 +23,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
-
 import org.apache.hadoop.util.StringUtils;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS_DEFAULT;
 
 /**
  * Tool for redacting sensitive information when displaying config parameters.
