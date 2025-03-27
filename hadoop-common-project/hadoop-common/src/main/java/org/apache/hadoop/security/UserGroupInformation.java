@@ -24,7 +24,14 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_KEYTAB_LOGIN_AUTORENEWAL_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_TOKEN_FILES;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_TOKENS;
-import static org.apache.hadoop.security.UGIExceptionMessages.*;
+import static org.apache.hadoop.security.UGIExceptionMessages.FAILURE_TO_LOGIN;
+import static org.apache.hadoop.security.UGIExceptionMessages.INVALID_UID;
+import static org.apache.hadoop.security.UGIExceptionMessages.LOGIN_FAILURE;
+import static org.apache.hadoop.security.UGIExceptionMessages.LOGOUT_FAILURE;
+import static org.apache.hadoop.security.UGIExceptionMessages.MUST_FIRST_LOGIN;
+import static org.apache.hadoop.security.UGIExceptionMessages.MUST_FIRST_LOGIN_FROM_KEYTAB;
+import static org.apache.hadoop.security.UGIExceptionMessages.SUBJECT_MUST_CONTAIN_PRINCIPAL;
+import static org.apache.hadoop.security.UGIExceptionMessages.SUBJECT_MUST_NOT_BE_NULL;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 import static org.apache.hadoop.util.StringUtils.getTrimmedStringCollection;
 

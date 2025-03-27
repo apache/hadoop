@@ -22,7 +22,10 @@ import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.server.webapp.ErrorsAndWarningsBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlPage;
 
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
 public class NMErrorsAndWarningsPage extends NMView {
 

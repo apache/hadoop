@@ -23,15 +23,16 @@ import java.util.Random;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.hadoop.util.Preconditions.*;
-
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterInt;
 import org.apache.hadoop.metrics2.lib.MutableStat;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
-import static org.apache.hadoop.metrics2.util.Contracts.*;
+
+import static org.apache.hadoop.metrics2.util.Contracts.checkArg;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
+
 import org.apache.hadoop.metrics2.MetricsFilter;
 import org.apache.hadoop.metrics2.MetricsSink;
 import org.apache.hadoop.util.Time;

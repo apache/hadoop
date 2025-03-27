@@ -21,7 +21,9 @@ package org.apache.hadoop.yarn.server.router.webapp;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.view.TwoColumnLayout;
 
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION_ID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 
 /**
  * View for the Router Web UI.

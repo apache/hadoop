@@ -48,7 +48,26 @@ import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
-import static org.apache.hadoop.metrics2.impl.MetricsConfig.*;
+
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.CONTEXT_KEY;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.DESC_KEY;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.METRIC_FILTER_KEY;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.PERIOD_DEFAULT;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.PERIOD_KEY;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.PERIOD_MILLIS_KEY;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.PREFIX_DEFAULT;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.QUEUE_CAPACITY_DEFAULT;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.QUEUE_CAPACITY_KEY;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.RECORD_FILTER_KEY;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.RETRY_BACKOFF_DEFAULT;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.RETRY_BACKOFF_KEY;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.RETRY_COUNT_DEFAULT;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.RETRY_COUNT_KEY;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.RETRY_DELAY_DEFAULT;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.RETRY_DELAY_KEY;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.SINK_KEY;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.SOURCE_FILTER_KEY;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.SOURCE_KEY;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;

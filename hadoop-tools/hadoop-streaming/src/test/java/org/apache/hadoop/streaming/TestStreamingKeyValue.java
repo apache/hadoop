@@ -19,13 +19,14 @@
 package org.apache.hadoop.streaming;
 
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * This class tests hadoopStreaming in MapReduce local mode.

@@ -24,7 +24,8 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsTag;
-import static org.apache.hadoop.metrics2.util.Contracts.*;
+
+import static org.apache.hadoop.metrics2.util.Contracts.checkArg;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 @VisibleForTesting

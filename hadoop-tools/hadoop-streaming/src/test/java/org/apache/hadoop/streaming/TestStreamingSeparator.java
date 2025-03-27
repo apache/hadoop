@@ -19,11 +19,15 @@
 package org.apache.hadoop.streaming;
 
 import org.junit.Test;
-import static org.junit.Assert.*;
 
-import java.io.*;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.fs.FileUtil;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * This class tests hadoopStreaming with customized separator in MapReduce local mode.

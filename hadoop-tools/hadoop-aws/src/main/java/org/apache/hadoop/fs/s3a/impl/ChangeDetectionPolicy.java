@@ -38,7 +38,18 @@ import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
-import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE_CLIENT;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE_NONE;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE_SERVER;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE_WARN;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_REQUIRE_VERSION;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_REQUIRE_VERSION_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE_ETAG;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE_VERSION_ID;
 
 /**
  * Object change detection policy.

@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.security;
 
-import static org.apache.hadoop.security.UGIExceptionMessages.*;
-
 import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import static org.apache.hadoop.security.UGIExceptionMessages.FOR_PRINCIPAL;
+import static org.apache.hadoop.security.UGIExceptionMessages.FOR_USER;
+import static org.apache.hadoop.security.UGIExceptionMessages.FROM_KEYTAB;
+import static org.apache.hadoop.security.UGIExceptionMessages.USING_TICKET_CACHE_FILE;
 
 /**
  * Thrown when {@link UserGroupInformation} failed with an unrecoverable error,

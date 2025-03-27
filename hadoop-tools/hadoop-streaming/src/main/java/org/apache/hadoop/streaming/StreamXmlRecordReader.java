@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.streaming;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.regex.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;

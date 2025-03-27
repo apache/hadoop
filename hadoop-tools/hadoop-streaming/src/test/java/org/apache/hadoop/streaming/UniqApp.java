@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.streaming;
 
-import java.io.*;
-import java.util.Date;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 
 /** A minimal Java implementation of /usr/bin/uniq
     Used to test the usage of external applications without adding

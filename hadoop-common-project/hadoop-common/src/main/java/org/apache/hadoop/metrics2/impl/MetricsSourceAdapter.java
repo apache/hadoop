@@ -37,13 +37,15 @@ import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsFilter;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsTag;
-import static org.apache.hadoop.metrics2.impl.MetricsConfig.*;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.metrics2.util.Contracts.*;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.METRIC_FILTER_KEY;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.RECORD_FILTER_KEY;
+import static org.apache.hadoop.metrics2.impl.MetricsConfig.START_MBEANS_KEY;
+import static org.apache.hadoop.metrics2.util.Contracts.checkArg;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**

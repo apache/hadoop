@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.streaming;
 
-import java.io.*;
-
-import org.apache.hadoop.streaming.Environment;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 
 /** A minimal Java implementation of /usr/bin/tr.
  *  Used to test the usage of external applications without adding

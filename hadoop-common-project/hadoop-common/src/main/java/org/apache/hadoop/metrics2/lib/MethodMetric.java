@@ -29,7 +29,7 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.metrics2.util.Contracts.*;
+import static org.apache.hadoop.metrics2.util.Contracts.checkArg;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**

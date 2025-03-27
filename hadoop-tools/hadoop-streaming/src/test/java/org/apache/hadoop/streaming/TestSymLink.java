@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,6 +36,9 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+
+import static org.junit.Assert.assertEquals;
+
 /**
  * This test case tests the symlink creation
  * utility provided by distributed caching 

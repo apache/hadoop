@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.streaming;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 

@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.streaming;
 
-import static org.junit.Assert.*;
-
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -30,6 +28,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 public class TestUnconsumedInput {
   protected final int EXPECTED_OUTPUT_SIZE = 10000;

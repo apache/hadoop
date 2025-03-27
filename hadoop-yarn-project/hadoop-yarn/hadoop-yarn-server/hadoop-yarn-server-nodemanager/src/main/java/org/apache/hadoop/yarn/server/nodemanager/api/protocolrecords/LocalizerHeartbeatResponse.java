@@ -17,8 +17,9 @@
 */
 package org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords;
 
+import org.apache.hadoop.yarn.server.nodemanager.api.ResourceLocalizationSpec;
+
 import java.util.List;
-import org.apache.hadoop.yarn.server.nodemanager.api.*;
 
 public interface LocalizerHeartbeatResponse {
 
