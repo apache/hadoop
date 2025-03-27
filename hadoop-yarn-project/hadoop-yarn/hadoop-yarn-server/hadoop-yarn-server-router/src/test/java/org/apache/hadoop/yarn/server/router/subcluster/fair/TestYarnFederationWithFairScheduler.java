@@ -64,9 +64,9 @@ import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterUserInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeInfo;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.Response;
 import java.io.IOException;
@@ -113,9 +113,9 @@ import static org.apache.hadoop.yarn.server.router.subcluster.TestFederationSubC
 import static org.apache.hadoop.yarn.server.router.webapp.HTTPMethods.POST;
 import static org.apache.hadoop.yarn.server.router.webapp.HTTPMethods.PUT;
 import static org.apache.http.HttpStatus.SC_OK;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestYarnFederationWithFairScheduler {
   private static TestFederationSubCluster testFederationSubCluster;
@@ -124,7 +124,7 @@ public class TestYarnFederationWithFairScheduler {
   private static final String SC1_RM_WEB_ADDRESS = "http://localhost:38088";
   private static final String SC2_RM_WEB_ADDRESS = "http://localhost:48088";
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp()
       throws IOException, InterruptedException, YarnException, TimeoutException {
     testFederationSubCluster = new TestFederationSubCluster();
@@ -137,7 +137,7 @@ public class TestYarnFederationWithFairScheduler {
     subClusters.add("SC-2");
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutDown() throws Exception {
     testFederationSubCluster.stop();
   }

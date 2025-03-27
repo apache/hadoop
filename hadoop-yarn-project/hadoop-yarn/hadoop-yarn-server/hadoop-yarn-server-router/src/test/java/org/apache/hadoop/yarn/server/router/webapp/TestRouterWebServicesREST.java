@@ -69,9 +69,9 @@ import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseS
 import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.getNMWebAppURLWithoutScheme;
 import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.getRMWebAppURLWithScheme;
 import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.getRouterWebAppURLWithScheme;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -129,9 +129,10 @@ import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
 import org.apache.hadoop.yarn.server.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -202,7 +203,7 @@ public class TestRouterWebServicesREST {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     conf = new YarnConfiguration();
 
@@ -231,7 +232,7 @@ public class TestRouterWebServicesREST {
     waitWebAppRunning(nmAddress, "/ws/v1/node");
   }
 
-  @AfterClass
+  @AfterAll
   public static void stop() throws Exception {
     if (nm != null) {
       nm.stop();
@@ -332,7 +333,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of {@link RMWebServiceProtocol#get()}
    * inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testInfoXML() throws Exception {
 
     List<ClusterInfo> responses = performGetCalls(
@@ -353,7 +355,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getClusterInfo()} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testClusterInfoXML() throws Exception {
 
     List<ClusterInfo> responses = performGetCalls(
@@ -374,7 +377,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getClusterMetricsInfo()} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testMetricsInfoXML() throws Exception {
 
     List<ClusterMetricsInfo> responses = performGetCalls(
@@ -395,7 +399,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getSchedulerInfo()} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testSchedulerInfoXML() throws Exception {
 
     List<SchedulerTypeInfo> responses = performGetCalls(
@@ -416,7 +421,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getNodes(String)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testNodesEmptyXML() throws Exception {
 
     List<NodesInfo> responses = performGetCalls(
@@ -437,7 +443,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getNodes(String)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testNodesXML() throws Exception {
 
     List<NodesInfo> responses = performGetCalls(
@@ -458,7 +465,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getNode(String)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testNodeXML() throws Exception {
 
     List<NodeInfo> responses = performGetCalls(
@@ -520,7 +528,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getActivities(HttpServletRequest, String, String)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testActiviesXML() throws Exception {
 
     List<ActivitiesInfo> responses = performGetCalls(
@@ -538,7 +547,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getAppActivities} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testAppActivitiesXML() throws Exception {
 
     String appId = submitApplication();
@@ -558,7 +568,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getAppStatistics} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testAppStatisticsXML() throws Exception {
 
     submitApplication();
@@ -582,7 +593,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#dumpSchedulerLogs} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testDumpSchedulerLogsXML() throws Exception {
 
     // Test with a wrong HTTP method
@@ -605,7 +617,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#createNewApplication} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testNewApplicationXML() throws Exception {
 
     // Test with a wrong HTTP method
@@ -629,7 +642,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#submitApplication} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testSubmitApplicationXML() throws Exception {
 
     // Test with a wrong HTTP method
@@ -655,7 +669,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getApps} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testAppsXML() throws Exception {
 
     submitApplication();
@@ -678,7 +693,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getApp} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testAppXML() throws Exception {
 
     String appId = submitApplication();
@@ -702,7 +718,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getAppAttempts} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testAppAttemptXML() throws Exception {
 
     String appId = submitApplication();
@@ -726,7 +743,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getAppState} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testAppStateXML() throws Exception {
 
     String appId = submitApplication();
@@ -750,7 +768,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#updateAppState} inside Router.
    */
-  @Test(timeout = 20000000)
+  @Test
+  @Timeout(value = 20000)
   public void testUpdateAppStateXML() throws Exception {
 
     String appId = submitApplication();
@@ -778,7 +797,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getAppPriority} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testAppPriorityXML() throws Exception {
 
     String appId = submitApplication();
@@ -801,7 +821,8 @@ public class TestRouterWebServicesREST {
    * {@link RMWebServiceProtocol#updateApplicationPriority(
    *     AppPriority, HttpServletRequest, String)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testUpdateAppPriorityXML() throws Exception {
 
     String appId = submitApplication();
@@ -829,7 +850,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getAppQueue(HttpServletRequest, String)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testAppQueueXML() throws Exception {
 
     String appId = submitApplication();
@@ -852,7 +874,8 @@ public class TestRouterWebServicesREST {
    * {@link RMWebServiceProtocol#updateAppQueue(AppQueue, HttpServletRequest, String)}
    * inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testUpdateAppQueueXML() throws Exception {
 
     String appId = submitApplication();
@@ -880,7 +903,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getAppTimeouts} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testAppTimeoutsXML() throws Exception {
 
     String appId = submitApplication();
@@ -904,7 +928,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getAppTimeout} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testAppTimeoutXML() throws Exception {
 
     String appId = submitApplication();
@@ -928,7 +953,8 @@ public class TestRouterWebServicesREST {
    * {@link RMWebServiceProtocol#updateApplicationTimeout}
    * inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testUpdateAppTimeoutsXML() throws Exception {
 
     String appId = submitApplication();
@@ -956,7 +982,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#createNewReservation(HttpServletRequest)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testNewReservationXML() throws Exception {
 
     // Test with a wrong HTTP method
@@ -981,7 +1008,8 @@ public class TestRouterWebServicesREST {
    * {@link RMWebServiceProtocol#submitReservation(
    *     ReservationSubmissionRequestInfo, HttpServletRequest)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testSubmitReservationXML() throws Exception {
 
     // Test with a wrong HTTP method
@@ -1010,7 +1038,8 @@ public class TestRouterWebServicesREST {
    * {@link RMWebServiceProtocol#updateReservation(
    *     ReservationUpdateRequestInfo, HttpServletRequest)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testUpdateReservationXML() throws Exception {
 
     // Test with a wrong HTTP method
@@ -1037,7 +1066,8 @@ public class TestRouterWebServicesREST {
    * {@link RMWebServiceProtocol#deleteReservation(
    *     ReservationDeleteRequestInfo, HttpServletRequest)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testDeleteReservationXML() throws Exception {
 
     // Test with a wrong HTTP method
@@ -1063,7 +1093,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getNodeToLabels(HttpServletRequest)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testGetNodeToLabelsXML() throws Exception {
 
     List<NodeToLabelsInfo> responses = performGetCalls(
@@ -1085,7 +1116,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getClusterNodeLabels(HttpServletRequest)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testGetClusterNodeLabelsXML() throws Exception {
 
     List<NodeLabelsInfo> responses = performGetCalls(
@@ -1107,7 +1139,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getLabelsOnNode(HttpServletRequest, String)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testGetLabelsOnNodeXML() throws Exception {
 
     List<NodeLabelsInfo> responses = performGetCalls(
@@ -1129,7 +1162,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getLabelsToNodes(Set<String>)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testGetLabelsMappingEmptyXML() throws Exception {
 
     List<LabelsToNodesInfo> responses = performGetCalls(
@@ -1151,7 +1185,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getLabelsToNodes(Set<String>)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testGetLabelsMappingXML() throws Exception {
 
     List<LabelsToNodesInfo> responses = performGetCalls(
@@ -1174,7 +1209,8 @@ public class TestRouterWebServicesREST {
    * {@link RMWebServiceProtocol#addToClusterNodeLabels(
    *     NodeLabelsInfo, HttpServletRequest)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testAddToClusterNodeLabelsXML() throws Exception {
 
     // Test with a wrong HTTP method
@@ -1202,7 +1238,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#removeFromClusterNodeLabels} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testRemoveFromClusterNodeLabelsXML()
       throws Exception {
 
@@ -1228,7 +1265,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#replaceLabelsOnNodes} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testReplaceLabelsOnNodesXML() throws Exception {
 
     // Test with a wrong HTTP method
@@ -1255,7 +1293,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#replaceLabelsOnNode} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testReplaceLabelsOnNodeXML() throws Exception {
 
     // Test with a wrong HTTP method
@@ -1281,7 +1320,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of {@link WebServices#getAppAttempt}
    * inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testGetAppAttemptXML() throws Exception {
 
     String appId = submitApplication();
@@ -1305,7 +1345,8 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of {@link WebServices#getContainers}
    * inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
+  @Timeout(value = 2)
   public void testGetContainersXML() throws Exception {
 
     String appId = submitApplication();
@@ -1326,7 +1367,8 @@ public class TestRouterWebServicesREST {
         routerResponse.getContainers().size());
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testGetAppsMultiThread() throws Exception {
     final int iniNumApps = getNumApps();
 

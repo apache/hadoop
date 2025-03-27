@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.yarn.server.router.cleaner;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -29,9 +32,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterHeartbeatRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterHeartbeatResponse;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
@@ -48,7 +50,7 @@ public class TestSubClusterCleaner {
   private final static int NUM_SUBCLUSTERS = 4;
   private final static long EXPIRATION_TIME = Time.now() - 5000;
 
-  @Before
+  @BeforeEach
   public void setup() throws YarnException {
     conf = new YarnConfiguration();
     conf.setLong(YarnConfiguration.ROUTER_SUBCLUSTER_EXPIRATION_TIME, 1000);
@@ -93,13 +95,13 @@ public class TestSubClusterCleaner {
     // Step3. All clusters have expired,
     // so the current Federation has no active subClusters.
     int count = facade.getActiveSubClustersCount();
-    Assert.assertEquals(0, count);
+    assertEquals(0, count);
 
     // Step4. Check Active SubCluster Status.
     // We want all subClusters to be SC_LOST.
     subClustersMap.values().forEach(subClusterInfo -> {
       SubClusterState subClusterState = subClusterInfo.getState();
-      Assert.assertEquals(SubClusterState.SC_LOST, subClusterState);
+      assertEquals(SubClusterState.SC_LOST, subClusterState);
     });
   }
 
@@ -121,7 +123,7 @@ public class TestSubClusterCleaner {
 
     // Step4. At this point we should have 2 subClusters that are surviving clusters.
     int count = facade.getActiveSubClustersCount();
-    Assert.assertEquals(2, count);
+    assertEquals(2, count);
 
     // Step5. The result we expect is that SC-0 and SC-1 are in the RUNNING state,
     // and SC-2 and SC-3 are in the SC_LOST state.
@@ -137,7 +139,7 @@ public class TestSubClusterCleaner {
     SubClusterHeartbeatRequest request = SubClusterHeartbeatRequest.newInstance(
         subClusterId, Time.now(), SubClusterState.SC_RUNNING, "test");
     SubClusterHeartbeatResponse response = stateStore.subClusterHeartbeat(request);
-    Assert.assertNotNull(response);
+    assertNotNull(response);
   }
 
   private void expiredSubcluster(String pSubClusterId) {
@@ -153,6 +155,6 @@ public class TestSubClusterCleaner {
     if (subClusterInfo == null) {
       throw new YarnException("subClusterId=" + pSubClusterId + " does not exist.");
     }
-    Assert.assertEquals(expectState, subClusterInfo.getState());
+    assertEquals(expectState, subClusterInfo.getState());
   }
 }

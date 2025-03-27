@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.yarn.server.router.secure;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import org.apache.commons.collections4.MapUtils;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
@@ -35,8 +38,7 @@ import org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.rmadmin.DefaultRMAdminRequestInterceptor;
 import org.apache.hadoop.yarn.server.router.rmadmin.RouterRMAdminService;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +51,7 @@ public class TestSecureLogins extends AbstractSecureRouterTest {
 
   @Test
   public void testHasRealm() throws Throwable {
-    Assert.assertNotNull(getRealm());
+    assertNotNull(getRealm());
     LOG.info("Router principal = {}", getPrincipalAndRealm(ROUTER_LOCALHOST));
   }
 
@@ -58,8 +60,8 @@ public class TestSecureLogins extends AbstractSecureRouterTest {
     startSecureRouter();
 
     List<Service> services = this.getRouter().getServices();
-    Assert.assertNotNull(services);
-    Assert.assertEquals(3, services.size());
+    assertNotNull(services);
+    assertEquals(3, services.size());
 
     stopSecureRouter();
   }
@@ -78,10 +80,10 @@ public class TestSecureLogins extends AbstractSecureRouterTest {
     GetClusterMetricsRequest metricsRequest = GetClusterMetricsRequest.newInstance();
     GetClusterMetricsResponse metricsResponse =
         routerClientRMService.getClusterMetrics(metricsRequest);
-    Assert.assertNotNull(metricsResponse);
+    assertNotNull(metricsResponse);
     YarnClusterMetrics clusterMetrics = metricsResponse.getClusterMetrics();
-    Assert.assertEquals(4, clusterMetrics.getNumNodeManagers());
-    Assert.assertEquals(0, clusterMetrics.getNumLostNodeManagers());
+    assertEquals(4, clusterMetrics.getNumNodeManagers());
+    assertEquals(0, clusterMetrics.getNumLostNodeManagers());
 
     // Stop the Router in Secure Mode
     stopSecureRouter();
@@ -101,7 +103,7 @@ public class TestSecureLogins extends AbstractSecureRouterTest {
     RefreshNodesRequest refreshNodesRequest = RefreshNodesRequest.newInstance();
     RefreshNodesResponse refreshNodesResponse =
         routerRMAdminService.refreshNodes(refreshNodesRequest);
-    Assert.assertNotNull(refreshNodesResponse);
+    assertNotNull(refreshNodesResponse);
 
     // Stop the Router in Secure Mode
     stopSecureRouter();

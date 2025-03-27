@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.yarn.server.router;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -34,9 +36,7 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.webapp.WebAppContext;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -107,7 +107,7 @@ public class TestRouter {
     for (Class<?> protocolClass : manager.getProtocolsWithAcls()) {
       AccessControlList accessList = manager.getProtocolsAcls(protocolClass);
       if (protocolClass == protocol) {
-        Assert.assertEquals(accessList.getAclString(), aclString);
+        assertEquals(accessList.getAclString(), aclString);
       }
     }
   }
@@ -149,42 +149,42 @@ public class TestRouter {
     CrossOriginFilter filter = (CrossOriginFilter) holder.getFilter();
 
     // 1. Simulate [example.com] for access
-    HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
-    Mockito.when(mockReq.getHeader("Origin")).thenReturn("example.com");
-    Mockito.when(mockReq.getHeader("Access-Control-Request-Method")).thenReturn("GET");
-    Mockito.when(mockReq.getHeader("Access-Control-Request-Headers"))
+    HttpServletRequest mockReq = mock(HttpServletRequest.class);
+    when(mockReq.getHeader("Origin")).thenReturn("example.com");
+    when(mockReq.getHeader("Access-Control-Request-Method")).thenReturn("GET");
+    when(mockReq.getHeader("Access-Control-Request-Headers"))
         .thenReturn("X-Requested-With");
 
     // Objects to verify interactions based on request
     HttpServletResponseForRouterTest mockRes = new HttpServletResponseForRouterTest();
-    FilterChain mockChain = Mockito.mock(FilterChain.class);
+    FilterChain mockChain = mock(FilterChain.class);
 
     // Object under test
     filter.doFilter(mockReq, mockRes, mockChain);
 
     // Why is 5, because when Filter passes,
     // CrossOriginFilter will set 5 values to Map
-    Assert.assertEquals(5, mockRes.getHeaders().size());
+    assertEquals(5, mockRes.getHeaders().size());
     String allowResult = mockRes.getHeader("Access-Control-Allow-Credentials");
-    Assert.assertEquals("true", allowResult);
+    assertEquals("true", allowResult);
 
     // 2. Simulate [example.org] for access
-    HttpServletRequest mockReq2 = Mockito.mock(HttpServletRequest.class);
-    Mockito.when(mockReq2.getHeader("Origin")).thenReturn("example.org");
-    Mockito.when(mockReq2.getHeader("Access-Control-Request-Method")).thenReturn("GET");
-    Mockito.when(mockReq2.getHeader("Access-Control-Request-Headers"))
+    HttpServletRequest mockReq2 = mock(HttpServletRequest.class);
+    when(mockReq2.getHeader("Origin")).thenReturn("example.org");
+    when(mockReq2.getHeader("Access-Control-Request-Method")).thenReturn("GET");
+    when(mockReq2.getHeader("Access-Control-Request-Headers"))
         .thenReturn("X-Requested-With");
 
     // Objects to verify interactions based on request
     HttpServletResponseForRouterTest mockRes2 = new HttpServletResponseForRouterTest();
-    FilterChain mockChain2 = Mockito.mock(FilterChain.class);
+    FilterChain mockChain2 = mock(FilterChain.class);
 
     // Object under test
     filter.doFilter(mockReq2, mockRes2, mockChain2);
 
     // Why is 0, because when the Filter fails,
     // CrossOriginFilter will not set any value
-    Assert.assertEquals(0, mockRes2.getHeaders().size());
+    assertEquals(0, mockRes2.getHeaders().size());
 
     router.stop();
   }

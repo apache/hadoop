@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesResponse;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.junit.Assert;
 
 /**
  * This class mocks the ClientRequestInterceptor.
@@ -65,7 +66,7 @@ public class MockClientRequestInterceptor
       // allow plan follower to synchronize
       Thread.sleep(1050);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      fail(e.getMessage());
     }
     super.setRMClient(mockRM.getClientRMService());
   }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -58,7 +59,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,7 +101,7 @@ public class TestableFederationClientInterceptor
           MockNM nm = mockRM.registerNode("127.0.0.1:1234", 8*1024, 4);
           mockNMs.put(subClusterId, nm);
         } catch (Exception e) {
-          Assert.fail(e.getMessage());
+          fail(e.getMessage());
         }
         mockRMs.put(subClusterId, mockRM);
       }
