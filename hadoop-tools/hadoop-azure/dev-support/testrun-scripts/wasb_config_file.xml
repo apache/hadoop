@@ -23,6 +23,22 @@
     <value>fs.azure.io.copyblob.retry.min.backoff.interval </value>
   </property>
   <property>
+    <name>fs.azure.io.blob.retry.l </name>
+    <value>fs.blob.core.windows.net </value>
+  </property>
+  <property>
+    <name>fs.azure.account.auth.type.account.blob.core.windows.net</name>
+    <value>fs.azure.account.auth.type.account.blob.core.windows.net</value>
+  </property>
+  <property>
+    <name>fs.defaultFS</name>
+    <value>wasb://CONTAINER@ACCOUNT.blob.core.windows.net</value>
+  </property>
+  <property>
+    <name>wasb://CONTAINER@ACCOUNT.blob.core.windows.net</name>
+    <value>wasb://CONTAINER@ACCOUNT.blob.core.windows.net</value>
+  </property>
+  <property>
     <name> fs.azure.rename.threads:</name>
     <value>  fs.azure.rename.threads:</value>
   </property>
