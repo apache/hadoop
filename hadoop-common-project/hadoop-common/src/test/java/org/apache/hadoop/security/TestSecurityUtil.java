@@ -37,6 +37,7 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.kerberos.KerberosPrincipal;
 
@@ -511,7 +512,9 @@ public class TestSecurityUtil {
     // 1. useIP is false and cache interval is 0
     Configuration conf = new Configuration();
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, false);
-    conf.setInt(CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS, 0);
+    conf.setTimeDuration(
+        CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS,
+        0, TimeUnit.SECONDS);
     SecurityUtil.setConfiguration(conf);
     SecurityUtil.HostResolver hostResolver = SecurityUtil.hostResolver;
     assertTrue(hostResolver instanceof SecurityUtil.QualifiedHostResolver,
@@ -524,7 +527,9 @@ public class TestSecurityUtil {
 
     // 2. useIP is false and cache interval is 10
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, false);
-    conf.setInt(CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS, 10);
+    conf.setTimeDuration(
+        CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS,
+        10, TimeUnit.SECONDS);
     SecurityUtil.setConfiguration(conf);
     hostResolver = SecurityUtil.hostResolver;
     assertTrue(hostResolver instanceof SecurityUtil.QualifiedHostResolver,
@@ -535,7 +540,9 @@ public class TestSecurityUtil {
 
     // 3. useIP is true and cache interval is 0
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, true);
-    conf.setInt(CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS, 0);
+    conf.setTimeDuration(
+        CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS,
+        0, TimeUnit.SECONDS);
     SecurityUtil.setConfiguration(conf);
     hostResolver = SecurityUtil.hostResolver;
     assertTrue(hostResolver instanceof SecurityUtil.StandardHostResolver,
@@ -546,7 +553,9 @@ public class TestSecurityUtil {
 
     // 4. useIP is true and cache interval is 10
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, true);
-    conf.setInt(CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS, 10);
+    conf.setTimeDuration(
+        CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS,
+        10, TimeUnit.SECONDS);
     SecurityUtil.setConfiguration(conf);
     hostResolver = SecurityUtil.hostResolver;
     assertTrue(hostResolver instanceof SecurityUtil.StandardHostResolver,

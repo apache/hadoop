@@ -93,7 +93,7 @@ public final class SecurityUtil {
 
   private static boolean logSlowLookups;
   private static int slowLookupThresholdMs;
-  private static int cachingInterval = 0;
+  private static long cachingInterval = 0;
 
   static {
     setConfigurationInternal(new Configuration());
@@ -110,9 +110,10 @@ public final class SecurityUtil {
     boolean useIp = conf.getBoolean(
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP,
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT);
-    cachingInterval = conf.getInt(
+    cachingInterval = conf.getTimeDuration(
         CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS,
-        CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS_DEFAULT);
+        CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS_DEFAULT,
+        TimeUnit.SECONDS);
     setTokenServiceUseIp(useIp);
 
     logSlowLookups = conf.getBoolean(
@@ -601,7 +602,7 @@ public final class SecurityUtil {
   static abstract class CacheableHostResolver implements HostResolver {
     private volatile LoadingCache<String, InetAddress> cache;
 
-    CacheableHostResolver(int expiryIntervalSecs) {
+    CacheableHostResolver(long expiryIntervalSecs) {
       if (expiryIntervalSecs > 0) {
         cache = CacheBuilder.newBuilder()
             .expireAfterWrite(expiryIntervalSecs, TimeUnit.SECONDS)
@@ -643,7 +644,7 @@ public final class SecurityUtil {
    */
   static class StandardHostResolver extends CacheableHostResolver {
 
-    StandardHostResolver(int expiryIntervalSecs) {
+    StandardHostResolver(long expiryIntervalSecs) {
       super(expiryIntervalSecs);
     }
 
@@ -688,7 +689,7 @@ public final class SecurityUtil {
       this(0);
     }
 
-    QualifiedHostResolver(int expiryIntervalSecs) {
+    QualifiedHostResolver(long expiryIntervalSecs) {
       super(expiryIntervalSecs);
     }
     /**
