@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -293,5 +294,12 @@ public class DFSZKFailoverController extends ZKFailoverController {
       targets.add(new NNHAServiceTarget(conf, nsId, nnId));
     }
     return targets;
+  }
+
+  @Override
+  protected boolean isSSLEnabled() {
+    return conf.getBoolean(CommonConfigurationKeys.ZK_CLIENT_SSL_ENABLED,
+        conf.getBoolean(DFSConfigKeys.ZK_CLIENT_SSL_ENABLED,
+            DFSConfigKeys.DEFAULT_ZK_CLIENT_SSL_ENABLED));
   }
 }

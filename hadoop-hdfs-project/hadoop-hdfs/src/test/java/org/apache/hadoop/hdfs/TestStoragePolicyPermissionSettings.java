@@ -21,8 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,6 +32,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.test.ReflectionUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -77,22 +76,15 @@ public class TestStoragePolicyPermissionSettings {
     }
   }
 
-  private void setFSNameSystemFinalField(String field, boolean value)
-      throws NoSuchFieldException, IllegalAccessException {
-    Field f = FSNamesystem.class.getDeclaredField(field);
-    f.setAccessible(true);
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
-    modifiersField.setAccessible(true);
-    modifiersField.setInt(f, f.getModifiers() & ~Modifier.FINAL);
-    f.set(cluster.getNamesystem(), value);
-  }
-
   private void setStoragePolicyPermissions(boolean isStoragePolicyEnabled,
                                            boolean isStoragePolicySuperuserOnly)
-      throws NoSuchFieldException, IllegalAccessException {
-    setFSNameSystemFinalField("isStoragePolicyEnabled", isStoragePolicyEnabled);
-    setFSNameSystemFinalField("isStoragePolicySuperuserOnly",
-        isStoragePolicySuperuserOnly);
+      throws ReflectiveOperationException {
+    ReflectionUtils.setFinalField(
+        FSNamesystem.class, cluster.getNamesystem(),
+        "isStoragePolicyEnabled", isStoragePolicyEnabled);
+    ReflectionUtils.setFinalField(
+        FSNamesystem.class, cluster.getNamesystem(),
+        "isStoragePolicySuperuserOnly", isStoragePolicySuperuserOnly);
   }
 
   @Test

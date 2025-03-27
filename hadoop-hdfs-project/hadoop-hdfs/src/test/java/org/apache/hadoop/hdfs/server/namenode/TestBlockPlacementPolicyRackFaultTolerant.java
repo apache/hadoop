@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFaultTolerant;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.net.StaticMapping;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
@@ -253,11 +254,12 @@ public class TestBlockPlacementPolicyRackFaultTolerant {
 
     //test if decommission succeeded
     DatanodeDescriptor dnd3 = dnm.getDatanode(cluster.getDataNodes().get(3).getDatanodeId());
-    cluster.getNamesystem().writeLock();
+    cluster.getNamesystem().writeLock(RwLockMode.BM);
     try {
       dm.getDatanodeAdminManager().startDecommission(dnd3);
     } finally {
-      cluster.getNamesystem().writeUnlock();
+      cluster.getNamesystem().writeUnlock(RwLockMode.BM,
+          "testPlacementWithOnlyOneNodeInRackDecommission");
     }
 
     // make sure the decommission finishes and the block in on 4 racks

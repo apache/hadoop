@@ -20,10 +20,9 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
 import org.junit.Before;
 import org.junit.Test;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
@@ -74,7 +73,7 @@ public class TestWildflyAndOpenSSLBinding extends AbstractHadoopTestBase {
     Configuration conf = new Configuration(false);
     conf.set(SSL_CHANNEL_MODE, "no-such-mode ");
     intercept(IllegalArgumentException.class, () ->
-        bindSSLChannelMode(conf, new ClientConfiguration()));
+        bindSSLChannelMode(conf, ApacheHttpClient.builder()));
   }
 
   @Test
@@ -143,9 +142,7 @@ public class TestWildflyAndOpenSSLBinding extends AbstractHadoopTestBase {
     DelegatingSSLSocketFactory.resetDefaultFactory();
     Configuration conf = new Configuration(false);
     conf.set(SSL_CHANNEL_MODE, channelMode.name());
-    ClientConfiguration awsConf = new ClientConfiguration();
-    awsConf.setProtocol(Protocol.HTTPS);
-    bindSSLChannelMode(conf, awsConf);
+    bindSSLChannelMode(conf, ApacheHttpClient.builder());
     return DelegatingSSLSocketFactory.getDefaultFactory().getChannelMode();
   }
 

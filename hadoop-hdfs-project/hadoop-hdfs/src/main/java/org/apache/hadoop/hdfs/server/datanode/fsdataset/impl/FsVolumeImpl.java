@@ -27,6 +27,7 @@ import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Collection;
@@ -171,7 +172,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
     this.usage = usage;
     if (this.usage != null) {
       reserved = new ReservedSpaceCalculator.Builder(conf)
-          .setUsage(this.usage).setStorageType(storageType).build();
+          .setUsage(this.usage).setStorageType(storageType)
+          .setDir(currentDir != null ? currentDir.getParent() : "NULL").build();
       boolean fixedSizeVolume = conf.getBoolean(
           DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_KEY,
           DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_DEFAULT);
@@ -928,7 +930,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
       boolean success = false;
       try (BufferedWriter writer = new BufferedWriter(
           new OutputStreamWriter(fileIoProvider.getFileOutputStream(
-              FsVolumeImpl.this, getTempSaveFile()), "UTF-8"))) {
+              FsVolumeImpl.this, getTempSaveFile()), StandardCharsets.UTF_8))) {
         WRITER.writeValue(writer, state);
         success = true;
       } finally {
@@ -1289,7 +1291,9 @@ public class FsVolumeImpl implements FsVolumeSpi {
 
     // rename meta file to rbw directory
     // rename block file to rbw directory
+    long oldReplicaLength = replicaInfo.getNumBytes() + replicaInfo.getMetadataLength();
     newReplicaInfo.moveReplicaFrom(replicaInfo, newBlkFile);
+    getBlockPoolSlice(bpid).decDfsUsed(oldReplicaLength);
 
     reserveSpaceForReplica(bytesReserved);
     return newReplicaInfo;

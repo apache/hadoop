@@ -115,6 +115,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
   public void testRandomRead() throws Exception {
     Assume.assumeFalse("This test does not support namespace enabled account",
         getIsNamespaceEnabled(getFileSystem()));
+    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
     Path testPath = path(TEST_FILE_PREFIX + "_testRandomRead");
     assumeHugeFileExists(testPath);
 
@@ -508,7 +509,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
         1 * MEGABYTE, config);
     String eTag = fs.getAbfsClient()
         .getPathStatus(testFile.toUri().getPath(), false,
-            getTestTracingContext(fs, false))
+            getTestTracingContext(fs, false), null)
         .getResult()
         .getResponseHeader(ETAG);
 

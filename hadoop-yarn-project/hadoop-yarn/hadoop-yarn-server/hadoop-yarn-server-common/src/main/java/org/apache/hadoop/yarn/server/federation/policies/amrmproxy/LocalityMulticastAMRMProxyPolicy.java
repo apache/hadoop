@@ -32,7 +32,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.collections.MapUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -394,7 +394,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
         targetSubclusters = allocationBookkeeper.getActiveAndEnabledSC();
       }
 
-      // SECOND: pick how much to ask to each RM for each request
+      // SECOND: pick how much to ask each RM for each request
       splitIndividualAny(resourceRequest, targetSubclusters,
           allocationBookkeeper);
     }

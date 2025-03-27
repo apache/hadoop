@@ -281,5 +281,9 @@ public class QueueCapacityVector implements
     public String getResourceName() {
       return resourceName;
     }
+
+    public String getResourceWithPostfix() {
+      return resourceValue + vectorResourceType.getPostfix();
+    }
   }
 }

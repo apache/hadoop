@@ -58,7 +58,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -141,10 +141,10 @@ public class NodeAttributesCLI extends Configured implements Tool {
       throws UnsupportedEncodingException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter pw =
-        new PrintWriter(new OutputStreamWriter(baos, Charset.forName("UTF-8")));
+        new PrintWriter(new OutputStreamWriter(baos, StandardCharsets.UTF_8));
     pw.write(usageBuilder.toString());
     pw.close();
-    errOut.println(baos.toString("UTF-8"));
+    errOut.println(new String(baos.toByteArray(), StandardCharsets.UTF_8));
   }
 
   private Options buildOptions(CommandHandler... handlers) {
@@ -380,7 +380,7 @@ public class NodeAttributesCLI extends Configured implements Tool {
           protocol.getAttributesToNodes(request);
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       PrintWriter writer = new PrintWriter(
-          new OutputStreamWriter(baos, Charset.forName("UTF-8")));
+          new OutputStreamWriter(baos, StandardCharsets.UTF_8));
       writer.format(HOSTNAMEVAL, "Hostname", "Attribute-value");
       response.getAttributesToNodes().forEach((attributeKey, v) -> {
         writer.println(getKeyString(attributeKey) + " :");
@@ -389,7 +389,7 @@ public class NodeAttributesCLI extends Configured implements Tool {
                 attrVal.getAttributeValue()));
       });
       writer.close();
-      sysOut.println(baos.toString("UTF-8"));
+      sysOut.println(new String(baos.toByteArray(), StandardCharsets.UTF_8));
       return 0;
     }
 
@@ -405,7 +405,7 @@ public class NodeAttributesCLI extends Configured implements Tool {
           response.getNodeToAttributes();
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       PrintWriter writer = new PrintWriter(
-          new OutputStreamWriter(baos, Charset.forName("UTF-8")));
+          new OutputStreamWriter(baos, StandardCharsets.UTF_8));
       writer.printf(NODEATTRIBUTE, "Attribute", "Type", "Value");
       nodeToAttrs.forEach((node, v) -> {
         // print node header
@@ -415,7 +415,7 @@ public class NodeAttributesCLI extends Configured implements Tool {
                 attr.getAttributeType().name(), attr.getAttributeValue()));
       });
       writer.close();
-      sysOut.println(baos.toString("UTF-8"));
+      sysOut.println(new String(baos.toByteArray(), StandardCharsets.UTF_8));
       return 0;
     }
 
@@ -427,14 +427,14 @@ public class NodeAttributesCLI extends Configured implements Tool {
           protocol.getClusterNodeAttributes(request);
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       PrintWriter writer = new PrintWriter(
-          new OutputStreamWriter(baos, Charset.forName("UTF-8")));
+          new OutputStreamWriter(baos, StandardCharsets.UTF_8));
       writer.format(NODEATTRIBUTEINFO, "Attribute", "Type");
       for (NodeAttributeInfo attr : response.getNodeAttributes()) {
         writer.format(NODEATTRIBUTEINFO, getKeyString(attr.getAttributeKey()),
             attr.getAttributeType().name());
       }
       writer.close();
-      sysOut.println(baos.toString("UTF-8"));
+      sysOut.println(new String(baos.toByteArray(), StandardCharsets.UTF_8));
       return 0;
     }
 

@@ -31,9 +31,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 
 import org.apache.hadoop.util.Sets;
 import org.assertj.core.api.Assertions;
@@ -51,7 +51,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.AWSClientIOException;
 import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
@@ -69,6 +68,7 @@ import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
@@ -112,7 +112,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
   // created in Before
   private StagingTestBase.ClientResults results = null;
   private StagingTestBase.ClientErrors errors = null;
-  private AmazonS3 mockClient = null;
+  private S3Client mockClient = null;
   private File tmpDir;
 
   /**
@@ -158,7 +158,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     this.errors = new StagingTestBase.ClientErrors();
     this.mockClient = newMockS3Client(results, errors);
     this.mockFS = createAndBindMockFSInstance(jobConf,
-        Pair.of(results, errors));
+        Pair.of(results, errors), mockClient);
     this.wrapperFS = lookupWrapperFS(jobConf);
     // and bind the FS
     wrapperFS.setAmazonS3Client(mockClient);
@@ -200,6 +200,15 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
   private Configuration newConfig() {
     return new Configuration(false);
+  }
+
+  @Test
+  public void testMockFSclientWiredUp() throws Throwable {
+    final S3Client client = mockFS.getS3AInternals().getAmazonS3Client("test");
+    Assertions.assertThat(client)
+        .describedAs("S3Client from FS")
+        .isNotNull()
+        .isSameAs(mockClient);
   }
 
   @Test
@@ -473,7 +482,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     writeOutputFile(tac.getTaskAttemptID(), attemptPath,
         UUID.randomUUID().toString(), 10);
 
-    intercept(AWSClientIOException.class,
+    intercept(IOException.class,
         "Fail on init 1",
         "Should fail during init",
         () -> committer.commitTask(tac));
@@ -501,7 +510,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     writeOutputFile(tac.getTaskAttemptID(), attemptPath,
         UUID.randomUUID().toString(), 10);
 
-    intercept((Class<? extends Exception>) AWSClientIOException.class,
+    intercept(IOException.class,
         "Fail on upload 2",
         "Should fail during upload",
         () -> {
@@ -513,7 +522,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         1, results.getUploads().size());
     assertEquals("Should abort the upload",
         results.getUploads().get(0),
-        results.getAborts().get(0).getUploadId());
+        results.getAborts().get(0).uploadId());
     assertPathDoesNotExist(fs, "Should remove the attempt path",
         attemptPath);
   }
@@ -532,7 +541,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     writeOutputFile(tac.getTaskAttemptID(), attemptPath,
         UUID.randomUUID().toString(), 10);
 
-    intercept((Class<? extends Exception>) AWSClientIOException.class,
+    intercept(IOException.class,
         "Fail on upload 5",
         "Should fail during upload",
         () -> {
@@ -564,7 +573,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     writeOutputFile(tac.getTaskAttemptID(), attemptPath,
         UUID.randomUUID().toString(), 10);
 
-    intercept((Class<? extends Exception>) AWSClientIOException.class,
+    intercept(IOException.class,
         "Fail on upload 5",
         "Should suppress abort failure, propagate upload failure",
         ()-> {
@@ -637,7 +646,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     errors.failOnCommit(5);
     setMockLogLevel(MockS3AFileSystem.LOG_NAME);
 
-    intercept(AWSClientIOException.class,
+    intercept(IOException.class,
         "Fail on commit 5",
         "Should propagate the commit failure",
         () -> {
@@ -645,17 +654,16 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
           return jobCommitter.toString();
         });
 
-
     Set<String> commits = results.getCommits()
         .stream()
         .map(commit ->
-            "s3a://" + commit.getBucketName() + "/" + commit.getKey())
+            "s3a://" + commit.bucket() + "/" + commit.key())
         .collect(Collectors.toSet());
 
     Set<String> deletes = results.getDeletes()
         .stream()
         .map(delete ->
-            "s3a://" + delete.getBucketName() + "/" + delete.getKey())
+            "s3a://" + delete.bucket() + "/" + delete.key())
         .collect(Collectors.toSet());
 
     Assertions.assertThat(commits)
@@ -729,14 +737,14 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
   private static Set<String> getAbortedIds(
       List<AbortMultipartUploadRequest> aborts) {
     return aborts.stream()
-        .map(AbortMultipartUploadRequest::getUploadId)
+        .map(AbortMultipartUploadRequest::uploadId)
         .collect(Collectors.toSet());
   }
 
   private static Set<String> getCommittedIds(
       List<CompleteMultipartUploadRequest> commits) {
     return commits.stream()
-        .map(CompleteMultipartUploadRequest::getUploadId)
+        .map(CompleteMultipartUploadRequest::uploadId)
         .collect(Collectors.toSet());
   }
 

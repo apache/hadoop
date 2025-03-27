@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.AmazonServiceException;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 
 /**
  * Request is redirected.
@@ -32,7 +32,7 @@ public class AWSRedirectException extends AWSServiceIOException {
    * @param cause the underlying cause
    */
   public AWSRedirectException(String operation,
-      AmazonServiceException cause) {
+      AwsServiceException cause) {
     super(operation, cause);
   }
 }

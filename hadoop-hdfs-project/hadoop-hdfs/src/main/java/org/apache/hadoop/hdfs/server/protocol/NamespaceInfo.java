@@ -110,6 +110,29 @@ public class NamespaceInfo extends StorageInfo {
     this.capabilities = capabilities;
   }
 
+  public NamespaceInfo(StorageInfo storage) {
+    super(storage);
+    if (storage instanceof NamespaceInfo) {
+      this.capabilities = ((NamespaceInfo)storage).capabilities;
+      this.blockPoolID = ((NamespaceInfo)storage).blockPoolID;
+    } else {
+      this.capabilities = CAPABILITIES_SUPPORTED;
+    }
+    this.buildVersion = Storage.getBuildVersion();
+    this.softwareVersion = VersionInfo.getVersion();
+    if (storage instanceof NNStorage) {
+      this.blockPoolID = ((NNStorage)storage).getBlockPoolID();
+    } else {
+      this.blockPoolID = null;
+    }
+
+  }
+
+  public NamespaceInfo(StorageInfo storage, HAServiceState st) {
+    this(storage);
+    this.state = st;
+  }
+
   public NamespaceInfo(int nsID, String clusterID, String bpID, 
       long cT) {
     this(nsID, clusterID, bpID, cT, Storage.getBuildVersion(),

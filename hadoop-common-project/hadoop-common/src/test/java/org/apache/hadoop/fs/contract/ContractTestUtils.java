@@ -24,16 +24,19 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.FutureIO;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
@@ -45,6 +48,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -61,6 +65,7 @@ import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
 
 /**
  * Utilities used across test cases.
@@ -214,6 +219,8 @@ public class ContractTestUtils extends Assert {
    * Read the file and convert to a byte dataset.
    * This implements readfully internally, so that it will read
    * in the file without ever having to seek()
+   * The read is performed through a sequence of calls to multi-byte
+   * {@link InputStream#read(byte[], int, int)}.
    * @param fs filesystem
    * @param path path to read from
    * @param len length of data to read
@@ -235,6 +242,57 @@ public class ContractTestUtils extends Assert {
       }
     }
     return dest;
+  }
+
+  /**
+   * Read a file completely and return the contents in a byte buffer. The read is performed through
+   * repeated calls to single-byte {@link InputStream#read()}.
+   * @param fs filesystem
+   * @param path path to read from
+   * @param len length of data to read
+   * @return the bytes
+   * @throws IOException IO problems
+   */
+  public static byte[] readDatasetSingleByteReads(FileSystem fs, Path path, int len)
+      throws IOException {
+    byte[] dest = new byte[len];
+    try (FSDataInputStream in = fs.open(path)) {
+      for (int i = 0; i < len; ++i) {
+        int nextByte = in.read();
+        if (-1 == nextByte) {
+          throw new EOFException("End of file reached before reading fully.");
+        }
+        dest[i] = (byte)nextByte;
+      }
+    }
+    return dest;
+  }
+
+  /**
+   * Reads {@code len} bytes into offset {@code off} of target buffer {@code b}, up to EOF,
+   * potentially blocking until enough bytes are available on the stream. This is similar to
+   * {@code InputStream#readNBytes(int)} introduced in Java 11, except the caller owns allocation of
+   * the target buffer.
+   * @param is input stream to read
+   * @param b target buffer
+   * @param off offset within {@code b}
+   * @param len length of data to read
+   * @return number of bytes read
+   * @throws IOException IO problems
+   */
+  public static int readNBytes(InputStream is, byte[] b, int off, int len)
+      throws IOException {
+    int totalBytes = 0;
+    while (len > 0) {
+      int nbytes = is.read(b, off, len);
+      if (nbytes < 0) {
+        break;
+      }
+      totalBytes += nbytes;
+      off += nbytes;
+      len -= nbytes;
+    }
+    return totalBytes;
   }
 
   /**
@@ -647,6 +705,22 @@ public class ContractTestUtils extends Assert {
                                  Path path,
                                  boolean overwrite,
                                  byte[] data) throws IOException {
+    file(fs, path, overwrite, data);
+  }
+
+  /**
+   * Create a file, returning IOStatistics.
+   * @param fs filesystem
+   * @param path path to write
+   * @param overwrite overwrite flag
+   * @param data source dataset. Can be null
+   * @return any IOStatistics from the stream
+   * @throws IOException on any problem
+   */
+  public static IOStatistics file(FileSystem fs,
+      Path path,
+      boolean overwrite,
+      byte[] data) throws IOException {
     FSDataOutputStream stream = fs.create(path, overwrite);
     try {
       if (data != null && data.length > 0) {
@@ -656,6 +730,7 @@ public class ContractTestUtils extends Assert {
     } finally {
       IOUtils.closeStream(stream);
     }
+    return stream.getIOStatistics();
   }
 
   /**
@@ -806,7 +881,7 @@ public class ContractTestUtils extends Assert {
     try (FSDataInputStream in = fs.open(path)) {
       byte[] buf = new byte[length];
       in.readFully(0, buf);
-      return new String(buf, "UTF-8");
+      return new String(buf, StandardCharsets.UTF_8);
     }
   }
 
@@ -1113,11 +1188,14 @@ public class ContractTestUtils extends Assert {
    * Utility to validate vectored read results.
    * @param fileRanges input ranges.
    * @param originalData original data.
+   * @param baseOffset base offset of the original data
    * @throws IOException any ioe.
    */
-  public static void validateVectoredReadResult(List<FileRange> fileRanges,
-                                                byte[] originalData)
-          throws IOException, TimeoutException {
+  public static void validateVectoredReadResult(
+      final List<FileRange> fileRanges,
+      final byte[] originalData,
+      final long baseOffset)
+      throws IOException, TimeoutException {
     CompletableFuture<?>[] completableFutures = new CompletableFuture<?>[fileRanges.size()];
     int i = 0;
     for (FileRange res : fileRanges) {
@@ -1133,8 +1211,8 @@ public class ContractTestUtils extends Assert {
       ByteBuffer buffer = FutureIO.awaitFuture(data,
               VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
               TimeUnit.SECONDS);
-      assertDatasetEquals((int) res.getOffset(), "vecRead",
-              buffer, res.getLength(), originalData);
+      assertDatasetEquals((int) (res.getOffset() - baseOffset), "vecRead",
+          buffer, res.getLength(), originalData);
     }
   }
 
@@ -1169,15 +1247,19 @@ public class ContractTestUtils extends Assert {
    * @param originalData original data.
    */
   public static void assertDatasetEquals(
-          final int readOffset,
-          final String operation,
-          final ByteBuffer data,
-          int length, byte[] originalData) {
+      final int readOffset,
+      final String operation,
+      final ByteBuffer data,
+      final int length,
+      final byte[] originalData) {
     for (int i = 0; i < length; i++) {
       int o = readOffset + i;
-      assertEquals(operation + " with read offset " + readOffset
-                      + ": data[" + i + "] != DATASET[" + o + "]",
-              originalData[o], data.get());
+      final byte orig = originalData[o];
+      final byte current = data.get();
+      Assertions.assertThat(current)
+          .describedAs("%s with read offset %d: data[0x%02X] != DATASET[0x%02X]",
+                      operation, o, i, current)
+          .isEqualTo(orig);
     }
   }
 
@@ -1506,19 +1588,39 @@ public class ContractTestUtils extends Assert {
    */
   public static TreeScanResults treeWalk(FileSystem fs, Path path)
       throws IOException {
-    TreeScanResults dirsAndFiles = new TreeScanResults();
+    return treeWalk(fs, fs.getFileStatus(path), new TreeScanResults());
+  }
 
-    FileStatus[] statuses = fs.listStatus(path);
-    for (FileStatus status : statuses) {
-      LOG.info("{}{}", status.getPath(), status.isDirectory() ? "*" : "");
+  /**
+   * Recursively list all entries, with a depth first traversal of the
+   * directory tree.
+   * @param dir status of the dir to scan
+   * @return the scan results
+   * @throws IOException IO problems
+   * @throws FileNotFoundException if the dir is not found and this FS does not
+   * have the listing inconsistency path capability/flag.
+   */
+  private static TreeScanResults treeWalk(FileSystem fs,
+      FileStatus dir,
+      TreeScanResults results) throws IOException {
+
+    Path path = dir.getPath();
+
+    try {
+      foreach(fs.listStatusIterator(path), (status) -> {
+        LOG.info("{}{}", status.getPath(), status.isDirectory() ? "*" : "");
+        if (status.isDirectory()) {
+          treeWalk(fs, status, results);
+        } else {
+          results.add(status);
+        }
+      });
+      // and ourselves
+      results.add(dir);
+    } catch (FileNotFoundException fnfe) {
+      FileUtil.maybeIgnoreMissingDirectory(fs, path, fnfe);
     }
-    for (FileStatus status : statuses) {
-      dirsAndFiles.add(status);
-      if (status.isDirectory()) {
-        dirsAndFiles.add(treeWalk(fs, status.getPath()));
-      }
-    }
-    return dirsAndFiles;
+    return results;
   }
 
   /**
@@ -1738,6 +1840,43 @@ public class ContractTestUtils extends Assert {
     }
   }
 
+  /**
+   * Create a range list with a single range within it.
+   * @param offset offset
+   * @param length length
+   * @return the list.
+   */
+  public static List<FileRange> range(
+      final long offset,
+      final int length) {
+    return range(new ArrayList<>(), offset, length);
+  }
+
+  /**
+   * Create a range and add it to the supplied list.
+   * @param fileRanges list of ranges
+   * @param offset offset
+   * @param length length
+   * @return the list.
+   */
+  public static List<FileRange> range(
+      final List<FileRange> fileRanges,
+      final long offset,
+      final int length) {
+    fileRanges.add(FileRange.createFileRange(offset, length));
+    return fileRanges;
+  }
+
+  /**
+   * Given a list of ranges, calculate the total size.
+   * @param fileRanges range list.
+   * @return total size of all reads.
+   */
+  public static long totalReadSize(final List<FileRange> fileRanges) {
+    return fileRanges.stream()
+        .mapToLong(FileRange::getLength)
+        .sum();
+  }
 
   /**
    * Results of recursive directory creation/scan operations.
@@ -1836,10 +1975,10 @@ public class ContractTestUtils extends Assert {
      */
     private String dump() {
       StringBuilder sb = new StringBuilder(toString());
-      sb.append("\nFiles:");
+      sb.append("\nDirectories:");
       directories.forEach(p ->
           sb.append("\n  \"").append(p.toString()));
-      sb.append("\nDirectories:");
+      sb.append("\nFiles:");
       files.forEach(p ->
           sb.append("\n  \"").append(p.toString()));
       return sb.toString();
@@ -1916,17 +2055,16 @@ public class ContractTestUtils extends Assert {
     public void assertFieldsEquivalent(String fieldname,
         TreeScanResults that,
         List<Path> ours, List<Path> theirs) {
-      String ourList = pathsToString(ours);
-      String theirList = pathsToString(theirs);
-      assertFalse("Duplicate  " + fieldname + " in " + this
-          +": " + ourList,
-          containsDuplicates(ours));
-      assertFalse("Duplicate  " + fieldname + " in other " + that
-              + ": " + theirList,
-          containsDuplicates(theirs));
-      assertTrue(fieldname + " mismatch: between " + ourList
-          + " and " + theirList,
-          collectionsEquivalent(ours, theirs));
+      Assertions.assertThat(ours).
+          describedAs("list of %s", fieldname)
+          .doesNotHaveDuplicates();
+      Assertions.assertThat(theirs).
+          describedAs("list of %s in %s", fieldname, that)
+          .doesNotHaveDuplicates();
+      Assertions.assertThat(ours)
+          .describedAs("Elements of %s", fieldname)
+          .containsExactlyInAnyOrderElementsOf(theirs);
+
     }
 
     public List<Path> getFiles() {

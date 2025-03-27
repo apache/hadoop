@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -139,7 +140,7 @@ public class FileSystemTimelineWriterImpl extends AbstractService
 
       byte[] record =  new StringBuilder()
               .append(TimelineUtils.dumpTimelineRecordtoJSON(entity))
-              .append("\n").toString().getBytes("UTF-8");
+              .append("\n").toString().getBytes(StandardCharsets.UTF_8);
       writeFileWithRetries(filePath, record);
     } catch (Exception ioe) {
       LOG.warn("Interrupted operation:{}", ioe.getMessage());
@@ -290,6 +291,10 @@ public class FileSystemTimelineWriterImpl extends AbstractService
    * In order to make this writeInternal atomic as a part of writeInternal
    * we will first writeInternal data to .tmp file and then rename it.
    * Here we are assuming that rename is atomic for underlying file system.
+   *
+   * @param outputPath outputPath.
+   * @param data data.
+   * @throws IOException Signals that an I/O exception of some sort has occurred.
    */
   protected void writeFile(Path outputPath, byte[] data) throws IOException {
     Path tempPath =

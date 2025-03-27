@@ -19,9 +19,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.sun.jersey.spi.container.servlet.ServletContainer;
+import org.glassfish.jersey.servlet.ServletContainer;
 
 import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
 import org.apache.hadoop.yarn.server.webproxy.DefaultAppReportFetcher;
@@ -148,7 +149,7 @@ import java.lang.management.ThreadMXBean;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -409,6 +410,7 @@ public class ResourceManager extends CompositeService
    */
   public ZKCuratorManager createAndStartZKManager(Configuration
       config) throws IOException {
+    String zkHostPort = config.get(YarnConfiguration.RM_ZK_ADDRESS);
     ZKCuratorManager manager = new ZKCuratorManager(config);
 
     // Get authentication
@@ -421,13 +423,17 @@ public class ResourceManager extends CompositeService
       String defaultFencingAuth =
           zkRootNodeUsername + ":" + zkRootNodePassword;
       byte[] defaultFencingAuthData =
-          defaultFencingAuth.getBytes(Charset.forName("UTF-8"));
+          defaultFencingAuth.getBytes(StandardCharsets.UTF_8);
       String scheme = new DigestAuthenticationProvider().getScheme();
       AuthInfo authInfo = new AuthInfo(scheme, defaultFencingAuthData);
       authInfos.add(authInfo);
     }
 
-    manager.start(authInfos);
+    boolean isSSLEnabled =
+        config.getBoolean(CommonConfigurationKeys.ZK_CLIENT_SSL_ENABLED,
+            config.getBoolean(YarnConfiguration.RM_ZK_CLIENT_SSL_ENABLED,
+                YarnConfiguration.DEFAULT_RM_ZK_CLIENT_SSL_ENABLED));
+    manager.start(authInfos, isSSLEnabled, zkHostPort);
     return manager;
   }
 
@@ -637,12 +643,11 @@ public class ResourceManager extends CompositeService
   }
 
   protected MultiNodeSortingManager<SchedulerNode> createMultiNodeSortingManager() {
-    return new MultiNodeSortingManager<SchedulerNode>();
+    return new MultiNodeSortingManager<>();
   }
 
   protected SystemMetricsPublisher createSystemMetricsPublisher() {
-    List<SystemMetricsPublisher> publishers =
-        new ArrayList<SystemMetricsPublisher>();
+    List<SystemMetricsPublisher> publishers = new ArrayList<>();
     if (YarnConfiguration.timelineServiceV1Enabled(conf) &&
         YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
       SystemMetricsPublisher publisherV1 = new TimelineServiceV1Publisher();
@@ -817,7 +822,7 @@ public class ResourceManager extends CompositeService
       recoveryEnabled = conf.getBoolean(YarnConfiguration.RECOVERY_ENABLED,
           YarnConfiguration.DEFAULT_RM_RECOVERY_ENABLED);
 
-      RMStateStore rmStore = null;
+      RMStateStore rmStore;
       if (recoveryEnabled) {
         rmStore = RMStateStoreFactory.getStore(conf);
         boolean isWorkPreservingRecoveryEnabled =
@@ -1393,13 +1398,12 @@ public class ResourceManager extends CompositeService
   }
 
   protected void startWepApp() {
-    Map<String, String> serviceConfig = null;
     Configuration conf = getConfig();
 
     RMWebAppUtil.setupSecurityAndFilters(conf,
         getClientRMService().rmDTSecretManager);
 
-    Map<String, String> params = new HashMap<String, String>();
+    Map<String, String> params = new HashMap<>();
     if (getConfig().getBoolean(YarnConfiguration.YARN_API_SERVICES_ENABLE,
         false)) {
       String apiPackages = "org.apache.hadoop.yarn.service.webapp;" +
@@ -1411,8 +1415,7 @@ public class ResourceManager extends CompositeService
 
     Builder<ResourceManager> builder =
         WebApps
-            .$for("cluster", ResourceManager.class, this,
-                "ws")
+            .$for("cluster", ResourceManager.class, this, "rm-ws")
             .with(conf)
             .withServlet("API-Service", "/app/*",
                 ServletContainer.class, params, false)
@@ -1464,10 +1467,10 @@ public class ResourceManager extends CompositeService
       } else {
         if (onDiskPath.endsWith(".war")) {
           uiWebAppContext.setWar(onDiskPath);
-          LOG.info("Using war file at: " + onDiskPath);
+          LOG.info("Using war file at: {}.", onDiskPath);
         } else {
           uiWebAppContext.setResourceBase(onDiskPath);
-          LOG.info("Using webapps at: " + onDiskPath);
+          LOG.info("Using webapps at: {}.", onDiskPath);
         }
       }
     }
@@ -1478,7 +1481,9 @@ public class ResourceManager extends CompositeService
         IsResourceManagerActiveServlet.class);
 
     try {
-      webApp = builder.start(new RMWebApp(this), uiWebAppContext);
+      RMWebApp rmWebApp = new RMWebApp(this);
+      builder.withResourceConfig(rmWebApp.resourceConfig());
+      webApp = builder.start(rmWebApp, uiWebAppContext);
     } catch (WebAppException e) {
       webApp = e.getWebApp();
       throw e;
@@ -1597,6 +1602,18 @@ public class ResourceManager extends CompositeService
       int port = webApp.port();
       WebAppUtils.setRMWebAppPort(conf, port);
     }
+
+    // Refresh node state before the service startup to reflect the unregistered
+    // nodemanagers as LOST if the tracking for unregistered nodes flag is enabled.
+    // For HA setup, refreshNodes is already being called before the active
+    // transition.
+    Configuration yarnConf = getConfig();
+    if (!this.rmContext.isHAEnabled() && yarnConf.getBoolean(
+        YarnConfiguration.ENABLE_TRACKING_FOR_UNREGISTERED_NODES,
+        YarnConfiguration.DEFAULT_ENABLE_TRACKING_FOR_UNREGISTERED_NODES)) {
+      this.rmContext.getNodesListManager().refreshNodes(yarnConf);
+    }
+
     super.serviceStart();
 
     // Non HA case, start after RM services are started.
@@ -1604,7 +1621,7 @@ public class ResourceManager extends CompositeService
       transitionToActive();
     }
   }
-  
+
   protected void doSecureLogin() throws IOException {
 	InetSocketAddress socAddr = getBindAddress(conf);
     SecurityUtil.login(this.conf, YarnConfiguration.RM_KEYTAB,
@@ -1902,13 +1919,14 @@ public class ResourceManager extends CompositeService
     }
 
     if (scheduler instanceof MutableConfScheduler && isConfigurationMutable) {
-      YarnConfigurationStore confStore = YarnConfigurationStoreFactory
-          .getStore(conf);
-      confStore.initialize(conf, conf, rmContext);
-      confStore.format();
+      try (YarnConfigurationStore confStore = YarnConfigurationStoreFactory
+          .getStore(conf)) {
+        confStore.initialize(conf, conf, rmContext);
+        confStore.format();
+      }
     } else {
-      System.out.println(String.format("Scheduler Configuration format only " +
-          "supported by %s.", MutableConfScheduler.class.getSimpleName()));
+      System.out.printf("Scheduler Configuration format only " +
+          "supported by %s.%n", MutableConfScheduler.class.getSimpleName());
     }
   }
 

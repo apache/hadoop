@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
@@ -62,11 +63,12 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.PathUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,7 +92,10 @@ public class TestDecommissionWithStriped {
   private Path decommissionDir;
   private Path hostsFile;
   private Path excludeFile;
-  private FileSystem localFileSys;
+  private LocalFileSystem localFileSys;
+
+  @Rule
+  public TemporaryFolder baseDir = new TemporaryFolder();
 
   private Configuration conf;
   private MiniDFSCluster cluster;
@@ -118,9 +123,9 @@ public class TestDecommissionWithStriped {
     conf = createConfiguration();
     // Set up the hosts/exclude files.
     localFileSys = FileSystem.getLocal(conf);
+    localFileSys.setWorkingDirectory(new Path(baseDir.getRoot().getPath()));
     Path workingDir = localFileSys.getWorkingDirectory();
-    decommissionDir = new Path(workingDir,
-        PathUtils.getTestDirName(getClass()) + "/work-dir/decommission");
+    decommissionDir = new Path(workingDir, "work-dir/decommission");
     hostsFile = new Path(decommissionDir, "hosts");
     excludeFile = new Path(decommissionDir, "exclude");
     writeConfigFile(hostsFile, null);
@@ -457,6 +462,60 @@ public class TestDecommissionWithStriped {
         fileChecksum1.equals(fileChecksum2));
   }
 
+  /**
+   * Test decommission when DN marked as busy.
+   * @throwsException
+   */
+  @Test(timeout = 120000)
+  public void testBusyAfterDecommissionNode() throws Exception {
+    int busyDNIndex = 0;
+    //1. create EC file.
+    final Path ecFile = new Path(ecDir, "testBusyAfterDecommissionNode");
+    int writeBytes = cellSize * dataBlocks;
+    writeStripedFile(dfs, ecFile, writeBytes);
+    Assert.assertEquals(0, bm.numOfUnderReplicatedBlocks());
+    FileChecksum fileChecksum1 = dfs.getFileChecksum(ecFile, writeBytes);
+
+    //2. make once DN busy.
+    final INodeFile fileNode = cluster.getNamesystem().getFSDirectory()
+        .getINode4Write(ecFile.toString()).asFile();
+    BlockInfo firstBlock = fileNode.getBlocks()[0];
+    DatanodeStorageInfo[] dnStorageInfos = bm.getStorages(firstBlock);
+    DatanodeDescriptor busyNode =
+        dnStorageInfos[busyDNIndex].getDatanodeDescriptor();
+    for (int j = 0; j < replicationStreamsHardLimit; j++) {
+      busyNode.incrementPendingReplicationWithoutTargets();
+    }
+
+    //3. decomission one node.
+    List<DatanodeInfo> decommisionNodes = new ArrayList<>();
+    decommisionNodes.add(busyNode);
+    decommissionNode(0, decommisionNodes, AdminStates.DECOMMISSION_INPROGRESS);
+
+    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    bm.getDatanodeManager().fetchDatanodes(live, null, false);
+    int liveDecommissioning = 0;
+    for (DatanodeDescriptor node : live) {
+      liveDecommissioning += node.isDecommissionInProgress() ? 1 : 0;
+    }
+    assertEquals(decommisionNodes.size(), liveDecommissioning);
+
+    //4. wait for decommission block to replicate.
+    GenericTestUtils.waitFor(() -> bm.getLowRedundancyBlocksCount() == 1,
+        100, 3000);
+
+    int blocksScheduled = 0;
+    final List<DatanodeDescriptor> dnList = new ArrayList<>();
+    fsn.getBlockManager().getDatanodeManager().fetchDatanodes(dnList, null,
+        false);
+    for (DatanodeDescriptor dn : dnList) {
+      blocksScheduled += dn.getBlocksScheduled();
+    }
+    assertEquals(0, blocksScheduled);
+    assertEquals(0, bm.getPendingReconstructionBlocksCount());
+    assertEquals(1, bm.getLowRedundancyBlocksCount());
+  }
+
   private void testDecommission(int writeBytes, int storageCount,
       int decomNodeCount, String filename) throws IOException, Exception {
     Path ecFile = new Path(ecDir, filename);
@@ -582,16 +641,14 @@ public class TestDecommissionWithStriped {
       localFileSys.delete(name, true);
     }
 
-    FSDataOutputStream stm = localFileSys.create(name);
-
-    if (nodes != null) {
-      for (Iterator<String> it = nodes.iterator(); it.hasNext();) {
-        String node = it.next();
-        stm.writeBytes(node);
-        stm.writeBytes("\n");
+    try (FSDataOutputStream stm = localFileSys.create(name)) {
+      if (nodes != null) {
+        for (String node: nodes) {
+          stm.writeBytes(node);
+          stm.writeBytes("\n");
+        }
       }
     }
-    stm.close();
   }
 
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.audit;
 
 import java.nio.file.AccessDeniedException;
+import java.util.EnumSet;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -32,7 +33,9 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_FAILURE;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_REQUEST_EXECUTION;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.enableLoggingAuditor;
+import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.requireOutOfSpanOperationsRejected;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.resetAuditOptions;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_INTERCEPTORS;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_REQUEST_HANDLERS;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.UNAUDITED_OPERATION;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
@@ -48,17 +51,14 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  */
 public class ITestAuditManager extends AbstractS3ACostTest {
 
-  public ITestAuditManager() {
-    super(true);
-  }
-
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     resetAuditOptions(conf);
     enableLoggingAuditor(conf);
-    conf.set(AUDIT_REQUEST_HANDLERS,
-        SimpleAWSRequestHandler.CLASS);
+    conf.set(AUDIT_EXECUTION_INTERCEPTORS,
+        SimpleAWSExecutionInterceptor.CLASS);
+    conf.set(AUDIT_REQUEST_HANDLERS, "not-valid-class");
     return conf;
   }
 
@@ -80,6 +80,9 @@ public class ITestAuditManager extends AbstractS3ACostTest {
   public void testInvokeOutOfSpanRejected() throws Throwable {
     describe("Operations against S3 will be rejected outside of a span");
     final S3AFileSystem fs = getFileSystem();
+
+    requireOutOfSpanOperationsRejected(fs);
+
     final long failures0 = lookupCounterStatistic(iostats(),
         AUDIT_FAILURE.getSymbol());
     final long exec0 = lookupCounterStatistic(iostats(),
@@ -111,25 +114,33 @@ public class ITestAuditManager extends AbstractS3ACostTest {
         .isGreaterThan(exec0);
     assertThatStatisticCounter(iostats(), AUDIT_FAILURE.getSymbol())
         .isGreaterThan(failures0);
+
+    // stop rejecting out of span requests
+    fs.getAuditManager().setAuditFlags(EnumSet.of(AuditorFlags.PermitOutOfBandOperations));
+    writer.listMultipartUploads("/");
   }
 
   @Test
-  public void testRequestHandlerBinding() throws Throwable {
-    describe("Verify that extra request handlers can be added and that they"
+  public void testExecutionInterceptorBinding() throws Throwable {
+    describe("Verify that extra ExecutionInterceptor can be added and that they"
         + " will be invoked during request execution");
-    final long baseCount = SimpleAWSRequestHandler.getInvocationCount();
+    final long baseCount = SimpleAWSExecutionInterceptor.getInvocationCount();
     final S3AFileSystem fs = getFileSystem();
     final long exec0 = lookupCounterStatistic(iostats(),
         AUDIT_REQUEST_EXECUTION.getSymbol());
     // API call to a known path, `getBucketLocation()` does not always result in an API call.
     fs.listStatus(path("/"));
     // which MUST have ended up calling the extension request handler
-    Assertions.assertThat(SimpleAWSRequestHandler.getInvocationCount())
+    Assertions.assertThat(SimpleAWSExecutionInterceptor.getInvocationCount())
         .describedAs("Invocation count of plugged in request handler")
         .isGreaterThan(baseCount);
     assertThatStatisticCounter(iostats(), AUDIT_REQUEST_EXECUTION.getSymbol())
         .isGreaterThan(exec0);
     assertThatStatisticCounter(iostats(), AUDIT_FAILURE.getSymbol())
         .isZero();
+    Assertions.assertThat(SimpleAWSExecutionInterceptor.getStaticConf())
+        .describedAs("configuratin of SimpleAWSExecutionInterceptor")
+        .isNotNull()
+        .isSameAs(fs.getConf());
   }
 }

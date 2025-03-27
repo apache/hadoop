@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -32,6 +32,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
@@ -50,10 +51,10 @@ import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.client.api.SharedCacheClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -74,12 +75,12 @@ public class TestJobResourceUploaderWithSharedCache {
       new Path(MRJobConfig.DEFAULT_MR_AM_STAGING_DIR);
   private String input = "roses.are.red\nviolets.are.blue\nbunnies.are.pink\n";
 
-  @Before
+  @BeforeEach
   public void cleanup() throws Exception {
     remoteFs.delete(remoteStagingDir, true);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     // create configuration, dfs, file system
     localFs = FileSystem.getLocal(conf);
@@ -91,7 +92,7 @@ public class TestJobResourceUploaderWithSharedCache {
     remoteFs = dfs.getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     try {
       if (localFs != null) {
@@ -339,12 +340,12 @@ public class TestJobResourceUploaderWithSharedCache {
       IOException {
     FileOutputStream fos =
         new FileOutputStream(new File(p.toUri().getPath()));
-    JarOutputStream jos = new JarOutputStream(fos);
-    ZipEntry ze = new ZipEntry("distributed.jar.inside" + index);
-    jos.putNextEntry(ze);
-    jos.write(("inside the jar!" + index).getBytes());
-    jos.closeEntry();
-    jos.close();
+    try (JarOutputStream jos = new JarOutputStream(fos)) {
+      ZipEntry ze = new ZipEntry("distributed.jar.inside" + index);
+      jos.putNextEntry(ze);
+      jos.write(("inside the jar!" + index).getBytes());
+      jos.closeEntry();
+    }
     localFs.setPermission(p, new FsPermission("700"));
     return p;
   }
@@ -354,12 +355,12 @@ public class TestJobResourceUploaderWithSharedCache {
     Path archive = new Path(testRootDir, archiveFile);
     Path file = new Path(testRootDir, filename);
     DataOutputStream out = localFs.create(archive);
-    ZipOutputStream zos = new ZipOutputStream(out);
-    ZipEntry ze = new ZipEntry(file.toString());
-    zos.putNextEntry(ze);
-    zos.write(input.getBytes("UTF-8"));
-    zos.closeEntry();
-    zos.close();
+    try (ZipOutputStream zos = new ZipOutputStream(out)) {
+      ZipEntry ze = new ZipEntry(file.toString());
+      zos.putNextEntry(ze);
+      zos.write(input.getBytes(StandardCharsets.UTF_8));
+      zos.closeEntry();
+    }
     return archive;
   }
 }

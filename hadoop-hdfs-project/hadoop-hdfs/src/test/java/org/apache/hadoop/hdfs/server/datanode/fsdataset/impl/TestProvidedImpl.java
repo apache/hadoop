@@ -33,6 +33,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -147,7 +148,7 @@ public class TestProvidedImpl {
                 newFile.getAbsolutePath());
             newFile.createNewFile();
             Writer writer = new OutputStreamWriter(
-                new FileOutputStream(newFile.getAbsolutePath()), "utf-8");
+                new FileOutputStream(newFile.getAbsolutePath()), StandardCharsets.UTF_8);
             for(int i=0; i< BLK_LEN/(Integer.SIZE/8); i++) {
               writer.write(currentCount);
             }

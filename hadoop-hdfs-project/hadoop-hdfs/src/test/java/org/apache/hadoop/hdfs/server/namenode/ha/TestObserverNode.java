@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_OBSERVER_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getServiceState;
 import static org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider.*;
@@ -64,7 +65,7 @@ import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapterMockitoUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeRpcServer;
 import org.apache.hadoop.hdfs.server.namenode.TestFsck;
 import org.apache.hadoop.hdfs.tools.GetGroups;
@@ -216,6 +217,65 @@ public class TestObserverNode {
   }
 
   @Test
+  public void testConfigStartup() throws Exception {
+    int nnIdx = dfsCluster.getNumNameNodes() - 1;
+
+    // Transition all current observers to standby
+    for (int i = 0; i < dfsCluster.getNumNameNodes(); i++) {
+      if (dfsCluster.getNameNode(i).isObserverState()) {
+        dfsCluster.transitionToStandby(i);
+      }
+    }
+
+    // Confirm that the namenode at nnIdx is standby
+    assertTrue("The NameNode is observer despite being transitioned to standby",
+        dfsCluster.getNameNode(nnIdx).isStandbyState());
+
+    // Restart the NameNode with observer startup option as false
+    dfsCluster.getConfiguration(nnIdx)
+        .setBoolean(DFS_NAMENODE_OBSERVER_ENABLED_KEY, false);
+    dfsCluster.restartNameNode(nnIdx);
+
+    // Verify that the NameNode is not in Observer state
+    dfsCluster.waitNameNodeUp(nnIdx);
+    assertTrue("The NameNode started as Observer despite "
+        + DFS_NAMENODE_OBSERVER_ENABLED_KEY + " being false",
+        dfsCluster.getNameNode(nnIdx).isStandbyState());
+
+    dfs.mkdir(testPath, FsPermission.getDefault());
+    assertSentTo(0);
+
+    // The first request goes to the active because it has not refreshed yet;
+    // the second would go to the observer if it was not in standby
+    dfsCluster.rollEditLogAndTail(0);
+    dfs.getFileStatus(testPath);
+    dfs.getFileStatus(testPath);
+    assertSentTo(0);
+
+    Path testPath2 = new Path(testPath, "test2");
+    // Restart the NameNode with the observer startup option as true
+    dfsCluster.getConfiguration(nnIdx)
+        .setBoolean(DFS_NAMENODE_OBSERVER_ENABLED_KEY, true);
+    dfsCluster.restartNameNode(nnIdx);
+
+    // Check that the NameNode is in Observer state
+    dfsCluster.waitNameNodeUp(nnIdx);
+    assertTrue("The NameNode did not start as Observer despite "
+        + DFS_NAMENODE_OBSERVER_ENABLED_KEY + " being true",
+        dfsCluster.getNameNode(nnIdx).isObserverState());
+
+    dfs.mkdir(testPath2, FsPermission.getDefault());
+    assertSentTo(0);
+
+    // The first request goes to the active because it has not refreshed yet;
+    // the second will properly go to the observer
+    dfsCluster.rollEditLogAndTail(0);
+    dfs.getFileStatus(testPath2);
+    dfs.getFileStatus(testPath2);
+    assertSentTo(nnIdx);
+  }
+
+  @Test
   public void testFailover() throws Exception {
     Path testPath2 = new Path(testPath, "test2");
     setObserverRead(false);
@@ -362,7 +422,7 @@ public class TestObserverNode {
     // Mock block manager for observer to generate some fake blocks which
     // will trigger the (retriable) safe mode exception.
     BlockManager bmSpy =
-        NameNodeAdapter.spyOnBlockManager(dfsCluster.getNameNode(2));
+        NameNodeAdapterMockitoUtil.spyOnBlockManager(dfsCluster.getNameNode(2));
     doAnswer((invocation) -> {
       ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L));
       LocatedBlock fakeBlock = new LocatedBlock(b, DatanodeInfo.EMPTY_ARRAY);
@@ -397,7 +457,7 @@ public class TestObserverNode {
     // Mock block manager for observer to generate some fake blocks which
     // will trigger the block missing exception.
 
-    BlockManager bmSpy = NameNodeAdapter
+    BlockManager bmSpy = NameNodeAdapterMockitoUtil
         .spyOnBlockManager(dfsCluster.getNameNode(2));
     doAnswer((invocation) -> {
       List<LocatedBlock> fakeBlocks = new ArrayList<>();
@@ -566,7 +626,7 @@ public class TestObserverNode {
     assertSentTo(2);
 
     // Create a spy on FSEditLog, which delays MkdirOp transaction by 100 mec
-    FSEditLog spyEditLog = NameNodeAdapter.spyDelayMkDirTransaction(
+    FSEditLog spyEditLog = NameNodeAdapterMockitoUtil.spyDelayMkDirTransaction(
         dfsCluster.getNameNode(0), 100);
 
     final int numThreads = 4;

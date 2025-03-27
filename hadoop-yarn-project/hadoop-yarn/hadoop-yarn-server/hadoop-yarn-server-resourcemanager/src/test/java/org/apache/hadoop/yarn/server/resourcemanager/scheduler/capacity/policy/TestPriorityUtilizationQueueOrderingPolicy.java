@@ -21,16 +21,23 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
+import java.util.Collections;
 
+import java.util.concurrent.ThreadLocalRandom;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -68,7 +75,7 @@ public class TestPriorityUtilizationQueueOrderingPolicy {
     int i = 0;
     while (iter.hasNext()) {
       CSQueue q = iter.next();
-      Assert.assertEquals(expectedOrder[i], q.getQueuePath());
+      assertEquals(expectedOrder[i], q.getQueuePath());
       i++;
     }
 
@@ -249,5 +256,143 @@ public class TestPriorityUtilizationQueueOrderingPolicy {
         new float[] { 0.0f, 0.0f, 0.1f, 0.3f, 0.3f }, "x"));
     verifyOrder(policy, "x", new String[] { "e", "c", "d", "b", "a" });
 
+  }
+
+  @Test
+  public void testComparatorDoesNotValidateGeneralContract() {
+    final String[] nodeLabels = {"x", "y", "z"};
+    PriorityUtilizationQueueOrderingPolicy policy =
+        new PriorityUtilizationQueueOrderingPolicy(true);
+
+    final String partition = nodeLabels[randInt(0, nodeLabels.length - 1)];
+    List<CSQueue> list = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) {
+      CSQueue q = mock(CSQueue.class);
+      when(q.getQueuePath()).thenReturn(String.format("%d", i));
+
+      // simulating change in queueCapacities
+      when(q.getQueueCapacities())
+          .thenReturn(randomQueueCapacities(partition))
+          .thenReturn(randomQueueCapacities(partition))
+          .thenReturn(randomQueueCapacities(partition))
+          .thenReturn(randomQueueCapacities(partition))
+          .thenReturn(randomQueueCapacities(partition));
+
+      // simulating change in the priority
+      when(q.getPriority())
+          .thenReturn(Priority.newInstance(randInt(0, 10)))
+          .thenReturn(Priority.newInstance(randInt(0, 10)))
+          .thenReturn(Priority.newInstance(randInt(0, 10)))
+          .thenReturn(Priority.newInstance(randInt(0, 10)))
+          .thenReturn(Priority.newInstance(randInt(0, 10)));
+
+      if (randInt(0, nodeLabels.length) == 1) {
+        // simulating change in nodeLabels
+        when(q.getAccessibleNodeLabels())
+            .thenReturn(randomNodeLabels(nodeLabels))
+            .thenReturn(randomNodeLabels(nodeLabels))
+            .thenReturn(randomNodeLabels(nodeLabels))
+            .thenReturn(randomNodeLabels(nodeLabels))
+            .thenReturn(randomNodeLabels(nodeLabels));
+      }
+
+      // simulating change in configuredMinResource
+      when(q.getQueueResourceQuotas())
+          .thenReturn(randomResourceQuotas(partition))
+          .thenReturn(randomResourceQuotas(partition))
+          .thenReturn(randomResourceQuotas(partition))
+          .thenReturn(randomResourceQuotas(partition))
+          .thenReturn(randomResourceQuotas(partition));
+      list.add(q);
+    }
+
+    policy.setQueues(list);
+    // java.lang.IllegalArgumentException: Comparison method violates its general contract!
+    assertDoesNotThrow(() -> policy.getAssignmentIterator(partition));
+  }
+
+  @Test
+  public void testComparatorClassDoesNotViolateTimSortContract() {
+    String partition = "testPartition";
+
+    List<PriorityUtilizationQueueOrderingPolicy.
+            PriorityQueueResourcesForSorting> queues = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) { // 1000 queues to have enough queues so the exception occur
+      queues.add(createMockPriorityQueueResourcesForSorting(partition));
+    }
+
+    Collections.shuffle(queues);
+    // java.lang.IllegalArgumentException: Comparison method violates its general contract!
+    assertDoesNotThrow(() -> queues.sort(new PriorityUtilizationQueueOrderingPolicy(true)
+            .new PriorityQueueComparator(partition)));
+
+  }
+
+  private PriorityUtilizationQueueOrderingPolicy.
+          PriorityQueueResourcesForSorting createMockPriorityQueueResourcesForSorting(
+          String partition) {
+    QueueResourceQuotas resourceQuotas = randomResourceQuotas(partition);
+
+    boolean isZeroResource = ThreadLocalRandom.current().nextBoolean();
+    if (isZeroResource) {
+      resourceQuotas.setConfiguredMinResource(partition,  Resource.newInstance(0, 0));
+    }
+
+    QueueCapacities mockQueueCapacities = mock(QueueCapacities.class);
+    when(mockQueueCapacities.getAbsoluteUsedCapacity(partition))
+            .thenReturn(4.2f); // could be any specific number, so that there are equal values
+    when(mockQueueCapacities.getUsedCapacity(partition))
+            .thenReturn(1.0f); // could be any specific number, so that there are equal values
+    when(mockQueueCapacities.getAbsoluteCapacity(partition))
+            .thenReturn(6.2f); // could be any specific number, so that there are equal values
+
+    CSQueue mockQueue = mock(CSQueue.class);
+    when(mockQueue.getQueueCapacities())
+            .thenReturn(mockQueueCapacities);
+    when(mockQueue.getPriority())
+            .thenReturn(Priority.newInstance(7)); // could be any specific number,
+    // so that there are equal values
+    when(mockQueue.getAccessibleNodeLabels())
+            .thenReturn(Collections.singleton(partition));
+    when(mockQueue.getQueueResourceQuotas())
+            .thenReturn(resourceQuotas);
+
+    return new PriorityUtilizationQueueOrderingPolicy.PriorityQueueResourcesForSorting(
+            mockQueue, partition
+    );
+
+  }
+
+  private QueueCapacities randomQueueCapacities(String partition) {
+    QueueCapacities qc = new QueueCapacities(false);
+    qc.setAbsoluteCapacity(partition, (float) randFloat(0.0d, 100.0d));
+    qc.setUsedCapacity(partition, (float) randFloat(0.0d, 100.0d));
+    qc.setAbsoluteUsedCapacity(partition, (float) randFloat(0.0d, 100.0d));
+    return qc;
+  }
+
+  private Set<String> randomNodeLabels(String[] availableNodeLabels) {
+    Set<String> nodeLabels = new HashSet<>();
+    for (String label : availableNodeLabels) {
+      if (randInt(0, 1) == 1) {
+        nodeLabels.add(label);
+      }
+    }
+    return nodeLabels;
+  }
+
+  private QueueResourceQuotas randomResourceQuotas(String partition) {
+    QueueResourceQuotas qr = new QueueResourceQuotas();
+    qr.setConfiguredMinResource(partition,
+        Resource.newInstance(randInt(1, 10) * 1024, randInt(1, 10)));
+    return qr;
+  }
+
+  private static double randFloat(double min, double max) {
+    return min + ThreadLocalRandom.current().nextFloat() * (max - min);
+  }
+
+  private static int randInt(int min, int max) {
+    return ThreadLocalRandom.current().nextInt(min, max + 1);
   }
 }

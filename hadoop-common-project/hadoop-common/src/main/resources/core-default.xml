@@ -65,6 +65,18 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.http.jmx.nan-filter.enabled</name>
+  <value>false</value>
+  <description>
+    The REST API of the JMX interface can return with NaN values
+    if the attribute represent a 0.0/0.0 value.
+    Some JSON parser by default can not parse json attributes like foo:NaN.
+    If this filter is enabled the NaN values will be converted to 0.0 values,
+    to make json parse less complicated.
+  </description>
+</property>
+
 <!--- security properties -->
 
 <property>
@@ -721,6 +733,23 @@
 </property>
 
 <property>
+  <name>hadoop.security.sasl.mechanism</name>
+  <value>DIGEST-MD5</value>
+  <description>
+    The SASL mechanism used in Hadoop.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.sasl.CustomizedCallbackHandler.class</name>
+  <value></value>
+  <description>
+    Some security provider may define a new javax.security.auth.callback.Callback.
+    This property allows users to configure a customized callback handler.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.sensitive-config-keys</name>
   <value>
       secret$
@@ -730,6 +759,7 @@
       fs.s3a.*.server-side-encryption.key
       fs.s3a.encryption.algorithm
       fs.s3a.encryption.key
+      fs.s3a.encryption.context
       fs.s3a.secret.key
       fs.s3a.*.secret.key
       fs.s3a.session.key
@@ -1030,6 +1060,28 @@
     Used to decide whether to enable native codec. If set to false, native codec
     would not be created and ISA-L support would be disabled. Recommend to set to
     false when your CPU does not support ISA-L.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.secret-manager.key-generator.algorithm</name>
+  <value>HmacSHA1</value>
+  <description>
+    The configuration key specifying the KeyGenerator algorithm used in SecretManager
+    for generating secret keys. The algorithm must be a KeyGenerator algorithm supported by
+    the Java Cryptography Architecture (JCA). Common examples include "HmacSHA1",
+    "HmacSHA256", and "HmacSHA512".
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.secret-manager.key-length</name>
+  <value>64</value>
+  <description>
+    The configuration key specifying the key length of the generated secret keys
+    in SecretManager. The key length must be appropriate for the algorithm.
+    For example, longer keys are generally more secure but may not be supported
+    by all algorithms.
   </description>
 </property>
 
@@ -1388,16 +1440,23 @@
 </property>
 
 <property>
+  <name>fs.s3a.session.token</name>
+  <description>Session token, when using org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider
+    as one of the providers.
+  </description>
+</property>
+
+<property>
   <name>fs.s3a.aws.credentials.provider</name>
   <value>
     org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider,
     org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
-    com.amazonaws.auth.EnvironmentVariableCredentialsProvider,
+    software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider,
     org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
   </value>
   <description>
     Comma-separated class names of credential provider classes which implement
-    com.amazonaws.auth.AWSCredentialsProvider.
+    software.amazon.awssdk.auth.credentials.AwsCredentialsProvider.
 
     When S3A delegation tokens are not enabled, this list will be used
     to directly authenticate with S3 and other AWS services.
@@ -1405,43 +1464,6 @@
     token binding it may be used
     to communicate wih the STS endpoint to request session/role
     credentials.
-
-    These are loaded and queried in sequence for a valid set of credentials.
-    Each listed class must implement one of the following means of
-    construction, which are attempted in order:
-    * a public constructor accepting java.net.URI and
-        org.apache.hadoop.conf.Configuration,
-    * a public constructor accepting org.apache.hadoop.conf.Configuration,
-    * a public static method named getInstance that accepts no
-       arguments and returns an instance of
-       com.amazonaws.auth.AWSCredentialsProvider, or
-    * a public default constructor.
-
-    Specifying org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider allows
-    anonymous access to a publicly accessible S3 bucket without any credentials.
-    Please note that allowing anonymous access to an S3 bucket compromises
-    security and therefore is unsuitable for most use cases. It can be useful
-    for accessing public data sets without requiring AWS credentials.
-
-    If unspecified, then the default list of credential provider classes,
-    queried in sequence, is:
-    * org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider: looks
-       for session login secrets in the Hadoop configuration.
-    * org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider:
-       Uses the values of fs.s3a.access.key and fs.s3a.secret.key.
-    * com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
-        configuration of AWS access key ID and secret access key in
-        environment variables named AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
-        and AWS_SESSION_TOKEN as documented in the AWS SDK.
-    * org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider: picks up
-       IAM credentials of any EC2 VM or AWS container in which the process is running.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.session.token</name>
-  <description>Session token, when using org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider
-    as one of the providers.
   </description>
 </property>
 
@@ -1539,22 +1561,23 @@
     Note: for job submission to actually collect these tokens,
     Kerberos must be enabled.
 
-    Options are:
+    Bindings available in hadoop-aws are:
     org.apache.hadoop.fs.s3a.auth.delegation.SessionTokenBinding
     org.apache.hadoop.fs.s3a.auth.delegation.FullCredentialsTokenBinding
-    and org.apache.hadoop.fs.s3a.auth.delegation.RoleTokenBinding
+    org.apache.hadoop.fs.s3a.auth.delegation.RoleTokenBinding
   </description>
 </property>
 
 <property>
   <name>fs.s3a.connection.maximum</name>
-  <value>96</value>
+  <value>500</value>
   <description>Controls the maximum number of simultaneous connections to S3.
     This must be bigger than the value of fs.s3a.threads.max so as to stop
     threads being blocked waiting for new HTTPS connections.
     Why not equal? The AWS SDK transfer manager also uses these connections.
   </description>
 </property>
+
 
 <property>
   <name>fs.s3a.connection.ssl.enabled</name>
@@ -1614,20 +1637,33 @@
 
 <property>
   <name>fs.s3a.attempts.maximum</name>
-  <value>20</value>
-  <description>How many times we should retry commands on transient errors.</description>
+  <value>5</value>
+  <description>
+    Number of times the AWS client library should retry errors before
+    escalating to the S3A code: {@value}.
+    The S3A connector does its own selective retries; the only time the AWS
+    SDK operations are not wrapped is during multipart copy via the AWS SDK
+    transfer manager.
+  </description>
 </property>
 
 <property>
   <name>fs.s3a.connection.establish.timeout</name>
-  <value>5000</value>
-  <description>Socket connection setup timeout in milliseconds.</description>
+  <value>30s</value>
+  <description>Socket connection setup timeout in milliseconds; this will be retried
+    more than once.</description>
 </property>
 
 <property>
   <name>fs.s3a.connection.timeout</name>
-  <value>200000</value>
-  <description>Socket connection timeout in milliseconds.</description>
+  <value>200s</value>
+  <description>Socket connection timeout.</description>
+</property>
+
+<property>
+  <name>fs.s3a.connection.ttl</name>
+  <value>5m</value>
+  <description>Expiry time for any active connection.</description>
 </property>
 
 <property>
@@ -1651,14 +1687,14 @@
 
 <property>
   <name>fs.s3a.threads.max</name>
-  <value>64</value>
+  <value>96</value>
   <description>The total number of threads available in the filesystem for data
     uploads *or any other queued filesystem operation*.</description>
 </property>
 
 <property>
   <name>fs.s3a.threads.keepalivetime</name>
-  <value>60</value>
+  <value>60s</value>
   <description>Number of seconds a thread can be idle before being
     terminated.</description>
 </property>
@@ -1738,7 +1774,7 @@
 
 <property>
   <name>fs.s3a.multipart.purge.age</name>
-  <value>86400</value>
+  <value>24h</value>
   <description>Minimum age in seconds of multipart uploads to purge
     on startup if "fs.s3a.multipart.purge" is true
   </description>
@@ -1748,19 +1784,28 @@
   <name>fs.s3a.encryption.algorithm</name>
   <description>Specify a server-side encryption or client-side
     encryption algorithm for s3a: file system. Unset by default. It supports the
-    following values: 'AES256' (for SSE-S3), 'SSE-KMS', 'SSE-C', and 'CSE-KMS'
+    following values: 'AES256' (for SSE-S3), 'SSE-KMS', 'DSSE-KMS', 'SSE-C', and 'CSE-KMS'
   </description>
 </property>
 
 <property>
   <name>fs.s3a.encryption.key</name>
   <description>Specific encryption key to use if fs.s3a.encryption.algorithm
-    has been set to 'SSE-KMS', 'SSE-C' or 'CSE-KMS'. In the case of SSE-C
+    has been set to 'SSE-KMS', 'DSSE-KMS', 'SSE-C' or 'CSE-KMS'. In the case of SSE-C
     , the value of this property should be the Base64 encoded key. If you are
     using SSE-KMS and leave this property empty, you'll be using your default's
     S3 KMS key, otherwise you should set this property to the specific KMS key
     id. In case of 'CSE-KMS' this value needs to be the AWS-KMS Key ID
     generated from AWS console.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.encryption.context</name>
+  <description>Specific encryption context to use if fs.s3a.encryption.algorithm
+    has been set to 'SSE-KMS' or 'DSSE-KMS'. The value of this property is a set
+    of non-secret comma-separated key-value pairs of additional contextual
+    information about the data that are separated by equal operator (=).
   </description>
 </property>
 
@@ -2102,23 +2147,6 @@
 </property>
 
 <property>
-  <name>fs.s3a.connection.request.timeout</name>
-  <value>0</value>
-  <description>
-    Time out on HTTP requests to the AWS service; 0 means no timeout.
-    Measured in seconds; the usual time suffixes are all supported
-
-    Important: this is the maximum duration of any AWS service call,
-    including upload and copy operations. If non-zero, it must be larger
-    than the time to upload multi-megabyte blocks to S3 from the client,
-    and to rename many-GB files. Use with care.
-
-    Values that are larger than Integer.MAX_VALUE milliseconds are
-    converged to Integer.MAX_VALUE milliseconds
-  </description>
-</property>
-
-<property>
   <name>fs.s3a.etag.checksum.enabled</name>
   <value>false</value>
   <description>
@@ -2381,6 +2409,7 @@ The switch to turn S3A auditing on or off.
   <value>100</value>
   <description>
     Define the maximum number of outstanding async calls.
+    If negative, there is no limit on the number of outstanding async calls.
   </description>
 </property>
 
@@ -2551,6 +2580,15 @@ The switch to turn S3A auditing on or off.
 </property>
 
 <property>
+  <name>ipc.server.log.slow.rpc.threshold.ms</name>
+  <value>0</value>
+  <description>The threshold in milliseconds for logging slow rpc when ipc.server.log.slow.rpc is enabled.
+    Besides of being much slower than other RPC requests, an RPC request has to take at least the threshold value
+    defined by this property before it can be considered as slow. By default, this threshold is set to 0 (disabled).
+  </description>
+</property>
+
+<property>
   <name>ipc.server.purge.interval</name>
   <value>15</value>
   <description>Define how often calls are cleaned up in the server.
@@ -2604,10 +2642,20 @@ The switch to turn S3A auditing on or off.
 </property>
 
 <property>
-  <name>callqueue.overflow.trigger.failover</name>
+  <name>ipc.[port_number].callqueue.overflow.trigger.failover</name>
   <value>false</value>
   <description>
     Enable callqueue overflow trigger failover for stateless servers.
+  </description>
+</property>
+
+<property>
+  <name>ipc.callqueue.overflow.trigger.failover</name>
+  <value>false</value>
+  <description>
+    This property is used as fallback property in case
+    "ipc.[port_number].callqueue.overflow.trigger.failover" is not defined.
+    It determines whether or not to enable callqueue overflow trigger failover for stateless servers.
   </description>
 </property>
 
@@ -3625,6 +3673,21 @@ The switch to turn S3A auditing on or off.
   <value></value>
   <description>
     The JCE provider name used in CryptoCodec.
+    If this value is set, the corresponding provider must be added to the provider list.
+    The provider may be added statically in the java.security file, or
+    dynamically by calling the java.security.Security.addProvider(..) method, or
+    automatically (only for org.bouncycastle.jce.provider.BouncyCastleProvider)
+    by setting "hadoop.security.crypto.jce.provider.auto-add" to true
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.crypto.jce.provider.auto-add</name>
+  <value>true</value>
+  <description>
+    Automatically add the org.bouncycastle.jce.provider.BouncyCastleProvider
+    when the value in "hadoop.security.crypto.jce.provider" is set
+    to BouncyCastleProvider.PROVIDER_NAME.
   </description>
 </property>
 
@@ -4249,6 +4312,18 @@ The switch to turn S3A auditing on or off.
   </property>
 
   <property>
+    <name>hadoop.zk.ssl.enabled</name>
+    <decription>
+      Enable SSL/TLS encryption for the ZooKeeper communication.
+      Note: this setting overrides dfs.ha.zkfc.client.ssl.enabled,
+      yarn.resourcemanager.zk-client-ssl.enabled and also
+      hadoop.kms.authentication.zk-dt-secret-manager.ssl.enabled in order to unify the SSL based
+      Zookeeper access across Hadoop. Leaving this property empty ensures that service specific
+      enablement can be done separately.
+    </decription>
+  </property>
+
+  <property>
     <name>hadoop.zk.ssl.keystore.location</name>
     <description>
       Keystore location for ZooKeeper client connection over SSL.
@@ -4392,6 +4467,17 @@ The switch to turn S3A auditing on or off.
     <name>fs.AbstractFileSystem.o3fs.impl</name>
     <value>org.apache.hadoop.fs.ozone.OzFs</value>
     <description>The AbstractFileSystem for Ozone FileSystem o3fs uri</description>
+  </property>
+
+  <property>
+    <name>fs.hdfs.impl.disable.cache</name>
+    <value>false</value>
+    <description>Whether disable cached hdfs filesystem instances or not.
+      If false, return a cached hdfs fileSystem instance to the caller if exists.
+      If true, a new hdfs fileSystem instance will be created,
+      initialized with the configuration and URI, cached and returned to the caller,
+      it is slower than using cached hdfs filesystme instances.
+      </description>
   </property>
 
 </configuration>

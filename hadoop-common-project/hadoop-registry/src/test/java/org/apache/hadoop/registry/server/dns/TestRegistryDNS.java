@@ -350,7 +350,7 @@ public class TestRegistryDNS extends Assert {
     Name name = Name.fromString("19.1.17.172.in-addr.arpa.");
     Record question = Record.newRecord(name, Type.PTR, DClass.IN);
     Message query = Message.newQuery(question);
-    OPTRecord optRecord = new OPTRecord(4096, 0, 0, Flags.DO, null);
+    OPTRecord optRecord = new OPTRecord(4096, 0, 0, Flags.DO);
     query.addRecord(optRecord, Section.ADDITIONAL);
     byte[] responseBytes = getRegistryDNS().generateReply(query, null);
     Message response = new Message(responseBytes);
@@ -392,7 +392,7 @@ public class TestRegistryDNS extends Assert {
     Name name = Name.fromString(lookup);
     Record question = Record.newRecord(name, type, DClass.IN);
     Message query = Message.newQuery(question);
-    OPTRecord optRecord = new OPTRecord(4096, 0, 0, Flags.DO, null);
+    OPTRecord optRecord = new OPTRecord(4096, 0, 0, Flags.DO);
     query.addRecord(optRecord, Section.ADDITIONAL);
     byte[] responseBytes = getRegistryDNS().generateReply(query, null);
     Message response = new Message(responseBytes);
@@ -421,7 +421,7 @@ public class TestRegistryDNS extends Assert {
     Name name = Name.fromString(lookup);
     Record question = Record.newRecord(name, type, DClass.IN);
     Message query = Message.newQuery(question);
-    OPTRecord optRecord = new OPTRecord(4096, 0, 0, Flags.DO, null);
+    OPTRecord optRecord = new OPTRecord(4096, 0, 0, Flags.DO);
     query.addRecord(optRecord, Section.ADDITIONAL);
     byte[] responseBytes = getRegistryDNS().generateReply(query, null);
     Message response = new Message(responseBytes);
@@ -592,7 +592,7 @@ public class TestRegistryDNS extends Assert {
     Name name = Name.fromString("5.0.17.172.in-addr.arpa.");
     Record question = Record.newRecord(name, Type.PTR, DClass.IN);
     Message query = Message.newQuery(question);
-    OPTRecord optRecord = new OPTRecord(4096, 0, 0, Flags.DO, null);
+    OPTRecord optRecord = new OPTRecord(4096, 0, 0, Flags.DO);
     query.addRecord(optRecord, Section.ADDITIONAL);
     byte[] responseBytes = getRegistryDNS().generateReply(query, null);
     Message response = new Message(responseBytes);

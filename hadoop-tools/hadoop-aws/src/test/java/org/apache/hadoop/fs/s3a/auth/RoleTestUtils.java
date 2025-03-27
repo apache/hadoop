@@ -38,6 +38,8 @@ import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Constants.S3EXPRESS_CREATE_SESSION;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableCreateSession;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
@@ -146,19 +148,25 @@ public final class RoleTestUtils {
    * @param roleARN ARN of role
    * @return the new configuration
    */
-  @SuppressWarnings("deprecation")
   public static Configuration newAssumedRoleConfig(
       final Configuration srcConf,
       final String roleARN) {
     Configuration conf = new Configuration(srcConf);
     removeBaseAndBucketOverrides(conf,
+        S3A_BUCKET_PROBE,
         DELEGATION_TOKEN_BINDING,
         ASSUMED_ROLE_ARN,
-        AWS_CREDENTIALS_PROVIDER);
+        AWS_CREDENTIALS_PROVIDER,
+        ASSUMED_ROLE_SESSION_DURATION,
+        S3EXPRESS_CREATE_SESSION);
+
     conf.set(AWS_CREDENTIALS_PROVIDER, AssumedRoleCredentialProvider.NAME);
     conf.set(ASSUMED_ROLE_ARN, roleARN);
     conf.set(ASSUMED_ROLE_SESSION_NAME, "test");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "15m");
+    // force in bucket resolution during startup
+    conf.setInt(S3A_BUCKET_PROBE, 1);
+    disableCreateSession(conf);
     disableFilesystemCaching(conf);
     return conf;
   }

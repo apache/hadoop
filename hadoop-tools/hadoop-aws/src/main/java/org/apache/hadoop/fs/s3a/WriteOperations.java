@@ -20,26 +20,21 @@ package org.apache.hadoop.fs.s3a;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
-import com.amazonaws.services.s3.model.MultipartUpload;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
-import com.amazonaws.services.s3.model.SelectObjectContentRequest;
-import com.amazonaws.services.s3.model.SelectObjectContentResult;
-import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.amazonaws.services.s3.model.UploadPartResult;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.MultipartUpload;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
@@ -77,26 +72,12 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
   /**
    * Create a {@link PutObjectRequest} request against the specific key.
    * @param destKey destination key
-   * @param inputStream source data.
    * @param length size, if known. Use -1 for not known
    * @param options options for the request
    * @return the request
    */
   PutObjectRequest createPutObjectRequest(String destKey,
-      InputStream inputStream,
       long length,
-      @Nullable PutObjectOptions options);
-
-  /**
-   * Create a {@link PutObjectRequest} request to upload a file.
-   * @param dest key to PUT to.
-   * @param sourceFile source file
-   * @param options options for the request
-   * @return the request
-   */
-  PutObjectRequest createPutObjectRequest(
-      String dest,
-      File sourceFile,
       @Nullable PutObjectOptions options);
 
   /**
@@ -110,15 +91,6 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @param ex Any exception raised which triggered the failure.
    */
   void writeFailed(Exception ex);
-
-  /**
-   * Create a new object metadata instance.
-   * Any standard metadata headers are added here, for example:
-   * encryption.
-   * @param length size, if known. Use -1 for not known
-   * @return a new metadata instance
-   */
-  ObjectMetadata newObjectMetadata(long length);
 
   /**
    * Start the multipart upload process.
@@ -148,10 +120,10 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * the retry count was exceeded
    */
   @Retries.RetryTranslated
-  CompleteMultipartUploadResult completeMPUwithRetries(
+  CompleteMultipartUploadResponse completeMPUwithRetries(
       String destKey,
       String uploadId,
-      List<PartETag> partETags,
+      List<CompletedPart> partETags,
       long length,
       AtomicInteger errorCount,
       PutObjectOptions putOptions)
@@ -174,6 +146,7 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
   /**
    * Abort a multipart commit operation.
    * @param upload upload to abort.
+   * @throws FileNotFoundException if the upload is unknown
    * @throws IOException on problems.
    */
   @Retries.RetryTranslated
@@ -213,31 +186,22 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
       throws IOException;
 
   /**
-   * Create and initialize a part request of a multipart upload.
-   * Exactly one of: {@code uploadStream} or {@code sourceFile}
-   * must be specified.
-   * A subset of the file may be posted, by providing the starting point
-   * in {@code offset} and a length of block in {@code size} equal to
-   * or less than the remaining bytes.
+   * Create and initialize a part request builder of a multipart upload.
    * @param destKey destination key of ongoing operation
    * @param uploadId ID of ongoing upload
    * @param partNumber current part number of the upload
+   * @param isLastPart is this the last part of the upload?
    * @param size amount of data
-   * @param uploadStream source of data to upload
-   * @param sourceFile optional source file.
-   * @param offset offset in file to start reading.
-   * @return the request.
+   * @return the request builder.
    * @throws IllegalArgumentException if the parameters are invalid
    * @throws PathIOException if the part number is out of range.
    */
-  UploadPartRequest newUploadPartRequest(
+  UploadPartRequest.Builder newUploadPartRequestBuilder(
       String destKey,
       String uploadId,
       int partNumber,
-      long size,
-      InputStream uploadStream,
-      File sourceFile,
-      Long offset) throws IOException;
+      boolean isLastPart,
+      long size) throws IOException;
 
   /**
    * PUT an object directly (i.e. not via the transfer manager).
@@ -245,13 +209,15 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * file, from the content length of the header.
    * @param putObjectRequest the request
    * @param putOptions put object options
+   * @param uploadData data to be uploaded
    * @param durationTrackerFactory factory for duration tracking
    * @return the upload initiated
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  PutObjectResult putObject(PutObjectRequest putObjectRequest,
+  PutObjectResponse putObject(PutObjectRequest putObjectRequest,
       PutObjectOptions putOptions,
+      S3ADataBlocks.BlockUploadData uploadData,
       DurationTrackerFactory durationTrackerFactory)
       throws IOException;
 
@@ -279,22 +245,23 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * the retry count was exceeded
    */
   @Retries.RetryTranslated
-  CompleteMultipartUploadResult commitUpload(
+  CompleteMultipartUploadResponse commitUpload(
       String destKey,
       String uploadId,
-      List<PartETag> partETags,
+      List<CompletedPart> partETags,
       long length)
       throws IOException;
 
   /**
    * Upload part of a multi-partition file.
-   * @param request request
+   * @param request the upload part request.
+   * @param body the request body.
    * @param durationTrackerFactory factory for duration tracking
    * @return the result of the operation.
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  UploadPartResult uploadPart(UploadPartRequest request,
+  UploadPartResponse uploadPart(UploadPartRequest request, RequestBody body,
       DurationTrackerFactory durationTrackerFactory)
       throws IOException;
 
@@ -304,31 +271,6 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @return the configuration.
    */
   Configuration getConf();
-
-  /**
-   * Create a S3 Select request for the destination path.
-   * This does not build the query.
-   * @param path pre-qualified path for query
-   * @return the request
-   */
-  SelectObjectContentRequest newSelectRequest(Path path);
-
-  /**
-   * Execute an S3 Select operation.
-   * On a failure, the request is only logged at debug to avoid the
-   * select exception being printed.
-   * @param source source for selection
-   * @param request Select request to issue.
-   * @param action the action for use in exception creation
-   * @return response
-   * @throws IOException failure
-   */
-  @Retries.RetryTranslated
-  SelectObjectContentResult select(
-      Path source,
-      SelectObjectContentRequest request,
-      String action)
-      throws IOException;
 
   /**
    * Increment the write operation counter

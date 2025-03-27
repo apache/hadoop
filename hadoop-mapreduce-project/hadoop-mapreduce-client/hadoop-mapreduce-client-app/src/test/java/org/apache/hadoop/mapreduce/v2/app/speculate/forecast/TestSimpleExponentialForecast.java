@@ -23,8 +23,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.yarn.util.ControlledClock;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Testing the statistical model of simple exponential estimator.
@@ -101,21 +102,18 @@ public class TestSimpleExponentialForecast {
   @Test
   public void testSimpleExponentialForecastLinearInc() throws Exception {
     int res = incTestSimpleExponentialForecast();
-    Assert.assertEquals("We got the wrong estimate from simple exponential.",
-        res, 0);
+    assertEquals(res, 0, "We got the wrong estimate from simple exponential.");
   }
 
   @Test
   public void testSimpleExponentialForecastLinearDec() throws Exception {
     int res = decTestSimpleExponentialForecast();
-    Assert.assertEquals("We got the wrong estimate from simple exponential.",
-        res, 0);
+    assertEquals(res, 0, "We got the wrong estimate from simple exponential.");
   }
 
   @Test
   public void testSimpleExponentialForecastZeros() throws Exception {
     int res = zeroTestSimpleExponentialForecast();
-    Assert.assertEquals("We got the wrong estimate from simple exponential.",
-        res, 0);
+    assertEquals(res, 0, "We got the wrong estimate from simple exponential.");
   }
 }

@@ -136,6 +136,7 @@ public class SLSWebApp extends HttpServlet {
     String webRootDir = getClass().getClassLoader().getResource("html").
         toExternalForm();
     staticHandler.setResourceBase(webRootDir);
+    staticHandler.start();
 
     Handler handler = new AbstractHandler() {
       @Override

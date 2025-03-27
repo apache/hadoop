@@ -582,6 +582,9 @@ public class TestBlockTokenWithDFS {
 
     // restart the namenode to allow DFSClient to re-fetch tokens
     cluster.restartNameNode(0);
+    // Reopen closed streams
+    in1 = fs.open(fileToRead);
+    in3 = fs.open(fileToRead);
     // verify blockSeekTo() works again (by transparently re-fetching
     // tokens from namenode)
     in1.seek(0);

@@ -404,6 +404,21 @@ The following configuration properties are specific to the `zookeeper` implement
 *   `signer.secret.provider.zookeeper.kerberos.principal`: Set this to the
     Kerberos principal to use. This only required if using Kerberos.
 
+*   `signer.secret.provider.zookeeper.ssl.enabled` : Set this to true to enable SSL/TLS
+    communication between the server and Zookeeper, if the SignerSecretProvider is zookeeper.
+
+*   `signer.secret.provider.zookeeper.ssl.keystore.location` : Specifies the location of the
+    Zookeeper client's keystore file.
+
+*   `signer.secret.provider.zookeeper.ssl.keystore.password` : Specifies the location of the
+    Zookeeper client's keystore password.
+
+*   `signer.secret.provider.zookeeper.ssl.truststore.location` : Specifies the location of the
+    Zookeeper client's truststore file.
+
+*   `signer.secret.provider.zookeeper.ssl.truststore.password` : Specifies the location of the
+    Zookeeper client's truststore password.
+
 *   `signer.secret.provider.zookeeper.disconnect.on.shutdown`: Whether to close the
     ZooKeeper connection when the provider is shutdown. The default value is `true`.
     Only set this to `false` if a custom Curator client is being provided and

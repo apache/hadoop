@@ -22,8 +22,8 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.Test;
 
 public class TestMaster {
 

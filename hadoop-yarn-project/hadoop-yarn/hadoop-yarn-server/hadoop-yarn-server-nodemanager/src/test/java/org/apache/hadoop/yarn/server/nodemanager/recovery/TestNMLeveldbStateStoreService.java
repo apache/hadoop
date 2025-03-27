@@ -20,12 +20,13 @@ package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.fusesource.leveldbjni.JniDBFactory.bytes;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.isNull;
 import static org.mockito.Mockito.mock;
@@ -98,10 +99,9 @@ import org.apache.hadoop.yarn.server.security.BaseNMTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBException;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 public class TestNMLeveldbStateStoreService {
@@ -113,7 +113,7 @@ public class TestNMLeveldbStateStoreService {
   YarnConfiguration conf;
   NMLeveldbStateStoreService stateStore;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     FileUtil.fullyDelete(TMP_DIR);
     conf = new YarnConfiguration();
@@ -122,7 +122,7 @@ public class TestNMLeveldbStateStoreService {
     restartStateStore();
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws IOException {
     if (stateStore != null) {
       stateStore.close();
@@ -258,17 +258,17 @@ public class TestNMLeveldbStateStoreService {
   public void testCheckVersion() throws IOException {
     // default version
     Version defaultVersion = stateStore.getCurrentVersion();
-    Assert.assertEquals(defaultVersion, stateStore.loadVersion());
+    assertEquals(defaultVersion, stateStore.loadVersion());
 
     // compatible version
     Version compatibleVersion =
         Version.newInstance(defaultVersion.getMajorVersion(),
           defaultVersion.getMinorVersion() + 2);
     stateStore.storeVersion(compatibleVersion);
-    Assert.assertEquals(compatibleVersion, stateStore.loadVersion());
+    assertEquals(compatibleVersion, stateStore.loadVersion());
     restartStateStore();
     // overwrite the compatible version
-    Assert.assertEquals(defaultVersion, stateStore.loadVersion());
+    assertEquals(defaultVersion, stateStore.loadVersion());
 
     // incompatible version
     Version incompatibleVersion =
@@ -277,10 +277,10 @@ public class TestNMLeveldbStateStoreService {
     stateStore.storeVersion(incompatibleVersion);
     try {
       restartStateStore();
-      Assert.fail("Incompatible version, should expect fail here.");
+      fail("Incompatible version, should expect fail here.");
     } catch (ServiceStateException e) {
-      Assert.assertTrue("Exception message mismatch",
-        e.getMessage().contains("Incompatible version for NM state:"));
+      assertTrue(e.getMessage().contains("Incompatible version for NM state:"),
+          "Exception message mismatch");
     }
   }
 
@@ -591,8 +591,8 @@ public class TestNMLeveldbStateStoreService {
 
     // verify the container version key is not stored for new containers
     DB db = stateStore.getDB();
-    assertNull("version key present for new container", db.get(bytes(
-        stateStore.getContainerVersionKey(containerId.toString()))));
+    assertNull(db.get(bytes(stateStore.getContainerVersionKey(containerId.toString()))),
+        "version key present for new container");
 
     return new ContainerStateConstructParams()
         .setContainerRequest(containerReq)
@@ -1746,16 +1746,16 @@ public class TestNMLeveldbStateStoreService {
     RecoveredContainerState rcs = recoveredContainers.get(0);
     List<Serializable> resources = rcs.getResourceMappings()
         .getAssignedResources("gpu");
-    Assert.assertEquals(gpuRes1, resources);
-    Assert.assertEquals(gpuRes1, resourceMappings.getAssignedResources("gpu"));
+    assertEquals(gpuRes1, resources);
+    assertEquals(gpuRes1, resourceMappings.getAssignedResources("gpu"));
 
     resources = rcs.getResourceMappings().getAssignedResources("fpga");
-    Assert.assertEquals(fpgaRes, resources);
-    Assert.assertEquals(fpgaRes, resourceMappings.getAssignedResources("fpga"));
+    assertEquals(fpgaRes, resources);
+    assertEquals(fpgaRes, resourceMappings.getAssignedResources("fpga"));
 
     resources = rcs.getResourceMappings().getAssignedResources("numa");
-    Assert.assertEquals(numaRes, resources);
-    Assert.assertEquals(numaRes, resourceMappings.getAssignedResources("numa"));
+    assertEquals(numaRes, resources);
+    assertEquals(numaRes, resourceMappings.getAssignedResources("numa"));
     // test removing numa resources from state store
     stateStore.releaseAssignedResources(containerId, "numa");
     recoveredContainers = loadContainersState(stateStore.getContainerStateIterator());
@@ -1766,7 +1766,7 @@ public class TestNMLeveldbStateStoreService {
     try {
       stateStore.releaseAssignedResources(containerId, "numa");
     }catch (RuntimeException e){
-      Assert.fail("Should not throw exception while deleting non existing key from statestore");
+      fail("Should not throw exception while deleting non existing key from statestore");
     }
   }
 
@@ -1792,14 +1792,14 @@ public class TestNMLeveldbStateStoreService {
       // Cause should be wrapped DBException
       assertTrue(ioErr.getCause() instanceof DBException);
       // check the store is marked unhealthy
-      assertFalse("Statestore should have been unhealthy",
-          stateStore.isHealthy());
+      assertFalse(stateStore.isHealthy(),
+          "Statestore should have been unhealthy");
       return;
     } finally {
       // restore the working DB
       stateStore.setDB(keepDB);
     }
-    Assert.fail("Expected exception not thrown");
+    fail("Expected exception not thrown");
   }
 
   @Test

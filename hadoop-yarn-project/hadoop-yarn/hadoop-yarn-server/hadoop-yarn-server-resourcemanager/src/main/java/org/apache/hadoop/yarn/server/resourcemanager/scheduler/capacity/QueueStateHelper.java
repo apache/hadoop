@@ -42,7 +42,7 @@ public final class QueueStateHelper {
   public static void setQueueState(AbstractCSQueue queue) {
     QueueState previousState = queue.getState();
     QueueState configuredState = queue.getQueueContext().getConfiguration().getConfiguredState(
-        queue.getQueuePath());
+        queue.getQueuePathObject());
     QueueState parentState = (queue.getParent() == null) ? null : queue.getParent().getState();
 
     // verify that we can not any value for State other than RUNNING/STOPPED

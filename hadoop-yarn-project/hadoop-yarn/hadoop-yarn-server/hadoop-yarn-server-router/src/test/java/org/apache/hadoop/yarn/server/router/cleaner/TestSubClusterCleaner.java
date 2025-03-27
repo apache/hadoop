@@ -57,7 +57,7 @@ public class TestSubClusterCleaner {
     stateStore = new MemoryFederationStateStore();
     stateStore.init(conf);
 
-    facade = FederationStateStoreFacade.getInstance();
+    facade = FederationStateStoreFacade.getInstance(conf);
     facade.reinitialize(stateStore, conf);
 
     cleaner = new SubClusterCleaner(conf);

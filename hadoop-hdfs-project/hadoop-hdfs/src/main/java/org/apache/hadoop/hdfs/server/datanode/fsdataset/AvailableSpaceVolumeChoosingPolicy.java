@@ -209,7 +209,7 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
         leastAvailable = Math.min(leastAvailable, volume.getAvailable());
         mostAvailable = Math.max(mostAvailable, volume.getAvailable());
       }
-      return (mostAvailable - leastAvailable) < balancedSpaceThreshold;
+      return (mostAvailable - leastAvailable) <= balancedSpaceThreshold;
     }
     
     /**

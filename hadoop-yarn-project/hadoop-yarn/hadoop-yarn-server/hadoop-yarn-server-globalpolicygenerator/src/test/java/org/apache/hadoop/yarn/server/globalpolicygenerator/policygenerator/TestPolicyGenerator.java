@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator;
 
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONUnmarshaller;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.FederationPolicyManager;
@@ -43,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
@@ -51,15 +50,19 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInf
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfoList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.glassfish.jersey.jettison.JettisonConfig;
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
+import org.glassfish.jersey.jettison.JettisonUnmarshaller;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import javax.xml.bind.JAXBException;
 import java.io.IOException;
 import java.io.StringReader;
+import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -68,7 +71,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
@@ -85,8 +88,7 @@ public class TestPolicyGenerator {
 
   private Configuration conf;
   private FederationStateStore stateStore;
-  private FederationStateStoreFacade facade =
-      FederationStateStoreFacade.getInstance();
+  private FederationStateStoreFacade facade;
 
   private List<SubClusterId> subClusterIds;
   private Map<SubClusterId, SubClusterInfo> subClusterInfos;
@@ -100,13 +102,13 @@ public class TestPolicyGenerator {
   public TestPolicyGenerator() {
     conf = new Configuration();
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
-
+    facade = FederationStateStoreFacade.getInstance(conf);
     gpgContext = new GPGContextImpl();
     gpgContext.setPolicyFacade(new GPGPolicyFacade(facade, conf));
     gpgContext.setStateStoreFacade(facade);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, YarnException, JAXBException {
     subClusterIds = new ArrayList<>();
     subClusterInfos = new HashMap<>();
@@ -136,7 +138,7 @@ public class TestPolicyGenerator {
       ClusterMetricsInfo metricsInfo = new ClusterMetricsInfo();
       metricsInfo.setAppsPending(2000);
       if (!clusterInfos.containsKey(id)) {
-        clusterInfos.put(id, new HashMap<Class, Object>());
+        clusterInfos.put(id, new HashMap<>());
       }
       clusterInfos.get(id).put(ClusterMetricsInfo.class, metricsInfo);
 
@@ -153,7 +155,7 @@ public class TestPolicyGenerator {
     facade.reinitialize(stateStore, conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     stateStore.close();
     stateStore = null;
@@ -161,17 +163,14 @@ public class TestPolicyGenerator {
 
   private <T> T readJSON(String pathname, Class<T> classy)
       throws IOException, JAXBException {
-
-    JSONJAXBContext jc =
-        new JSONJAXBContext(JSONConfiguration.mapped().build(), classy);
-    JSONUnmarshaller unmarshaller = jc.createJSONUnmarshaller();
+    JettisonJaxbContext jaxbContext = new JettisonJaxbContext(JettisonConfig.DEFAULT, classy);
     String contents = new String(Files.readAllBytes(Paths.get(pathname)));
+    JettisonUnmarshaller unmarshaller = jaxbContext.createJsonUnmarshaller();
     return unmarshaller.unmarshalFromJSON(new StringReader(contents), classy);
-
   }
 
   @Test
-  public void testPolicyGenerator() throws YarnException {
+  public void testPolicyGenerator() {
     policyGenerator = new TestablePolicyGenerator();
     policyGenerator.setPolicy(mock(GlobalPolicy.class));
     policyGenerator.run();
@@ -182,7 +181,7 @@ public class TestPolicyGenerator {
   }
 
   @Test
-  public void testBlacklist() throws YarnException {
+  public void testBlacklist() {
     conf.set(YarnConfiguration.GPG_POLICY_GENERATOR_BLACKLIST,
         subClusterIds.get(0).toString());
     Map<SubClusterId, Map<Class, Object>> blacklistedCMI =
@@ -198,7 +197,7 @@ public class TestPolicyGenerator {
   }
 
   @Test
-  public void testBlacklistTwo() throws YarnException {
+  public void testBlacklistTwo() {
     conf.set(YarnConfiguration.GPG_POLICY_GENERATOR_BLACKLIST,
         subClusterIds.get(0).toString() + "," + subClusterIds.get(1)
             .toString());
@@ -238,6 +237,7 @@ public class TestPolicyGenerator {
         ArgumentCaptor.forClass(FederationPolicyManager.class);
     verify(policyGenerator.getPolicy(), times(1))
         .updatePolicy(eq("default"), eq(clusterInfos), argCaptor.capture());
+    argCaptor.getValue().setWeightedPolicyInfo(manager.getWeightedPolicyInfo());
     assertEquals(argCaptor.getValue().getClass(), manager.getClass());
     assertEquals(argCaptor.getValue().serializeConf(), manager.serializeConf());
   }
@@ -248,13 +248,13 @@ public class TestPolicyGenerator {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
 
-    final String a = CapacitySchedulerConfiguration.ROOT + ".a";
-    final String b = CapacitySchedulerConfiguration.ROOT + ".b";
-    final String a1 = a + ".a1";
-    final String a2 = a + ".a2";
-    final String b1 = b + ".b1";
-    final String b2 = b + ".b2";
-    final String b3 = b + ".b3";
+    final QueuePath a = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".a");
+    final QueuePath b = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".b");
+    final QueuePath a1 = new QueuePath(a + ".a1");
+    final QueuePath a2 = new QueuePath(a + ".a2");
+    final QueuePath b1 = new QueuePath(b + ".b1");
+    final QueuePath b2 = new QueuePath(b + ".b2");
+    final QueuePath b3 = new QueuePath(b + ".b3");
     float aCapacity = 10.5f;
     float bCapacity = 89.5f;
     float a1Capacity = 30;
@@ -264,7 +264,7 @@ public class TestPolicyGenerator {
     float b3Capacity = 20;
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    csConf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
         new String[] {"a", "b"});
 
     csConf.setCapacity(a, aCapacity);
@@ -294,56 +294,63 @@ public class TestPolicyGenerator {
     resourceManager.start();
 
     String rmAddress = WebAppUtils.getRMWebAppURLWithScheme(this.conf);
-    SchedulerTypeInfo sti = GPGUtils.invokeRMWebService(rmAddress, RMWSConsts.SCHEDULER,
-        SchedulerTypeInfo.class);
+    String webAppAddress = getServiceAddress(NetUtils.createSocketAddr(rmAddress));
 
-    Assert.assertNotNull(sti);
+    SchedulerTypeInfo sti = GPGUtils.invokeRMWebService(webAppAddress, RMWSConsts.SCHEDULER,
+        SchedulerTypeInfo.class, conf);
+
+    Assertions.assertNotNull(sti);
     SchedulerInfo schedulerInfo = sti.getSchedulerInfo();
-    Assert.assertTrue(schedulerInfo instanceof CapacitySchedulerInfo);
+    Assertions.assertTrue(schedulerInfo instanceof CapacitySchedulerInfo);
 
     CapacitySchedulerInfo capacitySchedulerInfo = (CapacitySchedulerInfo) schedulerInfo;
-    Assert.assertNotNull(capacitySchedulerInfo);
+    Assertions.assertNotNull(capacitySchedulerInfo);
 
     CapacitySchedulerQueueInfoList queues = capacitySchedulerInfo.getQueues();
-    Assert.assertNotNull(queues);
+    Assertions.assertNotNull(queues);
     ArrayList<CapacitySchedulerQueueInfo> queueInfoList = queues.getQueueInfoList();
-    Assert.assertNotNull(queueInfoList);
-    Assert.assertEquals(2, queueInfoList.size());
+    Assertions.assertNotNull(queueInfoList);
+    Assertions.assertEquals(2, queueInfoList.size());
 
     CapacitySchedulerQueueInfo queueA = queueInfoList.get(0);
-    Assert.assertNotNull(queueA);
-    Assert.assertEquals("root.a", queueA.getQueuePath());
-    Assert.assertEquals(10.5f, queueA.getCapacity(), 0.00001);
+    Assertions.assertNotNull(queueA);
+    Assertions.assertEquals("root.a", queueA.getQueuePath());
+    Assertions.assertEquals(10.5f, queueA.getCapacity(), 0.00001);
     CapacitySchedulerQueueInfoList queueAQueues = queueA.getQueues();
-    Assert.assertNotNull(queueAQueues);
+    Assertions.assertNotNull(queueAQueues);
     ArrayList<CapacitySchedulerQueueInfo> queueInfoAList = queueAQueues.getQueueInfoList();
-    Assert.assertNotNull(queueInfoAList);
-    Assert.assertEquals(2, queueInfoAList.size());
+    Assertions.assertNotNull(queueInfoAList);
+    Assertions.assertEquals(2, queueInfoAList.size());
     CapacitySchedulerQueueInfo queueA1 = queueInfoAList.get(0);
-    Assert.assertNotNull(queueA1);
-    Assert.assertEquals(30f, queueA1.getCapacity(), 0.00001);
+    Assertions.assertNotNull(queueA1);
+    Assertions.assertEquals(30f, queueA1.getCapacity(), 0.00001);
     CapacitySchedulerQueueInfo queueA2 = queueInfoAList.get(1);
-    Assert.assertNotNull(queueA2);
-    Assert.assertEquals(70f, queueA2.getCapacity(), 0.00001);
+    Assertions.assertNotNull(queueA2);
+    Assertions.assertEquals(70f, queueA2.getCapacity(), 0.00001);
 
     CapacitySchedulerQueueInfo queueB = queueInfoList.get(1);
-    Assert.assertNotNull(queueB);
-    Assert.assertEquals("root.b", queueB.getQueuePath());
-    Assert.assertEquals(89.5f, queueB.getCapacity(), 0.00001);
+    Assertions.assertNotNull(queueB);
+    Assertions.assertEquals("root.b", queueB.getQueuePath());
+    Assertions.assertEquals(89.5f, queueB.getCapacity(), 0.00001);
     CapacitySchedulerQueueInfoList queueBQueues = queueB.getQueues();
-    Assert.assertNotNull(queueBQueues);
+    Assertions.assertNotNull(queueBQueues);
     ArrayList<CapacitySchedulerQueueInfo> queueInfoBList = queueBQueues.getQueueInfoList();
-    Assert.assertNotNull(queueInfoBList);
-    Assert.assertEquals(3, queueInfoBList.size());
+    Assertions.assertNotNull(queueInfoBList);
+    Assertions.assertEquals(3, queueInfoBList.size());
     CapacitySchedulerQueueInfo queueB1 = queueInfoBList.get(0);
-    Assert.assertNotNull(queueB1);
-    Assert.assertEquals(79.2f, queueB1.getCapacity(), 0.00001);
+    Assertions.assertNotNull(queueB1);
+    Assertions.assertEquals(79.2f, queueB1.getCapacity(), 0.00001);
     CapacitySchedulerQueueInfo queueB2 = queueInfoBList.get(1);
-    Assert.assertNotNull(queueB2);
-    Assert.assertEquals(0.8f, queueB2.getCapacity(), 0.00001);
+    Assertions.assertNotNull(queueB2);
+    Assertions.assertEquals(0.8f, queueB2.getCapacity(), 0.00001);
     CapacitySchedulerQueueInfo queueB3 = queueInfoBList.get(2);
-    Assert.assertNotNull(queueB3);
-    Assert.assertEquals(20f, queueB3.getCapacity(), 0.00001);
+    Assertions.assertNotNull(queueB3);
+    Assertions.assertEquals(20f, queueB3.getCapacity(), 0.00001);
+  }
+
+  private String getServiceAddress(InetSocketAddress address) {
+    InetSocketAddress socketAddress = NetUtils.getConnectAddress(address);
+    return socketAddress.getAddress().getHostAddress() + ":" + socketAddress.getPort();
   }
 
   /**

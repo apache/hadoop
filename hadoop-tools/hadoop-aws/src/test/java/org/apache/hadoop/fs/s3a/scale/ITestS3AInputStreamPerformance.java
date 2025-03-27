@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
@@ -57,8 +58,10 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disablePrefetching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getInputStreamStatistics;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getS3AInputStream;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticMinimum;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMaximumStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMeanStatistic;
@@ -70,6 +73,7 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GE
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MAX;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MIN;
+import static org.apache.hadoop.io.Sizes.*;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /**
@@ -78,15 +82,15 @@ import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestS3AInputStreamPerformance.class);
-  private static final int READAHEAD_128K = 128 * _1KB;
+  private static final int READAHEAD_128K = S_128K;
 
   private S3AFileSystem s3aFS;
   private Path testData;
   private FileStatus testDataStatus;
   private FSDataInputStream in;
   private S3AInputStreamStatistics streamStatistics;
-  public static final int BLOCK_SIZE = 32 * 1024;
-  public static final int BIG_BLOCK_SIZE = 256 * 1024;
+  public static final int BLOCK_SIZE = S_32K;
+  public static final int BIG_BLOCK_SIZE = S_256K;
 
   private static final IOStatisticsSnapshot IOSTATS = snapshotIOStatistics();
 
@@ -97,9 +101,12 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
 
   @Override
   protected Configuration createScaleConfiguration() {
-    Configuration conf = super.createScaleConfiguration();
-    S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
-    conf.setBoolean(PREFETCH_ENABLED_KEY, false);
+    Configuration conf = disablePrefetching(super.createScaleConfiguration());
+    if (isUsingDefaultExternalDataFile(conf)) {
+      S3ATestUtils.removeBaseAndBucketOverrides(
+          conf,
+          ENDPOINT);
+    }
     return conf;
   }
 
@@ -110,9 +117,11 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   @Before
   public void openFS() throws IOException {
     Configuration conf = getConf();
-    conf.setInt(SOCKET_SEND_BUFFER, 16 * 1024);
-    conf.setInt(SOCKET_RECV_BUFFER, 16 * 1024);
-    String testFile =  conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE);
+    conf.setInt(SOCKET_SEND_BUFFER, S_16K);
+    conf.setInt(SOCKET_RECV_BUFFER, S_16K);
+    // look up the test file, no requirement to be set.
+    String testFile =  conf.getTrimmed(KEY_CSVTEST_FILE,
+        PublicDatasetTestUtils.DEFAULT_EXTERNAL_FILE);
     if (testFile.isEmpty()) {
       assumptionMessage = "Empty test property: " + KEY_CSVTEST_FILE;
       LOG.warn(assumptionMessage);
@@ -273,7 +282,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     // implicitly rounding down here
     long blockCount = len / blockSize;
     long totalToRead = blockCount * blockSize;
-    long minimumBandwidth = 128 * 1024;
+    long minimumBandwidth = S_128K;
     int maxResetCount = 4;
     int resetCount = 0;
     for (long i = 0; i < blockCount; i++) {
@@ -394,6 +403,9 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     CompressionCodecFactory factory
         = new CompressionCodecFactory(getConf());
     CompressionCodec codec = factory.getCodec(testData);
+    Assertions.assertThat(codec)
+        .describedAs("No codec found for %s", testData)
+        .isNotNull();
     long bytesRead = 0;
     int lines = 0;
 
@@ -460,22 +472,10 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     logStreamStatistics();
   }
 
-  public static final int _4K = 4 * 1024;
-  public static final int _8K = 8 * 1024;
-  public static final int _16K = 16 * 1024;
-  public static final int _32K = 32 * 1024;
-  public static final int _64K = 64 * 1024;
-  public static final int _128K = 128 * 1024;
-  public static final int _256K = 256 * 1024;
-  public static final int _1MB = 1024 * 1024;
-  public static final int _2MB = 2 * _1MB;
-  public static final int _10MB = _1MB * 10;
-  public static final int _5MB = _1MB * 5;
-
   private static final int[][] RANDOM_IO_SEQUENCE = {
-      {_2MB, _128K},
-      {_128K, _128K},
-      {_5MB, _64K},
+      {S_2M, S_128K},
+      {S_128K, S_128K},
+      {S_5M, S_64K},
       {_1MB, _1MB},
   };
 
@@ -523,14 +523,20 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
       long expectedOpenCount)
       throws IOException {
     describe("Random IO with policy \"%s\"", policy);
-    byte[] buffer = new byte[_1MB];
+    byte[] buffer = new byte[S_1M];
     long totalBytesRead = 0;
-
+    final long len = testDataStatus.getLen();
     in = openTestFile(policy, 0);
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     for (int[] action : RANDOM_IO_SEQUENCE) {
-      int position = action[0];
+      long position = action[0];
       int range = action[1];
+      // if a read goes past EOF, fail with details
+      // this will happen if the test datafile is too small.
+      Assertions.assertThat(position + range)
+          .describedAs("readFully(pos=%d range=%d) of %s",
+              position, range, testDataStatus)
+          .isLessThanOrEqualTo(len);
       in.readFully(position, buffer, 0, range);
       totalBytesRead += range;
     }
@@ -569,15 +575,15 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   public void testRandomReadOverBuffer() throws Throwable {
     describe("read over a buffer, making sure that the requests" +
         " spans readahead ranges");
-    int datasetLen = _32K;
+    int datasetLen = S_32K;
     S3AFileSystem fs = getFileSystem();
     Path dataFile = path("testReadOverBuffer.bin");
     byte[] sourceData = dataset(datasetLen, 0, 64);
     // relies on the field 'fs' referring to the R/W FS
-    writeDataset(fs, dataFile, sourceData, datasetLen, _16K, true);
+    writeDataset(fs, dataFile, sourceData, datasetLen, S_16K, true);
     byte[] buffer = new byte[datasetLen];
-    int readahead = _8K;
-    int halfReadahead = _4K;
+    int readahead = S_8K;
+    int halfReadahead = S_4K;
     in = openDataFile(fs, dataFile, S3AInputPolicy.Random, readahead, datasetLen);
 
     LOG.info("Starting initial reads");

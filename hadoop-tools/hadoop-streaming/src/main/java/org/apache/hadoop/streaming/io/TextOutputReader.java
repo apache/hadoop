@@ -21,8 +21,8 @@ package org.apache.hadoop.streaming.io;
 import java.io.DataInput;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.CharacterCodingException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -84,11 +84,7 @@ public class TextOutputReader extends OutputReader<Text, Text> {
   @Override
   public String getLastOutput() {
     if (bytes != null) {
-      try {
-        return new String(bytes, "UTF-8");
-      } catch (UnsupportedEncodingException e) {
-        return "<undecodable>";
-      }
+      return new String(bytes, StandardCharsets.UTF_8);
     } else {
       return null;
     }

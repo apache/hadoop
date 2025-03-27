@@ -288,6 +288,7 @@ For deciding where to create a new file/folder it uses the order parameter, it c
 * RANDOM: Random subcluster. This is usually useful for balancing the load across. Folders are created in all subclusters.
 * HASH_ALL: Follow consistent hashing at all the levels. This approach tries to balance the reads and writes evenly across subclusters. Folders are created in all subclusters.
 * SPACE: Try to write data in the subcluster with the most available space. Folders are created in all subclusters.
+* LEADER_FOLLOWER: Try to write data in the leader subcluster as much as possible, if failed, try follower subclusters. Folders are created in all subclusters.
 
 For the hash-based approaches, the difference is that HASH would make all the files/folders within a folder belong to the same subcluster while HASH_ALL will spread all files under a mount point.
 For example, assuming we have a HASH mount point for `/data/hash`, files and folders under `/data/hash/folder0` will all be in the same subcluster.
@@ -296,6 +297,9 @@ On the other hand, a HASH_ALL mount point for `/data/hash_all`, will spread file
 RANDOM can be used for reading and writing data from/into different subclusters.
 The common use for this approach is to have the same data in multiple subclusters and balance the reads across subclusters.
 For example, if thousands of containers need to read the same data (e.g., a library), one can use RANDOM to read the data from any of the subclusters.
+
+LEADER_FOLLOWER can be used in cross-cluster disaster tolerance, it's not for sharing overloads among sub-clusters. When using this mode like `-add /data ns2,ns1 /data -order LEADER_FOLLOWER`,
+`ns2` is considered an active subcluster and `ns1` is considered a follower subcluster. The order of namespaces is always `leader,follower,follower...`.
 
 To determine which subcluster contains a file:
 
@@ -469,6 +473,7 @@ The connection to the State Store and the internal caching at the Router.
 | dfs.federation.router.store.connection.test | 60000 | How often to check for the connection to the State Store in milliseconds. |
 | dfs.federation.router.cache.ttl | 60000 | How often to refresh the State Store caches in milliseconds. |
 | dfs.federation.router.store.membership.expiration | 300000 | Expiration time in milliseconds for a membership record. |
+| dfs.federation.router.store.driver.async.override.max.threads |  | Number of threads to overwrite and delete records asynchronously when overriding. |
 | dfs.federation.router.mount-table.cache.update | false | If true, Mount table cache is updated whenever a mount table entry is added, modified or removed for all the routers. |
 | dfs.federation.router.mount-table.cache.update.timeout | 1m | Max time to wait for all the routers to finish their mount table cache update. |
 | dfs.federation.router.mount-table.cache.update.client.max.time | 5m | Max time a RouterClient connection can be cached. |
@@ -539,7 +544,7 @@ More metrics info can see [RBF Metrics](../../hadoop-project-dist/hadoop-common/
 Router Federation Rename
 -------
 
-Enable Router to rename across namespaces. Currently it is implemented based on [HDFS Federation Balance](../../hadoop-federation-balance/HDFSFederationBalance.md) and has some limits comparing with normal rename.
+Enable Router to rename across namespaces. Currently it is implemented based on [HDFS Federation Balance](../../hadoop-federation-balance/HDFSFederationBalance.html) and has some limits comparing with normal rename.
 1. It is much slower than the normal rename so need a longer RPC timeout configuration. See `ipc.client.rpc-timeout.ms` and its description for more information about RPC timeout.
 2. It doesn't support snapshot path.
 3. It doesn't support to rename path with multiple destinations.
@@ -553,3 +558,35 @@ Enable Router to rename across namespaces. Currently it is implemented based on 
 | dfs.federation.router.federation.rename.delay | 1000 | Specify the delayed duration(millie seconds) when the job needs to retry.|
 | dfs.federation.router.federation.rename.diff | 0 | Specify the threshold of the diff entries that used in incremental copy stage.|
 | dfs.federation.router.federation.rename.trash | trash | This options has 3 values: trash (move the source path to trash), delete (delete the source path directly) and skip (skip both trash and deletion).|
+
+Asynchronous Router RPC
+-------
+Asynchronous router RPC is designed to address the performance bottlenecks of synchronous router RPC in scenarios with high concurrency and multiple named services.
+By introducing an asynchronous processing mechanism, it optimizes the request-handling process, enhances the system's concurrency capacity and resource utilization efficiency.
+
+See the Apache JIRA ticket [HDFS-17531](https://issues.apache.org/jira/browse/HDFS-17531) for more information on this feature.
+
+### Asynchronous router RPC threads
+
+- **Handler**: Retrieves ```RpcCall``` from the ```CallQueue``` for preliminary processing. In case of exceptions (such as the non-existence of the mount point),
+it directly places the response into the response queue. Otherwise, it forwards the ```RpcCall``` to the **Async-Handler**.
+- **Async-Handler**: Puts the ```RpcCall``` into the ```connection.calls``` of the connection thread and returns immediately without blocking and waiting.
+- **Async-Responder**: Is responsible for processing the response received by the connection thread. If the ```RpcCall``` needs to be retried (such as the downstream service returns a ```StandbyException```),
+it re-adds the ```RpcCall``` to the ```connection.calls```; otherwise, it puts the response into the ```ResponseQueue```.
+- **Responder**: Retrieves the response from the ```ResponseQueue``` and returns it to the client.
+
+### Advantages of the Asynchronous Router Rpc
+
+- **High Processing Performance**: Benefiting from the asynchronous RPC (Remote Procedure Call) processing mechanism, the asynchronous router is capable of handling a large number of requests simultaneously.
+This not only significantly enhances the system's concurrent processing capacity but also optimizes the overall throughput. This mechanism enables the system to respond rapidly to high - traffic requests and maintain efficient operation even under high - load conditions.
+- **High Resource Utilization**: The asynchronous design effectively reduces thread blocking and frequent thread switching. As a result, it minimizes the resource waste associated with threads, thereby improving the overall efficiency of the system and reducing CPU idle time.
+- **Isolation**: Different name-services employ distinct asynchronous processor thread pools. This architecture achieves isolation among name-services. If a particular name-service experiences a performance degradation,
+it will not impact the processing capabilities of other name-services, ensuring the stability and reliability of the entire system.
+
+### Asynchronous Router Rpc configuration
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.async.rpc.enable | false | If true, router will process the ```RpcCall``` asynchronously. |
+| dfs.federation.router.async.rpc.ns.handler.count |  | The number of async-handlers per nameservice, separated by commas, internally separated by colons.  The identifier of nameservice is in dfs.nameservices configuration entry. Such as: ns1:count1,ns2:count2,ns3:count3. |
+| dfs.federation.router.async.rpc.handler.count | 10 | For those nameservices not in dfs.federation.router.async.rpc.ns.handler.count configuration entry, use this value as the async-handler counts. |
+| dfs.federation.router.async.rpc.responder.count | 10 | The thread counts of async-responders. |

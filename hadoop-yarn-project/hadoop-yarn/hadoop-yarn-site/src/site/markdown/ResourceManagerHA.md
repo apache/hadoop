@@ -56,7 +56,7 @@ Most of the failover functionality is tunable using various configuration proper
 
 | Configuration Properties | Description |
 |:---- |:---- |
-| `hadoop.zk.address` | Address of the ZK-quorum. Used both for the state-store and embedded leader-election. |
+| `yarn.resourcemanager.zk-address` | Address of the ZK-quorum. Used both for the state-store and embedded leader-election. |
 | `yarn.resourcemanager.ha.enabled` | Enable RM HA. |
 | `yarn.resourcemanager.ha.rm-ids` | List of logical IDs for the RMs. e.g., "rm1,rm2". |
 | `yarn.resourcemanager.hostname.`*rm-id* | For each *rm-id*, specify the hostname the RM corresponds to. Alternately, one could set each of the RM's service addresses. |
@@ -112,7 +112,7 @@ Here is the sample of minimal setup for RM failover.
   <value>master2:8088</value>
 </property>
 <property>
-  <name>hadoop.zk.address</name>
+  <name>yarn.resourcemanager.zk-address</name>
   <value>zk1:2181,zk2:2181,zk3:2181</value>
 </property>
 ```

@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -34,7 +35,6 @@ import java.util.TreeMap;
 import org.apache.hadoop.examples.pi.math.Bellard;
 import org.apache.hadoop.examples.pi.math.Bellard.Parameter;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /** A class for parsing outputs */
 public final class Parser {
@@ -80,7 +80,7 @@ public final class Parser {
         m.put(p, new ArrayList<TaskResult>());
 
       final BufferedReader in = new BufferedReader(
-          new InputStreamReader(new FileInputStream(f), Charsets.UTF_8)); 
+          new InputStreamReader(new FileInputStream(f), StandardCharsets.UTF_8));
       try {
         for(String line; (line = in.readLine()) != null; )
           try {
@@ -137,7 +137,7 @@ public final class Parser {
 
         final PrintWriter out = new PrintWriter(
             new OutputStreamWriter(new FileOutputStream(
-                new File(outputdir, p + ".txt")), Charsets.UTF_8), true);
+                new File(outputdir, p + ".txt")), StandardCharsets.UTF_8), true);
         try {
           for(int i = 0; i < results.size(); i++)
             out.println(DistSum.taskResult2string(p + "." + i, results.get(i)));

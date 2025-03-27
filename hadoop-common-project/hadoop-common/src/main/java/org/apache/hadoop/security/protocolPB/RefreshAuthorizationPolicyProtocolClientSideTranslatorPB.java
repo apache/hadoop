@@ -21,16 +21,14 @@ package org.apache.hadoop.security.protocolPB;
 import java.io.Closeable;
 import java.io.IOException;
 
-import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.security.proto.RefreshAuthorizationPolicyProtocolProtos.RefreshServiceAclRequestProto;
-import org.apache.hadoop.security.protocolPB.RefreshAuthorizationPolicyProtocolPB;
-
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+
+import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 
 public class RefreshAuthorizationPolicyProtocolClientSideTranslatorPB implements
     ProtocolMetaInterface, RefreshAuthorizationPolicyProtocol, Closeable {
@@ -55,12 +53,8 @@ public class RefreshAuthorizationPolicyProtocolClientSideTranslatorPB implements
 
   @Override
   public void refreshServiceAcl() throws IOException {
-    try {
-      rpcProxy.refreshServiceAcl(NULL_CONTROLLER,
-          VOID_REFRESH_SERVICE_ACL_REQUEST);
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    ipc(() -> rpcProxy.refreshServiceAcl(NULL_CONTROLLER,
+        VOID_REFRESH_SERVICE_ACL_REQUEST));
   }
 
   @Override

@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a.auth.delegation;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -304,7 +304,7 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
    * @return a password.
    */
   protected static byte[] getSecretManagerPasssword() {
-    return "non-password".getBytes(Charset.forName("UTF-8"));
+    return "non-password".getBytes(StandardCharsets.UTF_8);
   }
 
   /**

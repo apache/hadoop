@@ -30,13 +30,13 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.mockito.Mockito;
 
@@ -89,7 +89,7 @@ public class TestDtUtilShell {
   private DtUtilShell dt = null;
   private int rc = 0;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     localFs.mkdirs(localFs.makeQualified(workDir));
     makeTokenFile(tokenFile, false, null);
@@ -102,7 +102,7 @@ public class TestDtUtilShell {
     rc = 0;
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     localFs.delete(localFs.makeQualified(workDir), true);
   }
@@ -128,40 +128,40 @@ public class TestDtUtilShell {
   public void testPrint() throws Exception {
     args = new String[] {"print", tokenFilename};
     rc = dt.run(args);
-    assertEquals("test simple print exit code", 0, rc);
-    assertTrue("test simple print output kind:\n" + outContent.toString(),
-               outContent.toString().contains(KIND.toString()));
-    assertTrue("test simple print output service:\n" + outContent.toString(),
-               outContent.toString().contains(SERVICE.toString()));
+    assertEquals(0, rc, "test simple print exit code");
+    assertTrue(outContent.toString().contains(KIND.toString()),
+        "test simple print output kind:\n" + outContent.toString());
+    assertTrue(outContent.toString().contains(SERVICE.toString()),
+        "test simple print output service:\n" + outContent.toString());
 
     outContent.reset();
     args = new String[] {"print", tokenLegacyFile.toString()};
     rc = dt.run(args);
-    assertEquals("test legacy print exit code", 0, rc);
-    assertTrue("test simple print output kind:\n" + outContent.toString(),
-               outContent.toString().contains(KIND.toString()));
-    assertTrue("test simple print output service:\n" + outContent.toString(),
-               outContent.toString().contains(SERVICE.toString()));
+    assertEquals(0, rc, "test legacy print exit code");
+    assertTrue(outContent.toString().contains(KIND.toString()),
+        "test simple print output kind:\n" + outContent.toString());
+    assertTrue(outContent.toString().contains(SERVICE.toString()),
+        "test simple print output service:\n" + outContent.toString());
 
     outContent.reset();
     args = new String[] {
         "print", "-alias", SERVICE.toString(), tokenFilename};
     rc = dt.run(args);
-    assertEquals("test alias print exit code", 0, rc);
-    assertTrue("test simple print output kind:\n" + outContent.toString(),
-               outContent.toString().contains(KIND.toString()));
-    assertTrue("test simple print output service:\n" + outContent.toString(),
-               outContent.toString().contains(SERVICE.toString()));
+    assertEquals(0, rc, "test alias print exit code");
+    assertTrue(outContent.toString().contains(KIND.toString()),
+        "test simple print output kind:\n" + outContent.toString());
+    assertTrue(outContent.toString().contains(SERVICE.toString()),
+        "test simple print output service:\n" + outContent.toString());
 
     outContent.reset();
     args = new String[] {
         "print", "-alias", "not-a-serivce", tokenFilename};
     rc = dt.run(args);
-    assertEquals("test no alias print exit code", 0, rc);
-    assertFalse("test no alias print output kind:\n" + outContent.toString(),
-                outContent.toString().contains(KIND.toString()));
-    assertFalse("test no alias print output service:\n" + outContent.toString(),
-                outContent.toString().contains(SERVICE.toString()));
+    assertEquals(0, rc, "test no alias print exit code");
+    assertFalse(outContent.toString().contains(KIND.toString()),
+        "test no alias print output kind:\n" + outContent.toString());
+    assertFalse(outContent.toString().contains(SERVICE.toString()),
+        "test no alias print output service:\n" + outContent.toString());
   }
 
   @Test
@@ -171,66 +171,66 @@ public class TestDtUtilShell {
     args = new String[] {"edit",
         "-service", oldService, "-alias", newAlias, tokenFilename2};
     rc = dt.run(args);
-    assertEquals("test simple edit exit code", 0, rc);
+    assertEquals(0, rc, "test simple edit exit code");
     args = new String[] {"print", "-alias", oldService, tokenFilename2};
     rc = dt.run(args);
-    assertEquals("test simple edit print old exit code", 0, rc);
-    assertTrue("test simple edit output kind old:\n" + outContent.toString(),
-               outContent.toString().contains(KIND.toString()));
-    assertTrue("test simple edit output service old:\n" + outContent.toString(),
-               outContent.toString().contains(oldService));
+    assertEquals(0, rc, "test simple edit print old exit code");
+    assertTrue(outContent.toString().contains(KIND.toString()),
+        "test simple edit output kind old:\n" + outContent.toString());
+    assertTrue(outContent.toString().contains(oldService),
+        "test simple edit output service old:\n" + outContent.toString());
     args = new String[] {"print", "-alias", newAlias, tokenFilename2};
     rc = dt.run(args);
-    assertEquals("test simple edit print new exit code", 0, rc);
-    assertTrue("test simple edit output kind new:\n" + outContent.toString(),
-               outContent.toString().contains(KIND.toString()));
-    assertTrue("test simple edit output service new:\n" + outContent.toString(),
-               outContent.toString().contains(newAlias));
+    assertEquals(0, rc, "test simple edit print new exit code");
+    assertTrue(outContent.toString().contains(KIND.toString()),
+        "test simple edit output kind new:\n" + outContent.toString());
+    assertTrue(outContent.toString().contains(newAlias),
+        "test simple edit output service new:\n" + outContent.toString());
   }
 
   @Test
   public void testAppend() throws Exception {
     args = new String[] {"append", tokenFilename, tokenFilename2};
     rc = dt.run(args);
-    assertEquals("test simple append exit code", 0, rc);
+    assertEquals(0, rc, "test simple append exit code");
     args = new String[] {"print", tokenFilename2};
     rc = dt.run(args);
-    assertEquals("test simple append print exit code", 0, rc);
-    assertTrue("test simple append output kind:\n" + outContent.toString(),
-               outContent.toString().contains(KIND.toString()));
-    assertTrue("test simple append output service:\n" + outContent.toString(),
-               outContent.toString().contains(SERVICE.toString()));
-    assertTrue("test simple append output service:\n" + outContent.toString(),
-               outContent.toString().contains(SERVICE2.toString()));
+    assertEquals(0, rc, "test simple append print exit code");
+    assertTrue(outContent.toString().contains(KIND.toString()),
+        "test simple append output kind:\n" + outContent.toString());
+    assertTrue(outContent.toString().contains(SERVICE.toString()),
+        "test simple append output service:\n" + outContent.toString());
+    assertTrue(outContent.toString().contains(SERVICE2.toString()),
+        "test simple append output service:\n" + outContent.toString());
   }
 
   @Test
   public void testRemove() throws Exception {
     args = new String[] {"remove", "-alias", SERVICE.toString(), tokenFilename};
     rc = dt.run(args);
-    assertEquals("test simple remove exit code", 0, rc);
+    assertEquals(0, rc, "test simple remove exit code");
     args = new String[] {"print", tokenFilename};
     rc = dt.run(args);
-    assertEquals("test simple remove print exit code", 0, rc);
-    assertFalse("test simple remove output kind:\n" + outContent.toString(),
-                outContent.toString().contains(KIND.toString()));
-    assertFalse("test simple remove output service:\n" + outContent.toString(),
-                outContent.toString().contains(SERVICE.toString()));
+    assertEquals(0, rc, "test simple remove print exit code");
+    assertFalse(outContent.toString().contains(KIND.toString()),
+        "test simple remove output kind:\n" + outContent.toString());
+    assertFalse(outContent.toString().contains(SERVICE.toString()),
+        "test simple remove output service:\n" + outContent.toString());
   }
 
   @Test
   public void testGet() throws Exception {
     args = new String[] {"get", getUrl, tokenFilenameGet};
     rc = dt.run(args);
-    assertEquals("test mocked get exit code", 0, rc);
+    assertEquals(0, rc, "test mocked get exit code");
     args = new String[] {"print", tokenFilenameGet};
     rc = dt.run(args);
     String oc = outContent.toString();
-    assertEquals("test print after get exit code", 0, rc);
-    assertTrue("test print after get output kind:\n" + oc,
-               oc.contains(KIND_GET.toString()));
-    assertTrue("test print after get output service:\n" + oc,
-               oc.contains(SERVICE_GET.toString()));
+    assertEquals(0, rc, "test print after get exit code");
+    assertTrue(oc.contains(KIND_GET.toString()),
+        "test print after get output kind:\n" + oc);
+    assertTrue(oc.contains(SERVICE_GET.toString()),
+        "test print after get output service:\n" + oc);
   }
 
   @Test
@@ -238,39 +238,39 @@ public class TestDtUtilShell {
     args = new String[] {"get", getUrl2, "-service", SERVICE_GET.toString(),
                          tokenFilenameGet};
     rc = dt.run(args);
-    assertEquals("test mocked get with service flag exit code", 0, rc);
+    assertEquals(0, rc, "test mocked get with service flag exit code");
     args = new String[] {"print", tokenFilenameGet};
     rc = dt.run(args);
     String oc = outContent.toString();
-    assertEquals("test print after get with service flag exit code", 0, rc);
-    assertTrue("test print after get with service flag output kind:\n" + oc,
-               oc.contains(KIND_GET.toString()));
-    assertTrue("test print after get with service flag output service:\n" + oc,
-               oc.contains(SERVICE_GET.toString()));
+    assertEquals(0, rc, "test print after get with service flag exit code");
+    assertTrue(oc.contains(KIND_GET.toString()),
+        "test print after get with service flag output kind:\n" + oc);
+    assertTrue(oc.contains(SERVICE_GET.toString()),
+        "test print after get with service flag output service:\n" + oc);
   }
 
   @Test
   public void testGetWithAliasFlag() throws Exception {
     args = new String[] {"get", getUrl, "-alias", alias, tokenFilenameGet};
     rc = dt.run(args);
-    assertEquals("test mocked get with alias flag exit code", 0, rc);
+    assertEquals(0, rc, "test mocked get with alias flag exit code");
     args = new String[] {"print", tokenFilenameGet};
     rc = dt.run(args);
     String oc = outContent.toString();
-    assertEquals("test print after get with alias flag exit code", 0, rc);
-    assertTrue("test print after get with alias flag output kind:\n" + oc,
-               oc.contains(KIND_GET.toString()));
-    assertTrue("test print after get with alias flag output alias:\n" + oc,
-               oc.contains(alias));
-    assertFalse("test print after get with alias flag output old service:\n" +
-                oc, oc.contains(SERVICE_GET.toString()));
+    assertEquals(0, rc, "test print after get with alias flag exit code");
+    assertTrue(oc.contains(KIND_GET.toString()),
+        "test print after get with alias flag output kind:\n" + oc);
+    assertTrue(oc.contains(alias),
+        "test print after get with alias flag output alias:\n" + oc);
+    assertFalse(oc.contains(SERVICE_GET.toString()),
+        "test print after get with alias flag output old service:\n" + oc);
   }
 
   @Test
   public void testFormatJavaFlag() throws Exception {
     args = new String[] {"get", getUrl, "-format", "java", tokenFilenameGet};
     rc = dt.run(args);
-    assertEquals("test mocked get with java format flag exit code", 0, rc);
+    assertEquals(0, rc, "test mocked get with java format flag exit code");
     Credentials creds = new Credentials();
     Credentials spyCreds = Mockito.spy(creds);
     DataInputStream in = new DataInputStream(
@@ -284,7 +284,7 @@ public class TestDtUtilShell {
     args = new String[] {
         "get", getUrl, "-format", "protobuf", tokenFilenameGet};
     rc = dt.run(args);
-    assertEquals("test mocked get with protobuf format flag exit code", 0, rc);
+    assertEquals(0, rc, "test mocked get with protobuf format flag exit code");
     Credentials creds = new Credentials();
     Credentials spyCreds = Mockito.spy(creds);
     DataInputStream in = new DataInputStream(
@@ -298,17 +298,17 @@ public class TestDtUtilShell {
     String base64 = IMPORT_TOKEN.encodeToUrlString();
     args = new String[] {"import", base64, tokenFilenameImport};
     rc = dt.run(args);
-    assertEquals("test simple import print old exit code", 0, rc);
+    assertEquals(0, rc, "test simple import print old exit code");
 
     args = new String[] {"print", tokenFilenameImport};
     rc = dt.run(args);
-    assertEquals("test simple import print old exit code", 0, rc);
-    assertTrue("test print after import output:\n" + outContent,
-               outContent.toString().contains(KIND_IMPORT.toString()));
-    assertTrue("test print after import output:\n" + outContent,
-        outContent.toString().contains(SERVICE_IMPORT.toString()));
-    assertTrue("test print after simple import output:\n" + outContent,
-               outContent.toString().contains(base64));
+    assertEquals(0, rc, "test simple import print old exit code");
+    assertTrue(outContent.toString().contains(KIND_IMPORT.toString()),
+        "test print after import output:\n" + outContent);
+    assertTrue(outContent.toString().contains(SERVICE_IMPORT.toString()),
+        "test print after import output:\n" + outContent);
+    assertTrue(outContent.toString().contains(base64),
+        "test print after simple import output:\n" + outContent);
   }
 
   @Test
@@ -317,14 +317,14 @@ public class TestDtUtilShell {
     args = new String[] {"import", base64, "-alias", alias,
         tokenFilenameImport};
     rc = dt.run(args);
-    assertEquals("test import with alias print old exit code", 0, rc);
+    assertEquals(0, rc, "test import with alias print old exit code");
 
     args = new String[] {"print", tokenFilenameImport};
     rc = dt.run(args);
-    assertEquals("test simple import print old exit code", 0, rc);
-    assertTrue("test print after import output:\n" + outContent,
-               outContent.toString().contains(KIND_IMPORT.toString()));
-    assertTrue("test print after import with alias output:\n" + outContent,
-               outContent.toString().contains(alias));
+    assertEquals(0, rc, "test simple import print old exit code");
+    assertTrue(outContent.toString().contains(KIND_IMPORT.toString()),
+        "test print after import output:\n" + outContent);
+    assertTrue(outContent.toString().contains(alias),
+        "test print after import with alias output:\n" + outContent);
   }
 }

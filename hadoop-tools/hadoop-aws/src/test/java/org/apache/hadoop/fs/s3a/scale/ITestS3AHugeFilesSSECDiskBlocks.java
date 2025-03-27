@@ -19,9 +19,9 @@
 package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.AWSUnsupportedFeatureException;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
-import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 import java.nio.file.AccessDeniedException;
 
@@ -31,6 +31,7 @@ import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionTestsDisabled;
 
 /**
@@ -54,8 +55,9 @@ public class ITestS3AHugeFilesSSECDiskBlocks
   public void setup() throws Exception {
     try {
       super.setup();
-      skipIfEncryptionTestsDisabled(getConfiguration());
-    } catch (AccessDeniedException e) {
+      skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
+          "Analytics Accelerator currently does not support SSE-C");
+    } catch (AccessDeniedException | AWSUnsupportedFeatureException e) {
       skip("Bucket does not allow " + S3AEncryptionMethods.SSE_C + " encryption method");
     }
   }
@@ -67,7 +69,7 @@ public class ITestS3AHugeFilesSSECDiskBlocks
     removeBaseAndBucketOverrides(conf, S3_ENCRYPTION_KEY,
         S3_ENCRYPTION_ALGORITHM, SERVER_SIDE_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_KEY);
-    S3ATestUtils.disableFilesystemCaching(conf);
+    skipIfEncryptionTestsDisabled(conf);
     conf.set(Constants.S3_ENCRYPTION_ALGORITHM,
         getSSEAlgorithm().getMethod());
     conf.set(Constants.S3_ENCRYPTION_KEY, KEY_1);

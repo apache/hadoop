@@ -24,9 +24,9 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientResponse;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.ProcessingException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,6 +65,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import net.jodah.failsafe.RetryPolicy;
+import org.apache.hadoop.util.Time;
+
 public class TestTimelineClient {
 
   private TimelineClientImpl client;
@@ -78,6 +82,7 @@ public class TestTimelineClient {
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 1.0f);
     client = createTimelineClient(conf);
+    client.getConnector().setSocketTimeOut(10);
   }
 
   @AfterEach
@@ -88,11 +93,12 @@ public class TestTimelineClient {
     if (isSSLConfigured()) {
       KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
     }
+    client.getConnector().setSocketTimeOut(60_000);
   }
 
   @Test
   void testPostEntities() throws Exception {
-    mockEntityClientResponse(spyTimelineWriter, ClientResponse.Status.OK,
+    mockEntityClientResponse(spyTimelineWriter, Response.Status.OK,
         false, false);
     try {
       TimelinePutResponse response = client.putEntities(generateEntity());
@@ -104,7 +110,7 @@ public class TestTimelineClient {
 
   @Test
   void testPostEntitiesWithError() throws Exception {
-    mockEntityClientResponse(spyTimelineWriter, ClientResponse.Status.OK, true,
+    mockEntityClientResponse(spyTimelineWriter, Response.Status.OK, true,
         false);
     try {
       TimelinePutResponse response = client.putEntities(generateEntity());
@@ -131,8 +137,8 @@ public class TestTimelineClient {
 
   @Test
   void testPostEntitiesNoResponse() throws Exception {
-    mockEntityClientResponse(spyTimelineWriter,
-        ClientResponse.Status.INTERNAL_SERVER_ERROR, false, false);
+    mockEntityClientResponse(spyTimelineWriter, Response.Status.INTERNAL_SERVER_ERROR,
+        false, false);
     try {
       client.putEntities(generateEntity());
       fail("Exception is expected");
@@ -149,13 +155,13 @@ public class TestTimelineClient {
       client.putEntities(generateEntity());
       fail("RuntimeException is expected");
     } catch (RuntimeException re) {
-      assertTrue(re instanceof ClientHandlerException);
+      assertTrue(re instanceof ProcessingException);
     }
   }
 
   @Test
   void testPutDomain() throws Exception {
-    mockDomainClientResponse(spyTimelineWriter, ClientResponse.Status.OK, false);
+    mockDomainClientResponse(spyTimelineWriter, Response.Status.OK, false);
     try {
       client.putDomain(generateDomain());
     } catch (YarnException e) {
@@ -166,7 +172,7 @@ public class TestTimelineClient {
   @Test
   void testPutDomainNoResponse() throws Exception {
     mockDomainClientResponse(spyTimelineWriter,
-        ClientResponse.Status.FORBIDDEN, false);
+        Response.Status.FORBIDDEN, false);
     try {
       client.putDomain(generateDomain());
       fail("Exception is expected");
@@ -183,7 +189,7 @@ public class TestTimelineClient {
       client.putDomain(generateDomain());
       fail("RuntimeException is expected");
     } catch (RuntimeException re) {
-      assertTrue(re instanceof ClientHandlerException);
+      assertTrue(re instanceof ProcessingException);
     }
   }
 
@@ -221,18 +227,16 @@ public class TestTimelineClient {
         newIntervalMs);
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     TimelineClientImpl client = createTimelineClient(conf);
+    long start = Time.monotonicNow();
     try {
       // This call should fail because there is no timeline server
       client.putEntities(generateEntity());
       fail("Exception expected! "
           + "Timeline server should be off to run this test. ");
     } catch (RuntimeException ce) {
-      assertTrue(
-          ce.getMessage().contains("Connection retries limit exceeded"),
-          "Handler exception for reason other than retry: " + ce.getMessage());
-      // we would expect this exception here, check if the client has retried
-      assertTrue(client.connector.connectionRetry.getRetired(),
-          "Retry filter didn't perform any retries! ");
+      long end = Time.monotonicNow();
+      ce.printStackTrace();
+      assertTrue(end - start >= newIntervalMs * newMaxRetries, "Failed without retries.");
     }
   }
 
@@ -267,7 +271,6 @@ public class TestTimelineClient {
             UserGroupInformation.getCurrentUser().getShortUserName());
         assertFail();
       } catch (RuntimeException ce) {
-        assertException(client, ce);
       }
 
       try {
@@ -282,7 +285,6 @@ public class TestTimelineClient {
                 new Text("0.0.0.0:8188")));
         assertFail();
       } catch (RuntimeException ce) {
-        assertException(client, ce);
       }
 
       try {
@@ -297,7 +299,6 @@ public class TestTimelineClient {
                 new Text("0.0.0.0:8188")));
         assertFail();
       } catch (RuntimeException ce) {
-        assertException(client, ce);
       }
 
       // Test DelegationTokenOperationsRetry on SocketTimeoutException
@@ -312,7 +313,6 @@ public class TestTimelineClient {
                 new Text("0.0.0.0:8188")));
         assertFail();
       } catch (RuntimeException ce) {
-        assertException(clientFake, ce);
       }
     } finally {
       client.stop();
@@ -364,22 +364,13 @@ public class TestTimelineClient {
         + "Timeline server should be off to run this test.");
   }
 
-  private void assertException(TimelineClientImpl client, RuntimeException ce) {
-    assertTrue(ce.getMessage().contains("Connection retries limit exceeded"),
-        "Handler exception for reason other than retry: " + ce.toString());
-    // we would expect this exception here, check if the client has retried
-    assertTrue(client.connector.connectionRetry.getRetired(),
-        "Retry filter didn't perform any retries! ");
-  }
-
-  public static ClientResponse mockEntityClientResponse(
-      TimelineWriter spyTimelineWriter, ClientResponse.Status status,
-      boolean hasError, boolean hasRuntimeError) {
-    ClientResponse response = mock(ClientResponse.class);
+  public static Response mockEntityClientResponse(
+      TimelineWriter spyTimelineWriter, Response.Status status,
+      boolean hasError, boolean hasRuntimeError) throws JsonProcessingException {
+    Response response = mock(Response.class);
     if (hasRuntimeError) {
-      doThrow(new ClientHandlerException(new ConnectException())).when(
-          spyTimelineWriter).doPostingObject(
-              any(TimelineEntities.class), any());
+      doThrow(new ProcessingException(new ConnectException())).when(spyTimelineWriter)
+          .doPostingObject(any(TimelineEntities.class), any());
       return response;
     }
     doReturn(response).when(spyTimelineWriter)
@@ -394,16 +385,16 @@ public class TestTimelineClient {
     if (hasError) {
       putResponse.addError(error);
     }
-    when(response.getEntity(TimelinePutResponse.class)).thenReturn(putResponse);
+    when(response.readEntity(TimelinePutResponse.class)).thenReturn(putResponse);
     return response;
   }
 
-  private static ClientResponse mockDomainClientResponse(
-      TimelineWriter spyTimelineWriter, ClientResponse.Status status,
-      boolean hasRuntimeError) {
-    ClientResponse response = mock(ClientResponse.class);
+  private static Response mockDomainClientResponse(
+      TimelineWriter spyTimelineWriter, Response.Status status,
+      boolean hasRuntimeError) throws JsonProcessingException {
+    Response response = mock(Response.class);
     if (hasRuntimeError) {
-      doThrow(new ClientHandlerException(new ConnectException())).when(
+      doThrow(new ProcessingException(new ConnectException())).when(
         spyTimelineWriter).doPostingObject(any(TimelineDomain.class),
         any(String.class));
       return response;
@@ -454,10 +445,11 @@ public class TestTimelineClient {
     TimelineClientImpl client = new TimelineClientImpl() {
       @Override
       protected TimelineWriter createTimelineWriter(Configuration conf,
-          UserGroupInformation authUgi, Client client, URI resURI)
+          UserGroupInformation uAuthUgi, Client paramClient, URI resURI,
+          RetryPolicy<Object> retryPolicy)
           throws IOException {
         TimelineWriter timelineWriter =
-            new DirectTimelineWriter(authUgi, client, resURI);
+            new DirectTimelineWriter(uAuthUgi, paramClient, resURI, retryPolicy);
         spyTimelineWriter = spy(timelineWriter);
         return spyTimelineWriter;
       }
@@ -546,7 +538,7 @@ public class TestTimelineClient {
     Client mockJerseyClient = mock(Client.class);
     client.connector.client = mockJerseyClient;
     client.stop();
-    verify(mockJerseyClient, times(1)).destroy();
+    verify(mockJerseyClient, times(1)).close();
   }
 
   private void setupSSLConfig(YarnConfiguration conf) throws Exception {

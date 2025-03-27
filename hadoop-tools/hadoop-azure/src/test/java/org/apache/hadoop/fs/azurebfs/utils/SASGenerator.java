@@ -29,6 +29,10 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
+
 /**
  * Test SAS generator.
  */
@@ -54,10 +58,8 @@ public abstract class SASGenerator {
   protected static final Logger LOG = LoggerFactory.getLogger(SASGenerator.class);
   public static final Duration FIVE_MINUTES = Duration.ofMinutes(5);
   public static final Duration ONE_DAY = Duration.ofDays(1);
-  public static final DateTimeFormatter ISO_8601_FORMATTER =
-      DateTimeFormatter
-          .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT)
-          .withZone(ZoneId.of("UTC"));
+  public static final DateTimeFormatter ISO_8601_FORMATTER = DateTimeFormatter
+      .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT).withZone(ZoneId.of("UTC"));
 
   private Mac hmacSha256;
   private byte[] key;
@@ -68,7 +70,7 @@ public abstract class SASGenerator {
 
   /**
    * Called by subclasses to initialize the cryptographic SHA-256 HMAC provider.
-   * @param key - a 256-bit secret key
+   * @param key - a 256-bit secret key.
    */
   protected SASGenerator(byte[] key) {
     this.key = key;
@@ -82,6 +84,26 @@ public abstract class SASGenerator {
       hmacSha256.init(new SecretKeySpec(key, "HmacSHA256"));
     } catch (final Exception e) {
       throw new IllegalArgumentException(e);
+    }
+  }
+
+  protected String getCanonicalAccountName(String accountName) throws
+      InvalidConfigurationValueException {
+    // returns the account name without the endpoint
+    // given account names with endpoint have the format accountname.endpoint
+    // For example, input of xyz.dfs.core.windows.net should return "xyz" only
+    int dotIndex = accountName.indexOf(AbfsHttpConstants.DOT);
+    if (dotIndex == 0) {
+      // case when accountname starts with a ".": endpoint is present, accountName is null
+      // for example .dfs.azure.com, which is invalid
+      throw new InvalidConfigurationValueException("Account Name is not fully qualified");
+    }
+    if (dotIndex > 0) {
+      // case when endpoint is present with accountName
+      return accountName.substring(0, dotIndex);
+    } else {
+      // case when accountName is already canonicalized
+      return accountName;
     }
   }
 

@@ -112,8 +112,6 @@ public class YarnConfiguration extends Configuration {
             SYSTEM_METRICS_PUBLISHER_ENABLED),
         new DeprecationDelta(RM_ZK_ACL, CommonConfigurationKeys.ZK_ACL),
         new DeprecationDelta(RM_ZK_AUTH, CommonConfigurationKeys.ZK_AUTH),
-        new DeprecationDelta(RM_ZK_ADDRESS,
-            CommonConfigurationKeys.ZK_ADDRESS),
         new DeprecationDelta(RM_ZK_NUM_RETRIES,
             CommonConfigurationKeys.ZK_NUM_RETRIES),
         new DeprecationDelta(RM_ZK_TIMEOUT_MS,
@@ -150,7 +148,11 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_LOG_CONTAINER_DEBUG_INFO =
       YarnConfiguration.NM_PREFIX + "log-container-debug-info.enabled";
 
+  public static final String NM_LOG_CONTAINER_DEBUG_INFO_ON_ERROR =
+      YarnConfiguration.NM_PREFIX + "log-container-debug-info-on-error.enabled";
+
   public static final boolean DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO = true;
+  public static final boolean DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO_ON_ERROR = false;
 
   ////////////////////////////////
   // IPC Configs
@@ -517,7 +519,7 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_YARN_INTERMEDIATE_DATA_ENCRYPTION = false;
 
   /** The address of the RM admin interface.*/
-  public static final String RM_ADMIN_ADDRESS = 
+  public static final String RM_ADMIN_ADDRESS =
     RM_PREFIX + "admin.address";
   public static final int DEFAULT_RM_ADMIN_PORT = 8033;
   public static final String DEFAULT_RM_ADMIN_ADDRESS = "0.0.0.0:" +
@@ -852,6 +854,10 @@ public class YarnConfiguration extends Configuration {
 
   /** Zookeeper interaction configs */
   public static final String RM_ZK_PREFIX = RM_PREFIX + "zk-";
+
+  /** Enable Zookeeper SSL/TLS communication. */
+  public static final String RM_ZK_CLIENT_SSL_ENABLED = RM_ZK_PREFIX + "client-ssl.enabled";
+  public static final boolean DEFAULT_RM_ZK_CLIENT_SSL_ENABLED = false;
 
   public static final String RM_ZK_ADDRESS = RM_ZK_PREFIX + "address";
 
@@ -1272,6 +1278,13 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT = 3600;
 
   /**
+   * Enable/disable tracking of unregistered nodes.
+   **/
+  public static final String ENABLE_TRACKING_FOR_UNREGISTERED_NODES =
+      RM_PREFIX + "enable-tracking-for-unregistered-nodes";
+  public static final boolean DEFAULT_ENABLE_TRACKING_FOR_UNREGISTERED_NODES = false;
+
+  /**
    * Period in seconds of the poll timer task inside DecommissioningNodesWatcher
    * to identify and take care of DECOMMISSIONING nodes missing regular heart beat.
    */
@@ -1523,6 +1536,17 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "max-log-aggregation-diagnostics-in-memory";
   public static final int DEFAULT_RM_MAX_LOG_AGGREGATION_DIAGNOSTICS_IN_MEMORY =
       10;
+
+  /**
+   * The configuration key for enabling or disabling the auto-correction of container allocation.
+   */
+  public static final String RM_SCHEDULER_AUTOCORRECT_CONTAINER_ALLOCATION = RM_PREFIX
+      + "scheduler.autocorrect.container.allocation";
+
+  /**
+   * Default value: {@value}.
+   */
+  public static final boolean DEFAULT_RM_SCHEDULER_AUTOCORRECT_CONTAINER_ALLOCATION = false;
 
   /** Whether to enable log aggregation */
   public static final String LOG_AGGREGATION_ENABLED = YARN_PREFIX
@@ -2152,15 +2176,18 @@ public class YarnConfiguration extends Configuration {
       NM_DISK_HEALTH_CHECK_PREFIX + "min-free-space-per-disk-mb";
 
   /**
+   * By default, all the disk can be used before it is marked as offline.
+   */
+  public static final long DEFAULT_NM_MIN_PER_DISK_FREE_SPACE_MB = 0;
+
+  /**
    * Enable/Disable the minimum disk free
    * space threshold for disk health checker.
    */
   public static final String NM_DISK_FREE_SPACE_THRESHOLD_ENABLED =
-      NM_DISK_HEALTH_CHECK_PREFIX +
-          "disk-free-space-threshold.enabled";
+      NM_DISK_HEALTH_CHECK_PREFIX + "disk-free-space-threshold.enabled";
 
-  public static final boolean
-      DEFAULT_NM_DISK_FREE_SPACE_THRESHOLD_ENABLED = true;
+  public static final boolean DEFAULT_NM_DISK_FREE_SPACE_THRESHOLD_ENABLED = true;
 
   /**
    * The minimum space that must be available on an offline
@@ -2174,9 +2201,13 @@ public class YarnConfiguration extends Configuration {
       NM_DISK_HEALTH_CHECK_PREFIX +
           "min-free-space-per-disk-watermark-high-mb";
   /**
-   * By default, all of the disk can be used before it is marked as offline.
+   * Validate content of the node manager directories can be accessed.
    */
-  public static final long DEFAULT_NM_MIN_PER_DISK_FREE_SPACE_MB = 0;
+  public static final String NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_ENABLED =
+      NM_DISK_HEALTH_CHECK_PREFIX + "working-dir-content-accessibility-validation.enabled";
+
+  public static final boolean DEFAULT_NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_ENABLED =
+      false;
 
   /** The health checker scripts. */
   public static final String NM_HEALTH_CHECK_SCRIPTS =
@@ -2223,6 +2254,21 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "container-localizer.java.opts";
   public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT =
       "-Xmx256m";
+
+  /** The admin JVM options used on forking ContainerLocalizer process
+      by container executor. */
+  public static final String NM_CONTAINER_LOCALIZER_ADMIN_JAVA_OPTS_KEY =
+      NM_PREFIX + "container-localizer.admin.java.opts";
+
+  public static final String NM_CONTAINER_LOCALIZER_ADMIN_JAVA_OPTS_DEFAULT = "";
+
+  /*
+   * Flag to indicate whether JDK17's required add-exports flags should be added to
+   * container localizers regardless of the user specified JAVA_OPTS.
+   */
+  public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_KEY =
+      NM_PREFIX + "container-localizer.java.opts.add-exports-as-default";
+  public static final boolean NM_CONTAINER_LOCALIZER_JAVA_OPTS_ADD_EXPORTS_DEFAULT = true;
 
   /** The log level of container localizer process. */
   public static final String NM_CONTAINER_LOCALIZER_LOG_LEVEL=
@@ -2710,6 +2756,10 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH =
     NM_PREFIX + "linux-container-executor.cgroups.mount-path";
 
+  /** Where the linux container executor should mount cgroups v2 if not found. */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_V2_MOUNT_PATH =
+      NM_PREFIX + "linux-container-executor.cgroups.v2.mount-path";
+
   /**
    * Whether the apps should run in strict resource usage mode(not allowed to
    * use spare CPU)
@@ -2780,6 +2830,14 @@ public class YarnConfiguration extends Configuration {
 
   public static final long DEFAULT_NM_LINUX_CONTAINER_CGROUPS_DELETE_DELAY =
       20;
+
+  /**
+   * Boolean indicating whether cgroup v2 is enabled.
+   */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_V2_ENABLED =
+      NM_PREFIX + "linux-container-executor.cgroups.v2.enabled";
+
+  public static final boolean DEFAULT_NM_LINUX_CONTAINER_CGROUPS_V2_ENABLED = false;
 
   /**
    * Indicates if memory and CPU limits will be set for the Windows Job
@@ -4003,10 +4061,17 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_FEDERATION_STATESTORE_CLIENT_CLASS =
       "org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore";
 
+  public static final String FEDERATION_STATESTORE_ZK_ADDRESS =
+      FEDERATION_PREFIX + "state-store.zk.address";
+
   public static final String FEDERATION_CACHE_TIME_TO_LIVE_SECS =
       FEDERATION_PREFIX + "cache-ttl.secs";
   // 5 minutes
   public static final int DEFAULT_FEDERATION_CACHE_TIME_TO_LIVE_SECS = 5 * 60;
+
+  public static final String FEDERATION_CACHE_ENTITY_NUMS =
+      FEDERATION_PREFIX + "cache-entity.nums";
+  public static final int DEFAULT_FEDERATION_CACHE_ENTITY_NUMS = 1000;
 
   public static final String FEDERATION_FLUSH_CACHE_FOR_RM_ADDR =
       FEDERATION_PREFIX + "flush-cache-for-rm-addr";
@@ -4353,6 +4418,22 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME =
       TimeUnit.SECONDS.toMillis(0); // 0s
 
+  /**
+   * This method configures the policy for core threads regarding termination
+   * when no tasks arrive within the keep-alive time.
+   * When set to false, core threads are never terminated due to a lack of tasks.
+   * When set to true, the same keep-alive policy
+   * that applies to non-core threads also applies to core threads.
+   * To prevent constant thread replacement,
+   * ensure that the keep-alive time is greater than zero when setting it to true.
+   * It's advisable to call this method before the pool becomes actively used.
+   */
+  public static final String ROUTER_USER_CLIENT_THREAD_POOL_ALLOW_CORE_THREAD_TIMEOUT =
+      ROUTER_PREFIX + "interceptor.user-thread-pool.allow-core-thread-time-out";
+
+  public static final boolean DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_ALLOW_CORE_THREAD_TIMEOUT =
+      false;
+
   /** The address of the Router web application. */
   public static final String ROUTER_WEBAPP_ADDRESS =
       ROUTER_WEBAPP_PREFIX + "address";
@@ -4401,6 +4482,9 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED =
       false;
 
+  public static final String ROUTER_WEBAPP_PROXY_ENABLE = ROUTER_WEBAPP_PREFIX + "proxy.enable";
+  public static final boolean DEFAULT_ROUTER_WEBAPP_PROXY_ENABLE = true;
+
   private static final String FEDERATION_GPG_PREFIX = FEDERATION_PREFIX + "gpg.";
 
   // The number of threads to use for the GPG scheduled executor service
@@ -4428,6 +4512,31 @@ public class YarnConfiguration extends Configuration {
   /** The Kerberos principal hostname for the yarn gpg.*/
   public static final String GPG_KERBEROS_PRINCIPAL_HOSTNAME_KEY = FEDERATION_GPG_PREFIX +
       "kerberos.principal.hostname";
+
+  // The application cleaner class to use
+  public static final String GPG_APPCLEANER_CLASS =
+      FEDERATION_GPG_PREFIX + "application.cleaner.class";
+  public static final String DEFAULT_GPG_APPCLEANER_CLASS =
+      "org.apache.hadoop.yarn.server.globalpolicygenerator"
+          + ".applicationcleaner.DefaultApplicationCleaner";
+
+  // The interval at which the application cleaner runs, -1 means disabled
+  public static final String GPG_APPCLEANER_INTERVAL_MS =
+      FEDERATION_GPG_PREFIX + "application.cleaner.interval-ms";
+  public static final long DEFAULT_GPG_APPCLEANER_INTERVAL_MS = TimeUnit.SECONDS.toMillis(-1);
+
+  /**
+   * Specifications on how (many times) to contact Router for apps. We need to
+   * do this because Router might return partial application list because some
+   * sub-cluster RM is not responsive (e.g. failing over).
+   *
+   * Should have three values separated by comma: minimal success retries,
+   * maximum total retry, retry interval (ms).
+   */
+  public static final String GPG_APPCLEANER_CONTACT_ROUTER_SPEC =
+      FEDERATION_GPG_PREFIX + "application.cleaner.contact.router.spec";
+  public static final String DEFAULT_GPG_APPCLEANER_CONTACT_ROUTER_SPEC =
+      "3,10,600000";
 
   public static final String FEDERATION_GPG_POLICY_PREFIX =
       FEDERATION_GPG_PREFIX + "policy.generator.";
@@ -4504,6 +4613,11 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_GPG_WEBAPP_HTTPS_PORT = 8070;
   public static final String DEFAULT_GPG_WEBAPP_HTTPS_ADDRESS =
       "0.0.0.0:" + DEFAULT_GPG_WEBAPP_HTTPS_PORT;
+
+  public static final String GPG_WEBAPP_CONNECT_TIMEOUT = GPG_WEBAPP_PREFIX + "connect-timeout";
+  public static final long DEFAULT_GPG_WEBAPP_CONNECT_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
+  public static final String GPG_WEBAPP_READ_TIMEOUT = GPG_WEBAPP_PREFIX + "read-timeout";
+  public static final long DEFAULT_GPG_WEBAPP_READ_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
 
   /**
    * Connection and Read timeout from the Router to RM.

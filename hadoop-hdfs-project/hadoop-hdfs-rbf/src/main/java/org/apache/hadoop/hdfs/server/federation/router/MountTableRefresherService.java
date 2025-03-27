@@ -75,7 +75,7 @@ public class MountTableRefresherService extends AbstractService {
 
   /**
    * All router admin clients cached. So no need to create the client again and
-   * again. Router admin address(host:port) is used as key to cache RouterClient
+   * again. Router admin address(host:port or ip:port) is used as key to cache RouterClient
    * objects.
    */
   private LoadingCache<String, RouterClient> routerClientsCache;
@@ -102,8 +102,13 @@ public class MountTableRefresherService extends AbstractService {
     this.mountTableStore = getMountTableStore();
     // Attach this service to mount table store.
     this.mountTableStore.setRefreshService(this);
-    this.localAdminAddress =
-        StateStoreUtils.getHostPortString(router.getAdminServerAddress());
+    if (conf.getBoolean(RBFConfigKeys.DFS_ROUTER_HEARTBEAT_WITH_IP_ENABLE,
+        RBFConfigKeys.DFS_ROUTER_HEARTBEAT_WITH_IP_ENABLE_DEFAULT)) {
+      this.localAdminAddress = StateStoreUtils.getIpPortString(router.getAdminServerAddress());
+    } else {
+      this.localAdminAddress = StateStoreUtils.getHostPortString(router.getAdminServerAddress());
+    }
+    LOG.info("Initialized MountTableRefresherService with addr: {}", this.localAdminAddress);
     this.cacheUpdateTimeout = conf.getTimeDuration(
         RBFConfigKeys.MOUNT_TABLE_CACHE_UPDATE_TIMEOUT,
         RBFConfigKeys.MOUNT_TABLE_CACHE_UPDATE_TIMEOUT_DEFAULT,
@@ -220,7 +225,7 @@ public class MountTableRefresherService extends AbstractService {
     List<MountTableRefresherThread> refreshThreads = new ArrayList<>();
     for (RouterState routerState : cachedRecords) {
       String adminAddress = routerState.getAdminAddress();
-      if (adminAddress == null || adminAddress.length() == 0) {
+      if (adminAddress == null || adminAddress.isEmpty()) {
         // this router has not enabled router admin.
         continue;
       }
@@ -237,11 +242,13 @@ public class MountTableRefresherService extends AbstractService {
          * RouterClient
          */
         refreshThreads.add(getLocalRefresher(adminAddress));
+        LOG.debug("Added local refresher for {}", adminAddress);
       } else {
         try {
           RouterClient client = routerClientsCache.get(adminAddress);
           refreshThreads.add(new MountTableRefresherThread(
               client.getMountTableManager(), adminAddress));
+          LOG.debug("Added remote refresher for {}", adminAddress);
         } catch (ExecutionException execExcep) {
           // Can not connect, seems router is stopped now.
           LOG.warn(ROUTER_CONNECT_ERROR_MSG, adminAddress, execExcep);
@@ -296,6 +303,7 @@ public class MountTableRefresherService extends AbstractService {
       if (mountTableRefreshThread.isSuccess()) {
         successCount++;
       } else {
+        LOG.debug("Failed to refresh {}", mountTableRefreshThread.getAdminAddress());
         failureCount++;
         // remove RouterClient from cache so that new client is created
         removeFromCache(mountTableRefreshThread.getAdminAddress());

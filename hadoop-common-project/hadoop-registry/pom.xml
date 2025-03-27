@@ -19,12 +19,12 @@
   <parent>
     <artifactId>hadoop-project</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.4.0-SNAPSHOT</version>
+    <version>3.5.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-registry</artifactId>
-  <version>3.4.0-SNAPSHOT</version>
+  <version>3.5.0-SNAPSHOT</version>
   <name>Apache Hadoop Registry</name>
 
   <dependencies>
@@ -233,7 +233,7 @@
       <configuration>
         <reuseForks>false</reuseForks>
         <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
-        <argLine>-Xmx1024m -XX:+HeapDumpOnOutOfMemoryError</argLine>
+        <argLine>${maven-surefire-plugin.argLine} -Xmx1024m -XX:+HeapDumpOnOutOfMemoryError</argLine>
         <environmentVariables>
           <!-- HADOOP_HOME required for tests on Windows to find winutils -->
           <HADOOP_HOME>${hadoop.common.build.dir}</HADOOP_HOME>

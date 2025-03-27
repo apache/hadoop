@@ -18,7 +18,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-main</artifactId>
-  <version>3.4.0-SNAPSHOT</version>
+  <version>3.5.0-SNAPSHOT</version>
   <description>Apache Hadoop Main</description>
   <name>Apache Hadoop Main</name>
   <packaging>pom</packaging>
@@ -56,6 +56,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
       <id>${distMgmtSnapshotsId}</id>
       <name>${distMgmtSnapshotsName}</name>
       <url>${distMgmtSnapshotsUrl}</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
     </repository>
     <repository>
       <id>repository.jboss.org</id>
@@ -68,7 +71,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
 
   <licenses>
     <license>
-      <name>Apache License, Version 2.0</name>
+      <name>Apache-2.0</name>
       <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
     </license>
   </licenses>
@@ -80,7 +83,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
 
   <properties>
     <!-- required as child projects with different version can't use ${project.version} -->
-    <hadoop.version>3.4.0-SNAPSHOT</hadoop.version>
+    <hadoop.version>3.5.0-SNAPSHOT</hadoop.version>
+
+    <docker.image>apache/hadoop:${project.version}</docker.image>
 
     <distMgmtSnapshotsId>apache.snapshots.https</distMgmtSnapshotsId>
     <distMgmtSnapshotsName>Apache Development Snapshot Repository</distMgmtSnapshotsName>
@@ -100,7 +105,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <maven-antrun-plugin.version>1.7</maven-antrun-plugin.version>
     <maven-assembly-plugin.version>2.4</maven-assembly-plugin.version>
     <maven-dependency-plugin.version>3.0.2</maven-dependency-plugin.version>
-    <maven-enforcer-plugin.version>3.0.0</maven-enforcer-plugin.version>
+    <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
     <restrict-imports.enforcer.version>2.0.0</restrict-imports.enforcer.version>
     <maven-javadoc-plugin.version>3.0.1</maven-javadoc-plugin.version>
     <maven-gpg-plugin.version>1.5</maven-gpg-plugin.version>
@@ -118,7 +123,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <spotbugs-maven-plugin.version>4.2.0</spotbugs-maven-plugin.version>
     <jsonschema2pojo-maven-plugin.version>1.1.1</jsonschema2pojo-maven-plugin.version>
     <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
-    <cyclonedx.version>2.7.6</cyclonedx.version>
+    <cyclonedx.version>2.7.10</cyclonedx.version>
+    <docker-maven-plugin.version>0.29.0</docker-maven-plugin.version>
 
     <shell-executable>bash</shell-executable>
 
@@ -149,6 +155,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-dependency-plugin</artifactId>
           <version>${maven-dependency-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>io.fabric8</groupId>
+          <artifactId>docker-maven-plugin</artifactId>
+          <version>${docker-maven-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -223,6 +234,14 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                     <bannedImports>
                       <bannedImport>org.apache.hadoop.thirdparty.com.google.common.io.BaseEncoding</bannedImport>
                       <bannedImport>org.apache.hadoop.thirdparty.com.google.common.io.BaseEncoding.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports>
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use java.nio.charset.StandardCharsets rather than Guava provided Charsets</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Charsets</bannedImport>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Charsets.**</bannedImport>
                     </bannedImports>
                   </restrictImports>
                   <restrictImports>
@@ -884,5 +903,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
       </activation>
     </profile>
 
+    <profile>
+      <id>docker-build</id>
+      <properties>
+        <docker.image>${user.name}/hadoop:${project.version}</docker.image>
+      </properties>
+    </profile>
   </profiles>
 </project>

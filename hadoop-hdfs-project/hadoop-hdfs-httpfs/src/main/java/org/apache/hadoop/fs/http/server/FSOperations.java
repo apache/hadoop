@@ -2396,4 +2396,32 @@ public final class FSOperations {
       return ecCodecs;
     }
   }
+
+  /**
+   * Executor that performs a FSGetTrashRoots operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSGetTrashRoots
+      implements FileSystemAccess.FileSystemExecutor<Map> {
+    final private boolean allUsers;
+
+    public FSGetTrashRoots(boolean allUsers) {
+      this.allUsers = allUsers;
+    }
+
+    @Override
+    public Map execute(FileSystem fs) throws IOException {
+      Map<String, Collection<FileStatus>> paths = new HashMap<>();
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        paths.put("Paths", dfs.getTrashRoots(allUsers));
+      } else {
+        throw new UnsupportedOperationException("getTrashRoots is " +
+            "not supported for HttpFs on " + fs.getClass() +
+            ". Please check your fs.defaultFS configuration");
+      }
+      HttpFSServerWebApp.get().getMetrics().incrOpsTrashRoots();
+      return paths;
+    }
+  }
 }

@@ -21,15 +21,16 @@ package org.apache.hadoop.fs.s3a.tools;
 import java.io.IOException;
 import java.util.List;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
 import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteException;
+
 
 /**
  * Operations which must be offered by the store for {@link MarkerTool}.
@@ -62,14 +63,14 @@ public interface MarkerToolOperations {
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
    * be deleted in a multiple object delete operation.
-   * @throws AmazonClientException amazon-layer failure.
+   * @throws AwsServiceException amazon-layer failure.
    * @throws IOException other IO Exception.
    */
   @Retries.RetryMixed
   void removeKeys(
-      List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+      List<ObjectIdentifier> keysToDelete,
       boolean deleteFakeDir)
-      throws MultiObjectDeleteException, AmazonClientException,
+      throws MultiObjectDeleteException, AwsServiceException,
              IOException;
 
 }

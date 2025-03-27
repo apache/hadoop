@@ -65,6 +65,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.FsDatasetTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -1083,7 +1084,7 @@ public class TestFileTruncate {
     INodeFile file = iip.getLastINode().asFile();
     long initialGenStamp = file.getLastBlock().getGenerationStamp();
     // Test that prepareFileForTruncate sets up in-place truncate.
-    fsn.writeLock();
+    fsn.writeLock(RwLockMode.GLOBAL);
     try {
       Block oldBlock = file.getLastBlock();
       Block truncateBlock = FSDirTruncateOp.prepareFileForTruncate(fsn, iip,
@@ -1103,7 +1104,7 @@ public class TestFileTruncate {
       fsn.getEditLog().logTruncate(
           src, client, clientMachine, BLOCK_SIZE-1, Time.now(), truncateBlock);
     } finally {
-      fsn.writeUnlock();
+      fsn.writeUnlock(RwLockMode.GLOBAL, "testTruncateRecovery");
     }
 
     // Re-create file and ensure we are ready to copy on truncate
@@ -1117,7 +1118,7 @@ public class TestFileTruncate {
         (BlockInfoContiguous) file.getLastBlock()), is(true));
     initialGenStamp = file.getLastBlock().getGenerationStamp();
     // Test that prepareFileForTruncate sets up copy-on-write truncate
-    fsn.writeLock();
+    fsn.writeLock(RwLockMode.GLOBAL);
     try {
       Block oldBlock = file.getLastBlock();
       Block truncateBlock = FSDirTruncateOp.prepareFileForTruncate(fsn, iip,
@@ -1137,7 +1138,7 @@ public class TestFileTruncate {
       fsn.getEditLog().logTruncate(
           src, client, clientMachine, BLOCK_SIZE-1, Time.now(), truncateBlock);
     } finally {
-      fsn.writeUnlock();
+      fsn.writeUnlock(RwLockMode.GLOBAL, "testTruncateRecovery");
     }
     checkBlockRecovery(srcPath);
     fs.deleteSnapshot(parent, "ss0");

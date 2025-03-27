@@ -23,6 +23,9 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import javax.inject.Named;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -40,6 +43,7 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskAttemptResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.KillTaskAttemptRequestPBImpl;
@@ -79,18 +83,20 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
 import org.apache.hadoop.util.Preconditions;
-import com.google.inject.Inject;
 
+
+@Singleton
 @Path("/ws/v1/mapreduce")
 public class AMWebServices {
   private final AppContext appCtx;
   private final App app;
   private final MRClientService service;
 
-  private @Context HttpServletResponse response;
+  @Context
+  private HttpServletResponse response;
   
   @Inject
-  public AMWebServices(final App app, final AppContext context) {
+  public AMWebServices(final @Named("app") App app, final @Named("am") AppContext context) {
     this.appCtx = context;
     this.app = app;
     this.service = new MRClientService(context);
@@ -113,9 +119,17 @@ public class AMWebServices {
     response.setContentType(null);
   }
 
-  /**
-   * convert a job id string to an actual job and handle all the error checking.
-   */
+  public static Job getJobFromContainerIdString(String cid, AppContext appCtx)
+      throws NotFoundException {
+    //example container_e06_1724414851587_0004_01_000001
+    String[] parts = cid.split("_");
+    return getJobFromJobIdString(JobID.JOB + "_" + parts[2] + "_" + parts[3], appCtx);
+  }
+
+
+    /**
+     * convert a job id string to an actual job and handle all the error checking.
+     */
  public static Job getJobFromJobIdString(String jid, AppContext appCtx) throws NotFoundException {
     JobId jobId;
     Job job;

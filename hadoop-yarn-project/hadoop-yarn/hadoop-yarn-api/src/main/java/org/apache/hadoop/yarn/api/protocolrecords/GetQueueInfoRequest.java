@@ -46,6 +46,19 @@ public abstract class GetQueueInfoRequest {
     return request;
   }
 
+  @Public
+  @Stable
+  public static GetQueueInfoRequest newInstance(String queueName, boolean includeApplications,
+      boolean includeChildQueues, boolean recursive, String subClusterId) {
+    GetQueueInfoRequest request = Records.newRecord(GetQueueInfoRequest.class);
+    request.setQueueName(queueName);
+    request.setIncludeApplications(includeApplications);
+    request.setIncludeChildQueues(includeChildQueues);
+    request.setRecursive(recursive);
+    request.setSubClusterId(subClusterId);
+    return request;
+  }
+
   /**
    * Get the <em>queue name</em> for which to get queue information.
    * @return <em>queue name</em> for which to get queue information
@@ -114,5 +127,21 @@ public abstract class GetQueueInfoRequest {
   @Public
   @Stable
   public abstract void setRecursive(boolean recursive);
+
+  /**
+   * Get SubClusterId.
+   * @return SubClusterId.
+   */
+  @Public
+  @Stable
+  public abstract String getSubClusterId();
+
+  /**
+   * Set SubClusterId.
+   * @param subClusterId SubClusterId.
+   */
+  @Public
+  @Stable
+  public abstract void setSubClusterId(String subClusterId);
 }
 

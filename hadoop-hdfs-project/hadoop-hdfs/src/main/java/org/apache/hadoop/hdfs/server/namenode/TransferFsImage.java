@@ -311,7 +311,7 @@ public class TransferFsImage {
       ImageServlet.setVerificationHeadersForPut(connection, imageFile);
 
       // Write the file to output stream.
-      writeFileToPutRequest(conf, connection, imageFile, canceler);
+      writeFileToPutRequest(conf, connection, imageFile, canceler, chunkSize);
 
       int responseCode = connection.getResponseCode();
       if (responseCode != HttpURLConnection.HTTP_OK) {
@@ -330,7 +330,8 @@ public class TransferFsImage {
   }
 
   private static void writeFileToPutRequest(Configuration conf,
-      HttpURLConnection connection, File imageFile, Canceler canceler)
+      HttpURLConnection connection, File imageFile, Canceler canceler,
+      int bufferSize)
       throws IOException {
     connection.setRequestProperty(Util.CONTENT_TYPE, "application/octet-stream");
     connection.setRequestProperty(Util.CONTENT_TRANSFER_ENCODING, "binary");
@@ -338,7 +339,7 @@ public class TransferFsImage {
     FileInputStream input = new FileInputStream(imageFile);
     try {
       copyFileToStream(output, imageFile, input,
-          ImageServlet.getThrottler(conf), canceler);
+          ImageServlet.getThrottler(conf), canceler, bufferSize);
     } finally {
       IOUtils.closeStream(input);
       IOUtils.closeStream(output);
@@ -352,13 +353,14 @@ public class TransferFsImage {
   public static void copyFileToStream(OutputStream out, File localfile,
       FileInputStream infile, DataTransferThrottler throttler)
     throws IOException {
-    copyFileToStream(out, localfile, infile, throttler, null);
+    copyFileToStream(out, localfile, infile, throttler, null, -1);
   }
 
   private static void copyFileToStream(OutputStream out, File localfile,
       FileInputStream infile, DataTransferThrottler throttler,
-      Canceler canceler) throws IOException {
-    byte buf[] = new byte[IO_FILE_BUFFER_SIZE];
+      Canceler canceler, int bufferSize) throws IOException {
+    int bufSize = bufferSize > 0 ? bufferSize : IO_FILE_BUFFER_SIZE;
+    byte[] buf = new byte[bufSize];
     long total = 0;
     int num = 1;
     IOException ioe = null;
@@ -369,13 +371,13 @@ public class TransferFsImage {
           .aboutToSendFile(localfile);
 
       if (CheckpointFaultInjector.getInstance().
-            shouldSendShortFile(localfile)) {
-          // Test sending image shorter than localfile
-          long len = localfile.length();
-          buf = new byte[(int)Math.min(len/2, IO_FILE_BUFFER_SIZE)];
-          // This will read at most half of the image
-          // and the rest of the image will be sent over the wire
-          infile.read(buf);
+          shouldSendShortFile(localfile)) {
+        // Test sending image shorter than localfile
+        long len = localfile.length();
+        buf = new byte[(int) Math.min(len / 2, bufSize)];
+        // This will read at most half of the image
+        // and the rest of the image will be sent over the wire
+        infile.read(buf);
       }
       while (num > 0) {
         if (canceler != null && canceler.isCancelled()) {

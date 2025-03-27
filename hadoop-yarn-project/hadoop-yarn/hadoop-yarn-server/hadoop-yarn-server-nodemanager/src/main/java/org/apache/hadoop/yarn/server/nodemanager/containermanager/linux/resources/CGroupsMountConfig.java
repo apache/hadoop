@@ -26,11 +26,17 @@ public class CGroupsMountConfig {
   private final boolean enableMount;
   private final String mountPath;
 
+  // CGroups v2 mount path is only relevant in mixed CGroups v1/v2 mode,
+  // where v2 is mounted alongside with v1.
+  private final String v2MountPath;
+
   public CGroupsMountConfig(Configuration conf) {
     this.enableMount = conf.getBoolean(YarnConfiguration.
         NM_LINUX_CONTAINER_CGROUPS_MOUNT, false);
     this.mountPath = conf.get(YarnConfiguration.
         NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH, null);
+    this.v2MountPath = conf.get(YarnConfiguration.
+        NM_LINUX_CONTAINER_CGROUPS_V2_MOUNT_PATH, mountPath);
   }
 
   public boolean ensureMountPathIsDefined() throws ResourceHandlerException {
@@ -62,11 +68,16 @@ public class CGroupsMountConfig {
     return mountPath;
   }
 
+  public String getV2MountPath() {
+    return v2MountPath;
+  }
+
   @Override
   public String toString() {
     return "CGroupsMountConfig{" +
         "enableMount=" + enableMount +
-        ", mountPath='" + mountPath + '\'' +
+        ", mountPath='" + mountPath +
+        ", v2MountPath='" + v2MountPath + '\'' +
         '}';
   }
 }

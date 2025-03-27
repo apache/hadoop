@@ -22,14 +22,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.impl.WeakReferenceThreadMap;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test {@link WeakReferenceMap} and {@link WeakReferenceThreadMap}.
@@ -50,7 +50,7 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
    */
   private List<Integer> lostReferences;
 
-  @Before
+  @BeforeEach
   public void setup() {
     lostReferences = new ArrayList<>();
     referenceMap = new WeakReferenceMap<>(
@@ -156,12 +156,12 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
         id -> "Entry for thread ID " + id + " (" + created.incrementAndGet() + ")",
         id -> lost.incrementAndGet());
 
-    Assertions.assertThat(threadMap.setForCurrentThread("hello"))
+    assertThat(threadMap.setForCurrentThread("hello"))
         .describedAs("current thread map value on first set")
         .isNull();
 
     // second attempt returns itself
-    Assertions.assertThat(threadMap.setForCurrentThread("hello"))
+    assertThat(threadMap.setForCurrentThread("hello"))
         .describedAs("current thread map value on second set")
         .isEqualTo("hello");
 
@@ -170,30 +170,30 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
         threadMap.setForCurrentThread(null));
 
     // the map is unchanged
-    Assertions.assertThat(threadMap.getForCurrentThread())
+    assertThat(threadMap.getForCurrentThread())
         .describedAs("current thread map value")
         .isEqualTo("hello");
 
     // remove the value and assert what the removed entry was
-    Assertions.assertThat(threadMap.removeForCurrentThread())
+    assertThat(threadMap.removeForCurrentThread())
         .describedAs("removed thread map value")
         .isEqualTo("hello");
 
     // remove the value again; this time the removed value is null
-    Assertions.assertThat(threadMap.removeForCurrentThread())
+    assertThat(threadMap.removeForCurrentThread())
         .describedAs("removed thread map value on second call")
         .isNull();
 
     // lookup will return a new instance created by the factory
     long c1 = created.get();
     String dynamicValue = threadMap.getForCurrentThread();
-    Assertions.assertThat(dynamicValue)
+    assertThat(dynamicValue)
         .describedAs("dynamically created thread map value")
         .startsWith("Entry for thread ID")
         .contains("(" + (c1 + 1) + ")");
 
     // and we can overwrite that
-    Assertions.assertThat(threadMap.setForCurrentThread("hello2"))
+    assertThat(threadMap.setForCurrentThread("hello2"))
         .describedAs("value before the thread entry is changed")
         .isEqualTo(dynamicValue);
 
@@ -201,10 +201,10 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
     long threadId = threadMap.currentThreadId();
     threadMap.put(threadId, null);
     String updated = threadMap.getForCurrentThread();
-    Assertions.assertThat(lost.get())
+    assertThat(lost.get())
         .describedAs("lost count")
         .isEqualTo(1);
-    Assertions.assertThat(updated)
+    assertThat(updated)
         .describedAs("dynamically created thread map value")
         .startsWith("Entry for thread ID")
         .contains("(" + (c1 + 2) + ")");
@@ -217,7 +217,7 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
    * @param val expected value
    */
   private void assertMapEntryEquals(int key, String val) {
-    Assertions.assertThat(referenceMap.get(key))
+    assertThat(referenceMap.get(key))
         .describedAs("map enty of key %d", key)
         .isEqualTo(val);
   }
@@ -227,7 +227,7 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
    * @param key key
    */
   private void assertMapContainsKey(int key) {
-    Assertions.assertThat(referenceMap.containsKey(key))
+    assertThat(referenceMap.containsKey(key))
         .describedAs("map entry of key %d should be present", key)
         .isTrue();
   }
@@ -237,7 +237,7 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
    * @param key key
    */
   private void assertMapDoesNotContainKey(int key) {
-    Assertions.assertThat(referenceMap.containsKey(key))
+    assertThat(referenceMap.containsKey(key))
         .describedAs("map enty of key %d should be absent", key)
         .isFalse();
   }
@@ -247,7 +247,7 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
    * @param size expected size.
    */
   private void assertMapSize(int size) {
-    Assertions.assertThat(referenceMap.size())
+    assertThat(referenceMap.size())
         .describedAs("size of map %s", referenceMap)
         .isEqualTo(size);
   }
@@ -257,7 +257,7 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
    * @param count expected count.
    */
   private void assertPruned(int count) {
-    Assertions.assertThat(referenceMap.prune())
+    assertThat(referenceMap.prune())
         .describedAs("number of entries pruned from map %s", referenceMap)
         .isEqualTo(count);
   }
@@ -267,7 +267,7 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
    * @param count expected count.
    */
   private void assertLostCount(int count) {
-    Assertions.assertThat(lostReferences)
+    assertThat(lostReferences)
         .describedAs("number of entries lost from map %s", referenceMap)
         .hasSize(count);
   }

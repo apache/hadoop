@@ -29,8 +29,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import java.util.zip.CRC32;
 
@@ -52,9 +54,9 @@ import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
+import static org.apache.hadoop.fs.VectoredReadUtils.validateAndSortRanges;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.impl.StoreImplementationUtils.isProbeForSyncable;
-import static org.apache.hadoop.fs.VectoredReadUtils.sortRanges;
 
 /****************************************************************
  * Abstract Checksumed FileSystem.
@@ -425,41 +427,38 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     }
 
     /**
-     * Validates range parameters.
-     * In case of CheckSum FS, we already have calculated
-     * fileLength so failing fast here.
-     * @param ranges requested ranges.
-     * @param fileLength length of file.
-     * @throws EOFException end of file exception.
+     * Vectored read.
+     * If the file has no checksums: delegate to the underlying stream.
+     * If the file is checksummed: calculate the checksum ranges as
+     * well as the data ranges, read both, and validate the checksums
+     * as well as returning the data.
+     * @param ranges the byte ranges to read
+     * @param allocate the function to allocate ByteBuffer
+     * @throws IOException
      */
-    private void validateRangeRequest(List<? extends FileRange> ranges,
-                                      final long fileLength) throws EOFException {
-      for (FileRange range : ranges) {
-        VectoredReadUtils.validateRangeRequest(range);
-        if (range.getOffset() + range.getLength() > fileLength) {
-          final String errMsg = String.format("Requested range [%d, %d) is beyond EOF for path %s",
-                  range.getOffset(), range.getLength(), file);
-          LOG.warn(errMsg);
-          throw new EOFException(errMsg);
-        }
-      }
-    }
-
     @Override
     public void readVectored(List<? extends FileRange> ranges,
                              IntFunction<ByteBuffer> allocate) throws IOException {
-      final long length = getFileLength();
-      validateRangeRequest(ranges, length);
+      readVectored(ranges, allocate, (b) -> { });
+    }
+
+    @Override
+    public void readVectored(final List<? extends FileRange> ranges,
+        final IntFunction<ByteBuffer> allocate,
+        final Consumer<ByteBuffer> release) throws IOException {
 
       // If the stream doesn't have checksums, just delegate.
       if (sums == null) {
         datas.readVectored(ranges, allocate);
         return;
       }
+      final long length = getFileLength();
+      final List<? extends FileRange> sorted = validateAndSortRanges(ranges,
+          Optional.of(length));
       int minSeek = minSeekForVectorReads();
       int maxSize = maxReadSizeForVectorReads();
       List<CombinedFileRange> dataRanges =
-          VectoredReadUtils.mergeSortedRanges(Arrays.asList(sortRanges(ranges)), bytesPerSum,
+          VectoredReadUtils.mergeSortedRanges(sorted, bytesPerSum,
               minSeek, maxReadSizeForVectorReads());
       // While merging the ranges above, they are rounded up based on the value of bytesPerSum
       // which leads to some ranges crossing the EOF thus they need to be fixed else it will
@@ -471,8 +470,8 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       }
       List<CombinedFileRange> checksumRanges = findChecksumRanges(dataRanges,
           bytesPerSum, minSeek, maxSize);
-      sums.readVectored(checksumRanges, allocate);
-      datas.readVectored(dataRanges, allocate);
+      sums.readVectored(checksumRanges, allocate, release);
+      datas.readVectored(dataRanges, allocate, release);
       for(CombinedFileRange checksumRange: checksumRanges) {
         for(FileRange dataRange: checksumRange.getUnderlying()) {
           // when we have both the ranges, validate the checksum
@@ -779,7 +778,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   abstract class FsOperation {
     boolean run(Path p) throws IOException {
       boolean status = apply(p);
-      if (status) {
+      if (status && !p.isRoot()) {
         Path checkFile = getChecksumFile(p);
         if (fs.exists(checkFile)) {
           apply(checkFile);
@@ -875,7 +874,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
 
   /**
    * Set replication for an existing file.
-   * Implement the abstract <tt>setReplication</tt> of <tt>FileSystem</tt>
+   * Implement the abstract <code>setReplication</code> of <code>FileSystem</code>
    * @param src file name
    * @param replication new replication
    * @throws IOException if an I/O error occurs.

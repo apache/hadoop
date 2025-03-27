@@ -247,7 +247,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     CreateOutputDirectoriesStage attempt2 =
         new CreateOutputDirectoriesStage(
             createStageConfigForJob(JOB1, destDir)
-                .withDeleteTargetPaths(true));
+                .withDeleteTargetPaths(false));
     // attempt will fail because one of the entries marked as
     // a file to delete is now a non-empty directory
     LOG.info("Executing failing attempt to create the directories");

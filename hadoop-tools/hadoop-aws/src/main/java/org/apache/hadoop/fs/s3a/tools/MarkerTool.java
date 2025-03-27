@@ -32,10 +32,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.s3a.AWSBadRequestException;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,15 +53,13 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.UnknownStoreException;
 import org.apache.hadoop.fs.s3a.impl.DirMarkerTracker;
-import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
-import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
+import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteException;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
 
-import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Invoker.once;
@@ -173,7 +171,6 @@ public final class MarkerTool extends S3GuardTool {
       + " [-" + OPT_MAX + " <count>]"
       + " [-" + OPT_OUT + " <filename>]"
       + " [-" + OPT_LIMIT + " <limit>]"
-      + " [-" + OPT_NONAUTH + "]"
       + " [-" + VERBOSE + "]"
 
       + " <PATH>\n"
@@ -205,8 +202,7 @@ public final class MarkerTool extends S3GuardTool {
     super(conf,
         OPT_AUDIT,
         OPT_CLEAN,
-        VERBOSE,
-        OPT_NONAUTH);
+        VERBOSE);
     CommandFormat format = getCommandFormat();
     format.addOptionWithValue(OPT_MIN);
     format.addOptionWithValue(OPT_MAX);
@@ -235,13 +231,7 @@ public final class MarkerTool extends S3GuardTool {
   public int run(final String[] args, final PrintStream stream)
       throws ExitUtil.ExitException, Exception {
     this.out = stream;
-    final List<String> parsedArgs;
-    try {
-      parsedArgs = parseArgs(args);
-    } catch (CommandFormat.UnknownOptionException e) {
-      errorln(getUsage());
-      throw new ExitUtil.ExitException(EXIT_USAGE, e.getMessage(), e);
-    }
+    final List<String> parsedArgs = parseArgsWithErrorReporting(args);
     if (parsedArgs.size() != 1) {
       errorln(getUsage());
       println(out, "Supplied arguments: ["
@@ -279,7 +269,6 @@ public final class MarkerTool extends S3GuardTool {
       path = new Path(path, "/");
     }
     FileSystem fs = path.getFileSystem(getConf());
-    boolean nonAuth = command.getOpt(OPT_NONAUTH);
     ScanResult result;
     try {
       result = execute(
@@ -290,7 +279,6 @@ public final class MarkerTool extends S3GuardTool {
                       .withMinMarkerCount(expectedMin)
                       .withMaxMarkerCount(expectedMax)
                       .withLimit(limit)
-                      .withNonAuth(nonAuth)
                       .build());
     } catch (UnknownStoreException ex) {
       // bucket doesn't exist.
@@ -360,21 +348,6 @@ public final class MarkerTool extends S3GuardTool {
 
     // extract the callbacks needed for the rest of the work
     storeContext = fs.createStoreContext();
-    // filesystem policy.
-    // if the -nonauth option is set, this is used to filter
-    // out surplus markers from the results.
-    DirectoryPolicy activePolicy = fs.getDirectoryMarkerPolicy();
-    DirectoryPolicy.MarkerPolicy policy = activePolicy
-        .getMarkerPolicy();
-    println(out, "The directory marker policy of %s is \"%s\"",
-        storeContext.getFsURI(),
-        policy);
-    String authPath = storeContext.getConfiguration()
-        .getTrimmed(AUTHORITATIVE_PATH, "");
-    if (policy == DirectoryPolicy.MarkerPolicy.Authoritative) {
-      // in auth mode, note the auth paths.
-      println(out, "Authoritative path list is \"%s\"", authPath);
-    }
     // qualify the path
     Path path = scanArgs.getPath();
     Path target = path.makeQualified(fs.getUri(), new Path("/"));
@@ -393,26 +366,8 @@ public final class MarkerTool extends S3GuardTool {
     }
 
     // the default filter policy is that all entries should be deleted
-    DirectoryPolicy filterPolicy;
-    if (scanArgs.isNonAuth()) {
-      filterPolicy = new DirectoryPolicyImpl(
-          DirectoryPolicy.MarkerPolicy.Authoritative,
-          fs::allowAuthoritative);
-    } else {
-      filterPolicy = null;
-    }
     int minMarkerCount = scanArgs.getMinMarkerCount();
     int maxMarkerCount = scanArgs.getMaxMarkerCount();
-    if (minMarkerCount > maxMarkerCount) {
-      // swap min and max if they are wrong.
-      // this is to ensure any test scripts written to work around
-      // HADOOP-17332 and min/max swapping continue to work.
-      println(out, "Swapping -min (%d) and -max (%d) values",
-          minMarkerCount, maxMarkerCount);
-      int m = minMarkerCount;
-      minMarkerCount = maxMarkerCount;
-      maxMarkerCount = m;
-    }
     // extract the callbacks needed for the rest of the work
     operations = fs.createMarkerToolOperations(
         target.toString());
@@ -420,8 +375,8 @@ public final class MarkerTool extends S3GuardTool {
         scanArgs.isDoPurge(),
         minMarkerCount,
         maxMarkerCount,
-        scanArgs.getLimit(),
-        filterPolicy);
+        scanArgs.getLimit()
+    );
   }
 
   /**
@@ -524,7 +479,6 @@ public final class MarkerTool extends S3GuardTool {
    * @param minMarkerCount min marker count (ignored on purge)
    * @param maxMarkerCount max marker count (ignored on purge)
    * @param limit limit of files to scan; 0 for 'unlimited'
-   * @param filterPolicy filter policy on a nonauth scan; may be null
    * @return result.
    * @throws IOException IO failure
    * @throws ExitUtil.ExitException explicitly raised failure
@@ -535,8 +489,7 @@ public final class MarkerTool extends S3GuardTool {
       final boolean doPurge,
       final int minMarkerCount,
       final int maxMarkerCount,
-      final int limit,
-      final DirectoryPolicy filterPolicy)
+      final int limit)
       throws IOException, ExitUtil.ExitException {
 
     // safety check: min and max are correctly ordered at this point.
@@ -602,21 +555,6 @@ public final class MarkerTool extends S3GuardTool {
       result.purgeSummary = purgeMarkers(tracker, deletePageSize);
     } else {
       // this is an audit, so validate the marker count
-
-      if (filterPolicy != null) {
-        // if a filter policy is supplied, filter out all markers
-        // under the auth path
-        List<Path> allowed = tracker.removeAllowedMarkers(filterPolicy);
-        int allowedMarkers =  allowed.size();
-        println(out, "%nIgnoring %d marker%s in authoritative paths",
-            allowedMarkers, suffix(allowedMarkers));
-        if (verbose) {
-          allowed.forEach(p -> println(out, p.toString()));
-        }
-        // recalculate the marker size
-        markerCount = surplusMarkers.size();
-        result.filteredMarkerCount = markerCount;
-      }
       if (markerCount < minMarkerCount || markerCount > maxMarkerCount) {
         // failure
         return failScan(result, EXIT_NOT_ACCEPTABLE,
@@ -678,8 +616,30 @@ public final class MarkerTool extends S3GuardTool {
 
     int count = 0;
     boolean result = true;
-    RemoteIterator<S3AFileStatus> listing = operations
-        .listObjects(path, storeContext.pathToKey(path));
+
+    // the path/key stuff loses any trailing / passed in.
+    // but this may actually be needed.
+    RemoteIterator<S3AFileStatus> listing = null;
+    String listkey = storeContext.pathToKey(path);
+    if (listkey.isEmpty()) {
+      // root. always give it a path to keep ranger happy.
+      listkey = "/";
+    }
+
+    try {
+      listing = operations.listObjects(path, listkey);
+    } catch (AWSBadRequestException e) {
+      // endpoint was unhappy. this is generally unrecoverable, but some
+      // third party stores do insist on a / here.
+      LOG.debug("Failed to list \"{}\"", listkey, e);
+      // now retry with a trailing / in case that works
+      if (listkey.endsWith("/")) {
+        // already has a trailing /, so fail
+        throw e;
+      }
+      // try again.
+      listing = operations.listObjects(path, listkey + "/");
+    }
     while (listing.hasNext()) {
       count++;
       S3AFileStatus status = listing.next();
@@ -784,7 +744,7 @@ public final class MarkerTool extends S3GuardTool {
   private MarkerPurgeSummary purgeMarkers(
       final DirMarkerTracker tracker,
       final int deletePageSize)
-      throws MultiObjectDeleteException, AmazonClientException, IOException {
+      throws MultiObjectDeleteException, AwsServiceException, IOException {
 
     MarkerPurgeSummary summary = new MarkerPurgeSummary();
     // we get a map of surplus markers to delete.
@@ -792,13 +752,13 @@ public final class MarkerTool extends S3GuardTool {
         = tracker.getSurplusMarkers();
     int size = markers.size();
     // build a list from the strings in the map
-    List<DeleteObjectsRequest.KeyVersion> collect =
+    List<ObjectIdentifier> collect =
         markers.values().stream()
-            .map(p -> new DeleteObjectsRequest.KeyVersion(p.getKey()))
+            .map(p -> ObjectIdentifier.builder().key(p.getKey()).build())
             .collect(Collectors.toList());
     // build an array list for ease of creating the lists of
     // keys in each page through the subList() method.
-    List<DeleteObjectsRequest.KeyVersion> markerKeys =
+    List<ObjectIdentifier> markerKeys =
         new ArrayList<>(collect);
 
     // now randomize. Why so? if the list spans multiple S3 partitions,
@@ -819,7 +779,7 @@ public final class MarkerTool extends S3GuardTool {
     while (start < size) {
       // end is one past the end of the page
       int end = Math.min(start + deletePageSize, size);
-      List<DeleteObjectsRequest.KeyVersion> page = markerKeys.subList(start,
+      List<ObjectIdentifier> page = markerKeys.subList(start,
           end);
       once("Remove S3 Keys",
           tracker.getBasePath().toString(), () ->
@@ -884,9 +844,6 @@ public final class MarkerTool extends S3GuardTool {
     /** Limit of files to scan; 0 for 'unlimited'. */
     private final int limit;
 
-    /** Consider only markers in nonauth paths as errors. */
-    private final boolean nonAuth;
-
     /**
      * @param sourceFS source FS; must be or wrap an S3A FS.
      * @param path path to scan.
@@ -894,22 +851,19 @@ public final class MarkerTool extends S3GuardTool {
      * @param minMarkerCount min marker count (ignored on purge)
      * @param maxMarkerCount max marker count (ignored on purge)
      * @param limit limit of files to scan; 0 for 'unlimited'
-     * @param nonAuth consider only markers in nonauth paths as errors
      */
     private ScanArgs(final FileSystem sourceFS,
         final Path path,
         final boolean doPurge,
         final int minMarkerCount,
         final int maxMarkerCount,
-        final int limit,
-        final boolean nonAuth) {
+        final int limit) {
       this.sourceFS = sourceFS;
       this.path = path;
       this.doPurge = doPurge;
       this.minMarkerCount = minMarkerCount;
       this.maxMarkerCount = maxMarkerCount;
       this.limit = limit;
-      this.nonAuth = nonAuth;
     }
 
     FileSystem getSourceFS() {
@@ -936,9 +890,6 @@ public final class MarkerTool extends S3GuardTool {
       return limit;
     }
 
-    boolean isNonAuth() {
-      return nonAuth;
-    }
   }
 
   /**
@@ -963,9 +914,6 @@ public final class MarkerTool extends S3GuardTool {
 
     /** Limit of files to scan; 0 for 'unlimited'. */
     private int limit = UNLIMITED_LISTING;
-
-    /** Consider only markers in nonauth paths as errors. */
-    private boolean nonAuth = false;
 
     /**
      * Source FS; must be or wrap an S3A FS.
@@ -1028,16 +976,6 @@ public final class MarkerTool extends S3GuardTool {
     }
 
     /**
-     * Consider only markers in non-authoritative paths as errors.
-     * @param b True if tool should only consider markers in non-authoritative paths
-     * @return builder class for method chaining
-     */
-    public ScanArgsBuilder withNonAuth(final boolean b) {
-      this.nonAuth = b;
-      return this;
-    }
-
-    /**
      * Build the actual argument instance.
      * @return the arguments to pass in
      */
@@ -1047,8 +985,7 @@ public final class MarkerTool extends S3GuardTool {
           doPurge,
           minMarkerCount,
           maxMarkerCount,
-          limit,
-          nonAuth);
+          limit);
     }
   }
 }

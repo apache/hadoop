@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -39,6 +40,7 @@ import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.log4j.LogManager;
@@ -77,6 +79,18 @@ public class StringUtils {
    */
   public static final Pattern ENV_VAR_PATTERN = Shell.WINDOWS ?
     WIN_ENV_VAR_PATTERN : SHELL_ENV_VAR_PATTERN;
+
+  /**
+   * {@link #getTrimmedStringCollectionSplitByEquals(String)} throws
+   * {@link IllegalArgumentException} with error message starting with this string
+   * if the argument provided is not valid representation of non-empty key-value
+   * pairs.
+   * Value = {@value}
+   */
+  @VisibleForTesting
+  public static final String STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG =
+      "Trimmed string split by equals does not correctly represent "
+          + "non-empty key-value pairs.";
 
   /**
    * Make a string representation of the exception.
@@ -231,7 +245,7 @@ public class StringUtils {
   /**
    * @param str
    *          The string array to be parsed into an URI array.
-   * @return <tt>null</tt> if str is <tt>null</tt>, else the URI array
+   * @return <code>null</code> if str is <code>null</code>, else the URI array
    *         equivalent to str.
    * @throws IllegalArgumentException
    *           If any string in str violates RFC&nbsp;2396.
@@ -479,7 +493,37 @@ public class StringUtils {
     set.remove("");
     return set;
   }
-  
+
+  /**
+   * Splits an "=" separated value <code>String</code>, trimming leading and
+   * trailing whitespace on each value after splitting by comma and new line separator.
+   *
+   * @param str a comma separated <code>String</code> with values, may be null
+   * @return a <code>Map</code> of <code>String</code> keys and values, empty
+   * Collection if null String input.
+   */
+  public static Map<String, String> getTrimmedStringCollectionSplitByEquals(
+      String str) {
+    String[] trimmedList = getTrimmedStrings(str);
+    Map<String, String> pairs = new HashMap<>();
+    for (String s : trimmedList) {
+      if (s.isEmpty()) {
+        continue;
+      }
+      String[] splitByKeyVal = getTrimmedStringsSplitByEquals(s);
+      Preconditions.checkArgument(
+          splitByKeyVal.length == 2,
+          STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG + " Input: " + str);
+      boolean emptyKey = org.apache.commons.lang3.StringUtils.isEmpty(splitByKeyVal[0]);
+      boolean emptyVal = org.apache.commons.lang3.StringUtils.isEmpty(splitByKeyVal[1]);
+      Preconditions.checkArgument(
+          !emptyKey && !emptyVal,
+          STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG + " Input: " + str);
+      pairs.put(splitByKeyVal[0], splitByKeyVal[1]);
+    }
+    return pairs;
+  }
+
   /**
    * Splits a comma or newline separated value <code>String</code>, trimming
    * leading and trailing whitespace on each value.
@@ -495,6 +539,22 @@ public class StringUtils {
     }
 
     return str.trim().split("\\s*[,\n]\\s*");
+  }
+
+  /**
+   * Splits "=" separated value <code>String</code>, trimming
+   * leading and trailing whitespace on each value.
+   *
+   * @param str an "=" separated <code>String</code> with values,
+   *            may be null
+   * @return an array of <code>String</code> values, empty array if null String
+   *         input
+   */
+  public static String[] getTrimmedStringsSplitByEquals(String str){
+    if (null == str || str.trim().isEmpty()) {
+      return emptyStringArray;
+    }
+    return str.trim().split("\\s*=\\s*");
   }
 
   final public static String[] emptyStringArray = {};
@@ -1089,6 +1149,19 @@ public class StringUtils {
   }
 
   /**
+   * Get stack trace from throwable exception.
+   * @param t Throwable.
+   * @return stack trace string.
+   */
+  public static String getStackTrace(Throwable t) {
+    StringBuilder str = new StringBuilder();
+    for (StackTraceElement e : t.getStackTrace()) {
+      str.append(e.toString() + "\n\t");
+    }
+    return str.toString();
+  }
+
+  /**
    * From a list of command-line arguments, remove both an option and the 
    * next argument.
    *
@@ -1261,7 +1334,7 @@ public class StringUtils {
 
       int inputLineLength = str.length();
       int offset = 0;
-      StringBuffer wrappedLine = new StringBuffer(inputLineLength + 32);
+      StringBuilder wrappedLine = new StringBuilder(inputLineLength + 32);
 
       while(inputLineLength - offset > wrapLength) {
         if(str.charAt(offset) == 32) {

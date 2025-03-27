@@ -66,6 +66,11 @@ public class TestFileSystemTimelineReaderImpl {
 
   private static final String ROOT_DIR = new File("target",
       TestFileSystemTimelineReaderImpl.class.getSimpleName()).getAbsolutePath();
+  private static String cluster = "cluster1";
+  private static String user = "user1";
+  private static String flowVersion = "v1";
+  private static String flowRunId = "1";
+
   private FileSystemTimelineReaderImpl reader;
 
   @BeforeAll
@@ -125,7 +130,7 @@ public class TestFileSystemTimelineReaderImpl {
 
   private static void loadEntityData(String rootDir) throws Exception {
     File appDir =
-        getAppDir(rootDir, "cluster1", "user1", "flow1", "1", "app1", "app");
+        getAppDir(rootDir, "flow1", "app1", "app");
     TimelineEntity entity11 = new TimelineEntity();
     entity11.setId("id_1");
     entity11.setType("app");
@@ -266,8 +271,9 @@ public class TestFileSystemTimelineReaderImpl {
     entity4.addEvent(event44);
     writeEntityFile(entity4, appDir);
 
-    File attemptDir = getAppDir(rootDir, "cluster1", "user1", "flow1", "1",
-        "app1", TimelineEntityType.YARN_APPLICATION_ATTEMPT.toString());
+
+    File attemptDir = getAppDir(rootDir, "flow1", "app1",
+        TimelineEntityType.YARN_APPLICATION_ATTEMPT.toString());
     ApplicationAttemptEntity attempt1 = new ApplicationAttemptEntity();
     attempt1.setId("app-attempt-1");
     attempt1.setCreatedTime(1425017502003L);
@@ -277,8 +283,8 @@ public class TestFileSystemTimelineReaderImpl {
     attempt2.setCreatedTime(1425017502004L);
     writeEntityFile(attempt2, attemptDir);
 
-    File entityDir = getAppDir(rootDir, "cluster1", "user1", "flow1", "1",
-        "app1", TimelineEntityType.YARN_CONTAINER.toString());
+    File entityDir = getAppDir(rootDir, "flow1", "app1",
+        TimelineEntityType.YARN_CONTAINER.toString());
     ContainerEntity containerEntity1 = new ContainerEntity();
     containerEntity1.setId("container_1_1");
     containerEntity1.setParent(attempt1.getIdentifier());
@@ -298,8 +304,7 @@ public class TestFileSystemTimelineReaderImpl {
     writeEntityFile(containerEntity3, entityDir);
 
     File appDir2 =
-        getAppDir(rootDir, "cluster1", "user1", "flow1,flow", "1", "app2",
-            "app");
+        getAppDir(rootDir, "flow1,flow", "app2", "app");
     TimelineEntity entity5 = new TimelineEntity();
     entity5.setId("id_5");
     entity5.setType("app");
@@ -307,10 +312,9 @@ public class TestFileSystemTimelineReaderImpl {
     writeEntityFile(entity5, appDir2);
   }
 
-  private static File getAppDir(String rootDir, String cluster, String user,
-      String flowName, String flowRunId, String appId, String entityName) {
+  private static File getAppDir(String rootDir, String flowName, String appId, String entityName) {
     return new File(rootDir + File.separator + "entities" + File.separator +
-        cluster + File.separator + user + File.separator + flowName +
+        cluster + File.separator + user + File.separator + flowName + File.separator + flowVersion +
         File.separator + flowRunId + File.separator + appId + File.separator +
         entityName + File.separator);
   }

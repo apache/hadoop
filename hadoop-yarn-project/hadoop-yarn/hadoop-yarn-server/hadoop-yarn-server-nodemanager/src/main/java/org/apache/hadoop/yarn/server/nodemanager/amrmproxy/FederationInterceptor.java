@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -96,8 +97,9 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.uam.UnmanagedAMPoolManager;
 import org.apache.hadoop.yarn.util.AsyncCallback;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.util.MonotonicClock;
+import org.apache.hadoop.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -260,6 +262,16 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
   private final MonotonicClock clock = new MonotonicClock();
 
+  /*
+   * For UAM, keepContainersAcrossApplicationAttempts is always true.
+   * When re-register to RM, RM will clear node set and regenerate NMToken for transferred
+   * container. But If keepContainersAcrossApplicationAttempts of AM is false, AM may not
+   * called getNMTokensFromPreviousAttempts, so the NMToken which is pass from
+   * RegisterApplicationMasterResponse will be missing. Here we cache these NMToken,
+   * then pass to AM in allocate stage.
+   * */
+  private Set<NMToken> nmTokenMapFromRegisterSecondaryCluster;
+
   /**
    * Creates an instance of the FederationInterceptor class.
    */
@@ -278,6 +290,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     this.finishAMCalled = false;
     this.lastSCResponseTime = new ConcurrentHashMap<>();
     this.lastAMHeartbeatTime = this.clock.getTime();
+    this.nmTokenMapFromRegisterSecondaryCluster = new ConcurrentHashSet<>();
   }
 
   /**
@@ -335,7 +348,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     this.lastAllocateResponse
         .setResponseId(AMRMClientUtils.PRE_REGISTER_RESPONSE_ID);
 
-    this.federationFacade = FederationStateStoreFacade.getInstance();
+    this.federationFacade = FederationStateStoreFacade.getInstance(conf);
     this.subClusterResolver = this.federationFacade.getSubClusterResolver();
 
     // AMRMProxyPolicy will be initialized in registerApplicationMaster
@@ -453,6 +466,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           // RegisterApplicationMaster
           RegisterApplicationMasterResponse response =
               this.uamPool.registerApplicationMaster(keyScId, this.amRegistrationRequest);
+          nmTokenMapFromRegisterSecondaryCluster.addAll(response.getNMTokensFromPreviousAttempts());
 
           // Set sub-cluster to be timed out initially
           lastSCResponseTime.put(subClusterId, clock.getTime() - subClusterTimeOut);
@@ -572,7 +586,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         // entry for subClusterId -> UAM AMRMTokenIdentifier
         String scId = key.substring(NMSS_SECONDARY_SC_PREFIX.length());
         Token<AMRMTokenIdentifier> aMRMTokenIdentifier = new Token<>();
-        aMRMTokenIdentifier.decodeFromUrlString(new String(value, STRING_TO_BYTE_FORMAT));
+        aMRMTokenIdentifier.decodeFromUrlString(new String(value, StandardCharsets.UTF_8));
         uamMap.put(scId, aMRMTokenIdentifier);
         LOG.debug("Recovered UAM in {} from NMSS.", scId);
       }
@@ -1096,6 +1110,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         if (registerResponse != null) {
           LOG.info("Merging register response for {}", appId);
           mergeRegisterResponse(homeResponse, registerResponse);
+          nmTokenMapFromRegisterSecondaryCluster.addAll(
+              registerResponse.getNMTokensFromPreviousAttempts());
         }
       } catch (Exception e) {
         LOG.warn("Reattaching UAM failed for ApplicationId: " + appId, e);
@@ -1330,7 +1346,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           } else if (getNMStateStore() != null) {
             getNMStateStore().storeAMRMProxyAppContextEntry(attemptId,
                 NMSS_SECONDARY_SC_PREFIX + subClusterId,
-                token.encodeToUrlString().getBytes(STRING_TO_BYTE_FORMAT));
+                token.encodeToUrlString().getBytes(StandardCharsets.UTF_8));
           }
         } catch (Throwable e) {
           LOG.error("Failed to persist UAM token from {} Application {}",
@@ -1432,6 +1448,17 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           }
           responses.clear();
         }
+      }
+    }
+    // When re-register RM, client may not cache the NMToken from register response.
+    // Here we pass these NMToken in allocate stage.
+    if (nmTokenMapFromRegisterSecondaryCluster.size() > 0) {
+      List<NMToken> duplicateNmToken = new ArrayList(nmTokenMapFromRegisterSecondaryCluster);
+      nmTokenMapFromRegisterSecondaryCluster.removeAll(duplicateNmToken);
+      if (!isNullOrEmpty(mergedResponse.getNMTokens())) {
+        mergedResponse.getNMTokens().addAll(duplicateNmToken);
+      } else {
+        mergedResponse.setNMTokens(duplicateNmToken);
       }
     }
   }
@@ -1858,7 +1885,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           try {
             getNMStateStore().storeAMRMProxyAppContextEntry(attemptId,
                 NMSS_SECONDARY_SC_PREFIX + subClusterId.getId(),
-                newToken.encodeToUrlString().getBytes(STRING_TO_BYTE_FORMAT));
+                newToken.encodeToUrlString().getBytes(StandardCharsets.UTF_8));
           } catch (IOException e) {
             LOG.error("Error storing UAM token as AMRMProxy "
                 + "context entry in NMSS for {}.", attemptId, e);

@@ -37,6 +37,7 @@ import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.ReflectionUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
@@ -183,7 +184,7 @@ public class TestAsyncDispatcher {
 
     Field logger = AsyncDispatcher.class.getDeclaredField("LOG");
     logger.setAccessible(true);
-    Field modifiers = Field.class.getDeclaredField("modifiers");
+    Field modifiers = ReflectionUtils.getModifiersField();
     modifiers.setAccessible(true);
     modifiers.setInt(logger, logger.getModifiers() & ~Modifier.FINAL);
     Object oldLog = logger.get(null);
@@ -229,7 +230,7 @@ public class TestAsyncDispatcher {
 
     Field logger = AsyncDispatcher.class.getDeclaredField("LOG");
     logger.setAccessible(true);
-    Field modifiers = Field.class.getDeclaredField("modifiers");
+    Field modifiers = ReflectionUtils.getModifiersField();
     modifiers.setAccessible(true);
     modifiers.setInt(logger, logger.getModifiers() & ~Modifier.FINAL);
     Object oldLog = logger.get(null);

@@ -25,13 +25,19 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Options related to S3 Select.
  *
  * These options are set for the entire filesystem unless overridden
- * as an option in the URI
+ * as an option in the URI.
+ *
+ * The S3 Select API is no longer supported -however this class is retained
+ * so that any application which imports the dependencies will still link.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
+@InterfaceStability.Stable
+@Deprecated
 public final class SelectConstants {
 
-  public static final String SELECT_UNSUPPORTED = "S3 Select is not supported";
+  public static final String SELECT_UNSUPPORTED = "S3 Select is no longer supported";
+
+  public static final String NAME = "select";
 
   private SelectConstants() {
   }
@@ -41,13 +47,18 @@ public final class SelectConstants {
 
   /**
    * This is the big SQL expression: {@value}.
-   * When used in an open() call, switch to a select operation.
-   * This is only used in the open call, never in a filesystem configuration.
+   * When used in an open() call:
+   * <ol>
+   *   <li>if the option is set in a {@code .may()} clause: warn and continue</li>
+   *   <li>if the option is set in a {@code .must()} clause:
+   *        {@code UnsupportedOperationException}.</li>
+   *  </ol>
    */
   public static final String SELECT_SQL = FS_S3A_SELECT + "sql";
 
   /**
    * Does the FS Support S3 Select?
+   * This is false everywhere.
    * Value: {@value}.
    */
   public static final String S3_SELECT_CAPABILITY = "fs.s3a.capability.select.sql";

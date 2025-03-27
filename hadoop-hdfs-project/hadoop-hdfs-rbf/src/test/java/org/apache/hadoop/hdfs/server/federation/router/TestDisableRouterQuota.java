@@ -24,13 +24,13 @@ import java.io.IOException;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test the behavior when disabling the Router quota.
@@ -39,7 +39,7 @@ public class TestDisableRouterQuota {
 
   private static Router router;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     // Build and start a router
     router = new Router();
@@ -53,7 +53,7 @@ public class TestDisableRouterQuota {
     router.start();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     if (router != null) {
       router.stop();
@@ -61,7 +61,7 @@ public class TestDisableRouterQuota {
     }
   }
 
-  @Before
+  @BeforeEach
   public void checkDisableQuota() {
     assertFalse(router.isQuotaEnabled());
   }

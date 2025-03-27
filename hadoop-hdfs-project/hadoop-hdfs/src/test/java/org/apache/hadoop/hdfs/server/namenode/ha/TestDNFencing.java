@@ -50,8 +50,10 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
@@ -421,9 +423,6 @@ public class TestDNFencing {
    */
   @Test
   public void testQueueingWithAppend() throws Exception {
-    int numQueued = 0;
-    int numDN = cluster.getDataNodes().size();
-    
     // case 1: create file and call hflush after write
     FSDataOutputStream out = fs.create(TEST_FILE_PATH);
     try {
@@ -436,20 +435,16 @@ public class TestDNFencing {
       // Apply cluster.triggerBlockReports() to trigger the reporting sooner.
       //
       cluster.triggerBlockReports();
-      numQueued += numDN; // RBW messages
 
       // The cluster.triggerBlockReports() call above does a full 
       // block report that incurs 3 extra RBW messages
-      numQueued += numDN; // RBW messages      
     } finally {
       IOUtils.closeStream(out);
-      numQueued += numDN; // blockReceived messages
     }
 
     cluster.triggerBlockReports();
-    numQueued += numDN;
-    assertEquals(numQueued, cluster.getNameNode(1).getNamesystem().
-        getPendingDataNodeMessageCount());
+    assertEquals("The queue should only have the latest report for each DN",
+        3, nn2.getNamesystem().getPendingDataNodeMessageCount());
 
     // case 2: append to file and call hflush after write
     try {
@@ -457,14 +452,12 @@ public class TestDNFencing {
       AppendTestUtil.write(out, 10, 10);
       out.hflush();
       cluster.triggerBlockReports();
-      numQueued += numDN * 2; // RBW messages, see comments in case 1
     } finally {
       IOUtils.closeStream(out);
       cluster.triggerHeartbeats();
-      numQueued += numDN; // blockReceived
     }
-    assertEquals(numQueued, cluster.getNameNode(1).getNamesystem().
-        getPendingDataNodeMessageCount());
+    assertEquals("The queue should only have the latest report for each DN",
+        3, nn2.getNamesystem().getPendingDataNodeMessageCount());
 
     // case 3: similar to case 2, except no hflush is called.
     try {
@@ -483,17 +476,12 @@ public class TestDNFencing {
       //    BPServiceActor#addPendingReplicationBlockInfo 
       //
       IOUtils.closeStream(out);
-      numQueued += numDN; // blockReceived
     }
 
     cluster.triggerBlockReports();
-    numQueued += numDN;
 
-    LOG.info("Expect " + numQueued + " and got: " + cluster.getNameNode(1).getNamesystem().
-        getPendingDataNodeMessageCount());      
-
-    assertEquals(numQueued, cluster.getNameNode(1).getNamesystem().
-        getPendingDataNodeMessageCount());
+    assertEquals("The queue should only have the latest report for each DN",
+        3, nn2.getNamesystem().getPendingDataNodeMessageCount());
 
     cluster.transitionToStandby(0);
     cluster.transitionToActive(1);
@@ -582,13 +570,13 @@ public class TestDNFencing {
   }
 
   private void doMetasave(NameNode nn2) {
-    nn2.getNamesystem().writeLock();
+    nn2.getNamesystem().writeLock(RwLockMode.BM);
     try {
       PrintWriter pw = new PrintWriter(System.err);
       nn2.getNamesystem().getBlockManager().metaSave(pw);
       pw.flush();
     } finally {
-      nn2.getNamesystem().writeUnlock();
+      nn2.getNamesystem().writeUnlock(RwLockMode.BM, "metaSave");
     }
   }
 
@@ -610,9 +598,13 @@ public class TestDNFencing {
       throws IOException {
     int count = 0;
     for (DataNode dn : cluster.getDataNodes()) {
-      if (DataNodeTestUtils.getFSDataset(dn).getStoredBlock(
-          block.getBlockPoolId(), block.getBlockId()) != null) {
-        count++;
+      try {
+        if (DataNodeTestUtils.getFSDataset(dn).getStoredBlock(
+            block.getBlockPoolId(), block.getBlockId()) != null) {
+          count++;
+        }
+      } catch (ReplicaNotFoundException e) {
+        continue;
       }
     }
     return count;

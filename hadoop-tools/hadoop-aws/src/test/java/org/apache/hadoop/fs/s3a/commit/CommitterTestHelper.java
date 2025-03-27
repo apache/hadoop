@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyPathExists;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.BASE;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.STREAM_CAPABILITY_MAGIC_OUTPUT;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.XA_MAGIC_MARKER;
 import static org.apache.hadoop.fs.s3a.commit.impl.CommitOperations.extractMagicFileLength;
@@ -51,6 +51,8 @@ public class CommitterTestHelper {
    * Filesystem under test.
    */
   private final S3AFileSystem fileSystem;
+
+  public static final String JOB_ID = "123";
 
   /**
    * Constructor.
@@ -108,7 +110,7 @@ public class CommitterTestHelper {
    */
   public static Path makeMagic(Path destFile) {
     return new Path(destFile.getParent(),
-        MAGIC + '/' + BASE + "/" + destFile.getName());
+        MAGIC_PATH_PREFIX + JOB_ID + '/' + BASE + "/" + destFile.getName());
   }
 
   /**

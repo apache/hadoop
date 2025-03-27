@@ -40,11 +40,14 @@ public class NavBlock extends RouterBlock {
 
   @Override
   public void render(Block html) {
+
+    String federationText = isYarnFederationEnabled() ? "Federation" : "LocalCluster";
+
     Hamlet.UL<Hamlet.DIV<Hamlet>> mainList = html.div("#nav").
         h3("Cluster").
         ul().
         li().a(url(""), "About").__().
-        li().a(url("federation"), "Federation").__();
+        li().a(url("federation"), federationText).__();
 
     List<String> subClusterIds = getActiveSubClusterIds();
 

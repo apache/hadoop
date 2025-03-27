@@ -18,7 +18,11 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.Optional;
 import java.util.function.Supplier;
+
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -57,8 +61,10 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.eclipse.jetty.util.ajax.JSON;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,6 +103,9 @@ public class TestNameNodeMXBean {
    */
   private static final double DELTA = 0.000001;
 
+  @Rule
+  public TemporaryFolder baseDir = new TemporaryFolder();
+
   static {
     NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator());
   }
@@ -112,7 +121,7 @@ public class TestNameNodeMXBean {
     MiniDFSCluster cluster = null;
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(4).build();
       cluster.waitActive();
 
       // Set upgrade domain on the first DN.
@@ -139,7 +148,7 @@ public class TestNameNodeMXBean {
       String clusterId = (String) mbs.getAttribute(mxbeanName, "ClusterId");
       assertEquals(fsn.getClusterId(), clusterId);
       // get attribute "BlockPoolId"
-      String blockpoolId = (String) mbs.getAttribute(mxbeanName, 
+      String blockpoolId = (String) mbs.getAttribute(mxbeanName,
           "BlockPoolId");
       assertEquals(fsn.getBlockPoolId(), blockpoolId);
       // get attribute "Version"
@@ -206,7 +215,7 @@ public class TestNameNodeMXBean {
               cluster.getDataNodes().get(3).getDatanodeId());
       decommissionedNode.setDecommissioned();
 
-      // Assert the location field is included in the mxbeanName
+      // Assert the location and uuid field is included in the mxbeanName
       // under different states
       String alivenodeinfo1 = (String) (mbs.getAttribute(mxbeanName,
               "LiveNodes"));
@@ -214,6 +223,7 @@ public class TestNameNodeMXBean {
               (Map<String, Map<String, Object>>) JSON.parse(alivenodeinfo1);
       for (Map<String, Object> liveNode : liveNodes1.values()) {
         assertTrue(liveNode.containsKey("location"));
+        assertTrue(liveNode.containsKey("uuid"));
       }
 
       // get attributes DeadNodes
@@ -270,7 +280,7 @@ public class TestNameNodeMXBean {
       assertEquals(0, FileUtil.chmod(
           new File(failedNameDir, "current").getAbsolutePath(), "000"));
       cluster.getNameNodeRpc().rollEditLog();
-      
+
       nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
           "NameDirStatuses"));
       statusMap = (Map<String, Map<String, String>>) JSON.parse(nameDirStatuses);
@@ -313,7 +323,7 @@ public class TestNameNodeMXBean {
     hostsFileWriter.initialize(conf, "temp/TestNameNodeMXBean");
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(3).build();
       cluster.waitActive();
 
       FSNamesystem fsn = cluster.getNameNode().namesystem;
@@ -366,7 +376,7 @@ public class TestNameNodeMXBean {
     hostsFileWriter.initialize(conf, "temp/TestNameNodeMXBean");
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(3).build();
       cluster.waitActive();
 
       FSNamesystem fsn = cluster.getNameNode().namesystem;
@@ -469,7 +479,7 @@ public class TestNameNodeMXBean {
     hostsFileWriter.initialize(conf, "temp/TestInServiceNodes");
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(3).build();
       cluster.waitActive();
 
       final FSNamesystem fsn = cluster.getNameNode().namesystem;
@@ -568,7 +578,7 @@ public class TestNameNodeMXBean {
     hostsFileWriter.initialize(conf, "temp/TestNameNodeMXBean");
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(3).build();
       cluster.waitActive();
 
       FSNamesystem fsn = cluster.getNameNode().namesystem;
@@ -659,7 +669,7 @@ public class TestNameNodeMXBean {
     final Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(0).build();
       cluster.waitActive();
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxbeanNameFsns = new ObjectName(
@@ -675,7 +685,7 @@ public class TestNameNodeMXBean {
           (String) (mbs.getAttribute(mxbeanNameFsns, "TopUserOpCounts"));
       ObjectMapper mapper = new ObjectMapper();
       Map<String, Object> map = mapper.readValue(topUsers, Map.class);
-      assertTrue("Could not find map key timestamp", 
+      assertTrue("Could not find map key timestamp",
           map.containsKey("timestamp"));
       assertTrue("Could not find map key windows", map.containsKey("windows"));
       List<Map<String, List<Map<String, Object>>>> windows =
@@ -715,7 +725,7 @@ public class TestNameNodeMXBean {
     conf.setBoolean(DFSConfigKeys.NNTOP_ENABLED_KEY, false);
     MiniDFSCluster cluster = null;
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(0).build();
       cluster.waitActive();
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxbeanNameFsns = new ObjectName(
@@ -744,7 +754,7 @@ public class TestNameNodeMXBean {
     conf.set(DFSConfigKeys.NNTOP_WINDOWS_MINUTES_KEY, "");
     MiniDFSCluster cluster = null;
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(0).build();
       cluster.waitActive();
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxbeanNameFsns = new ObjectName(
@@ -771,7 +781,7 @@ public class TestNameNodeMXBean {
     final Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(0).build();
       cluster.waitActive();
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxbeanNameFs =
@@ -801,7 +811,7 @@ public class TestNameNodeMXBean {
                 .addNN(
                     new MiniDFSNNTopology.NNConf("nn2").setIpcPort(ports[1])));
 
-        cluster = new MiniDFSCluster.Builder(conf)
+        cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot())
             .nnTopology(topology).numDataNodes(0)
             .build();
         break;
@@ -863,7 +873,7 @@ public class TestNameNodeMXBean {
       int dataBlocks = defaultPolicy.getNumDataUnits();
       int parityBlocks = defaultPolicy.getNumParityUnits();
       int totalSize = dataBlocks + parityBlocks;
-      cluster = new MiniDFSCluster.Builder(conf)
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot())
           .numDataNodes(totalSize).build();
       fs = cluster.getFileSystem();
 
@@ -903,7 +913,7 @@ public class TestNameNodeMXBean {
           StripedFileTestUtil.getDefaultECPolicy().getNumParityUnits();
       int cellSize = StripedFileTestUtil.getDefaultECPolicy().getCellSize();
       int totalSize = dataBlocks + parityBlocks;
-      cluster = new MiniDFSCluster.Builder(conf)
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot())
           .numDataNodes(totalSize).build();
       fs = cluster.getFileSystem();
       fs.enableErasureCodingPolicy(
@@ -1046,7 +1056,7 @@ public class TestNameNodeMXBean {
       int blockSize = stripesPerBlock * cellSize;
       conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
 
-      cluster = new MiniDFSCluster.Builder(conf)
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot())
           .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(1)).
               numDataNodes(totalSize).build();
       cluster.waitActive();
@@ -1123,6 +1133,66 @@ public class TestNameNodeMXBean {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  @SuppressWarnings({ "unchecked" })
+  @Test
+  public void testDeadNodesInNameNodeMXBean() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1);
+    MiniDFSCluster cluster = null;
+    HostsFileWriter hostsFileWriter = new HostsFileWriter();
+    hostsFileWriter.initialize(conf, "temp/TestNameNodeMXBean");
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(3).build();
+      cluster.waitActive();
+
+      FSNamesystem fsn = cluster.getNameNode().namesystem;
+
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName = new ObjectName(
+          "Hadoop:service=NameNode,name=NameNodeInfo");
+
+      List<String> hosts = new ArrayList<>();
+      for(DataNode dn : cluster.getDataNodes()) {
+        hosts.add(dn.getDisplayName());
+      }
+
+      DatanodeDescriptor mockNode = new DatanodeDescriptor(
+          new DatanodeID("127.0.0.2", "127.0.0.2", "",
+              5000, 5001, 5002, 5003));
+
+      assertEquals("", Optional.ofNullable(mockNode.getDatanodeUuid()).orElse(""));
+      hosts.add(mockNode.getXferAddrWithHostname());
+      hostsFileWriter.initIncludeHosts(hosts.toArray(
+          new String[hosts.size()]));
+      fsn.getBlockManager().getDatanodeManager().refreshNodes(conf);
+      DatanodeManager dm = cluster.getNameNode().getNamesystem().
+          getBlockManager().getDatanodeManager();
+      LOG.info("Get all include nodes: {}", dm.getHostConfigManager().getIncludes());
+
+      // get attribute DeadNodes
+      String deadNodeInfo = (String) (mbs.getAttribute(mxbeanName,
+          "DeadNodes"));
+      assertEquals(fsn.getDeadNodes(), deadNodeInfo);
+      LOG.info("Get deadNode info: {}", deadNodeInfo);
+      Map<String, Map<String, Object>> deadNodes =
+          (Map<String, Map<String, Object>>) JSON.parse(deadNodeInfo);
+      assertEquals(1, deadNodes.size());
+      for (Map<String, Object> deadNode : deadNodes.values()) {
+        assertTrue(deadNode.containsKey("lastContact"));
+        assertTrue(deadNode.containsKey("adminState"));
+        assertTrue(deadNode.containsKey("xferaddr"));
+        assertEquals("", deadNode.get("uuid"));
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      hostsFileWriter.cleanup();
     }
   }
 

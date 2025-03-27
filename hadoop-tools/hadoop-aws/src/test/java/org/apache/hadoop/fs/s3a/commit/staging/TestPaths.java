@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.HadoopTestBase;
 
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.UNIT_TEST_EXAMPLE_PATH;
 import static org.apache.hadoop.fs.s3a.commit.staging.Paths.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -81,7 +82,7 @@ public class TestPaths extends HadoopTestBase {
     assertEquals("from " + path, expected, addUUID(path, "UUID"));
   }
 
-  private static final String DATA = "s3a://landsat-pds/data/";
+  private static final String DATA = UNIT_TEST_EXAMPLE_PATH;
   private static final Path BASE = new Path(DATA);
 
   @Test

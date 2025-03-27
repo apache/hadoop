@@ -32,7 +32,16 @@ import java.text.DecimalFormat;
 import java.util.Collection;
 import java.util.Date;
 import java.util.StringTokenizer;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -57,9 +66,10 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,6 +126,10 @@ public class TestDFSIO implements Tool {
       "test.io.block.storage.policy";
   private static final String ERASURE_CODE_POLICY_NAME_KEY =
       "test.io.erasure.code.policy";
+  private ExecutorService excutorService = Executors.newFixedThreadPool(
+      2 * Runtime.getRuntime().availableProcessors());
+  private CompletionService<String> completionService =
+      new ExecutorCompletionService<>(excutorService);
 
   static{
     Configuration.addDefaultResource("hdfs-default.xml");
@@ -213,7 +227,7 @@ public class TestDFSIO implements Tool {
   private static MiniDFSCluster cluster;
   private static TestDFSIO bench;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     bench = new TestDFSIO();
     bench.getConf().setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
@@ -228,7 +242,7 @@ public class TestDFSIO implements Tool {
     testWrite();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     if(cluster == null)
       return;
@@ -243,14 +257,16 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_WRITE, execTime);
   }
 
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testRead() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     long execTime = bench.readTest(fs);
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ, execTime);
   }
 
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testReadRandom() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     bench.getConf().setLong("test.io.skip.size", 0);
@@ -258,7 +274,8 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ_RANDOM, execTime);
   }
 
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testReadBackward() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     bench.getConf().setLong("test.io.skip.size", -DEFAULT_BUFFER_SIZE);
@@ -266,7 +283,8 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ_BACKWARD, execTime);
   }
 
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testReadSkip() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     bench.getConf().setLong("test.io.skip.size", 1);
@@ -274,14 +292,16 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ_SKIP, execTime);
   }
 
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testAppend() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     long execTime = bench.appendTest(fs);
     bench.analyzeResult(fs, TestType.TEST_TYPE_APPEND, execTime);
   }
 
-  @Test (timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testTruncate() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     bench.createControlFile(fs, DEFAULT_NR_BYTES / 2, DEFAULT_NR_FILES);
@@ -289,12 +309,43 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_TRUNCATE, execTime);
   }
 
+  private class ControlFileCreateTask implements Runnable {
+    private SequenceFile.Writer writer = null;
+    private String name;
+    private long nrBytes;
+
+    ControlFileCreateTask(SequenceFile.Writer writer, String name,
+        long nrBytes) {
+      this.writer = writer;
+      this.name = name;
+      this.nrBytes = nrBytes;
+    }
+
+    @Override
+    public void run() {
+      try {
+        writer.append(new Text(name), new LongWritable(nrBytes));
+      } catch (Exception e) {
+        LOG.error(e.getLocalizedMessage());
+      } finally {
+        if (writer != null) {
+          try {
+            writer.close();
+          } catch (IOException e) {
+            LOG.error(e.toString());
+          }
+        }
+        writer = null;
+      }
+    }
+  }
+
   @SuppressWarnings("deprecation")
   private void createControlFile(FileSystem fs,
                                   long nrBytes, // in bytes
                                   int nrFiles
                                 ) throws IOException {
-    LOG.info("creating control file: "+nrBytes+" bytes, "+nrFiles+" files");
+    LOG.info("creating control file: " + nrBytes + " bytes, " + nrFiles + " files");
     final int maxDirItems = config.getInt(
         DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_DEFAULT);
@@ -308,7 +359,7 @@ public class TestDFSIO implements Tool {
 
     fs.delete(controlDir, true);
 
-    for(int i=0; i < nrFiles; i++) {
+    for (int i = 0; i < nrFiles; i++) {
       String name = getFileName(i);
       Path controlFile = new Path(controlDir, "in_file_" + name);
       SequenceFile.Writer writer = null;
@@ -316,18 +367,41 @@ public class TestDFSIO implements Tool {
         writer = SequenceFile.createWriter(fs, config, controlFile,
                                            Text.class, LongWritable.class,
                                            CompressionType.NONE);
-        writer.append(new Text(name), new LongWritable(nrBytes));
+        Runnable controlFileCreateTask = new ControlFileCreateTask(writer, name, nrBytes);
+        completionService.submit(controlFileCreateTask, "success");
       } catch(Exception e) {
         throw new IOException(e.getLocalizedMessage());
-      } finally {
-        if (writer != null) {
-          writer.close();
-        }
-        writer = null;
       }
     }
-    LOG.info("created control files for: " + nrFiles + " files");
+
+    boolean isSuccess = false;
+    int count = 0;
+    for (int i = 0; i < nrFiles; i++) {
+      try {
+        // Since control file is quiet small, we use 3 minutes here.
+        Future<String> future = completionService.poll(3, TimeUnit.MINUTES);
+        if (future != null) {
+          future.get(3, TimeUnit.MINUTES);
+          count++;
+        } else {
+          break;
+        }
+      } catch (ExecutionException | InterruptedException | TimeoutException e) {
+        throw new IOException(e);
+      }
+    }
+
+    if (count == nrFiles) {
+      isSuccess = true;
+    }
+
+    if (isSuccess) {
+      LOG.info("created control files for: " + nrFiles + " files");
+    } else {
+      throw new IOException("Create control files timeout.");
+    }
   }
+
 
   private static String getFileName(int fIdx) {
     return BASE_FILE_NAME + Integer.toString(fIdx);
@@ -865,7 +939,12 @@ public class TestDFSIO implements Tool {
       cleanup(fs);
       return 0;
     }
-    createControlFile(fs, nrBytes, nrFiles);
+    try {
+      createControlFile(fs, nrBytes, nrFiles);
+    } catch (IOException e) {
+      LOG.warn(e.toString());
+      throw new IOException(e);
+    }
     long tStart = System.currentTimeMillis();
     switch(testType) {
     case TEST_TYPE_WRITE:

@@ -73,6 +73,7 @@ public final class InternalConstants {
       OP_CREATE_ONE_DIRECTORY,
       OP_DIRECTORY_SCAN,
       OP_DELETE,
+      OP_DELETE_DIR,
       OP_DELETE_FILE_UNDER_DESTINATION,
       OP_GET_FILE_STATUS,
       OP_IS_DIRECTORY,
@@ -85,6 +86,7 @@ public final class InternalConstants {
       OP_MSYNC,
       OP_PREPARE_DIR_ANCESTORS,
       OP_RENAME_FILE,
+      OP_SAVE_SUMMARY_FILE,
       OP_SAVE_TASK_MANIFEST,
 
       OBJECT_LIST_REQUEST,
@@ -127,4 +129,11 @@ public final class InternalConstants {
   /** Schemas of filesystems we know to not work with this committer. */
   public static final Set<String> UNSUPPORTED_FS_SCHEMAS =
       ImmutableSet.of("s3a", "wasb");
+
+  /**
+   * Interval in milliseconds between save retries.
+   * Value {@value} milliseconds.
+   */
+  public static final int SAVE_SLEEP_INTERVAL = 500;
+
 }

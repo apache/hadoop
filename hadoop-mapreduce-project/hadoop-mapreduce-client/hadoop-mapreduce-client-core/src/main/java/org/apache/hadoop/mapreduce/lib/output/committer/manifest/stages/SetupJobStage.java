@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.Path;
 
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_DELETE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_SETUP;
 
 /**
@@ -55,7 +56,7 @@ public class SetupJobStage extends
     createNewDirectory("Creating task manifest dir", getTaskManifestDir());
     // delete any success marker if so instructed.
     if (deleteMarker) {
-      delete(getStageConfig().getJobSuccessMarkerPath(), false);
+      deleteFile(getStageConfig().getJobSuccessMarkerPath(), OP_DELETE);
     }
     return path;
   }

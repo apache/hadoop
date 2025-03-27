@@ -25,8 +25,8 @@ import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.PartitionedStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterFactory;
 
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
 
 /**
  * These are internal constants not intended for public use.
@@ -108,7 +108,7 @@ public final class InternalCommitterConstants {
 
   /** Error message for a path without a magic element in the list: {@value}. */
   public static final String E_NO_MAGIC_PATH_ELEMENT
-      = "No " + MAGIC + " element in path";
+      = "No " + MAGIC_PATH_PREFIX + " element in path";
 
   /**
    * The UUID for jobs: {@value}.

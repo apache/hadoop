@@ -22,10 +22,10 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verif
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.clearRecords;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.createMockMountTable;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.synchronizeRecords;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -42,9 +42,9 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the basic {@link StateStoreService}
@@ -55,14 +55,14 @@ public class TestStateStoreMountTable extends TestStateStoreBase {
   private static List<String> nameservices;
   private static MountTableStore mountStore;
 
-  @BeforeClass
+  @BeforeAll
   public static void create() throws IOException {
     nameservices = new ArrayList<>();
     nameservices.add(NAMESERVICES[0]);
     nameservices.add(NAMESERVICES[1]);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException, InterruptedException {
     mountStore =
         getStateStore().getRegisteredRecordStore(MountTableStore.class);

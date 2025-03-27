@@ -19,9 +19,9 @@
 package org.apache.hadoop.fs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -42,8 +42,9 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +60,7 @@ public class TestFsShellReturnCode {
   private static FileSystem fileSys;
   private static FsShell fsShell;
   
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     conf.setClass("fs.file.impl", LocalFileSystemExtn.class, LocalFileSystem.class);
     fileSys = FileSystem.get(conf);
@@ -105,14 +106,10 @@ public class TestFsShellReturnCode {
       FileStatus[] stats = fileSys.globStatus(new Path(files[i]));
       if (stats != null) {
         for (int j=0; j < stats.length; j++) {
-          assertEquals("check owner of " + files[i],
-              ((owner != null) ? "STUB-"+owner : oldStats[i][j].getOwner()),
-              stats[j].getOwner()
-          );
-          assertEquals("check group of " + files[i],
-              ((group != null) ? "STUB-"+group : oldStats[i][j].getGroup()),
-              stats[j].getGroup()
-          );        
+          assertEquals(((owner != null) ? "STUB-"+owner : oldStats[i][j].getOwner()),
+              stats[j].getOwner(), "check owner of " + files[i]);
+          assertEquals(((group != null) ? "STUB-"+group : oldStats[i][j].getGroup()),
+              stats[j].getGroup(), "check group of " + files[i]);
         }
       }
     }
@@ -127,7 +124,8 @@ public class TestFsShellReturnCode {
    * 
    * @throws Exception
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testChmod() throws Exception {
     Path p1 = new Path(TEST_ROOT_DIR, "testChmod/fileExists");
 
@@ -183,7 +181,8 @@ public class TestFsShellReturnCode {
    * 
    * @throws Exception
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testChown() throws Exception {
     Path p1 = new Path(TEST_ROOT_DIR, "testChown/fileExists");
 
@@ -239,7 +238,8 @@ public class TestFsShellReturnCode {
    * 
    * @throws Exception
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testChgrp() throws Exception {
     Path p1 = new Path(TEST_ROOT_DIR, "testChgrp/fileExists");
 
@@ -284,7 +284,8 @@ public class TestFsShellReturnCode {
     change(1, null, "admin", f2, f7);
   }
   
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testGetWithInvalidSourcePathShouldNotDisplayNullInConsole()
       throws Exception {
     Configuration conf = new Configuration();
@@ -303,20 +304,22 @@ public class TestFsShellReturnCode {
       args[0] = "-get";
       args[1] = new Path(tdir.toUri().getPath(), "/invalidSrc").toString();
       args[2] = new Path(tdir.toUri().getPath(), "/invalidDst").toString();
-      assertTrue("file exists", !fileSys.exists(new Path(args[1])));
-      assertTrue("file exists", !fileSys.exists(new Path(args[2])));
+      assertTrue(!fileSys.exists(new Path(args[1])), "file exists");
+      assertTrue(!fileSys.exists(new Path(args[2])), "file exists");
       int run = shell.run(args);
       results = bytes.toString();
-      assertEquals("Return code should be 1", 1, run);
-      assertTrue(" Null is coming when source path is invalid. ",!results.contains("get: null"));
-      assertTrue(" Not displaying the intended message ",results.contains("get: `"+args[1]+"': No such file or directory"));
+      assertEquals(1, run, "Return code should be 1");
+      assertTrue(!results.contains("get: null"), " Null is coming when source path is invalid. ");
+      assertTrue(results.contains("get: `" + args[1] + "': No such file or directory"),
+          " Not displaying the intended message ");
     } finally {
       IOUtils.closeStream(out);
       System.setErr(oldErr);
     }
   }
   
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRmWithNonexistentGlob() throws Exception {
     Configuration conf = new Configuration();
     FsShell shell = new FsShell();
@@ -337,7 +340,8 @@ public class TestFsShellReturnCode {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRmForceWithNonexistentGlob() throws Exception {
     Configuration conf = new Configuration();
     FsShell shell = new FsShell();
@@ -356,7 +360,8 @@ public class TestFsShellReturnCode {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testInvalidDefaultFS() throws Exception {
     // if default fs doesn't exist or is invalid, but the path provided in 
     // arguments is valid - fsshell should work
@@ -379,7 +384,7 @@ public class TestFsShellReturnCode {
       int run = shell.run(args);
       results = bytes.toString();
       LOG.info("result=" + results);
-      assertTrue("Return code should be 0", run == 0);
+      assertTrue(run == 0, "Return code should be 0");
     } finally {
       IOUtils.closeStream(out);
       System.setErr(oldErr);
@@ -387,7 +392,8 @@ public class TestFsShellReturnCode {
     
   }
   
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testInterrupt() throws Exception {
     MyFsShell shell = new MyFsShell();
     shell.setConf(new Configuration());

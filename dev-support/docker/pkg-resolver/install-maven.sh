@@ -40,7 +40,7 @@ fi
 
 if [ "$version_to_install" == "3.6.3" ]; then
   mkdir -p /opt/maven /tmp/maven &&
-    curl -L -s -S https://dlcdn.apache.org/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz \
+    curl -L -s -S https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.6.3/apache-maven-3.6.3-bin.tar.gz \
       -o /tmp/maven/apache-maven-3.6.3-bin.tar.gz &&
     tar xzf /tmp/maven/apache-maven-3.6.3-bin.tar.gz --strip-components 1 -C /opt/maven
 else

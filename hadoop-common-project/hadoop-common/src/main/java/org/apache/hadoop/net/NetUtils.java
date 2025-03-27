@@ -83,9 +83,9 @@ public class NetUtils {
   /**
    * Get the socket factory for the given class according to its
    * configuration parameter
-   * <tt>hadoop.rpc.socket.factory.class.&lt;ClassName&gt;</tt>. When no
+   * <code>hadoop.rpc.socket.factory.class.&lt;ClassName&gt;</code>. When no
    * such parameter exists then fall back on the default socket factory as
-   * configured by <tt>hadoop.rpc.socket.factory.class.default</tt>. If
+   * configured by <code>hadoop.rpc.socket.factory.class.default</code>. If
    * this default socket factory is not configured, then fall back on the JVM
    * default socket factory.
    * 
@@ -111,7 +111,7 @@ public class NetUtils {
 
   /**
    * Get the default socket factory as specified by the configuration
-   * parameter <tt>hadoop.rpc.socket.factory.default</tt>
+   * parameter <code>hadoop.rpc.socket.factory.default</code>
    * 
    * @param conf the configuration
    * @return the default socket factory as specified in the configuration or
@@ -161,6 +161,10 @@ public class NetUtils {
    */
   public static InetSocketAddress createSocketAddr(String target) {
     return createSocketAddr(target, -1);
+  }
+
+  public static InetSocketAddress createSocketAddrUnresolved(String target) {
+    return createSocketAddr(target, -1, null, false, false);
   }
 
   /**
@@ -219,6 +223,12 @@ public class NetUtils {
                                                    int defaultPort,
                                                    String configName,
                                                    boolean useCacheIfPresent) {
+    return createSocketAddr(target, defaultPort, configName, useCacheIfPresent, true);
+  }
+
+  public static InetSocketAddress createSocketAddr(
+      String target, int defaultPort, String configName,
+      boolean useCacheIfPresent, boolean isResolved) {
     String helpText = "";
     if (configName != null) {
       helpText = " (configuration property '" + configName + "')";
@@ -244,7 +254,10 @@ public class NetUtils {
           "Does not contain a valid host:port authority: " + target + helpText
       );
     }
-    return createSocketAddrForHost(host, port);
+    if (isResolved) {
+      return createSocketAddrForHost(host, port);
+    }
+    return InetSocketAddress.createUnresolved(host, port);
   }
 
   private static final long URI_CACHE_SIZE_DEFAULT = 1000;

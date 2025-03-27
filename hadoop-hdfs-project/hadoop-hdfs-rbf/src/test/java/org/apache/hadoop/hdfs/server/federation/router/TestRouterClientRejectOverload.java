@@ -17,14 +17,18 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.ACTIVE;
+import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.STANDBY;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.simulateSlowNamenode;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.simulateThrowExceptionRouterRpcServer;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.transitionClusterNSToStandby;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.transitionClusterNSToActive;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.URI;
@@ -42,20 +46,21 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCMetrics;
+import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.apache.hadoop.util.Time;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,16 +77,13 @@ public class TestRouterClientRejectOverload {
 
   private StateStoreDFSCluster cluster;
 
-  @After
+  @AfterEach
   public void cleanup() {
     if (cluster != null) {
       cluster.shutdown();
       cluster = null;
     }
   }
-
-  @Rule
-  public ExpectedException exceptionRule = ExpectedException.none();
 
   private void setupCluster(boolean overloadControl, boolean ha)
       throws Exception {
@@ -169,8 +171,8 @@ public class TestRouterClientRejectOverload {
     long proxyOps0 = rpcMetrics0.getProxyOps() - iniProxyOps0;
     long proxyOps1 = rpcMetrics1.getProxyOps() - iniProxyOps1;
     assertEquals(2 * 10, proxyOps0 + proxyOps1);
-    assertTrue(proxyOps0 + " operations: not distributed", proxyOps0 >= 8);
-    assertTrue(proxyOps1 + " operations: not distributed", proxyOps1 >= 8);
+    assertTrue(proxyOps0 >= 8, proxyOps0 + " operations: not distributed");
+    assertTrue(proxyOps1 >= 8, proxyOps1 + " operations: not distributed");
   }
 
   private void testOverloaded(int expOverload) throws Exception {
@@ -216,7 +218,7 @@ public class TestRouterClientRejectOverload {
           routerProto.renewLease(clientName, null);
         } catch (RemoteException re) {
           IOException ioe = re.unwrapRemoteException();
-          assertTrue("Wrong exception: " + ioe, ioe instanceof StandbyException);
+          assertTrue(ioe instanceof StandbyException, "Wrong exception: " + ioe);
           assertExceptionContains("is overloaded", ioe);
           overloadException.incrementAndGet();
         } catch (IOException e) {
@@ -245,10 +247,8 @@ public class TestRouterClientRejectOverload {
     if (expOverloadMin == expOverloadMax) {
       assertEquals(expOverloadMin, num);
     } else {
-      assertTrue("Expected >=" + expOverloadMin + " but was " + num,
-          num >= expOverloadMin);
-      assertTrue("Expected <=" + expOverloadMax + " but was " + num,
-          num <= expOverloadMax);
+      assertTrue(num >= expOverloadMin, "Expected >=" + expOverloadMin + " but was " + num);
+      assertTrue(num <= expOverloadMax, "Expected <=" + expOverloadMax + " but was " + num);
     }
   }
 
@@ -296,7 +296,7 @@ public class TestRouterClientRejectOverload {
    * Client will success after some retries.
    */
   @Test
-  public void testNoNamenodesAvailable() throws Exception{
+  public void testNoNamenodesAvailable() throws Exception {
     setupCluster(false, true);
 
     transitionClusterNSToStandby(cluster);
@@ -317,45 +317,123 @@ public class TestRouterClientRejectOverload {
     FederationRPCMetrics rpcMetrics1 = cluster.getRouters().get(1)
         .getRouter().getRpcServer().getRPCMetrics();
 
-    // Original failures
-    long originalRouter0Failures = rpcMetrics0.getProxyOpNoNamenodes();
-    long originalRouter1Failures = rpcMetrics1.getProxyOpNoNamenodes();
-
     // GetFileInfo will throw Exception
     String exceptionMessage = "org.apache.hadoop.hdfs.server.federation."
         + "router.NoNamenodesAvailableException: No namenodes available "
         + "under nameservice ns0";
-    exceptionRule.expect(RemoteException.class);
-    exceptionRule.expectMessage(exceptionMessage);
-    routerClient.getFileInfo("/");
+    RemoteException remoteException = assertThrows(RemoteException.class, () -> {
 
-    // Router 0 failures will increase
-    assertEquals(originalRouter0Failures + 4,
-        rpcMetrics0.getProxyOpNoNamenodes());
-    // Router 1 failures do not change
-    assertEquals(originalRouter1Failures,
-        rpcMetrics1.getProxyOpNoNamenodes());
+      // Original failures
+      long originalRouter0Failures = rpcMetrics0.getProxyOpNoNamenodes();
+      long originalRouter1Failures = rpcMetrics1.getProxyOpNoNamenodes();
 
-    // Make name services available
-    transitionClusterNSToActive(cluster, 0);
+      routerClient.getFileInfo("/");
+
+      // Router 0 failures will increase
+      assertEquals(originalRouter0Failures + 4,
+          rpcMetrics0.getProxyOpNoNamenodes());
+      // Router 1 failures do not change
+      assertEquals(originalRouter1Failures,
+          rpcMetrics1.getProxyOpNoNamenodes());
+
+      // Make name services available
+      transitionClusterNSToActive(cluster, 0);
+      for (RouterContext routerContext : cluster.getRouters()) {
+        // Manually trigger the heartbeat
+        Collection<NamenodeHeartbeatService> heartbeatServices = routerContext
+            .getRouter().getNamenodeHeartbeatServices();
+        for (NamenodeHeartbeatService service : heartbeatServices) {
+          service.periodicInvoke();
+        }
+        // Update service cache
+        routerContext.getRouter().getStateStore().refreshCaches(true);
+      }
+
+      originalRouter0Failures = rpcMetrics0.getProxyOpNoNamenodes();
+
+      // RPC call must be successful
+      routerClient.getFileInfo("/");
+      // Router 0 failures do not change
+      assertEquals(originalRouter0Failures, rpcMetrics0.getProxyOpNoNamenodes());
+    });
+    assertThat(remoteException.getMessage()).contains(exceptionMessage);
+  }
+
+  /**
+   * When failover occurs, the router may record that the ns has no active namenode.
+   * Only when the router updates the cache next time can the memory status be updated,
+   * causing the router to report NoNamenodesAvailableException for a long time.
+   */
+  @Test
+  public void testNoNamenodesAvailableLongTimeWhenNsFailover() throws Exception {
+    setupCluster(false, true);
+    transitionClusterNSToStandby(cluster);
     for (RouterContext routerContext : cluster.getRouters()) {
       // Manually trigger the heartbeat
       Collection<NamenodeHeartbeatService> heartbeatServices = routerContext
-          .getRouter().getNamenodeHeartbeatServices();
+              .getRouter().getNamenodeHeartbeatServices();
       for (NamenodeHeartbeatService service : heartbeatServices) {
         service.periodicInvoke();
       }
       // Update service cache
       routerContext.getRouter().getStateStore().refreshCaches(true);
     }
+    // Record the time after the router first updated the cache
+    long firstLoadTime = Time.now();
+    List<MiniRouterDFSCluster.NamenodeContext> namenodes = cluster.getNamenodes();
 
-    originalRouter0Failures = rpcMetrics0.getProxyOpNoNamenodes();
+    // Make sure all namenodes are in standby state
+    for (MiniRouterDFSCluster.NamenodeContext namenodeContext : namenodes) {
+      assertEquals(STANDBY.ordinal(), namenodeContext.getNamenode().getNameNodeState());
+    }
 
-    // RPC call must be successful
+    Configuration conf = cluster.getRouterClientConf();
+    // Set dfs.client.failover.random.order false, to pick 1st router at first
+    conf.setBoolean("dfs.client.failover.random.order", false);
+
+    DFSClient routerClient = new DFSClient(new URI("hdfs://fed"), conf);
+
+    for (RouterContext routerContext : cluster.getRouters()) {
+      // Get the second namenode in the router cache and make it active
+      List<? extends FederationNamenodeContext> ns0 = routerContext.getRouter()
+              .getNamenodeResolver()
+              .getNamenodesForNameserviceId("ns0", false);
+
+      String nsId = ns0.get(1).getNamenodeId();
+      cluster.switchToActive("ns0", nsId);
+      // Manually trigger the heartbeat, but the router does not manually load the cache
+      Collection<NamenodeHeartbeatService> heartbeatServices = routerContext
+              .getRouter().getNamenodeHeartbeatServices();
+      for (NamenodeHeartbeatService service : heartbeatServices) {
+        service.periodicInvoke();
+      }
+      assertEquals(ACTIVE.ordinal(),
+              cluster.getNamenode("ns0", nsId).getNamenode().getNameNodeState());
+    }
+
+    // Get router0 metrics
+    FederationRPCMetrics rpcMetrics0 = cluster.getRouters().get(0)
+            .getRouter().getRpcServer().getRPCMetrics();
+    // Original failures
+    long originalRouter0Failures = rpcMetrics0.getProxyOpNoNamenodes();
+
+    /*
+     * At this time, the router has recorded 2 standby namenodes in memory,
+     * and the first accessed namenode is indeed standby,
+     * then an NoNamenodesAvailableException will be reported for the first access,
+     * and the next access will be successful.
+     */
     routerClient.getFileInfo("/");
-    // Router 0 failures do not change
-    assertEquals(originalRouter0Failures, rpcMetrics0.getProxyOpNoNamenodes());
+    long successReadTime = Time.now();
+    assertEquals(originalRouter0Failures + 1, rpcMetrics0.getProxyOpNoNamenodes());
+
+    /*
+     * access the active namenode without waiting for the router to update the cache,
+     * even if there are 2 standby states recorded in the router memory.
+     */
+    assertTrue(successReadTime - firstLoadTime < cluster.getCacheFlushInterval());
   }
+
 
   @Test
   public void testAsyncCallerPoolMetrics() throws Exception {

@@ -17,9 +17,9 @@
 */
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -29,24 +29,23 @@ import java.util.Random;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestDFVariations {
   private static final String TEST_ROOT_DIR =
       GenericTestUtils.getTestDir("testdfvariations").getAbsolutePath();
   private static File test_root = null;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     test_root = new File(TEST_ROOT_DIR);
     test_root.mkdirs();
   }
   
-  @After
+  @AfterEach
   public void after() throws IOException {
     FileUtil.setWritable(test_root, true);
     FileUtil.fullyDelete(test_root);
@@ -65,25 +64,26 @@ public class TestDFVariations {
     }
   }
 
-  @Test(timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testMount() throws Exception {
     XXDF df = new XXDF();
     String expectedMount =
         Shell.WINDOWS ? df.getDirPath().substring(0, 2) : "/foo/bar";
-    assertEquals("Invalid mount point",
-        expectedMount, df.getMount());
+    assertEquals(expectedMount, df.getMount(), "Invalid mount point");
   }
 
-  @Test(timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testFileSystem() throws Exception {
     XXDF df = new XXDF();
     String expectedFileSystem =
         Shell.WINDOWS ? df.getDirPath().substring(0, 2) : "/dev/sda3";
-    assertEquals("Invalid filesystem",
-        expectedFileSystem, df.getFilesystem());
+    assertEquals(expectedFileSystem, df.getFilesystem(), "Invalid filesystem");
   }
 
-  @Test(timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testDFInvalidPath() throws Exception {
     // Generate a path that doesn't exist
     Random random = new Random(0xDEADBEEFl);
@@ -106,7 +106,8 @@ public class TestDFVariations {
     }
   }
   
-  @Test(timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testDFMalformedOutput() throws Exception {
     DF df = new DF(new File("/"), 0l);
     BufferedReader reader = new BufferedReader(new StringReader(
@@ -152,19 +153,19 @@ public class TestDFVariations {
     }
   }
 
-  @Test(timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testGetMountCurrentDirectory() throws Exception {
     File currentDirectory = new File(".");
     String workingDir = currentDirectory.getAbsoluteFile().getCanonicalPath();
     DF df = new DF(new File(workingDir), 0L);
     String mountPath = df.getMount();
     File mountDir = new File(mountPath);
-    assertTrue("Mount dir ["+mountDir.getAbsolutePath()+"] should exist.", 
-        mountDir.exists());
-    assertTrue("Mount dir ["+mountDir.getAbsolutePath()+"] should be directory.", 
-        mountDir.isDirectory());
-    assertTrue("Working dir ["+workingDir+"] should start with ["+mountPath+"].",
-        workingDir.startsWith(mountPath));
+    assertTrue(mountDir.exists(), "Mount dir ["+mountDir.getAbsolutePath()+"] should exist.");
+    assertTrue(mountDir.isDirectory(),
+        "Mount dir ["+mountDir.getAbsolutePath()+"] should be directory.");
+    assertTrue(workingDir.startsWith(mountPath),
+        "Working dir ["+workingDir+"] should start with ["+mountPath+"].");
   }
 }
 

@@ -59,6 +59,26 @@ public interface S3ATestConstants {
   String KEY_STORAGE_CLASS_TESTS_ENABLED = TEST_FS_S3A + "create.storage.class.enabled";
 
   /**
+   * A property set to true if ACL tests are enabled: {@value}.
+   */
+  String KEY_ACL_TESTS_ENABLED = TEST_FS_S3A + "create.acl.enabled";
+
+  /**
+   * A property set to true if tests running in performance mode are enabled: {@value }
+   */
+  String KEY_PERFORMANCE_TESTS_ENABLED = TEST_FS_S3A + "performance.enabled";
+
+  /**
+   * A property set to true if V1 tests are enabled: {@value}.
+   */
+  String KEY_LIST_V1_ENABLED = TEST_FS_S3A + "list.v1.enabled";
+
+  /**
+   * A property set to true if content encoding tests are enabled: {@value}.
+   */
+  String KEY_CONTENT_ENCODING_ENABLED = TEST_FS_S3A + "content.encoding.enabled";
+
+  /**
    * Tell tests that they are being executed in parallel: {@value}.
    */
   String KEY_PARALLEL_TEST_EXECUTION = "test.parallel.execution";
@@ -96,14 +116,16 @@ public interface S3ATestConstants {
   String KEY_CSVTEST_FILE = S3A_SCALE_TEST + "csvfile";
 
   /**
-   * The landsat bucket: {@value}.
+   * Default path for the multi MB test file: {@value}.
+   * @deprecated retrieve via {@link PublicDatasetTestUtils}.
    */
-  String LANDSAT_BUCKET = "s3a://landsat-pds/";
+  @Deprecated
+  String DEFAULT_CSVTEST_FILE = PublicDatasetTestUtils.DEFAULT_EXTERNAL_FILE;
 
   /**
-   * Default path for the multi MB test file: {@value}.
+   * Example path for unit tests; this is never accessed: {@value}.
    */
-  String DEFAULT_CSVTEST_FILE = LANDSAT_BUCKET + "scene_list.gz";
+  String UNIT_TEST_EXAMPLE_PATH = "s3a://example/data/";
 
   /**
    * Configuration key for an existing object in a requester pays bucket: {@value}.
@@ -176,6 +198,8 @@ public interface S3ATestConstants {
 
   /**
    * Fork ID passed down from maven if the test is running in parallel.
+   * If a build was also executed with job.id set, this is included in
+   * the fork ID.
    */
   String TEST_UNIQUE_FORK_ID = "test.unique.fork.id";
   String TEST_STS_ENABLED = "test.fs.s3a.sts.enabled";
@@ -228,12 +252,6 @@ public interface S3ATestConstants {
       TEST_SESSION_TOKEN_DURATION_SECONDS);
 
   /**
-   * Test option to enable audits of the method path after
-   * every test case.
-   */
-  String DIRECTORY_MARKER_AUDIT = "fs.s3a.directory.marker.audit";
-
-  /**
    * Constant bytes being written when Client side encryption KMS is enabled
    * for a test. This bytes written takes into account "EncryptionContext",
    * which contains the algo used for eg:
@@ -251,4 +269,19 @@ public interface S3ATestConstants {
    * Value: {@value}.
    */
   String PROJECT_BUILD_DIRECTORY_PROPERTY = "project.build.directory";
+
+  /**
+   * AWS ireland region.
+   */
+  String EU_WEST_1 = "eu-west-1";
+
+  /**
+   * System property for root tests being enabled: {@value}.
+   */
+  String ROOT_TESTS_ENABLED = "fs.s3a.root.tests.enabled";
+
+  /**
+   * Default policy on root tests: {@value}.
+   */
+  boolean DEFAULT_ROOT_TESTS_ENABLED = true;
 }

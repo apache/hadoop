@@ -20,12 +20,12 @@ package org.apache.hadoop.fs.s3a.audit;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
+import org.assertj.core.api.Assertions;
+import software.amazon.awssdk.http.SdkHttpRequest;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -33,10 +33,12 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor;
+import org.apache.hadoop.fs.s3a.audit.impl.ReferrerExtractor;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
 import org.apache.hadoop.security.UserGroupInformation;
+
 
 import static org.apache.hadoop.fs.audit.AuditConstants.DELETE_KEYS_SIZE;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.loggingAuditConfig;
@@ -97,13 +99,16 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
   public void testHttpReferrerPatchesTheRequest() throws Throwable {
     AuditSpan span = span();
     long ts = span.getTimestamp();
-    GetObjectMetadataRequest request = head();
-    Map<String, String> headers
-        = request.getCustomRequestHeaders();
+    SdkHttpRequest request = head();
+    Map<String, List<String>> headers = request.headers();
     assertThat(headers)
         .describedAs("Custom headers")
         .containsKey(HEADER_REFERRER);
-    String header = headers.get(HEADER_REFERRER);
+    List<String> headerValues = headers.get(HEADER_REFERRER);
+    assertThat(headerValues)
+        .describedAs("Multiple referrer headers")
+        .hasSize(1);
+    String header = headerValues.get(0);
     LOG.info("Header is {}", header);
     Map<String, String> params
         = HttpReferrerAuditHeader.extractQueryParameters(header);
@@ -201,7 +206,7 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
           + "&id=e8ede3c7-8506-4a43-8268-fe8fcbb510a4-00000278&t0=154"
           + "&fs=e8ede3c7-8506-4a43-8268-fe8fcbb510a4&t1=156&"
           + "ts=1620905165700\""
-          + " \"Hadoop 3.4.0-SNAPSHOT, java/1.8.0_282 vendor/AdoptOpenJDK\""
+          + " \"Hadoop 3.5.0-SNAPSHOT, java/1.8.0_282 vendor/AdoptOpenJDK\""
           + " -"
           + " TrIqtEYGWAwvu0h1N9WJKyoqM0TyHUaY+ZZBwP2yNf2qQp1Z/0="
           + " SigV4"
@@ -305,13 +310,16 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
   @Test
   public void testGetObjectRange() throws Throwable {
     AuditSpan span = span();
-    GetObjectRequest request = get(getObjectRequest -> getObjectRequest.setRange(100, 200));
-    Map<String, String> headers
-            = request.getCustomRequestHeaders();
+    SdkHttpRequest request = get("bytes=100-200");
+    Map<String, List<String>> headers = request.headers();
     assertThat(headers)
-            .describedAs("Custom headers")
-            .containsKey(HEADER_REFERRER);
-    String header = headers.get(HEADER_REFERRER);
+        .describedAs("Custom headers")
+        .containsKey(HEADER_REFERRER);
+    List<String> headerValues = headers.get(HEADER_REFERRER);
+    assertThat(headerValues)
+        .describedAs("Multiple referrer headers")
+        .hasSize(1);
+    String header = headerValues.get(0);
     LOG.info("Header is {}", header);
     Map<String, String> params
             = HttpReferrerAuditHeader.extractQueryParameters(header);
@@ -324,13 +332,16 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
   @Test
   public void testGetObjectWithoutRange() throws Throwable {
     AuditSpan span = span();
-    GetObjectRequest request = get(getObjectRequest -> {});
-    Map<String, String> headers
-        = request.getCustomRequestHeaders();
+    SdkHttpRequest request = get("");
+    Map<String, List<String>> headers = request.headers();
     assertThat(headers)
         .describedAs("Custom headers")
         .containsKey(HEADER_REFERRER);
-    String header = headers.get(HEADER_REFERRER);
+    List<String> headerValues = headers.get(HEADER_REFERRER);
+    assertThat(headerValues)
+        .describedAs("Multiple referrer headers")
+        .hasSize(1);
+    String header = headerValues.get(0);
     LOG.info("Header is {}", header);
     Map<String, String> params
         = HttpReferrerAuditHeader.extractQueryParameters(header);
@@ -341,16 +352,20 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
   public void testHttpReferrerForBulkDelete() throws Throwable {
     AuditSpan span = span();
     long ts = span.getTimestamp();
-    DeleteObjectsRequest request = headForBulkDelete(
+    SdkHttpRequest request = headForBulkDelete(
         "key_01",
         "key_02",
         "key_03");
-    Map<String, String> headers
-        = request.getCustomRequestHeaders();
+    Map<String, List<String>> headers
+        = request.headers();
     assertThat(headers)
         .describedAs("Custom headers")
         .containsKey(HEADER_REFERRER);
-    String header = headers.get(HEADER_REFERRER);
+    List<String> headerValues = headers.get(HEADER_REFERRER);
+    assertThat(headerValues)
+        .describedAs("Multiple referrer headers")
+        .hasSize(1);
+    String header = headerValues.get(0);
     LOG.info("Header is {}", header);
     Map<String, String> params
         = HttpReferrerAuditHeader.extractQueryParameters(header);
@@ -403,5 +418,34 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
     assertThat(maybeStripWrappedQuotes(str))
         .describedAs("Stripped <%s>", str)
         .isEqualTo(ex);
+  }
+
+  /**
+   * Verify that exceptions raised when building referrer headers
+   * do not result in failures, just an empty header.
+   */
+  @Test
+  public void testSpanResilience() throws Throwable {
+    final CommonAuditContext auditContext = CommonAuditContext.currentAuditContext();
+    final String failing = "failing";
+    auditContext.put(failing, () -> {
+      throw new RuntimeException("raised");
+    });
+    try {
+      final HttpReferrerAuditHeader referrer = ReferrerExtractor.getReferrer(auditor, span());
+      Assertions.assertThat(referrer.buildHttpReferrer())
+          .describedAs("referrer header")
+          .isBlank();
+      // repeat
+      LOG.info("second attempt: there should be no second warning below");
+      Assertions.assertThat(referrer.buildHttpReferrer())
+          .describedAs("referrer header 2")
+          .isBlank();
+      referrer.buildHttpReferrer();
+    } finally {
+      // critical to remove this so it doesn't interfere with any other
+      // tests
+      auditContext.remove(failing);
+    }
   }
 }

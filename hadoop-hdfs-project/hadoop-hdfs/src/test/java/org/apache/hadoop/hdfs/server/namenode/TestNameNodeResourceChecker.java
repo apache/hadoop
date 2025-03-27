@@ -130,6 +130,14 @@ public class TestNameNodeResourceChecker {
 
       assertTrue("NN should be in safe mode after resources crossed threshold",
           cluster.getNameNode().isInSafeMode());
+
+      mockResourceChecker.setResourcesAvailable(true);
+      while (cluster.getNameNode().isInSafeMode() &&
+          Time.now() < startMillis + (60 * 1000)) {
+        Thread.sleep(1000);
+      }
+      assertTrue("NN should leave safe mode after resources not crossed threshold",
+          !cluster.getNameNode().isInSafeMode());
     } finally {
       if (cluster != null)
         cluster.shutdown();

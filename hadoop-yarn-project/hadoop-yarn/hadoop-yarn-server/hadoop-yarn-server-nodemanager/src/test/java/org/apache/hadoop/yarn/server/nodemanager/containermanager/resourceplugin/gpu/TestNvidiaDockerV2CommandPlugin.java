@@ -24,14 +24,15 @@ import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRunCommand;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -96,14 +97,14 @@ public class TestNvidiaDockerV2CommandPlugin {
 
     // getResourceMapping is null, so commandline won't be updated
     commandPlugin.updateDockerRunCommand(runCommand, nmContainer);
-    Assert.assertTrue(commandlinesEquals(originalCommandline,
+    assertTrue(commandlinesEquals(originalCommandline,
         runCommand.getDockerCommandWithArguments()));
 
     // no GPU resource assigned, so commandline won't be updated
     ResourceMappings resourceMappings = new ResourceMappings();
     when(nmContainer.getResourceMappings()).thenReturn(resourceMappings);
     commandPlugin.updateDockerRunCommand(runCommand, nmContainer);
-    Assert.assertTrue(commandlinesEquals(originalCommandline,
+    assertTrue(commandlinesEquals(originalCommandline,
         runCommand.getDockerCommandWithArguments()));
 
     // Assign GPU resource
@@ -120,11 +121,11 @@ public class TestNvidiaDockerV2CommandPlugin {
         runCommand.getDockerCommandWithArguments();
 
     // Command line will be updated
-    Assert.assertFalse(commandlinesEquals(originalCommandline, newCommandLine));
+    assertFalse(commandlinesEquals(originalCommandline, newCommandLine));
     // NVIDIA_VISIBLE_DEVICES will be set
-    Assert.assertTrue(
+    assertTrue(
         runCommand.getEnv().get("NVIDIA_VISIBLE_DEVICES").equals("0,1"));
     // runtime should exist
-    Assert.assertTrue(newCommandLine.containsKey("runtime"));
+    assertTrue(newCommandLine.containsKey("runtime"));
   }
 }

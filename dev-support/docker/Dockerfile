@@ -44,9 +44,14 @@ RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
 ######
 # hadolint ignore=DL3008,SC2046
 RUN apt-get -q update \
+    && apt-get -q install -y --no-install-recommends wget apt-transport-https gpg gpg-agent gawk ca-certificates \
     && apt-get -q install -y --no-install-recommends python3 \
+    && echo "deb https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print$2}' /etc/os-release) main" > /etc/apt/sources.list.d/adoptium.list \
+    && wget -q -O - https://packages.adoptium.net/artifactory/api/gpg/key/public > /etc/apt/trusted.gpg.d/adoptium.asc  \
+    && apt-get -q update \
     && apt-get -q install -y --no-install-recommends $(pkg-resolver/resolve.py ubuntu:focal) \
     && apt-get clean \
+    && update-java-alternatives -s java-1.8.0-openjdk-amd64 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN locale-gen en_US.UTF-8
@@ -66,7 +71,7 @@ ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 ENV SPOTBUGS_HOME /opt/spotbugs
 
 #######
-# Set env vars for Google Protobuf 3.7.1
+# Set env vars for Google Protobuf 3.21.12
 #######
 ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"

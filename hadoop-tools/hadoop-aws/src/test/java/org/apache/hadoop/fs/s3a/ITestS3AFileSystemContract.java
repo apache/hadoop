@@ -19,7 +19,9 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -32,6 +34,10 @@ import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.isCreatePerformanceEnabled;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assume.*;
 import static org.junit.Assert.*;
@@ -62,7 +68,9 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
   @Before
   public void setUp() throws Exception {
     nameThread();
-    Configuration conf = new Configuration();
+    Configuration conf = setPerformanceFlags(
+        new Configuration(),
+        "");
 
     fs = S3ATestUtils.createTestFileSystem(conf);
     assumeNotNull(fs);
@@ -136,5 +144,33 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
     intercept(FileNotFoundException.class,
         () -> super.testRenameNonExistentPath());
 
+  }
+
+  @Override
+  public void testOverwrite() throws IOException {
+    boolean createPerformance = isCreatePerformanceEnabled(fs);
+    try {
+      super.testOverwrite();
+      Assertions.assertThat(createPerformance)
+          .describedAs("create performance enabled")
+          .isFalse();
+    } catch (AssertionError e) {
+      // swallow the exception if create performance is enabled,
+      // else rethrow
+      if (!createPerformance) {
+        throw e;
+      }
+    }
+  }
+
+  @Override
+  public void testOverWriteAndRead() throws Exception {
+    // Currently analytics accelerator does not support reading of files that have been overwritten.
+    // This is because the analytics accelerator library caches metadata, and when a file is
+    // overwritten, the old metadata continues to be used, until it is removed from the cache over
+    // time. This will be fixed in https://github.com/awslabs/analytics-accelerator-s3/issues/218.
+    skipIfAnalyticsAcceleratorEnabled(fs.getConf(),
+        "Analytics Accelerator currently does not support reading of over written files");
+    super.testOverWriteAndRead();
   }
 }

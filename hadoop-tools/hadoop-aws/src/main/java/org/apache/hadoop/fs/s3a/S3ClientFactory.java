@@ -24,44 +24,70 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.handlers.RequestHandler2;
-import com.amazonaws.monitoring.MonitoringListener;
-import com.amazonaws.services.s3.AmazonS3;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.s3a.impl.CSEMaterials;
 import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.S3EXPRESS_CREATE_SESSION_DEFAULT;
 
 /**
- * Factory for creation of {@link AmazonS3} client instances.
+ * Factory for creation of {@link S3Client} client instances.
  * Important: HBase's HBoss module implements this interface in its
  * tests.
  * Take care when updating this interface to ensure that a client
  * implementing only the deprecated method will work.
  * See https://github.com/apache/hbase-filesystem
  *
- * @deprecated This interface will be replaced by one which uses the AWS SDK V2 S3 client as part of
- * upgrading S3A to SDK V2. See HADOOP-18073.
  */
 @InterfaceAudience.LimitedPrivate("HBoss")
 @InterfaceStability.Evolving
-@Deprecated
 public interface S3ClientFactory {
 
   /**
-   * Creates a new {@link AmazonS3} client.
+   * Creates a new {@link S3Client}.
+   * The client returned supports synchronous operations. For
+   * asynchronous operations, use
+   * {@link #createS3AsyncClient(URI, S3ClientCreationParameters)}.
    *
    * @param uri S3A file system URI
    * @param parameters parameter object
    * @return S3 client
-   * @throws IOException IO problem
+   * @throws IOException on any IO problem
    */
-  AmazonS3 createS3Client(URI uri,
+  S3Client createS3Client(URI uri,
       S3ClientCreationParameters parameters) throws IOException;
+
+  /**
+   * Creates a new {@link S3AsyncClient}.
+   * The client returned supports asynchronous operations. For
+   * synchronous operations, use
+   * {@link #createS3Client(URI, S3ClientCreationParameters)}.
+   *
+   * @param uri S3A file system URI
+   * @param parameters parameter object
+   * @return Async S3 client
+   * @throws IOException on any IO problem
+   */
+  S3AsyncClient createS3AsyncClient(URI uri,
+      S3ClientCreationParameters parameters) throws IOException;
+
+  /**
+   * Creates a new {@link S3TransferManager}.
+   *
+   * @param s3AsyncClient the async client to be used by the TM.
+   * @return S3 transfer manager
+   */
+  S3TransferManager createS3TransferManager(S3AsyncClient s3AsyncClient);
 
   /**
    * Settings for the S3 Client.
@@ -74,7 +100,7 @@ public interface S3ClientFactory {
     /**
      * Credentials.
      */
-    private AWSCredentialsProvider credentialSet;
+    private AwsCredentialsProvider credentialSet;
 
     /**
      * Endpoint.
@@ -87,16 +113,28 @@ public interface S3ClientFactory {
     private final Map<String, String> headers = new HashMap<>();
 
     /**
-     * Monitoring listener.
-     */
-    private MonitoringListener monitoringListener;
-
-    /**
      * RequestMetricCollector metrics...if not-null will be wrapped
      * with an {@code AwsStatisticsCollector} and passed to
      * the client.
      */
     private StatisticsFromAwsSdk metrics;
+
+    /**
+     * Is CSE enabled?
+     * The default value is {@value}.
+     */
+    private Boolean isCSEEnabled = false;
+
+    /**
+     * KMS region.
+     * This is only used if CSE is enabled.
+     */
+    private String kmsRegion;
+
+    /**
+     * Client side encryption materials.
+     */
+    private CSEMaterials cseMaterials;
 
     /**
      * Use (deprecated) path style access.
@@ -109,9 +147,9 @@ public interface S3ClientFactory {
     private boolean requesterPays;
 
     /**
-     * Request handlers; used for auditing, X-Ray etc.
-     */
-    private List<RequestHandler2> requestHandlers;
+     * Execution interceptors; used for auditing, X-Ray etc.
+     * */
+    private List<ExecutionInterceptor> executionInterceptors;
 
     /**
      * Suffix to UA.
@@ -125,37 +163,67 @@ public interface S3ClientFactory {
     private URI pathUri;
 
     /**
-     * List of request handlers to include in the chain
-     * of request execution in the SDK.
-     * @return the handler list
+     * Minimum part size for transfer parts.
      */
-    public List<RequestHandler2> getRequestHandlers() {
-      return requestHandlers;
+    private long minimumPartSize;
+
+    /**
+     * Threshold for multipart operations.
+     */
+    private long multiPartThreshold;
+
+    /**
+     * Multipart upload enabled.
+     */
+    private boolean multipartCopy = true;
+
+    /**
+     * Executor that the transfer manager will use to execute background tasks.
+     */
+    private Executor transferManagerExecutor;
+
+    /**
+     * Region of the S3 bucket.
+     */
+    private String region;
+
+    /**
+     * Enable S3Express create session.
+     */
+    private boolean expressCreateSession = S3EXPRESS_CREATE_SESSION_DEFAULT;
+
+    /**
+     * Enable checksum validation.
+     */
+    private boolean checksumValidationEnabled;
+
+    /**
+     * Is FIPS enabled?
+     */
+    private boolean fipsEnabled;
+
+    /**
+     * Is analytics accelerator enabled?
+     */
+    private boolean isAnalyticsAcceleratorEnabled;
+
+    /**
+     * List of execution interceptors to include in the chain
+     * of interceptors in the SDK.
+     * @return the interceptors list
+     */
+    public List<ExecutionInterceptor> getExecutionInterceptors() {
+      return executionInterceptors;
     }
 
     /**
-     * List of request handlers.
-     * @param handlers handler list.
+     * List of execution interceptors.
+     * @param interceptors interceptors list.
      * @return this object
      */
-    public S3ClientCreationParameters withRequestHandlers(
-        @Nullable final List<RequestHandler2> handlers) {
-      requestHandlers = handlers;
-      return this;
-    }
-
-    public MonitoringListener getMonitoringListener() {
-      return monitoringListener;
-    }
-
-    /**
-     * listener for AWS monitoring events.
-     * @param listener listener
-     * @return this object
-     */
-    public S3ClientCreationParameters withMonitoringListener(
-        @Nullable final MonitoringListener listener) {
-      monitoringListener = listener;
+    public S3ClientCreationParameters withExecutionInterceptors(
+        @Nullable final List<ExecutionInterceptor> interceptors) {
+      executionInterceptors = interceptors;
       return this;
     }
 
@@ -191,7 +259,7 @@ public interface S3ClientFactory {
       return requesterPays;
     }
 
-    public AWSCredentialsProvider getCredentialSet() {
+    public AwsCredentialsProvider getCredentialSet() {
       return credentialSet;
     }
 
@@ -202,7 +270,7 @@ public interface S3ClientFactory {
      */
 
     public S3ClientCreationParameters withCredentialSet(
-        final AWSCredentialsProvider value) {
+        final AwsCredentialsProvider value) {
       credentialSet = value;
       return this;
     }
@@ -292,6 +360,246 @@ public interface S3ClientFactory {
     public S3ClientCreationParameters withPathUri(
         final URI value) {
       pathUri = value;
+      return this;
+    }
+
+    /**
+     * Get the minimum part size for transfer parts.
+     * @return part size
+     */
+    public long getMinimumPartSize() {
+      return minimumPartSize;
+    }
+
+    /**
+     * Set the minimum part size for transfer parts.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withMinimumPartSize(
+        final long value) {
+      minimumPartSize = value;
+      return this;
+    }
+
+    /**
+     * Get the threshold for multipart operations.
+     * @return multipart threshold
+     */
+    public long getMultiPartThreshold() {
+      return multiPartThreshold;
+    }
+
+    /**
+     * Set the threshold for multipart operations.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withMultipartThreshold(
+        final long value) {
+      multiPartThreshold = value;
+      return this;
+    }
+
+    /**
+     * Get the executor that the transfer manager will use to execute background tasks.
+     * @return part size
+     */
+    public Executor getTransferManagerExecutor() {
+      return transferManagerExecutor;
+    }
+
+    /**
+     * Set the executor that the transfer manager will use to execute background tasks.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withTransferManagerExecutor(
+        final Executor value) {
+      transferManagerExecutor = value;
+      return this;
+    }
+
+    /**
+     * Set the multipart flag..
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withMultipartCopyEnabled(final boolean value) {
+      this.multipartCopy = value;
+      return this;
+    }
+
+    /**
+     * Get the multipart flag.
+     * @return multipart flag
+     */
+    public boolean isMultipartCopy() {
+      return multipartCopy;
+    }
+
+    /**
+     * Set region.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withRegion(
+        final String value) {
+      region = value;
+      return this;
+    }
+
+    /**
+     * Set the client side encryption flag.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withClientSideEncryptionEnabled(final boolean value) {
+      this.isCSEEnabled = value;
+      return this;
+    }
+
+    /**
+     * Set the analytics accelerator enabled flag.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withAnalyticsAcceleratorEnabled(final boolean value) {
+      this.isAnalyticsAcceleratorEnabled = value;
+      return this;
+    }
+
+    /**
+     * Set the KMS client region.
+     * This is required for CSE-KMS
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withKMSRegion(final String value) {
+      this.kmsRegion = value;
+      return this;
+    }
+
+    /**
+     * Get the client side encryption flag.
+     * @return client side encryption flag
+     */
+    public boolean isClientSideEncryptionEnabled() {
+      return this.isCSEEnabled;
+    }
+
+    /**
+     * Get the analytics accelerator enabled flag.
+     * @return analytics accelerator enabled flag.
+     */
+    public boolean isAnalyticsAcceleratorEnabled() {
+      return this.isAnalyticsAcceleratorEnabled;
+    }
+
+    /**
+     * Set the client side encryption materials.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withClientSideEncryptionMaterials(final CSEMaterials value) {
+      this.cseMaterials = value;
+      return this;
+    }
+
+    /**
+     * Get the client side encryption materials.
+     * @return client side encryption materials
+     */
+    public CSEMaterials getClientSideEncryptionMaterials() {
+      return this.cseMaterials;
+    }
+
+    /**
+     * Get the region.
+     * @return invoker
+     */
+    public String getRegion() {
+      return region;
+    }
+
+    /**
+     * Get the KMS region.
+     * @return Configured KMS region.
+     */
+    public String getKmsRegion() {
+      return kmsRegion;
+    }
+
+    /**
+     * Should s3express createSession be called?
+     * @return true if the client should enable createSession.
+     */
+    public boolean isExpressCreateSession() {
+      return expressCreateSession;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withExpressCreateSession(final boolean value) {
+      expressCreateSession = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withChecksumValidationEnabled(final boolean value) {
+      checksumValidationEnabled = value;
+      return this;
+    }
+
+    public boolean isChecksumValidationEnabled() {
+      return checksumValidationEnabled;
+    }
+
+    @Override
+    public String toString() {
+      return "S3ClientCreationParameters{" +
+          "endpoint='" + endpoint + '\'' +
+          ", pathStyleAccess=" + pathStyleAccess +
+          ", requesterPays=" + requesterPays +
+          ", userAgentSuffix='" + userAgentSuffix + '\'' +
+          ", pathUri=" + pathUri +
+          ", minimumPartSize=" + minimumPartSize +
+          ", multiPartThreshold=" + multiPartThreshold +
+          ", multipartCopy=" + multipartCopy +
+          ", region='" + region + '\'' +
+          ", expressCreateSession=" + expressCreateSession +
+          ", checksumValidationEnabled=" + checksumValidationEnabled +
+          '}';
+    }
+
+    /**
+     * Get the FIPS flag.
+     * @return is fips enabled
+     */
+    public boolean isFipsEnabled() {
+      return fipsEnabled;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withFipsEnabled(final boolean value) {
+      fipsEnabled = value;
       return this;
     }
   }

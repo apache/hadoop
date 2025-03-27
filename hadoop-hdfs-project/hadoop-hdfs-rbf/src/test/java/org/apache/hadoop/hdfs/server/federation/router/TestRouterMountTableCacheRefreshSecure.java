@@ -18,9 +18,9 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.fs.contract.router.SecurityConfUtil.initSecurity;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -30,7 +30,6 @@ import java.util.List;
 
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.server.federation.FederationTestUtils;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
@@ -50,10 +49,10 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +71,7 @@ public class TestRouterMountTableCacheRefreshSecure {
   private static RouterContext routerContext;
   private static MountTableManager mountTableManager;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     curatorTestingServer = new TestingServer();
     curatorTestingServer.start();
@@ -86,7 +85,7 @@ public class TestRouterMountTableCacheRefreshSecure {
     conf.setClass(RBFConfigKeys.FEDERATION_FILE_RESOLVER_CLIENT_CLASS,
         RBFConfigKeys.FEDERATION_FILE_RESOLVER_CLIENT_CLASS_DEFAULT,
         FileSubclusterResolver.class);
-    conf.set(CommonConfigurationKeys.ZK_ADDRESS, connectString);
+    conf.set(RBFConfigKeys.FEDERATION_STORE_ZK_ADDRESS, connectString);
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_STORE_ENABLE, true);
     cluster = new MiniRouterDFSCluster(false, numNameservices, conf);
     cluster.addRouterOverrides(conf);
@@ -102,7 +101,7 @@ public class TestRouterMountTableCacheRefreshSecure {
         numNameservices, 60000);
   }
 
-  @AfterClass
+  @AfterAll
   public static void destory() {
     try {
       curatorTestingServer.close();
@@ -112,7 +111,7 @@ public class TestRouterMountTableCacheRefreshSecure {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     clearEntries();
   }
@@ -235,8 +234,7 @@ public class TestRouterMountTableCacheRefreshSecure {
             UpdateMountTableEntryRequest.newInstance(upateEntry));
     assertTrue(updateMountTableEntry.getStatus());
     MountTable updatedMountTable = getMountTableEntry(srcPath);
-    assertNotNull("Updated mount table entrty cannot be null",
-        updatedMountTable);
+    assertNotNull(updatedMountTable, "Updated mount table entrty cannot be null");
 
     // When update entry is done, all the routers must have updated its mount
     // table entry

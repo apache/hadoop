@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.util.Time;
 import org.junit.Test;
 
@@ -174,14 +175,14 @@ public class TestNodeCount {
   /* threadsafe read of the replication counts for this block */
   NumberReplicas countNodes(Block block, FSNamesystem namesystem) {
     BlockManager blockManager = namesystem.getBlockManager();
-    namesystem.readLock();
+    namesystem.readLock(RwLockMode.BM);
     try {
       lastBlock = block;
       lastNum = blockManager.countNodes(blockManager.getStoredBlock(block));
       return lastNum;
     }
     finally {
-      namesystem.readUnlock();
+      namesystem.readUnlock(RwLockMode.BM, "countNodes");
     }
   }
 }

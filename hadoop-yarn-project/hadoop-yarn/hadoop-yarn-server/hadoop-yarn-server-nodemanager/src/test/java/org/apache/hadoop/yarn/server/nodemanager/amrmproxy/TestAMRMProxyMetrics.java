@@ -22,39 +22,43 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestAMRMProxyMetrics extends BaseAMRMProxyTest {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestAMRMProxyMetrics.class);
   private static AMRMProxyMetrics metrics;
 
-  @BeforeClass
+  @BeforeAll
   public static void init() {
     metrics = AMRMProxyMetrics.getMetrics();
     LOG.info("Test: aggregate metrics are initialized correctly");
 
-    Assert.assertEquals(0, metrics.getFailedAppStartRequests());
-    Assert.assertEquals(0, metrics.getFailedRegisterAMRequests());
-    Assert.assertEquals(0, metrics.getFailedFinishAMRequests());
-    Assert.assertEquals(0, metrics.getFailedAllocateRequests());
-    Assert.assertEquals(0, metrics.getFailedAppRecoveryCount());
-    Assert.assertEquals(0, metrics.getFailedAppStopRequests());
-    Assert.assertEquals(0, metrics.getFailedUpdateAMRMTokenRequests());
-    Assert.assertEquals(0, metrics.getAllocateCount());
-    Assert.assertEquals(0, metrics.getRequestCount());
+    assertEquals(0, metrics.getFailedAppStartRequests());
+    assertEquals(0, metrics.getFailedRegisterAMRequests());
+    assertEquals(0, metrics.getFailedFinishAMRequests());
+    assertEquals(0, metrics.getFailedAllocateRequests());
+    assertEquals(0, metrics.getFailedAppRecoveryCount());
+    assertEquals(0, metrics.getFailedAppStopRequests());
+    assertEquals(0, metrics.getFailedUpdateAMRMTokenRequests());
+    assertEquals(0, metrics.getAllocateCount());
+    assertEquals(0, metrics.getRequestCount());
 
-    Assert.assertEquals(0, metrics.getNumSucceededAppStartRequests());
-    Assert.assertEquals(0, metrics.getNumSucceededRegisterAMRequests());
-    Assert.assertEquals(0, metrics.getNumSucceededFinishAMRequests());
-    Assert.assertEquals(0, metrics.getNumSucceededAllocateRequests());
-    Assert.assertEquals(0, metrics.getNumSucceededRecoverRequests());
-    Assert.assertEquals(0, metrics.getNumSucceededAppStopRequests());
-    Assert.assertEquals(0, metrics.getNumSucceededUpdateAMRMTokenRequests());
+    assertEquals(0, metrics.getNumSucceededAppStartRequests());
+    assertEquals(0, metrics.getNumSucceededRegisterAMRequests());
+    assertEquals(0, metrics.getNumSucceededFinishAMRequests());
+    assertEquals(0, metrics.getNumSucceededAllocateRequests());
+    assertEquals(0, metrics.getNumSucceededRecoverRequests());
+    assertEquals(0, metrics.getNumSucceededAppStopRequests());
+    assertEquals(0, metrics.getNumSucceededUpdateAMRMTokenRequests());
 
     LOG.info("Test: aggregate metrics are updated correctly");
   }
@@ -76,33 +80,33 @@ public class TestAMRMProxyMetrics extends BaseAMRMProxyTest {
 
     int testAppId = 1;
     RegisterApplicationMasterResponse registerResponse = registerApplicationMaster(testAppId);
-    Assert.assertNotNull(registerResponse);
-    Assert.assertEquals(Integer.toString(testAppId), registerResponse.getQueue());
+    assertNotNull(registerResponse);
+    assertEquals(Integer.toString(testAppId), registerResponse.getQueue());
 
     AllocateResponse allocateResponse = allocate(testAppId);
-    Assert.assertNotNull(allocateResponse);
+    assertNotNull(allocateResponse);
 
     FinishApplicationMasterResponse finishResponse =
         finishApplicationMaster(testAppId, FinalApplicationStatus.SUCCEEDED);
 
-    Assert.assertNotNull(finishResponse);
-    Assert.assertTrue(finishResponse.getIsUnregistered());
+    assertNotNull(finishResponse);
+    assertTrue(finishResponse.getIsUnregistered());
 
-    Assert.assertEquals(failedAppStartRequests, metrics.getFailedAppStartRequests());
-    Assert.assertEquals(failedRegisterAMRequests, metrics.getFailedRegisterAMRequests());
-    Assert.assertEquals(failedFinishAMRequests, metrics.getFailedFinishAMRequests());
-    Assert.assertEquals(failedAllocateRequests, metrics.getFailedAllocateRequests());
-    Assert.assertEquals(failedAppRecoveryRequests, metrics.getFailedAppRecoveryCount());
-    Assert.assertEquals(failedAppStopRequests, metrics.getFailedAppStopRequests());
-    Assert.assertEquals(failedUpdateAMRMTokenRequests, metrics.getFailedUpdateAMRMTokenRequests());
+    assertEquals(failedAppStartRequests, metrics.getFailedAppStartRequests());
+    assertEquals(failedRegisterAMRequests, metrics.getFailedRegisterAMRequests());
+    assertEquals(failedFinishAMRequests, metrics.getFailedFinishAMRequests());
+    assertEquals(failedAllocateRequests, metrics.getFailedAllocateRequests());
+    assertEquals(failedAppRecoveryRequests, metrics.getFailedAppRecoveryCount());
+    assertEquals(failedAppStopRequests, metrics.getFailedAppStopRequests());
+    assertEquals(failedUpdateAMRMTokenRequests, metrics.getFailedUpdateAMRMTokenRequests());
 
-    Assert.assertEquals(succeededAppStartRequests,
+    assertEquals(succeededAppStartRequests,
         metrics.getNumSucceededAppStartRequests());
-    Assert.assertEquals(1 + succeededRegisterAMRequests,
+    assertEquals(1 + succeededRegisterAMRequests,
         metrics.getNumSucceededRegisterAMRequests());
-    Assert.assertEquals(1 + succeededFinishAMRequests,
+    assertEquals(1 + succeededFinishAMRequests,
         metrics.getNumSucceededFinishAMRequests());
-    Assert.assertEquals(1 + succeededAllocateRequests,
+    assertEquals(1 + succeededAllocateRequests,
         metrics.getNumSucceededAllocateRequests());
   }
 
@@ -122,42 +126,40 @@ public class TestAMRMProxyMetrics extends BaseAMRMProxyTest {
     int testAppId = 1;
     RegisterApplicationMasterResponse registerResponse =
         registerApplicationMaster(testAppId);
-    Assert.assertNotNull(registerResponse);
-    Assert
-        .assertEquals(Integer.toString(testAppId), registerResponse.getQueue());
+    assertNotNull(registerResponse);
+    assertEquals(Integer.toString(testAppId), registerResponse.getQueue());
 
     FinishApplicationMasterResponse finishResponse =
         finishApplicationMaster(testAppId, FinalApplicationStatus.FAILED);
 
-    Assert.assertNotNull(finishResponse);
+    assertNotNull(finishResponse);
 
     try {
       // Try to finish an application master that is already finished.
       finishApplicationMaster(testAppId, FinalApplicationStatus.SUCCEEDED);
-      Assert
-          .fail("The request to finish application master should have failed");
+      fail("The request to finish application master should have failed");
     } catch (Throwable ex) {
       // This is expected. So nothing required here.
       LOG.info("Finish registration failed as expected because it was not "
           + "registered");
     }
 
-    Assert.assertEquals(failedAppStartRequests,
+    assertEquals(failedAppStartRequests,
         metrics.getFailedAppStartRequests());
-    Assert.assertEquals(failedRegisterAMRequests,
+    assertEquals(failedRegisterAMRequests,
         metrics.getFailedRegisterAMRequests());
-    Assert.assertEquals(1 + failedFinishAMRequests,
+    assertEquals(1 + failedFinishAMRequests,
         metrics.getFailedFinishAMRequests());
-    Assert.assertEquals(failedAllocateRequests,
+    assertEquals(failedAllocateRequests,
         metrics.getFailedAllocateRequests());
 
-    Assert.assertEquals(succeededAppStartRequests,
+    assertEquals(succeededAppStartRequests,
         metrics.getNumSucceededAppStartRequests());
-    Assert.assertEquals(1 + succeededRegisterAMRequests,
+    assertEquals(1 + succeededRegisterAMRequests,
         metrics.getNumSucceededRegisterAMRequests());
-    Assert.assertEquals(1 + succeededFinishAMRequests,
+    assertEquals(1 + succeededFinishAMRequests,
         metrics.getNumSucceededFinishAMRequests());
-    Assert.assertEquals(succeededAllocateRequests,
+    assertEquals(succeededAllocateRequests,
         metrics.getNumSucceededAllocateRequests());
   }
 }

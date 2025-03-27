@@ -340,4 +340,177 @@ public abstract class QueueInfo {
   @Unstable
   public abstract void setIntraQueuePreemptionDisabled(
       boolean intraQueuePreemptionDisabled);
+
+  /**
+   * Get Scheduler type.
+   *
+   * @return SchedulerType.
+   */
+  @Public
+  @Stable
+  public abstract String getSchedulerType();
+
+  /**
+   * Set Scheduler type.
+   * @param schedulerType scheduler Type.
+   */
+  @Private
+  @Unstable
+  public abstract void setSchedulerType(String schedulerType);
+
+  /**
+   * Get the minimum resource VCore.
+   * @return minimum resource VCore.
+   */
+  @Public
+  @Stable
+  public abstract int getMinResourceVCore();
+
+  /**
+   * Set the minimum resource VCore.
+   * @param vCore minimum resource VCore.
+   */
+  @Private
+  @Unstable
+  public abstract void setMinResourceVCore(int vCore);
+
+  /**
+   * Get the minimum resource Memory.
+   * @return minimum resource Memory.
+   */
+  @Public
+  @Stable
+  public abstract long getMinResourceMemory();
+
+  /**
+   * Set the minimum resource Memory.
+   * @param memory minimum resource Memory.
+   */
+  @Private
+  @Unstable
+  public abstract void setMinResourceMemory(long memory);
+
+  /**
+   * Get the maximum resource VCore.
+   * @return maximum resource VCore.
+   */
+  @Public
+  @Stable
+  public abstract int getMaxResourceVCore();
+
+  /**
+   * Set the maximum resource Memory.
+   * @param vCore maximum resource VCore.
+   */
+  @Private
+  @Unstable
+  public abstract void setMaxResourceVCore(int vCore);
+
+  /**
+   * Get the maximum resource Memory.
+   * @return maximum resource Memory.
+   */
+  @Public
+  @Stable
+  public abstract long getMaxResourceMemory();
+
+  /**
+   * Set the maximum resource Memory.
+   * @param memory maximum resource Memory.
+   */
+  @Private
+  @Unstable
+  public abstract void setMaxResourceMemory(long memory);
+
+  /**
+   * Get the reserved resource VCore.
+   * @return reserved resource VCore.
+   */
+  @Public
+  @Stable
+  public abstract int getReservedResourceVCore();
+
+  /**
+   * Set the reserved resource VCore.
+   * @param vCore reserved resource VCore.
+   */
+  @Private
+  @Unstable
+  public abstract void setReservedResourceVCore(int vCore);
+
+  /**
+   * Get the reserved resource Memory.
+   * @return reserved resource Memory.
+   */
+  @Public
+  @Stable
+  public abstract long getReservedResourceMemory();
+
+  /**
+   * Set the reserved resource Memory.
+   * @param memory reserved resource Memory.
+   */
+  @Private
+  @Unstable
+  public abstract void setReservedResourceMemory(long memory);
+
+  /**
+   * Get the SteadyFairShare VCore.
+   * @return SteadyFairShare VCore.
+   */
+  @Public
+  @Stable
+  public abstract int getSteadyFairShareVCore();
+
+  /**
+   * Set the SteadyFairShare VCore.
+   * @param vCore SteadyFairShare VCore.
+   */
+  @Private
+  @Unstable
+  public abstract void setSteadyFairShareVCore(int vCore);
+
+  /**
+   * Get the SteadyFairShare Memory.
+   * @return SteadyFairShare Memory.
+   */
+  @Public
+  @Stable
+  public abstract long getSteadyFairShareMemory();
+
+  /**
+   * Set the SteadyFairShare Memory.
+   * @param memory SteadyFairShare Memory.
+   */
+  @Private
+  @Unstable
+  public abstract void setSteadyFairShareMemory(long memory);
+
+  /**
+   * Get the SubClusterId.
+   * @return the SubClusterId.
+   */
+  @Public
+  @Stable
+  public abstract String getSubClusterId();
+
+  /**
+   * Set the SubClusterId.
+   * @param subClusterId the SubClusterId.
+   */
+  @Private
+  @Unstable
+  public abstract void setSubClusterId(String subClusterId);
+
+  /**
+   * Get the MaxRunningApp.
+   * @return The number of MaxRunningApp.
+   */
+  @Public
+  @Stable
+  public abstract int getMaxRunningApp();
+
+  @Private
+  @Unstable
+  public abstract void setMaxRunningApp(int maxRunningApp);
 }

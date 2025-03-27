@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 public class PartitionQueueCapacitiesInfo {
   private String partitionName;
 
+  private QueueCapacityVectorInfo queueCapacityVectorInfo;
   private float capacity;
   private float usedCapacity;
   private float maxCapacity = 100;
@@ -49,13 +50,15 @@ public class PartitionQueueCapacitiesInfo {
   public PartitionQueueCapacitiesInfo() {
   }
 
-  public PartitionQueueCapacitiesInfo(String partitionName, float capacity,
-      float usedCapacity, float maxCapacity, float absCapacity,
+  public PartitionQueueCapacitiesInfo(String partitionName,
+      QueueCapacityVectorInfo queueCapacityVectorInfo,
+      float capacity, float usedCapacity, float maxCapacity, float absCapacity,
       float absUsedCapacity, float absMaxCapacity, float maxAMLimitPercentage,
       float weight, float normalizedWeight,
       Resource confMinRes, Resource confMaxRes, Resource effMinRes,
       Resource effMaxRes) {
     super();
+    this.queueCapacityVectorInfo = queueCapacityVectorInfo;
     this.partitionName = partitionName;
     this.capacity = capacity;
     this.usedCapacity = usedCapacity;
@@ -70,6 +73,14 @@ public class PartitionQueueCapacitiesInfo {
     this.configuredMaxResource = new ResourceInfo(confMaxRes);
     this.effectiveMinResource = new ResourceInfo(effMinRes);
     this.effectiveMaxResource = new ResourceInfo(effMaxRes);
+  }
+
+  public QueueCapacityVectorInfo getQueueCapacityVectorInfo() {
+    return queueCapacityVectorInfo;
+  }
+
+  public void setQueueCapacityVectorInfo(QueueCapacityVectorInfo queueCapacityVectorInfo) {
+    this.queueCapacityVectorInfo = queueCapacityVectorInfo;
   }
 
   public float getCapacity() {

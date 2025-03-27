@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
+import javax.inject.Singleton;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -59,7 +60,6 @@ import org.apache.hadoop.yarn.server.timelineservice.metrics.PerNodeAggTimelineC
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
-import com.google.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,7 +79,9 @@ public class TimelineCollectorWebService {
   private static final Logger LOG =
       LoggerFactory.getLogger(TimelineCollectorWebService.class);
 
-  private @Context ServletContext context;
+  @Context
+  private ServletContext context;
+
   private static final PerNodeAggTimelineCollectorMetrics METRICS =
       PerNodeAggTimelineCollectorMetrics.getInstance();
 
@@ -139,6 +141,7 @@ public class TimelineCollectorWebService {
    * @param res Servlet response.
    * @param async flag indicating whether its an async put or not. "true"
    *     indicates, its an async call. If null, its considered false.
+   * @param isSubAppEntities subappwrite.
    * @param appId Application Id to which the entities to be put belong to. If
    *     appId is not there or it cannot be parsed, HTTP 400 will be sent back.
    * @param entities timeline entities to be put.

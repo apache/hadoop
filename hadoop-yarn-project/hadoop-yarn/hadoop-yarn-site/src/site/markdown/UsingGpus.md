@@ -80,7 +80,7 @@ By default, YARN will automatically detect and config GPUs when above config is 
   device number of GPUs is using `nvidia-smi -q` and search `Minor Number`
   output.
 
-  When minor numbers are specified manually, admin needs to include indice of GPUs
+  When minor numbers are specified manually, admin needs to include indices of GPUs
   as well, format is `index:minor_number[,index:minor_number...]`. An example
   of manual specification is `0:0,1:1,2:2,3:4"`to allow YARN NodeManager to
   manage GPU devices with indices `0/1/2/3` and minor number `0/1/2/4`.

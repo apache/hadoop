@@ -60,7 +60,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
   @SuppressWarnings("deprecation")
   @Override
   public void initializeMemberVariables() {
-    xmlFilename = new String("core-default.xml");
+    xmlFilename = "core-default.xml";
     configurationClasses = new Class[] {
         CommonConfigurationKeys.class,
         CommonConfigurationKeysPublic.class,
@@ -149,6 +149,10 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.azure.saskey.usecontainersaskeyforallaccess");
     xmlPropsToSkipCompare.add("fs.azure.user.agent.prefix");
 
+    // Properties in enable callqueue overflow trigger failover for stateless servers.
+    xmlPropsToSkipCompare.add("ipc.[port_number].callqueue.overflow.trigger.failover");
+    xmlPropsToSkipCompare.add("ipc.callqueue.overflow.trigger.failover");
+
     // FairCallQueue configs that includes dynamic ports in its keys
     xmlPropsToSkipCompare.add("ipc.[port_number].backoff.enable");
     xmlPropsToSkipCompare.add("ipc.backoff.enable");
@@ -223,6 +227,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("hadoop.common.configuration.version");
     // - org.apache.hadoop.fs.FileSystem
     xmlPropsToSkipCompare.add("fs.har.impl.disable.cache");
+    xmlPropsToSkipCompare.add("fs.hdfs.impl.disable.cache");
 
     // - package org.apache.hadoop.tracing.TraceUtils ?
     xmlPropsToSkipCompare.add("hadoop.htrace.span.receiver.classes");

@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Queue;
 
 import org.apache.hadoop.conf.Configuration;
@@ -52,23 +54,33 @@ public class TestPendingDataNodeMessages {
 
   @Test
   public void testQueues() {
-    DatanodeDescriptor fakeDN = DFSTestUtil.getLocalDatanodeDescriptor();
-    DatanodeStorage storage = new DatanodeStorage("STORAGE_ID");
-    DatanodeStorageInfo storageInfo = new DatanodeStorageInfo(fakeDN, storage);
-    msgs.enqueueReportedBlock(storageInfo, block1Gs1, ReplicaState.FINALIZED);
-    msgs.enqueueReportedBlock(storageInfo, block1Gs2, ReplicaState.FINALIZED);
+    DatanodeDescriptor fakeDN1 = DFSTestUtil.getDatanodeDescriptor(
+        "localhost", 8898, "/default-rack");
+    DatanodeDescriptor fakeDN2 = DFSTestUtil.getDatanodeDescriptor(
+        "localhost", 8899, "/default-rack");
+    DatanodeStorage storage1 = new DatanodeStorage("STORAGE_ID_1");
+    DatanodeStorage storage2 = new DatanodeStorage("STORAGE_ID_2");
+    DatanodeStorageInfo storageInfo1 = new DatanodeStorageInfo(fakeDN1, storage1);
+    DatanodeStorageInfo storageInfo2 = new DatanodeStorageInfo(fakeDN2, storage2);
+    msgs.enqueueReportedBlock(storageInfo1, block1Gs1, ReplicaState.FINALIZED);
+    msgs.enqueueReportedBlock(storageInfo2, block1Gs1, ReplicaState.FINALIZED);
+    msgs.enqueueReportedBlock(storageInfo1, block1Gs2, ReplicaState.FINALIZED);
+    msgs.enqueueReportedBlock(storageInfo2, block1Gs2, ReplicaState.FINALIZED);
+    List<ReportedBlockInfo> rbis = Arrays.asList(
+        new ReportedBlockInfo(storageInfo1, block1Gs1, ReplicaState.FINALIZED),
+        new ReportedBlockInfo(storageInfo2, block1Gs1, ReplicaState.FINALIZED),
+        new ReportedBlockInfo(storageInfo1, block1Gs2, ReplicaState.FINALIZED),
+        new ReportedBlockInfo(storageInfo2, block1Gs2, ReplicaState.FINALIZED));
 
-    assertEquals(2, msgs.count());
+    assertEquals(4, msgs.count());
     
     // Nothing queued yet for block 2
     assertNull(msgs.takeBlockQueue(block2Gs1));
-    assertEquals(2, msgs.count());
+    assertEquals(4, msgs.count());
     
     Queue<ReportedBlockInfo> q =
       msgs.takeBlockQueue(block1Gs2DifferentInstance);
-    assertEquals(
-        "ReportedBlockInfo [block=blk_1_1, dn=127.0.0.1:9866, reportedState=FINALIZED]," +
-        "ReportedBlockInfo [block=blk_1_2, dn=127.0.0.1:9866, reportedState=FINALIZED]",
+    assertEquals(Joiner.on(",").join(rbis),
         Joiner.on(",").join(q));
     assertEquals(0, msgs.count());
     
@@ -112,5 +124,41 @@ public class TestPendingDataNodeMessages {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testRemoveQueuedBlock() {
+    DatanodeDescriptor fakeDN1 = DFSTestUtil.getDatanodeDescriptor(
+        "localhost", 8898, "/default-rack");
+    DatanodeDescriptor fakeDN2 = DFSTestUtil.getDatanodeDescriptor(
+        "localhost", 8899, "/default-rack");
+    DatanodeStorage storage1 = new DatanodeStorage("STORAGE_ID_1");
+    DatanodeStorage storage2 = new DatanodeStorage("STORAGE_ID_2");
+    DatanodeStorageInfo storageInfo1 = new DatanodeStorageInfo(fakeDN1, storage1);
+    DatanodeStorageInfo storageInfo2 = new DatanodeStorageInfo(fakeDN2, storage2);
+    msgs.enqueueReportedBlock(storageInfo1, block1Gs1, ReplicaState.FINALIZED);
+    msgs.enqueueReportedBlock(storageInfo2, block1Gs1, ReplicaState.FINALIZED);
+    msgs.enqueueReportedBlock(storageInfo1, block1Gs2, ReplicaState.FINALIZED);
+    msgs.enqueueReportedBlock(storageInfo2, block1Gs2, ReplicaState.FINALIZED);
+    List<ReportedBlockInfo> rbis = Arrays.asList(
+        new ReportedBlockInfo(storageInfo2, block1Gs1, ReplicaState.FINALIZED),
+        new ReportedBlockInfo(storageInfo2, block1Gs2, ReplicaState.FINALIZED));
+
+    assertEquals(4, msgs.count());
+
+    // Nothing queued yet for block 2
+    assertNull(msgs.takeBlockQueue(block2Gs1));
+    assertEquals(4, msgs.count());
+
+    msgs.removeQueuedBlock(storageInfo1, block1Gs1);
+    Queue<ReportedBlockInfo> q =
+        msgs.takeBlockQueue(block1Gs2DifferentInstance);
+    assertEquals(Joiner.on(",").join(rbis),
+        Joiner.on(",").join(q));
+    assertEquals(0, msgs.count());
+
+    // Should be null if we pull again;
+    assertNull(msgs.takeBlockQueue(block1Gs2));
+    assertEquals(0, msgs.count());
   }
 }

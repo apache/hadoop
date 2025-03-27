@@ -22,7 +22,6 @@ package org.apache.hadoop.fs.s3a.prefetch;
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 
@@ -32,6 +31,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_REMOTE_BLOCK_READ;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
@@ -144,7 +146,8 @@ public class S3ARemoteObjectReader implements Closeable {
       return;
     }
 
-    InputStream inputStream = remoteObject.openForRead(offset, readSize);
+    ResponseInputStream<GetObjectResponse> inputStream =
+        remoteObject.openForRead(offset, readSize);
     int numRemainingBytes = readSize;
     byte[] bytes = new byte[READ_BUFFER_SIZE];
 

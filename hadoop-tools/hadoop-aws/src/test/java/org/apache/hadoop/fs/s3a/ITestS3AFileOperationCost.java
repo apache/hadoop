@@ -18,14 +18,14 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.api.PerformanceFlagEnum;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,12 +33,11 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.URI;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.EnumSet;
 
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 import static org.apache.hadoop.test.GenericTestUtils.getTestDir;
@@ -46,29 +45,17 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Use metrics to assert about the cost of file API calls.
- * Parameterized on directory marker keep vs delete.
  */
-@RunWith(Parameterized.class)
 public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AFileOperationCost.class);
 
-  /**
-   * Parameterization.
-   */
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> params() {
-    return Arrays.asList(new Object[][]{
-        {"keep-markers", true},
-        {"delete-markers", false},
-    });
-  }
-
-  public ITestS3AFileOperationCost(
-      final String name,
-      final boolean keepMarkers) {
-    super(keepMarkers);
+  @Override
+  public Configuration createConfiguration() {
+    return setPerformanceFlags(
+        super.createConfiguration(),
+        PerformanceFlagEnum.Create.toString());
   }
 
   /**
@@ -120,7 +107,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
 
   @Test
   public void testCostOfListFilesOnEmptyDir() throws Throwable {
-    describe("Perpforming listFiles() on an empty dir with marker");
+    describe("Performing listFiles() on an empty dir with marker");
     // this attem
     Path dir = path(getMethodName());
     S3AFileSystem fs = getFileSystem();
@@ -377,7 +364,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     // create a bunch of files
     int filesToCreate = 10;
     for (int i = 0; i < filesToCreate; i++) {
-      create(basePath.suffix("/" + i));
+      file(basePath.suffix("/" + i));
     }
 
     fs.globStatus(basePath.suffix("/*"));
@@ -396,7 +383,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     // create a single file, globStatus returning a single file on a pattern
     // triggers attempts at symlinks resolution if configured
     String fileName = "/notASymlinkDOntResolveMeLikeOne";
-    create(basePath.suffix(fileName));
+    file(basePath.suffix(fileName));
     // unguarded: 2 head + 1 list from getFileStatus on path,
     // plus 1 list to match the glob pattern
     // no additional operations from symlink resolution

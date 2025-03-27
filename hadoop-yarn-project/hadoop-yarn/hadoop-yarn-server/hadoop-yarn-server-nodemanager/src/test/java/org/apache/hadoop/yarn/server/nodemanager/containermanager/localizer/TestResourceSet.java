@@ -25,12 +25,13 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.LocalizationState;
 import org.apache.hadoop.yarn.api.records.LocalizationStatus;
 import org.apache.hadoop.yarn.api.records.URL;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests of {@link ResourceSet}.
@@ -47,12 +48,11 @@ public class TestResourceSet {
             0, System.currentTimeMillis()));
     resourceSet.addResources(resources);
 
-    Assert.assertEquals("num statuses", 1,
-        resourceSet.getLocalizationStatuses().size());
+    assertEquals(1, resourceSet.getLocalizationStatuses().size(), "num statuses");
     LocalizationStatus status = resourceSet.getLocalizationStatuses()
         .iterator().next();
-    Assert.assertEquals("status", LocalizationState.PENDING,
-        status.getLocalizationState());
+    assertEquals(LocalizationState.PENDING,
+        status.getLocalizationState(), "status");
   }
 
   @Test
@@ -70,12 +70,12 @@ public class TestResourceSet {
     LocalResourceRequest lrr = new LocalResourceRequest(resource1);
     resourceSet.resourceLocalized(lrr, new Path("file1.txt"));
 
-    Assert.assertEquals("num statuses", 1,
-        resourceSet.getLocalizationStatuses().size());
+    assertEquals(1,
+        resourceSet.getLocalizationStatuses().size(), "num statuses");
     LocalizationStatus status = resourceSet.getLocalizationStatuses()
         .iterator().next();
-    Assert.assertEquals("status", LocalizationState.COMPLETED,
-        status.getLocalizationState());
+    assertEquals(LocalizationState.COMPLETED,
+        status.getLocalizationState(), "status");
   }
 
 
@@ -94,13 +94,13 @@ public class TestResourceSet {
     LocalResourceRequest lrr = new LocalResourceRequest(resource1);
     resourceSet.resourceLocalizationFailed(lrr, "file does not exist");
 
-    Assert.assertEquals("num statuses", 1,
-        resourceSet.getLocalizationStatuses().size());
+    assertEquals(1,
+        resourceSet.getLocalizationStatuses().size(), "num statuses");
     LocalizationStatus status = resourceSet.getLocalizationStatuses()
         .iterator().next();
-    Assert.assertEquals("status", LocalizationState.FAILED,
-        status.getLocalizationState());
-    Assert.assertEquals("diagnostics", "file does not exist",
-        status.getDiagnostics());
+    assertEquals(LocalizationState.FAILED,
+        status.getLocalizationState(), "status");
+    assertEquals("file does not exist",
+        status.getDiagnostics(), "diagnostics");
   }
 }

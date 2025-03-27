@@ -24,7 +24,7 @@ import java.util.regex.Matcher;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_SETTINGS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_WEIGHT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_WEIGHT_PATTERN;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getQueuePrefix;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes.getQueuePrefix;
 
 public final class UserWeights {
   public static final float DEFAULT_WEIGHT = 1.0F;
@@ -43,7 +43,7 @@ public final class UserWeights {
   public static UserWeights createByConfig(
       CapacitySchedulerConfiguration conf,
       ConfigurationProperties configurationProperties,
-      String queuePath) {
+      QueuePath queuePath) {
     String queuePathPlusPrefix = getQueuePrefix(queuePath) + USER_SETTINGS;
     Map<String, String> props = configurationProperties
         .getPropertiesWithPrefix(queuePathPlusPrefix);

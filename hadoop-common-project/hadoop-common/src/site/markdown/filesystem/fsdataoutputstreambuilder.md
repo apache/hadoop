@@ -200,8 +200,8 @@ Prioritize file creation performance over safety checks for filesystem consisten
 This:
 1. Skips the `LIST` call which makes sure a file is being created over a directory.
    Risk: a file is created over a directory.
-1. Ignores the overwrite flag.
-1. Never issues a `DELETE` call to delete parent directory markers.
+2. Ignores the overwrite flag.
+3. Never issues a `DELETE` call to delete parent directory markers.
 
 It is possible to probe an S3A Filesystem instance for this capability through
 the `hasPathCapability(path, "fs.s3a.create.performance")` check.
@@ -223,6 +223,12 @@ If they didn't, the fact they had held the button down will
 be used as evidence at the inquest as proof that they made a
 conscious decision to choose speed over safety and
 that the outcome was their own fault.
+
+Note: the option can be set for an entire filesystem. Again, the safety checks
+are there to more closely match the semantics of a classic filesystem,
+and to reduce the likelihood that the object store ends up in a state which
+diverges so much from the classic directory + tree structur that applications
+get confused.
 
 Accordingly: *Use if and only if you are confident that the conditions are met.*
 

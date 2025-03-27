@@ -19,8 +19,11 @@ package org.apache.hadoop.net;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -46,18 +49,18 @@ public class TestScriptBasedMappingWithDependency {
     names.add("some.machine.name");
     names.add("other.machine.name");
     List<String> result = mapping.resolve(names);
-    assertNull("Expected an empty list for resolve", result);
+    assertNull(result, "Expected an empty list for resolve");
     result = mapping.getDependency("some.machine.name");
-    assertNull("Expected an empty list for getDependency", result);
+    assertNull(result, "Expected an empty list for getDependency");
   }
 
   @Test
   public void testNoFilenameMeansSingleSwitch() throws Throwable {
     Configuration conf = new Configuration();
     ScriptBasedMapping mapping = createMapping(conf);
-    assertTrue("Expected to be single switch", mapping.isSingleSwitch());
-    assertTrue("Expected to be single switch",
-               AbstractDNSToSwitchMapping.isMappingSingleSwitch(mapping));
+    assertTrue(mapping.isSingleSwitch(), "Expected to be single switch");
+    assertTrue(AbstractDNSToSwitchMapping.isMappingSingleSwitch(mapping),
+        "Expected to be single switch");
   }
 
   @Test
@@ -65,15 +68,15 @@ public class TestScriptBasedMappingWithDependency {
     Configuration conf = new Configuration();
     conf.set(ScriptBasedMapping.SCRIPT_FILENAME_KEY, "any-filename");
     ScriptBasedMapping mapping = createMapping(conf);
-    assertFalse("Expected to be multi switch", mapping.isSingleSwitch());
+    assertFalse(mapping.isSingleSwitch(), "Expected to be multi switch");
     mapping.setConf(new Configuration());
-    assertTrue("Expected to be single switch", mapping.isSingleSwitch());
+    assertTrue(mapping.isSingleSwitch(), "Expected to be single switch");
   }
 
   @Test
   public void testNullConfig() throws Throwable {
     ScriptBasedMapping mapping = createMapping(null);
-    assertTrue("Expected to be single switch", mapping.isSingleSwitch());
+    assertTrue(mapping.isSingleSwitch(), "Expected to be single switch");
   }
 
   private ScriptBasedMappingWithDependency createMapping(Configuration conf) {

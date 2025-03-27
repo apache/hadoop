@@ -43,9 +43,13 @@ import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSub
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
 
 /**
@@ -62,12 +66,14 @@ public abstract class BaseRouterPoliciesTest
             false, false, 0, Resources.none(), null, false, null, null);
     SubClusterId chosen =
         localPolicy.getHomeSubcluster(applicationSubmissionContext, null);
-    Assert.assertNotNull(chosen);
+    assertNotNull(chosen);
   }
 
-  @Test(expected = FederationPolicyException.class)
+  @Test
   public void testNullAppContext() throws YarnException {
-    ((FederationRouterPolicy) getPolicy()).getHomeSubcluster(null, null);
+    assertThrows(FederationPolicyException.class, () -> {
+      ((FederationRouterPolicy) getPolicy()).getHomeSubcluster(null, null);
+    });
   }
 
   @Test
@@ -96,8 +102,8 @@ public abstract class BaseRouterPoliciesTest
           applicationSubmissionContext, blacklistSubclusters);
 
       // check that the selected sub-cluster is only one not blacklisted
-      Assert.assertNotNull(chosen);
-      Assert.assertEquals(removed, chosen);
+      assertNotNull(chosen);
+      assertEquals(removed, chosen);
     }
   }
 
@@ -120,9 +126,9 @@ public abstract class BaseRouterPoliciesTest
       try {
         localPolicy.getHomeSubcluster(applicationSubmissionContext,
             blacklistSubclusters);
-        Assert.fail();
+        fail();
       } catch (YarnException e) {
-        Assert.assertTrue(e.getMessage()
+        assertTrue(e.getMessage()
             .equals(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE));
       }
     }
@@ -191,7 +197,7 @@ public abstract class BaseRouterPoliciesTest
         applicationSubmissionContext, Collections.emptyList());
 
     // application follows reservation
-    Assert.assertEquals(chosen, chosen2);
+    assertEquals(chosen, chosen2);
   }
 
   @Test
@@ -232,7 +238,7 @@ public abstract class BaseRouterPoliciesTest
     SubClusterId chosen3 = routerPolicy.getHomeSubcluster(
         applicationSubmissionContext, new ArrayList<>());
 
-    Assert.assertEquals(chosen2, chosen3);
+    assertEquals(chosen2, chosen3);
   }
 
   @Test

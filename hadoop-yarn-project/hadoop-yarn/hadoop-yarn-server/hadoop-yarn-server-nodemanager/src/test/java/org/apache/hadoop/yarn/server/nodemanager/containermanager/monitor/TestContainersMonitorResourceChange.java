@@ -51,15 +51,15 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class TestContainersMonitorResourceChange {
 
@@ -155,7 +155,7 @@ public class TestContainersMonitorResourceChange {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     executor = new MockExecutor();
     dispatcher = new AsyncDispatcher();
@@ -177,7 +177,7 @@ public class TestContainersMonitorResourceChange {
     dispatcher.register(ContainerEventType.class, containerEventHandler);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (containersMonitor != null) {
       containersMonitor.stop();
@@ -311,10 +311,9 @@ public class TestContainersMonitorResourceChange {
     // Since MockCPUResourceCalculatorProcessTree will return a -1 as CPU
     // utilization, containersUtilization will not be calculated and hence it
     // will be 0.
-    assertEquals(
-        "Resource utilization must be default with MonitorThread's first run",
-        0, containersMonitor.getContainersUtilization()
-            .compareTo(ResourceUtilization.newInstance(0, 0, 0.0f)));
+    assertEquals(0, containersMonitor.getContainersUtilization()
+        .compareTo(ResourceUtilization.newInstance(0, 0, 0.0f)),
+        "Resource utilization must be default with MonitorThread's first run");
 
     // Verify the container utilization value. Since at least one round is done,
     // we can expect a non-zero value for container utilization as
@@ -340,10 +339,10 @@ public class TestContainersMonitorResourceChange {
       timeWaiting += WAIT_MS_PER_LOOP;
     }
 
-    assertTrue("Resource utilization is not changed after " +
-            timeoutMsecs / WAIT_MS_PER_LOOP + " updates",
-        0 != containersMonitor.getContainersUtilization()
-            .compareTo(ResourceUtilization.newInstance(0, 0, 0.0f)));
+    assertTrue(0 != containersMonitor.getContainersUtilization()
+        .compareTo(ResourceUtilization.newInstance(0, 0, 0.0f)),
+         "Resource utilization is not changed after " +
+         timeoutMsecs / WAIT_MS_PER_LOOP + " updates");
   }
 
   private ContainersMonitorImpl createContainersMonitor(

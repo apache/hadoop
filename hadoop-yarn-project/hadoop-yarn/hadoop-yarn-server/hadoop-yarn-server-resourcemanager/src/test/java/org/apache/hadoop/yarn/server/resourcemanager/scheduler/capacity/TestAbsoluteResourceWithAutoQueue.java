@@ -20,10 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -45,9 +46,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.queuemanagement.GuaranteedOrZeroCapacityOverTimePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicy;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,6 +73,13 @@ public class TestAbsoluteResourceWithAutoQueue
   private static final String QUEUED_FULL =
       CapacitySchedulerConfiguration.ROOT + "." + QUEUED;
 
+  private static final QueuePath ROOT_QUEUE_PATH =
+      new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath A_QUEUE_PATH = new QueuePath(QUEUEA_FULL);
+  private static final QueuePath B_QUEUE_PATH = new QueuePath(QUEUEB_FULL);
+  private static final QueuePath C_QUEUE_PATH = new QueuePath(QUEUEC_FULL);
+  private static final QueuePath D_QUEUE_PATH = new QueuePath(QUEUED_FULL);
+
   private static final Resource QUEUE_A_MINRES =
       Resource.newInstance(100 * GB, 10);
   private static final Resource QUEUE_A_MAXRES =
@@ -88,13 +97,13 @@ public class TestAbsoluteResourceWithAutoQueue
   private static final Resource QUEUE_D_MAXRES =
       Resource.newInstance(150 * GB, 20);
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
 
     accessibleNodeLabelsOnC.add(NO_LABEL);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (mockRM != null) {
       mockRM.stop();
@@ -104,15 +113,15 @@ public class TestAbsoluteResourceWithAutoQueue
   private CapacitySchedulerConfiguration setupMinMaxResourceConfiguration(
       CapacitySchedulerConfiguration csConf) {
     // Update min/max resource to queueA/B/C
-    csConf.setMinimumResourceRequirement("", new QueuePath(QUEUEA_FULL), QUEUE_A_MINRES);
-    csConf.setMinimumResourceRequirement("", new QueuePath(QUEUEB_FULL), QUEUE_B_MINRES);
-    csConf.setMinimumResourceRequirement("", new QueuePath(QUEUEC_FULL), QUEUE_C_MINRES);
-    csConf.setMinimumResourceRequirement("", new QueuePath(QUEUED_FULL), QUEUE_D_MINRES);
+    csConf.setMinimumResourceRequirement("", A_QUEUE_PATH, QUEUE_A_MINRES);
+    csConf.setMinimumResourceRequirement("", B_QUEUE_PATH, QUEUE_B_MINRES);
+    csConf.setMinimumResourceRequirement("", C_QUEUE_PATH, QUEUE_C_MINRES);
+    csConf.setMinimumResourceRequirement("", D_QUEUE_PATH, QUEUE_D_MINRES);
 
-    csConf.setMaximumResourceRequirement("", new QueuePath(QUEUEA_FULL), QUEUE_A_MAXRES);
-    csConf.setMaximumResourceRequirement("", new QueuePath(QUEUEB_FULL), QUEUE_B_MAXRES);
-    csConf.setMaximumResourceRequirement("", new QueuePath(QUEUEC_FULL), QUEUE_C_MAXRES);
-    csConf.setMaximumResourceRequirement("", new QueuePath(QUEUED_FULL), QUEUE_D_MAXRES);
+    csConf.setMaximumResourceRequirement("", A_QUEUE_PATH, QUEUE_A_MAXRES);
+    csConf.setMaximumResourceRequirement("", B_QUEUE_PATH, QUEUE_B_MAXRES);
+    csConf.setMaximumResourceRequirement("", C_QUEUE_PATH, QUEUE_C_MAXRES);
+    csConf.setMaximumResourceRequirement("", D_QUEUE_PATH, QUEUE_D_MAXRES);
 
     return csConf;
   }
@@ -127,36 +136,37 @@ public class TestAbsoluteResourceWithAutoQueue
       boolean isCapacityNeeded) {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    csConf.setQueues(ROOT_QUEUE_PATH,
         new String[] { QUEUEA, QUEUEB, QUEUEC, QUEUED });
 
     // Set default capacities like normal configuration.
     if (isCapacityNeeded) {
-      csConf.setCapacity(QUEUEA_FULL, 50f);
-      csConf.setCapacity(QUEUEB_FULL, 25f);
-      csConf.setCapacity(QUEUEC_FULL, 25f);
-      csConf.setCapacity(QUEUED_FULL, 25f);
+      csConf.setCapacity(A_QUEUE_PATH, 50f);
+      csConf.setCapacity(B_QUEUE_PATH, 25f);
+      csConf.setCapacity(C_QUEUE_PATH, 25f);
+      csConf.setCapacity(D_QUEUE_PATH, 25f);
     }
 
-    csConf.setAutoCreateChildQueueEnabled(QUEUEC_FULL, true);
+    csConf.setAutoCreateChildQueueEnabled(C_QUEUE_PATH, true);
 
-    csConf.setAutoCreatedLeafQueueTemplateCapacityByLabel(QUEUEC_FULL, "",
+    csConf.setAutoCreatedLeafQueueTemplateCapacityByLabel(C_QUEUE_PATH, "",
         QUEUE_C_MINRES);
-    csConf.setAutoCreatedLeafQueueTemplateMaxCapacity(QUEUEC_FULL, "",
+    csConf.setAutoCreatedLeafQueueTemplateMaxCapacity(C_QUEUE_PATH, "",
         QUEUE_C_MAXRES);
 
-    csConf.setAutoCreateChildQueueEnabled(QUEUED_FULL, true);
+    csConf.setAutoCreateChildQueueEnabled(D_QUEUE_PATH, true);
 
     // Setup leaf queue template configs
-    csConf.setAutoCreatedLeafQueueTemplateCapacityByLabel(QUEUED_FULL, "",
+    csConf.setAutoCreatedLeafQueueTemplateCapacityByLabel(D_QUEUE_PATH, "",
         Resource.newInstance(10 * GB, 2));
-    csConf.setAutoCreatedLeafQueueTemplateMaxCapacity(QUEUED_FULL, "",
+    csConf.setAutoCreatedLeafQueueTemplateMaxCapacity(D_QUEUE_PATH, "",
         QUEUE_D_MAXRES);
 
     return csConf;
   }
 
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testAutoCreateLeafQueueCreation() throws Exception {
 
     try {
@@ -280,20 +290,22 @@ public class TestAbsoluteResourceWithAutoQueue
     }
   }
 
-  @Test(expected = Exception.class)
+  @Test
   public void testValidateLeafQueueTemplateConfigurations() {
+    assertThrows(Exception.class, () -> {
+      CapacitySchedulerConfiguration csConf = setupSimpleQueueConfiguration(true);
 
-    CapacitySchedulerConfiguration csConf = setupSimpleQueueConfiguration(true);
+      csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+          ResourceScheduler.class);
 
-    csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-        ResourceScheduler.class);
-
-    mockRM = new MockRM(csConf);
-    fail("Exception should be thrown as leaf queue template configuration is "
-        + "not same as Parent configuration");
+      mockRM = new MockRM(csConf);
+      fail("Exception should be thrown as leaf queue template configuration is "
+          + "not same as Parent configuration");
+    });
   }
 
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testApplicationRunningWithDRF() throws Exception {
     CapacitySchedulerConfiguration csConf =
         setupSimpleQueueConfiguration(false);
@@ -322,7 +334,7 @@ public class TestAbsoluteResourceWithAutoQueue
     cs = (CapacityScheduler) mockRM.getResourceScheduler();
     AutoCreatedLeafQueue autoCreatedLeafQueue =
         (AutoCreatedLeafQueue) cs.getQueue(TEST_GROUPUSER);
-    assertNotNull("Auto Creation of Queue failed", autoCreatedLeafQueue);
+    assertNotNull(autoCreatedLeafQueue, "Auto Creation of Queue failed");
     ManagedParentQueue parentQueue = (ManagedParentQueue) cs.getQueue(QUEUED);
     assertEquals(parentQueue, autoCreatedLeafQueue.getParent());
   }

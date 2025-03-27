@@ -34,6 +34,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -110,7 +112,7 @@ public class TestFederationClientInterceptorRetry
 
     stateStore = new MemoryFederationStateStore();
     stateStore.init(this.getConf());
-    FederationStateStoreFacade.getInstance().reinitialize(stateStore,
+    FederationStateStoreFacade.getInstance(getConf()).reinitialize(stateStore,
         getConf());
     stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
 
@@ -352,5 +354,78 @@ public class TestFederationClientInterceptorRetry
     Assert.assertNotNull(responseHomeSubCluster);
     SubClusterId respSubClusterId = responseHomeSubCluster.getHomeSubCluster();
     Assert.assertEquals(expectSubCluster, respSubClusterId);
+  }
+
+  @Test
+  public void testSubmitApplicationTwoBadNodeWithRealError() throws Exception {
+    LOG.info("Test submitApplication with two bad SubClusters.");
+    setupCluster(Arrays.asList(bad1, bad2));
+    interceptor.setNumSubmitRetries(1);
+
+    final ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 5);
+
+    final SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+
+    LambdaTestUtils.intercept(YarnException.class, "RM is stopped",
+        () -> interceptor.submitApplication(request));
+  }
+
+  @Test
+  public void testSubmitApplicationOneBadNodeWithRealError() throws Exception {
+    LOG.info("Test submitApplication with one bad SubClusters.");
+    setupCluster(Arrays.asList(bad1));
+    interceptor.setNumSubmitRetries(0);
+
+    final ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 6);
+
+    final SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+
+    LambdaTestUtils.intercept(YarnException.class, "RM is stopped",
+        () -> interceptor.submitApplication(request));
+  }
+
+  @Test
+  public void testGetClusterMetricsTwoBadNodeWithRealError() throws Exception {
+    LOG.info("Test getClusterMetrics with two bad SubClusters.");
+    setupCluster(Arrays.asList(bad1, bad2));
+    GetClusterMetricsRequest request = GetClusterMetricsRequest.newInstance();
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "subClusterId 1 exec getClusterMetrics error RM is stopped.",
+        () -> interceptor.getClusterMetrics(request));
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "subClusterId 2 exec getClusterMetrics error RM is stopped.",
+        () -> interceptor.getClusterMetrics(request));
+  }
+
+  @Test
+  public void testGetClusterMetricsOneBadNodeWithRealError() throws Exception {
+    LOG.info("Test getClusterMetrics with one bad SubClusters.");
+    setupCluster(Arrays.asList(bad1));
+    GetClusterMetricsRequest request = GetClusterMetricsRequest.newInstance();
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "subClusterId 1 exec getClusterMetrics error RM is stopped.",
+        () -> interceptor.getClusterMetrics(request));
+  }
+
+  @Test
+  public void testGetClusterMetricsOneBadOneGoodNodeWithRealError() throws Exception {
+    LOG.info("Test getClusterMetrics with one bad and one good SubCluster.");
+    setupCluster(Arrays.asList(bad1, good));
+    GetClusterMetricsRequest request = GetClusterMetricsRequest.newInstance();
+
+    GetClusterMetricsResponse clusterMetrics = interceptor.getClusterMetrics(request);
+    Assert.assertNotNull(clusterMetrics);
+
+    // If partial results are not allowed to be returned, an exception will be thrown.
+    interceptor.setAllowPartialResult(false);
+    LambdaTestUtils.intercept(YarnException.class,
+        "subClusterId 1 exec getClusterMetrics error RM is stopped.",
+        () -> interceptor.getClusterMetrics(request));
+    interceptor.setAllowPartialResult(true);
   }
 }

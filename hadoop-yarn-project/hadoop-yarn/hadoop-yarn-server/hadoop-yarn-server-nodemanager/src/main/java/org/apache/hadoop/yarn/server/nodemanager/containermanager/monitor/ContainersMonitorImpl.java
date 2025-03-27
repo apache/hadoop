@@ -295,7 +295,7 @@ public class ContainersMonitorImpl extends AbstractService implements
           + "{} is disabled.", this.getClass().getName());
       return false;
     }
-    if (getResourceCalculatorProcessTree("0") == null) {
+    if (getResourceCalculatorProcessTree("1") == null) {
       LOG.info("ResourceCalculatorProcessTree is unavailable on this system. "
           + "{} is disabled.", this.getClass().getName());
       return false;

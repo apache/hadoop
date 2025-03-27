@@ -29,11 +29,9 @@ import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFile
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileSystemImpl;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.stubbing.Answer;
 
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_STORE_FS_ASYNC_THREADS;
@@ -46,15 +44,16 @@ import static org.mockito.Mockito.spy;
 /**
  * Test the FileSystem (e.g., HDFS) implementation of the State Store driver.
  */
-@RunWith(Parameterized.class)
 public class TestStateStoreFileSystem extends TestStateStoreDriverBase {
 
   private static MiniDFSCluster dfsCluster;
 
-  private final String numFsAsyncThreads;
+  private String numFsAsyncThreads;
 
-  public TestStateStoreFileSystem(String numFsAsyncThreads) {
-    this.numFsAsyncThreads = numFsAsyncThreads;
+  public void initTestStateStoreFileSystem(String pNumFsAsyncThreads) throws Exception {
+    this.numFsAsyncThreads = pNumFsAsyncThreads;
+    setupCluster(numFsAsyncThreads);
+    removeAll(getStateStoreDriver());
   }
 
   private static void setupCluster(String numFsAsyncThreads) throws Exception {
@@ -71,18 +70,16 @@ public class TestStateStoreFileSystem extends TestStateStoreDriverBase {
     getStateStore(conf);
   }
 
-  @Parameterized.Parameters(name = "numFsAsyncThreads-{0}")
   public static List<String[]> data() {
     return Arrays.asList(new String[][] {{"20"}, {"0"}});
   }
 
-  @Before
   public void startup() throws Exception {
     setupCluster(numFsAsyncThreads);
     removeAll(getStateStoreDriver());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     tearDownCluster();
     if (dfsCluster != null) {
@@ -91,39 +88,50 @@ public class TestStateStoreFileSystem extends TestStateStoreDriverBase {
     }
   }
 
-  @Test
-  public void testInsert()
-      throws IllegalArgumentException, IllegalAccessException, IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testInsert(String pNumFsAsyncThreads)
+      throws Exception {
+    initTestStateStoreFileSystem(pNumFsAsyncThreads);
     testInsert(getStateStoreDriver());
   }
 
-  @Test
-  public void testUpdate() throws IllegalArgumentException, IOException,
-      SecurityException, ReflectiveOperationException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testUpdate(String pNumFsAsyncThreads) throws Exception {
+    initTestStateStoreFileSystem(pNumFsAsyncThreads);
     testPut(getStateStoreDriver());
   }
 
-  @Test
-  public void testDelete()
-      throws IllegalArgumentException, IllegalAccessException, IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testDelete(String pNumFsAsyncThreads)
+      throws Exception {
+    initTestStateStoreFileSystem(pNumFsAsyncThreads);
     testRemove(getStateStoreDriver());
   }
 
-  @Test
-  public void testFetchErrors()
-      throws IllegalArgumentException, IllegalAccessException, IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testFetchErrors(String pNumFsAsyncThreads)
+      throws Exception {
+    initTestStateStoreFileSystem(pNumFsAsyncThreads);
     testFetchErrors(getStateStoreDriver());
   }
 
-  @Test
-  public void testMetrics()
-      throws IllegalArgumentException, IllegalAccessException, IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testMetrics(String pNumFsAsyncThreads)
+      throws Exception {
+    initTestStateStoreFileSystem(pNumFsAsyncThreads);
     testMetrics(getStateStoreDriver());
   }
 
-  @Test
-  public void testInsertWithErrorDuringWrite()
-      throws IllegalArgumentException, IllegalAccessException, IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testInsertWithErrorDuringWrite(String pNumFsAsyncThreads)
+      throws Exception {
+    initTestStateStoreFileSystem(pNumFsAsyncThreads);
     StateStoreFileBaseImpl driver = spy((StateStoreFileBaseImpl)getStateStoreDriver());
     doAnswer((Answer<BufferedWriter>) a -> {
       BufferedWriter writer = (BufferedWriter) a.callRealMethod();
@@ -135,8 +143,10 @@ public class TestStateStoreFileSystem extends TestStateStoreDriverBase {
     testInsertWithErrorDuringWrite(driver, MembershipState.class);
   }
 
-  @Test
-  public void testCacheLoadMetrics() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testCacheLoadMetrics(String pNumFsAsyncThreads) throws Exception {
+    initTestStateStoreFileSystem(pNumFsAsyncThreads);
     // inject value of CacheMountTableLoad as -1 initially, if tests get CacheMountTableLoadAvgTime
     // value as -1 ms, that would mean no other sample with value >= 0 would have been received and
     // hence this would be failure to assert that mount table avg load time is higher than -1

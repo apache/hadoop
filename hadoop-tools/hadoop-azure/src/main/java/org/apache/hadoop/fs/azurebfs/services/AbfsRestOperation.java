@@ -23,22 +23,52 @@ import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.time.Duration;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.ClosedIOException;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.enums.RetryValue;
+import org.apache.http.impl.execchain.RequestAbortedException;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.PUT_BLOCK_LIST;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.MAX_RETRY_COUNT;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_FAILED;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_SUCCEEDED;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_SUCCEEDED_WITHOUT_RETRYING;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.TOTAL_NUMBER_OF_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.NUMBER_OF_IOPS_THROTTLED_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.NUMBER_OF_OTHER_THROTTLED_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.NUMBER_OF_NETWORK_FAILED_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.MIN_BACK_OFF;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.MAX_BACK_OFF;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.TOTAL_BACK_OFF;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.TOTAL_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.enums.RetryValue.getRetryValue;
+import static org.apache.hadoop.util.Time.now;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.EGRESS_LIMIT_BREACH_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.INGRESS_LIMIT_BREACH_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.TPS_LIMIT_BREACH_ABBREVIATION;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -65,22 +95,37 @@ public class AbfsRestOperation {
   private final String sasToken;
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
-
+  private static final Logger LOG1 = LoggerFactory.getLogger(AbfsRestOperation.class);
   // For uploads, this is the request entity body.  For downloads,
   // this will hold the response entity body.
   private byte[] buffer;
   private int bufferOffset;
   private int bufferLength;
   private int retryCount = 0;
-
+  private boolean isThrottledRequest = false;
+  private long maxRetryCount = 0L;
+  private final int maxIoRetries;
   private AbfsHttpOperation result;
-  private AbfsCounters abfsCounters;
-
+  private final AbfsCounters abfsCounters;
+  private AbfsBackoffMetrics abfsBackoffMetrics;
   /**
    * This variable contains the reason of last API call within the same
    * AbfsRestOperation object.
    */
   private String failureReason;
+  private AbfsRetryPolicy retryPolicy;
+
+  private final AbfsConfiguration abfsConfiguration;
+
+  /**
+   * This variable stores the tracing context used for last Rest Operation.
+   */
+  private TracingContext lastUsedTracingContext;
+
+  /**
+   * Number of retries due to IOException.
+   */
+  private int apacheHttpClientIoExceptions = 0;
 
   /**
    * Checks if there is non-null HTTP response.
@@ -99,6 +144,25 @@ public class AbfsRestOperation {
         this.method, httpStatus);
   }
 
+  /**
+   * For setting dummy result of getFileStatus for implicit paths.
+   * @param httpStatus http status code to be set.
+   */
+  public void hardSetGetFileStatusResult(int httpStatus) {
+    result = new AbfsHttpOperation.AbfsHttpOperationWithFixedResultForGetFileStatus(this.url,
+        this.method, httpStatus);
+  }
+
+  /**
+   * For setting dummy result of listPathStatus for file paths.
+   * @param httpStatus http status code to be set.
+   * @param listResultSchema list result schema to be set.
+   */
+  public void hardSetGetListStatusResult(int httpStatus, final ListResultSchema listResultSchema) {
+    result = new AbfsHttpOperation.AbfsHttpOperationWithFixedResultForGetListStatus(this.url,
+        this.method, httpStatus, listResultSchema);
+  }
+
   public URL getUrl() {
     return url;
   }
@@ -115,6 +179,11 @@ public class AbfsRestOperation {
     return sasToken;
   }
 
+  private static final int MIN_FIRST_RANGE = 1;
+  private static final int MAX_FIRST_RANGE = 5;
+  private static final int MAX_SECOND_RANGE = 15;
+  private static final int MAX_THIRD_RANGE = 25;
+
   /**
    * Initializes a new REST operation.
    *
@@ -127,8 +196,10 @@ public class AbfsRestOperation {
                     final AbfsClient client,
                     final String method,
                     final URL url,
-                    final List<AbfsHttpHeader> requestHeaders) {
-    this(operationType, client, method, url, requestHeaders, null);
+                    final List<AbfsHttpHeader> requestHeaders,
+                    final AbfsConfiguration abfsConfiguration) {
+    this(operationType, client, method, url, requestHeaders, null, abfsConfiguration
+    );
   }
 
   /**
@@ -145,7 +216,8 @@ public class AbfsRestOperation {
                     final String method,
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders,
-                    final String sasToken) {
+                    final String sasToken,
+                    final AbfsConfiguration abfsConfiguration) {
     this.operationType = operationType;
     this.client = client;
     this.method = method;
@@ -156,7 +228,13 @@ public class AbfsRestOperation {
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
+    if (abfsCounters != null) {
+      this.abfsBackoffMetrics = abfsCounters.getAbfsBackoffMetrics();
+    }
+    this.maxIoRetries = abfsConfiguration.getMaxIoRetries();
     this.intercept = client.getIntercept();
+    this.abfsConfiguration = abfsConfiguration;
+    this.retryPolicy = client.getExponentialRetryPolicy();
   }
 
   /**
@@ -168,8 +246,8 @@ public class AbfsRestOperation {
    * @param url The full URL including query string parameters.
    * @param requestHeaders The HTTP request headers.
    * @param buffer For uploads, this is the request entity body.  For downloads,
-   *               this will hold the response entity body.
-   * @param bufferOffset An offset into the buffer where the data beings.
+   * this will hold the response entity body.
+   * @param bufferOffset An offset into the buffer where the data begins.
    * @param bufferLength The length of the data in the buffer.
    * @param sasToken A sasToken for optional re-use by AbfsInputStream/AbfsOutputStream.
    */
@@ -181,26 +259,34 @@ public class AbfsRestOperation {
                     byte[] buffer,
                     int bufferOffset,
                     int bufferLength,
-                    String sasToken) {
-    this(operationType, client, method, url, requestHeaders, sasToken);
+                    String sasToken,
+                    final AbfsConfiguration abfsConfiguration) {
+    this(operationType, client, method, url, requestHeaders, sasToken, abfsConfiguration
+    );
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
-    this.abfsCounters = client.getAbfsCounters();
   }
 
   /**
    * Execute a AbfsRestOperation. Track the Duration of a request if
    * abfsCounters isn't null.
    * @param tracingContext TracingContext instance to track correlation IDs
+   * @throws AzureBlobFileSystemException if the operation fails.
    */
   public void execute(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
-
+    // Since this might be a sub-sequential or parallel rest operation
+    // triggered by a single file system call, using a new tracing context.
+    lastUsedTracingContext = createNewTracingContext(tracingContext);
     try {
+      if (abfsCounters != null) {
+        abfsCounters.getLastExecutionTime().set(now());
+      }
+      client.timerOrchestrator(TimerFunctionality.RESUME, null);
       IOStatisticsBinding.trackDurationOfInvocation(abfsCounters,
           AbfsStatistic.getStatNameFromHttpCall(method),
-          () -> completeExecute(tracingContext));
+          () -> completeExecute(lastUsedTracingContext));
     } catch (AzureBlobFileSystemException aze) {
       throw aze;
     } catch (IOException e) {
@@ -214,7 +300,7 @@ public class AbfsRestOperation {
    * HTTP operations.
    * @param tracingContext TracingContext instance to track correlation IDs
    */
-  private void completeExecute(TracingContext tracingContext)
+  void completeExecute(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     // see if we have latency reports from the previous requests
     String latencyHeader = getClientLatency();
@@ -224,20 +310,34 @@ public class AbfsRestOperation {
       requestHeaders.add(httpHeader);
     }
 
+    // By Default Exponential Retry Policy Will be used
     retryCount = 0;
+    retryPolicy = client.getExponentialRetryPolicy();
     LOG.debug("First execution of REST operation - {}", operationType);
+    long sleepDuration = 0L;
+    if (abfsBackoffMetrics != null) {
+      synchronized (this) {
+        abfsBackoffMetrics.incrementMetricValue(TOTAL_NUMBER_OF_REQUESTS);
+      }
+    }
     while (!executeHttpOperation(retryCount, tracingContext)) {
       try {
         ++retryCount;
         tracingContext.setRetryCount(retryCount);
-        LOG.debug("Retrying REST operation {}. RetryCount = {}",
-            operationType, retryCount);
-        Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
+        long retryInterval = retryPolicy.getRetryInterval(retryCount);
+        LOG.debug("Rest operation {} failed with failureReason: {}. Retrying with retryCount = {}, retryPolicy: {} and sleepInterval: {}",
+            operationType, failureReason, retryCount, retryPolicy.getAbbreviation(), retryInterval);
+        if (abfsBackoffMetrics != null) {
+          updateBackoffTimeMetrics(retryCount, sleepDuration);
+        }
+        Thread.sleep(retryInterval);
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
       }
     }
-
+    if (abfsBackoffMetrics != null) {
+      updateBackoffMetrics(retryCount, result.getStatusCode());
+    }
     int status = result.getStatusCode();
     /*
       If even after exhausting all retries, the http status code has an
@@ -257,6 +357,30 @@ public class AbfsRestOperation {
   }
 
   @VisibleForTesting
+  void updateBackoffMetrics(int retryCount, int statusCode) {
+    if (abfsBackoffMetrics != null) {
+      if (statusCode < HttpURLConnection.HTTP_OK
+              || statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR) {
+        synchronized (this) {
+          if (retryCount >= maxIoRetries) {
+            abfsBackoffMetrics.incrementMetricValue(NUMBER_OF_REQUESTS_FAILED);
+          }
+        }
+      } else {
+        synchronized (this) {
+          if (retryCount > ZERO && retryCount <= maxIoRetries) {
+            maxRetryCount = Math.max(abfsBackoffMetrics.getMetricValue(MAX_RETRY_COUNT), retryCount);
+            abfsBackoffMetrics.setMetricValue(MAX_RETRY_COUNT, maxRetryCount);
+            updateCount(retryCount);
+          } else {
+            abfsBackoffMetrics.incrementMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED_WITHOUT_RETRYING);
+          }
+        }
+      }
+    }
+  }
+
+  @VisibleForTesting
   String getClientLatency() {
     return client.getAbfsPerfTracker().getClientLatency();
   }
@@ -268,13 +392,15 @@ public class AbfsRestOperation {
    */
   private boolean executeHttpOperation(final int retryCount,
     TracingContext tracingContext) throws AzureBlobFileSystemException {
-    AbfsHttpOperation httpOperation;
+    final AbfsHttpOperation httpOperation;
+    // Used to avoid CST Metric Update in Case of UnknownHost/IO Exception.
+    boolean wasKnownExceptionThrown = false;
 
     try {
       // initialize the HTTP request and open the connection
       httpOperation = createHttpOperation();
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
-      tracingContext.constructHeader(httpOperation, failureReason);
+      tracingContext.constructHeader(httpOperation, failureReason, retryPolicy.getAbbreviation());
 
       signRequest(httpOperation, hasRequestBody ? bufferLength : 0);
 
@@ -287,17 +413,45 @@ public class AbfsRestOperation {
     try {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
-          httpOperation.getConnection().getRequestProperties());
+          httpOperation.getRequestProperties());
       intercept.sendingRequest(operationType, abfsCounters);
       if (hasRequestBody) {
-        // HttpUrlConnection requires
-        httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
+        httpOperation.sendPayload(buffer, bufferOffset, bufferLength);
         incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
-        incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
+        if (!(operationType.name().equals(PUT_BLOCK_LIST))) {
+          incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
+        }
       }
-
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
-      incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
+      if (!isThrottledRequest && httpOperation.getStatusCode()
+          >= HttpURLConnection.HTTP_INTERNAL_ERROR) {
+        isThrottledRequest = true;
+        AzureServiceErrorCode serviceErrorCode =
+            AzureServiceErrorCode.getAzureServiceCode(
+                httpOperation.getStatusCode(),
+                httpOperation.getStorageErrorCode(),
+                httpOperation.getStorageErrorMessage());
+        LOG1.trace("Service code is " + serviceErrorCode + " status code is "
+            + httpOperation.getStatusCode() + " error code is "
+            + httpOperation.getStorageErrorCode()
+            + " error message is " + httpOperation.getStorageErrorMessage());
+        if (abfsBackoffMetrics != null) {
+          synchronized (this) {
+            if (serviceErrorCode.equals(
+                    AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT)
+                    || serviceErrorCode.equals(
+                    AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT)) {
+              abfsBackoffMetrics.incrementMetricValue(NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS);
+            } else if (serviceErrorCode.equals(
+                    AzureServiceErrorCode.TPS_OVER_ACCOUNT_LIMIT)) {
+              abfsBackoffMetrics.incrementMetricValue(NUMBER_OF_IOPS_THROTTLED_REQUESTS);
+            } else {
+              abfsBackoffMetrics.incrementMetricValue(NUMBER_OF_OTHER_THROTTLED_REQUESTS);
+            }
+          }
+        }
+      }
+        incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
       //Only increment bytesReceived counter when the status code is 2XX.
       if (httpOperation.getStatusCode() >= HttpURLConnection.HTTP_OK
           && httpOperation.getStatusCode() <= HttpURLConnection.HTTP_PARTIAL) {
@@ -306,56 +460,92 @@ public class AbfsRestOperation {
       } else if (httpOperation.getStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
         incrementCounter(AbfsStatistic.SERVER_UNAVAILABLE, 1);
       }
+
+      // If no exception occurred till here it means http operation was successfully complete and
+      // a response from server has been received which might be failure or success.
+      // If any kind of exception has occurred it will be caught below.
+      // If request failed to determine failure reason and retry policy here.
+      // else simply return with success after saving the result.
+      LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
+
+      int status = httpOperation.getStatusCode();
+      failureReason = RetryReason.getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
+      retryPolicy = client.getRetryPolicy(failureReason);
+
+      if (retryPolicy.shouldRetry(retryCount, httpOperation.getStatusCode())) {
+        return false;
+      }
+
+      // If the request has succeeded or failed with non-retrial error, save the operation and return.
+      result = httpOperation;
+
     } catch (UnknownHostException ex) {
+      wasKnownExceptionThrown = true;
       String hostname = null;
       hostname = httpOperation.getHost();
       failureReason = RetryReason.getAbbreviation(ex, null, null);
+      retryPolicy = client.getRetryPolicy(failureReason);
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
-      if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
+      if (httpOperation instanceof AbfsAHCHttpOperation) {
+        registerApacheHttpClientIoException();
+      }
+      if (abfsBackoffMetrics != null) {
+        synchronized (this) {
+          abfsBackoffMetrics.incrementMetricValue(NUMBER_OF_NETWORK_FAILED_REQUESTS);
+        }
+      }
+      if (!retryPolicy.shouldRetry(retryCount, -1)) {
+        updateBackoffMetrics(retryCount, httpOperation.getStatusCode());
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
       return false;
     } catch (IOException ex) {
+      wasKnownExceptionThrown = true;
       if (LOG.isDebugEnabled()) {
         LOG.debug("HttpRequestFailure: {}, {}", httpOperation, ex);
       }
-
+      if (abfsBackoffMetrics != null) {
+        synchronized (this) {
+          abfsBackoffMetrics.incrementMetricValue(NUMBER_OF_NETWORK_FAILED_REQUESTS);
+        }
+      }
       failureReason = RetryReason.getAbbreviation(ex, -1, "");
-
-      if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
+      retryPolicy = client.getRetryPolicy(failureReason);
+      if (httpOperation instanceof AbfsAHCHttpOperation) {
+        registerApacheHttpClientIoException();
+        if (ex instanceof RequestAbortedException
+            && ex.getCause() instanceof ClosedIOException) {
+          throw new AbfsDriverException((IOException) ex.getCause());
+        }
+      }
+      if (!retryPolicy.shouldRetry(retryCount, -1)) {
+        updateBackoffMetrics(retryCount, httpOperation.getStatusCode());
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
-
       return false;
     } finally {
-      int status = httpOperation.getStatusCode();
-      /*
-        A status less than 300 (2xx range) or greater than or equal
-        to 500 (5xx range) should contribute to throttling metrics being updated.
-        Less than 200 or greater than or equal to 500 show failed operations. 2xx
-        range contributes to successful operations. 3xx range is for redirects
-        and 4xx range is for user errors. These should not be a part of
-        throttling backoff computation.
-       */
-      boolean updateMetricsResponseCode = (status < HttpURLConnection.HTTP_MULT_CHOICE
-              || status >= HttpURLConnection.HTTP_INTERNAL_ERROR);
-      if (updateMetricsResponseCode) {
+      int statusCode = httpOperation.getStatusCode();
+      // Update Metrics only if Succeeded or Throttled due to account limits.
+      // Also Update in case of any unhandled exception is thrown.
+      if (shouldUpdateCSTMetrics(statusCode) && !wasKnownExceptionThrown) {
         intercept.updateMetrics(operationType, httpOperation);
       }
     }
 
-    LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
-
-    if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {
-      int status = httpOperation.getStatusCode();
-      failureReason = RetryReason.getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
-      return false;
-    }
-
-    result = httpOperation;
-
     return true;
+  }
+
+  /**
+   * Registers switch off of ApacheHttpClient in case of IOException retries increases
+   * more than the threshold.
+   */
+  private void registerApacheHttpClientIoException() {
+    apacheHttpClientIoExceptions++;
+    if (apacheHttpClientIoExceptions
+        >= abfsConfiguration.getMaxApacheHttpClientIoExceptionsRetries()) {
+      AbfsApacheHttpClient.registerFallback();
+    }
   }
 
   /**
@@ -366,11 +556,14 @@ public class AbfsRestOperation {
    */
   @VisibleForTesting
   public void signRequest(final AbfsHttpOperation httpOperation, int bytesToSign) throws IOException {
-    switch(client.getAuthType()) {
+    if (client.isSendMetricCall()) {
+      client.getMetricSharedkeyCredentials().signRequest(httpOperation, bytesToSign);
+    } else {
+      switch (client.getAuthType()) {
       case Custom:
       case OAuth:
         LOG.debug("Authenticating request with OAuth2 access token");
-        httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+        httpOperation.setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
             client.getAccessToken());
         break;
       case SAS:
@@ -383,9 +576,10 @@ public class AbfsRestOperation {
         LOG.debug("Signing request with shared key");
         // sign the HTTP request
         client.getSharedKeyCredentials().signRequest(
-            httpOperation.getConnection(),
+            httpOperation,
             bytesToSign);
         break;
+      }
     }
   }
 
@@ -395,7 +589,32 @@ public class AbfsRestOperation {
    */
   @VisibleForTesting
   AbfsHttpOperation createHttpOperation() throws IOException {
-    return new AbfsHttpOperation(url, method, requestHeaders);
+    HttpOperationType httpOperationType
+        = abfsConfiguration.getPreferredHttpOperationType();
+    if (httpOperationType == HttpOperationType.APACHE_HTTP_CLIENT
+        && isApacheClientUsable()) {
+      return createAbfsAHCHttpOperation();
+    }
+    return createAbfsHttpOperation();
+  }
+
+  private boolean isApacheClientUsable() {
+    return AbfsApacheHttpClient.usable();
+  }
+
+  @VisibleForTesting
+  AbfsJdkHttpOperation createAbfsHttpOperation() throws IOException {
+    return new AbfsJdkHttpOperation(url, method, requestHeaders,
+        Duration.ofMillis(client.getAbfsConfiguration().getHttpConnectionTimeout()),
+        Duration.ofMillis(client.getAbfsConfiguration().getHttpReadTimeout()), client);
+  }
+
+  @VisibleForTesting
+  AbfsAHCHttpOperation createAbfsAHCHttpOperation() throws IOException {
+    return new AbfsAHCHttpOperation(url, method, requestHeaders,
+        Duration.ofMillis(client.getAbfsConfiguration().getHttpConnectionTimeout()),
+        Duration.ofMillis(client.getAbfsConfiguration().getHttpReadTimeout()),
+        client.getAbfsApacheHttpClient(), client);
   }
 
   /**
@@ -408,5 +627,89 @@ public class AbfsRestOperation {
     if (abfsCounters != null) {
       abfsCounters.incrementCounter(statistic, value);
     }
+  }
+
+  /**
+   * Updates the count metrics based on the provided retry count.
+   * @param retryCount The retry count used to determine the metrics category.
+   *
+   * This method increments the number of succeeded requests for the specified retry count.
+   */
+  private void updateCount(int retryCount){
+      abfsBackoffMetrics.incrementMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, getRetryValue(retryCount));
+  }
+
+  /**
+   * Updates backoff time metrics based on the provided retry count and sleep duration.
+   * @param retryCount    The retry count used to determine the metrics category.
+   * @param sleepDuration The duration of sleep during backoff.
+   *
+   * This method calculates and updates various backoff time metrics, including minimum, maximum,
+   * and total backoff time, as well as the total number of requests for the specified retry count.
+   */
+  private void updateBackoffTimeMetrics(int retryCount, long sleepDuration) {
+    synchronized (this) {
+      RetryValue retryCounter = getRetryValue(retryCount);
+      long minBackoffTime = Math.min(abfsBackoffMetrics.getMetricValue(MIN_BACK_OFF, retryCounter), sleepDuration);
+      long maxBackoffForTime = Math.max(abfsBackoffMetrics.getMetricValue(MAX_BACK_OFF, retryCounter), sleepDuration);
+      long totalBackoffTime = abfsBackoffMetrics.getMetricValue(TOTAL_BACK_OFF, retryCounter) + sleepDuration;
+      abfsBackoffMetrics.incrementMetricValue(TOTAL_REQUESTS, retryCounter);
+      abfsBackoffMetrics.setMetricValue(MIN_BACK_OFF, minBackoffTime, retryCounter);
+      abfsBackoffMetrics.setMetricValue(MAX_BACK_OFF, maxBackoffForTime, retryCounter);
+      abfsBackoffMetrics.setMetricValue(TOTAL_BACK_OFF, totalBackoffTime, retryCounter);
+    }
+  }
+
+  /**
+   * Updating Client Side Throttling Metrics for relevant response status codes.
+   * Following criteria is used to decide based on status code and failure reason.
+   * <ol>
+   *   <li>Case 1: Status code in 2xx range: Successful Operations should contribute</li>
+   *   <li>Case 2: Status code in 3xx range: Redirection Operations should not contribute</li>
+   *   <li>Case 3: Status code in 4xx range: User Errors should not contribute</li>
+   *   <li>
+   *     Case 4: Status code is 503: Throttling Error should contribute as following:
+   *     <ol>
+   *       <li>Case 4.a: Ingress Over Account Limit: Should Contribute</li>
+   *       <li>Case 4.b: Egress Over Account Limit: Should Contribute</li>
+   *       <li>Case 4.c: TPS Over Account Limit: Should Contribute</li>
+   *       <li>Case 4.d: Other Server Throttling: Should not contribute</li>
+   *     </ol>
+   *   </li>
+   *   <li>Case 5: Status code in 5xx range other than 503: Should not contribute</li>
+   * </ol>
+   * @param statusCode
+   * @return
+   */
+  private boolean shouldUpdateCSTMetrics(final int statusCode) {
+    return statusCode <  HttpURLConnection.HTTP_MULT_CHOICE // Case 1
+        || INGRESS_LIMIT_BREACH_ABBREVIATION.equals(failureReason) // Case 4.a
+        || EGRESS_LIMIT_BREACH_ABBREVIATION.equals(failureReason) // Case 4.b
+        || TPS_LIMIT_BREACH_ABBREVIATION.equals(failureReason); // Case 4.c
+  }
+
+  /**
+   * Creates a new Tracing context before entering the retry loop of a rest operation.
+   * This will ensure all rest operations have unique
+   * tracing context that will be used for all the retries.
+   * @param tracingContext original tracingContext.
+   * @return tracingContext new tracingContext object created from original one.
+   */
+  @VisibleForTesting
+  public TracingContext createNewTracingContext(final TracingContext tracingContext) {
+    return new TracingContext(tracingContext);
+  }
+
+  /**
+   * Returns the tracing contest used for last rest operation made.
+   * @return tracingContext lasUserTracingContext.
+   */
+  @VisibleForTesting
+  public final TracingContext getLastTracingContext() {
+    return lastUsedTracingContext;
+  }
+
+  int getRetryCount() {
+    return retryCount;
   }
 }

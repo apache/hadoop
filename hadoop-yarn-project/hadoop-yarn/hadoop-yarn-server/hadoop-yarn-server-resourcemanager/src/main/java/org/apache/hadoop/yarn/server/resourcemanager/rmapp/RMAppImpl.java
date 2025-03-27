@@ -106,8 +106,8 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -1018,7 +1018,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private void processNodeUpdate(RMAppNodeUpdateType type, RMNode node) {
     NodeState nodeState = node.getState();
     updatedNodes.put(node, RMAppNodeUpdateType.convertToNodeUpdateType(type));
-    LOG.debug("Received node update event:{} for node:{} with state:",
+    LOG.debug("Received node update event:{} for node:{} with state:{}",
         type, node, nodeState);
   }
 
@@ -1269,7 +1269,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       long applicationLifetime =
           app.getApplicationLifetime(ApplicationTimeoutType.LIFETIME);
       applicationLifetime = app.scheduler
-          .checkAndGetApplicationLifetime(app.queue, applicationLifetime);
+          .checkAndGetApplicationLifetime(app.queue, applicationLifetime, app);
       if (applicationLifetime > 0) {
         // calculate next timeout value
         Long newTimeout =

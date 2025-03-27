@@ -17,11 +17,15 @@
  */
 package org.apache.hadoop.util;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.apache.hadoop.test.GenericTestUtils;
@@ -29,9 +33,8 @@ import org.apache.hadoop.util.ZKUtil.BadAclFormatException;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
 import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.data.ACL;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 public class TestZKUtil {
@@ -80,7 +83,7 @@ public class TestZKUtil {
     int perms = Perms.ALL;
     int remove = Perms.CREATE;
     int newPerms = ZKUtil.removeSpecificPerms(perms, remove);
-    assertEquals("Removal failed", 0, newPerms & Perms.CREATE);
+    assertEquals(0, newPerms & Perms.CREATE, "Removal failed");
   }
 
   @Test
@@ -131,7 +134,7 @@ public class TestZKUtil {
     assertEquals("x", ZKUtil.resolveConfIndirection("x"));
     
     TEST_FILE.getParentFile().mkdirs();
-    Files.asCharSink(TEST_FILE, Charsets.UTF_8).write("hello world");
+    Files.asCharSink(TEST_FILE, StandardCharsets.UTF_8).write("hello world");
     assertEquals("hello world", ZKUtil.resolveConfIndirection(
         "@" + TEST_FILE.getAbsolutePath()));
     

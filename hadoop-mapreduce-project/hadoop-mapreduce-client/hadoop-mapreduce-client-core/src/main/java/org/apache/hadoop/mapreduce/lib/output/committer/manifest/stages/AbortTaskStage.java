@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.Path;
 
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_TASK_ABORT_TASK;
 
 /**
@@ -55,7 +56,11 @@ public class AbortTaskStage extends
     final Path dir = getTaskAttemptDir();
     if (dir != null) {
       LOG.info("{}: Deleting task attempt directory {}", getName(), dir);
-      deleteDir(dir, suppressExceptions);
+      if (suppressExceptions) {
+        deleteRecursiveSuppressingExceptions(dir, OP_DELETE_DIR);
+      } else {
+        deleteRecursive(dir, OP_DELETE_DIR);
+      }
     }
     return dir;
   }

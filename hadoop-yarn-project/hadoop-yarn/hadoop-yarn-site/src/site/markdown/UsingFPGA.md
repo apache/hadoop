@@ -102,7 +102,7 @@ FPGA isolation uses CGroup [devices controller](https://www.kernel.org/doc/Docum
 | --- | --- |
 | yarn.nodemanager.linux-container-executor.cgroups.mount | true |
 
-For more details of YARN CGroups configurations, please refer to [Using CGroups with YARN](https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/NodeManagerCgroups.html)
+For more details of YARN CGroups configurations, please refer to [Using Cgroups with YARN](https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/NodeManagerCgroups.html)
 
 ### In `container-executor.cfg`
 

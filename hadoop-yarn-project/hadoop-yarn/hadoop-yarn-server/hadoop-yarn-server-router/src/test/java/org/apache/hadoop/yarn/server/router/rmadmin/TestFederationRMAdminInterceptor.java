@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -62,12 +63,22 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePoli
 import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationSubCluster;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
+import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.junit.Assert;
@@ -82,6 +93,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
@@ -120,8 +132,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     // Initialize facade & stateSore
     stateStore = new MemoryFederationStateStore();
     stateStore.init(this.getConf());
-    facade = FederationStateStoreFacade.getInstance();
-    facade.reinitialize(stateStore, getConf());
+    facade = FederationStateStoreFacade.getInstance(this.getConf());
+    facade.reinitialize(stateStore, this.getConf());
     stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
 
     // Initialize interceptor
@@ -636,15 +648,27 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     LambdaTestUtils.intercept(YarnException.class, "Missing Queue information.",
         () -> interceptor.saveFederationQueuePolicy(request));
 
-    // routerWeight / amrmWeight
-    // The sum of the routerWeight is not equal to 1.
+    // PolicyManager needs to support weight
     FederationQueueWeight federationQueueWeight2 = FederationQueueWeight.newInstance(
         "SC-1:0.7,SC-2:0.3", "SC-1:0.8,SC-2:0.3", "1.0");
     SaveFederationQueuePolicyRequest request2 =
-        SaveFederationQueuePolicyRequest.newInstance("root.a", federationQueueWeight2, "-");
+        SaveFederationQueuePolicyRequest.newInstance("root.a", federationQueueWeight2,
+        "TestPolicyManager");
+    LambdaTestUtils.intercept(YarnException.class,
+        "TestPolicyManager does not support the use of queue weights.",
+        () -> interceptor.saveFederationQueuePolicy(request2));
+
+    // routerWeight / amrmWeight
+    // The sum of the routerWeight is not equal to 1.
+    String policyTypeName = WeightedLocalityPolicyManager.class.getCanonicalName();
+    FederationQueueWeight federationQueueWeight3 = FederationQueueWeight.newInstance(
+        "SC-1:0.7,SC-2:0.3", "SC-1:0.8,SC-2:0.3", "1.0");
+    SaveFederationQueuePolicyRequest request3 =
+        SaveFederationQueuePolicyRequest.newInstance("root.a", federationQueueWeight3,
+        policyTypeName);
     LambdaTestUtils.intercept(YarnException.class,
         "The sum of ratios for all subClusters must be equal to 1.",
-        () -> interceptor.saveFederationQueuePolicy(request2));
+        () -> interceptor.saveFederationQueuePolicy(request3));
   }
 
   @Test
@@ -802,10 +826,10 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
    * Generating Policy Weight Data.
    *
    * @param pSubClusters set of sub-clusters.
-   * @return policy Weight String, like SC-1:0.7,SC-2:0.
+   * @return policy Weight String, like SC-1:0.7,SC-2:0.3
    */
   private String generatePolicyWeight(List<String> pSubClusters) {
-    List<String> weights = generateWeights(subClusters.size());
+    List<String> weights = generateWeights(pSubClusters.size());
     List<String> subClusterWeight = new ArrayList<>();
     for (int i = 0; i < pSubClusters.size(); i++) {
       String subCluster = pSubClusters.get(i);
@@ -843,5 +867,226 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     }
 
     return formattedRandomNumbers;
+  }
+
+  @Test
+  public void testParsePolicyWeights() {
+    Map<SubClusterIdInfo, Float> policyWeights = new LinkedHashMap<>();
+    SubClusterIdInfo sc1 = new SubClusterIdInfo("SC-1");
+    policyWeights.put(sc1, 0.7f);
+    SubClusterIdInfo sc2 = new SubClusterIdInfo("SC-2");
+    policyWeights.put(sc2, 0.3f);
+    String policyWeight = interceptor.parsePolicyWeights(policyWeights);
+    assertEquals("SC-1:0.7,SC-2:0.3", policyWeight);
+  }
+
+  @Test
+  public void testFilterPoliciesConfigurationsByQueues() throws Exception {
+    // SubClusters : SC-1,SC-2
+    List<String> subClusterLists = new ArrayList<>();
+    subClusterLists.add("SC-1");
+    subClusterLists.add("SC-2");
+
+    // We initialize 26 queues, queue root.a~root.z
+    List<FederationQueueWeight> federationQueueWeights = new ArrayList<>();
+    for (char letter = 'a'; letter <= 'z'; letter++) {
+      FederationQueueWeight leaf =
+          generateFederationQueueWeight("root." + letter, subClusterLists);
+      federationQueueWeights.add(leaf);
+    }
+
+    // Save Queue Policies in Batches
+    BatchSaveFederationQueuePoliciesRequest request =
+        BatchSaveFederationQueuePoliciesRequest.newInstance(federationQueueWeights);
+
+    BatchSaveFederationQueuePoliciesResponse policiesResponse =
+        interceptor.batchSaveFederationQueuePolicies(request);
+
+    assertNotNull(policiesResponse);
+    assertNotNull(policiesResponse.getMessage());
+    assertEquals("batch save policies success.", policiesResponse.getMessage());
+
+    // We query 12 queues, root.a ~ root.l
+    List<String> queues = new ArrayList<>();
+    for (char letter = 'a'; letter <= 'l'; letter++) {
+      queues.add("root." + letter);
+    }
+
+    // Queue1: We query page 1, 10 items per page, and the returned result should be 10 items.
+    // TotalPage should be 2, TotalSize should be 12.
+    QueryFederationQueuePoliciesRequest request1 =
+        QueryFederationQueuePoliciesRequest.newInstance(10, 1, "", queues);
+    QueryFederationQueuePoliciesResponse response1 =
+        interceptor.listFederationQueuePolicies(request1);
+    assertNotNull(response1);
+    assertEquals(1, response1.getCurrentPage());
+    assertEquals(10, response1.getPageSize());
+    assertEquals(2, response1.getTotalPage());
+    assertEquals(12, response1.getTotalSize());
+    List<FederationQueueWeight> federationQueueWeights1 = response1.getFederationQueueWeights();
+    assertNotNull(federationQueueWeights1);
+    assertEquals(10, federationQueueWeights1.size());
+
+    // Queue2: We query page 1, 12 items per page, and the returned result should be 12 items.
+    // TotalPage should be 1, TotalSize should be 12.
+    QueryFederationQueuePoliciesRequest request2 =
+        QueryFederationQueuePoliciesRequest.newInstance(12, 1, "", queues);
+    QueryFederationQueuePoliciesResponse response2 =
+        interceptor.listFederationQueuePolicies(request2);
+    assertNotNull(response2);
+    assertEquals(1, response2.getCurrentPage());
+    assertEquals(12, response2.getPageSize());
+    assertEquals(1, response2.getTotalPage());
+    assertEquals(12, response2.getTotalSize());
+    List<FederationQueueWeight> federationQueueWeights2 = response2.getFederationQueueWeights();
+    assertNotNull(federationQueueWeights2);
+    assertEquals(12, federationQueueWeights2.size());
+
+    // Queue3: Boundary limit exceeded
+    // We filter 12 queues, should return 12 records, 12 per page,
+    // should return 1 page, but we are going to return page 2.
+    QueryFederationQueuePoliciesRequest request3 =
+        QueryFederationQueuePoliciesRequest.newInstance(12, 2, "", queues);
+    QueryFederationQueuePoliciesResponse response3 =
+        interceptor.listFederationQueuePolicies(request3);
+    assertNotNull(response3);
+    assertEquals(2, response3.getCurrentPage());
+    assertEquals(12, response3.getPageSize());
+    assertEquals(1, response2.getTotalPage());
+    assertEquals(12, response3.getTotalSize());
+    List<FederationQueueWeight> federationQueueWeights3 = response3.getFederationQueueWeights();
+    assertNotNull(federationQueueWeights3);
+    assertEquals(0, federationQueueWeights3.size());
+
+    // Queue4: Boundary limit exceeded
+    // We pass in some negative parameters and we will get some exceptions
+    QueryFederationQueuePoliciesRequest request4 =
+        QueryFederationQueuePoliciesRequest.newInstance(-1, 2, "", queues);
+    LambdaTestUtils.intercept(YarnException.class, "PageSize cannot be negative or zero.",
+        () -> interceptor.listFederationQueuePolicies(request4));
+
+    // Queue5: Boundary limit exceeded
+    // We pass in some negative parameters and we will get some exceptions
+    QueryFederationQueuePoliciesRequest request5 =
+        QueryFederationQueuePoliciesRequest.newInstance(10, -1, "", queues);
+    LambdaTestUtils.intercept(YarnException.class, "CurrentPage cannot be negative or zero.",
+        () -> interceptor.listFederationQueuePolicies(request5));
+
+    // Queue6: We use Queue as the condition,
+    // at this time we will only get the only one return value.
+    QueryFederationQueuePoliciesRequest request6 =
+        QueryFederationQueuePoliciesRequest.newInstance(10, 1, "root.a", null);
+    QueryFederationQueuePoliciesResponse response6 =
+        interceptor.listFederationQueuePolicies(request6);
+    assertNotNull(response6);
+    assertEquals(1, response6.getCurrentPage());
+    assertEquals(10, response6.getPageSize());
+    assertEquals(1, response6.getTotalPage());
+    assertEquals(1, response6.getTotalSize());
+    List<FederationQueueWeight> federationQueueWeights6 = response6.getFederationQueueWeights();
+    assertNotNull(federationQueueWeights6);
+    assertEquals(1, federationQueueWeights6.size());
+
+    // Queue7: We design such a test case, we do not set any filter conditions,
+    // but we need to get the return results
+    QueryFederationQueuePoliciesRequest request7 =
+        QueryFederationQueuePoliciesRequest.newInstance(10, 1, null, null);
+    QueryFederationQueuePoliciesResponse response7 =
+        interceptor.listFederationQueuePolicies(request7);
+    assertNotNull(response7);
+    assertEquals(1, response7.getCurrentPage());
+    assertEquals(10, response7.getPageSize());
+    assertEquals(3, response7.getTotalPage());
+    assertEquals(26, response7.getTotalSize());
+    List<FederationQueueWeight> federationQueueWeights7 = response7.getFederationQueueWeights();
+    assertNotNull(federationQueueWeights7);
+    assertEquals(10, federationQueueWeights7.size());
+
+    // Queue8: We are designing a unit test where the number of records
+    // we need to retrieve exceeds the maximum number of Policies available.
+    QueryFederationQueuePoliciesRequest request8 =
+        QueryFederationQueuePoliciesRequest.newInstance(10, 10, null, null);
+    LambdaTestUtils.intercept(YarnException.class,
+        "The index of the records to be retrieved has exceeded the maximum index.",
+        () -> interceptor.listFederationQueuePolicies(request8));
+  }
+
+  @Test
+  public void testDeleteFederationApplication() throws Exception {
+    ApplicationId applicationId = ApplicationId.newInstance(10, 1);
+    DeleteFederationApplicationRequest request1 =
+        DeleteFederationApplicationRequest.newInstance(applicationId.toString());
+    LambdaTestUtils.intercept(YarnException.class,
+        "Application application_10_0001 does not exist.",
+        () -> interceptor.deleteFederationApplication(request1));
+
+    ApplicationId applicationId2 = ApplicationId.newInstance(10, 2);
+    SubClusterId homeSubCluster = SubClusterId.newInstance("SC-1");
+    ApplicationHomeSubCluster appHomeSubCluster =
+        ApplicationHomeSubCluster.newInstance(applicationId2, homeSubCluster);
+    facade.addApplicationHomeSubCluster(appHomeSubCluster);
+    DeleteFederationApplicationRequest request2 =
+        DeleteFederationApplicationRequest.newInstance(applicationId2.toString());
+    DeleteFederationApplicationResponse deleteFederationApplicationResponse =
+        interceptor.deleteFederationApplication(request2);
+    assertNotNull(deleteFederationApplicationResponse);
+    assertEquals("applicationId = " + applicationId2 + " delete success.",
+        deleteFederationApplicationResponse.getMessage());
+  }
+
+  @Test
+  public void testGetFederationSubClusters() throws Exception {
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing getFederationSubClusters Request.",
+        () -> interceptor.getFederationSubClusters(null));
+
+    GetSubClustersRequest request = GetSubClustersRequest.newInstance();
+    GetSubClustersResponse federationSubClusters = interceptor.getFederationSubClusters(request);
+    assertNotNull(federationSubClusters);
+
+    List<FederationSubCluster> federationSubClustersList =
+        federationSubClusters.getFederationSubClusters();
+    assertNotNull(federationSubClustersList);
+    assertEquals(4, federationSubClustersList.size());
+  }
+
+  @Test
+  public void testDeleteFederationPoliciesByQueues() throws IOException, YarnException {
+    // subClusters
+    List<String> subClusterLists = new ArrayList<>();
+    subClusterLists.add("SC-1");
+    subClusterLists.add("SC-2");
+
+    // generate queue A, queue B, queue C
+    FederationQueueWeight rootA = generateFederationQueueWeight("root.a", subClusterLists);
+    FederationQueueWeight rootB = generateFederationQueueWeight("root.b", subClusterLists);
+    FederationQueueWeight rootC = generateFederationQueueWeight("root.c", subClusterLists);
+
+    List<FederationQueueWeight> federationQueueWeights = new ArrayList<>();
+    federationQueueWeights.add(rootA);
+    federationQueueWeights.add(rootB);
+    federationQueueWeights.add(rootC);
+
+    // Step1. Save Queue Policies in Batches
+    BatchSaveFederationQueuePoliciesRequest request =
+        BatchSaveFederationQueuePoliciesRequest.newInstance(federationQueueWeights);
+
+    BatchSaveFederationQueuePoliciesResponse policiesResponse =
+        interceptor.batchSaveFederationQueuePolicies(request);
+
+    assertNotNull(policiesResponse);
+    assertNotNull(policiesResponse.getMessage());
+    assertEquals("batch save policies success.", policiesResponse.getMessage());
+
+    // Step2. Delete the policy of root.c
+    List<String> deleteQueues = new ArrayList<>();
+    deleteQueues.add("root.c");
+    DeleteFederationQueuePoliciesRequest deleteRequest =
+        DeleteFederationQueuePoliciesRequest.newInstance(deleteQueues);
+    DeleteFederationQueuePoliciesResponse deleteResponse =
+        interceptor.deleteFederationPoliciesByQueues(deleteRequest);
+    assertNotNull(deleteResponse);
+    String message = deleteResponse.getMessage();
+    assertEquals("queues = root.c delete success.", message);
   }
 }

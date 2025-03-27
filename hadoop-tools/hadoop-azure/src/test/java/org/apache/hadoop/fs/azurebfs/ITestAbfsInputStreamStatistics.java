@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.io.IOUtils;
-
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMeanStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
@@ -280,7 +279,7 @@ public class ITestAbfsInputStreamStatistics
       // AbfsRestOperation Instance required for eTag.
       AbfsRestOperation abfsRestOperation = fs.getAbfsClient()
           .getPathStatus(nullStatFilePath.toUri().getPath(), false,
-              getTestTracingContext(fs, false));
+              getTestTracingContext(fs, false), null);
 
       // AbfsInputStream with no StreamStatistics.
       in = new AbfsInputStream(fs.getAbfsClient(), null,

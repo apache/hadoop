@@ -22,7 +22,6 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.store.RouterStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -32,18 +31,18 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetRouterRegistra
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetRouterRegistrationResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.waitStateStore;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test cases for router heartbeat service.
@@ -54,7 +53,7 @@ public class TestRouterHeartbeatService {
   private TestingServer testingServer;
   private CuratorFramework curatorFramework;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     router = new Router();
     router.setRouterId(routerId);
@@ -74,7 +73,7 @@ public class TestRouterHeartbeatService {
         .retryPolicy(new RetryNTimes(100, 100))
         .build();
     curatorFramework.start();
-    routerConfig.set(CommonConfigurationKeys.ZK_ADDRESS, connectStr);
+    routerConfig.set(RBFConfigKeys.FEDERATION_STORE_ZK_ADDRESS, connectStr);
     router.init(routerConfig);
     router.start();
 
@@ -131,7 +130,7 @@ public class TestRouterHeartbeatService {
     assertNotNull(version);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (curatorFramework != null) {
       curatorFramework.close();

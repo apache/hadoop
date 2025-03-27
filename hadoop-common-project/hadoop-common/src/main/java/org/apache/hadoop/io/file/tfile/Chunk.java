@@ -219,8 +219,8 @@ final class Chunk {
 
     /**
      * The number of valid bytes in the buffer. This value is always in the
-     * range <tt>0</tt> through <tt>buf.length</tt>; elements <tt>buf[0]</tt>
-     * through <tt>buf[count-1]</tt> contain valid byte data.
+     * range <code>0</code> through <code>buf.length</code>; elements <code>buf[0]</code>
+     * through <code>buf[count-1]</code> contain valid byte data.
      */
     private int count;
 

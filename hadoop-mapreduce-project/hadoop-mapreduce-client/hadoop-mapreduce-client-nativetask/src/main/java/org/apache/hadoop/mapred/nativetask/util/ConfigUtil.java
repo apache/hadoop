@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.mapred.nativetask.util;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -31,8 +31,8 @@ public abstract class ConfigUtil {
   public static byte[][] toBytes(Configuration conf) {
     List<byte[]> nativeConfigs = new ArrayList<byte[]>();
     for (Map.Entry<String, String> e : conf) {
-      nativeConfigs.add(e.getKey().getBytes(Charsets.UTF_8));
-      nativeConfigs.add(e.getValue().getBytes(Charsets.UTF_8));
+      nativeConfigs.add(e.getKey().getBytes(StandardCharsets.UTF_8));
+      nativeConfigs.add(e.getValue().getBytes(StandardCharsets.UTF_8));
     }
     return nativeConfigs.toArray(new byte[nativeConfigs.size()][]);
   }

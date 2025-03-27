@@ -157,7 +157,7 @@ public class TestStandbyCheckpoints {
 
   @Test(timeout = 300000)
   public void testSBNCheckpoints() throws Exception {
-    JournalSet standbyJournalSet = NameNodeAdapter.spyOnJournalSet(nns[1]);
+    JournalSet standbyJournalSet = NameNodeAdapterMockitoUtil.spyOnJournalSet(nns[1]);
 
     doEdits(0, 10);
     HATestUtil.waitForStandbyToCatchUp(nns[0], nns[1]);
@@ -350,7 +350,7 @@ public class TestStandbyCheckpoints {
     cluster.restartNameNode(1);
     nns[1] = cluster.getNameNode(1);
 
-    FSImage spyImage1 = NameNodeAdapter.spyOnFsImage(nns[1]);
+    FSImage spyImage1 = NameNodeAdapterMockitoUtil.spyOnFsImage(nns[1]);
 
     // We shouldn't save any checkpoints at txid=0
     Thread.sleep(1000);
@@ -486,7 +486,7 @@ public class TestStandbyCheckpoints {
   public void testStandbyExceptionThrownDuringCheckpoint() throws Exception {
     
     // Set it up so that we know when the SBN checkpoint starts and ends.
-    FSImage spyImage1 = NameNodeAdapter.spyOnFsImage(nns[1]);
+    FSImage spyImage1 = NameNodeAdapterMockitoUtil.spyOnFsImage(nns[1]);
     DelayAnswer answerer = new DelayAnswer(LOG);
     Mockito.doAnswer(answerer).when(spyImage1)
         .saveNamespace(any(FSNamesystem.class),
@@ -531,7 +531,7 @@ public class TestStandbyCheckpoints {
   public void testReadsAllowedDuringCheckpoint() throws Exception {
     
     // Set it up so that we know when the SBN checkpoint starts and ends.
-    FSImage spyImage1 = NameNodeAdapter.spyOnFsImage(nns[1]);
+    FSImage spyImage1 = NameNodeAdapterMockitoUtil.spyOnFsImage(nns[1]);
     DelayAnswer answerer = new DelayAnswer(LOG);
     Mockito.doAnswer(answerer).when(spyImage1)
         .saveNamespace(any(FSNamesystem.class),

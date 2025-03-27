@@ -177,6 +177,23 @@ public final class IOStatisticAssertions {
   }
 
   /**
+   * Assert that two counters have similar values.
+   *
+   * @param stats statistics source.
+   * @param key1 statistic first key.
+   * @param key2 statistic second key.
+   */
+  public static void verifyStatisticCounterValues(
+      final IOStatistics stats,
+      final String key1,
+      final String key2) {
+    verifyStatisticValues(COUNTER,
+        key1,
+        key2,
+        verifyStatisticsNotNull(stats).counters());
+  }
+
+  /**
    * Assert that a gauge has an expected value.
    * @param stats statistics source
    * @param key statistic key
@@ -258,6 +275,26 @@ public final class IOStatisticAssertions {
     return statistic;
   }
 
+  /**
+   * Assert that the given two statistics have same values.
+   *
+   * @param type type of the statistics.
+   * @param key1 statistic first key.
+   * @param key2 statistic second key.
+   * @param map map to look up.
+   * @param <E> type of map element.
+   */
+  private static <E> void verifyStatisticValues(
+      final String type,
+      final String key1,
+      final String key2,
+      final Map<String, E> map) {
+    final E statistic1 = lookupStatistic(type, key1, map);
+    final E statistic2 = lookupStatistic(type, key2, map);
+    assertThat(statistic1)
+        .describedAs("%s named %s and %s named %s", type, key1, type, key2)
+        .isEqualTo(statistic2);
+  }
 
   /**
    * Assert that a given statistic has an expected value.

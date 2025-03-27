@@ -327,6 +327,13 @@ public interface FederationMBean {
   long getNumberOfMissingBlocksWithReplicationFactorOne();
 
   /**
+   * Gets the total number of badly distributed blocks.
+   *
+   * @return the total number of badly distrubted blocks.
+   */
+  long getNumberOfBadlyDistributedBlocks();
+
+  /**
    * Gets the total number of replicated low redundancy blocks on the cluster
    * with the highest risk of loss.
    *

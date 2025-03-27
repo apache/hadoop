@@ -26,27 +26,26 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
+import javax.inject.Singleton;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.NotAcceptableException;
+import javax.ws.rs.NotFoundException;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Application;
+import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
-import com.google.inject.Guice;
-import com.google.inject.Singleton;
-import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.ClientResponse.Status;
-import com.sun.jersey.api.client.GenericType;
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -79,17 +78,22 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
+import org.apache.hadoop.yarn.server.timeline.reader.ContainerLogsInfoListReader;
+import org.apache.hadoop.yarn.server.timeline.reader.TimelineAboutReader;
 import org.apache.hadoop.yarn.server.webapp.LogServlet;
 import org.apache.hadoop.yarn.server.webapp.LogWebServiceUtils;
 import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
+import static javax.ws.rs.core.Response.Status.NOT_ACCEPTABLE;
+import static javax.ws.rs.core.Response.Status.NOT_FOUND;
+import static javax.ws.rs.core.Response.Status.FORBIDDEN;
+import static javax.ws.rs.core.Response.Status.OK;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -99,6 +103,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 public class TestAHSWebServices extends JerseyTestBase {
 
@@ -112,8 +118,37 @@ public class TestAHSWebServices extends JerseyTestBase {
   private static final String rootLogDir = "target/LocalLogs";
   private static final String NM_WEBADDRESS = "test-nm-web-address:9999";
   private static final String NM_ID = "test:1234";
+  private static HttpServletRequest request;
 
-  @BeforeAll
+  @Override
+  protected Application configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.register(new JerseyBinder());
+    config.register(AHSWebServices.class);
+    config.register(GenericExceptionHandler.class);
+    config.register(TestSimpleAuthFilter.class);
+    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    return config;
+  }
+
+  private static class JerseyBinder extends AbstractBinder {
+    @Override
+    protected void configure() {
+      try {
+        setupClass();
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+      bind(conf).to(Configuration.class).named("conf");
+      bind(historyClientService).to(ApplicationBaseProtocol.class).named("appBaseProt");
+      final HttpServletResponse response = mock(HttpServletResponse.class);
+      request = mock(HttpServletRequest.class);
+      bind(response).to(HttpServletResponse.class);
+      bind(request).to(HttpServletRequest.class);
+      bind(ahsWebservice).to(AHSWebServices.class);
+    }
+  }
+
   public static void setupClass() throws Exception {
     conf = new YarnConfiguration();
     TimelineStore store =
@@ -147,8 +182,6 @@ public class TestAHSWebServices extends JerseyTestBase {
     ahsWebservice.setLogServlet(logServlet);
 
     fs = FileSystem.get(conf);
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
   }
 
   @AfterAll
@@ -164,25 +197,6 @@ public class TestAHSWebServices extends JerseyTestBase {
     return Arrays.asList(new Object[][]{{0}, {1}});
   }
 
-  private static class WebServletModule extends ServletModule {
-    @Override
-    protected void configureServlets() {
-      bind(JAXBContextResolver.class);
-      bind(AHSWebServices.class).toInstance(ahsWebservice);
-      bind(GenericExceptionHandler.class);
-      bind(ApplicationBaseProtocol.class).toInstance(historyClientService);
-      serve("/*").with(GuiceContainer.class);
-      filter("/*").through(TestSimpleAuthFilter.class);
-    }
-  }
-
-  @BeforeEach
-  public void setUp() throws Exception {
-    super.setUp();
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
-  }
-
   @Singleton
   public static class TestSimpleAuthFilter extends AuthenticationFilter {
     @Override
@@ -196,27 +210,19 @@ public class TestAHSWebServices extends JerseyTestBase {
     }
   }
 
-  public TestAHSWebServices() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.applicationhistoryservice.webapp")
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build());
-  }
-
   @MethodSource("rounds")
   @ParameterizedTest
   void testInvalidApp(int round) {
     ApplicationId appId = ApplicationId.newInstance(0, MAX_APPS + 1);
-    WebResource r = resource();
-    ClientResponse response =
+    WebTarget r = target();
+    Response response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
             .path(appId.toString())
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON)
-            .get(ClientResponse.class);
+            .request(MediaType.APPLICATION_JSON)
+            .get(Response.class);
     assertResponseStatusCode("404 not found expected",
-        Status.NOT_FOUND, response.getStatusInfo());
+        Response.Status.NOT_FOUND, response.getStatusInfo());
   }
 
   @MethodSource("rounds")
@@ -225,20 +231,21 @@ public class TestAHSWebServices extends JerseyTestBase {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, MAX_APPS + 1);
-    WebResource r = resource();
-    ClientResponse response =
+    WebTarget r = target();
+    when(request.getRemoteUser()).thenReturn(USERS[round]);
+    Response response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
             .path(appId.toString()).path("appattempts")
             .path(appAttemptId.toString())
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON)
-            .get(ClientResponse.class);
+            .request(MediaType.APPLICATION_JSON)
+            .get(Response.class);
     if (round == 1) {
-      assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
+      assertResponseStatusCode(Response.Status.FORBIDDEN, response.getStatusInfo());
       return;
     }
     assertResponseStatusCode("404 not found expected",
-        Status.NOT_FOUND, response.getStatusInfo());
+        Response.Status.NOT_FOUND, response.getStatusInfo());
   }
 
   @MethodSource("rounds")
@@ -249,38 +256,38 @@ public class TestAHSWebServices extends JerseyTestBase {
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId = ContainerId.newContainerId(appAttemptId,
         MAX_APPS + 1);
-    WebResource r = resource();
-    ClientResponse response =
+    WebTarget r = target();
+    when(request.getRemoteUser()).thenReturn(USERS[round]);
+    Response response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
             .path(appId.toString()).path("appattempts")
             .path(appAttemptId.toString()).path("containers")
             .path(containerId.toString())
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON)
-            .get(ClientResponse.class);
+            .request(MediaType.APPLICATION_JSON)
+            .get(Response.class);
     if (round == 1) {
-      assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
+      assertResponseStatusCode(Response.Status.FORBIDDEN, response.getStatusInfo());
       return;
     }
     assertResponseStatusCode("404 not found expected",
-        Status.NOT_FOUND, response.getStatusInfo());
+        Response.Status.NOT_FOUND, response.getStatusInfo());
   }
 
   @MethodSource("rounds")
   @ParameterizedTest
   void testInvalidUri(int round) throws JSONException, Exception {
-    WebResource r = resource();
+    WebTarget r = target();
     String responseStr = "";
     try {
       responseStr =
           r.path("ws").path("v1").path("applicationhistory").path("bogus")
               .queryParam("user.name", USERS[round])
-              .accept(MediaType.APPLICATION_JSON).get(String.class);
+              .request(MediaType.APPLICATION_JSON).get(String.class);
       fail("should have thrown exception on invalid uri");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
-
+    } catch (NotFoundException ue) {
+      Response response = ue.getResponse();
+      assertResponseStatusCode(NOT_FOUND, response.getStatusInfo());
       WebServicesTestUtils.checkStringMatch(
           "error string exists and shouldn't", "", responseStr);
     }
@@ -288,16 +295,16 @@ public class TestAHSWebServices extends JerseyTestBase {
 
   @MethodSource("rounds")
   @ParameterizedTest
-  void testInvalidUri2(int round) throws JSONException, Exception {
-    WebResource r = resource();
+  public void testInvalidUri2(int round) throws JSONException, Exception {
+    WebTarget r = target();
     String responseStr = "";
     try {
       responseStr = r.queryParam("user.name", USERS[round])
-          .accept(MediaType.APPLICATION_JSON).get(String.class);
+          .request(MediaType.APPLICATION_JSON).get(String.class);
       fail("should have thrown exception on invalid uri");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
+    } catch (NotFoundException ue) {
+      Response response = ue.getResponse();
+      assertResponseStatusCode(NOT_FOUND, response.getStatusInfo());
       WebServicesTestUtils.checkStringMatch(
           "error string exists and shouldn't", "", responseStr);
     }
@@ -305,18 +312,18 @@ public class TestAHSWebServices extends JerseyTestBase {
 
   @MethodSource("rounds")
   @ParameterizedTest
-  void testInvalidAccept(int round) throws JSONException, Exception {
-    WebResource r = resource();
+  public void testInvalidAccept(int round) throws JSONException, Exception {
+    WebTarget r = target();
     String responseStr = "";
     try {
       responseStr =
           r.path("ws").path("v1").path("applicationhistory")
               .queryParam("user.name", USERS[round])
-              .accept(MediaType.TEXT_PLAIN).get(String.class);
+              .request(MediaType.TEXT_PLAIN).get(String.class);
       fail("should have thrown exception on invalid uri");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.INTERNAL_SERVER_ERROR,
+    } catch (NotAcceptableException ue) {
+      Response response = ue.getResponse();
+      assertResponseStatusCode(NOT_ACCEPTABLE,
           response.getStatusInfo());
       WebServicesTestUtils.checkStringMatch(
           "error string exists and shouldn't", "", responseStr);
@@ -325,15 +332,15 @@ public class TestAHSWebServices extends JerseyTestBase {
 
   @MethodSource("rounds")
   @ParameterizedTest
-  void testAbout(int round) throws Exception {
-    WebResource r = resource();
-    ClientResponse response = r
+  public void testAbout(int round) throws Exception {
+    WebTarget r = target().register(TimelineAboutReader.class);
+    Response response = r
         .path("ws").path("v1").path("applicationhistory").path("about")
         .queryParam("user.name", USERS[round])
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    TimelineAbout actualAbout = response.getEntity(TimelineAbout.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    TimelineAbout actualAbout = response.readEntity(TimelineAbout.class);
     TimelineAbout expectedAbout =
         TimelineUtils.createTimelineAbout("Generic History Service API");
     assertNotNull(
@@ -356,15 +363,16 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   void testAppsQuery(int round) throws Exception {
-    WebResource r = resource();
-    ClientResponse response =
+    WebTarget r = targetWithJsonObject();
+    when(request.getRemoteUser()).thenReturn(USERS[round]);
+    Response response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
             .queryParam("state", YarnApplicationState.FINISHED.toString())
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
@@ -374,17 +382,18 @@ public class TestAHSWebServices extends JerseyTestBase {
 
   @MethodSource("rounds")
   @ParameterizedTest
-  void testQueueQuery(int round) throws Exception {
-    WebResource r = resource();
-    ClientResponse response =
+  public void testQueueQuery(int round) throws Exception {
+    WebTarget r = target();
+    Response response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
             .queryParam("queue", "test queue")
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertResponseStatusCode(Status.OK, response.getStatusInfo());
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
+    assertResponseStatusCode(OK, response.getStatusInfo());
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String entity = response.readEntity(String.class);
+    JSONObject json = new JSONObject(entity);
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
@@ -398,16 +407,17 @@ public class TestAHSWebServices extends JerseyTestBase {
   @ParameterizedTest
   void testSingleApp(int round) throws Exception {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
-    WebResource r = resource();
-    ClientResponse response =
+    WebTarget r = targetWithJsonObject();
+    when(request.getRemoteUser()).thenReturn(USERS[round]);
+    Response response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
             .path(appId.toString())
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON)
-            .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+            .request(MediaType.APPLICATION_JSON)
+            .get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject app = json.getJSONObject("app");
     assertEquals(appId.toString(), app.getString("appId"));
@@ -431,19 +441,20 @@ public class TestAHSWebServices extends JerseyTestBase {
   @ParameterizedTest
   void testMultipleAttempts(int round) throws Exception {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
-    WebResource r = resource();
-    ClientResponse response =
+    WebTarget r = targetWithJsonObject();
+    when(request.getRemoteUser()).thenReturn(USERS[round]);
+    Response response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
             .path(appId.toString()).path("appattempts")
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
     if (round == 1) {
-      assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
+      assertResponseStatusCode(FORBIDDEN, response.getStatusInfo());
       return;
     }
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject appAttempts = json.getJSONObject("appAttempts");
     assertEquals(1, appAttempts.length(), "incorrect number of elements");
@@ -453,25 +464,26 @@ public class TestAHSWebServices extends JerseyTestBase {
 
   @MethodSource("rounds")
   @ParameterizedTest
-  void testSingleAttempt(int round) throws Exception {
+  public void testSingleAttempt(int round) throws Exception {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    WebResource r = resource();
-    ClientResponse response =
+    WebTarget r = targetWithJsonObject();
+    when(request.getRemoteUser()).thenReturn(USERS[round]);
+    Response response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
             .path(appId.toString()).path("appattempts")
             .path(appAttemptId.toString())
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON)
-            .get(ClientResponse.class);
+            .request(MediaType.APPLICATION_JSON)
+            .get(Response.class);
     if (round == 1) {
-      assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
+      assertResponseStatusCode(FORBIDDEN, response.getStatusInfo());
       return;
     }
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject appAttempt = json.getJSONObject("appAttempt");
     assertEquals(appAttemptId.toString(), appAttempt.getString("appAttemptId"));
@@ -485,24 +497,25 @@ public class TestAHSWebServices extends JerseyTestBase {
 
   @MethodSource("rounds")
   @ParameterizedTest
-  void testMultipleContainers(int round) throws Exception {
+  public void testMultipleContainers(int round) throws Exception {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    WebResource r = resource();
-    ClientResponse response =
+    WebTarget r = targetWithJsonObject();
+    when(request.getRemoteUser()).thenReturn(USERS[round]);
+    Response response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
-            .path(appId.toString()).path("appattempts")
-            .path(appAttemptId.toString()).path("containers")
-            .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .path(appId.toString()).path("appattempts")
+        .path(appAttemptId.toString()).path("containers")
+        .queryParam("user.name", USERS[round])
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     if (round == 1) {
-      assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
+      assertResponseStatusCode(FORBIDDEN, response.getStatusInfo());
       return;
     }
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject containers = json.getJSONObject("containers");
     assertEquals(1, containers.length(), "incorrect number of elements");
@@ -517,22 +530,23 @@ public class TestAHSWebServices extends JerseyTestBase {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
-    WebResource r = resource();
-    ClientResponse response =
+    WebTarget r = targetWithJsonObject();
+    when(request.getRemoteUser()).thenReturn(USERS[round]);
+    Response response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
             .path(appId.toString()).path("appattempts")
             .path(appAttemptId.toString()).path("containers")
             .path(containerId.toString())
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON)
-            .get(ClientResponse.class);
+            .request(MediaType.APPLICATION_JSON)
+            .get(Response.class);
     if (round == 1) {
-      assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
+      assertResponseStatusCode(FORBIDDEN, response.getStatusInfo());
       return;
     }
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject container = json.getJSONObject("container");
     assertEquals(containerId.toString(), container.getString("containerId"));
@@ -574,45 +588,45 @@ public class TestAHSWebServices extends JerseyTestBase {
         nodeId2, fileName, user, false);
     // test whether we can find container log from remote diretory if
     // the containerInfo for this container could be fetched from AHS.
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1")
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1")
         .path("applicationhistory").path("containerlogs")
         .path(containerId1.toString()).path(fileName)
         .queryParam("user.name", user)
-        .accept(MediaType.TEXT_PLAIN)
-        .get(ClientResponse.class);
-    String responseText = response.getEntity(String.class);
+        .request(MediaType.TEXT_PLAIN)
+        .get(Response.class);
+    String responseText = response.readEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId1));
     // Do the same test with new API
-    r = resource();
+    r = target();
     response = r.path("ws").path("v1")
         .path("applicationhistory").path("containers")
         .path(containerId1.toString()).path("logs").path(fileName)
         .queryParam("user.name", user)
-        .accept(MediaType.TEXT_PLAIN)
-        .get(ClientResponse.class);
-    responseText = response.getEntity(String.class);
+        .request(MediaType.TEXT_PLAIN)
+        .get(Response.class);
+    responseText = response.readEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId1));
-    // test whether we can find container log from remote diretory if
+    // test whether we can find container log from remote directory if
     // the containerInfo for this container could not be fetched from AHS.
-    r = resource();
+    r = target();
     response = r.path("ws").path("v1")
         .path("applicationhistory").path("containerlogs")
         .path(containerId100.toString()).path(fileName)
         .queryParam("user.name", user)
-        .accept(MediaType.TEXT_PLAIN)
-        .get(ClientResponse.class);
-    responseText = response.getEntity(String.class);
+        .request(MediaType.TEXT_PLAIN)
+        .get(Response.class);
+    responseText = response.readEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId100));
     // Do the same test with new API
-    r = resource();
+    r = target();
     response = r.path("ws").path("v1")
         .path("applicationhistory").path("containers")
         .path(containerId100.toString()).path("logs").path(fileName)
         .queryParam("user.name", user)
-        .accept(MediaType.TEXT_PLAIN)
-        .get(ClientResponse.class);
-    responseText = response.getEntity(String.class);
+        .request(MediaType.TEXT_PLAIN)
+        .get(Response.class);
+    responseText = response.readEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId100));
     // create an application which can not be found from AHS
     ApplicationId appId100 = ApplicationId.newInstance(0, 100);
@@ -625,14 +639,14 @@ public class TestAHSWebServices extends JerseyTestBase {
         Collections.singletonMap(containerId1ForApp100,
             "Hello." + containerId1ForApp100),
         nodeId, fileName, user, true);
-    r = resource();
+    r = target();
     response = r.path("ws").path("v1")
         .path("applicationhistory").path("containerlogs")
         .path(containerId1ForApp100.toString()).path(fileName)
         .queryParam("user.name", user)
-        .accept(MediaType.TEXT_PLAIN)
-        .get(ClientResponse.class);
-    responseText = response.getEntity(String.class);
+        .request(MediaType.TEXT_PLAIN)
+        .get(Response.class);
+    responseText = response.readEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId1ForApp100));
     int fullTextSize = responseText.getBytes().length;
     String tailEndSeparator = StringUtils.repeat("*",
@@ -644,15 +658,15 @@ public class TestAHSWebServices extends JerseyTestBase {
     // specify how many bytes we should get from logs
     // if we specify a position number, it would get the first n bytes from
     // container log
-    r = resource();
+    r = target();
     response = r.path("ws").path("v1")
         .path("applicationhistory").path("containerlogs")
         .path(containerId1ForApp100.toString()).path(fileName)
         .queryParam("user.name", user)
         .queryParam("size", "5")
-        .accept(MediaType.TEXT_PLAIN)
-        .get(ClientResponse.class);
-    responseText = response.getEntity(String.class);
+        .request(MediaType.TEXT_PLAIN)
+        .get(Response.class);
+    responseText = response.readEntity(String.class);
     assertEquals(responseText.getBytes().length,
         (fullTextSize - fileContentSize) + 5);
     assertTrue(fullTextSize >= responseText.getBytes().length);
@@ -662,15 +676,15 @@ public class TestAHSWebServices extends JerseyTestBase {
     // specify how many bytes we should get from logs
     // if we specify a negative number, it would get the last n bytes from
     // container log
-    r = resource();
+    r = target();
     response = r.path("ws").path("v1")
         .path("applicationhistory").path("containerlogs")
         .path(containerId1ForApp100.toString()).path(fileName)
         .queryParam("user.name", user)
         .queryParam("size", "-5")
-        .accept(MediaType.TEXT_PLAIN)
-        .get(ClientResponse.class);
-    responseText = response.getEntity(String.class);
+        .request(MediaType.TEXT_PLAIN)
+        .get(Response.class);
+    responseText = response.readEntity(String.class);
     assertEquals(responseText.getBytes().length,
         (fullTextSize - fileContentSize) + 5);
     assertTrue(fullTextSize >= responseText.getBytes().length);
@@ -679,33 +693,33 @@ public class TestAHSWebServices extends JerseyTestBase {
         new String(logMessage.getBytes(), fileContentSize - 5, 5));
     // specify the bytes which is larger than the actual file size,
     // we would get the full logs
-    r = resource();
+    r = target();
     response = r.path("ws").path("v1")
         .path("applicationhistory").path("containerlogs")
         .path(containerId1ForApp100.toString()).path(fileName)
         .queryParam("user.name", user)
         .queryParam("size", "10000")
-        .accept(MediaType.TEXT_PLAIN)
-        .get(ClientResponse.class);
-    responseText = response.getEntity(String.class);
+        .request(MediaType.TEXT_PLAIN)
+        .get(Response.class);
+    responseText = response.readEntity(String.class);
     assertThat(responseText.getBytes()).hasSize(fullTextSize);
 
-    r = resource();
+    r = target();
     response = r.path("ws").path("v1")
         .path("applicationhistory").path("containerlogs")
         .path(containerId1ForApp100.toString()).path(fileName)
         .queryParam("user.name", user)
         .queryParam("size", "-10000")
-        .accept(MediaType.TEXT_PLAIN)
-        .get(ClientResponse.class);
-    responseText = response.getEntity(String.class);
+        .request(MediaType.TEXT_PLAIN)
+        .get(Response.class);
+    responseText = response.readEntity(String.class);
     assertThat(responseText.getBytes()).hasSize(fullTextSize);
   }
 
   @MethodSource("rounds")
   @ParameterizedTest
   @Timeout(10000)
-  void testContainerLogsForRunningApps(int round) throws Exception {
+  public void testContainerLogsForRunningApps(int round) throws Exception {
     String fileName = "syslog";
     String user = "user1";
     ApplicationId appId = ApplicationId.newInstance(
@@ -713,11 +727,12 @@ public class TestAHSWebServices extends JerseyTestBase {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
-    WebResource r = resource();
+    WebTarget r = target();
+    when(request.getRemoteUser()).thenReturn(user);
     URI requestURI = r.path("ws").path("v1")
         .path("applicationhistory").path("containerlogs")
         .path(containerId1.toString()).path(fileName)
-        .queryParam("user.name", user).getURI();
+        .queryParam("user.name", user).getUri();
     String redirectURL = getRedirectURL(requestURI.toString());
     assertTrue(redirectURL != null);
     assertTrue(redirectURL.contains("test:1234"));
@@ -733,7 +748,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path(containerId1.toString()).path(fileName)
         .queryParam("user.name", user)
         .queryParam(YarnWebServiceParams.NM_ID, NM_ID)
-        .getURI();
+        .getUri();
     redirectURL = getRedirectURL(requestURI.toString());
     assertTrue(redirectURL != null);
     assertTrue(redirectURL.contains(NM_WEBADDRESS));
@@ -746,7 +761,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     requestURI = r.path("ws").path("v1")
         .path("applicationhistory").path("containers")
         .path(containerId1.toString()).path("logs").path(fileName)
-        .queryParam("user.name", user).getURI();
+        .queryParam("user.name", user).getUri();
     redirectURL = getRedirectURL(requestURI.toString());
     assertTrue(redirectURL != null);
     assertTrue(redirectURL.contains("test:1234"));
@@ -760,7 +775,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path(containerId1.toString()).path("logs").path(fileName)
         .queryParam("user.name", user)
         .queryParam(YarnWebServiceParams.NM_ID, NM_ID)
-        .getURI();
+        .getUri();
     redirectURL = getRedirectURL(requestURI.toString());
     assertTrue(redirectURL != null);
     assertTrue(redirectURL.contains(NM_WEBADDRESS));
@@ -778,14 +793,14 @@ public class TestAHSWebServices extends JerseyTestBase {
     TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
         rootLogDir, appId, Collections.singletonMap(containerId1000, content),
         nodeId, fileName, user, true);
-    r = resource();
-    ClientResponse response = r.path("ws").path("v1")
+    r = target();
+    Response response = r.path("ws").path("v1")
         .path("applicationhistory").path("containerlogs")
         .path(containerId1000.toString()).path(fileName)
         .queryParam("user.name", user)
-        .accept(MediaType.TEXT_PLAIN)
-        .get(ClientResponse.class);
-    String responseText = response.getEntity(String.class);
+        .request(MediaType.TEXT_PLAIN)
+        .get(Response.class);
+    String responseText = response.readEntity(String.class);
     assertTrue(responseText.contains(content));
     // Also test whether we output the empty local container log, and give
     // the warning message.
@@ -802,9 +817,9 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path(containerId1000.toString()).path(fileName)
         .queryParam(YarnWebServiceParams.NM_ID, "invalid-nm:1234")
         .queryParam("user.name", user)
-        .accept(MediaType.TEXT_PLAIN)
-        .get(ClientResponse.class);
-    responseText = response.getEntity(String.class);
+        .request(MediaType.TEXT_PLAIN)
+        .get(Response.class);
+    responseText = response.readEntity(String.class);
     assertTrue(responseText.contains(content));
     assertTrue(responseText.contains("LogAggregationType: "
         + ContainerLogAggregationType.LOCAL));
@@ -823,8 +838,8 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path(containerId1.toString()).path("logs").path(fileName)
         .queryParam("user.name", user)
         .queryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE, "true")
-        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
-    responseText = response.getEntity(String.class);
+        .request(MediaType.TEXT_PLAIN).get(Response.class);
+    responseText = response.readEntity(String.class);
     assertTrue(responseText.contains(content1));
     assertTrue(responseText.contains("LogAggregationType: "
         + ContainerLogAggregationType.AGGREGATED));
@@ -833,14 +848,15 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   @Timeout(10000)
-  void testContainerLogsMetaForRunningApps(int round) throws Exception {
+  public void testContainerLogsMetaForRunningApps(int round) throws Exception {
     String user = "user1";
     ApplicationId appId = ApplicationId.newInstance(
         1234, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
-    WebResource r = resource();
+    WebTarget r = target().register(ContainerLogsInfoListReader.class);
+
     // If we specify the NMID, we re-direct the request by using
     // the NM's web address
     URI requestURI = r.path("ws").path("v1")
@@ -848,7 +864,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path(containerId1.toString()).path("logs")
         .queryParam("user.name", user)
         .queryParam(YarnWebServiceParams.NM_ID, NM_ID)
-        .getURI();
+        .getUri();
     String redirectURL = getRedirectURL(requestURI.toString());
     assertTrue(redirectURL != null);
     assertTrue(redirectURL.contains(NM_WEBADDRESS));
@@ -862,7 +878,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     requestURI = r.path("ws").path("v1")
         .path("applicationhistory").path("containers")
         .path(containerId1.toString()).path("logs")
-        .queryParam("user.name", user).getURI();
+        .queryParam("user.name", user).getUri();
     redirectURL = getRedirectURL(requestURI.toString());
     assertTrue(redirectURL != null);
     assertTrue(redirectURL.contains("test:1234"));
@@ -881,14 +897,15 @@ public class TestAHSWebServices extends JerseyTestBase {
     TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
         rootLogDir, appId, Collections.singletonMap(containerId1000, content),
         nodeId, fileName, user, true);
-    ClientResponse response = r.path("ws").path("v1")
+    when(request.getRemoteUser()).thenReturn(user);
+    Response response = r.path("ws").path("v1")
         .path("applicationhistory").path("containers")
         .path(containerId1000.toString()).path("logs")
         .queryParam("user.name", user)
-        .accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
 
-    List<ContainerLogsInfo> responseText = response.getEntity(new GenericType<
+    List<ContainerLogsInfo> responseText = response.readEntity(new GenericType<
         List<ContainerLogsInfo>>(){
     });
     assertTrue(responseText.size() == 2);
@@ -915,9 +932,9 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path(containerId1000.toString()).path("logs")
         .queryParam(YarnWebServiceParams.NM_ID, "invalid-nm:1234")
         .queryParam("user.name", user)
-        .accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
-    responseText = response.getEntity(new GenericType<
+        .request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
+    responseText = response.readEntity(new GenericType<
         List<ContainerLogsInfo>>(){
     });
     assertTrue(responseText.size() == 2);
@@ -953,14 +970,14 @@ public class TestAHSWebServices extends JerseyTestBase {
         rootLogDir, appId, Collections.singletonMap(containerId1, content),
         nodeId, fileName, user, true);
 
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1")
+    WebTarget r = target().register(ContainerLogsInfoListReader.class);
+    Response response = r.path("ws").path("v1")
         .path("applicationhistory").path("containers")
         .path(containerId1.toString()).path("logs")
         .queryParam("user.name", user)
-        .accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
-    List<ContainerLogsInfo> responseText = response.getEntity(new GenericType<
+        .request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
+    List<ContainerLogsInfo> responseText = response.readEntity(new GenericType<
         List<ContainerLogsInfo>>(){
     });
     assertTrue(responseText.size() == 1);
@@ -984,10 +1001,32 @@ public class TestAHSWebServices extends JerseyTestBase {
       conn.setInstanceFollowRedirects(false);
       if (conn.getResponseCode() == HttpServletResponse.SC_TEMPORARY_REDIRECT) {
         redirectUrl = conn.getHeaderField("Location");
+        String queryParams = getQueryParams(url);
+        if (queryParams != null && !queryParams.isEmpty()) {
+          redirectUrl = appendQueryParams(redirectUrl, queryParams);
+        }
       }
     } catch (Exception e) {
       // throw new RuntimeException(e);
     }
     return redirectUrl;
+  }
+
+  private static String getQueryParams(String url) {
+    try {
+      URL u = new URL(url);
+      String query = u.getQuery();
+      return query != null ? query : "";
+    } catch (Exception e) {
+      e.printStackTrace();
+      return "";
+    }
+  }
+
+  private static String appendQueryParams(String url, String queryParams) {
+    if (url == null || queryParams == null || queryParams.isEmpty()) {
+      return url;
+    }
+    return url + (url.contains("?") ? "&" : "?") + queryParams;
   }
 }

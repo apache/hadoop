@@ -571,6 +571,18 @@ class TestPlacementConstraintParser {
   }
 
   @Test
+  public void testParseIllegalExprShouldThrowException() {
+    // A single node attribute constraint w/o source tags, it should fail when multiple
+    // attribute kvs are specified.
+    try {
+      PlacementConstraintParser.parseExpression("rm.yarn.io/foo=true,rm.yarn.io/bar=true");
+      fail("Expected a failure!");
+    } catch (PlacementConstraintParseException e) {
+      // ignore
+    }
+  }
+
+  @Test
   void testParseAllocationTagNameSpace()
       throws PlacementConstraintParseException {
     Map<SourceTags, PlacementConstraint> result;

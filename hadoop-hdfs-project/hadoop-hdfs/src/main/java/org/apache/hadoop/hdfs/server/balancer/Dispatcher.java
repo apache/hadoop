@@ -539,6 +539,10 @@ public class Dispatcher {
       this.indices = indices;
     }
 
+    public byte[] getIndices() {
+      return this.indices;
+    }
+
     /**
      * Adjust EC block indices，it will remove the element of adjustList from indices.
      * @param adjustList the list will be removed from indices
@@ -839,7 +843,7 @@ public class Dispatcher {
       final long size = Math.min(getBlocksSize, blocksToReceive);
       final BlocksWithLocations newBlksLocs =
           nnc.getBlocks(getDatanodeInfo(), size, getBlocksMinBlockSize,
-              hotBlockTimeInterval);
+              hotBlockTimeInterval, storageType);
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("getBlocks(" + getDatanodeInfo() + ", "
@@ -889,8 +893,8 @@ public class Dispatcher {
               if (g != null) { // not unknown
                 block.addLocation(g);
               } else if (blkLocs instanceof StripedBlockWithLocations) {
-                // some datanode may not in storageGroupMap due to decommission operation
-                // or balancer cli with "-exclude" parameter
+                // some datanode may not in storageGroupMap due to decommission or maintenance
+                // operation or balancer cli with "-exclude" parameter
                 adjustList.add(i);
               }
             }

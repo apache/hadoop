@@ -25,8 +25,8 @@ import java.util.concurrent.TimeUnit;
 /** Client configuration properties */
 @InterfaceAudience.Private
 public interface HdfsClientConfigKeys {
-  long SECOND = 1000L;
-  long MINUTE = 60 * SECOND;
+  long MS_PER_SECOND = 1000L;
+  long MINUTE = 60 * MS_PER_SECOND;
 
   String  DFS_BLOCK_SIZE_KEY = "dfs.blocksize";
   long    DFS_BLOCK_SIZE_DEFAULT = 128*1024*1024;
@@ -287,6 +287,15 @@ public interface HdfsClientConfigKeys {
       "dfs.client.output.stream.uniq.default.key";
   String DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY_DEFAULT = "DEFAULT";
 
+  String DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME =
+      "dfs.client.congestion.backoff.mean.time";
+  int DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT = 5000;
+
+  String DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME =
+      "dfs.client.congestion.backoff.max.time";
+  int DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT =
+      DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT * 10;
+
   /**
    * These are deprecated config keys to client code.
    */
@@ -388,6 +397,8 @@ public interface HdfsClientConfigKeys {
     String RESOLVE_SERVICE_KEY = PREFIX + "resolver.impl";
     String  RESOLVE_ADDRESS_TO_FQDN = PREFIX + "resolver.useFQDN";
     boolean RESOLVE_ADDRESS_TO_FQDN_DEFAULT = true;
+    String DFS_CLIENT_LAZY_RESOLVED = PREFIX + "lazy.resolved";
+    boolean DFS_CLIENT_LAZY_RESOLVED_DEFAULT = false;
   }
 
   /** dfs.client.write configuration properties */
@@ -414,7 +425,7 @@ public interface HdfsClientConfigKeys {
       int     COUNT_LIMIT_DEFAULT = 2048;
       String  COUNT_RESET_TIME_PERIOD_MS_KEY =
           PREFIX + "count-reset-time-period-ms";
-      long    COUNT_RESET_TIME_PERIOD_MS_DEFAULT = 10*SECOND;
+      long    COUNT_RESET_TIME_PERIOD_MS_DEFAULT = 10 * MS_PER_SECOND;
     }
   }
 

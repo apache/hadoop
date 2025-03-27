@@ -24,8 +24,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.config.ClientConfig;
+import javax.ws.rs.client.Client;
+import org.glassfish.jersey.client.ClientProperties;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -490,9 +490,15 @@ public class TestRouterWebServiceUtil {
         metricsResponse.getTotalMB() + metricsClone.getTotalMB(),
         metrics.getTotalMB());
     Assert.assertEquals(
+        metricsResponse.getUtilizedMB() + metricsClone.getUtilizedMB(),
+        metrics.getUtilizedMB());
+    Assert.assertEquals(
         metricsResponse.getTotalVirtualCores()
             + metricsClone.getTotalVirtualCores(),
         metrics.getTotalVirtualCores());
+    Assert.assertEquals(
+        metricsResponse.getUtilizedVirtualCores() + metricsClone.getUtilizedVirtualCores(),
+        metrics.getUtilizedVirtualCores());
     Assert.assertEquals(
         metricsResponse.getTotalNodes() + metricsClone.getTotalNodes(),
         metrics.getTotalNodes());
@@ -544,7 +550,9 @@ public class TestRouterWebServiceUtil {
     metricsClone.setContainersPending(metrics.getPendingContainers());
 
     metricsClone.setTotalMB(metrics.getTotalMB());
+    metricsClone.setUtilizedMB(metrics.getUtilizedMB());
     metricsClone.setTotalVirtualCores(metrics.getTotalVirtualCores());
+    metricsClone.setUtilizedVirtualCores(metrics.getUtilizedVirtualCores());
     metricsClone.setTotalNodes(metrics.getTotalNodes());
     metricsClone.setLostNodes(metrics.getLostNodes());
     metricsClone.setUnhealthyNodes(metrics.getUnhealthyNodes());
@@ -580,7 +588,9 @@ public class TestRouterWebServiceUtil {
     metrics.setContainersPending(rand.nextInt(1000));
 
     metrics.setTotalMB(rand.nextInt(1000));
+    metrics.setUtilizedMB(metrics.getTotalMB() - rand.nextInt(100));
     metrics.setTotalVirtualCores(rand.nextInt(1000));
+    metrics.setUtilizedVirtualCores(metrics.getUtilizedVirtualCores() - rand.nextInt(100));
     metrics.setTotalNodes(rand.nextInt(1000));
     metrics.setLostNodes(rand.nextInt(1000));
     metrics.setUnhealthyNodes(rand.nextInt(1000));
@@ -689,24 +699,24 @@ public class TestRouterWebServiceUtil {
     // Case1,  default timeout, The default timeout is 30s.
     YarnConfiguration configuration = new YarnConfiguration();
     Client client01 = RouterWebServiceUtil.createJerseyClient(configuration);
-    Map<String, Object> properties = client01.getProperties();
-    int readTimeOut = (int) properties.get(ClientConfig.PROPERTY_READ_TIMEOUT);
-    int connectTimeOut = (int) properties.get(ClientConfig.PROPERTY_CONNECT_TIMEOUT);
+    Map<String, Object> properties = client01.getConfiguration().getProperties();
+    int readTimeOut = (int) properties.get(ClientProperties.READ_TIMEOUT);
+    int connectTimeOut = (int) properties.get(ClientProperties.CONNECT_TIMEOUT);
     Assert.assertEquals(30000, readTimeOut);
     Assert.assertEquals(30000, connectTimeOut);
-    client01.destroy();
+    client01.close();
 
     // Case2, set a negative timeout, We'll get the default timeout(30s)
     YarnConfiguration configuration2 = new YarnConfiguration();
     configuration2.setLong(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, -1L);
     configuration2.setLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, -1L);
     Client client02 = RouterWebServiceUtil.createJerseyClient(configuration2);
-    Map<String, Object> properties02 = client02.getProperties();
-    int readTimeOut02 = (int) properties02.get(ClientConfig.PROPERTY_READ_TIMEOUT);
-    int connectTimeOut02 =  (int) properties02.get(ClientConfig.PROPERTY_CONNECT_TIMEOUT);
+    Map<String, Object> properties02 = client02.getConfiguration().getProperties();
+    int readTimeOut02 = (int) properties02.get(ClientProperties.READ_TIMEOUT);
+    int connectTimeOut02 =  (int) properties02.get(ClientProperties.CONNECT_TIMEOUT);
     Assert.assertEquals(30000, readTimeOut02);
     Assert.assertEquals(30000, connectTimeOut02);
-    client02.destroy();
+    client02.close();
 
     // Case3, Set the maximum value that exceeds the integer
     // We'll get the default timeout(30s)
@@ -717,12 +727,12 @@ public class TestRouterWebServiceUtil {
     configuration3.setLong(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, connectTimeOutLong);
     configuration3.setLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, readTimeOutLong);
     Client client03 = RouterWebServiceUtil.createJerseyClient(configuration3);
-    Map<String, Object> properties03 = client03.getProperties();
-    int readTimeOut03 = (int) properties03.get(ClientConfig.PROPERTY_READ_TIMEOUT);
-    int connectTimeOut03 = (int) properties03.get(ClientConfig.PROPERTY_CONNECT_TIMEOUT);
+    Map<String, Object> properties03 = client03.getConfiguration().getProperties();
+    int readTimeOut03 = (int) properties03.get(ClientProperties.READ_TIMEOUT);
+    int connectTimeOut03 = (int) properties03.get(ClientProperties.CONNECT_TIMEOUT);
     Assert.assertEquals(30000, readTimeOut03);
     Assert.assertEquals(30000, connectTimeOut03);
-    client03.destroy();
+    client03.close();
   }
 
   @Test

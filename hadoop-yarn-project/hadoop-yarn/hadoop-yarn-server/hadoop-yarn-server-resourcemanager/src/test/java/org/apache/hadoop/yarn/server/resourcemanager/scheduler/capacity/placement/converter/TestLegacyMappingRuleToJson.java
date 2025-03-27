@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.converter;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -64,21 +66,21 @@ public class TestLegacyMappingRuleToJson {
     List<MappingRule> jsonRules = conf.getMappingRules();
 
     //Sanity check
-    assertEquals("Number of rules should mach",
-        legacyRules.size(), jsonRules.size());
+    assertEquals(legacyRules.size(), jsonRules.size(),
+        "Number of rules should mach");
 
     //We expect ALL rules to match no matter if it was parsed from legacy format
     //or from JSON
     for (int i = 0; i < legacyRules.size(); i++) {
       assertEquals(
-          "Rule #" + i + " should match",
           legacyRules.get(i).toString(),
-          jsonRules.get(i).toString());
+          jsonRules.get(i).toString(),
+          "Rule #" + i + " should match");
 
       assertEquals(
-          "Rule #" + i + " fallback should match",
           legacyRules.get(i).getFallback().toString(),
-          jsonRules.get(i).getFallback().toString());
+          jsonRules.get(i).getFallback().toString(),
+          "Rule #" + i + " fallback should match");
     }
 
   }

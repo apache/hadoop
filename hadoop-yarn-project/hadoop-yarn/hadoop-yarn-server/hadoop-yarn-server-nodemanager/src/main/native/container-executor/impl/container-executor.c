@@ -74,6 +74,11 @@
 #include "compat/unlinkat.h"
 #endif
 
+// include cgroup2 super magic number if not defined
+#ifndef CGROUP2_SUPER_MAGIC
+#define CGROUP2_SUPER_MAGIC 0x63677270
+#endif
+
 static const int DEFAULT_MIN_USERID = 1000;
 
 static const char* DEFAULT_BANNED_USERS[] = {"yarn", "mapred", "hdfs", "bin", 0};
@@ -242,8 +247,8 @@ static int write_pid_to_cgroup_as_root(const char* cgroup_file, pid_t pid) {
            strerror(errno));
     rc = -1;
     goto cleanup;
-  } else if (buf.f_type != CGROUP_SUPER_MAGIC) {
-    fprintf(LOGFILE, "Pid file %s is not located on cgroup filesystem\n", cgroup_file);
+  } else if (buf.f_type != CGROUP_SUPER_MAGIC && buf.f_type != CGROUP2_SUPER_MAGIC) {
+    fprintf(LOGFILE, "Pid file %s is not located on cgroup/cgroup2 filesystem\n", cgroup_file);
     rc = -1;
     goto cleanup;
   }

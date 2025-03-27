@@ -18,14 +18,15 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_CACHE_TIME_TO_LIVE_MS;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_SAFEMODE_CHECKPERIOD_MS;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_SAFEMODE_EXPIRATION;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_SAFEMODE_EXTENSION;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.deleteStateStore;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -43,11 +44,11 @@ import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the safe mode for the {@link Router} controlled by
@@ -58,7 +59,7 @@ public class TestRouterSafemode {
   private Router router;
   private static Configuration conf;
 
-  @BeforeClass
+  @BeforeAll
   public static void create() throws IOException {
     // Wipe state store
     deleteStateStore();
@@ -70,6 +71,9 @@ public class TestRouterSafemode {
     // 200 ms cache refresh
     conf.setTimeDuration(DFS_ROUTER_CACHE_TIME_TO_LIVE_MS,
         200, TimeUnit.MILLISECONDS);
+    // 100 ms safemode checkperiod
+    conf.setTimeDuration(DFS_ROUTER_SAFEMODE_CHECKPERIOD_MS,
+        100, TimeUnit.MILLISECONDS);
     // 1 sec post cache update before entering safemode (2 intervals)
     conf.setTimeDuration(DFS_ROUTER_SAFEMODE_EXPIRATION,
         TimeUnit.SECONDS.toMillis(1), TimeUnit.MILLISECONDS);
@@ -91,18 +95,18 @@ public class TestRouterSafemode {
         .build();
   }
 
-  @AfterClass
+  @AfterAll
   public static void destroy() {
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException, URISyntaxException {
     router = new Router();
     router.init(conf);
     router.start();
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws IOException {
     if (router != null) {
       router.stop();
@@ -133,7 +137,7 @@ public class TestRouterSafemode {
     long interval =
         conf.getTimeDuration(DFS_ROUTER_SAFEMODE_EXTENSION,
             TimeUnit.SECONDS.toMillis(2), TimeUnit.MILLISECONDS) +
-        conf.getTimeDuration(DFS_ROUTER_CACHE_TIME_TO_LIVE_MS,
+        conf.getTimeDuration(DFS_ROUTER_SAFEMODE_CHECKPERIOD_MS,
             TimeUnit.SECONDS.toMillis(1), TimeUnit.MILLISECONDS);
     Thread.sleep(interval);
 
@@ -199,7 +203,7 @@ public class TestRouterSafemode {
     } catch (StandbyException sme) {
       exception = true;
     }
-    assertTrue("We should have thrown a safe mode exception", exception);
+    assertTrue(exception, "We should have thrown a safe mode exception");
   }
 
   @Test
@@ -274,8 +278,8 @@ public class TestRouterSafemode {
       fail("We should have thrown a safe mode exception");
     } catch (StandbyException e) {
       String msg = e.getMessage();
-      assertTrue("Wrong message: " + msg,
-          msg.endsWith("is in safe mode and cannot handle READ requests"));
+      assertTrue(msg.endsWith("is in safe mode and cannot handle READ requests"),
+          "Wrong message: " + msg);
     }
   }
 }

@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
@@ -295,7 +296,12 @@ class BlockSender implements java.io.Closeable {
         (!is32Bit || length <= Integer.MAX_VALUE);
 
       // Obtain a reference before reading data
-      volumeRef = datanode.data.getVolume(block).obtainReference();
+      FsVolumeSpi volume = datanode.data.getVolume(block);
+      if (volume == null) {
+        LOG.warn("Cannot find FsVolumeSpi to obtain a reference for block: {}", block);
+        throw new ReplicaNotFoundException(block);
+      }
+      volumeRef = volume.obtainReference();
 
       /* 
        * (corruptChecksumOK, meta_file_exist): operation
@@ -428,12 +434,12 @@ class BlockSender implements java.io.Closeable {
       blockIn = datanode.data.getBlockInputStream(block, offset); // seek to offset
       ris = new ReplicaInputStreams(
           blockIn, checksumIn, volumeRef, fileIoProvider);
-    } catch (IOException ioe) {
+    } catch (Throwable t) {
       IOUtils.cleanupWithLogger(null, volumeRef);
       IOUtils.closeStream(this);
       IOUtils.closeStream(blockIn);
       IOUtils.closeStream(checksumIn);
-      throw ioe;
+      throw t;
     }
   }
 

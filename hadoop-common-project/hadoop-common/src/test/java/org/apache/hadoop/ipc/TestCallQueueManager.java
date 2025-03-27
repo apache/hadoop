@@ -18,15 +18,18 @@
 
 package org.apache.hadoop.ipc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.reset;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,8 +40,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.CallQueueManager.CallQueueOverflowException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestCallQueueManager {
   private CallQueueManager<FakeCall> manager;
@@ -260,7 +263,8 @@ public class TestCallQueueManager {
     assertCanPut(manager, 0, 1);
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testSwapUnderContention() throws InterruptedException {
     manager = new CallQueueManager<FakeCall>(queueClass, schedulerClass, false,
         5000, "", conf);
@@ -437,12 +441,12 @@ public class TestCallQueueManager {
   @SuppressWarnings("unchecked")
   @Test
   public void testCallQueueOverflowExceptions() throws Exception {
-    RpcScheduler scheduler = Mockito.mock(RpcScheduler.class);
-    BlockingQueue<Schedulable> queue = Mockito.mock(BlockingQueue.class);
+    RpcScheduler scheduler = mock(RpcScheduler.class);
+    BlockingQueue<Schedulable> queue = mock(BlockingQueue.class);
     CallQueueManager<Schedulable> cqm =
-        Mockito.spy(new CallQueueManager<>(queue, scheduler, false, false));
+        spy(new CallQueueManager<>(queue, scheduler, false, false));
     CallQueueManager<Schedulable> cqmTriggerFailover =
-            Mockito.spy(new CallQueueManager<>(queue, scheduler, false, true));
+        spy(new CallQueueManager<>(queue, scheduler, false, true));
     Schedulable call = new FakeCall(0);
 
     // call queue exceptions that trigger failover
@@ -472,7 +476,7 @@ public class TestCallQueueManager {
       cqm.add(call);
       fail("didn't throw");
     } catch (Exception ex) {
-      assertTrue(ex.toString(), ex instanceof CallQueueOverflowException);
+      assertTrue(ex instanceof CallQueueOverflowException, ex.toString());
     }
 
     // backoff disabled, put is put to queue.
@@ -499,7 +503,7 @@ public class TestCallQueueManager {
       cqm.put(call);
       fail("didn't fail");
     } catch (Exception ex) {
-      assertTrue(ex.toString(), ex instanceof CallQueueOverflowException);
+      assertTrue(ex instanceof CallQueueOverflowException, ex.toString());
     }
     verify(queue, times(0)).put(call);
     verify(queue, times(0)).add(call);
@@ -512,9 +516,34 @@ public class TestCallQueueManager {
       cqm.add(call);
       fail("didn't fail");
     } catch (Exception ex) {
-      assertTrue(ex.toString(), ex instanceof CallQueueOverflowException);
+      assertTrue(ex instanceof CallQueueOverflowException, ex.toString());
     }
     verify(queue, times(0)).put(call);
     verify(queue, times(0)).add(call);
+  }
+
+  @Test
+  public void testCallQueueOverEnabled() {
+    // default ipc.callqueue.overflow.trigger.failover' configure false.
+    String ns = "ipc.8888";
+    conf.setBoolean("ipc.callqueue.overflow.trigger.failover", false);
+    manager = new CallQueueManager<>(fcqueueClass, rpcSchedulerClass, false,
+        10, ns, conf);
+    assertFalse(manager.isServerFailOverEnabled());
+    assertFalse(manager.isServerFailOverEnabledByQueue());
+
+    // set ipc.8888.callqueue.overflow.trigger.failover configure true.
+    conf.setBoolean("ipc.8888.callqueue.overflow.trigger.failover", true);
+    manager = new CallQueueManager<>(fcqueueClass, rpcSchedulerClass, false,
+        10, ns, conf);
+    assertTrue(manager.isServerFailOverEnabled());
+    assertTrue(manager.isServerFailOverEnabledByQueue());
+
+    // set ipc.callqueue.overflow.trigger.failover' configure true.
+    conf.setBoolean("ipc.callqueue.overflow.trigger.failover", true);
+    manager = new CallQueueManager<>(fcqueueClass, rpcSchedulerClass, false,
+        10, ns, conf);
+    assertTrue(manager.isServerFailOverEnabled());
+    assertTrue(manager.isServerFailOverEnabledByQueue());
   }
 }

@@ -35,10 +35,9 @@ import org.apache.hadoop.tools.DistCpContext;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.StubContext;
 import org.apache.hadoop.security.Credentials;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -46,6 +45,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestUniformSizeInputFormat {
   private static MiniDFSCluster cluster;
@@ -57,7 +59,7 @@ public class TestUniformSizeInputFormat {
   private static final Credentials CREDENTIALS = new Credentials();
 
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     cluster = new MiniDFSCluster.Builder(new Configuration()).numDataNodes(1)
                                           .format(true).build();
@@ -95,7 +97,7 @@ public class TestUniformSizeInputFormat {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     cluster.shutdown();
   }
@@ -140,7 +142,7 @@ public class TestUniformSizeInputFormat {
         }
         currentSplitSize += fileStatus[0].getLen();
       }
-      Assert.assertTrue(
+      assertTrue(
            previousSplitSize == -1
                || Math.abs(currentSplitSize - previousSplitSize) < 0.1*sizePerMap
                || i == splits.size()-1);
@@ -148,7 +150,7 @@ public class TestUniformSizeInputFormat {
       doubleCheckedTotalSize += currentSplitSize;
     }
 
-    Assert.assertEquals(totalFileSize, doubleCheckedTotalSize);
+    assertEquals(totalFileSize, doubleCheckedTotalSize);
   }
 
   private void checkSplits(Path listFile, List<InputSplit> splits) throws IOException {
@@ -159,7 +161,7 @@ public class TestUniformSizeInputFormat {
     for (InputSplit split : splits) {
       FileSplit fileSplit = (FileSplit) split;
       long start = fileSplit.getStart();
-      Assert.assertEquals(lastEnd, start);
+      assertEquals(lastEnd, start);
       lastEnd = start + fileSplit.getLength();
     }
 
@@ -172,7 +174,7 @@ public class TestUniformSizeInputFormat {
       reader.seek(lastEnd);
       CopyListingFileStatus srcFileStatus = new CopyListingFileStatus();
       Text srcRelPath = new Text();
-      Assert.assertFalse(reader.next(srcRelPath, srcFileStatus));
+      assertFalse(reader.next(srcRelPath, srcFileStatus));
     } finally {
       IOUtils.closeStream(reader);
     }

@@ -17,13 +17,22 @@
  */
 package org.apache.hadoop.hdfs.server.federation.store.driver;
 
+import java.io.IOException;
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
+import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUnavailableException;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
@@ -53,6 +62,9 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
 
   /** State Store metrics. */
   private StateStoreMetrics metrics;
+
+  /** Thread pool to delegate overwrite and deletion asynchronously. */
+  private ThreadPoolExecutor executor = null;
 
   /**
    * Initialize the state store connection.
@@ -87,6 +99,18 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
         LOG.error("Cannot initialize record store for {}", cls.getSimpleName());
         return false;
       }
+    }
+
+    int nThreads = conf.getInt(
+        RBFConfigKeys.FEDERATION_STORE_DRIVER_ASYNC_OVERRIDE_MAX_THREADS,
+        RBFConfigKeys.FEDERATION_STORE_DRIVER_ASYNC_OVERRIDE_MAX_THREADS_DEFAULT);
+    if (nThreads > 0) {
+      executor = new ThreadPoolExecutor(nThreads, nThreads, 1L, TimeUnit.MINUTES,
+          new LinkedBlockingQueue<>());
+      executor.allowCoreThreadTimeOut(true);
+      LOG.info("Init StateStoreDriver in async mode with {} threads.", nThreads);
+    } else {
+      LOG.info("Init StateStoreDriver in sync mode.");
     }
     return true;
   }
@@ -169,7 +193,12 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
    *
    * @throws Exception if something goes wrong while closing the state store driver connection.
    */
-  public abstract void close() throws Exception;
+  public void close() throws Exception {
+    if (executor != null) {
+      executor.shutdown();
+      executor = null;
+    }
+  }
 
   /**
    * Returns the current time synchronization from the underlying store.
@@ -205,5 +234,63 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
       LOG.error("Cannot get local address", e);
     }
     return hostname;
+  }
+
+  /**
+   * Try to overwrite records in commitRecords and remove records in deleteRecords.
+   * Should return null if async mode is used. Else return removed records.
+   * @param commitRecords records to overwrite in state store
+   * @param deleteRecords records to remove from state store
+   * @param <R> record class
+   * @throws IOException when there is a failure during overwriting or deletion
+   * @return null if async mode is used, else removed records
+   */
+  public <R extends BaseRecord> List<R> handleOverwriteAndDelete(List<R> commitRecords,
+      List<R> deleteRecords) throws IOException {
+    List<R> result = null;
+    try {
+      // Overwrite all expired records.
+      if (commitRecords != null && !commitRecords.isEmpty()) {
+        Runnable overwriteCallable =
+            () -> {
+              try {
+                putAll(commitRecords, true, false);
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            };
+        if (executor != null) {
+          executor.execute(overwriteCallable);
+        } else {
+          overwriteCallable.run();
+        }
+      }
+
+      // Delete all deletable records.
+      if (deleteRecords != null && !deleteRecords.isEmpty()) {
+        Map<R, Boolean> removedRecords = new HashMap<>();
+        Runnable deletionCallable = () -> {
+          try {
+            removedRecords.putAll(removeMultiple(deleteRecords));
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        };
+        if (executor != null) {
+          executor.execute(deletionCallable);
+        } else {
+          result = new ArrayList<>();
+          deletionCallable.run();
+          for (Map.Entry<R, Boolean> entry : removedRecords.entrySet()) {
+            if (entry.getValue()) {
+              result.add(entry.getKey());
+            }
+          }
+        }
+      }
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+    return result;
   }
 }

@@ -26,8 +26,7 @@ import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_STATE;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR_VALUE;
 
-import com.sun.jersey.api.client.Client;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -44,6 +43,7 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.inject.Inject;
 
+import javax.ws.rs.client.Client;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -94,23 +94,25 @@ public class AppsBlock extends RouterBlock {
   }
 
   private AppsInfo getYarnFederationAppsInfo(boolean isEnabled) {
+    String webAddress = null;
     if (isEnabled) {
-      String webAddress = WebAppUtils.getRouterWebAppURLWithScheme(this.conf);
-      return getSubClusterAppsInfoByWebAddress(webAddress, StringUtils.EMPTY);
+      webAddress = WebAppUtils.getRouterWebAppURLWithScheme(this.conf);
+    } else {
+      webAddress = WebAppUtils.getRMWebAppURLWithScheme(this.conf);
     }
-    return null;
+    return getSubClusterAppsInfoByWebAddress(webAddress, StringUtils.EMPTY);
   }
 
   private AppsInfo getSubClusterAppsInfo(String subCluster, String states) {
     try {
       SubClusterId subClusterId = SubClusterId.newInstance(subCluster);
-      FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+      FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance(this.conf);
       SubClusterInfo subClusterInfo = facade.getSubCluster(subClusterId);
 
       if (subClusterInfo != null) {
         // Prepare webAddress
         String webAddress = subClusterInfo.getRMWebServiceAddress();
-        String herfWebAppAddress = "";
+        String herfWebAppAddress;
         if (webAddress != null && !webAddress.isEmpty()) {
           herfWebAppAddress = WebAppUtils.getHttpSchemePrefix(conf) + webAddress;
           return getSubClusterAppsInfoByWebAddress(herfWebAppAddress, states);
@@ -132,7 +134,7 @@ public class AppsBlock extends RouterBlock {
         .genericForward(webAddress, null, AppsInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS, null, queryParams, conf,
         client);
-    client.destroy();
+    client.close();
     return apps;
   }
 

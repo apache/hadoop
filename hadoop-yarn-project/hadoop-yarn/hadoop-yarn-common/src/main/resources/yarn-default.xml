@@ -183,6 +183,21 @@
   </property>
 
   <property>
+    <description>
+      This configuration key enables or disables the auto-correction of container allocation in
+      YARN. Due to the asynchronous nature of container request and allocation, YARN may sometimes
+      over-allocate more containers than requested. The auto-correction feature addresses this by
+      automatically adjusting the number of requested containers based on those already allocated,
+      preventing extra containers from being allocated.
+      While the extra allocated containers will be released by the client within a few seconds,
+      this may not be a concern in normal circumstances. However, if the user is worried about
+      resource contention due to over-allocation, enabling this feature can help avoid such cases.
+    </description>
+    <name>yarn.resourcemanager.scheduler.autocorrect.container.allocation</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>The address of the scheduler interface.</description>
     <name>yarn.resourcemanager.scheduler.address</name>
     <value>${yarn.resourcemanager.hostname}:8030</value>
@@ -582,6 +597,15 @@
   </property>
 
   <property>
+    <description>Host:Port of the ZooKeeper server to be used by the RM. This
+      must be supplied when using the ZooKeeper based implementation of the
+      RM state store and/or embedded automatic failover in an HA setting.
+    </description>
+    <name>yarn.resourcemanager.zk-address</name>
+    <!--value>127.0.0.1:2181</value-->
+  </property>
+
+  <property>
     <description>Full path of the ZooKeeper znode where RM state will be
     stored. This must be supplied when using
     org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
@@ -739,6 +763,16 @@
       in zookeeper. Default value configured is 1MB.</description>
     <name>yarn.resourcemanager.zk-max-znode-size.bytes</name>
     <value>1048576</value>
+  </property>
+
+  <property>
+    <description>
+      Enable SSL/TLS encryption for the ZooKeeper communication.
+      Note: if hadoop.zk.ssl.enabled is set to a value, then that central setting has precedence,
+      and this value will be overridden by the value of hadoop.zk.ssl.enabled.
+    </description>
+    <name>yarn.resourcemanager.zk-client-ssl.enabled</name>
+    <value>false</value>
   </property>
 
   <property>
@@ -1480,6 +1514,26 @@
 
   <property>
     <description>
+      The admin JVM options used on forking ContainerLocalizer process
+      by the container executor.
+    </description>
+    <name>yarn.nodemanager.container-localizer.admin.java.opts</name>
+    <value></value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.container-localizer.java.opts.add-exports-as-default</name>
+    <value>true</value>
+    <description>Since on JDK17 it is no longer possible to use the reflection API to
+      access public fields and methods, add-exports flags should be added to container
+      localizers regardless of the user specified JAVA_OPTS. Setting this to true will
+      add the flags to the container localizer on nodes with JDK17 or higher.
+      Defaults to true, but the setting has no effect on nodes using JDK16 and before.
+    </description>
+  </property>
+
+  <property>
+    <description>
       The log level for container localizer while it is an independent process.
     </description>
     <name>yarn.nodemanager.container-localizer.log.level</name>
@@ -1654,6 +1708,21 @@
     </description>
     <name>yarn.nodemanager.log-container-debug-info.enabled</name>
     <value>true</value>
+  </property>
+
+  <property>
+    <description>Generate additional logs about container launches,
+      if container returned with non-zero exit code.
+      Currently, this creates a copy of the launch script and lists the
+      directory contents of the container work dir. When listing directory
+      contents, we follow symlinks to a max-depth of 5(including symlinks
+      which point to outside the container work dir) which may lead to a
+      slowness in launching containers.
+      If yarn.nodemanager.log-container-debug-info.enabled is true,
+      it does not have effect on the behavior.
+    </description>
+    <name>yarn.nodemanager.log-container-debug-info-on-error.enabled</name>
+    <value>false</value>
   </property>
 
   <property>
@@ -1942,6 +2011,12 @@
   </property>
 
   <property>
+    <description>Validate content of the node manager directories can be accessed</description>
+    <name>yarn.nodemanager.disk-health-checker.working-dir-content-accessibility-validation.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>The maximum percentage of disk space utilization allowed after 
     which a disk is marked as bad. Values can range from 0.0 to 100.0. 
     If the value is greater than or equal to 100, the nodemanager will check 
@@ -2040,6 +2115,20 @@
     CgroupsLCEResourcesHandler.
     </description>
     <name>yarn.nodemanager.linux-container-executor.cgroups.mount-path</name>
+  </property>
+
+  <property>
+    <description>This property sets the mount path for CGroups v2.
+      This parameter is optional, and needed to be set only in mixed mode,
+      when CGroups v2 is mounted alongside with Cgroups v1.
+      For example, in hybrid mode, CGroups v1 controllers can be mounted under /sys/fs/cgroup/
+      (for example /sys/fs/cgroup/cpu,cpuacct), while v2 can be mounted in /sys/fs/cgroup/unified folder.
+
+      If this value is not set, the value of
+      yarn.nodemanager.linux-container-executor.cgroups.mount-path
+      will be used for CGroups v2 as well.
+    </description>
+    <name>yarn.nodemanager.linux-container-executor.cgroups.v2.mount-path</name>
   </property>
 
   <property>
@@ -2417,6 +2506,12 @@
     </description>
     <name>yarn.nodemanager.linux-container-executor.cgroups.delete-timeout-ms</name>
     <value>1000</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.linux-container-executor.cgroups.v2.enabled</name>
+    <value>false</value>
+    <description>Boolean indicating whether cgroup v2 is enabled.</description>
   </property>
 
   <property>
@@ -3734,12 +3829,28 @@
   </property>
 
   <property>
+    <description>
+      Host:Port of the ZooKeeper server to be used by the federation state store
+    </description>
+    <name>yarn.federation.state-store.zk.address</name>
+  </property>
+
+  <property>
    <description>
     The time in seconds after which the federation state store local cache
     will be refreshed periodically
    </description>
    <name>yarn.federation.cache-ttl.secs</name>
    <value>300</value>
+  </property>
+
+  <property>
+    <description>
+      The number of entries in the Federation cache.
+      default is 1000.
+    </description>
+    <name>yarn.federation.cache-entity.nums</name>
+    <value>1000</value>
   </property>
 
   <property>
@@ -5100,10 +5211,27 @@
 
   <property>
     <name>yarn.router.interceptor.user-thread-pool.keep-alive-time</name>
-    <value>0s</value>
+    <value>30s</value>
     <description>
       This configurable is used to set the keepAliveTime of the thread pool of the interceptor.
-      Default is 0s.
+      Default is 30s.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.interceptor.user-thread-pool.allow-core-thread-time-out</name>
+    <value>false</value>
+    <description>
+      This method configures the policy for core threads regarding termination
+      when no tasks arrive within the keep-alive time.
+      When set to false, core threads are never terminated due to a lack of tasks.
+      When set to true, the same keep-alive policy
+      that applies to non-core threads also applies to core threads.
+      To prevent constant thread replacement,
+      ensure that the keep-alive time is greater than zero when setting it to true.
+      It's advisable to call this method before the pool becomes actively used.
+      We need to ensure that
+        yarn.router.interceptor.user-thread-pool.keep-alive-time is greater than 0.
     </description>
   </property>
 
@@ -5153,7 +5281,7 @@
     <description>
       The number of threads to use for the Router scheduled executor service.
     </description>
-    <name>yarn.router.subcluster.cleaner.interval.time</name>
+    <name>yarn.router.scheduled.executor.threads</name>
     <value>1</value>
   </property>
 
@@ -5262,6 +5390,14 @@
     </description>
     <name>yarn.federation.failover.random.order</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to enable proxy service in router. Default is true.
+    </description>
+    <name>yarn.router.webapp.proxy.enable</name>
+    <value>true</value>
   </property>
 
   <property>
@@ -5531,11 +5667,27 @@
   </property>
 
   <property>
+    <description>
+      The Application Cleaner implementation class for GPG to use.
+    </description>
+    <name>yarn.federation.gpg.application.cleaner.class</name>
+    <value>org.apache.hadoop.yarn.server.globalpolicygenerator.applicationcleaner.DefaultApplicationCleaner</value>
+  </property>
+
+  <property>
     <description>Flag to enable cross-origin (CORS) support in the GPG. This flag
       requires the CORS filter initializer to be added to the filter initializers
       list in core-site.xml.</description>
     <name>yarn.federation.gpg.webapp.cross-origin.enabled</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      The interval at which the application cleaner runs, -1 means disabled.
+    </description>
+    <name>yarn.federation.gpg.application.cleaner.interval-ms</name>
+    <value>-1s</value>
   </property>
 
   <property>
@@ -5546,6 +5698,18 @@
     </description>
     <name>yarn.federation.gpg.webapp.address</name>
     <value>0.0.0.0:8069</value>
+  </property>
+
+  <property>
+    <description>
+      Specifications on how (many times) to contact Router for apps. We need to
+      do this because Router might return partial application list because some
+      sub-cluster RM is not responsive (e.g. failing over).
+      Should have three values separated by comma: minimal success retries,
+      maximum total retry, retry interval (ms).
+    </description>
+    <name>yarn.federation.gpg.application.cleaner.contact.router.spec</name>
+    <value>3,10,600000</value>
   </property>
 
   <property>
@@ -5638,4 +5802,36 @@
     <value>50000</value>
   </property>
 
+  <property>
+    <description>
+      Set the connect timeout interval, in milliseconds.
+      A value of 0 means no timeout, otherwise values must be between 1 and Integer#MAX_VALUE.
+      This ensures that the connection is established within a specified time,
+      or it triggers a connection timeout exception.
+    </description>
+    <name>yarn.federation.gpg.webapp.connect-timeout</name>
+    <value>30s</value>
+  </property>
+
+  <property>
+    <description>
+      Set the read timeout interval, in milliseconds.
+      A value of 0 means no timeout, otherwise values must be between 1 and Integer#MAX_VALUE.
+      This timeout specifies the maximum time a client should wait for data to be read from a server
+      once the connection has been established.
+      If data is not received within the specified time, a read timeout exception is raised.
+    </description>
+    <name>yarn.federation.gpg.webapp.read-timeout</name>
+    <value>30s</value>
+  </property>
+
+  <property>
+    <description>
+      The setting that controls whether the ResourceManager should track the nodes as
+      lost when they are unregistered and not reported to the RM.
+      It doesn't account for decommissioned nodes. Default is false.
+    </description>
+    <name>yarn.resourcemanager.enable-tracking-for-unregistered-nodes</name>
+    <value>false</value>
+  </property>
 </configuration>

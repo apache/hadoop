@@ -135,7 +135,7 @@ import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeIn
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterUserInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
-import org.apache.hadoop.yarn.util.MonotonicClock;
+import org.apache.hadoop.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
@@ -188,7 +188,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     stateStore = new MemoryFederationStateStore();
     stateStore.init(this.getConf());
-    FederationStateStoreFacade.getInstance().reinitialize(stateStore,
+    FederationStateStoreFacade.getInstance(this.getConf()).reinitialize(stateStore,
         this.getConf());
     stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
 
@@ -215,7 +215,8 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
         RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
         RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
     RouterDelegationTokenSecretManager tokenSecretManager = new RouterDelegationTokenSecretManager(
-        secretKeyInterval, tokenMaxLifetime, tokenRenewInterval, removeScanInterval);
+        secretKeyInterval, tokenMaxLifetime, tokenRenewInterval, removeScanInterval,
+        this.getConf());
     tokenSecretManager.startThreads();
     routerClientRMService.setRouterDTSecretManager(tokenSecretManager);
 

@@ -39,7 +39,7 @@ public class CapacityReservationsACLsManager extends ReservationsACLsManager {
     for (String planQueue : scheduler.getPlanQueues()) {
       CSQueue queue = ((CapacityScheduler) scheduler).getQueue(planQueue);
       reservationAcls.put(planQueue,
-          csConf.getReservationAcls(queue.getQueuePath()));
+          csConf.getReservationAcls(queue.getQueuePathObject()));
     }
   }
 

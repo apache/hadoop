@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -43,11 +47,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.FSPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserPlacementRule;
-import org.apache.hadoop.yarn.util.SystemClock;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.apache.hadoop.util.SystemClock;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -66,13 +70,13 @@ public class TestQueuePlacementPolicy {
   private ApplicationSubmissionContext asc;
   private ApplicationPlacementContext context;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() {
     CONF.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
   }
 
-  @Before
+  @BeforeEach
   public void initTest() {
     SystemClock clock = SystemClock.getInstance();
     RMContext rmContext = mock(RMContext.class);
@@ -90,7 +94,7 @@ public class TestQueuePlacementPolicy {
     when(scheduler.getQueueManager()).thenReturn(queueManager);
   }
 
-  @After
+  @AfterEach
   public void cleanTest() {
     placementManager = null;
     queueManager = null;
@@ -99,7 +103,7 @@ public class TestQueuePlacementPolicy {
 
   @Test
   public void testSpecifiedUserPolicy() throws Exception {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='specified' />");
     sb.append("  <rule name='user' />");
@@ -118,7 +122,7 @@ public class TestQueuePlacementPolicy {
 
   @Test
   public void testNoCreate() throws Exception {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='specified' />");
     sb.append("  <rule name='user' create=\"false\" />");
@@ -144,7 +148,7 @@ public class TestQueuePlacementPolicy {
 
   @Test
   public void testSpecifiedThenReject() throws Exception {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='specified' />");
     sb.append("  <rule name='reject' />");
@@ -155,12 +159,12 @@ public class TestQueuePlacementPolicy {
     assertEquals("root.specifiedq", context.getQueue());
     asc = newAppSubmissionContext("default");
     context = placementManager.placeApplication(asc, "someuser");
-    assertNull("Assignment should have been rejected and was not", context);
+    assertNull(context, "Assignment should have been rejected and was not");
   }
 
   @Test
   public void testOmittedTerminalRule()  {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='specified' />");
     sb.append("  <rule name='user' create=\"false\" />");
@@ -170,7 +174,7 @@ public class TestQueuePlacementPolicy {
 
   @Test
   public void testTerminalRuleInMiddle() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='specified' />");
     sb.append("  <rule name='default' />");
@@ -184,7 +188,7 @@ public class TestQueuePlacementPolicy {
     // The default rule is no longer considered terminal when the create flag
     // is false. The throw now happens when configuring not when assigning the
     // application
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='secondaryGroupExistingQueue' create='true'/>");
     sb.append("  <rule name='default' queue='otherdefault' create='false'/>");
@@ -197,7 +201,7 @@ public class TestQueuePlacementPolicy {
     // This test covers the use case where we would like default rule
     // to point to a different queue by default rather than root.default
     createQueue(FSQueueType.LEAF, "root.someDefaultQueue");
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='specified' create='false' />");
     sb.append("  <rule name='default' queue='root.someDefaultQueue'/>");
@@ -212,7 +216,7 @@ public class TestQueuePlacementPolicy {
   @Test
   public void testNestedUserQueueParsingErrors() {
     // No nested rule specified in hierarchical user queue
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='nestedUserQueue'/>");
     sb.append("</queuePlacementPolicy>");
@@ -220,7 +224,7 @@ public class TestQueuePlacementPolicy {
     assertIfExceptionThrown(sb);
 
     // Specified nested rule is not a FSPlacementRule
-    sb = new StringBuffer();
+    sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='nestedUserQueue'>");
     sb.append("    <rule name='unknownRule'/>");
@@ -230,7 +234,7 @@ public class TestQueuePlacementPolicy {
     assertIfExceptionThrown(sb);
 
     // Parent rule is rule that cannot be one: reject or nestedUserQueue
-    sb = new StringBuffer();
+    sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='nestedUserQueue'>");
     sb.append("    <rule name='reject'/>");
@@ -241,7 +245,7 @@ public class TestQueuePlacementPolicy {
 
     // If the parent rule does not have the create flag the nested rule is not
     // terminal
-    sb = new StringBuffer();
+    sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='nestedUserQueue'>");
     sb.append("    <rule name='primaryGroup' create='false'/>");
@@ -253,7 +257,7 @@ public class TestQueuePlacementPolicy {
 
   @Test
   public void testMultipleParentRules() throws Exception {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='nestedUserQueue'>");
     sb.append("    <rule name='primaryGroup'/>");
@@ -265,8 +269,8 @@ public class TestQueuePlacementPolicy {
     PlacementRule nested = placementManager.getPlacementRules().get(0);
     if (nested instanceof UserPlacementRule) {
       PlacementRule parent = ((FSPlacementRule)nested).getParentRule();
-      assertTrue("Nested rule should have been Default rule",
-          parent instanceof DefaultPlacementRule);
+      assertTrue(parent instanceof DefaultPlacementRule,
+          "Nested rule should have been Default rule");
     } else {
       fail("Policy parsing failed: rule with multiple parents not set");
     }
@@ -275,7 +279,7 @@ public class TestQueuePlacementPolicy {
   @Test
   public void testBrokenRules() throws Exception {
     // broken rule should fail configuring
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule />");
     sb.append("</queuePlacementPolicy>");
@@ -283,7 +287,7 @@ public class TestQueuePlacementPolicy {
     assertIfExceptionThrown(sb);
 
     // policy without rules ignoring policy
-    sb = new StringBuffer();
+    sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <notarule />");
     sb.append("</queuePlacementPolicy>");
@@ -291,7 +295,7 @@ public class TestQueuePlacementPolicy {
     createPolicy(sb.toString());
 
     // broken rule should fail configuring
-    sb = new StringBuffer();
+    sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='user'>");
     sb.append("    <rule />");
@@ -302,7 +306,7 @@ public class TestQueuePlacementPolicy {
 
     // parent rule not set to something known: no parent rule is required
     // required case is only for nestedUserQueue tested earlier
-    sb = new StringBuffer();
+    sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='user'>");
     sb.append("    <notarule />");
@@ -312,7 +316,7 @@ public class TestQueuePlacementPolicy {
     createPolicy(sb.toString());
   }
 
-  private void assertIfExceptionThrown(StringBuffer sb) {
+  private void assertIfExceptionThrown(StringBuilder sb) {
     Throwable th = null;
     try {
       createPolicy(sb.toString());
@@ -336,7 +340,7 @@ public class TestQueuePlacementPolicy {
 
   @Test
   public void testNestedUserQueueParsing() throws Exception {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='specified' />");
     sb.append("  <rule name='nestedUserQueue'>");
@@ -349,7 +353,7 @@ public class TestQueuePlacementPolicy {
 
   @Test
   public void testNestedUserQueuePrimaryGroup() throws Exception {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='specified' create='false' />");
     sb.append("  <rule name='nestedUserQueue'>");
@@ -374,13 +378,13 @@ public class TestQueuePlacementPolicy {
     createQueue(FSQueueType.LEAF, "root.user3group");
     asc = newAppSubmissionContext("default");
     context = placementManager.placeApplication(asc, "user3");
-    assertNull("Submission should have failed and did not", context);
+    assertNull(context, "Submission should have failed and did not");
   }
 
   @Test
   public void testNestedUserQueuePrimaryGroupNoCreate() throws Exception {
     // Primary group rule has create='false'
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='nestedUserQueue'>");
     sb.append("       <rule name='primaryGroup' create='false'/>");
@@ -402,7 +406,7 @@ public class TestQueuePlacementPolicy {
     assertEquals("root.user1group.user1", context.getQueue());
 
     // Both Primary group and nestedUserQueue rule has create='false'
-    sb = new StringBuffer();
+    sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='nestedUserQueue' create='false'>");
     sb.append("       <rule name='primaryGroup' create='false'/>");
@@ -426,7 +430,7 @@ public class TestQueuePlacementPolicy {
 
   @Test
   public void testNestedUserQueueSecondaryGroup() throws Exception {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='nestedUserQueue'>");
     sb.append("       <rule name='secondaryGroupExistingQueue'/>");
@@ -452,7 +456,7 @@ public class TestQueuePlacementPolicy {
   public void testNestedUserQueueSpecificRule() throws Exception {
     // This test covers the use case where users can specify different parent
     // queues and want user queues under those.
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='nestedUserQueue'>");
     sb.append("       <rule name='specified' create='false'/>");
@@ -477,7 +481,7 @@ public class TestQueuePlacementPolicy {
   public void testNestedUserQueueDefaultRule() throws Exception {
     // This test covers the use case where we would like user queues to be
     // created under a default parent queue
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='specified' create='false' />");
     sb.append("  <rule name='nestedUserQueue'>");
@@ -492,7 +496,7 @@ public class TestQueuePlacementPolicy {
 
     // Same as above but now with the create flag false for the parent
     createQueue(FSQueueType.PARENT, "root.parent");
-    sb = new StringBuffer();
+    sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='specified' create='false' />");
     sb.append("  <rule name='nestedUserQueue'>");
@@ -509,7 +513,7 @@ public class TestQueuePlacementPolicy {
     // Parent queue returned is already a configured LEAF, should fail and the
     // context is null.
     createQueue(FSQueueType.LEAF, "root.parent");
-    sb = new StringBuffer();
+    sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='specified' create='false' />");
     sb.append("  <rule name='nestedUserQueue'>");
@@ -520,13 +524,13 @@ public class TestQueuePlacementPolicy {
     createPolicy(sb.toString());
     asc = newAppSubmissionContext("default");
     context = placementManager.placeApplication(asc, "user1");
-    assertNull("Submission should have failed and did not", context);
+    assertNull(context, "Submission should have failed and did not");
   }
 
   @Test
   public void testUserContainsPeriod() throws Exception {
     // This test covers the user case where the username contains periods.
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='user' />");
     sb.append("</queuePlacementPolicy>");
@@ -535,7 +539,7 @@ public class TestQueuePlacementPolicy {
     context = placementManager.placeApplication(asc, "first.last");
     assertEquals("root.first_dot_last", context.getQueue());
 
-    sb = new StringBuffer();
+    sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='specified' create='false' />");
     sb.append("  <rule name='nestedUserQueue'>");
@@ -553,7 +557,7 @@ public class TestQueuePlacementPolicy {
 
   @Test
   public void testGroupContainsPeriod() throws Exception {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='specified' create='false' />");
     sb.append("  <rule name='nestedUserQueue'>");
@@ -580,7 +584,7 @@ public class TestQueuePlacementPolicy {
 
   @Test
   public void testEmptyGroupsPrimaryGroupRule() throws Exception {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='primaryGroup' create=\"false\" />");
     sb.append("  <rule name='default' />");
@@ -596,7 +600,7 @@ public class TestQueuePlacementPolicy {
 
   @Test
   public void testSpecifiedQueueWithSpaces() throws Exception {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='specified'/>");
     sb.append("  <rule name='default'/>");
@@ -642,7 +646,7 @@ public class TestQueuePlacementPolicy {
   private void createQueue(FSQueueType type, String name) {
     // Create a queue as if it is in the config.
     FSQueue queue = queueManager.createQueue(name, type);
-    assertNotNull("Queue not created", queue);
+    assertNotNull(queue, "Queue not created");
     // walk up the list till we have a non dynamic queue
     // root is always non dynamic
     do {

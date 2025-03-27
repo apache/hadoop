@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.time.Duration;
 
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.impl.streams.InputStreamType;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.ChangeTrackerStatistics;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
@@ -165,6 +166,11 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
+    public long streamOpened(InputStreamType type) {
+      return 0;
+    }
+
+    @Override
     public void streamClose(final boolean abortedConnection,
         final long remainingInCurrentRequest) {
 
@@ -238,6 +244,11 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     @Override
     public void blockRemovedFromFileCache() {
+
+    }
+
+    @Override
+    public void blockEvictedFromFileCache() {
 
     }
 

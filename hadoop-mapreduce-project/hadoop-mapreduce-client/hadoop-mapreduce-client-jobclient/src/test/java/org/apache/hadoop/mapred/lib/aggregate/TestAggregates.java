@@ -22,10 +22,11 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.*;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.text.NumberFormat;
 
@@ -55,8 +56,8 @@ public class TestAggregates {
     fs.mkdirs(INPUT_DIR);
     fs.delete(OUTPUT_DIR, true);
 
-    StringBuffer inputData = new StringBuffer();
-    StringBuffer expectedOutput = new StringBuffer();
+    StringBuilder inputData = new StringBuilder();
+    StringBuilder expectedOutput = new StringBuilder();
     expectedOutput.append("max\t19\n");
     expectedOutput.append("min\t1\n"); 
 
@@ -76,7 +77,7 @@ public class TestAggregates {
     expectedOutput.append("uniq_count\t15\n");
 
 
-    fileOut.write(inputData.toString().getBytes("utf-8"));
+    fileOut.write(inputData.toString().getBytes(StandardCharsets.UTF_8));
     fileOut.close();
 
     System.out.println("inputData:");

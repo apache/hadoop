@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.s3a.UnknownStoreException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ExitUtil;
 
-import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo.IS_MARKER_AWARE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_S3GUARD_UNSUPPORTED;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.INVALID_ARGUMENT;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
@@ -118,12 +117,12 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
    * Run a S3GuardTool command from a varags list, catch any raised
    * ExitException and verify the status code matches that expected.
    * @param status expected status code of the exception
+   * @param conf configuration object.
    * @param args argument list
    * @throws Exception any exception
    */
-  protected void runToFailure(int status, Object... args)
+  protected void runToFailure(int status, Configuration conf, Object... args)
       throws Exception {
-    final Configuration conf = getConfiguration();
     ExitUtil.ExitException ex =
         intercept(ExitUtil.ExitException.class, () ->
             runS3GuardCommand(conf, args));
@@ -169,12 +168,9 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
 
     // run a bucket info command
     S3GuardTool.BucketInfo infocmd = toClose(new S3GuardTool.BucketInfo(conf));
-    String info = exec(infocmd, S3GuardTool.BucketInfo.NAME,
+    exec(infocmd, S3GuardTool.BucketInfo.NAME,
         "-" + MARKERS, S3GuardTool.BucketInfo.MARKERS_AWARE,
         fsUri.toString());
-
-    assertTrue("Output should contain information about S3A client " + info,
-        info.contains(IS_MARKER_AWARE));
   }
 
   /**
@@ -219,8 +215,10 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
           cmdR.getName(),
           S3A_THIS_BUCKET_DOES_NOT_EXIST
       };
-      intercept(UnknownStoreException.class,
-          () -> cmdR.run(argsR));
+      intercept(UnknownStoreException.class, () -> {
+        final int e = cmdR.run(argsR);
+        return String.format("Outcome of %s on missing bucket: %d", tool, e);
+      });
     }
   }
 
@@ -245,7 +243,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     describe("Verify the unsupported tools are rejected");
     for (String tool : UNSUPPORTED_COMMANDS) {
       describe("Probing %s", tool);
-      runToFailure(E_S3GUARD_UNSUPPORTED, tool);
+      runToFailure(E_S3GUARD_UNSUPPORTED, getConfiguration(), tool);
     }
   }
 

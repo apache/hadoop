@@ -29,19 +29,20 @@ import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -60,7 +61,7 @@ public class TestMutableCSConfigurationProvider {
   private static final UserGroupInformation TEST_USER = UserGroupInformation
       .createUserForTesting("testUser", new String[] {});
 
-  @Before
+  @BeforeEach
   public void setUp() {
     cs = mock(CapacityScheduler.class);
     rmContext = mock(RMContext.class);
@@ -141,9 +142,9 @@ public class TestMutableCSConfigurationProvider {
 
     log = confProvider.logAndApplyMutation(TEST_USER, updateInfo);
     confProvider.confirmPendingMutation(log, true);
-    assertNull("Failed to remove config",
-        confProvider.loadConfiguration(conf)
-        .get("yarn.scheduler.capacity.root.a.testkey1"));
+    assertNull(confProvider.loadConfiguration(conf)
+        .get("yarn.scheduler.capacity.root.a.testkey1"),
+        "Failed to remove config");
     assertEquals("testval2", confProvider.loadConfiguration(conf)
         .get("yarn.scheduler.capacity.root.a.testkey2"));
   }
@@ -221,12 +222,13 @@ public class TestMutableCSConfigurationProvider {
   public void testAddRemoveQueueWithSpacesInConfig() throws Exception {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] {" a   , b, c" });
+    QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    QueuePath a = root.createNewLeaf("a");
+    QueuePath b = root.createNewLeaf("b");
+    QueuePath c = root.createNewLeaf("c");
 
-    final String a = CapacitySchedulerConfiguration.ROOT + ".a";
-    final String b = CapacitySchedulerConfiguration.ROOT + ".b";
-    final String c = CapacitySchedulerConfiguration.ROOT + ".c";
+    csConf.setQueues(root, new String[] {" a   , b, c" });
+
     csConf.setCapacity(a, 0);
     csConf.setCapacity(b, 50);
     csConf.setCapacity(c, 50);

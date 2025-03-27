@@ -69,4 +69,20 @@ public interface RouterRpcFairnessPolicyController {
    * @return the JSON string of the available handler for each name service.
    */
   String getAvailableHandlerOnPerNs();
+
+  /**
+   * Returns the available handler for each name service.
+   *
+   * @param nsId name service id.
+   * @return the available handler for each name service.
+   */
+  int getAvailablePermits(String nsId);
+
+  /**
+   * Determine whether ns has registered handlers.
+   *
+   * @param nsId name service id.
+   * @return true if the ns has registered handlers, false in other cases.
+   */
+  boolean contains(String nsId);
 }

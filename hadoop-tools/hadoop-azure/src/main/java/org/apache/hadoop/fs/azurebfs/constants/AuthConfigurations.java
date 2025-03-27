@@ -39,6 +39,10 @@ public final class AuthConfigurations {
   public static final String
       DEFAULT_FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT =
       "https://login.microsoftonline.com/Common/oauth2/token";
+  /** Default OAuth token file path for the workload identity flow. */
+  public static final String
+      DEFAULT_FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE =
+      "/var/run/secrets/azure/tokens/azure-identity-token";
 
   private AuthConfigurations() {
   }

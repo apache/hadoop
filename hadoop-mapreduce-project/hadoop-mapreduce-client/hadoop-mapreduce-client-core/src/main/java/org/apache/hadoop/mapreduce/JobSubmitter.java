@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -63,7 +64,6 @@ import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -409,7 +409,7 @@ class JobSubmitter {
 
         for(Map.Entry<String, String> ent: nm.entrySet()) {
           credentials.addSecretKey(new Text(ent.getKey()), ent.getValue()
-              .getBytes(Charsets.UTF_8));
+              .getBytes(StandardCharsets.UTF_8));
         }
       } catch (JsonMappingException | JsonParseException e) {
         LOG.warn("couldn't parse Token Cache JSON file with user secret keys");

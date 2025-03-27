@@ -64,7 +64,7 @@ public abstract class RMHATestBase extends ClientBaseWithFixes{
     configuration.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     configuration.set(YarnConfiguration.RM_STORE,
         ZKRMStateStore.class.getName());
-    configuration.set(CommonConfigurationKeys.ZK_ADDRESS, hostPort);
+    configuration.set(YarnConfiguration.RM_ZK_ADDRESS, hostPort);
     configuration.setInt(CommonConfigurationKeys.ZK_TIMEOUT_MS, ZK_TIMEOUT_MS);
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     configuration.set(YarnConfiguration.RM_CLUSTER_ID, "test-yarn-cluster");

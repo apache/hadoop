@@ -77,9 +77,9 @@ import org.apache.hadoop.yarn.server.nodemanager.security.authorize
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
-import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.util.MonotonicClock;
+import org.apache.hadoop.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -145,7 +145,7 @@ public class AMRMProxyService extends CompositeService implements
           RegistryOperations.class);
       addService(this.registry);
     }
-    this.federationFacade = FederationStateStoreFacade.getInstance();
+    this.federationFacade = FederationStateStoreFacade.getInstance(conf);
     this.federationEnabled =
         conf.getBoolean(YarnConfiguration.FEDERATION_ENABLED,
             YarnConfiguration.DEFAULT_FEDERATION_ENABLED);

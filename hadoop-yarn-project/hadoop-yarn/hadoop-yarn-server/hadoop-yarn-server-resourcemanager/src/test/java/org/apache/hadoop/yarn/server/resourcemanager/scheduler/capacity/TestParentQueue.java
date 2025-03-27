@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -59,10 +59,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsMan
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -88,8 +87,36 @@ public class TestParentQueue {
 
   private final ResourceCalculator resourceComparator =
       new DefaultResourceCalculator();
-  
-  @Before
+
+  private static final String A = "a";
+  private static final String B = "b";
+  private static final String C = "c";
+  private static final String C1 = "c1";
+  private static final String C11 = "c11";
+  private static final String C111 = "c111";
+  private static final String C1111 = "c1111";
+  private static final String D = "d";
+  private static final String A1 = "a1";
+  private static final String A2 = "a2";
+  private static final String B1 = "b1";
+  private static final String B2 = "b2";
+  private static final String B3 = "b3";
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath Q_A = ROOT.createNewLeaf(A);
+  private static final QueuePath Q_B = ROOT.createNewLeaf(B);
+  private static final QueuePath Q_C = ROOT.createNewLeaf(C);
+  private static final QueuePath Q_D = ROOT.createNewLeaf(D);
+  private static final QueuePath Q_A1 = Q_A.createNewLeaf(A1);
+  private static final QueuePath Q_A2 = Q_A.createNewLeaf(A2);
+  private static final QueuePath Q_B1 = Q_B.createNewLeaf(B1);
+  private static final QueuePath Q_B2 = Q_B.createNewLeaf(B2);
+  private static final QueuePath Q_B3 = Q_B.createNewLeaf(B3);
+  private static final QueuePath Q_C1 = Q_C.createNewLeaf(C1);
+  private static final QueuePath Q_C11 = Q_C1.createNewLeaf(C11);
+  private static final QueuePath Q_C111 = Q_C11.createNewLeaf(C111);
+  private static final QueuePath Q_C1111 = Q_C111.createNewLeaf(C1111);
+
+  @BeforeEach
   public void setUp() throws Exception {
     rmContext = TestUtils.getMockRMContext();
     conf = new YarnConfiguration();
@@ -113,17 +140,11 @@ public class TestParentQueue {
 
     queueContext = new CapacitySchedulerQueueContext(csContext);
   }
-  
-  private static final String A = "a";
-  private static final String B = "b";
-  private static final String Q_A =
-      CapacitySchedulerConfiguration.ROOT + "." + A;
-  private static final String Q_B =
-      CapacitySchedulerConfiguration.ROOT + "." + B;
+
   private void setupSingleLevelQueues(CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B});
+    conf.setQueues(ROOT, new String[] {A, B});
     
     conf.setCapacity(Q_A, 30);
     
@@ -138,12 +159,12 @@ public class TestParentQueue {
       CapacitySchedulerConfiguration conf) {
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{A, B});
+    conf.setQueues(ROOT, new String[]{A, B});
 
-    conf.setMinimumResourceRequirement("", new QueuePath(Q_A),
+    conf.setMinimumResourceRequirement("", Q_A,
         QUEUE_A_RESOURCE);
 
-    conf.setMinimumResourceRequirement("", new QueuePath(Q_B),
+    conf.setMinimumResourceRequirement("", Q_B,
         QUEUE_B_RESOURCE);
 
     queueContext.reinitialize();
@@ -386,7 +407,7 @@ public class TestParentQueue {
 
     // If the new queue mode is used it's allowed to over allocate the resources,
     // as they'll be scaled down accordingly
-    assumeThat(csConf.isLegacyQueueMode(), is(true));
+    assumeTrue(csConf.isLegacyQueueMode() == true);
 
     CSQueueStore queues = new CSQueueStore();
     boolean exceptionOccurred = false;
@@ -398,7 +419,7 @@ public class TestParentQueue {
       exceptionOccurred = true;
     }
     if (!exceptionOccurred) {
-      Assert.fail("Capacity is more then 100% so should be failed.");
+      fail("Capacity is more then 100% so should be failed.");
     }
     csConf.setCapacity(Q_A, 30);
     csConf.setCapacity(Q_B, 70);
@@ -413,7 +434,7 @@ public class TestParentQueue {
       exceptionOccurred = true;
     }
     if (exceptionOccurred) {
-      Assert.fail("Capacity is 100% so should not be failed.");
+      fail("Capacity is 100% so should not be failed.");
     }
     csConf.setCapacity(Q_A, 30);
     csConf.setCapacity(Q_B, 70.005F);
@@ -428,65 +449,44 @@ public class TestParentQueue {
       exceptionOccurred = true;
     }
     if (exceptionOccurred) {
-      Assert
-          .fail("Capacity is under PRECISION which is .05% so should not be failed.");
+      fail("Capacity is under PRECISION which is .05% so should not be failed.");
     }
   }
-  
-  private static final String C = "c";
-  private static final String C1 = "c1";
-  private static final String C11 = "c11";
-  private static final String C111 = "c111";
-  private static final String C1111 = "c1111";
-
-  private static final String D = "d";
-  private static final String A1 = "a1";
-  private static final String A2 = "a2";
-  private static final String B1 = "b1";
-  private static final String B2 = "b2";
-  private static final String B3 = "b3";
-  private static final String B4 = "b4";
   
   private void setupMultiLevelQueues(CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B, C, D});
+    csConf.setQueues(ROOT, new String[] {A, B, C, D});
     
     conf.setCapacity(Q_A, 10);
     
     conf.setCapacity(Q_B, 50);
-    
-    final String Q_C = CapacitySchedulerConfiguration.ROOT + "." + C;
+
     conf.setCapacity(Q_C, 19.5f);
-    
-    final String Q_D = CapacitySchedulerConfiguration.ROOT + "." + D;
+
     conf.setCapacity(Q_D, 20.5f);
     
     // Define 2-nd level queues
     conf.setQueues(Q_A, new String[] {A1, A2});
-    conf.setCapacity(Q_A + "." + A1, 50);
-    conf.setCapacity(Q_A + "." + A2, 50);
+    conf.setCapacity(Q_A1, 50);
+    conf.setCapacity(Q_A2, 50);
     
     conf.setQueues(Q_B, new String[] {B1, B2, B3});
-    conf.setCapacity(Q_B + "." + B1, 10);
-    conf.setCapacity(Q_B + "." + B2, 20);
-    conf.setCapacity(Q_B + "." + B3, 70);
+    conf.setCapacity(Q_B1, 10);
+    conf.setCapacity(Q_B2, 20);
+    conf.setCapacity(Q_B3, 70);
 
     conf.setQueues(Q_C, new String[] {C1});
 
-    final String Q_C1= Q_C + "." + C1;
     conf.setCapacity(Q_C1, 100);
     conf.setQueues(Q_C1, new String[] {C11});
 
-    final String Q_C11= Q_C1 + "." + C11;
     conf.setCapacity(Q_C11, 100);
     conf.setQueues(Q_C11, new String[] {C111});
 
-    final String Q_C111= Q_C11 + "." + C111;
     conf.setCapacity(Q_C111, 100);
     //Leaf Queue
     conf.setQueues(Q_C111, new String[] {C1111});
-    final String Q_C1111= Q_C111 + "." + C1111;
     conf.setCapacity(Q_C1111, 100);
     queueContext.reinitialize();
   }
@@ -667,45 +667,49 @@ public class TestParentQueue {
     reset(a); reset(b); reset(c);
   }
   
-  @Test (expected=IOException.class)
+  @Test
   public void testQueueCapacitySettingChildZero() throws Exception {
-    // Setup queue configs
-    setupMultiLevelQueues(csConf);
+    assertThrows(IOException.class, () -> {
+      // Setup queue configs
+      setupMultiLevelQueues(csConf);
 
-    // If the new queue mode is used it's allowed to have
-    // zero-capacity queues under a non-zero parent
-    assumeThat(csConf.isLegacyQueueMode(), is(true));
+      // If the new queue mode is used it's allowed to have
+      // zero-capacity queues under a non-zero parent
+      assumeTrue(csConf.isLegacyQueueMode() == true);
 
-    // set child queues capacity to 0 when parents not 0
-    csConf.setCapacity(Q_B + "." + B1, 0);
-    csConf.setCapacity(Q_B + "." + B2, 0);
-    csConf.setCapacity(Q_B + "." + B3, 0);
-    queueContext.reinitialize();
+      // set child queues capacity to 0 when parents not 0
+      csConf.setCapacity(Q_B1, 0);
+      csConf.setCapacity(Q_B2, 0);
+      csConf.setCapacity(Q_B3, 0);
+      queueContext.reinitialize();
 
-    CSQueueStore queues = new CSQueueStore();
-    CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
-        CapacitySchedulerConfiguration.ROOT, queues, queues,
-        TestUtils.spyHook);
+      CSQueueStore queues = new CSQueueStore();
+      CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+          CapacitySchedulerConfiguration.ROOT, queues, queues,
+          TestUtils.spyHook);
+    });
   }
   
-  @Test (expected=IOException.class)
+  @Test
   public void testQueueCapacitySettingParentZero() throws Exception {
-    // Setup queue configs
-    setupMultiLevelQueues(csConf);
+    assertThrows(IOException.class, () -> {
+      // Setup queue configs
+      setupMultiLevelQueues(csConf);
 
-    // If the new queue mode is used it's allowed to have
-    // non-zero capacity queues under a zero capacity parent
-    assumeThat(csConf.isLegacyQueueMode(), is(true));
+      // If the new queue mode is used it's allowed to have
+      // non-zero capacity queues under a zero capacity parent
+      assumeTrue(csConf.isLegacyQueueMode() == true);
 
-    // set parent capacity to 0 when child not 0
-    csConf.setCapacity(Q_B, 0);
-    csConf.setCapacity(Q_A, 60);
-    queueContext.reinitialize();
+      // set parent capacity to 0 when child not 0
+      csConf.setCapacity(Q_B, 0);
+      csConf.setCapacity(Q_A, 60);
+      queueContext.reinitialize();
 
-    CSQueueStore queues = new CSQueueStore();
-    CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
-        CapacitySchedulerConfiguration.ROOT, queues, queues,
-        TestUtils.spyHook);
+      CSQueueStore queues = new CSQueueStore();
+      CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+          CapacitySchedulerConfiguration.ROOT, queues, queues,
+          TestUtils.spyHook);
+    });
   }
 
   @Test
@@ -726,29 +730,31 @@ public class TestParentQueue {
         TestUtils.spyHook);
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testQueueCapacitySettingParentZeroChildren50pctZeroSumAllowed()
       throws Exception {
-    // Setup queue configs
-    setupMultiLevelQueues(csConf);
+    assertThrows(IOException.class, () -> {
+      // Setup queue configs
+      setupMultiLevelQueues(csConf);
 
-    // If the new queue mode is used it's allowed to have
-    // non-zero capacity queues under a zero capacity parent
-    assumeThat(csConf.isLegacyQueueMode(), is(true));
+      // If the new queue mode is used it's allowed to have
+      // non-zero capacity queues under a zero capacity parent
+      assumeTrue(csConf.isLegacyQueueMode() == true);
 
-    // set parent capacity to 0 when sum(children) is 50
-    // and allow zero capacity sum
-    csConf.setCapacity(Q_B, 0);
-    csConf.setCapacity(Q_A, 100);
-    csConf.setCapacity(Q_B + "." + B1, 10);
-    csConf.setCapacity(Q_B + "." + B2, 20);
-    csConf.setCapacity(Q_B + "." + B3, 20);
-    csConf.setAllowZeroCapacitySum(Q_B, true);
-    queueContext.reinitialize();
-    CSQueueStore queues = new CSQueueStore();
-    CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
-        CapacitySchedulerConfiguration.ROOT, queues, queues,
-        TestUtils.spyHook);
+      // set parent capacity to 0 when sum(children) is 50
+      // and allow zero capacity sum
+      csConf.setCapacity(Q_B, 0);
+      csConf.setCapacity(Q_A, 100);
+      csConf.setCapacity(Q_B1, 10);
+      csConf.setCapacity(Q_B2, 20);
+      csConf.setCapacity(Q_B3, 20);
+      csConf.setAllowZeroCapacitySum(Q_B, true);
+      queueContext.reinitialize();
+      CSQueueStore queues = new CSQueueStore();
+      CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+          CapacitySchedulerConfiguration.ROOT, queues, queues,
+          TestUtils.spyHook);
+    });
   }
 
   @Test
@@ -761,9 +767,9 @@ public class TestParentQueue {
     // and allow zero capacity sum
     csConf.setCapacity(Q_B, 10);
     csConf.setCapacity(Q_A, 50);
-    csConf.setCapacity(Q_B + "." + B1, 0);
-    csConf.setCapacity(Q_B + "." + B2, 0);
-    csConf.setCapacity(Q_B + "." + B3, 0);
+    csConf.setCapacity(Q_B1, 0);
+    csConf.setCapacity(Q_B2, 0);
+    csConf.setCapacity(Q_B3, 0);
     csConf.setAllowZeroCapacitySum(Q_B, true);
     queueContext.reinitialize();
     CSQueueStore queues = new CSQueueStore();
@@ -779,9 +785,9 @@ public class TestParentQueue {
     
     // set parent and child capacity to 0
     csConf.setCapacity(Q_B, 0);
-    csConf.setCapacity(Q_B + "." + B1, 0);
-    csConf.setCapacity(Q_B + "." + B2, 0);
-    csConf.setCapacity(Q_B + "." + B3, 0);
+    csConf.setCapacity(Q_B1, 0);
+    csConf.setCapacity(Q_B2, 0);
+    csConf.setCapacity(Q_B3, 0);
     csConf.setCapacity(Q_A, 60);
     queueContext.reinitialize();
 
@@ -793,7 +799,7 @@ public class TestParentQueue {
     } catch (IllegalArgumentException e) {
       fail("Failed to create queues with 0 capacity: " + e);
     }
-    assertTrue("Failed to create queues with 0 capacity", true);
+    assertTrue(true, "Failed to create queues with 0 capacity");
   }
 
   @Test
@@ -977,12 +983,10 @@ public class TestParentQueue {
   public void testQueueAcl() throws Exception {
  
     setupMultiLevelQueues(csConf);
-    csConf.setAcl(CapacitySchedulerConfiguration.ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
-    csConf.setAcl(CapacitySchedulerConfiguration.ROOT, QueueACL.ADMINISTER_QUEUE, " ");
+    csConf.setAcl(ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
+    csConf.setAcl(ROOT, QueueACL.ADMINISTER_QUEUE, " ");
 
-    final String Q_C = CapacitySchedulerConfiguration.ROOT + "." + C;
     csConf.setAcl(Q_C, QueueACL.ADMINISTER_QUEUE, "*");
-    final String Q_C11= Q_C + "." + C1 +  "." + C11;
     csConf.setAcl(Q_C11, QueueACL.SUBMIT_APPLICATIONS, "*");
     queueContext.reinitialize();
 
@@ -1248,7 +1252,7 @@ public class TestParentQueue {
 
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
   }
 

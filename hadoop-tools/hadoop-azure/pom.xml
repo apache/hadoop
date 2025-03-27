@@ -19,7 +19,7 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.4.0-SNAPSHOT</version>
+    <version>3.5.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-azure</artifactId>
@@ -45,6 +45,8 @@
     <fs.azure.scale.test.timeout>7200</fs.azure.scale.test.timeout>
     <fs.azure.scale.test.list.performance.threads>10</fs.azure.scale.test.list.performance.threads>
     <fs.azure.scale.test.list.performance.files>1000</fs.azure.scale.test.list.performance.files>
+    <!-- http connection pool size; passed down as a system property -->
+    <http.maxConnections>100</http.maxConnections>
   </properties>
 
   <build>
@@ -307,20 +309,21 @@
     </dependency>
 
     <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
+      <groupId>ch.qos.reload4j</groupId>
+      <artifactId>reload4j</artifactId>
       <scope>test</scope>
     </dependency>
 
     <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>jsr311-api</artifactId>
+      <groupId>jakarta.ws.rs</groupId>
+      <artifactId>jakarta.ws.rs-api</artifactId>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
+      <version>4.11.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -331,12 +334,12 @@
     <!-- Used to create SSL certs for a secure Keystore -->
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk15on</artifactId>
+      <artifactId>bcprov-jdk18on</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcpkix-jdk15on</artifactId>
+      <artifactId>bcpkix-jdk18on</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -349,7 +352,31 @@
       <artifactId>hamcrest-library</artifactId>
       <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <profiles>
@@ -400,7 +427,8 @@
                     <fs.azure.scale.test.timeout>${fs.azure.scale.test.timeout}</fs.azure.scale.test.timeout>
                     <fs.azure.scale.test.list.performance.threads>${fs.azure.scale.test.list.performance.threads}</fs.azure.scale.test.list.performance.threads>
                     <fs.azure.scale.test.list.performance.files>${fs.azure.scale.test.list.performance.files}</fs.azure.scale.test.list.performance.files>
-                  </systemPropertyVariables>
+                    <!-- http connection pool size -->
+                    <http.maxConnections>${http.maxConnections}</http.maxConnections>                  </systemPropertyVariables>
                   <includes>
                     <include>**/azure/Test*.java</include>
                     <include>**/azure/**/Test*.java</include>
@@ -431,6 +459,8 @@
                     <fs.azure.scale.test.timeout>${fs.azure.scale.test.timeout}</fs.azure.scale.test.timeout>
                     <fs.azure.scale.test.list.performance.threads>${fs.azure.scale.test.list.performance.threads}</fs.azure.scale.test.list.performance.threads>
                     <fs.azure.scale.test.list.performance.files>${fs.azure.scale.test.list.performance.files}</fs.azure.scale.test.list.performance.files>
+                    <!-- http connection pool size -->
+                    <http.maxConnections>${http.maxConnections}</http.maxConnections>
                   </systemPropertyVariables>
                   <includes>
                     <include>**/azure/**/TestRollingWindowAverage*.java</include>
@@ -604,6 +634,8 @@
                     <!-- Propagate scale parameters -->
                     <fs.azure.scale.test.enabled>${fs.azure.scale.test.enabled}</fs.azure.scale.test.enabled>
                     <fs.azure.scale.test.timeout>${fs.azure.scale.test.timeout}</fs.azure.scale.test.timeout>
+                    <!-- http connection pool size -->
+                    <http.maxConnections>${http.maxConnections}</http.maxConnections>
                   </systemPropertyVariables>
 
                   <includes>
@@ -654,7 +686,6 @@
                     <fs.azure.scale.test.timeout>${fs.azure.scale.test.timeout}</fs.azure.scale.test.timeout>
                   </systemPropertyVariables>
                   <includes>
-                    <include>**/azurebfs/contract/ITest*.java</include>
                     <include>**/azurebfs/ITestAzureBlobFileSystemE2EScale.java</include>
                     <include>**/azurebfs/ITestAbfsReadWriteAndSeek.java</include>
                     <include>**/azurebfs/ITestAzureBlobFileSystemListStatus.java</include>
@@ -663,6 +694,33 @@
                     <include>**/azurebfs/services/ITestReadBufferManager.java</include>
                     <include>**/azurebfs/ITestAbfsStreamStatistics*.java</include>
                     <include>**/azurebfs/commit/*.java</include>
+                  </includes>
+                </configuration>
+              </execution>
+              <execution>
+                <id>integration-test-abfs-sequential-contract-classes</id>
+                <goals>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
+                </goals>
+                <configuration>
+                  <!--NOTICE: hadoop contract tests methods can not be run in parallel-->
+                  <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
+                  <trimStackTrace>false</trimStackTrace>
+                  <systemPropertyVariables>
+                    <!-- Tell tests that they are being executed sequentially -->
+                    <test.parallel.execution>false</test.parallel.execution>
+                    <!-- Propagate scale parameters -->
+                    <fs.azure.scale.test.enabled>${fs.azure.scale.test.enabled}</fs.azure.scale.test.enabled>
+                    <fs.azure.scale.test.huge.filesize>${fs.azure.scale.test.huge.filesize}</fs.azure.scale.test.huge.filesize>
+                    <fs.azure.scale.test.timeout>${fs.azure.scale.test.timeout}</fs.azure.scale.test.timeout>
+                    <fs.azure.scale.test.list.performance.threads>${fs.azure.scale.test.list.performance.threads}</fs.azure.scale.test.list.performance.threads>
+                    <fs.azure.scale.test.list.performance.files>${fs.azure.scale.test.list.performance.files}</fs.azure.scale.test.list.performance.files>
+                    <!-- http connection pool size -->
+                    <http.maxConnections>${http.maxConnections}</http.maxConnections>
+                  </systemPropertyVariables>
+                  <includes>
+                    <include>**/azurebfs/contract/ITest*.java</include>
                   </includes>
                 </configuration>
               </execution>
@@ -792,6 +850,8 @@
                     <fs.azure.scale.test.timeout>${fs.azure.scale.test.timeout}</fs.azure.scale.test.timeout>
                     <fs.azure.scale.test.list.performance.threads>${fs.azure.scale.test.list.performance.threads}</fs.azure.scale.test.list.performance.threads>
                     <fs.azure.scale.test.list.performance.files>${fs.azure.scale.test.list.performance.files}</fs.azure.scale.test.list.performance.files>
+                    <!-- http connection pool size -->
+                    <http.maxConnections>${http.maxConnections}</http.maxConnections>
                   </systemPropertyVariables>
                   <!-- Some tests cannot run in parallel.  Tests that cover -->
                   <!-- access to the root directory must run in isolation -->
@@ -842,7 +902,8 @@
                     <fs.azure.scale.test.timeout>${fs.azure.scale.test.timeout}</fs.azure.scale.test.timeout>
                     <fs.azure.scale.test.list.performance.threads>${fs.azure.scale.test.list.performance.threads}</fs.azure.scale.test.list.performance.threads>
                     <fs.azure.scale.test.list.performance.files>${fs.azure.scale.test.list.performance.files}</fs.azure.scale.test.list.performance.files>
-                  </systemPropertyVariables>
+                    <!-- http connection pool size -->
+                    <http.maxConnections>${http.maxConnections}</http.maxConnections>                  </systemPropertyVariables>
                   <includes>
                     <include>**/ITestWasbAbfsCompatibility.java</include>
                     <include>**/ITestFileSystemOperationsExceptionHandlingMultiThreaded.java</include>
@@ -891,6 +952,8 @@
                     <fs.azure.scale.test.timeout>${fs.azure.scale.test.timeout}</fs.azure.scale.test.timeout>
                     <fs.azure.scale.test.list.performance.threads>${fs.azure.scale.test.list.performance.threads}</fs.azure.scale.test.list.performance.threads>
                     <fs.azure.scale.test.list.performance.files>${fs.azure.scale.test.list.performance.files}</fs.azure.scale.test.list.performance.files>
+                    <!-- http connection pool size -->
+                    <http.maxConnections>${http.maxConnections}</http.maxConnections>
                   </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                   <trimStackTrace>false</trimStackTrace>

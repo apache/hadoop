@@ -63,4 +63,8 @@ public class PriorityBroadcastPolicyManager extends AbstractPolicyManager {
     this.weightedPolicyInfo = weightedPolicyInfo;
   }
 
+  @Override
+  public boolean isSupportWeightedPolicyInfo() {
+    return true;
+  }
 }

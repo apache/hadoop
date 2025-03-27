@@ -19,6 +19,7 @@
 package org.apache.hadoop.util.functional;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 /**
  * Function of arity 2 which may raise an IOException.
@@ -37,4 +38,19 @@ public interface BiFunctionRaisingIOE<T, U, R> {
    * @throws IOException Any IO failure
    */
   R apply(T t, U u) throws IOException;
+
+  /**
+   * Apply unchecked.
+   * @param t argument
+   * @param u argument 2
+   * @return the evaluated function
+   * @throws UncheckedIOException IOE raised.
+   */
+  default R unchecked(T t, U u) {
+    try {
+      return apply(t, u);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
 }

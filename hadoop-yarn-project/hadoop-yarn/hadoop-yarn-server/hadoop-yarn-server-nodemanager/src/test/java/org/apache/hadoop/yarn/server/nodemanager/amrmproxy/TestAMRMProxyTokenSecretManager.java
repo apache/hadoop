@@ -29,10 +29,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Unit test for AMRMProxyTokenSecretManager.
@@ -43,7 +44,7 @@ public class TestAMRMProxyTokenSecretManager {
   private AMRMProxyTokenSecretManager secretManager;
   private NMMemoryStateStoreService stateStore;
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.NM_RECOVERY_ENABLED, true);
@@ -57,7 +58,7 @@ public class TestAMRMProxyTokenSecretManager {
     secretManager.start();
   }
 
-  @After
+  @AfterEach
   public void breakdown() {
     if (secretManager != null) {
       secretManager.stop();
@@ -85,7 +86,7 @@ public class TestAMRMProxyTokenSecretManager {
 
     try {
       secretManager.retrievePassword(identifier);
-      Assert.fail("Expect InvalidToken exception");
+      fail("Expect InvalidToken exception");
     } catch (InvalidToken e) {
     }
   }
@@ -133,7 +134,7 @@ public class TestAMRMProxyTokenSecretManager {
 
     try {
       secretManager.retrievePassword(identifier);
-      Assert.fail("Expect InvalidToken exception because the "
+      fail("Expect InvalidToken exception because the "
           + "old master key should have expired");
     } catch (InvalidToken e) {
     }

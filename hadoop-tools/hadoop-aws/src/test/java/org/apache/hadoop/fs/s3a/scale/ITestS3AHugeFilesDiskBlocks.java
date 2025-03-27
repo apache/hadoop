@@ -22,10 +22,16 @@ import org.apache.hadoop.fs.s3a.Constants;
 
 /**
  * Use {@link Constants#FAST_UPLOAD_BUFFER_DISK} for buffering.
+ * Also uses direct buffers for the vector IO.
  */
 public class ITestS3AHugeFilesDiskBlocks extends AbstractSTestS3AHugeFiles {
 
   protected String getBlockOutputBufferName() {
     return Constants.FAST_UPLOAD_BUFFER_DISK;
+  }
+
+  @Override
+  protected boolean isDirectVectorBuffer() {
+    return true;
   }
 }

@@ -123,6 +123,11 @@ public class ContainerLaunch implements Callable<Integer> {
   private static final String PID_FILE_NAME_FMT = "%s.pid";
   static final String EXIT_CODE_FILE_SUFFIX = ".exitcode";
 
+  private static final String ADDITIONAL_JDK17_PLUS_OPTIONS =
+      "--add-opens=java.base/java.lang=ALL-UNNAMED " +
+      "--add-exports=java.base/sun.net.dns=ALL-UNNAMED " +
+      "--add-exports=java.base/sun.net.util=ALL-UNNAMED";
+
   protected final Dispatcher dispatcher;
   protected final ContainerExecutor exec;
   protected final Application app;
@@ -171,8 +176,7 @@ public class ContainerLaunch implements Callable<Integer> {
       File.pathSeparator);
 
     if (Shell.isJavaVersionAtLeast(17)) {
-      var = var.replace(ApplicationConstants.JVM_ADD_OPENS_VAR,
-              "--add-opens=java.base/java.lang=ALL-UNNAMED");
+      var = var.replace(ApplicationConstants.JVM_ADD_OPENS_VAR, ADDITIONAL_JDK17_PLUS_OPTIONS);
     } else {
       var = var.replace(ApplicationConstants.JVM_ADD_OPENS_VAR, "");
     }

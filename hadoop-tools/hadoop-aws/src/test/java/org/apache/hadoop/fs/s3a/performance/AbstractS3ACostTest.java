@@ -32,12 +32,10 @@ import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.Tristate;
-import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum;
@@ -59,15 +57,6 @@ import static org.apache.hadoop.test.AssertExtensions.dynamicDescription;
  */
 public class AbstractS3ACostTest extends AbstractS3ATestBase {
 
-  /**
-   * Parameter: should directory markers be retained?
-   */
-  private final boolean keepMarkers;
-
-  private boolean isKeeping;
-
-  private boolean isDeleting;
-
   private OperationCostValidator costValidator;
 
   /**
@@ -85,11 +74,8 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
 
   /**
    * Constructor for parameterized tests.
-   * @param keepMarkers should markers be tested.
    */
-  protected AbstractS3ACostTest(
-      final boolean keepMarkers) {
-    this.keepMarkers = keepMarkers;
+  protected AbstractS3ACostTest() {
   }
 
   @Override
@@ -100,13 +86,8 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
     String arn = conf.getTrimmed(arnKey, "");
 
     removeBaseAndBucketOverrides(bucketName, conf,
-        DIRECTORY_MARKER_POLICY,
-        AUTHORITATIVE_PATH);
-    // directory marker options
-    conf.set(DIRECTORY_MARKER_POLICY,
-        keepMarkers
-            ? DIRECTORY_MARKER_POLICY_KEEP
-            : DIRECTORY_MARKER_POLICY_DELETE);
+        FS_S3A_CREATE_PERFORMANCE,
+        FS_S3A_PERFORMANCE_FLAGS);
     disableFilesystemCaching(conf);
 
     // AccessPoint ARN is the only per bucket configuration that must be kept.
@@ -121,23 +102,11 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   public void setup() throws Exception {
     super.setup();
     S3AFileSystem fs = getFileSystem();
-    isKeeping = isKeepingMarkers();
 
-    isDeleting = !isKeeping;
-
-    // check that the FS has the expected state
-    DirectoryPolicy markerPolicy = fs.getDirectoryMarkerPolicy();
-    Assertions.assertThat(markerPolicy.getMarkerPolicy())
-        .describedAs("Marker policy for filesystem %s", fs)
-        .isEqualTo(isKeepingMarkers()
-            ? DirectoryPolicy.MarkerPolicy.Keep
-            : DirectoryPolicy.MarkerPolicy.Delete);
     setupCostValidator();
 
     // determine bulk delete settings
-    final Configuration fsConf = getFileSystem().getConf();
-    isBulkDelete = fsConf.getBoolean(Constants.ENABLE_MULTI_DELETE,
-        true);
+    isBulkDelete = isBulkDeleteEnabled(getFileSystem());
     deleteMarkerStatistic = isBulkDelete()
         ? OBJECT_BULK_DELETE_REQUEST
         : OBJECT_DELETE_REQUEST;
@@ -156,14 +125,6 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
                 || s.getType() == StatisticTypeEnum.TYPE_DURATION)
         .forEach(s -> builder.withMetric(s));
     costValidator = builder.build();
-  }
-
-  public boolean isDeleting() {
-    return isDeleting;
-  }
-
-  public boolean isKeepingMarkers() {
-    return keepMarkers;
   }
 
   /**
@@ -232,6 +193,21 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   }
 
   /**
+   * Create a file with a specific body, returning its path.
+   * @param path path to file.
+   * @param overwrite overwrite flag
+   * @param body body of file
+   * @return path of new file
+   */
+  protected Path file(Path path, final boolean overwrite, byte[] body)
+      throws IOException {
+    ContractTestUtils.createFile(getFileSystem(), path, overwrite, body);
+    return path;
+  }
+
+
+
+  /**
    * Touch a file, overwriting.
    * @param path path
    * @return path to new object.
@@ -280,7 +256,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   /**
    * Reset all the metrics being tracked.
    */
-  private void resetStatistics() {
+  protected void resetStatistics() {
     costValidator.resetMetricDiffs();
   }
 
@@ -351,23 +327,11 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   }
 
   /**
-   * A metric diff which must hold when the fs is keeping markers.
-   * @param cost expected cost
-   * @return the diff.
+   * Always run a metrics operation.
+   * @return a probe.
    */
-  protected OperationCostValidator.ExpectedProbe whenKeeping(
-      OperationCost cost) {
-    return expect(isKeepingMarkers(), cost);
-  }
-
-  /**
-   * A metric diff which must hold when the fs is keeping markers.
-   * @param cost expected cost
-   * @return the diff.
-   */
-  protected OperationCostValidator.ExpectedProbe whenDeleting(
-      OperationCost cost) {
-    return expect(isDeleting(), cost);
+  protected OperationCostValidator.ExpectedProbe always() {
+    return OperationCostValidator.always();
   }
 
   /**
@@ -475,30 +439,6 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   protected OperationCostValidator.ExpectedProbe with(
       final Statistic stat, final int expected) {
     return probe(stat, expected);
-  }
-
-  /**
-   * A metric diff which must hold when the fs is keeping markers.
-   * @param stat metric source
-   * @param expected expected value.
-   * @return the diff.
-   */
-  protected OperationCostValidator.ExpectedProbe withWhenKeeping(
-      final Statistic stat,
-      final int expected) {
-    return probe(isKeepingMarkers(), stat, expected);
-  }
-
-  /**
-   * A metric diff which must hold when the fs is keeping markers.
-   * @param stat metric source
-   * @param expected expected value.
-   * @return the diff.
-   */
-  protected OperationCostValidator.ExpectedProbe withWhenDeleting(
-      final Statistic stat,
-      final int expected) {
-    return probe(isDeleting(), stat, expected);
   }
 
   /**

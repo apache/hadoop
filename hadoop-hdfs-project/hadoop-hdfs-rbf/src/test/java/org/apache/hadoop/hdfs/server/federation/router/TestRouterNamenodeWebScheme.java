@@ -29,9 +29,9 @@ import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResol
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +47,7 @@ import java.util.Set;
 
 import static java.util.Arrays.asList;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test the scheme of Http address of Namenodes displayed in Router.
@@ -65,7 +65,7 @@ public class TestRouterNamenodeWebScheme {
   /** Nameservices in the federated cluster. */
   private List<String> nsIds = asList("ns0", "ns1");
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     LOG.info("Initialize the Mock Namenodes to monitor");
     for (String nsId : nsIds) {
@@ -82,7 +82,7 @@ public class TestRouterNamenodeWebScheme {
     }
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws Exception {
     for (Map<String, MockNamenode> nnNS : nns.values()) {
       for (MockNamenode nn : nnNS.values()) {
@@ -198,8 +198,8 @@ public class TestRouterNamenodeWebScheme {
       namespaceInfo.addAll(nnReports);
     }
     for (FederationNamenodeContext nnInfo : namespaceInfo) {
-      assertEquals("Unexpected scheme for Policy: " + httpPolicy.name(),
-          nnInfo.getWebScheme(), expectedScheme);
+      assertEquals(nnInfo.getWebScheme(), expectedScheme, "Unexpected scheme for Policy: "+
+          httpPolicy.name());
     }
   }
 }

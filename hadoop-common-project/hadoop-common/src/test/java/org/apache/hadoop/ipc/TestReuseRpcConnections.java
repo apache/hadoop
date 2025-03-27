@@ -17,7 +17,7 @@
  */
 
 package org.apache.hadoop.ipc;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -26,15 +26,16 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.TestConnectionRetryPolicy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * This class mainly tests behaviors of reusing RPC connections for various
  * retry policies.
  */
 public class TestReuseRpcConnections extends TestRpcBase {
-  @Before
+  @BeforeEach
   public void setup() {
     setupConf();
   }
@@ -60,7 +61,8 @@ public class TestReuseRpcConnections extends TestRpcBase {
         remoteExceptionToRetry);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testDefaultRetryPolicyReuseConnections() throws Exception {
     RetryPolicy rp1 = null;
     RetryPolicy rp2 = null;
@@ -103,7 +105,8 @@ public class TestReuseRpcConnections extends TestRpcBase {
     verifyRetryPolicyReuseConnections(rp1, rp2, RetryPolicies.RETRY_FOREVER);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testRetryPolicyTryOnceThenFail() throws Exception {
     final RetryPolicy rp1 = TestConnectionRetryPolicy.newTryOnceThenFail();
     final RetryPolicy rp2 = TestConnectionRetryPolicy.newTryOnceThenFail();
@@ -130,21 +133,21 @@ public class TestReuseRpcConnections extends TestRpcBase {
       proxy1.ping(null, newEmptyRequest());
       client = ProtobufRpcEngine2.getClient(newConf);
       final Set<ConnectionId> conns = client.getConnectionIds();
-      assertEquals("number of connections in cache is wrong", 1, conns.size());
+      assertEquals(1, conns.size(), "number of connections in cache is wrong");
 
       /*
        * another equivalent retry policy, reuse connection
        */
       proxy2 = getClient(addr, newConf, retryPolicy2);
       proxy2.ping(null, newEmptyRequest());
-      assertEquals("number of connections in cache is wrong", 1, conns.size());
+      assertEquals(1, conns.size(), "number of connections in cache is wrong");
 
       /*
        * different retry policy, create a new connection
        */
       proxy3 = getClient(addr, newConf, anotherRetryPolicy);
       proxy3.ping(null, newEmptyRequest());
-      assertEquals("number of connections in cache is wrong", 2, conns.size());
+      assertEquals(2, conns.size(), "number of connections in cache is wrong");
     } finally {
       server.stop();
       // this is dirty, but clear out connection cache for next run

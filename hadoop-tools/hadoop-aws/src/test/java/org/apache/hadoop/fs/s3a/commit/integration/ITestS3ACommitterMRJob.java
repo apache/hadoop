@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.util.Sets;
 import org.assertj.core.api.Assertions;
 import org.junit.FixMethodOrder;
@@ -75,11 +76,12 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_TMP_PATH;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants._SUCCESS;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID;
 import static org.apache.hadoop.fs.s3a.commit.staging.Paths.getMultipartUploadCommitsDirectory;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.STAGING_UPLOADS;
+import static org.apache.hadoop.mapred.JobConf.MAPRED_TASK_ENV;
 
 /**
  * Test an MR Job with all the different committers.
@@ -332,19 +334,21 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     assertPathDoesNotExist("temporary dir should only be from"
             + " classic file committers",
         new Path(outputPath, CommitConstants.TEMPORARY));
-    customPostExecutionValidation(outputPath, successData);
+    customPostExecutionValidation(outputPath, successData, jobID);
   }
 
   @Override
   protected void applyCustomConfigOptions(final JobConf jobConf)
       throws IOException {
+    jobConf.set(MAPRED_TASK_ENV, "AWS_REGION=" + jobConf.get(Constants.AWS_REGION));
+    jobConf.set("yarn.app.mapreduce.am.env", "AWS_REGION=" + jobConf.get(Constants.AWS_REGION));
     committerTestBinding.applyCustomConfigOptions(jobConf);
   }
 
   @Override
   protected void customPostExecutionValidation(final Path destPath,
-      final SuccessData successData) throws Exception {
-    committerTestBinding.validateResult(destPath, successData);
+      final SuccessData successData, String jobId) throws Exception {
+    committerTestBinding.validateResult(destPath, successData, jobId);
   }
 
   /**
@@ -482,7 +486,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
      * @throws Exception failure
      */
     protected void validateResult(Path destPath,
-        SuccessData successData)
+        SuccessData successData, String jobId)
         throws Exception {
 
     }
@@ -576,7 +580,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     }
 
     /**
-     * The result validation here is that there isn't a __magic directory
+     * The result validation here is that there isn't a "MAGIC PATH" directory
      * any more.
      * @param destPath destination of work
      * @param successData loaded success data
@@ -584,9 +588,9 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
      */
     @Override
     protected void validateResult(final Path destPath,
-        final SuccessData successData)
+        final SuccessData successData, final String jobId)
         throws Exception {
-      Path magicDir = new Path(destPath, MAGIC);
+      Path magicDir = new Path(destPath, MAGIC_PATH_PREFIX + jobId);
 
       // if an FNFE isn't raised on getFileStatus, list out the directory
       // tree

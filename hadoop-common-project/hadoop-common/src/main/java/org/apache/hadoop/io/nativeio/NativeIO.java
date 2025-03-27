@@ -220,6 +220,9 @@ public class NativeIO {
       }
     }
 
+    /** Initialize the JNI method ID and class ID cache. */
+    private static native void initNativePosix(boolean doThreadsafeWorkaround);
+
     /**
      * JNI wrapper of persist memory operations.
      */
@@ -331,11 +334,11 @@ public class NativeIO {
       if (NativeCodeLoader.isNativeCodeLoaded()) {
         try {
           Configuration conf = new Configuration();
-          workaroundNonThreadSafePasswdCalls = conf.getBoolean(
-            WORKAROUND_NON_THREADSAFE_CALLS_KEY,
-            WORKAROUND_NON_THREADSAFE_CALLS_DEFAULT);
+          boolean workaroundNonThreadSafePasswdCalls = conf.getBoolean(
+              WORKAROUND_NON_THREADSAFE_CALLS_KEY,
+              WORKAROUND_NON_THREADSAFE_CALLS_DEFAULT);
 
-          initNative();
+          initNativePosix(workaroundNonThreadSafePasswdCalls);
           nativeLoaded = true;
 
           cacheTimeout = conf.getLong(
@@ -679,9 +682,6 @@ public class NativeIO {
         throws IOException;
   }
 
-  private static boolean workaroundNonThreadSafePasswdCalls = false;
-
-
   public static class Windows {
     // Flags for CreateFile() call on Windows
     public static final long GENERIC_READ = 0x80000000L;
@@ -833,7 +833,9 @@ public class NativeIO {
     static {
       if (NativeCodeLoader.isNativeCodeLoaded()) {
         try {
-          initNative();
+          initNativeWindows(false);
+          // As of now there is no change between initNative()
+          // and initNativeWindows() native impls.
           nativeLoaded = true;
         } catch (Throwable t) {
           // This can happen if the user has an older version of libhadoop.so
@@ -843,6 +845,10 @@ public class NativeIO {
         }
       }
     }
+
+    /** Initialize the JNI method ID and class ID cache. */
+    private static native void initNativeWindows(
+        boolean doThreadsafeWorkaround);
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(NativeIO.class);
@@ -852,7 +858,7 @@ public class NativeIO {
   static {
     if (NativeCodeLoader.isNativeCodeLoaded()) {
       try {
-        initNative();
+        initNative(false);
         nativeLoaded = true;
       } catch (Throwable t) {
         // This can happen if the user has an older version of libhadoop.so
@@ -871,7 +877,7 @@ public class NativeIO {
   }
 
   /** Initialize the JNI method ID and class ID cache */
-  private static native void initNative();
+  private static native void initNative(boolean doThreadsafeWorkaround);
 
   /**
    * Get the maximum number of bytes that can be locked into memory at any

@@ -41,10 +41,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.Contai
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.TestResourceUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +61,16 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.isA;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for DeviceMappingManager.
@@ -81,7 +89,7 @@ public class TestDeviceMappingManager {
   private PrivilegedOperationExecutor mockPrivilegedExecutor;
   private Context mockCtx;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     // setup resource-types.xml
     conf = new YarnConfiguration();
@@ -130,7 +138,7 @@ public class TestDeviceMappingManager {
     when(mockCtx.getConf()).thenReturn(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     // cleanup resource-types.xml
     File dest = new File(this.tempResourceTypesFile);
@@ -204,21 +212,21 @@ public class TestDeviceMappingManager {
         containerSet.get(resourceName2).entrySet()) {
       totalAllocatedCount += entry.getValue();
     }
-    Assert.assertEquals(totalAllocatedCount, used1.size() + used2.size());
+    assertEquals(totalAllocatedCount, used1.size() + used2.size());
     // Ensure each container has correct devices
     for (Map.Entry<Container, Integer> entry :
         containerSet.get(resourceName1).entrySet()) {
       int containerWanted = entry.getValue();
       int actualAllocated = dmm.getAllocatedDevices(resourceName1,
           entry.getKey().getContainerId()).size();
-      Assert.assertEquals(containerWanted, actualAllocated);
+      assertEquals(containerWanted, actualAllocated);
     }
     for (Map.Entry<Container, Integer> entry :
         containerSet.get(resourceName2).entrySet()) {
       int containerWanted = entry.getValue();
       int actualAllocated = dmm.getAllocatedDevices(resourceName2,
           entry.getKey().getContainerId()).size();
-      Assert.assertEquals(containerWanted, actualAllocated);
+      assertEquals(containerWanted, actualAllocated);
     }
   }
 
@@ -273,9 +281,9 @@ public class TestDeviceMappingManager {
         anyString(), any(ContainerId.class));
 
     // Ensure all devices are back
-    Assert.assertEquals(0,
+    assertEquals(0,
         dmm.getAllUsedDevices().get(resourceName1).size());
-    Assert.assertEquals(0,
+    assertEquals(0,
         dmm.getAllUsedDevices().get(resourceName2).size());
   }
 

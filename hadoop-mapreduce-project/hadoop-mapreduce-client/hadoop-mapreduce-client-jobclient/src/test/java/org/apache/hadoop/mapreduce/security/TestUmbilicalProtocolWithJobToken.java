@@ -48,7 +48,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /** Unit tests for using Job Token over RPC. 

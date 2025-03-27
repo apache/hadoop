@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.net.URI;
@@ -29,8 +29,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.NetUtilsTestResolver;
 import org.apache.hadoop.util.Progressable;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class TestFileSystemCanonicalization {
   static String[] authorities = {
@@ -44,7 +44,7 @@ public class TestFileSystemCanonicalization {
   };
 
 
-  @BeforeClass
+  @BeforeAll
   public static void initialize() throws Exception {
     NetUtilsTestResolver.install();
   }
@@ -288,7 +288,7 @@ public class TestFileSystemCanonicalization {
       }
       assertEquals(pathAuthority, fqPath.toUri().getAuthority());
     } else {
-      assertNotNull("did not fail", e);
+      assertNotNull(e, "did not fail");
       assertEquals("Wrong FS: "+rawPath+", expected: "+fs.getUri(),
           e.getMessage());
     }

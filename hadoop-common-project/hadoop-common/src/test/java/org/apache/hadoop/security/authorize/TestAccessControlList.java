@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.security.authorize;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collection;
 import java.util.Iterator;
@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -461,15 +461,14 @@ public class TestAccessControlList {
 
   private void assertUserAllowed(UserGroupInformation ugi,
       AccessControlList acl) {
-    assertTrue("User " + ugi + " is not granted the access-control!!",
-        acl.isUserAllowed(ugi));
+    assertTrue(acl.isUserAllowed(ugi),
+        "User " + ugi + " is not granted the access-control!!");
   }
 
   private void assertUserNotAllowed(UserGroupInformation ugi,
       AccessControlList acl) {
-    assertFalse("User " + ugi
-        + " is incorrectly granted the access-control!!",
-        acl.isUserAllowed(ugi));
+    assertFalse(acl.isUserAllowed(ugi), "User " + ugi
+        + " is incorrectly granted the access-control!!");
   }
 
   @Test
@@ -481,12 +480,12 @@ public class TestAccessControlList {
     UserGroupInformation user1 =
         UserGroupInformation.createProxyUserForTesting("regularJane",
             realUserUgi, new String [] {"group1"});
-    assertFalse("User " + user1 + " should not have been granted access.",
-        acl.isUserAllowed(user1));
+    assertFalse(acl.isUserAllowed(user1),
+        "User " + user1 + " should not have been granted access.");
 
     acl = new AccessControlList(AccessControlList.USE_REAL_ACLS + realUser);
 
-    assertTrue("User " + user1 + " should have access but was denied.",
-        acl.isUserAllowed(user1));
+    assertTrue(acl.isUserAllowed(user1),
+        "User " + user1 + " should have access but was denied.");
   }
 }

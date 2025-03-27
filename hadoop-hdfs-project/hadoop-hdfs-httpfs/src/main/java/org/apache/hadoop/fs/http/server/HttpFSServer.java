@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.http.server;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -55,6 +54,7 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrEncodingPa
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrNameParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrSetFlagParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrValueParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AllUsersParam;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.http.JettyUtils;
@@ -90,6 +90,7 @@ import javax.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
 import java.text.MessageFormat;
@@ -139,6 +140,14 @@ public class HttpFSServer {
     return UserGroupInformation.createRemoteUser(request.getUserPrincipal().getName());
   }
 
+  private static final HttpFSParametersProvider PARAMETERS_PROVIDER =
+      new HttpFSParametersProvider();
+
+  private Parameters getParams(HttpServletRequest request) {
+    return PARAMETERS_PROVIDER.get(request);
+  }
+
+  private static final Object[] NULL = new Object[0];
 
   /**
    * Executes a {@link FileSystemAccess.FileSystemExecutor} using a filesystem for the effective
@@ -199,7 +208,6 @@ public class HttpFSServer {
    *
    * @param uriInfo uri info of the request.
    * @param op the HttpFS operation of the request.
-   * @param params the HttpFS parameters of the request.
    *
    * @return the request response.
    *
@@ -213,10 +221,9 @@ public class HttpFSServer {
   @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Response getRoot(@Context UriInfo uriInfo,
                           @QueryParam(OperationParam.NAME) OperationParam op,
-                          @Context Parameters params,
                           @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
-    return get("", uriInfo, op, params, request);
+    return get("", uriInfo, op, request);
   }
 
   private String makeAbsolute(String path) {
@@ -229,7 +236,6 @@ public class HttpFSServer {
    * @param path the path for operation.
    * @param uriInfo uri info of the request.
    * @param op the HttpFS operation of the request.
-   * @param params the HttpFS parameters of the request.
    *
    * @return the request response.
    *
@@ -246,7 +252,6 @@ public class HttpFSServer {
   public Response get(@PathParam("path") String path,
                       @Context UriInfo uriInfo,
                       @QueryParam(OperationParam.NAME) OperationParam op,
-                      @Context Parameters params,
                       @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
     // Restrict access to only GETFILESTATUS and LISTSTATUS in write-only mode
@@ -258,6 +263,7 @@ public class HttpFSServer {
     UserGroupInformation user = HttpUserGroupInformation.get();
     Response response;
     path = makeAbsolute(path);
+    final Parameters params = getParams(request);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
     MDC.put("hostname", request.getRemoteAddr());
     switch (op.value()) {
@@ -421,7 +427,7 @@ public class HttpFSServer {
           HttpFSParametersProvider.StartAfterParam.class);
       byte[] token = HttpFSUtils.EMPTY_BYTES;
       if (startAfter != null) {
-        token = startAfter.getBytes(Charsets.UTF_8);
+        token = startAfter.getBytes(StandardCharsets.UTF_8);
       }
       FSOperations.FSListStatusBatch command = new FSOperations
           .FSListStatusBatch(path, token);
@@ -576,6 +582,14 @@ public class HttpFSServer {
       response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       break;
     }
+    case GETTRASHROOTS: {
+      Boolean allUsers = params.get(AllUsersParam.NAME, AllUsersParam.class);
+      FSOperations.FSGetTrashRoots command = new FSOperations.FSGetTrashRoots(allUsers);
+      Map json = fsExecute(user, command);
+      AUDIT_LOG.info("allUsers [{}]", allUsers);
+      response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
     default: {
       throw new IOException(
           MessageFormat.format("Invalid HTTP GET operation [{0}]", op.value()));
@@ -601,7 +615,6 @@ public class HttpFSServer {
    *
    * @param path the path for operation.
    * @param op the HttpFS operation of the request.
-   * @param params the HttpFS parameters of the request.
    *
    * @return the request response.
    *
@@ -616,7 +629,6 @@ public class HttpFSServer {
   @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Response delete(@PathParam("path") String path,
                          @QueryParam(OperationParam.NAME) OperationParam op,
-                         @Context Parameters params,
                          @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
     // Do not allow DELETE commands in read-only mode
@@ -626,6 +638,7 @@ public class HttpFSServer {
     UserGroupInformation user = HttpUserGroupInformation.get();
     Response response;
     path = makeAbsolute(path);
+    final Parameters params = getParams(request);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
     MDC.put("hostname", request.getRemoteAddr());
     switch (op.value()) {
@@ -663,7 +676,7 @@ public class HttpFSServer {
    * @param is the inputstream for the request payload.
    * @param uriInfo the of the request.
    * @param op the HttpFS operation of the request.
-   * @param params the HttpFS parameters of the request.
+   * @param request the HttpFS request.
    *
    * @return the request response.
    *
@@ -677,9 +690,9 @@ public class HttpFSServer {
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8 })
   public Response postRoot(InputStream is, @Context UriInfo uriInfo,
       @QueryParam(OperationParam.NAME) OperationParam op,
-      @Context Parameters params, @Context HttpServletRequest request)
+      @Context HttpServletRequest request)
       throws IOException, FileSystemAccessException {
-    return post(is, uriInfo, "/", op, params, request);
+    return post(is, uriInfo, "/", op, request);
   }
 
   /**
@@ -689,7 +702,6 @@ public class HttpFSServer {
    * @param uriInfo the of the request.
    * @param path the path for operation.
    * @param op the HttpFS operation of the request.
-   * @param params the HttpFS parameters of the request.
    *
    * @return the request response.
    *
@@ -707,7 +719,6 @@ public class HttpFSServer {
                        @Context UriInfo uriInfo,
                        @PathParam("path") String path,
                        @QueryParam(OperationParam.NAME) OperationParam op,
-                       @Context Parameters params,
                        @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
     // Do not allow POST commands in read-only mode
@@ -717,6 +728,7 @@ public class HttpFSServer {
     UserGroupInformation user = HttpUserGroupInformation.get();
     Response response;
     path = makeAbsolute(path);
+    final Parameters params = getParams(request);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
     MDC.put("hostname", request.getRemoteAddr());
     switch (op.value()) {
@@ -793,10 +805,11 @@ public class HttpFSServer {
    */
   protected URI createUploadRedirectionURL(UriInfo uriInfo, Enum<?> uploadOperation) {
     UriBuilder uriBuilder = uriInfo.getRequestUriBuilder();
-    uriBuilder = uriBuilder.replaceQueryParam(OperationParam.NAME, uploadOperation).
-            queryParam(DataParam.NAME, Boolean.TRUE)
-            .replaceQueryParam(NoRedirectParam.NAME, (Object[]) null);
-    return uriBuilder.build(null);
+    uriBuilder = uriBuilder.replaceQueryParam(OperationParam.NAME, uploadOperation)
+        .queryParam(DataParam.NAME, Boolean.TRUE)
+        .replaceQueryParam(NoRedirectParam.NAME, (Object[]) null);
+    // Workaround: NPE occurs when using null in Jersey 2.29
+    return uriBuilder.build(NULL);
   }
 
   /**
@@ -804,7 +817,7 @@ public class HttpFSServer {
    * @param is the inputstream for the request payload.
    * @param uriInfo the of the request.
    * @param op the HttpFS operation of the request.
-   * @param params the HttpFS parameters of the request.
+   * @param request the HttpFS request.
    *
    * @return the request response.
    *
@@ -818,9 +831,9 @@ public class HttpFSServer {
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8 })
   public Response putRoot(InputStream is, @Context UriInfo uriInfo,
       @QueryParam(OperationParam.NAME) OperationParam op,
-      @Context Parameters params, @Context HttpServletRequest request)
+      @Context HttpServletRequest request)
       throws IOException, FileSystemAccessException {
-    return put(is, uriInfo, "/", op, params, request);
+    return put(is, uriInfo, "/", op, request);
   }
 
   /**
@@ -830,7 +843,6 @@ public class HttpFSServer {
    * @param uriInfo the of the request.
    * @param path the path for operation.
    * @param op the HttpFS operation of the request.
-   * @param params the HttpFS parameters of the request.
    *
    * @return the request response.
    *
@@ -848,7 +860,6 @@ public class HttpFSServer {
                        @Context UriInfo uriInfo,
                        @PathParam("path") String path,
                        @QueryParam(OperationParam.NAME) OperationParam op,
-                       @Context Parameters params,
                        @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
     // Do not allow PUT commands in read-only mode
@@ -858,6 +869,7 @@ public class HttpFSServer {
     UserGroupInformation user = HttpUserGroupInformation.get();
     Response response;
     path = makeAbsolute(path);
+    final Parameters params = getParams(request);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
     MDC.put("hostname", request.getRemoteAddr());
     switch (op.value()) {

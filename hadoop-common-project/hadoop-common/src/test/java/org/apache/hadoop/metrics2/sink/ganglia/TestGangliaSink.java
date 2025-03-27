@@ -21,14 +21,14 @@ package org.apache.hadoop.metrics2.sink.ganglia;
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.metrics2.impl.ConfigBuilder;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.DatagramSocket;
 import java.net.MulticastSocket;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestGangliaSink {
   @Test
@@ -38,8 +38,8 @@ public class TestGangliaSink {
     GangliaSink30 gangliaSink = new GangliaSink30();
     gangliaSink.init(conf);
     DatagramSocket socket = gangliaSink.getDatagramSocket();
-    assertFalse("Did not create DatagramSocket",
-        socket == null || socket instanceof MulticastSocket);
+    assertFalse(socket == null || socket instanceof MulticastSocket,
+        "Did not create DatagramSocket");
   }
 
   @Test
@@ -49,8 +49,8 @@ public class TestGangliaSink {
     GangliaSink30 gangliaSink = new GangliaSink30();
     gangliaSink.init(conf);
     DatagramSocket socket = gangliaSink.getDatagramSocket();
-    assertFalse("Did not create DatagramSocket",
-        socket == null || socket instanceof MulticastSocket);
+    assertFalse(socket == null || socket instanceof MulticastSocket,
+        "Did not create DatagramSocket");
   }
 
   @Test
@@ -60,10 +60,10 @@ public class TestGangliaSink {
     GangliaSink30 gangliaSink = new GangliaSink30();
     gangliaSink.init(conf);
     DatagramSocket socket = gangliaSink.getDatagramSocket();
-    assertTrue("Did not create MulticastSocket",
-        socket != null && socket instanceof MulticastSocket);
+    assertTrue(socket != null && socket instanceof MulticastSocket,
+        "Did not create MulticastSocket");
     int ttl = ((MulticastSocket) socket).getTimeToLive();
-    assertEquals("Did not set default TTL", 1, ttl);
+    assertEquals(1, ttl, "Did not set default TTL");
   }
 
   @Test
@@ -73,10 +73,10 @@ public class TestGangliaSink {
     GangliaSink30 gangliaSink = new GangliaSink30();
     gangliaSink.init(conf);
     DatagramSocket socket = gangliaSink.getDatagramSocket();
-    assertTrue("Did not create MulticastSocket",
-        socket != null && socket instanceof MulticastSocket);
+    assertTrue(socket != null && socket instanceof MulticastSocket,
+        "Did not create MulticastSocket");
     int ttl = ((MulticastSocket) socket).getTimeToLive();
-    assertEquals("Did not set TTL", 3, ttl);
+    assertEquals(3, ttl, "Did not set TTL");
   }
 
   @Test

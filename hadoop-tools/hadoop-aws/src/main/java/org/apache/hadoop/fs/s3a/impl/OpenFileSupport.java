@@ -35,8 +35,8 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
-import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.fs.s3a.select.SelectConstants;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_BUFFER_SIZE;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
@@ -68,6 +68,7 @@ public class OpenFileSupport {
   private static final Logger LOG =
       LoggerFactory.getLogger(OpenFileSupport.class);
 
+  public static final LogExactlyOnce LOG_NO_SQL_SELECT = new LogExactlyOnce(LOG);
   /**
    * For use when a value of an split/file length is unknown.
    */
@@ -153,12 +154,14 @@ public class OpenFileSupport {
 
   /**
    * Prepare to open a file from the openFile parameters.
+   * S3Select SQL is rejected if a mandatory opt, ignored if optional.
    * @param path path to the file
    * @param parameters open file parameters from the builder.
    * @param blockSize for fileStatus
    * @return open file options
    * @throws IOException failure to resolve the link.
    * @throws IllegalArgumentException unknown mandatory key
+   * @throws UnsupportedOperationException for S3 Select options.
    */
   @SuppressWarnings("ChainOfInstanceofChecks")
   public OpenFileInformation prepareToOpenFile(
@@ -167,21 +170,21 @@ public class OpenFileSupport {
       final long blockSize) throws IOException {
     Configuration options = parameters.getOptions();
     Set<String> mandatoryKeys = parameters.getMandatoryKeys();
-    String sql = options.get(SelectConstants.SELECT_SQL, null);
-    boolean isSelect = sql != null;
-    // choice of keys depends on open type
-    if (isSelect) {
-      // S3 Select call adds a large set of supported mandatory keys
-      rejectUnknownMandatoryKeys(
-          mandatoryKeys,
-          InternalSelectConstants.SELECT_OPTIONS,
-          "for " + path + " in S3 Select operation");
-    } else {
-      rejectUnknownMandatoryKeys(
-          mandatoryKeys,
-          InternalConstants.S3A_OPENFILE_KEYS,
-          "for " + path + " in non-select file I/O");
+    // S3 Select is not supported in this release
+    if (options.get(SelectConstants.SELECT_SQL, null) != null) {
+      if (mandatoryKeys.contains(SelectConstants.SELECT_SQL)) {
+        // mandatory option: fail with a specific message.
+        throw new UnsupportedOperationException(SelectConstants.SELECT_UNSUPPORTED);
+      } else {
+        // optional; log once and continue
+        LOG_NO_SQL_SELECT.warn(SelectConstants.SELECT_UNSUPPORTED);
+      }
     }
+    // choice of keys depends on open type
+    rejectUnknownMandatoryKeys(
+        mandatoryKeys,
+        InternalConstants.S3A_OPENFILE_KEYS,
+        "for " + path + " in file I/O");
 
     // where does a read end?
     long fileLength = LENGTH_UNKNOWN;
@@ -281,8 +284,6 @@ public class OpenFileSupport {
     }
 
     return new OpenFileInformation()
-        .withS3Select(isSelect)
-        .withSql(sql)
         .withAsyncDrainThreshold(
             builderSupport.getPositiveLong(ASYNC_DRAIN_THRESHOLD,
                 defaultReadAhead))
@@ -329,7 +330,6 @@ public class OpenFileSupport {
    */
   public OpenFileInformation openSimpleFile(final int bufferSize) {
     return new OpenFileInformation()
-        .withS3Select(false)
         .withAsyncDrainThreshold(defaultAsyncDrainThreshold)
         .withBufferSize(bufferSize)
         .withChangePolicy(changePolicy)
@@ -357,14 +357,8 @@ public class OpenFileSupport {
    */
   public static final class OpenFileInformation {
 
-    /** Is this SQL? */
-    private boolean isS3Select;
-
     /** File status; may be null. */
     private S3AFileStatus status;
-
-    /** SQL string if this is a SQL select file. */
-    private String sql;
 
     /** Active input policy. */
     private S3AInputPolicy inputPolicy;
@@ -415,16 +409,8 @@ public class OpenFileSupport {
       return this;
     }
 
-    public boolean isS3Select() {
-      return isS3Select;
-    }
-
     public S3AFileStatus getStatus() {
       return status;
-    }
-
-    public String getSql() {
-      return sql;
     }
 
     public S3AInputPolicy getInputPolicy() {
@@ -454,9 +440,7 @@ public class OpenFileSupport {
     @Override
     public String toString() {
       return "OpenFileInformation{" +
-          "isSql=" + isS3Select +
-          ", status=" + status +
-          ", sql='" + sql + '\'' +
+          "status=" + status +
           ", inputPolicy=" + inputPolicy +
           ", changePolicy=" + changePolicy +
           ", readAheadRange=" + readAheadRange +
@@ -480,28 +464,8 @@ public class OpenFileSupport {
      * @param value new value
      * @return the builder
      */
-    public OpenFileInformation withS3Select(final boolean value) {
-      isS3Select = value;
-      return this;
-    }
-
-    /**
-     * Set builder value.
-     * @param value new value
-     * @return the builder
-     */
     public OpenFileInformation withStatus(final S3AFileStatus value) {
       status = value;
-      return this;
-    }
-
-    /**
-     * Set builder value.
-     * @param value new value
-     * @return the builder
-     */
-    public OpenFileInformation withSql(final String value) {
-      sql = value;
       return this;
     }
 

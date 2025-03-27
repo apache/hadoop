@@ -179,7 +179,7 @@
         <exclude>org.apache.hadoop:hadoop-hdfs</exclude>
         <!-- use slf4j from common to avoid multiple binding warnings -->
         <exclude>org.slf4j:slf4j-api</exclude>
-        <exclude>org.slf4j:slf4j-log4j12</exclude>
+        <exclude>org.slf4j:slf4j-reload4j</exclude>
         <exclude>org.hsqldb:hsqldb</exclude>
         <exclude>jdiff:jdiff:jar</exclude>
       </excludes>

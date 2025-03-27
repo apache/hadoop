@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.File;
 
 import org.slf4j.Logger;
@@ -41,10 +45,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
     .allocationfile.AllocationFileQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
     .allocationfile.AllocationFileWriter;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test Application master service using Fair scheduler.
@@ -60,7 +64,7 @@ public class TestApplicationMasterServiceWithFS {
   private AllocateResponse allocateResponse;
   private static YarnConfiguration configuration;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() {
     String allocFile =
         GenericTestUtils.getTestDir(TEST_FOLDER).getAbsolutePath();
@@ -81,13 +85,14 @@ public class TestApplicationMasterServiceWithFS {
         .writeToFile(allocFile);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown(){
     File allocFile = GenericTestUtils.getTestDir(TEST_FOLDER);
     allocFile.delete();
   }
 
-  @Test(timeout = 3000000)
+  @Test
+  @Timeout(value = 3000)
   public void testQueueLevelContainerAllocationFail() throws Exception {
     MockRM rm = new MockRM(configuration);
     rm.start();
@@ -111,10 +116,10 @@ public class TestApplicationMasterServiceWithFS {
     am1.addRequests(new String[] { "127.0.0.1" }, MEMORY_ALLOCATION, 1, 1);
     try {
       allocateResponse = am1.schedule(); // send the request
-      Assert.fail();
+      fail();
     } catch (Exception e) {
-      Assert.assertTrue(e instanceof InvalidResourceRequestException);
-      Assert.assertEquals(
+      assertTrue(e instanceof InvalidResourceRequestException);
+      assertEquals(
           InvalidResourceRequestException.InvalidResourceType.GREATER_THEN_MAX_ALLOCATION,
           ((InvalidResourceRequestException) e).getInvalidResourceType());
 
@@ -123,12 +128,14 @@ public class TestApplicationMasterServiceWithFS {
     }
   }
 
-  @Test(timeout = 3000000)
+  @Test
+  @Timeout(value = 3000)
   public void testQueueLevelContainerAllocationSuccess() throws Exception {
     testFairSchedulerContainerAllocationSuccess("queueB");
   }
 
-  @Test(timeout = 3000000)
+  @Test
+  @Timeout(value = 3000)
   public void testSchedulerLevelContainerAllocationSuccess() throws Exception {
     testFairSchedulerContainerAllocationSuccess("queueC");
   }
@@ -164,16 +171,16 @@ public class TestApplicationMasterServiceWithFS {
       try {
         allocateResponse = am1.schedule();
       } catch (Exception e) {
-        Assert.fail("Allocation should be successful");
+        fail("Allocation should be successful");
       }
       return allocateResponse.getAllocatedContainers().size() > 0;
     }, 1000, 10000);
 
     Container allocatedContainer =
         allocateResponse.getAllocatedContainers().get(0);
-    Assert.assertEquals(MEMORY_ALLOCATION,
+    assertEquals(MEMORY_ALLOCATION,
         allocatedContainer.getResource().getMemorySize());
-    Assert.assertEquals(1, allocatedContainer.getResource().getVirtualCores());
+    assertEquals(1, allocatedContainer.getResource().getVirtualCores());
     rm.stop();
   }
 }

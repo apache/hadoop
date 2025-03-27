@@ -60,10 +60,12 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
 
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapterMockitoUtil;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,7 +116,6 @@ import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
@@ -2006,7 +2007,7 @@ public class TestWebHDFS {
     final WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
         WebHdfsConstants.WEBHDFS_SCHEME);
     FSNamesystem fsnSpy =
-        NameNodeAdapter.spyOnNamesystem(cluster.getNameNode());
+        NameNodeAdapterMockitoUtil.spyOnNamesystem(cluster.getNameNode());
     Mockito.when(fsnSpy.getServerDefaults())
         .thenThrow(new UnsupportedOperationException());
     try {
@@ -2340,6 +2341,34 @@ public class TestWebHDFS {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testGetTrashRoots() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    cluster = new MiniDFSCluster.Builder(conf).build();
+    final WebHdfsFileSystem webFS = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+        WebHdfsConstants.WEBHDFS_SCHEME);
+
+    // Create user trash
+    Path currUserHome = webFS.getHomeDirectory();
+    Path currUserTrash = new Path(currUserHome, FileSystem.TRASH_PREFIX);
+    webFS.mkdirs(currUserTrash);
+
+    Collection<FileStatus> webTrashRoots = webFS.getTrashRoots(true);
+    assertEquals(1, webTrashRoots.size());
+
+    // Create trash root for user0
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("user0");
+    String user0HomeStr = DFSUtilClient.getHomeDirectory(conf, ugi);
+    Path user0Trash = new Path(user0HomeStr, FileSystem.TRASH_PREFIX);
+    webFS.mkdirs(user0Trash);
+
+    webTrashRoots = webFS.getTrashRoots(true);
+    assertEquals(2, webTrashRoots.size());
+
+    webTrashRoots = webFS.getTrashRoots(false);
+    assertEquals(1,  webTrashRoots.size());
   }
 
   /**

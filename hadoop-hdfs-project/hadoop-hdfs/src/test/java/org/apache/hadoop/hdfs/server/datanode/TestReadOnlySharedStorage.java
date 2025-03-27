@@ -205,7 +205,7 @@ public class TestReadOnlySharedStorage {
   }
   
   /**
-   * Verify that <tt>READ_ONLY_SHARED</tt> replicas are <i>not</i> counted towards the overall 
+   * Verify that <code>READ_ONLY_SHARED</code> replicas are <i>not</i> counted towards the overall 
    * replication count, but <i>are</i> included as replica locations returned to clients for reads.
    */
   @Test
@@ -221,7 +221,7 @@ public class TestReadOnlySharedStorage {
   }
 
   /**
-   * Verify that the NameNode is able to still use <tt>READ_ONLY_SHARED</tt> replicas even 
+   * Verify that the NameNode is able to still use <code>READ_ONLY_SHARED</code> replicas even 
    * when the single NORMAL replica is offline (and the effective replication count is 0).
    */
   @Test
@@ -253,7 +253,7 @@ public class TestReadOnlySharedStorage {
   }
   
   /**
-   * Verify that corrupt <tt>READ_ONLY_SHARED</tt> replicas aren't counted 
+   * Verify that corrupt <code>READ_ONLY_SHARED</code> replicas aren't counted 
    * towards the corrupt replicas total.
    */
   @Test

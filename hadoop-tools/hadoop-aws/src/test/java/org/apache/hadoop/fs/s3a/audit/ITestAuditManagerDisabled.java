@@ -35,10 +35,6 @@ import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED;
  */
 public class ITestAuditManagerDisabled extends AbstractS3ACostTest {
 
-  public ITestAuditManagerDisabled() {
-    super(true);
-  }
-
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();

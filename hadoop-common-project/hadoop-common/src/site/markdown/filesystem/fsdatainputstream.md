@@ -55,7 +55,7 @@ with access functions:
 file as returned by `FileSystem.getFileStatus(Path p)`
 
     forall p in dom(FS.Files[p]) :
-    len(data(FSDIS)) == FS.getFileStatus(p).length
+        len(data(FSDIS)) == FS.getFileStatus(p).length
 
 
 ### `Closeable.close()`
@@ -129,10 +129,11 @@ as implicitly set in `pos`.
 #### Preconditions
 
     isOpen(FSDIS)
-    buffer != null else raise NullPointerException
-    length >= 0
-    offset < len(buffer)
-    length <= len(buffer) - offset
+    buffer != null else raise NullPointerException, IllegalArgumentException
+    offset >= 0 else raise IndexOutOfBoundsException
+    length >= 0 else raise IndexOutOfBoundsException, IllegalArgumentException
+    offset < len(buffer) else raise IndexOutOfBoundsException
+    length <= len(buffer) - offset else raise IndexOutOfBoundsException
     pos >= 0 else raise EOFException, IOException
 
 Exceptions that may be raised on precondition failure are
@@ -174,6 +175,19 @@ What is critical is that unless the destination buffer size is 0, the call
 must block until at least one byte is returned. Thus, for any data source
 of length greater than zero, repeated invocations of this `read()` operation
 will eventually read all the data.
+
+#### Implementation Notes
+
+1. If the caller passes a `null` buffer, then an unchecked exception MUST be thrown. The base JDK
+`InputStream` implementation throws `NullPointerException`. HDFS historically used
+`IllegalArgumentException`. Implementations MAY use either of these.
+1. If the caller passes a negative value for `length`, then an unchecked exception MUST be thrown.
+The base JDK `InputStream` implementation throws `IndexOutOfBoundsException`. HDFS historically used
+`IllegalArgumentException`. Implementations MAY use either of these.
+1. Reads through any method MUST return the same data.
+1. Callers MAY interleave calls to different read methods (single-byte and multi-byte) on the same
+stream. The stream MUST return the same underlying data, regardless of the specific read calls or
+their ordering.
 
 ### <a name="Seekable.seek"></a>`Seekable.seek(s)`
 
@@ -259,8 +273,8 @@ Examples: `RawLocalFileSystem` , `HttpFSFileSystem`
 
 If the operation is supported and there is a new location for the data:
 
-        FSDIS' = (pos, data', true)
-        result = True
+    FSDIS' = (pos, data', true)
+    result = True
 
 The new data is the original data (or an updated version of it, as covered
 in the Consistency section below), but the block containing the data at `offset`
@@ -268,7 +282,7 @@ is sourced from a different replica.
 
 If there is no other copy, `FSDIS` is  not updated; the response indicates this:
 
-        result = False
+    result = False
 
 Outside of test methods, the primary use of this method is in the {{FSInputChecker}}
 class, which can react to a checksum error in a read by attempting to source
@@ -441,9 +455,9 @@ The semantics of this are exactly equivalent to
     readFully(position, buffer, 0, len(buffer))
 
 That is, the buffer is filled entirely with the contents of the input source
-from position `position`
+from position `position`.
 
-### `default void readVectored(List<? extends FileRange> ranges, IntFunction<ByteBuffer> allocate)`
+### `void readVectored(List<? extends FileRange> ranges, IntFunction<ByteBuffer> allocate)`
 
 Read fully data for a list of ranges asynchronously. The default implementation
 iterates through the ranges, tries to coalesce the ranges based on values of
@@ -459,51 +473,118 @@ The position returned by `getPos()` after `readVectored()` is undefined.
 If a file is changed while the `readVectored()` operation is in progress, the output is
 undefined. Some ranges may have old data, some may have new, and some may have both.
 
-While a `readVectored()` operation is in progress, normal read api calls may block.
+While a `readVectored()` operation is in progress, normal read API calls MAY block;
+the value of `getPos(`) is also undefined. Applications SHOULD NOT make such requests
+while waiting for the results of a vectored read.
 
-Note: Don't use direct buffers for reading from ChecksumFileSystem as that may
-lead to memory fragmentation explained in HADOOP-18296.
-
+Note: Don't use direct buffers for reading from `ChecksumFileSystem` as that may
+lead to memory fragmentation explained in
+[HADOOP-18296](https://issues.apache.org/jira/browse/HADOOP-18296)
+_Memory fragmentation in ChecksumFileSystem Vectored IO implementation_
 
 #### Preconditions
 
-For each requested range:
+No empty lists.
 
-    range.getOffset >= 0 else raise IllegalArgumentException
-    range.getLength >= 0 else raise EOFException
+```python
+if ranges = null raise NullPointerException
+if allocate = null raise NullPointerException
+```
+
+For each requested range `range[i]` in the list of ranges `range[0..n]` sorted
+on `getOffset()` ascending such that
+
+for all `i where i > 0`:
+
+    range[i].getOffset() > range[i-1].getOffset()
+
+For all ranges `0..i` the preconditions are:
+
+```python
+ranges[i] != null else raise IllegalArgumentException
+ranges[i].getOffset() >= 0 else raise EOFException
+ranges[i].getLength() >= 0 else raise IllegalArgumentException
+if i > 0 and ranges[i].getOffset() < (ranges[i-1].getOffset() + ranges[i-1].getLength) :
+   raise IllegalArgumentException
+```
+If the length of the file is known during the validation phase:
+
+```python
+if range[i].getOffset + range[i].getLength >= data.length() raise EOFException
+```
 
 #### Postconditions
 
-For each requested range:
+For each requested range `range[i]` in the list of ranges `range[0..n]`
 
-    range.getData() returns CompletableFuture<ByteBuffer> which will have data
-    from range.getOffset to range.getLength.
+```
+ranges[i]'.getData() = CompletableFuture<buffer: ByteBuffer>
+```
 
-### `minSeekForVectorReads()`
+ and when `getData().get()` completes:
+```
+let buffer = `getData().get()
+let len = ranges[i].getLength()
+let data = new byte[len]
+(buffer.position() - buffer.limit) = len
+buffer.get(data, 0, len) = readFully(ranges[i].getOffset(), data, 0, len)
+```
+
+That is: the result of every ranged read is the result of the (possibly asynchronous)
+call to `PositionedReadable.readFully()` for the same offset and length
+
+#### `minSeekForVectorReads()`
 
 The smallest reasonable seek. Two ranges won't be merged together if the difference between
 end of first and start of next range is more than this value.
 
-### `maxReadSizeForVectorReads()`
+#### `maxReadSizeForVectorReads()`
 
 Maximum number of bytes which can be read in one go after merging the ranges.
-Two ranges won't be merged if the combined data to be read is more than this value.
+Two ranges won't be merged if the combined data to be read It's okay we have a look at what we do right now for readOkayis more than this value.
 Essentially setting this to 0 will disable the merging of ranges.
 
-## Consistency
+#### Concurrency
 
-* All readers, local and remote, of a data stream FSDIS provided from a `FileSystem.open(p)`
+* When calling `readVectored()` while a separate thread is trying
+  to read data through `read()`/`readFully()`, all operations MUST
+  complete successfully.
+* Invoking a vector read while an existing set of pending vector reads
+  are in progress MUST be supported. The order of which ranges across
+  the multiple requests complete is undefined.
+* Invoking `read()`/`readFully()` while a vector API call is in progress
+  MUST be supported. The order of which calls return data is undefined.
+
+The S3A connector closes any open stream when its `synchronized readVectored()`
+method is invoked;
+It will then switch the read policy from normal to random
+so that any future invocations will be for limited ranges.
+This is because the expectation is that vector IO and large sequential
+reads are not mixed and that holding on to any open HTTP connection is wasteful.
+
+#### Handling of zero-length ranges
+
+Implementations MAY short-circuit reads for any range where `range.getLength() = 0`
+and return an empty buffer.
+
+In such circumstances, other validation checks MAY be omitted.
+
+There are no guarantees that such optimizations take place; callers SHOULD NOT
+include empty ranges for this reason.
+
+#### Consistency
+
+* All readers, local and remote, of a data stream `FSDIS` provided from a `FileSystem.open(p)`
 are expected to receive access to the data of `FS.Files[p]` at the time of opening.
 * If the underlying data is changed during the read process, these changes MAY or
 MAY NOT be visible.
 * Such changes that are visible MAY be partially visible.
 
-
-At time t0
+At time `t0`
 
     FSDIS0 = FS'read(p) = (0, data0[])
 
-At time t1
+At time `t1`
 
     FS' = FS' where FS'.Files[p] = data1
 
@@ -544,6 +625,71 @@ While at time `t3 > t2`:
 It may be that `r3 != r2`. (That is, some of the data my be cached or replicated,
 and on a subsequent read, a different version of the file's contents are returned).
 
-
 Similarly, if the data at the path `p`, is deleted, this change MAY or MAY
 not be visible during read operations performed on `FSDIS0`.
+
+#### API Stabilization Notes
+
+The `readVectored()` API was shipped in Hadoop 3.3.5, with explicit local, raw local and S3A
+support -and fallback everywhere else.
+
+*Overlapping ranges*
+
+The restriction "no overlapping ranges" was only initially enforced in
+the S3A connector, which would raise `UnsupportedOperationException`.
+Adding the range check as a precondition for all implementations (Raw Local
+being an exception) guarantees consistent behavior everywhere.
+The reason Raw Local doesn't have this precondition is ChecksumFileSystem
+creates the chunked ranges based on the checksum chunk size and then calls
+readVectored on Raw Local which may lead to overlapping ranges in some cases.
+For details see [HADOOP-19291](https://issues.apache.org/jira/browse/HADOOP-19291)
+
+For reliable use with older hadoop releases with the API: sort the list of ranges
+and check for overlaps before calling `readVectored()`.
+
+*Direct Buffer Reads*
+
+Releases without [HADOOP-19101](https://issues.apache.org/jira/browse/HADOOP-19101)
+_Vectored Read into off-heap buffer broken in fallback implementation_ can read data
+from the wrong offset with the default "fallback" implementation if the buffer allocator
+function returns off heap "direct" buffers.
+
+The custom implementations in local filesystem and S3A's non-prefetching stream are safe.
+
+Anyone implementing support for the API, unless confident they only run
+against releases with the fixed implementation, SHOULD NOT use the API
+if the allocator is direct and the input stream does not explicitly declare
+support through an explicit `hasCapability()` probe:
+
+```java
+Stream.hasCapability("in:readvectored")
+```
+
+Given the HADOOP-18296 problem with `ChecksumFileSystem` and direct buffers, across all releases,
+it is best to avoid using this API in production with direct buffers.
+
+
+## `void readVectored(List<? extends FileRange> ranges, IntFunction<ByteBuffer> allocate, Consumer<ByteBuffer> release)`
+
+This is the extension of `readVectored/2` with an additional `release` consumer operation to release buffers.
+
+The specification and rules of this method are exactly those of the other operation, with
+the addition of:
+
+Preconditions
+```
+if release = null raise NullPointerException
+```
+
+* If a read operation fails due to an `IOException` or similar, the implementation of `readVectored()`,
+  SHOULD call `release(buffer)` with the buffer created by invoking the `allocate()` function into which
+  the data was being read.
+* Implementations MUST NOT call `release(buffer)` with any non-null buffer _not_ obtained through `allocate()`.
+* Implementations MUST only call `release(buffer)` when a failure has occurred and the future is about to have `Future.completedExceptionally()` invoked.
+
+It is an extension to the original Vector Read API -not all versions of Hadoop with the original `readVectored()` call define it.
+If used directly in application code, that application is restricting itself to later versions
+of the API.
+
+If used via reflection, if this method is not found, fall back to the original method.
+

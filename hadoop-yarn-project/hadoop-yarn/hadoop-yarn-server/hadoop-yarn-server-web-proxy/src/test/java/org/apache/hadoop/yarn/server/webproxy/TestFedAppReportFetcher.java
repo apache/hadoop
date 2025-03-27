@@ -77,7 +77,7 @@ public class TestFedAppReportFetcher {
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, isAHSEnabled);
 
-    FederationStateStoreFacade fedFacade = FederationStateStoreFacade.getInstance();
+    FederationStateStoreFacade fedFacade = FederationStateStoreFacade.getInstance(this.conf);
     FederationStateStore fss = new MemoryFederationStateStore();
     fss.init(conf);
     fedFacade.reinitialize(fss, conf);

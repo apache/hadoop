@@ -24,8 +24,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -1055,6 +1057,8 @@ public class NodeManager extends CompositeService
     NodeManager nodeManager = new NodeManager();
     Configuration conf = new YarnConfiguration();
     new GenericOptionsParser(conf, args);
+    CallerContext.setCurrent(new CallerContext.Builder(
+        "nodemanager_" + NetUtils.getLocalHostname()).build());
     nodeManager.initAndStartNodeManager(conf, false);
   }
 
@@ -1073,5 +1077,10 @@ public class NodeManager extends CompositeService
   @Private
   public AsyncDispatcher getDispatcher() {
     return dispatcher;
+  }
+
+  @VisibleForTesting
+  public void disableWebServer() {
+    removeService(((NMContext) context).webServer);
   }
 }

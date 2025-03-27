@@ -41,9 +41,12 @@ import org.apache.hadoop.test.TestException;
 import org.apache.hadoop.test.TestHdfs;
 import org.apache.hadoop.test.TestHdfsHelper;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestFileSystemAccessService extends HFSTestCase {
 
@@ -55,7 +58,7 @@ public class TestFileSystemAccessService extends HFSTestCase {
     os.close();
   }
 
-  @Before
+  @BeforeEach
   public void createHadoopConf() throws Exception {
     Configuration hadoopConf = new Configuration(false);
     hadoopConf.set("foo", "FOO");
@@ -74,7 +77,7 @@ public class TestFileSystemAccessService extends HFSTestCase {
     conf.set("server.services", services);
     Server server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
-    Assert.assertNotNull(server.get(FileSystemAccess.class));
+    assertNotNull(server.get(FileSystemAccess.class));
     server.destroy();
   }
 
@@ -161,7 +164,7 @@ public class TestFileSystemAccessService extends HFSTestCase {
     Server server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
     FileSystemAccessService fsAccess = (FileSystemAccessService) server.get(FileSystemAccess.class);
-    Assert.assertEquals(fsAccess.serviceHadoopConf.get("foo"), "FOO");
+    assertEquals(fsAccess.serviceHadoopConf.get("foo"), "FOO");
     server.destroy();
   }
 
@@ -189,7 +192,7 @@ public class TestFileSystemAccessService extends HFSTestCase {
     Server server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
     FileSystemAccessService fsAccess = (FileSystemAccessService) server.get(FileSystemAccess.class);
-    Assert.assertEquals(fsAccess.serviceHadoopConf.get("foo"), "BAR");
+    assertEquals(fsAccess.serviceHadoopConf.get("foo"), "BAR");
     server.destroy();
   }
 
@@ -267,15 +270,15 @@ public class TestFileSystemAccessService extends HFSTestCase {
     server.init();
     FileSystemAccess hadoop = server.get(FileSystemAccess.class);
     FileSystem fs = hadoop.createFileSystem("u", hadoop.getFileSystemConfiguration());
-    Assert.assertNotNull(fs);
+    assertNotNull(fs);
     fs.mkdirs(new Path("/tmp/foo"));
     hadoop.releaseFileSystem(fs);
     try {
       fs.mkdirs(new Path("/tmp/foo"));
-      Assert.fail();
+      fail();
     } catch (IOException ex) {
     } catch (Exception ex) {
-      Assert.fail();
+      fail();
     }
     server.destroy();
   }
@@ -313,10 +316,10 @@ public class TestFileSystemAccessService extends HFSTestCase {
     });
     try {
       fsa[0].mkdirs(new Path("/tmp/foo"));
-      Assert.fail();
+      fail();
     } catch (IOException ex) {
     } catch (Exception ex) {
-      Assert.fail();
+      fail();
     }
     server.destroy();
   }
@@ -381,19 +384,19 @@ public class TestFileSystemAccessService extends HFSTestCase {
           throw new IOException();
         }
       });
-      Assert.fail();
+      fail();
     } catch (FileSystemAccessException ex) {
-      Assert.assertEquals(ex.getError(), FileSystemAccessException.ERROR.H03);
+      assertEquals(ex.getError(), FileSystemAccessException.ERROR.H03);
     } catch (Exception ex) {
-      Assert.fail();
+      fail();
     }
 
     try {
       fsa[0].mkdirs(new Path("/tmp/foo"));
-      Assert.fail();
+      fail();
     } catch (IOException ex) {
     } catch (Exception ex) {
-      Assert.fail();
+      fail();
     }
     server.destroy();
   }
@@ -424,7 +427,7 @@ public class TestFileSystemAccessService extends HFSTestCase {
 
       FileSystem fs1 =
         hadoop.createFileSystem("u", hadoop.getFileSystemConfiguration());
-      Assert.assertNotNull(fs1);
+      assertNotNull(fs1);
       fs1.mkdirs(new Path("/tmp/foo1"));
       hadoop.releaseFileSystem(fs1);
 
@@ -435,7 +438,7 @@ public class TestFileSystemAccessService extends HFSTestCase {
         hadoop.createFileSystem("u", hadoop.getFileSystemConfiguration());
 
       //should be same instance because of caching
-      Assert.assertEquals(fs1, fs2);
+      assertEquals(fs1, fs2);
 
       Thread.sleep(4 * 1000);
 
@@ -453,10 +456,10 @@ public class TestFileSystemAccessService extends HFSTestCase {
       //should not be around as lease count is 0
       try {
         fs2.mkdirs(new Path("/tmp/foo"));
-        Assert.fail();
+        fail();
       } catch (IOException ex) {
       } catch (Exception ex) {
-        Assert.fail();
+        fail();
       }
     } finally {
       server.destroy();

@@ -42,8 +42,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerChain;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -52,6 +52,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -66,6 +68,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
     super();
   }
 
+  @BeforeEach
   @Override
   public void setup() throws IOException {
     conf.setInt(
@@ -118,12 +121,12 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
     List<ContainerStatus> containerStatuses = containerManager
         .getContainerStatuses(statRequest).getContainerStatuses();
     for (ContainerStatus status : containerStatuses) {
-      Assert.assertEquals(
+      assertEquals(
           org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
           status.getState());
     }
-    Assert.assertEquals(0, metrics.getQueuedOpportunisticContainers());
-    Assert.assertEquals(0, metrics.getQueuedGuaranteedContainers());
+    assertEquals(0, metrics.getQueuedOpportunisticContainers());
+    assertEquals(0, metrics.getQueuedGuaranteedContainers());
   }
 
   /**
@@ -168,20 +171,20 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
     List<ContainerStatus> containerStatuses = containerManager
         .getContainerStatuses(statRequest).getContainerStatuses();
     for (ContainerStatus status : containerStatuses) {
-      Assert.assertEquals(ContainerSubState.SCHEDULED,
+      assertEquals(ContainerSubState.SCHEDULED,
           status.getContainerSubState());
     }
 
     ContainerScheduler containerScheduler =
         containerManager.getContainerScheduler();
     // Ensure both containers are properly queued.
-    Assert.assertEquals(2, containerScheduler.getNumQueuedContainers());
-    Assert.assertEquals(1,
+    assertEquals(2, containerScheduler.getNumQueuedContainers());
+    assertEquals(1,
         containerScheduler.getNumQueuedGuaranteedContainers());
-    Assert.assertEquals(1,
+    assertEquals(1,
         containerScheduler.getNumQueuedOpportunisticContainers());
-    Assert.assertEquals(1, metrics.getQueuedOpportunisticContainers());
-    Assert.assertEquals(1, metrics.getQueuedGuaranteedContainers());
+    assertEquals(1, metrics.getQueuedOpportunisticContainers());
+    assertEquals(1, metrics.getQueuedGuaranteedContainers());
   }
 
   /**
@@ -233,10 +236,10 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
         .getContainerStatuses(statRequest).getContainerStatuses();
     for (ContainerStatus status : containerStatuses) {
       if (status.getContainerId().equals(createContainerId(0))) {
-        Assert.assertEquals(ContainerSubState.RUNNING,
+        assertEquals(ContainerSubState.RUNNING,
             status.getContainerSubState());
       } else {
-        Assert.assertEquals(ContainerSubState.SCHEDULED,
+        assertEquals(ContainerSubState.SCHEDULED,
             status.getContainerSubState());
       }
     }
@@ -244,13 +247,13 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
     ContainerScheduler containerScheduler =
         containerManager.getContainerScheduler();
     // Ensure two containers are properly queued.
-    Assert.assertEquals(2, containerScheduler.getNumQueuedContainers());
-    Assert.assertEquals(0,
+    assertEquals(2, containerScheduler.getNumQueuedContainers());
+    assertEquals(0,
         containerScheduler.getNumQueuedGuaranteedContainers());
-    Assert.assertEquals(2,
+    assertEquals(2,
         containerScheduler.getNumQueuedOpportunisticContainers());
-    Assert.assertEquals(2, metrics.getQueuedOpportunisticContainers());
-    Assert.assertEquals(0, metrics.getQueuedGuaranteedContainers());
+    assertEquals(2, metrics.getQueuedOpportunisticContainers());
+    assertEquals(0, metrics.getQueuedGuaranteedContainers());
   }
 
   /**
@@ -310,14 +313,14 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
         .getContainerStatuses(statRequest).getContainerStatuses();
     for (ContainerStatus status : containerStatuses) {
       if (status.getContainerId().equals(createContainerId(0))) {
-        Assert.assertEquals(ContainerSubState.RUNNING,
+        assertEquals(ContainerSubState.RUNNING,
             status.getContainerSubState());
       } else if (status.getContainerId().equals(createContainerId(
           maxOppQueueLength + 1))) {
-        Assert.assertTrue(status.getDiagnostics().contains(
+        assertTrue(status.getDiagnostics().contains(
             "Opportunistic container queue is full"));
       } else {
-        Assert.assertEquals(ContainerSubState.SCHEDULED,
+        assertEquals(ContainerSubState.SCHEDULED,
             status.getContainerSubState());
       }
       System.out.println("\nStatus : [" + status + "]\n");
@@ -325,15 +328,15 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
 
     ContainerScheduler containerScheduler =
         containerManager.getContainerScheduler();
-    Assert.assertEquals(maxOppQueueLength,
+    assertEquals(maxOppQueueLength,
         containerScheduler.getNumQueuedContainers());
-    Assert.assertEquals(0,
+    assertEquals(0,
         containerScheduler.getNumQueuedGuaranteedContainers());
-    Assert.assertEquals(maxOppQueueLength,
+    assertEquals(maxOppQueueLength,
         containerScheduler.getNumQueuedOpportunisticContainers());
-    Assert.assertEquals(maxOppQueueLength,
+    assertEquals(maxOppQueueLength,
         metrics.getQueuedOpportunisticContainers());
-    Assert.assertEquals(0, metrics.getQueuedGuaranteedContainers());
+    assertEquals(0, metrics.getQueuedGuaranteedContainers());
   }
 
   /**
@@ -392,20 +395,20 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
         .getContainerStatuses(statRequest).getContainerStatuses();
     for (ContainerStatus status : containerStatuses) {
       if (status.getContainerId().equals(createContainerId(0))) {
-        Assert.assertTrue(status.getDiagnostics().contains(
+        assertTrue(status.getDiagnostics().contains(
             "Container Killed to make room for Guaranteed Container"));
       } else if (status.getContainerId().equals(createContainerId(1))) {
-        Assert.assertEquals(ContainerSubState.SCHEDULED,
+        assertEquals(ContainerSubState.SCHEDULED,
             status.getContainerSubState());
       } else if (status.getContainerId().equals(createContainerId(2))) {
-        Assert.assertEquals(ContainerSubState.RUNNING,
+        assertEquals(ContainerSubState.RUNNING,
             status.getContainerSubState());
       }
       System.out.println("\nStatus : [" + status + "]\n");
     }
 
-    Assert.assertEquals(1, metrics.getQueuedOpportunisticContainers());
-    Assert.assertEquals(0, metrics.getQueuedGuaranteedContainers());
+    assertEquals(1, metrics.getQueuedOpportunisticContainers());
+    assertEquals(0, metrics.getQueuedGuaranteedContainers());
 
     // Make sure the remaining OPPORTUNISTIC container starts its execution.
     BaseContainerManagerTest.waitForNMContainerState(containerManager,
@@ -415,12 +418,12 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
         createContainerId(1)));
     ContainerStatus contStatus1 = containerManager.getContainerStatuses(
         statRequest).getContainerStatuses().get(0);
-    Assert.assertEquals(
+    assertEquals(
         org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
         contStatus1.getState());
 
-    Assert.assertEquals(0, metrics.getQueuedOpportunisticContainers());
-    Assert.assertEquals(0, metrics.getQueuedGuaranteedContainers());
+    assertEquals(0, metrics.getQueuedOpportunisticContainers());
+    assertEquals(0, metrics.getQueuedGuaranteedContainers());
   }
 
   /**
@@ -486,17 +489,17 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
         .getContainerStatuses(statRequest).getContainerStatuses();
     for (ContainerStatus status : containerStatuses) {
       if (status.getContainerId().equals(createContainerId(0))) {
-        Assert.assertTrue(status.getDiagnostics().contains(
+        assertTrue(status.getDiagnostics().contains(
             "Container Paused to make room for Guaranteed Container"));
       } else if (status.getContainerId().equals(createContainerId(1))) {
-        Assert.assertEquals(
+        assertEquals(
             org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
             status.getState());
       }
       System.out.println("\nStatus : [" + status + "]\n");
     }
-    Assert.assertEquals(1, metrics.getQueuedOpportunisticContainers());
-    Assert.assertEquals(0, metrics.getQueuedGuaranteedContainers());
+    assertEquals(1, metrics.getQueuedOpportunisticContainers());
+    assertEquals(0, metrics.getQueuedGuaranteedContainers());
 
     // Make sure that the GUARANTEED container completes
     BaseContainerManagerTest.waitForNMContainerState(containerManager,
@@ -509,7 +512,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
     List<org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
         ContainerState> containerStates =
         listener.getStates().get(createContainerId(0));
-    Assert.assertEquals(Arrays.asList(
+    assertEquals(Arrays.asList(
         org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
             ContainerState.NEW,
         org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
@@ -530,7 +533,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
             ContainerState.DONE), containerStates);
     List<ContainerEventType> containerEventTypes =
         listener.getEvents().get(createContainerId(0));
-    Assert.assertEquals(Arrays.asList(ContainerEventType.INIT_CONTAINER,
+    assertEquals(Arrays.asList(ContainerEventType.INIT_CONTAINER,
         ContainerEventType.CONTAINER_LAUNCHED,
         ContainerEventType.PAUSE_CONTAINER,
         ContainerEventType.CONTAINER_PAUSED,
@@ -621,9 +624,9 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
     GenericTestUtils.waitFor(
         () -> containerScheduler.getNumQueuedContainers() == 6
             && metrics.getQueuedOpportunisticContainers() == 6, 100, 3000);
-    Assert.assertEquals(6, containerScheduler.getNumQueuedContainers());
-    Assert.assertEquals(6, metrics.getQueuedOpportunisticContainers());
-    Assert.assertEquals(0, metrics.getQueuedGuaranteedContainers());
+    assertEquals(6, containerScheduler.getNumQueuedContainers());
+    assertEquals(6, metrics.getQueuedOpportunisticContainers());
+    assertEquals(0, metrics.getQueuedGuaranteedContainers());
 
     ContainerQueuingLimit containerQueuingLimit = ContainerQueuingLimit
         .newInstance();
@@ -631,7 +634,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
     containerScheduler.updateQueuingLimit(containerQueuingLimit);
     GenericTestUtils.waitFor(
         () -> containerScheduler.getNumQueuedContainers() == 2, 100, 3000);
-    Assert.assertEquals(2, containerScheduler.getNumQueuedContainers());
+    assertEquals(2, containerScheduler.getNumQueuedContainers());
 
     List<ContainerId> statList = new ArrayList<ContainerId>();
     for (int i = 1; i < 7; i++) {
@@ -655,10 +658,10 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
         }
       }
     }
-    Assert.assertEquals(4, deQueuedContainers);
-    Assert.assertEquals(2, numQueuedOppContainers);
-    Assert.assertEquals(2, metrics.getQueuedOpportunisticContainers());
-    Assert.assertEquals(0, metrics.getQueuedGuaranteedContainers());
+    assertEquals(4, deQueuedContainers);
+    assertEquals(2, numQueuedOppContainers);
+    assertEquals(2, metrics.getQueuedOpportunisticContainers());
+    assertEquals(0, metrics.getQueuedGuaranteedContainers());
   }
 
   /**
@@ -716,7 +719,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
         (numTries-- > 0)) {
       Thread.sleep(100);
     }
-    Assert.assertEquals(2, containerScheduler.getNumQueuedContainers());
+    assertEquals(2, containerScheduler.getNumQueuedContainers());
 
     containerManager.stopContainers(
         StopContainersRequest.newInstance(Arrays.asList(createContainerId(2))));
@@ -726,7 +729,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
         (numTries-- > 0)) {
       Thread.sleep(100);
     }
-    Assert.assertEquals(1, containerScheduler.getNumQueuedContainers());
+    assertEquals(1, containerScheduler.getNumQueuedContainers());
   }
 
   /**
@@ -802,9 +805,9 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
       System.out.println("\nStatus : [" + status + "]\n");
     }
 
-    Assert.assertEquals(2, killedContainers);
-    Assert.assertEquals(0, metrics.getQueuedOpportunisticContainers());
-    Assert.assertEquals(0, metrics.getQueuedGuaranteedContainers());
+    assertEquals(2, killedContainers);
+    assertEquals(0, metrics.getQueuedOpportunisticContainers());
+    assertEquals(0, metrics.getQueuedGuaranteedContainers());
   }
 
   /**
@@ -869,9 +872,9 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
       System.out.println("\nStatus : [" + status + "]\n");
     }
 
-    Assert.assertEquals(2, killedContainers);
-    Assert.assertEquals(0, metrics.getQueuedOpportunisticContainers());
-    Assert.assertEquals(0, metrics.getQueuedGuaranteedContainers());
+    assertEquals(2, killedContainers);
+    assertEquals(0, metrics.getQueuedOpportunisticContainers());
+    assertEquals(0, metrics.getQueuedGuaranteedContainers());
   }
 
   /**
@@ -932,10 +935,10 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
       System.out.println("\nStatus : [" + status + "]\n");
     }
 
-    Assert.assertEquals(1, runningContainersNo);
-    Assert.assertEquals(2, queuedContainersNo);
-    Assert.assertEquals(2, metrics.getQueuedOpportunisticContainers());
-    Assert.assertEquals(0, metrics.getQueuedGuaranteedContainers());
+    assertEquals(1, runningContainersNo);
+    assertEquals(2, queuedContainersNo);
+    assertEquals(2, metrics.getQueuedOpportunisticContainers());
+    assertEquals(0, metrics.getQueuedGuaranteedContainers());
 
     // Stop one of the two queued containers.
     StopContainersRequest stopRequest = StopContainersRequest.
@@ -966,12 +969,12 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
         Thread.sleep(1000);
       }
     }
-    Assert.assertEquals(1, metrics.getQueuedOpportunisticContainers());
-    Assert.assertEquals(createContainerId(0),
+    assertEquals(1, metrics.getQueuedOpportunisticContainers());
+    assertEquals(createContainerId(0),
         map.get(ContainerSubState.RUNNING).getContainerId());
-    Assert.assertEquals(createContainerId(1),
+    assertEquals(createContainerId(1),
         map.get(ContainerSubState.DONE).getContainerId());
-    Assert.assertEquals(createContainerId(2),
+    assertEquals(createContainerId(2),
         map.get(ContainerSubState.SCHEDULED).getContainerId());
   }
 
@@ -1022,10 +1025,10 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
         .getContainerStatuses(statRequest).getContainerStatuses();
     for (ContainerStatus status : containerStatuses) {
       if (status.getContainerId().equals(createContainerId(0))) {
-        Assert.assertEquals(ContainerSubState.RUNNING,
+        assertEquals(ContainerSubState.RUNNING,
             status.getContainerSubState());
       } else {
-        Assert.assertEquals(ContainerSubState.SCHEDULED,
+        assertEquals(ContainerSubState.SCHEDULED,
             status.getContainerSubState());
       }
     }
@@ -1035,10 +1038,10 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
     containerScheduler.resourceHandlerChain =
         mock(ResourceHandlerChain.class);
     // Ensure two containers are properly queued.
-    Assert.assertEquals(1, containerScheduler.getNumQueuedContainers());
-    Assert.assertEquals(0,
+    assertEquals(1, containerScheduler.getNumQueuedContainers());
+    assertEquals(0,
         containerScheduler.getNumQueuedGuaranteedContainers());
-    Assert.assertEquals(1,
+    assertEquals(1,
         containerScheduler.getNumQueuedOpportunisticContainers());
 
     // Promote Queued Opportunistic Container
@@ -1054,9 +1057,9 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
     ContainerUpdateResponse updateResponse =
         containerManager.updateContainer(updateRequest);
 
-    Assert.assertEquals(1,
+    assertEquals(1,
         updateResponse.getSuccessfullyUpdatedContainers().size());
-    Assert.assertEquals(0, updateResponse.getFailedRequests().size());
+    assertEquals(0, updateResponse.getFailedRequests().size());
 
     waitForContainerState(containerManager, createContainerId(0),
         org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE);
@@ -1066,25 +1069,25 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
 
     containerStatuses = containerManager
         .getContainerStatuses(statRequest).getContainerStatuses();
-    Assert.assertEquals(1, containerStatuses.size());
+    assertEquals(1, containerStatuses.size());
 
     for (ContainerStatus status : containerStatuses) {
       if (org.apache.hadoop.yarn.api.records.ContainerState.RUNNING ==
           status.getState()) {
-        Assert.assertEquals(
+        assertEquals(
             ExecutionType.GUARANTEED, status.getExecutionType());
       }
     }
 
     // Ensure no containers are queued.
-    Assert.assertEquals(0, containerScheduler.getNumQueuedContainers());
-    Assert.assertEquals(0, metrics.getQueuedOpportunisticContainers());
-    Assert.assertEquals(0, metrics.getQueuedGuaranteedContainers());
+    assertEquals(0, containerScheduler.getNumQueuedContainers());
+    assertEquals(0, metrics.getQueuedOpportunisticContainers());
+    assertEquals(0, metrics.getQueuedGuaranteedContainers());
 
     List<org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
         ContainerState> containerStates =
         listener.getStates().get(createContainerId(1));
-    Assert.assertEquals(Arrays.asList(
+    assertEquals(Arrays.asList(
         org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
             ContainerState.NEW,
         org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
@@ -1095,7 +1098,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
             ContainerState.RUNNING), containerStates);
     List<ContainerEventType> containerEventTypes =
         listener.getEvents().get(createContainerId(1));
-    Assert.assertEquals(Arrays.asList(
+    assertEquals(Arrays.asList(
         ContainerEventType.INIT_CONTAINER,
         ContainerEventType.UPDATE_CONTAINER_TOKEN,
         ContainerEventType.CONTAINER_LAUNCHED), containerEventTypes);
@@ -1139,9 +1142,9 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
     ContainerUpdateResponse updateResponse =
         containerManager.updateContainer(updateRequest);
 
-    Assert.assertEquals(
+    assertEquals(
         1, updateResponse.getSuccessfullyUpdatedContainers().size());
-    Assert.assertTrue(updateResponse.getFailedRequests().isEmpty());
+    assertTrue(updateResponse.getFailedRequests().isEmpty());
 
     final GetContainerStatusesRequest statRequest =
             GetContainerStatusesRequest.newInstance(
@@ -1157,7 +1160,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
       } catch (YarnException | IOException e) {
         return false;
       }
-      Assert.assertEquals(1, containerStatuses.size());
+      assertEquals(1, containerStatuses.size());
       ContainerStatus status = containerStatuses.get(0);
       return (status.getState() == expectedState
               && status.getExecutionType() == ExecutionType.OPPORTUNISTIC);

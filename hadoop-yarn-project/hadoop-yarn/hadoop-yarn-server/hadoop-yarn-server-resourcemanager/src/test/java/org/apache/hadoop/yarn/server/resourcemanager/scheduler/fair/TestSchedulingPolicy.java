@@ -37,13 +37,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -55,7 +55,7 @@ public class TestSchedulingPolicy {
   private FairSchedulerConfiguration conf;
   private FairScheduler scheduler;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     scheduler = new FairScheduler();
     conf = new FairSchedulerConfiguration();
@@ -72,34 +72,34 @@ public class TestSchedulingPolicy {
     // Class name
     SchedulingPolicy sm = SchedulingPolicy
         .parse(FairSharePolicy.class.getName());
-    assertTrue("Invalid scheduler name",
-        sm.getName().equals(FairSharePolicy.NAME));
+    assertTrue(sm.getName().equals(FairSharePolicy.NAME),
+        "Invalid scheduler name");
 
     // Canonical name
     sm = SchedulingPolicy.parse(FairSharePolicy.class
         .getCanonicalName());
-    assertTrue("Invalid scheduler name",
-        sm.getName().equals(FairSharePolicy.NAME));
+    assertTrue(sm.getName().equals(FairSharePolicy.NAME),
+        "Invalid scheduler name");
 
     // Class
     sm = SchedulingPolicy.getInstance(FairSharePolicy.class);
-    assertTrue("Invalid scheduler name",
-        sm.getName().equals(FairSharePolicy.NAME));
+    assertTrue(sm.getName().equals(FairSharePolicy.NAME),
+        "Invalid scheduler name");
 
     // Shortname - drf
     sm = SchedulingPolicy.parse("drf");
-    assertTrue("Invalid scheduler name",
-        sm.getName().equals(DominantResourceFairnessPolicy.NAME));
+    assertTrue(sm.getName().equals(DominantResourceFairnessPolicy.NAME),
+        "Invalid scheduler name");
     
     // Shortname - fair
     sm = SchedulingPolicy.parse("fair");
-    assertTrue("Invalid scheduler name",
-        sm.getName().equals(FairSharePolicy.NAME));
+    assertTrue(sm.getName().equals(FairSharePolicy.NAME),
+        "Invalid scheduler name");
 
     // Shortname - fifo
     sm = SchedulingPolicy.parse("fifo");
-    assertTrue("Invalid scheduler name",
-        sm.getName().equals(FifoPolicy.NAME));
+    assertTrue(sm.getName().equals(FifoPolicy.NAME),
+        "Invalid scheduler name");
   }
 
   /**
@@ -160,8 +160,8 @@ public class TestSchedulingPolicy {
       if (genSchedulable.size() == 3) {
         // We get three Schedulable objects, let's use them to check the
         // comparator.
-        Assert.assertTrue("The comparator must ensure transitivity",
-            checkTransitivity(genSchedulable));
+        assertTrue(checkTransitivity(genSchedulable),
+            "The comparator must ensure transitivity");
         return;
       }
 
@@ -192,7 +192,7 @@ public class TestSchedulingPolicy {
     private boolean checkTransitivity(
         Collection<Schedulable> schedulableObjs) {
 
-      Assert.assertEquals(3, schedulableObjs.size());
+      assertEquals(3, schedulableObjs.size());
       Schedulable[] copy = schedulableObjs.toArray(new Schedulable[3]);
 
       if (fairShareComparator.compare(copy[0], copy[1]) > 0) {
@@ -335,14 +335,14 @@ public class TestSchedulingPolicy {
     scheduler.init(conf);
 
     FSQueue child1 = scheduler.getQueueManager().getQueue("child1");
-    assertNull("Queue 'child1' should be null since its policy isn't allowed to"
-        + " be 'drf' if its parent policy is 'fair'.", child1);
+    assertNull(child1, "Queue 'child1' should be null since its policy isn't allowed to"
+        + " be 'drf' if its parent policy is 'fair'.");
 
     // dynamic queue
     FSQueue dynamicQueue = scheduler.getQueueManager().
         getLeafQueue("dynamicQueue", true);
-    assertNull("Dynamic queue should be null since it isn't allowed to be 'drf'"
-        + " policy if its parent policy is 'fair'.", dynamicQueue);
+    assertNull(dynamicQueue, "Dynamic queue should be null since it isn't allowed to be 'drf'"
+        + " policy if its parent policy is 'fair'.");
 
     // Set child1 to 'fair' and child2 to 'drf', the reload the allocation file.
     AllocationFileWriter.create()
@@ -358,14 +358,15 @@ public class TestSchedulingPolicy {
 
     scheduler.reinitialize(conf, null);
     child1 = scheduler.getQueueManager().getQueue("child1");
-    assertNotNull("Queue 'child1' should be not null since its policy is "
-        + "allowed to be 'fair' if its parent policy is 'fair'.", child1);
+    assertNotNull(child1, "Queue 'child1' should be not null since its policy is "
+        + "allowed to be 'fair' if its parent policy is 'fair'.");
 
     // Detect the policy violation of Child2, keep the original policy instead
     // of setting the new policy.
     FSQueue child2 = scheduler.getQueueManager().getQueue("child2");
-    assertTrue("Queue 'child2' should be 'fair' since its new policy 'drf' "
-        + "is not allowed.", child2.getPolicy() instanceof FairSharePolicy);
+    assertTrue(child2.getPolicy() instanceof FairSharePolicy,
+        "Queue 'child2' should be 'fair' since its new policy 'drf' "
+        + "is not allowed.");
   }
 
   @Test
@@ -388,14 +389,13 @@ public class TestSchedulingPolicy {
     scheduler.init(conf);
 
     FSQueue level2 = scheduler.getQueueManager().getQueue("level2");
-    assertNotNull("Queue 'level2' shouldn't be null since its policy is allowed"
-        + " to be 'fair' if its parent policy is 'fair'.", level2);
+    assertNotNull(level2, "Queue 'level2' shouldn't be null since its policy is allowed"
+        + " to be 'fair' if its parent policy is 'fair'.");
     FSQueue level3 = scheduler.getQueueManager().getQueue("level2.level3");
-    assertNull("Queue 'level3' should be null since its policy isn't allowed"
-        + " to be 'drf' if its parent policy is 'fair'.", level3);
+    assertNull(level3, "Queue 'level3' should be null since its policy isn't allowed"
+        + " to be 'drf' if its parent policy is 'fair'.");
     FSQueue leaf = scheduler.getQueueManager().getQueue("level2.level3.leaf");
-    assertNull("Queue 'leaf' should be null since its parent failed to create.",
-        leaf);
+    assertNull(leaf, "Queue 'leaf' should be null since its parent failed to create.");
   }
 
   @Test
@@ -416,8 +416,8 @@ public class TestSchedulingPolicy {
     scheduler.init(conf);
 
     FSQueue intermediate = scheduler.getQueueManager().getQueue("intermediate");
-    assertNull("Queue 'intermediate' should be null since 'fifo' is only for "
-        + "leaf queue.", intermediate);
+    assertNull(intermediate, "Queue 'intermediate' should be null since 'fifo' is only for "
+        + "leaf queue.");
 
     AllocationFileWriter.create()
         .addQueue(new AllocationFileQueue.Builder("root")
@@ -434,8 +434,8 @@ public class TestSchedulingPolicy {
     assertNotNull(scheduler.getQueueManager().getQueue("intermediate"));
 
     FSQueue leaf = scheduler.getQueueManager().getQueue("intermediate.leaf");
-    assertNotNull("Queue 'leaf' should be null since 'fifo' is only for "
-        + "leaf queue.", leaf);
+    assertNotNull(leaf, "Queue 'leaf' should be null since 'fifo' is only for "
+        + "leaf queue.");
   }
 
   @Test
@@ -466,13 +466,13 @@ public class TestSchedulingPolicy {
     scheduler.reinitialize(conf, null);
 
     FSQueue child1 = scheduler.getQueueManager().getQueue("child1");
-    assertTrue("Queue 'child1' should still be 'fair' since 'drf' isn't allowed"
-            + " if its parent policy is 'fair'.",
-        child1.getPolicy() instanceof FairSharePolicy);
+    assertTrue(child1.getPolicy() instanceof FairSharePolicy,
+        "Queue 'child1' should still be 'fair' since 'drf' isn't allowed"
+        + " if its parent policy is 'fair'.");
     FSQueue child2 = scheduler.getQueueManager().getQueue("child2");
-    assertTrue("Queue 'child2' should still be 'fair' there is a policy"
-            + " violation while reinitialization.",
-        child2.getPolicy() instanceof FairSharePolicy);
+    assertTrue(child2.getPolicy() instanceof FairSharePolicy,
+        "Queue 'child2' should still be 'fair' there is a policy"
+        + " violation while reinitialization.");
 
     // Set both child1 and root to 'drf', then reload the allocation file
     AllocationFileWriter.create()
@@ -488,12 +488,12 @@ public class TestSchedulingPolicy {
     scheduler.reinitialize(conf, null);
 
     child1 = scheduler.getQueueManager().getQueue("child1");
-    assertTrue("Queue 'child1' should be 'drf' since both 'root' and 'child1'"
-            + " are 'drf'.",
-        child1.getPolicy() instanceof DominantResourceFairnessPolicy);
+    assertTrue(child1.getPolicy() instanceof DominantResourceFairnessPolicy,
+        "Queue 'child1' should be 'drf' since both 'root' and 'child1'" +
+        " are 'drf'.");
     child2 = scheduler.getQueueManager().getQueue("child2");
-    assertTrue("Queue 'child2' should still be 'fifo' there is no policy"
-            + " violation while reinitialization.",
-        child2.getPolicy() instanceof FifoPolicy);
+    assertTrue(child2.getPolicy() instanceof FifoPolicy,
+        "Queue 'child2' should still be 'fifo' there is no policy" +
+        " violation while reinitialization.");
   }
 }

@@ -18,6 +18,8 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -26,8 +28,8 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Set;
@@ -36,10 +38,13 @@ import java.util.concurrent.TimeoutException;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_SERVICE_READER_STORAGE_MONITOR_INTERVAL_MS;
 import static org.apache.hadoop.yarn.server.timelineservice.storage.HBaseStorageMonitor.DATA_TO_RETRIEVE;
 import static org.apache.hadoop.yarn.server.timelineservice.storage.HBaseStorageMonitor.MONITOR_FILTERS;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestTimelineReaderHBaseDown {
 
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testTimelineReaderHBaseUp() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     configure(util);
@@ -58,7 +63,8 @@ public class TestTimelineReaderHBaseDown {
     }
   }
 
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testTimelineReaderInitWhenHBaseIsDown() throws
       TimeoutException, InterruptedException {
     HBaseTestingUtility util = new HBaseTestingUtility();
@@ -72,7 +78,8 @@ public class TestTimelineReaderHBaseDown {
     waitForHBaseDown(htr);
   }
 
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testTimelineReaderDetectsHBaseDown() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     configure(util);
@@ -99,7 +106,8 @@ public class TestTimelineReaderHBaseDown {
     }
   }
 
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testTimelineReaderDetectsZooKeeperDown() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     configure(util);
@@ -126,7 +134,8 @@ public class TestTimelineReaderHBaseDown {
     }
   }
 
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testTimelineReaderRecoversAfterHBaseReturns() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     configure(util);
@@ -175,9 +184,9 @@ public class TestTimelineReaderHBaseDown {
         }
       }, 1000, 150000);
       checkQuery(htr);
-      Assert.fail("Query should fail when HBase is down");
+      fail("Query should fail when HBase is down");
     } catch (IOException e) {
-      Assert.assertEquals("HBase is down", e.getMessage());
+      assertEquals("HBase is down", e.getMessage());
     }
   }
 
@@ -202,6 +211,8 @@ public class TestTimelineReaderHBaseDown {
             + "HBaseTimelineReaderImpl");
     config.setInt("hfile.format.version", 3);
     config.setLong(TIMELINE_SERVICE_READER_STORAGE_MONITOR_INTERVAL_MS, 5000);
+    Path tmpDir = new Path(config.get("hadoop.tmp.dir", "target/build/test"), "httpfs");
+    config.set(HttpServer2.HTTP_TEMP_DIR_KEY, tmpDir.toString());
   }
 
   private static TimelineReaderServer getTimelineReaderServer() {

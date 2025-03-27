@@ -397,12 +397,19 @@
   <name>dfs.datanode.du.reserved</name>
   <value>0</value>
   <description>Reserved space in bytes per volume. Always leave this much space free for non dfs use.
+      Specific directory based reservation is supported. The property can be followed with directory
+      name which is set at 'dfs.datanode.data.dir'. For example, reserved space for /data/hdfs1/data
+      can be configured using property 'dfs.datanode.du.reserved./data/hdfs1/data'. If specific directory
+      reservation is not configured then dfs.datanode.du.reserved will be used.
       Specific storage type based reservation is also supported. The property can be followed with
       corresponding storage types ([ssd]/[disk]/[archive]/[ram_disk]/[nvdimm]) for cluster with heterogeneous storage.
       For example, reserved space for RAM_DISK storage can be configured using property
       'dfs.datanode.du.reserved.ram_disk'. If specific storage type reservation is not configured
       then dfs.datanode.du.reserved will be used. Support multiple size unit suffix(case insensitive),
-      as described in dfs.blocksize.
+      as described in dfs.blocksize. Use directory name and storage type based reservation at the
+      same time is also allowed if both are configured.
+      Property priority example: dfs.datanode.du.reserved./data/hdfs1/data.ram_disk >
+      dfs.datanode.du.reserved./data/hdfs1/data > dfs.datanode.du.reserved.ram_disk > dfs.datanode.du.reserved
       Note: In case of using tune2fs to set reserved-blocks-percentage, or other filesystem tools,
       then you can possibly run into out of disk errors because hadoop will not check those
       external tool configurations.
@@ -414,12 +421,19 @@
   <value>0</value>
   <description>Reserved space in percentage. Read dfs.datanode.du.reserved.calculator to see
     when this takes effect. The actual number of bytes reserved will be calculated by using the
-    total capacity of the data directory in question. Specific storage type based reservation
+    total capacity of the data directory in question. Specific directory based reservation is
+    supported. The property can be followed with directory name which is set at 'dfs.datanode.data.dir'.
+    For example, reserved percentage space for /data/hdfs1/data can be configured using property
+    'dfs.datanode.du.reserved.pct./data/hdfs1/data'. If specific directory reservation is not
+    configured then dfs.datanode.du.reserved.pct will be used. Specific storage type based reservation
     is also supported. The property can be followed with corresponding storage types
     ([ssd]/[disk]/[archive]/[ram_disk]/[nvdimm]) for cluster with heterogeneous storage.
     For example, reserved percentage space for RAM_DISK storage can be configured using property
     'dfs.datanode.du.reserved.pct.ram_disk'. If specific storage type reservation is not configured
-    then dfs.datanode.du.reserved.pct will be used.
+    then dfs.datanode.du.reserved.pct will be used. Use directory and storage type based reservation
+    is also allowed if both are configured.
+    Priority example: dfs.datanode.du.reserved.pct./data/hdfs1/data.ram_disk > dfs.datanode.du.reserved.pct./data/hdfs1/data
+    > dfs.datanode.du.reserved.pct.ram_disk > dfs.datanode.du.reserved.pct
   </description>
 </property>
 
@@ -1117,7 +1131,14 @@
   not permitted to connect to the namenode.  The full pathname of the
   file must be specified.  If the value is empty, no hosts are
   excluded.</description>
-</property> 
+</property>
+
+<property>
+  <name>dfs.hosts.timeout</name>
+  <value>0</value>
+  <description>Specifies a timeout (in milliseconds) for reading the dfs.hosts file.
+  A value of zero indicates no timeout to be set.</description>
+</property>
 
 <property>
   <name>dfs.namenode.max.objects</name>
@@ -2446,6 +2467,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.block-placement.min-blocks-for.write</name>
+  <value>1</value>
+  <description>
+    Setting the minimum number of blocks for write operations is used to calculate the space required
+    for write operations.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.max.slowpeer.collect.nodes</name>
   <value>5</value>
   <description>
@@ -2802,6 +2832,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.observer.enabled</name>
+  <value>false</value>
+  <description>
+    This causes NameNode on startup to become an observer node if
+    set to true, otherwise startup is no different.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.enable.retrycache</name>
   <value>true</value>
   <description>
@@ -2919,6 +2958,33 @@
     map.  The cached blocks map is a hash map which uses chained hashing.
     Smaller maps may be accessed more slowly if the number of cached blocks is
     large; larger maps will consume more memory.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.crm.checklocktime.enable</name>
+  <value>false</value>
+  <description>
+    Set to true to enable CacheManager to check amount of time to hold the
+    global rwlock.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.crm.maxlocktime.ms</name>
+  <value>1000</value>
+  <description>
+    The maximum amount of time that CacheManager should hold the global rwlock.
+    This configuration enable when set `dfs.namenode.crm.checklocktime.enable`.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.crm.sleeptime.ms</name>
+  <value>300</value>
+  <description>
+    The amount of time that CacheManager should relase the global rwlock.
+    This configuration enable when set `dfs.namenode.crm.checklocktime.enable`.
   </description>
 </property>
 
@@ -3549,6 +3615,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.edekcacheloader.max-retries</name>
+  <value>10</value>
+  <description>When KeyProvider is configured, the max retries allowed to attempt
+    warm up edek cache if none of key successful on NN start up / become active.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.reencrypt.sleep.interval</name>
   <value>1m</value>
   <description>Interval the re-encrypt EDEK thread sleeps in the main loop. The
@@ -3739,6 +3813,16 @@
 </property>
 
 <property>
+  <name>dfs.ha.zkfc.client.ssl.enabled</name>
+  <value>false</value>
+  <description>
+    Enable SSL/TLS encryption for the ZooKeeper communication from ZKFC.
+    Note: if hadoop.zk.ssl.enabled is set to a value, then that central setting has precedence,
+    and this value will be overridden by the value of hadoop.zk.ssl.enabled.
+  </description>
+</property>
+
+<property>
   <name>dfs.ha.nn.not-become-active-in-safemode</name>
   <value>false</value>
   <description>
@@ -3888,6 +3972,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.lock.model.provider.class</name>
+  <value>org.apache.hadoop.hdfs.server.namenode.fgl.GlobalFSNamesystemLock</value>
+  <description>
+    An implementation class of FSNamesystem lock.
+    Defaults to GlobalFSNamesystemLock.class
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.bp-ready.timeout</name>
   <value>20</value>
   <description>
@@ -4029,6 +4122,60 @@
     Keytab based login can be enabled with dfs.balancer.keytab.enabled.
   </description>
 </property>
+
+  <property>
+    <name>dfs.balancer.kerberos.internal.spnego.principal</name>
+    <value></value>
+    <description>
+      Kerberos SPNEGO principal name used by the balancer.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.httpserver.enabled</name>
+    <value>false</value>
+    <description>
+      If true, balancer will start httpserver.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.http-address</name>
+    <value>0.0.0.0:8590</value>
+    <description>
+      The balancer http server address and port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.http-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the HTTP server will bind to. If this optional address
+      is set, it overrides only the hostname portion of
+      dfs.balancer.http-address. This is useful for making the Balancer
+      HTTP server listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.https-address</name>
+    <value>0.0.0.0:8591</value>
+    <description>
+      The balancer HTTPS server address and port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.https-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the HTTP server will bind to. If this optional address
+      is set, it overrides only the hostname portion of
+      dfs.balancer.https-address. This is useful for making the Balancer
+      HTTP server listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
 
 <property>
   <name>dfs.http.client.retry.policy.enabled</name>
@@ -4397,6 +4544,15 @@
     In secure environment, this has to be enabled since Kerberos is using fqdn
     in machine's principal therefore accessing servers by IP won't be recognized
     by the KDC.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.failover.lazy.resolved</name>
+  <value>false</value>
+  <description>
+    Used to enable lazy resolution of host->ip. If the value is true,
+    the host will only be resolved only before Dfsclient needs to request the host.
   </description>
 </property>
 
@@ -4970,6 +5126,16 @@
 </property>
 
 <property>
+  <name>dfs.journalnode.enable.sync.format</name>
+  <value>false</value>
+  <description>
+    If true, the journal node syncer daemon that tries to sync edit
+    logs between journal nodes will try to format its journal if it is not.
+    It will query the other journal nodes for the storage info required to format.
+  </description>
+</property>
+
+<property>
   <name>dfs.journalnode.edit-cache-size.bytes</name>
   <value></value>
   <description>
@@ -5152,6 +5318,17 @@
       Special value between 0 and 20, inclusive. if the value is set beyond the scope,
       this value will be set as 5 by default, Increases tolerance of
       placing blocks on Datanodes with similar disk space used.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.available-space-block-placement-policy.balanced-space-tolerance-limit</name>
+    <value>100</value>
+    <description>
+      Only used when the dfs.block.replicator.classname is set to
+      org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicy.
+      Special value between 0 and 100, inclusive. if the value is set beyond the scope,
+      this value will be set as 100 by default.
     </description>
   </property>
 
@@ -5342,6 +5519,24 @@
   <description>
     Timeout in seconds for block reconstruction.  If this value is 0 or less,
     then it will default to 5 minutes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.excess.redundancy.timeout-sec</name>
+  <value>3600</value>
+  <description>
+    Timeout in seconds for excess redundancy block. If this value is 0 or less,
+    then it will default to 3600 minutes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.excess.redundancy.timeout.check.limit</name>
+  <value>1000</value>
+  <description>
+    Limits number of blocks used to check for excess redundancy timeout.
+    If this value is 0 or less, then it will default to 1000.
   </description>
 </property>
 
@@ -5598,6 +5793,14 @@
   <value>false</value>
   <description>
     If true, allows slownode information to be replied to Client via PipelineAck.
+  </description>
+</property>
+
+<property>
+  <name>dfs.pipeline.congestion.ratio</name>
+  <value>1.5</value>
+  <description>
+    The ratio which is used to compute congestion load.
   </description>
 </property>
 
@@ -6243,6 +6446,15 @@
   </property>
 
   <property>
+    <name>dfs.namenode.random.node.order.enabled</name>
+    <value>false</value>
+    <description>
+      Whether to randomized the order of data nodes of a block or sort by network
+      distance (default behavior) before returning to clients.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.journalnode.edits.dir.perm</name>
     <value>700</value>
     <description>
@@ -6451,6 +6663,22 @@
     <description>
       The default prefix key to construct the uniqKey for one DFSOutputStream.
       If the namespace is DEFAULT, it's best to change this conf to other value.
+    </description>
+  </property>
+  <property>
+    <name>dfs.client.congestion.backoff.mean.time</name>
+    <value>5000</value>
+    <description>
+      The mean time in milliseconds which is used to compute
+      client congestion backoff sleep time.
+    </description>
+  </property>
+  <property>
+    <name>dfs.client.congestion.backoff.max.time</name>
+    <value>50000</value>
+    <description>
+      The max time in milliseconds which is used to restrict
+      the upper limit backoff sleep time for client.
     </description>
   </property>
   <property>

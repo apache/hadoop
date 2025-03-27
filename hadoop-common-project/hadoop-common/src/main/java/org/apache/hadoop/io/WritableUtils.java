@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -86,12 +87,12 @@ public final class WritableUtils  {
   public static String readCompressedString(DataInput in) throws IOException {
     byte[] bytes = readCompressedByteArray(in);
     if (bytes == null) return null;
-    return new String(bytes, "UTF-8");
+    return new String(bytes, StandardCharsets.UTF_8);
   }
 
 
   public static int  writeCompressedString(DataOutput out, String s) throws IOException {
-    return writeCompressedByteArray(out, (s != null) ? s.getBytes("UTF-8") : null);
+    return writeCompressedByteArray(out, (s != null) ? s.getBytes(StandardCharsets.UTF_8) : null);
   }
 
   /*
@@ -103,7 +104,7 @@ public final class WritableUtils  {
    */
   public static void writeString(DataOutput out, String s) throws IOException {
     if (s != null) {
-      byte[] buffer = s.getBytes("UTF-8");
+      byte[] buffer = s.getBytes(StandardCharsets.UTF_8);
       int len = buffer.length;
       out.writeInt(len);
       out.write(buffer, 0, len);

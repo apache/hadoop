@@ -34,7 +34,6 @@ import org.apache.hadoop.lib.wsrs.ParametersProvider;
 import org.apache.hadoop.lib.wsrs.ShortParam;
 import org.apache.hadoop.lib.wsrs.StringParam;
 import org.apache.hadoop.util.StringUtils;
-import javax.ws.rs.ext.Provider;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -42,7 +41,6 @@ import java.util.regex.Pattern;
 /**
  * HttpFS ParametersProvider.
  */
-@Provider
 @InterfaceAudience.Private
 @SuppressWarnings("unchecked")
 public class HttpFSParametersProvider extends ParametersProvider {
@@ -132,6 +130,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.GETSTATUS, new Class[]{});
     PARAMS_DEF.put(Operation.GETECPOLICIES, new Class[]{});
     PARAMS_DEF.put(Operation.GETECCODECS, new Class[]{});
+    PARAMS_DEF.put(Operation.GETTRASHROOTS, new Class[]{AllUsersParam.class});
     PARAMS_DEF.put(Operation.GET_BLOCK_LOCATIONS, new Class[] {OffsetParam.class, LenParam.class});
   }
 
@@ -763,6 +762,24 @@ public class HttpFSParametersProvider extends ParametersProvider {
      */
     public ECPolicyParam() {
       super(NAME, null);
+    }
+  }
+
+  /**
+   * Class for allusers parameter.
+   */
+  @InterfaceAudience.Private
+  public static class AllUsersParam extends BooleanParam {
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = HttpFSFileSystem.ALLUSERS_PARAM;
+
+    /**
+     * Constructor.
+     */
+    public AllUsersParam() {
+      super(NAME, false);
     }
   }
 }

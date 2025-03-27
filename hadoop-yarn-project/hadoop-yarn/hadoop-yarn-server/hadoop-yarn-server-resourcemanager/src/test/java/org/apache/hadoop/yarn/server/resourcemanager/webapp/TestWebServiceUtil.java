@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,9 +27,17 @@ import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
@@ -38,17 +47,14 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
-import org.codehaus.jettison.json.JSONException;
-import org.codehaus.jettison.json.JSONObject;
-import org.junit.Assert;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
+import org.glassfish.jersey.jettison.JettisonMarshaller;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
@@ -58,43 +64,26 @@ import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.MEMORY_CONFIGURATION_STORE;
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public final class TestWebServiceUtil {
+  private static final ObjectMapper MAPPER = new ObjectMapper()
+      .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+  private static final ObjectWriter OBJECT_WRITER =
+      MAPPER.writerWithDefaultPrettyPrinter();
+
   private TestWebServiceUtil(){
-  }
-
-  public static class WebServletModule extends ServletModule {
-    private final MockRM rm;
-
-    WebServletModule(MockRM rm) {
-      this.rm = rm;
-    }
-
-    @Override
-    protected void configureServlets() {
-      bind(JAXBContextResolver.class);
-      bind(RMWebServices.class);
-      bind(GenericExceptionHandler.class);
-      bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
-    }
   }
 
   public static void runTest(String template, String name,
       MockRM rm,
-      WebResource resource) throws Exception {
-    final boolean reinitAfterNodeChane = isMutableConfig(rm.getConfig());
+      WebTarget resource) throws Exception {
     try {
       boolean legacyQueueMode = ((CapacityScheduler) rm.getResourceScheduler())
           .getConfiguration().isLegacyQueueMode();
@@ -105,16 +94,10 @@ public final class TestWebServiceUtil {
 
       MockNM nm1 = rm.registerNode("h1:1234", 8 * GB, 8);
       rm.registerNode("h2:1234", 8 * GB, 8);
-      if (reinitAfterNodeChane) {
-        reinitialize(rm, rm.getConfig());
-      }
       assertJsonResponse(sendRequest(resource),
           getExpectedResourceFile(template, name, "16", legacyQueueMode));
       rm.registerNode("h3:1234", 8 * GB, 8);
       MockNM nm4 = rm.registerNode("h4:1234", 8 * GB, 8);
-      if (reinitAfterNodeChane) {
-        reinitialize(rm, rm.getConfig());
-      }
 
       assertJsonResponse(sendRequest(resource),
           getExpectedResourceFile(template, name, "32", legacyQueueMode));
@@ -163,27 +146,22 @@ public final class TestWebServiceUtil {
     return text;
   }
 
-  public static boolean isMutableConfig(Configuration config) {
-    return Objects.equals(config.get(SCHEDULER_CONFIGURATION_STORE_CLASS),
-        MEMORY_CONFIGURATION_STORE);
-  }
-
-  public static ClientResponse sendRequest(WebResource resource) {
+  public static Response sendRequest(WebTarget resource) {
     return resource.path("ws").path("v1").path("cluster")
-        .path("scheduler").accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
+        .path("scheduler").request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
   }
 
-  public static void assertXmlType(ClientResponse response) {
-    assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
+  public static void assertXmlType(Response response) {
+    assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
   }
 
-  public static void assertXmlResponse(ClientResponse response,
+  public static void assertXmlResponse(Response response,
       String expectedResourceFilename) throws
       Exception {
     assertXmlType(response);
-    Document document = loadDocument(response.getEntity(String.class));
+    Document document = loadDocument(response.readEntity(String.class));
     String actual = serializeDocument(document).trim();
     updateTestDataAutomatically(expectedResourceFilename, actual);
     assertEquals(getResourceAsString(expectedResourceFilename), actual);
@@ -208,28 +186,67 @@ public final class TestWebServiceUtil {
     return builder.parse(is);
   }
 
-  public static void assertJsonResponse(ClientResponse response,
-      String expectedResourceFilename) throws JSONException,
-      IOException {
+  public static void assertJsonResponse(Response response,
+      String expectedResourceFilename) throws IOException {
     assertJsonType(response);
-    JSONObject json = response.getEntity(JSONObject.class);
-    String actual = prettyPrintJson(json.toString(2));
+
+    JsonNode jsonNode = MAPPER.readTree(response.readEntity(String.class));
+    sortQueuesLexically((ObjectNode) jsonNode);
+
+    String actual = OBJECT_WRITER.writeValueAsString(jsonNode);
     updateTestDataAutomatically(expectedResourceFilename, actual);
     assertEquals(
-        prettyPrintJson(getResourceAsString(expectedResourceFilename)),
+        // Deserialize/serialise again with the exact same settings
+        // to make sure jackson upgrade doesn't break the test
+        OBJECT_WRITER.writeValueAsString(
+            MAPPER.readTree(
+                Objects.requireNonNull(getResourceAsString(expectedResourceFilename)))),
         actual);
   }
 
-  private static String prettyPrintJson(String in) throws JsonProcessingException {
-    ObjectMapper objectMapper = new ObjectMapper();
-    return objectMapper
-        .writerWithDefaultPrettyPrinter()
-        .writeValueAsString(objectMapper.readTree(in));
+  /**
+   * Sorts the "queue": [ {}, {}, {} ] parts recursively by the queuePath key.
+   *
+   * <p>
+   * There was a marshalling error described in YARN-4785 in CapacitySchedulerInfo.getQueues().
+   * If that issue still present, we can't sort the queues there, but only sort the leaf queues
+   * then the non-leaf queues which would make a consistent output, but hard to document.
+   * Instead we make sure the test data is at least ordered by queue names.
+   * </p>
+   *
+   * @param object the json object to sort.
+   */
+  private static void sortQueuesLexically(ObjectNode object) {
+    Iterator<String> keys = object.fieldNames();
+    while (keys.hasNext()) {
+      String key = keys.next();
+      JsonNode o = object.get(key);
+      if (key.equals("queue") && o.isArray()) {
+        ArrayNode original = (ArrayNode) o;
+        List<ObjectNode> queues = new ArrayList<>(original.size());
+        for (int i = 0; i < original.size(); i++) {
+          if (original.get(i).isObject()) {
+            queues.add((ObjectNode) original.get(i));
+          }
+        }
+        queues.sort(new Comparator<ObjectNode>() {
+          private static final String SORT_BY_KEY = "queuePath";
+          @Override
+          public int compare(ObjectNode a, ObjectNode b) {
+            return a.get(SORT_BY_KEY).asText().compareTo(b.get(SORT_BY_KEY).asText());
+          }
+        });
+
+        object.set("queue", MAPPER.createObjectNode().arrayNode().addAll(queues));
+      } else if (o.isObject()) {
+        sortQueuesLexically((ObjectNode) o);
+      }
+    }
   }
 
-  public static void assertJsonType(ClientResponse response) {
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
+  public static void assertJsonType(Response response) {
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
   }
 
   public static InputStream getResourceAsStream(String configFilename) {
@@ -271,34 +288,28 @@ public final class TestWebServiceUtil {
       }
     } catch (URISyntaxException | IOException e) {
       e.printStackTrace();
-      Assert.fail("overwrite should not fail " + e.getMessage());
+      fail("overwrite should not fail " + e.getMessage());
     }
-  }
-  public static WebAppDescriptor createWebAppDescriptor() {
-    return new WebAppDescriptor.Builder(
-        TestRMWebServicesCapacitySched.class.getPackage().getName())
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build();
   }
 
   public static MockRM createRM(Configuration config) {
+    return createRM(config, false);
+  }
+
+  public static MockRM createRM(Configuration config, boolean setCustomAuthFilter) {
     config.setClass(YarnConfiguration.RM_SCHEDULER,
         CapacityScheduler.class, ResourceScheduler.class);
     config.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     MockRM rm = new MockRM(config);
-    GuiceServletConfig.setInjector(Guice.createInjector(new WebServletModule(rm)));
     rm.start();
     return rm;
   }
 
-  public static MockRM createMutableRM(Configuration conf) throws IOException {
+  public static MockRM createMutableRM(Configuration conf, boolean setCustomAuthFilter) {
     conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
         YarnConfiguration.MEMORY_CONFIGURATION_STORE);
-    MockRM rm = createRM(new CapacitySchedulerConfiguration(conf));
-    reinitialize(rm, conf);
-    return rm;
+    return createRM(new CapacitySchedulerConfiguration(conf), setCustomAuthFilter);
   }
 
   public static void reinitialize(MockRM rm, Configuration conf) throws IOException {
@@ -308,5 +319,59 @@ public final class TestWebServiceUtil {
     // Therefore CS will think there's only the default queue there.
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     cs.reinitialize(conf, rm.getRMContext(), true);
+  }
+
+  public static File getCapacitySchedulerConfigFileInTarget() {
+    return new File("target/test-classes", YarnConfiguration.CS_CONFIGURATION_FILE);
+  }
+
+  public static File getBackupCapacitySchedulerConfigFileInTarget() {
+    return new File("target/test-classes", YarnConfiguration.CS_CONFIGURATION_FILE + ".tmp");
+  }
+
+  public static void backupSchedulerConfigFileInTarget() {
+    final File file = getCapacitySchedulerConfigFileInTarget();
+    if (file.exists()) {
+      if (!file.renameTo(getBackupCapacitySchedulerConfigFileInTarget())) {
+        throw new RuntimeException("Failed to backup configuration file");
+      }
+    }
+  }
+
+  public static void restoreSchedulerConfigFileInTarget() {
+    File file = getBackupCapacitySchedulerConfigFileInTarget();
+    if (file.exists()) {
+      getCapacitySchedulerConfigFileInTarget().delete();
+      if (!file.renameTo(getCapacitySchedulerConfigFileInTarget())) {
+        throw new RuntimeException("Failed to restore configuration file");
+      }
+    }
+  }
+
+  public static String toEntity(Object obj, Class<?> klass, String mediaType)
+      throws Exception {
+    if (mediaType == MediaType.APPLICATION_JSON) {
+      return toJson(obj, klass);
+    }
+    if(mediaType == MediaType.APPLICATION_XML) {
+      return toXml(obj, klass);
+    }
+    return null;
+  }
+
+  public static String toJson(Object obj, Class<?> klass) throws Exception {
+    StringWriter stringWriter = new StringWriter();
+    JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(klass);
+    JettisonMarshaller jettisonMarshaller = jettisonJaxbContext.createJsonMarshaller();
+    jettisonMarshaller.marshallToJSON(obj, stringWriter);
+    return stringWriter.toString();
+  }
+
+  public static String toXml(Object obj, Class<?> klass) throws JAXBException {
+    StringWriter stringWriter = new StringWriter();
+    JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(klass);
+    Marshaller marshaller = jettisonJaxbContext.createMarshaller();
+    marshaller.marshal(obj, stringWriter);
+    return stringWriter.toString();
   }
 }

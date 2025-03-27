@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.mapreduce;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterEach;
+
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.RawComparator;
@@ -26,7 +28,9 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.junit.Test;
+
+import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -36,12 +40,15 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestNewCombinerGrouping {
-  private static String TEST_ROOT_DIR = new File(System.getProperty(
-      "test.build.data", "build/test/data"), UUID.randomUUID().toString())
-          .getAbsolutePath();
+  private static File testRootDir = GenericTestUtils.getRandomizedTestDir();
 
   public static class Map extends
       Mapper<LongWritable, Text, Text, LongWritable> {
@@ -103,16 +110,21 @@ public class TestNewCombinerGrouping {
 
   }
 
+  @AfterEach
+  public void cleanup() {
+    FileUtil.fullyDelete(testRootDir);
+  }
+
   @Test
   public void testCombiner() throws Exception {
-    if (!new File(TEST_ROOT_DIR).mkdirs()) {
-      throw new RuntimeException("Could not create test dir: " + TEST_ROOT_DIR);
+    if (!testRootDir.mkdirs()) {
+      throw new RuntimeException("Could not create test dir: " + testRootDir);
     }
-    File in = new File(TEST_ROOT_DIR, "input");
+    File in = new File(testRootDir, "input");
     if (!in.mkdirs()) {
       throw new RuntimeException("Could not create test dir: " + in);
     }
-    File out = new File(TEST_ROOT_DIR, "output");
+    File out = new File(testRootDir, "output");
     PrintWriter pw = new PrintWriter(new FileWriter(new File(in, "data.txt")));
     pw.println("A|a,1");
     pw.println("A|b,2");
@@ -149,30 +161,30 @@ public class TestNewCombinerGrouping {
       long combinerOutputRecords = counters.findCounter(
           "org.apache.hadoop.mapreduce.TaskCounter",
           "COMBINE_OUTPUT_RECORDS").getValue();
-      Assert.assertTrue(combinerInputRecords > 0);
-      Assert.assertTrue(combinerInputRecords > combinerOutputRecords);
+      assertTrue(combinerInputRecords > 0);
+      assertTrue(combinerInputRecords > combinerOutputRecords);
 
       BufferedReader br = new BufferedReader(new FileReader(
           new File(out, "part-r-00000")));
       Set<String> output = new HashSet<String>();
       String line = br.readLine();
-      Assert.assertNotNull(line);
+      assertNotNull(line);
       output.add(line.substring(0, 1) + line.substring(4, 5));
       line = br.readLine();
-      Assert.assertNotNull(line);
+      assertNotNull(line);
       output.add(line.substring(0, 1) + line.substring(4, 5));
       line = br.readLine();
-      Assert.assertNull(line);
+      assertNull(line);
       br.close();
 
       Set<String> expected = new HashSet<String>();
       expected.add("A2");
       expected.add("B5");
 
-      Assert.assertEquals(expected, output);
+      assertEquals(expected, output);
 
     } else {
-      Assert.fail("Job failed");
+      fail("Job failed");
     }
   }
 

@@ -134,6 +134,11 @@ Usage: `mapred envvars`
 
 Display computed Hadoop environment variables.
 
+# `successfile`
+
+Load and print a JSON `_SUCCESS` file from a [Manifest Committer](manifest_committer.html) or an S3A Committer,
+
+
 Administration Commands
 -----------------------
 

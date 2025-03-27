@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.commit.terasort;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
@@ -43,7 +44,9 @@ import org.apache.hadoop.examples.terasort.TeraSort;
 import org.apache.hadoop.examples.terasort.TeraSortConfigKeys;
 import org.apache.hadoop.examples.terasort.TeraValidate;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.commit.AbstractYarnClusterITest;
+import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter;
 import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitter;
 import org.apache.hadoop.mapred.JobConf;
@@ -97,6 +100,9 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
   /** Name of the committer for this run. */
   private final String committerName;
 
+  /** Should Magic committer track pending commits in-memory. */
+  private final boolean trackCommitsInMemory;
+
   /** Base path for all the terasort input and output paths. */
   private Path terasortPath;
 
@@ -114,15 +120,17 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
    *
    * @return the committer binding for this run.
    */
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "{0}-memory={1}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {DirectoryStagingCommitter.NAME},
-        {MagicS3GuardCommitter.NAME}});
+        {DirectoryStagingCommitter.NAME, false},
+        {MagicS3GuardCommitter.NAME, false},
+        {MagicS3GuardCommitter.NAME, true}});
   }
 
-  public ITestTerasortOnS3A(final String committerName) {
+  public ITestTerasortOnS3A(final String committerName, final boolean trackCommitsInMemory) {
     this.committerName = committerName;
+    this.trackCommitsInMemory = trackCommitsInMemory;
   }
 
   @Override
@@ -135,6 +143,11 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
     super.setup();
     requireScaleTestsEnabled();
     prepareToTerasort();
+  }
+
+  @Override
+  protected void deleteTestDirInTeardown() throws IOException {
+    /* no-op */
   }
 
   /**
@@ -152,6 +165,9 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
     conf.setBoolean(
         TeraSortConfigKeys.USE_SIMPLE_PARTITIONER.key(),
         false);
+    conf.setBoolean(
+        CommitConstants.FS_S3A_COMMITTER_MAGIC_TRACK_COMMITS_IN_MEMORY_ENABLED,
+        trackCommitsInMemory);
   }
 
   private int getExpectedPartitionCount() {
@@ -171,14 +187,14 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
    * The paths used must be unique across parameterized runs but
    * common across all test cases in a single parameterized run.
    */
-  private void prepareToTerasort() {
+  private void prepareToTerasort() throws IOException {
     // small sample size for faster runs
-    terasortPath = new Path("/terasort-" + committerName)
-        .makeQualified(getFileSystem());
+    terasortPath = getFileSystem().qualify(
+        new Path(S3ATestUtils.createTestPath(new Path("terasort-test")),
+            "terasort-" + committerName + "-" + trackCommitsInMemory));
     sortInput = new Path(terasortPath, "sortin");
     sortOutput = new Path(terasortPath, "sortout");
     sortValidate = new Path(terasortPath, "validate");
-
   }
 
   /**
@@ -245,7 +261,7 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
    */
   @Test
   public void test_100_terasort_setup() throws Throwable {
-    describe("Setting up for a terasort");
+    describe("Setting up for a terasort with path of %s", terasortPath);
 
     getFileSystem().delete(terasortPath, true);
     completedStages = new HashMap<>();
@@ -330,7 +346,8 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
     stage.accept("teravalidate");
     stage.accept("overall");
     String text = results.toString();
-    File resultsFile = new File(getReportDir(), committerName + ".csv");
+    File resultsFile = new File(getReportDir(),
+        String.format("%s-%s.csv", committerName, trackCommitsInMemory));
     FileUtils.write(resultsFile, text, StandardCharsets.UTF_8);
     LOG.info("Results are in {}\n{}", resultsFile, text);
   }

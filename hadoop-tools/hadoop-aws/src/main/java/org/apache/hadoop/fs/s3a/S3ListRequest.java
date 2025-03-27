@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 
 /**
  * API version-independent container for S3 List requests.
@@ -78,14 +78,14 @@ public final class S3ListRequest {
   public String toString() {
     if (isV1()) {
       return String.format(DESCRIPTION,
-          v1Request.getBucketName(), v1Request.getPrefix(),
-          v1Request.getDelimiter(), v1Request.getMaxKeys(),
-          v1Request.isRequesterPays());
+          v1Request.bucket(), v1Request.prefix(),
+          v1Request.delimiter(), v1Request.maxKeys(),
+          v1Request.requestPayerAsString());
     } else {
       return String.format(DESCRIPTION,
-          v2Request.getBucketName(), v2Request.getPrefix(),
-          v2Request.getDelimiter(), v2Request.getMaxKeys(),
-          v2Request.isRequesterPays());
+          v2Request.bucket(), v2Request.prefix(),
+          v2Request.delimiter(), v2Request.maxKeys(),
+          v2Request.requestPayerAsString());
     }
   }
 }

@@ -27,7 +27,9 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestAfsCheckPath {
   
@@ -56,11 +58,13 @@ public class TestAfsCheckPath {
     afs.checkPath(new Path("dummy://dummy-host:" + OTHER_PORT));
   }
   
-  @Test(expected=InvalidPathException.class)
+  @Test
   public void testCheckPathWithDifferentPorts() throws URISyntaxException {
-    URI uri = new URI("dummy://dummy-host:" + DEFAULT_PORT);
-    AbstractFileSystem afs = new DummyFileSystem(uri);
-    afs.checkPath(new Path("dummy://dummy-host:" + OTHER_PORT));
+    assertThrows(InvalidPathException.class, () -> {
+      URI uri = new URI("dummy://dummy-host:" + DEFAULT_PORT);
+      AbstractFileSystem afs = new DummyFileSystem(uri);
+      afs.checkPath(new Path("dummy://dummy-host:" + OTHER_PORT));
+    });
   }
   
   private static class DummyFileSystem extends AbstractFileSystem {

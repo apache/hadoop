@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.server.namenode.visitor.NamespacePrintVisitor;
 import org.apache.hadoop.hdfs.util.Canceler;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -77,15 +79,18 @@ public class TestFSImageWithSnapshot {
   MiniDFSCluster cluster;
   FSNamesystem fsn;
   DistributedFileSystem hdfs;
+
+  public void createCluster() throws IOException {
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
+    cluster.waitActive();
+    fsn = cluster.getNamesystem();
+    hdfs = cluster.getFileSystem();
+  }
   
   @Before
   public void setUp() throws Exception {
     conf = new Configuration();
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES)
-        .build();
-    cluster.waitActive();
-    fsn = cluster.getNamesystem();
-    hdfs = cluster.getFileSystem();
+    createCluster();
   }
 
   @After
@@ -147,11 +152,11 @@ public class TestFSImageWithSnapshot {
         conf);
     FSImageCompression compression = FSImageCompression.createCompression(conf);
     File imageFile = getImageFile(testDir, txid);
-    fsn.readLock();
+    fsn.readLock(RwLockMode.GLOBAL);
     try {
       saver.save(imageFile, compression);
     } finally {
-      fsn.readUnlock();
+      fsn.readUnlock(RwLockMode.GLOBAL, "saveFSImage");
     }
     return imageFile;
   }
@@ -159,14 +164,14 @@ public class TestFSImageWithSnapshot {
   /** Load the fsimage from a temp file */
   private void loadFSImageFromTempFile(File imageFile) throws IOException {
     FSImageFormat.LoaderDelegator loader = FSImageFormat.newLoader(conf, fsn);
-    fsn.writeLock();
+    fsn.writeLock(RwLockMode.GLOBAL);
     fsn.getFSDirectory().writeLock();
     try {
       loader.load(imageFile, false);
       fsn.getFSDirectory().updateCountForQuota();
     } finally {
       fsn.getFSDirectory().writeUnlock();
-      fsn.writeUnlock();
+      fsn.writeUnlock(RwLockMode.GLOBAL, "loadFSImageFromTempFile");
     }
   }
   
@@ -510,6 +515,32 @@ public class TestFSImageWithSnapshot {
     cluster.waitActive();
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
+  }
+
+  /**
+   * Test parallel compressed fsimage can be loaded serially.
+   */
+  @Test
+  public void testLoadParallelCompressedImageSerial() throws Exception {
+    int s = 0;
+    cluster.shutdown();
+
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
+    cluster.waitActive();
+    fsn = cluster.getNamesystem();
+    hdfs = cluster.getFileSystem();
+    hdfs.mkdirs(dir);
+    SnapshotTestHelper.createSnapshot(hdfs, dir, "s");
+
+    Path sub1 = new Path(dir, "sub1");
+    Path sub1file1 = new Path(sub1, "sub1file1");
+    Path sub1file2 = new Path(sub1, "sub1file2");
+    DFSTestUtil.createFile(hdfs, sub1file1, BLOCKSIZE, (short) 1, seed);
+    DFSTestUtil.createFile(hdfs, sub1file2, BLOCKSIZE, (short) 1, seed);
+
+    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, false);
+    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY, false);
+    checkImage(s);
   }
 
   void rename(Path src, Path dst) throws Exception {

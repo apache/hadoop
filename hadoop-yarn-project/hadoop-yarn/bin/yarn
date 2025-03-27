@@ -52,6 +52,7 @@ function hadoop_usage
   hadoop_add_subcommand "rmadmin" admin "admin tools"
   hadoop_add_subcommand "router" daemon "run the Router daemon"
   hadoop_add_subcommand "routeradmin" admin "router admin tools"
+  hadoop_add_subcommand "gpgadmin" admin "yan gpg admin tools"
   hadoop_add_subcommand "schedulerconf" client "Updates scheduler configuration"
   hadoop_add_subcommand "scmadmin" admin "SharedCacheManager admin tools"
   hadoop_add_subcommand "sharedcachemanager" daemon "run the SharedCacheManager daemon"
@@ -110,6 +111,10 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
     globalpolicygenerator)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator'
+      # Backwards compatibility
+      if [[ -n "${YARN_GLOBALPOLICYGENERATOR_HEAPSIZE}" ]]; then
+        HADOOP_HEAPSIZE_MAX="${YARN_GLOBALPOLICYGENERATOR_HEAPSIZE}"
+      fi
     ;;
     jar)
       HADOOP_CLASSNAME=org.apache.hadoop.util.RunJar
@@ -188,6 +193,9 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
     ;;
     routeradmin)
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.RouterCLI'
+    ;;
+    gpgadmin)
+      HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.GpgCLI'
     ;;
     schedulerconf)
     HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.SchedConfCLI'

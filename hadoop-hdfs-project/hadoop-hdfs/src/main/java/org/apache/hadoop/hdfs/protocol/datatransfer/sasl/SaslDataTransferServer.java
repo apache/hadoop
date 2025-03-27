@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil.*;
@@ -28,6 +29,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -55,6 +58,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockPoolTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.datanode.DNConf;
+import org.apache.hadoop.security.CustomizedCallbackHandler;
 import org.apache.hadoop.security.SaslPropertiesResolver;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -63,7 +67,6 @@ import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * Negotiates SASL for DataTransferProtocol on behalf of a server.  There are
@@ -179,7 +182,7 @@ public class SaslDataTransferServer {
         dnConf.getEncryptionAlgorithm());
     }
 
-    CallbackHandler callbackHandler = new SaslServerCallbackHandler(
+    final CallbackHandler callbackHandler = new SaslServerCallbackHandler(dnConf.getConf(),
       new PasswordFunction() {
         @Override
         public char[] apply(String userName) throws IOException {
@@ -196,7 +199,7 @@ public class SaslDataTransferServer {
    * logic.  It's similar to a Guava Function, but we need to let it throw
    * exceptions.
    */
-  private interface PasswordFunction {
+  interface PasswordFunction {
 
     /**
      * Returns the SASL password for the given user name.
@@ -211,18 +214,20 @@ public class SaslDataTransferServer {
   /**
    * Sets user name and password when asked by the server-side SASL object.
    */
-  private static final class SaslServerCallbackHandler
+  static final class SaslServerCallbackHandler
       implements CallbackHandler {
-
     private final PasswordFunction passwordFunction;
+    private final CustomizedCallbackHandler customizedCallbackHandler;
 
     /**
      * Creates a new SaslServerCallbackHandler.
      *
      * @param passwordFunction for determing the user's password
      */
-    public SaslServerCallbackHandler(PasswordFunction passwordFunction) {
+    SaslServerCallbackHandler(Configuration conf, PasswordFunction passwordFunction) {
       this.passwordFunction = passwordFunction;
+      this.customizedCallbackHandler = CustomizedCallbackHandler.get(
+          HADOOP_SECURITY_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY, conf);
     }
 
     @Override
@@ -231,6 +236,7 @@ public class SaslDataTransferServer {
       NameCallback nc = null;
       PasswordCallback pc = null;
       AuthorizeCallback ac = null;
+      List<Callback> unknownCallbacks = null;
       for (Callback callback : callbacks) {
         if (callback instanceof AuthorizeCallback) {
           ac = (AuthorizeCallback) callback;
@@ -241,8 +247,10 @@ public class SaslDataTransferServer {
         } else if (callback instanceof RealmCallback) {
           continue; // realm is ignored
         } else {
-          throw new UnsupportedCallbackException(callback,
-              "Unrecognized SASL DIGEST-MD5 Callback: " + callback);
+          if (unknownCallbacks == null) {
+            unknownCallbacks = new ArrayList<>();
+          }
+          unknownCallbacks.add(callback);
         }
       }
 
@@ -253,6 +261,12 @@ public class SaslDataTransferServer {
       if (ac != null) {
         ac.setAuthorized(true);
         ac.setAuthorizedID(ac.getAuthorizationID());
+      }
+
+      if (unknownCallbacks != null) {
+        final String name = nc != null ? nc.getDefaultName() : null;
+        final char[] password = name != null ? passwordFunction.apply(name) : null;
+        customizedCallbackHandler.handleCallbacks(unknownCallbacks, name, password);
       }
     }
   }
@@ -299,7 +313,7 @@ public class SaslDataTransferServer {
     Map<String, String> saslProps = saslPropsResolver.getServerProperties(
       getPeerAddress(peer));
 
-    CallbackHandler callbackHandler = new SaslServerCallbackHandler(
+    final CallbackHandler callbackHandler = new SaslServerCallbackHandler(dnConf.getConf(),
       new PasswordFunction() {
         @Override
         public char[] apply(String userName) throws IOException {
@@ -327,7 +341,7 @@ public class SaslDataTransferServer {
     byte[] tokenPassword = blockPoolTokenSecretManager.retrievePassword(
       identifier);
     return (new String(Base64.encodeBase64(tokenPassword, false),
-      Charsets.UTF_8)).toCharArray();
+      StandardCharsets.UTF_8)).toCharArray();
   }
 
   /**
@@ -383,7 +397,8 @@ public class SaslDataTransferServer {
       if (secret != null || bpid != null) {
         // sanity check, if one is null, the other must also not be null
         assert(secret != null && bpid != null);
-        String qop = new String(secret, Charsets.UTF_8);
+        String qop = new String(secret, StandardCharsets.UTF_8);
+        saslProps.put(Sasl.QOP, qop);
         dynamicSaslProps.put(Sasl.QOP, qop);
       }
       SaslParticipant sasl = SaslParticipant.createServerSaslParticipant(

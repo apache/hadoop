@@ -27,6 +27,8 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlSeeAlso;
 import javax.xml.bind.annotation.XmlTransient;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
@@ -111,8 +113,9 @@ public class FairSchedulerQueueInfo {
     reservedContainers = queue.getMetrics().getReservedContainers();
     pendingContainers = queue.getMetrics().getPendingContainers();
 
-    if (allocConf.isReservable(queueName) &&
-        !allocConf.getShowReservationAsQueues(queueName)) {
+    QueuePath queuePath = new QueuePath(queueName);
+    if (allocConf.isReservable(queuePath) &&
+        !allocConf.getShowReservationAsQueues(queuePath)) {
       return;
     }
 

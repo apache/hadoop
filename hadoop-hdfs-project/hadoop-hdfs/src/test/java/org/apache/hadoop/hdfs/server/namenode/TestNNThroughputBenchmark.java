@@ -22,8 +22,10 @@ import java.io.File;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -98,7 +100,30 @@ public class TestNNThroughputBenchmark {
       }
     }
   }
-
+  /**
+   * This test runs {@link NNThroughputBenchmark} against a mini DFS cluster with
+   * nonSuperUser option (useful when testing any authorization framework e.g.
+   * Ranger since only super user e.g. hdfs can enter/exit safemode
+   * but any request from super user is not sent for authorization).
+   */
+  @Test(timeout = 120000)
+  public void testNNThroughputAgainstRemoteNNNonSuperUser() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
+      final Configuration benchConf = new HdfsConfiguration();
+      benchConf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 16);
+      FileSystem.setDefaultUri(benchConf, cluster.getURI());
+      NNThroughputBenchmark.runBenchmark(benchConf, new String[]{"-op", "all", "-nonSuperUser"});
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
   /**
    * This test runs {@link NNThroughputBenchmark} against a mini DFS cluster
    * with explicit -fs option.
@@ -185,6 +210,98 @@ public class TestNNThroughputBenchmark {
       NNThroughputBenchmark.runBenchmark(benchConf,
           new String[]{"-fs", cluster.getURI().toString(), "-op",
               "blockReport", "-datanodes", "3", "-reports", "2"});
+    }
+  }
+
+  /**
+   * This test runs {@link NNThroughputBenchmark} against a mini DFS cluster
+   * with explicit -baseDirName option.
+   */
+  @Test(timeout = 120000)
+  public void testNNThroughputWithBaseDir() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
+      final Configuration benchConf = new HdfsConfiguration();
+      benchConf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 16);
+      FileSystem.setDefaultUri(benchConf, cluster.getURI());
+      DistributedFileSystem fs = cluster.getFileSystem();
+
+      NNThroughputBenchmark.runBenchmark(benchConf,
+          new String[] {"-op", "create", "-keepResults", "-files", "3", "-baseDirName",
+              "/nnThroughputBenchmark1", "-close"});
+      Assert.assertTrue(fs.exists(new Path("/nnThroughputBenchmark1")));
+      Assert.assertFalse(fs.exists(new Path("/nnThroughputBenchmark")));
+
+      NNThroughputBenchmark.runBenchmark(benchConf,
+          new String[] {"-op", "all", "-baseDirName", "/nnThroughputBenchmark1"});
+      Assert.assertTrue(fs.exists(new Path("/nnThroughputBenchmark1")));
+      Assert.assertFalse(fs.exists(new Path("/nnThroughputBenchmark")));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * This test runs {@link NNThroughputBenchmark} against a mini DFS cluster
+   * for blockSize  with letter suffix.
+   */
+  @Test(timeout = 120000)
+  public void testNNThroughputForBlockSizeWithLetterSuffix() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
+    conf.set(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, "1m");
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      cluster.waitActive();
+      final Configuration benchConf = new HdfsConfiguration();
+      benchConf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
+      benchConf.set(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, "1m");
+      FileSystem.setDefaultUri(benchConf, cluster.getURI());
+      NNThroughputBenchmark.runBenchmark(benchConf,
+          new String[]{"-op", "create", "-keepResults", "-files", "3", "-close"});
+    }
+  }
+
+  /**
+   * This test runs {@link NNThroughputBenchmark} against a mini DFS cluster
+   * with explicit -blockSize option.
+   */
+  @Test(timeout = 120000)
+  public void testNNThroughputWithBlockSize() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      cluster.waitActive();
+      final Configuration benchConf = new HdfsConfiguration();
+      benchConf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
+      FileSystem.setDefaultUri(benchConf, cluster.getURI());
+      NNThroughputBenchmark.runBenchmark(benchConf,
+          new String[]{"-op", "create", "-keepResults", "-files", "3",
+              "-blockSize", "32", "-close"});
+    }
+  }
+
+  /**
+   * This test runs {@link NNThroughputBenchmark} against a mini DFS cluster
+   * with explicit -blockSize option like 1m.
+   */
+  @Test(timeout = 120000)
+  public void testNNThroughputBlockSizeArgWithLetterSuffix() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      cluster.waitActive();
+      final Configuration benchConf = new HdfsConfiguration();
+      benchConf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
+      FileSystem.setDefaultUri(benchConf, cluster.getURI());
+      NNThroughputBenchmark.runBenchmark(benchConf,
+          new String[]{"-op", "create", "-keepResults", "-files", "3",
+              "-blockSize", "1m", "-close"});
     }
   }
 }

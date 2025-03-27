@@ -395,19 +395,19 @@ public final class TimelineEntityV2Converter {
         }
       }
       Map<String, Long> resourceSecondsMap = new HashMap<>();
-      Map<String, Long> preemptedResoureSecondsMap = new HashMap<>();
+      Map<String, Long> preemptedResourceSecondsMap = new HashMap<>();
       resourceSecondsMap
           .put(ResourceInformation.MEMORY_MB.getName(), memorySeconds);
       resourceSecondsMap
           .put(ResourceInformation.VCORES.getName(), vcoreSeconds);
-      preemptedResoureSecondsMap.put(ResourceInformation.MEMORY_MB.getName(),
+      preemptedResourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(),
           preemptedMemorySeconds);
-      preemptedResoureSecondsMap
+      preemptedResourceSecondsMap
           .put(ResourceInformation.VCORES.getName(), preemptedVcoreSeconds);
 
       appResources = ApplicationResourceUsageReport
           .newInstance(0, 0, null, null, null, resourceSecondsMap, 0, 0,
-              preemptedResoureSecondsMap);
+              preemptedResourceSecondsMap);
     }
 
     NavigableSet<TimelineEvent> events = entity.getEvents();

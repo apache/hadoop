@@ -21,9 +21,9 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.net.URI;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.services.s3.AmazonS3;
+import software.amazon.awssdk.core.SdkRequest;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.s3.S3Client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +40,7 @@ import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AuditTestSupport;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase;
-import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
+import org.apache.hadoop.fs.s3a.impl.ClientManager;
 import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
@@ -49,8 +49,11 @@ import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.test.MinimalWriteOperationHelperCallbacks;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.util.Progressable;
 
+
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PART_UPLOAD_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditor;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTrackerFactory;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
@@ -96,6 +99,7 @@ public class MockS3AFileSystem extends S3AFileSystem {
       .withRequestPreparer(MockS3AFileSystem::prepareRequest)
       .withBucket(BUCKET)
       .withEncryptionSecrets(new EncryptionSecrets())
+      .withPartUploadTimeout(DEFAULT_PART_UPLOAD_TIMEOUT)
       .build();
 
   /**
@@ -116,8 +120,12 @@ public class MockS3AFileSystem extends S3AFileSystem {
     root = new Path(FS_URI.toString());
   }
 
-  private static <T extends AmazonWebServiceRequest> T prepareRequest(T t) {
-    return t;
+  private static void prepareRequest(SdkRequest.Builder t) {}
+
+  @Override
+  protected S3AStore createS3AStore(final ClientManager clientManager,
+      final int rateLimitCapacity) {
+    return super.createS3AStore(clientManager, rateLimitCapacity);
   }
 
   @Override
@@ -178,7 +186,7 @@ public class MockS3AFileSystem extends S3AFileSystem {
         new EmptyS3AStatisticsContext(),
         noopAuditor(conf),
         AuditTestSupport.NOOP_SPAN,
-        new MinimalWriteOperationHelperCallbacks());
+        new MinimalWriteOperationHelperCallbacks(this::getS3Client));
   }
 
   @Override
@@ -187,6 +195,11 @@ public class MockS3AFileSystem extends S3AFileSystem {
 
   @Override
   public WriteOperationHelper getWriteOperationHelper() {
+    return writeHelper;
+  }
+
+  @Override
+  public WriteOperationHelper createWriteOperationHelper(final AuditSpan auditSpan) {
     return writeHelper;
   }
 
@@ -210,7 +223,7 @@ public class MockS3AFileSystem extends S3AFileSystem {
    * @param client client.
    */
   @Override
-  public void setAmazonS3Client(AmazonS3 client) {
+  public void setAmazonS3Client(S3Client client) {
     LOG.debug("Setting S3 client to {}", client);
     super.setAmazonS3Client(client);
   }
@@ -219,15 +232,6 @@ public class MockS3AFileSystem extends S3AFileSystem {
   public boolean exists(Path f) throws IOException {
     event("exists(%s)", f);
     return mock.exists(f);
-  }
-
-  @Override
-  void finishedWrite(String key,
-      long length,
-      String eTag,
-      String versionId,
-      final PutObjectOptions putOptions) {
-
   }
 
   @Override
@@ -353,13 +357,17 @@ public class MockS3AFileSystem extends S3AFileSystem {
   void deleteObjectAtPath(Path f,
       String key,
       boolean isFile)
-      throws AmazonClientException, IOException {
-    deleteObject(key);
+      throws SdkException, IOException {
+    mock.getS3AInternals()
+            .getAmazonS3Client("test")
+            .deleteObject(getRequestFactory()
+            .newDeleteObjectRequestBuilder(key)
+            .build());
   }
 
   @Override
   protected void maybeCreateFakeParentDirectory(Path path)
-      throws IOException, AmazonClientException {
+      throws IOException, SdkException {
     // no-op
   }
 

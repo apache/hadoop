@@ -22,8 +22,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSSessionCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -116,7 +116,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
   public void testSaveLoadTokens() throws Throwable {
     File tokenFile = File.createTempFile("token", "bin");
     EncryptionSecrets encryptionSecrets = new EncryptionSecrets(
-        S3AEncryptionMethods.SSE_KMS, KMS_KEY);
+        S3AEncryptionMethods.SSE_KMS, KMS_KEY, "");
     Token<AbstractS3ATokenIdentifier> dt
         = delegationTokens.createDelegationToken(encryptionSecrets, null);
     final SessionTokenIdentifier origIdentifier
@@ -171,7 +171,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     assertNull("Current User has delegation token",
         delegationTokens.selectTokenFromFSOwner());
     EncryptionSecrets secrets = new EncryptionSecrets(
-        S3AEncryptionMethods.SSE_KMS, KMS_KEY);
+        S3AEncryptionMethods.SSE_KMS, KMS_KEY, "");
     Token<AbstractS3ATokenIdentifier> originalDT
         = delegationTokens.createDelegationToken(secrets, null);
     assertEquals("Token kind mismatch", getTokenKind(), originalDT.getKind());
@@ -186,11 +186,15 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     final MarshalledCredentials creds;
     try(S3ADelegationTokens dt2 = instantiateDTSupport(getConfiguration())) {
       dt2.start();
+      // first creds are good
+      dt2.getCredentialProviders().resolveCredentials();
+
+      // reset to the original dt
 
       dt2.resetTokenBindingToDT(originalDT);
-      final AWSSessionCredentials awsSessionCreds
+      final AwsSessionCredentials awsSessionCreds
           = verifySessionCredentials(
-          dt2.getCredentialProviders().getCredentials());
+              dt2.getCredentialProviders().resolveCredentials());
       final MarshalledCredentials origCreds = fromAWSCredentials(
           awsSessionCreds);
 
@@ -225,7 +229,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     assertNull("Current User has delegation token",
         delegationTokens.selectTokenFromFSOwner());
     EncryptionSecrets secrets = new EncryptionSecrets(
-        S3AEncryptionMethods.SSE_KMS, KMS_KEY);
+        S3AEncryptionMethods.SSE_KMS, KMS_KEY, "");
     Token<AbstractS3ATokenIdentifier> dt
         = delegationTokens.createDelegationToken(secrets, renewer);
     assertEquals("Token kind mismatch", getTokenKind(), dt.getKind());
@@ -249,7 +253,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
    * @return the retrieved DT. This is only for error reporting.
    * @throws IOException failure.
    */
-  @SuppressWarnings({"OptionalGetWithoutIsPresent", "deprecation"})
+  @SuppressWarnings({"OptionalGetWithoutIsPresent"})
   protected AbstractS3ATokenIdentifier verifyCredentialPropagation(
       final S3AFileSystem fs,
       final MarshalledCredentials session,
@@ -278,7 +282,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
       LOG.info("Regenerated DT is {}", newDT);
       final MarshalledCredentials creds2 = fromAWSCredentials(
           verifySessionCredentials(
-              delegationTokens2.getCredentialProviders().getCredentials()));
+              delegationTokens2.getCredentialProviders().resolveCredentials()));
       assertEquals("Credentials", session, creds2);
       assertTrue("Origin in " + boundId,
           boundId.getOrigin()
@@ -287,12 +291,12 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     }
   }
 
-  private AWSSessionCredentials verifySessionCredentials(
-      final AWSCredentials creds) {
-    AWSSessionCredentials session = (AWSSessionCredentials) creds;
-    assertNotNull("access key", session.getAWSAccessKeyId());
-    assertNotNull("secret key", session.getAWSSecretKey());
-    assertNotNull("session token", session.getSessionToken());
+  private AwsSessionCredentials verifySessionCredentials(
+      final AwsCredentials creds) {
+    AwsSessionCredentials session = (AwsSessionCredentials) creds;
+    assertNotNull("access key", session.accessKeyId());
+    assertNotNull("secret key", session.secretAccessKey());
+    assertNotNull("session token", session.sessionToken());
     return session;
   }
 

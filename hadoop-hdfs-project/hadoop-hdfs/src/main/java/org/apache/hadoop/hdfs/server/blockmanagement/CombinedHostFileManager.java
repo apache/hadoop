@@ -179,12 +179,15 @@ public class CombinedHostFileManager extends HostConfigManager {
 
   @Override
   public void refresh() throws IOException {
-    refresh(conf.get(DFSConfigKeys.DFS_HOSTS, ""));
+    refresh(conf.get(DFSConfigKeys.DFS_HOSTS, ""),
+        conf.getInt(DFSConfigKeys.DFS_HOSTS_TIMEOUT, DFSConfigKeys.DFS_HOSTS_TIMEOUT_DEFAULT)
+    );
   }
-  private void refresh(final String hostsFile) throws IOException {
+  private void refresh(final String hostsFile, final int readTimeout) throws IOException {
     HostProperties hostProps = new HostProperties();
-    DatanodeAdminProperties[] all =
-        CombinedHostsFileReader.readFile(hostsFile);
+    DatanodeAdminProperties[] all = readTimeout != DFSConfigKeys.DFS_HOSTS_TIMEOUT_DEFAULT
+        ? CombinedHostsFileReader.readFileWithTimeout(hostsFile, readTimeout)
+        : CombinedHostsFileReader.readFile(hostsFile);
     for(DatanodeAdminProperties properties : all) {
       InetSocketAddress addr = parseEntry(hostsFile,
           properties.getHostName(), properties.getPort());

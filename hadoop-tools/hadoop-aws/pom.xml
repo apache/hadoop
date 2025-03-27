@@ -19,11 +19,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.4.0-SNAPSHOT</version>
+    <version>3.5.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-aws</artifactId>
-  <version>3.4.0-SNAPSHOT</version>
+  <version>3.5.0-SNAPSHOT</version>
   <name>Apache Hadoop Amazon Web Services support</name>
   <description>
     This module contains code to support integration with Amazon Web Services.
@@ -35,7 +35,6 @@
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
     <hadoop.tmp.dir>${project.build.directory}/test</hadoop.tmp.dir>
-    <javadoc.skip.jdk11>true</javadoc.skip.jdk11>
 
     <!-- are scale tests enabled ? -->
     <fs.s3a.scale.test.enabled>unset</fs.s3a.scale.test.enabled>
@@ -49,13 +48,13 @@
     <!-- Set a longer timeout for integration test (in milliseconds) -->
     <test.integration.timeout>200000</test.integration.timeout>
 
-    <!--   should directory marker retention be audited? -->
-    <fs.s3a.directory.marker.audit>false</fs.s3a.directory.marker.audit>
-    <!--    marker retention policy -->
-    <fs.s3a.directory.marker.retention></fs.s3a.directory.marker.retention>
-
-    <!-- Is prefetch enabled? -->
-    <fs.s3a.prefetch.enabled>unset</fs.s3a.prefetch.enabled>
+    <!-- stream type to use in tests; passed down in fs.s3a.input.stream.type  -->
+    <stream>classic</stream>
+    <!-- Job ID; allows for parallel jobs on same bucket -->
+    <!-- job.id is used to build the path for tests; default is 00.-->
+    <job.id>00</job.id>
+    <!-- are root tests enabled. Set to false when running parallel jobs on same bucket -->
+    <root.tests.enabled>unset</root.tests.enabled>
   </properties>
 
   <profiles>
@@ -115,24 +114,15 @@
                 <test.build.data>${test.build.data}/${surefire.forkNumber}</test.build.data>
                 <test.build.dir>${test.build.dir}/${surefire.forkNumber}</test.build.dir>
                 <hadoop.tmp.dir>${hadoop.tmp.dir}/${surefire.forkNumber}</hadoop.tmp.dir>
+                <test.unique.fork.id>job-${job.id}-fork-000${surefire.forkNumber}</test.unique.fork.id>
 
-                <!-- Due to a Maven quirk, setting this to just -->
-                <!-- surefire.forkNumber won't do the parameter -->
-                <!-- substitution.  Putting a prefix in front of it like -->
-                <!-- "fork-" makes it work. -->
-                <!-- Important: Those leading 0s are needed to guarantee that -->
-                <!-- trailing three chars are always numeric and unique -->
-                <test.unique.fork.id>fork-000${surefire.forkNumber}</test.unique.fork.id>
                 <!-- Propagate scale parameters -->
                 <fs.s3a.scale.test.enabled>${fs.s3a.scale.test.enabled}</fs.s3a.scale.test.enabled>
                 <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                 <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                 <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                <!-- Markers-->
-                <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
-                <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
-                <!-- Prefetch -->
-                <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
+                <!-- Stream Type -->
+                <fs.s3a.input.stream.type>${stream}</fs.s3a.input.stream.type>
               </systemPropertyVariables>
             </configuration>
           </plugin>
@@ -163,25 +153,23 @@
                     <!-- surefire.forkNumber won't do the parameter -->
                     <!-- substitution.  Putting a prefix in front of it like -->
                     <!-- "fork-" makes it work. -->
-                    <test.unique.fork.id>fork-000${surefire.forkNumber}</test.unique.fork.id>
+                    <test.unique.fork.id>job-${job.id}-fork-000${surefire.forkNumber}</test.unique.fork.id>
                     <!-- Propagate scale parameters -->
                     <fs.s3a.scale.test.enabled>${fs.s3a.scale.test.enabled}</fs.s3a.scale.test.enabled>
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                    <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
-
                     <test.default.timeout>${test.integration.timeout}</test.default.timeout>
-                    <!-- Prefetch -->
-                    <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
+                    <!-- Stream Type -->
+                    <fs.s3a.input.stream.type>${stream}</fs.s3a.input.stream.type>
+                    <!-- are root tests enabled. Set to false when running parallel jobs on same bucket -->
+                    <fs.s3a.root.tests.enabled>${root.tests.enabled}</fs.s3a.root.tests.enabled>
+
                   </systemPropertyVariables>
                   <!-- Some tests cannot run in parallel.  Tests that cover -->
                   <!-- access to the root directory must run in isolation -->
                   <!-- from anything else that could modify the bucket. -->
-                  <!-- S3A tests that cover multi-part upload must run in -->
-                  <!-- isolation, because the file system is configured to -->
-                  <!-- purge existing multi-part upload data on -->
-                  <!-- initialization.  MiniYARNCluster has not yet been -->
+                  <!-- MiniYARNCluster has not yet been -->
                   <!-- changed to handle parallel test execution gracefully. -->
                   <!-- Exclude all of these tests from parallel execution, -->
                   <!-- and instead run them sequentially in a separate -->
@@ -223,11 +211,11 @@
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                    <!-- Markers-->
-                    <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
-                    <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
-                    <!-- Prefetch -->
-                    <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
+                    <!-- Stream Type -->
+                    <fs.s3a.input.stream.type>${stream}</fs.s3a.input.stream.type>
+                    <!-- are root tests enabled. Set to false when running parallel jobs on same bucket -->
+                    <fs.s3a.root.tests.enabled>${root.tests.enabled}</fs.s3a.root.tests.enabled>
+                    <test.unique.fork.id>job-${job.id}</test.unique.fork.id>
                   </systemPropertyVariables>
                   <!-- Do a sequential run for tests that cannot handle -->
                   <!-- parallel execution. -->
@@ -284,11 +272,9 @@
                     <fs.s3a.scale.test.enabled>${fs.s3a.scale.test.enabled}</fs.s3a.scale.test.enabled>
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                    <!-- Markers-->
-                    <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
-                    <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
-                    <!-- Prefetch -->
-                    <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
+                    <!-- Stream Type -->
+                    <fs.s3a.input.stream.type>${stream}</fs.s3a.input.stream.type>
+                    <test.unique.fork.id>job-${job.id}</test.unique.fork.id>
                   </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>${fs.s3a.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                 </configuration>
@@ -312,44 +298,6 @@
       </properties>
     </profile>
 
-    <!-- Directory marker retention options, all from the -Dmarkers value-->
-    <profile>
-      <id>keep-markers</id>
-      <activation>
-        <property>
-          <name>markers</name>
-          <value>keep</value>
-        </property>
-      </activation>
-      <properties >
-        <fs.s3a.directory.marker.retention>keep</fs.s3a.directory.marker.retention>
-      </properties>
-    </profile>
-    <profile>
-      <id>delete-markers</id>
-      <activation>
-        <property>
-          <name>markers</name>
-          <value>delete</value>
-        </property>
-      </activation>
-      <properties >
-        <fs.s3a.directory.marker.retention>delete</fs.s3a.directory.marker.retention>
-      </properties>
-    </profile>
-    <profile>
-      <id>auth-markers</id>
-      <activation>
-        <property>
-          <name>markers</name>
-          <value>authoritative</value>
-        </property>
-      </activation>
-      <properties >
-        <fs.s3a.directory.marker.retention>authoritative</fs.s3a.directory.marker.retention>
-      </properties>
-    </profile>
-
     <!-- Turn on prefetching-->
     <profile>
       <id>prefetch</id>
@@ -359,7 +307,20 @@
         </property>
       </activation>
       <properties>
-        <fs.s3a.prefetch.enabled>true</fs.s3a.prefetch.enabled>
+        <stream>prefetch</stream>
+      </properties>
+    </profile>
+
+    <!-- Switch to the analytics input stream-->
+    <profile>
+      <id>analytics</id>
+      <activation>
+        <property>
+          <name>analytics</name>
+        </property>
+      </activation>
+      <properties>
+        <stream>analytics</stream>
       </properties>
     </profile>
 
@@ -464,6 +425,16 @@
                     <bannedImport>org.apache.hadoop.mapred.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
+                <restrictImports>
+                  <includeTestCode>false</includeTestCode>
+                  <reason>Restrict encryption client imports to encryption client factory</reason>
+                  <exclusions>
+                    <exclusion>org.apache.hadoop.fs.s3a.impl.EncryptionS3ClientFactory</exclusion>
+                  </exclusions>
+                  <bannedImports>
+                    <bannedImport>software.amazon.encryption.s3.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
               </rules>
             </configuration>
           </execution>
@@ -494,9 +465,28 @@
       <scope>test</scope>
       <type>test-jar</type>
     </dependency>
+
+    <!-- The v1 SDK is used at compilation time for adapter classes in
+         org.apache.hadoop.fs.s3a.adapter. It is not needed at runtime
+         unless a non-standard v1 credential provider is declared. -->
     <dependency>
       <groupId>com.amazonaws</groupId>
-      <artifactId>aws-java-sdk-bundle</artifactId>
+      <artifactId>aws-java-sdk-core</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>bundle</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.encryption.s3</groupId>
+      <artifactId>amazon-s3-encryption-client-java</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.s3.analyticsaccelerator</groupId>
+      <artifactId>analyticsaccelerator-s3</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -516,7 +506,7 @@
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
+      <artifactId>mockito-inline</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -600,12 +590,37 @@
     <!-- Used to create SSL certs for a secure Keystore -->
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk15on</artifactId>
+      <artifactId>bcprov-jdk18on</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcpkix-jdk15on</artifactId>
+      <artifactId>bcpkix-jdk18on</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

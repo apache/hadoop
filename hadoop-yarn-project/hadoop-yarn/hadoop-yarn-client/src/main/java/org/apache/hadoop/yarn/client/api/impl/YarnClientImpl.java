@@ -735,11 +735,32 @@ public class YarnClientImpl extends YarnClient {
     return request;
   }
 
+  private GetQueueInfoRequest getQueueInfoRequest(
+      String queueName, String subClusterId, boolean includeApplications,
+      boolean includeChildQueues, boolean recursive) {
+    GetQueueInfoRequest request = Records.newRecord(GetQueueInfoRequest.class);
+    request.setQueueName(queueName);
+    request.setSubClusterId(subClusterId);
+    request.setIncludeApplications(includeApplications);
+    request.setIncludeChildQueues(includeChildQueues);
+    request.setRecursive(recursive);
+    return request;
+  }
+
   @Override
   public QueueInfo getQueueInfo(String queueName) throws YarnException,
       IOException {
     GetQueueInfoRequest request =
         getQueueInfoRequest(queueName, true, false, false);
+    Records.newRecord(GetQueueInfoRequest.class);
+    return rmClient.getQueueInfo(request).getQueueInfo();
+  }
+
+  @Override
+  public QueueInfo getQueueInfo(String queueName,
+      String subClusterId) throws YarnException, IOException {
+    GetQueueInfoRequest request =
+        getQueueInfoRequest(queueName, subClusterId, true, false, false);
     Records.newRecord(GetQueueInfoRequest.class);
     return rmClient.getQueueInfo(request).getQueueInfo();
   }

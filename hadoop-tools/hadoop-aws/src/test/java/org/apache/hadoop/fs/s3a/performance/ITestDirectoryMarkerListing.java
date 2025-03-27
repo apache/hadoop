@@ -22,19 +22,18 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectMetadata;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -49,9 +48,8 @@ import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -78,10 +76,8 @@ import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
  * <p></p>
  * Similarly: JUnit assertions over AssertJ.
  * <p></p>
- * The tests work with unguarded buckets only -the bucket settings are changed
- * appropriately.
+ * s3a create performance is disabled for consistent assertions.
  */
-@RunWith(Parameterized.class)
 public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
   private static final Logger LOG =
@@ -96,17 +92,6 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   private static final String MARKER_PEER = "markerpeer";
 
   /**
-   * Parameterization.
-   */
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> params() {
-    return Arrays.asList(new Object[][]{
-        {"keep-markers",  true},
-        {"delete-markers", false},
-    });
-  }
-
-  /**
    * Does rename copy markers?
    * Value: {@value}
    * <p></p>
@@ -115,21 +100,6 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    * The full marker-optimized releases: no.
    */
   private static final boolean RENAME_COPIES_MARKERS = false;
-
-  /**
-   * Test configuration name.
-   */
-  private final String name;
-
-  /**
-   * Does this test configuration keep markers?
-   */
-  private final boolean keepMarkers;
-
-  /**
-   * Is this FS deleting markers?
-   */
-  private final boolean isDeletingMarkers;
 
   /**
    * Path to a directory which has a marker.
@@ -156,7 +126,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   /**
    * S3 Client of the FS.
    */
-  private AmazonS3 s3client;
+  private S3Client s3client;
 
   /**
    * Path to a file under the marker.
@@ -183,25 +153,15 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    */
   private String markerPeerKey;
 
-  public ITestDirectoryMarkerListing(final String name,
-      final boolean keepMarkers) {
-    this.name = name;
-    this.keepMarkers = keepMarkers;
-    this.isDeletingMarkers = !keepMarkers;
-  }
-
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     String bucketName = getTestBucketName(conf);
 
-    // directory marker options
     removeBaseAndBucketOverrides(bucketName, conf,
-        DIRECTORY_MARKER_POLICY);
-    conf.set(DIRECTORY_MARKER_POLICY,
-        keepMarkers
-            ? DIRECTORY_MARKER_POLICY_KEEP
-            : DIRECTORY_MARKER_POLICY_DELETE);
+        FS_S3A_CREATE_PERFORMANCE,
+        FS_S3A_PERFORMANCE_FLAGS);
+    conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, false);
     return conf;
   }
 
@@ -212,7 +172,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   public void setup() throws Exception {
     super.setup();
     S3AFileSystem fs = getFileSystem();
-    s3client = fs.getAmazonS3ClientForTesting("markers");
+    s3client = getS3AInternals().getAmazonS3Client("markers");
     bucket = fs.getBucket();
     Path base = new Path(methodPath(), "base");
 
@@ -442,10 +402,6 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
   /**
    * Rename the base directory, expect the source files to move.
-   * <p></p>
-   * Whether or not the marker itself is copied depends on whether
-   * the release's rename operation explicitly skips
-   * markers on renames.
    */
   @Test
   public void testRenameBase() throws Throwable {
@@ -453,6 +409,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
     Path src = basePath;
     Path dest = new Path(methodPath(), "dest");
+    getFileSystem().delete(dest, true);
     assertRenamed(src, dest);
 
     assertPathDoesNotExist("source", src);
@@ -472,14 +429,8 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     assertIsFile(destMarkerPeer);
     head(destFileKeyUnderMarker);
 
-    // probe for the marker based on expected rename
-    // behavior
-    if (RENAME_COPIES_MARKERS) {
-      head(destMarkerKeySlash);
-    } else {
-      head404(destMarkerKeySlash);
-    }
-
+    // rename doesn't copy non-leaf markers
+    head404(destMarkerKeySlash);
   }
 
   /**
@@ -512,11 +463,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     assertRenamed(src, dest);
     assertIsFile(new Path(dest, file));
     assertIsDirectory(srcDir);
-    if (isDeletingMarkers) {
-      head404(markerKeySlash);
-    } else {
-      head(markerKeySlash);
-    }
+    head(markerKeySlash);
   }
 
   /**
@@ -549,11 +496,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     assertRenamed(src, dest);
     assertIsFile(dest);
     assertIsDirectory(srcDir);
-    if (isDeletingMarkers) {
-      head404(markerKeySlash);
-    } else {
-      head(markerKeySlash);
-    }
+    head(markerKeySlash);
   }
 
   /**
@@ -604,18 +547,23 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    */
   private void put(final String key, final String content) throws Exception {
     exec("PUT " + key, () ->
-        s3client.putObject(bucket, key, content));
+        s3client.putObject(b -> b.bucket(bucket).key(key),
+            RequestBody.fromString(content)));
   }
+
   /**
-   * Delete an object.
+   * Delete an object; exceptions are swallowed.
    * @param key key
-   * @param content string
    */
   private void deleteObject(final String key) throws Exception {
-    exec("DELETE " + key, () -> {
-      s3client.deleteObject(bucket, key);
-      return "deleted " + key;
-    });
+    try {
+      exec("DELETE " + key, () -> {
+        s3client.deleteObject(b -> b.bucket(bucket).key(key));
+        return "deleted " + key;
+      });
+    } catch (IOException ignored) {
+
+    }
   }
 
   /**
@@ -624,10 +572,10 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    * @return a description of the object.
    */
   private String head(final String key) throws Exception {
-    ObjectMetadata md = exec("HEAD " + key, () ->
-        s3client.getObjectMetadata(bucket, key));
+    HeadObjectResponse response = exec("HEAD " + key, () ->
+        s3client.headObject(b -> b.bucket(bucket).key(key)));
     return String.format("Object %s of length %d",
-        key, md.getInstanceLength());
+        key, response.contentLength());
   }
 
   /**
@@ -638,7 +586,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   private void head404(final String key) throws Exception {
     intercept(FileNotFoundException.class, "",
         "Expected 404 of " + key, () ->
-        head(key));
+            head(key));
   }
 
   /**
@@ -655,7 +603,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     try (AuditSpan span = getSpanSource().createSpan(op, null, null)) {
       return call.call();
-    } catch (AmazonClientException ex) {
+    } catch (SdkException ex) {
       throw S3AUtils.translateException(op, "", ex);
     } finally {
       timer.end(op);
@@ -675,7 +623,8 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   }
 
   /**
-   * Expect the list of status objects to match that of the paths.
+   * Expect the list of status objects to match that of the paths,
+   * without enforcing ordering of the values.
    * @param statuses status object list
    * @param paths ordered varargs list of paths
    * @param <T> type of status objects
@@ -683,20 +632,11 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   private <T extends FileStatus> void assertContainsExactlyStatusOfPaths(
       List<T> statuses, Path... paths) {
 
-    String actual = statuses.stream()
-        .map(Object::toString)
-        .collect(Collectors.joining(";"));
-    String expected = Arrays.stream(paths)
-        .map(Object::toString)
-        .collect(Collectors.joining(";"));
-    String summary = "expected [" + expected + "]"
-        + " actual = [" + actual + "]";
-    assertEquals("mismatch in size of listing " + summary,
-        paths.length, statuses.size());
-    for (int i = 0; i < statuses.size(); i++) {
-      assertEquals("Path mismatch at element " + i + " in " + summary,
-          paths[i], statuses.get(i).getPath());
-    }
+    final List<Path> pathList = statuses.stream()
+        .map(FileStatus::getPath)
+        .collect(Collectors.toList());
+    Assertions.assertThat(pathList)
+        .containsExactlyInAnyOrder(paths);
   }
 
   /**

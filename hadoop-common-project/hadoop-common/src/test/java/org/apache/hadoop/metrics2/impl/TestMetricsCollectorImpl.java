@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.metrics2.impl;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.apache.commons.configuration2.SubsetConfiguration;
 import static org.apache.hadoop.metrics2.filter.TestPatternFilter.*;
@@ -34,10 +35,10 @@ public class TestMetricsCollectorImpl {
     mb.setRecordFilter(newGlobFilter(fc));
     MetricsRecordBuilderImpl rb = mb.addRecord("foo");
     rb.tag(info("foo", ""), "value").addGauge(info("g0", ""), 1);
-    assertEquals("no tags", 0, rb.tags().size());
-    assertEquals("no metrics", 0, rb.metrics().size());
-    assertNull("null record", rb.getRecord());
-    assertEquals("no records", 0, mb.getRecords().size());
+    assertEquals(0, rb.tags().size(), "no tags");
+    assertEquals(0, rb.metrics().size(), "no metrics");
+    assertNull(rb.getRecord(), "null record");
+    assertEquals(0, mb.getRecords().size(), "no records");
   }
 
   @Test public void testPerMetricFiltering() {
@@ -48,9 +49,9 @@ public class TestMetricsCollectorImpl {
     MetricsRecordBuilderImpl rb = mb.addRecord("foo");
     rb.tag(info("foo", ""), "").addCounter(info("c0", ""), 0)
       .addGauge(info("foo", ""), 1);
-    assertEquals("1 tag", 1, rb.tags().size());
-    assertEquals("1 metric", 1, rb.metrics().size());
-    assertEquals("expect foo tag", "foo", rb.tags().get(0).name());
-    assertEquals("expect c0", "c0", rb.metrics().get(0).name());
+    assertEquals(1, rb.tags().size(), "1 tag");
+    assertEquals(1, rb.metrics().size(), "1 metric");
+    assertEquals("foo", rb.tags().get(0).name(), "expect foo tag");
+    assertEquals("c0", rb.metrics().get(0).name(), "expect c0");
   }
 }

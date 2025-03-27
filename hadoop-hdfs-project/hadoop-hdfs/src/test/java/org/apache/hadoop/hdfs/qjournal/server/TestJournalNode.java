@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Bytes;
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 import org.apache.hadoop.conf.Configuration;
@@ -54,6 +53,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -278,7 +278,7 @@ public class TestJournalNode {
     ch.newEpoch(1).get();
     ch.setEpoch(1);
     ch.startLogSegment(1, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION).get();
-    ch.sendEdits(1L, 1, 1, "hello".getBytes(Charsets.UTF_8)).get();
+    ch.sendEdits(1L, 1, 1, "hello".getBytes(StandardCharsets.UTF_8)).get();
     
     metrics = MetricsAsserts.getMetrics(
         journal.getMetrics().getName());
@@ -291,7 +291,7 @@ public class TestJournalNode {
     beginTimestamp = lastJournalTimestamp;
 
     ch.setCommittedTxId(100L);
-    ch.sendEdits(1L, 2, 1, "goodbye".getBytes(Charsets.UTF_8)).get();
+    ch.sendEdits(1L, 2, 1, "goodbye".getBytes(StandardCharsets.UTF_8)).get();
 
     metrics = MetricsAsserts.getMetrics(
         journal.getMetrics().getName());

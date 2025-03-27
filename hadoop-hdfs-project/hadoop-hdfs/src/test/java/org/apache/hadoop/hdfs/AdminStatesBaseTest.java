@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -27,8 +28,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.util.Lists;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
+import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -63,6 +68,11 @@ public class AdminStatesBaseTest {
   static final int NAMENODE_REPLICATION_INTERVAL = 1; //replication interval
 
   final private Random myrand = new Random();
+
+  @Rule
+  public TemporaryFolder baseDir = new TemporaryFolder();
+  @Rule
+  public Timeout timeout = new Timeout(600, TimeUnit.SECONDS);
 
   private HostsFileWriter hostsFileWriter;
   private Configuration conf;
@@ -396,7 +406,7 @@ public class AdminStatesBaseTest {
   protected void startCluster(int numNameNodes, int numDatanodes,
       boolean setupHostsFile, long[] nodesCapacity,
       boolean checkDataNodeHostConfig, boolean federation) throws IOException {
-    MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf)
+    MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf, baseDir.getRoot())
         .numDataNodes(numDatanodes);
     if (federation) {
       builder.nnTopology(
@@ -431,7 +441,7 @@ public class AdminStatesBaseTest {
 
 
   protected void startSimpleHACluster(int numDatanodes) throws IOException {
-    cluster = new MiniDFSCluster.Builder(conf)
+    cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot())
         .nnTopology(MiniDFSNNTopology.simpleHATopology()).numDataNodes(
         numDatanodes).build();
     cluster.transitionToActive(0);
@@ -458,6 +468,6 @@ public class AdminStatesBaseTest {
       throws IOException {
     assertTrue(fileSys.exists(name));
     fileSys.delete(name, true);
-    assertTrue(!fileSys.exists(name));
+    assertFalse(fileSys.exists(name));
   }
 }

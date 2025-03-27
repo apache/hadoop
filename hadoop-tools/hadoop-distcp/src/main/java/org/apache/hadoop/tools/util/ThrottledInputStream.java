@@ -120,12 +120,11 @@ public class ThrottledInputStream extends InputStream implements Seekable {
    * @return Read rate, in bytes/sec.
    */
   public long getBytesPerSec() {
-    long elapsed = (System.currentTimeMillis() - startTime) / 1000;
-    if (elapsed == 0) {
-      return bytesRead;
-    } else {
-      return bytesRead / elapsed;
+    if (bytesRead == 0){
+      return 0;
     }
+    float elapsed = (System.currentTimeMillis() - startTime) / 1000.0f;
+    return (long) (bytesRead / elapsed);
   }
 
   /**

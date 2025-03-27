@@ -36,7 +36,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsTo
  */
 public class ManifestPrinter extends Configured implements Tool {
 
-  private static final String USAGE = "ManifestPrinter <success-file>";
+  private static final String USAGE = "successfile <success-file>";
 
   /**
    * Output for printing.
@@ -88,7 +88,7 @@ public class ManifestPrinter extends Configured implements Tool {
     return success;
   }
 
-  private void printManifest(ManifestSuccessData success) {
+  public void printManifest(ManifestSuccessData success) {
     field("succeeded", success.getSuccess());
     field("created", success.getDate());
     field("committer", success.getCommitter());

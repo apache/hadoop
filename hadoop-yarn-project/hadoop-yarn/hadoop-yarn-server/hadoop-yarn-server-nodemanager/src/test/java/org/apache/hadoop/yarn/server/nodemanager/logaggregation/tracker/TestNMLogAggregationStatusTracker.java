@@ -33,8 +33,10 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Function test for {@link NMLogAggregationStatusTracker}.
@@ -65,8 +67,8 @@ public class TestNMLogAggregationStatusTracker {
         .pullCachedLogAggregationReports();
     // we can not get any cached log aggregation status because
     // the log aggregation is disabled.
-    Assert.assertTrue("No cached log aggregation status because "
-        + "log aggregation is disabled.", reports.isEmpty());
+    assertTrue(reports.isEmpty(), "No cached log aggregation status because "
+        + "log aggregation is disabled.");
 
     // enable the log aggregation.
     conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
@@ -79,28 +81,27 @@ public class TestNMLogAggregationStatusTracker {
         LogAggregationStatus.RUNNING, baseTime, "", false);
     reports = tracker
         .pullCachedLogAggregationReports();
-    Assert.assertTrue("No cached log aggregation status "
-        + "because the application is finished or not existed.",
-        reports.isEmpty());
+    assertTrue(reports.isEmpty(), "No cached log aggregation status "
+        + "because the application is finished or not existed.");
 
     tracker.updateLogAggregationStatus(appId1,
         LogAggregationStatus.RUNNING, baseTime, "", false);
     reports = tracker
         .pullCachedLogAggregationReports();
-    Assert.assertEquals("Should have one cached log aggregation status.",
-        1, reports.size());
-    Assert.assertEquals("The cached log aggregation status should be RUNNING.",
-        LogAggregationStatus.RUNNING,
-        reports.get(0).getLogAggregationStatus());
+    assertEquals(1, reports.size(),
+        "Should have one cached log aggregation status.");
+    assertEquals(LogAggregationStatus.RUNNING,
+        reports.get(0).getLogAggregationStatus(),
+        "The cached log aggregation status should be RUNNING.");
 
     tracker.updateLogAggregationStatus(appId1,
         LogAggregationStatus.SUCCEEDED, baseTime + 60 * 1000, "", true);
     reports = tracker
         .pullCachedLogAggregationReports();
-    Assert.assertEquals(1, reports.size());
-    Assert.assertEquals("Update cached log aggregation status to SUCCEEDED",
-        LogAggregationStatus.SUCCEEDED,
-        reports.get(0).getLogAggregationStatus());
+    assertEquals(1, reports.size());
+    assertEquals(LogAggregationStatus.SUCCEEDED,
+        reports.get(0).getLogAggregationStatus(),
+        "Update cached log aggregation status to SUCCEEDED");
 
     // the log aggregation status is finalized. So, we would
     // ingore the following update
@@ -108,10 +109,10 @@ public class TestNMLogAggregationStatusTracker {
         LogAggregationStatus.FAILED, baseTime + 10 * 60 * 1000, "", true);
     reports = tracker
         .pullCachedLogAggregationReports();
-    Assert.assertEquals(1, reports.size());
-    Assert.assertEquals("The cached log aggregation status "
-        + "should be still SUCCEEDED.", LogAggregationStatus.SUCCEEDED,
-        reports.get(0).getLogAggregationStatus());
+    assertEquals(1, reports.size());
+    assertEquals(LogAggregationStatus.SUCCEEDED,
+        reports.get(0).getLogAggregationStatus(), "The cached log aggregation status "
+        + "should be still SUCCEEDED.");
   }
 
   public void testLogAggregationStatusRoller() throws Exception {
@@ -133,11 +134,11 @@ public class TestNMLogAggregationStatusTracker {
     // verify that we have cached the log aggregation status for app1
     List<LogAggregationReport> reports = tracker
         .pullCachedLogAggregationReports();
-    Assert.assertEquals("Should have one cached log aggregation status.",
-        1, reports.size());
-    Assert.assertEquals("The cached log aggregation status should be RUNNING.",
-        LogAggregationStatus.RUNNING,
-        reports.get(0).getLogAggregationStatus());
+    assertEquals(1, reports.size(),
+        "Should have one cached log aggregation status.");
+    assertEquals(LogAggregationStatus.RUNNING,
+        reports.get(0).getLogAggregationStatus(),
+        "The cached log aggregation status should be RUNNING.");
     // wait for 10s
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override

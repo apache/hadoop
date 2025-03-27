@@ -28,9 +28,9 @@ import org.codehaus.jettison.json.JSONObject;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This test helper class is primarily used by
@@ -62,8 +62,8 @@ public class FairSchedulerJsonVerifications {
       Set<String> resourceCategories) throws JSONException {
     for (String resourceCategory : resourceCategories) {
       boolean hasResourceCategory = queue.has(resourceCategory);
-      assertTrue("Queue " + queue + " does not have resource category key: "
-          + resourceCategory, hasResourceCategory);
+      assertTrue(hasResourceCategory, "Queue " + queue + " does not have resource category key: "
+          + resourceCategory);
       verifyResourceContainsDefaultResourceTypes(
           queue.getJSONObject(resourceCategory));
     }
@@ -74,15 +74,16 @@ public class FairSchedulerJsonVerifications {
     Object memory = jsonObject.opt("memory");
     Object vCores = jsonObject.opt("vCores");
 
-    assertNotNull("Key 'memory' not found in: " + jsonObject, memory);
-    assertNotNull("Key 'vCores' not found in: " + jsonObject, vCores);
+    assertNotNull(memory, "Key 'memory' not found in: " + jsonObject);
+    assertNotNull(vCores, "Key 'vCores' not found in: " + jsonObject);
   }
 
   private void verifyResourcesContainCustomResourceTypes(JSONObject queue,
       Set<String> resourceCategories) throws JSONException {
     for (String resourceCategory : resourceCategories) {
-      assertTrue("Queue " + queue + " does not have resource category key: "
-          + resourceCategory, queue.has(resourceCategory));
+      assertTrue(queue.has(resourceCategory),
+          "Queue " + queue + " does not have resource category key: "
+          + resourceCategory);
       verifyResourceContainsAllCustomResourceTypes(
           queue.getJSONObject(resourceCategory));
     }
@@ -90,35 +91,33 @@ public class FairSchedulerJsonVerifications {
 
   private void verifyResourceContainsAllCustomResourceTypes(
       JSONObject resourceCategory) throws JSONException {
-    assertTrue("resourceCategory does not have resourceInformations: "
-        + resourceCategory, resourceCategory.has("resourceInformations"));
+    assertTrue(resourceCategory.has("resourceInformations"),
+        "resourceCategory does not have resourceInformations: "
+        + resourceCategory);
 
     JSONObject resourceInformations =
         resourceCategory.getJSONObject("resourceInformations");
-    assertTrue(
+    assertTrue(resourceInformations.has("resourceInformation"),
         "resourceInformations does not have resourceInformation object: "
-            + resourceInformations,
-        resourceInformations.has("resourceInformation"));
+        + resourceInformations);
     JSONArray customResources =
         resourceInformations.getJSONArray("resourceInformation");
 
     // customResources will include vcores / memory as well
-    assertEquals(
-        "Different number of custom resource types found than expected",
-        customResourceTypes.size(), customResources.length() - 2);
+    assertEquals(customResourceTypes.size(), customResources.length() - 2,
+       "Different number of custom resource types found than expected");
 
     for (int i = 0; i < customResources.length(); i++) {
       JSONObject customResource = customResources.getJSONObject(i);
-      assertTrue("Resource type does not have name field: " + customResource,
-          customResource.has("name"));
-      assertTrue("Resource type does not have name resourceType field: "
-          + customResource, customResource.has("resourceType"));
-      assertTrue(
-          "Resource type does not have name units field: " + customResource,
-          customResource.has("units"));
-      assertTrue(
-          "Resource type does not have name value field: " + customResource,
-          customResource.has("value"));
+      assertTrue(customResource.has("name"),
+          "Resource type does not have name field: " + customResource);
+      assertTrue(customResource.has("resourceType"),
+          "Resource type does not have name resourceType field: "
+          + customResource);
+      assertTrue(customResource.has("units"),
+          "Resource type does not have name units field: " + customResource);
+      assertTrue(customResource.has("value"),
+          "Resource type does not have name value field: " + customResource);
 
       String name = customResource.getString("name");
       String unit = customResource.getString("units");
@@ -130,12 +129,12 @@ public class FairSchedulerJsonVerifications {
         continue;
       }
 
-      assertTrue("Custom resource type " + name + " not found",
-          customResourceTypes.contains(name));
+      assertTrue(customResourceTypes.contains(name),
+          "Custom resource type " + name + " not found");
       assertEquals("k", unit);
       assertEquals(ResourceTypes.COUNTABLE,
           ResourceTypes.valueOf(resourceType));
-      assertNotNull("Custom resource value " + value + " is null!", value);
+      assertNotNull(value, "Custom resource value " + value + " is null!");
     }
   }
 }

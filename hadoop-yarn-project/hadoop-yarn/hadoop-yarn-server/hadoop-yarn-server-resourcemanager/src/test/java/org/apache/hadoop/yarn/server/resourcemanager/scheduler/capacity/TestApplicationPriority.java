@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -58,16 +60,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptR
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestApplicationPriority {
   private final int GB = 1024;
 
   private YarnConfiguration conf;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -85,7 +87,7 @@ public class TestApplicationPriority {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
     LeafQueue q = (LeafQueue) cs.getQueue("default");
-    Assert.assertNotNull(q);
+    assertNotNull(q);
 
     String host = "127.0.0.1";
     RMNode node = MockNodes.newNodeInfo(0, MockNodes.newResource(16 * GB), 1,
@@ -176,14 +178,14 @@ public class TestApplicationPriority {
     List<Container> allocated1 = am1.allocateAndWaitForContainers("127.0.0.1",
         7, 2 * GB, nm1);
 
-    Assert.assertEquals(7, allocated1.size());
-    Assert.assertEquals(2 * GB, allocated1.get(0).getResource().getMemorySize());
+    assertEquals(7, allocated1.size());
+    assertEquals(2 * GB, allocated1.get(0).getResource().getMemorySize());
 
     // check node report, 15 GB used (1 AM and 7 containers) and 1 GB available
     SchedulerNodeReport report_nm1 = rm.getResourceScheduler().getNodeReport(
         nm1.getNodeId());
-    Assert.assertEquals(15 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(1 * GB,
+    assertEquals(15 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(1 * GB,
         report_nm1.getAvailableResource().getMemorySize());
 
     // Submit the second app App2 with priority 8 (Higher than App1)
@@ -200,8 +202,8 @@ public class TestApplicationPriority {
 
     // check node report, 16 GB used and 0 GB available
     report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(16 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(0 * GB,
+    assertEquals(16 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(0 * GB,
         report_nm1.getAvailableResource().getMemorySize());
 
     // get scheduler
@@ -223,8 +225,8 @@ public class TestApplicationPriority {
 
     // check node report, 12 GB used and 4 GB available
     report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(12 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(4 * GB,
+    assertEquals(12 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(4 * GB,
         report_nm1.getAvailableResource().getMemorySize());
 
     // send updated request for App1
@@ -236,12 +238,12 @@ public class TestApplicationPriority {
         2, 2 * GB, nm1);
 
     // App2 has got 2 containers now.
-    Assert.assertEquals(2, allocated2.size());
+    assertEquals(2, allocated2.size());
 
     // check node report, 16 GB used and 0 GB available
     report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(16 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(0 * GB,
+    assertEquals(16 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(0 * GB,
         report_nm1.getAvailableResource().getMemorySize());
 
     rm.stop();
@@ -274,14 +276,14 @@ public class TestApplicationPriority {
     List<Container> allocated1 = am1.allocateAndWaitForContainers("127.0.0.1",
         7, 1 * GB, nm1);
 
-    Assert.assertEquals(7, allocated1.size());
-    Assert.assertEquals(1 * GB, allocated1.get(0).getResource().getMemorySize());
+    assertEquals(7, allocated1.size());
+    assertEquals(1 * GB, allocated1.get(0).getResource().getMemorySize());
 
     // check node report, 8 GB used (1 AM and 7 containers) and 0 GB available
     SchedulerNodeReport report_nm1 = rm.getResourceScheduler().getNodeReport(
         nm1.getNodeId());
-    Assert.assertEquals(8 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(0 * GB,
+    assertEquals(8 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(0 * GB,
         report_nm1.getAvailableResource().getMemorySize());
 
     // Submit the second app App2 with priority 7
@@ -316,8 +318,8 @@ public class TestApplicationPriority {
 
     // check node report, 1 GB used and 7 GB available
     report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(1 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(7 * GB,
+    assertEquals(1 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(7 * GB,
         report_nm1.getAvailableResource().getMemorySize());
 
     rm.stop();
@@ -342,7 +344,7 @@ public class TestApplicationPriority {
     RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
     // Application submission should be successful and verify priority
-    Assert.assertEquals(app1.getApplicationSubmissionContext().getPriority(),
+    assertEquals(app1.getApplicationSubmissionContext().getPriority(),
         maxPriority);
     rm.stop();
   }
@@ -383,7 +385,7 @@ public class TestApplicationPriority {
         .get(app1.getApplicationId()).getCurrentAppAttempt();
 
     // Verify whether the new priority is updated
-    Assert.assertEquals(appPriority2, schedulerAppAttempt.getPriority());
+    assertEquals(appPriority2, schedulerAppAttempt.getPriority());
   }
 
   @Test
@@ -425,11 +427,12 @@ public class TestApplicationPriority {
 
     // Verify whether priority 15 is reset to 10
     Priority appPriority3 = Priority.newInstance(10);
-    Assert.assertEquals(appPriority3, schedulerAppAttempt.getPriority());
+    assertEquals(appPriority3, schedulerAppAttempt.getPriority());
     rm.stop();
   }
 
-  @Test(timeout = 180000)
+  @Test
+  @Timeout(value = 180)
   public void testRMRestartWithChangeInPriority() throws Exception {
     conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     conf.setBoolean(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED,
@@ -481,14 +484,14 @@ public class TestApplicationPriority {
     nm1.setResourceTrackerService(rm2.getResourceTrackerService());
 
     // Verify RM Apps after this restart
-    Assert.assertEquals(1, rm2.getRMContext().getRMApps().size());
+    assertEquals(1, rm2.getRMContext().getRMApps().size());
 
     // get scheduler app
     RMApp loadedApp = rm2.getRMContext().getRMApps()
         .get(app1.getApplicationId());
 
     // Verify whether priority 15 is reset to 10
-    Assert.assertEquals(appPriority2, loadedApp.getApplicationPriority());
+    assertEquals(appPriority2, loadedApp.getApplicationPriority());
 
     rm2.stop();
     rm1.stop();
@@ -521,15 +524,15 @@ public class TestApplicationPriority {
     List<Container> allocated1 = am1.allocateAndWaitForContainers("127.0.0.1",
         NUM_CONTAINERS, 2 * GB, nm1);
 
-    Assert.assertEquals(7, allocated1.size());
-    Assert.assertEquals(2 * GB,
+    assertEquals(7, allocated1.size());
+    assertEquals(2 * GB,
         allocated1.get(0).getResource().getMemorySize());
 
     // check node report, 15 GB used (1 AM and 7 containers) and 1 GB available
     SchedulerNodeReport report_nm1 =
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(15 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(1 * GB,
+    assertEquals(15 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(1 * GB,
         report_nm1.getAvailableResource().getMemorySize());
 
     // Submit the second app App2 with priority 8 (Higher than App1)
@@ -546,8 +549,8 @@ public class TestApplicationPriority {
 
     // check node report, 16 GB used and 0 GB available
     report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(16 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(0 * GB,
+    assertEquals(16 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(0 * GB,
         report_nm1.getAvailableResource().getMemorySize());
 
     // get scheduler
@@ -571,8 +574,8 @@ public class TestApplicationPriority {
 
     // check node report, 12 GB used and 4 GB available
     report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(12 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(4 * GB,
+    assertEquals(12 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(4 * GB,
         report_nm1.getAvailableResource().getMemorySize());
 
     // add request for containers App1
@@ -582,11 +585,11 @@ public class TestApplicationPriority {
     List<Container> allocated2 = am2.allocateAndWaitForContainers("127.0.0.1",
         2, 2 * GB, nm1);
 
-    Assert.assertEquals(2, allocated2.size());
+    assertEquals(2, allocated2.size());
     // check node report, 16 GB used and 0 GB available
     report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(16 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(0 * GB,
+    assertEquals(16 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(0 * GB,
         report_nm1.getAvailableResource().getMemorySize());
 
     // kill 1 more
@@ -604,8 +607,8 @@ public class TestApplicationPriority {
 
     // check node report, 14 GB used and 2 GB available
     report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(14 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(2 * GB,
+    assertEquals(14 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(2 * GB,
         report_nm1.getAvailableResource().getMemorySize());
 
     // Change the priority of App1 to 3 (lowest)
@@ -623,9 +626,9 @@ public class TestApplicationPriority {
     List<Container> allocated3 = am1.allocateAndWaitForContainers("127.0.0.1",
         1, 2 * GB, nm1);
 
-    Assert.assertEquals(1, allocated3.size());
+    assertEquals(1, allocated3.size());
     // Now App1 will have 5 containers and 1 AM. App2 will have 2 containers.
-    Assert.assertEquals(6, schedulerAppAttemptApp1.getLiveContainers().size());
+    assertEquals(6, schedulerAppAttemptApp1.getLiveContainers().size());
     rm.stop();
   }
 
@@ -689,8 +692,8 @@ public class TestApplicationPriority {
     am2.registerAppAttempt();
 
     rm1.drainEvents();
-    Assert.assertEquals(2, defaultQueue.getNumActiveApplications());
-    Assert.assertEquals(0, defaultQueue.getNumPendingApplications());
+    assertEquals(2, defaultQueue.getNumActiveApplications());
+    assertEquals(0, defaultQueue.getNumPendingApplications());
 
     // App-3 with priority 7 submitted and scheduled. But not activated since
     // AMResourceLimit threshold
@@ -702,22 +705,22 @@ public class TestApplicationPriority {
     RMApp app3 = MockRMAppSubmitter.submit(rm1, data);
 
     rm1.drainEvents();
-    Assert.assertEquals(2, defaultQueue.getNumActiveApplications());
-    Assert.assertEquals(1, defaultQueue.getNumPendingApplications());
+    assertEquals(2, defaultQueue.getNumActiveApplications());
+    assertEquals(1, defaultQueue.getNumPendingApplications());
 
     Iterator<FiCaSchedulerApp> iterator =
         defaultQueue.getOrderingPolicy().getSchedulableEntities().iterator();
     FiCaSchedulerApp fcApp2 = iterator.next();
-    Assert.assertEquals(app2.getCurrentAppAttempt().getAppAttemptId(),
+    assertEquals(app2.getCurrentAppAttempt().getAppAttemptId(),
         fcApp2.getApplicationAttemptId());
 
     FiCaSchedulerApp fcApp1 = iterator.next();
-    Assert.assertEquals(app1.getCurrentAppAttempt().getAppAttemptId(),
+    assertEquals(app1.getCurrentAppAttempt().getAppAttemptId(),
         fcApp1.getApplicationAttemptId());
 
     iterator = defaultQueue.getPendingApplications().iterator();
     FiCaSchedulerApp fcApp3 = iterator.next();
-    Assert.assertEquals(app3.getCurrentAppAttempt().getAppAttemptId(),
+    assertEquals(app3.getCurrentAppAttempt().getAppAttemptId(),
         fcApp3.getApplicationAttemptId());
 
     // create new RM to represent restart and recover state
@@ -729,7 +732,7 @@ public class TestApplicationPriority {
     nm1.setResourceTrackerService(rm2.getResourceTrackerService());
 
     // Verify RM Apps after this restart
-    Assert.assertEquals(3, rm2.getRMContext().getRMApps().size());
+    assertEquals(3, rm2.getRMContext().getRMApps().size());
 
     rm2.drainEvents();
     scheduler = rm2.getRMContext().getScheduler();
@@ -747,8 +750,8 @@ public class TestApplicationPriority {
 
     // Before NM registration, AMResourceLimit threshold is 0. So no
     // applications get activated.
-    Assert.assertEquals(0, defaultQueue.getNumActiveApplications());
-    Assert.assertEquals(3, defaultQueue.getNumPendingApplications());
+    assertEquals(0, defaultQueue.getNumActiveApplications());
+    assertEquals(3, defaultQueue.getNumPendingApplications());
 
     // NM resync to new RM
     nm1.registerNode();
@@ -763,31 +766,32 @@ public class TestApplicationPriority {
       Thread.sleep(50);
     }
 
-    Assert.assertEquals(2, defaultQueue.getNumActiveApplications());
-    Assert.assertEquals(1, defaultQueue.getNumPendingApplications());
+    assertEquals(2, defaultQueue.getNumActiveApplications());
+    assertEquals(1, defaultQueue.getNumPendingApplications());
 
     // verify for order of activated applications iterator
     iterator =
         defaultQueue.getOrderingPolicy().getSchedulableEntities().iterator();
     fcApp2 = iterator.next();
-    Assert.assertEquals(app2.getCurrentAppAttempt().getAppAttemptId(),
+    assertEquals(app2.getCurrentAppAttempt().getAppAttemptId(),
         fcApp2.getApplicationAttemptId());
 
     fcApp1 = iterator.next();
-    Assert.assertEquals(app1.getCurrentAppAttempt().getAppAttemptId(),
+    assertEquals(app1.getCurrentAppAttempt().getAppAttemptId(),
         fcApp1.getApplicationAttemptId());
 
     // verify for pending application iterator. It should be app-3 attempt
     iterator = defaultQueue.getPendingApplications().iterator();
     fcApp3 = iterator.next();
-    Assert.assertEquals(app3.getCurrentAppAttempt().getAppAttemptId(),
+    assertEquals(app3.getCurrentAppAttempt().getAppAttemptId(),
         fcApp3.getApplicationAttemptId());
 
     rm2.stop();
     rm1.stop();
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testUpdatePriorityOnPendingAppAndKillAttempt() throws Exception {
     int maxPriority = 10;
     int appPriority = 5;
@@ -812,8 +816,8 @@ public class TestApplicationPriority {
         ((LeafQueue) defaultQueue).getOrderingPolicy().getSchedulableEntities();
 
     // Verify app is in pending state
-    Assert.assertEquals("Pending apps should be 1", 1, appsPending.size());
-    Assert.assertEquals("Active apps should be 0", 0, activeApps.size());
+    assertEquals(1, appsPending.size(), "Pending apps should be 1");
+    assertEquals(0, activeApps.size(), "Active apps should be 0");
 
     // kill app1 which is pending
     killAppAndVerifyOrderingPolicy(rm, defaultQueue, 0, 0, app1);
@@ -826,8 +830,8 @@ public class TestApplicationPriority {
         MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
             .withAppPriority(Priority.newInstance(appPriority)).build();
     RMApp app2 = MockRMAppSubmitter.submit(rm, data2);
-    Assert.assertEquals("Pending apps should be 0", 0, appsPending.size());
-    Assert.assertEquals("Active apps should be 1", 1, activeApps.size());
+    assertEquals(0, appsPending.size(), "Pending apps should be 0");
+    assertEquals(1, activeApps.size(), "Active apps should be 1");
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
             .withAppPriority(Priority.newInstance(appPriority)).build();
@@ -836,8 +840,8 @@ public class TestApplicationPriority {
         MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
             .withAppPriority(Priority.newInstance(appPriority)).build();
     RMApp app4 = MockRMAppSubmitter.submit(rm, data);
-    Assert.assertEquals("Pending apps should be 2", 2, appsPending.size());
-    Assert.assertEquals("Active apps should be 1", 1, activeApps.size());
+    assertEquals(2, appsPending.size(), "Pending apps should be 2");
+    assertEquals(1, activeApps.size(), "Active apps should be 1");
     // kill app3, pending apps should reduce to 1
     killAppAndVerifyOrderingPolicy(rm, defaultQueue, 1, 1, app3);
     // kill app2, running apps is killed and pending added to running
@@ -865,10 +869,10 @@ public class TestApplicationPriority {
         ((LeafQueue) defaultQueue).getPendingApplications();
     Collection<FiCaSchedulerApp> activeApps =
         ((LeafQueue) defaultQueue).getApplications();
-    Assert.assertEquals("Pending apps should be " + appsPendingExpected,
-        appsPendingExpected, appsPending.size());
-    Assert.assertEquals("Active apps should be " + activeAppsExpected,
-        activeAppsExpected, activeApps.size());
+    assertEquals(appsPendingExpected, appsPending.size(),
+        "Pending apps should be " + appsPendingExpected);
+    assertEquals(activeAppsExpected, activeApps.size(),
+        "Active apps should be " + activeAppsExpected);
   }
 
 }

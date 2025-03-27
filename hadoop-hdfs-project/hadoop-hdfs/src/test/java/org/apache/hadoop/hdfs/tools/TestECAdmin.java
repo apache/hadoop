@@ -260,6 +260,37 @@ public class TestECAdmin {
             "expected 1 but got 0"));
   }
 
+  @Test
+  public void testVerifyClusterSetupSpecifiedPolicies() throws Exception {
+    final int numDataNodes = 5;
+    final int numRacks = 3;
+
+    cluster = DFSTestUtil.setupCluster(conf, numDataNodes, numRacks, 0);
+    cluster.getFileSystem().enableErasureCodingPolicy(XOR_2_1);
+
+    int ret = runCommandWithParams("-verifyClusterSetup", XOR_2_1);
+    assertEquals("Return value of the command is not successful", 1, ret);
+    assertTrue("Error message should be logged", err.toString().contains("Too many arguments"));
+
+    resetOutputs();
+    ret = runCommandWithParams("-verifyClusterSetup", "-policy");
+    assertEquals("Return value of the command is not successful", -1, ret);
+    assertTrue("Error message should be logged", err.toString()
+        .contains("NotEnoughArgumentsException: Not enough arguments: " + "expected 1 but got 0"));
+
+    resetOutputs();
+    ret = runCommandWithParams("-verifyClusterSetup", "-policy", XOR_2_1);
+    assertEquals("Return value of the command is successful", 0, ret);
+    assertTrue("Result of cluster topology verify " + "should be logged correctly",
+        out.toString().contains("The cluster setup can support EC policies: " + XOR_2_1));
+    assertTrue("Error output should be empty", err.toString().isEmpty());
+
+    resetOutputs();
+    ret = runCommandWithParams("-verifyClusterSetup", "-policy", RS_6_3);
+    assertEquals("Return value of the command is not successful", 2, ret);
+    assertNotEnoughDataNodesMessage(RS_6_3, numDataNodes, 9);
+  }
+
   private void resetOutputs() {
     out.reset();
     err.reset();

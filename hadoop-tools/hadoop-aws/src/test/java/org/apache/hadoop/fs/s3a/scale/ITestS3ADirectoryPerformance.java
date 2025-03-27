@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.S3ADataBlocks;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
@@ -41,20 +42,17 @@ import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
@@ -227,11 +225,6 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
     final Configuration conf =
             getConfigurationWithConfiguredBatchSize(batchSize);
 
-    removeBaseAndBucketOverrides(conf,
-        DIRECTORY_MARKER_POLICY);
-    // force directory markers = keep to save delete requests on every
-    // file created.
-    conf.set(DIRECTORY_MARKER_POLICY, DIRECTORY_MARKER_POLICY_KEEP);
     S3AFileSystem fs = (S3AFileSystem) FileSystem.get(dir.toUri(), conf);
 
     final List<String> originalListOfFiles = new ArrayList<>();
@@ -249,18 +242,19 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
           = fs.getWriteOperationHelper();
       final RequestFactory requestFactory
           = writeOperationHelper.getRequestFactory();
-      List<CompletableFuture<PutObjectResult>> futures =
+      List<CompletableFuture<PutObjectResponse>> futures =
           new ArrayList<>(numOfPutRequests);
 
       for (int i=0; i<numOfPutRequests; i++) {
         Path file = new Path(dir, String.format("file-%03d", i));
         originalListOfFiles.add(file.toString());
-        ObjectMetadata om = fs.newObjectMetadata(0L);
-        PutObjectRequest put = requestFactory
-            .newPutObjectRequest(fs.pathToKey(file), om,
-                null, new FailingInputStream());
-        futures.add(submit(executorService, () ->
-            writeOperationHelper.putObject(put, PutObjectOptions.keepingDirs(), null)));
+        PutObjectRequest.Builder putObjectRequestBuilder = requestFactory
+            .newPutObjectRequestBuilder(fs.pathToKey(file),
+                null, 0, false);
+        futures.add(submit(executorService,
+            () -> writeOperationHelper.putObject(putObjectRequestBuilder.build(),
+                PutObjectOptions.defaultOptions(),
+                new S3ADataBlocks.BlockUploadData(new byte[0], null), null)));
       }
       LOG.info("Waiting for PUTs to complete");
       waitForCompletion(futures);
@@ -358,16 +352,6 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
       LOG.info("FS statistics {}",
           ioStatisticsToPrettyString(fs.getIOStatistics()));
       fs.close();
-    }
-  }
-
-  /**
-   * Input stream which always returns -1.
-   */
-  private static final class FailingInputStream  extends InputStream {
-    @Override
-    public int read() throws IOException {
-      return -1;
     }
   }
 

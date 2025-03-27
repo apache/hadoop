@@ -38,7 +38,7 @@ import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.commons.collections.comparators.ReverseComparator;
+import org.apache.commons.collections4.comparators.ReverseComparator;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -130,7 +130,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
     this.callbacks = callbacks;
     this.deleteSource = deleteSource;
     this.overwrite = overwrite;
-    this.source = source;
+    this.source = source.toUri().getScheme() == null ? new Path("file://", source) : source;
     this.destination = destination;
 
     // Capacity of 1 is a safe default for now since transfer manager can also

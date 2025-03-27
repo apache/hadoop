@@ -334,7 +334,7 @@ public class TestRouterWebServices extends BaseRouterWebServicesTest {
 
     Assert.assertNotNull(client1.interceptor);
     Assert.assertNotNull(client2.interceptor);
-    Assert.assertTrue(client1.interceptor == client2.interceptor);
+    Assert.assertSame(client1.interceptor, client2.interceptor);
   }
 
 }

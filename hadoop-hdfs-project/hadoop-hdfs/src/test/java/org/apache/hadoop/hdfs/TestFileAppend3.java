@@ -590,4 +590,40 @@ public class TestFileAppend3  {
   public void testAppendToPartialChunkforAppend2() throws IOException {
     testAppendToPartialChunk(true);
   }
+
+  @Test
+  public void testApppendToPartialChunkWithMiddleBlockNotComplete() throws IOException {
+    final Path p = new Path("/TC8/foo");
+
+    //a. Create file and write one block of data. Close file.
+    final int len1 = (int) BLOCK_SIZE;
+    try (FSDataOutputStream out = fs.create(p, false, buffersize, REPLICATION,
+        BLOCK_SIZE)) {
+      AppendTestUtil.write(out, 0, len1);
+    }
+
+    // Reopen file to append. This length is not the multiple of 512.
+    final int len2 = (int) BLOCK_SIZE / 2 + 68;
+    try (FSDataOutputStream out = fs.append(p,
+        EnumSet.of(CreateFlag.APPEND, CreateFlag.NEW_BLOCK), 4096, null)) {
+      AppendTestUtil.write(out, len1, len2);
+    }
+
+    // Reopen file to append with NEW_BLOCK flag again, this will make middle block
+    // in file /TC8/foo not full.
+    final int len3 = (int) BLOCK_SIZE / 2;
+    try (FSDataOutputStream out = fs.append(p,
+        EnumSet.of(CreateFlag.APPEND, CreateFlag.NEW_BLOCK), 4096, null)) {
+      AppendTestUtil.write(out, len1 + len2, len3);
+    }
+
+    // Not use NEW_BLOCK flag.
+    final int len4 = 600;
+    try(FSDataOutputStream out = fs.append(p,
+        EnumSet.of(CreateFlag.APPEND), 4096, null)) {
+      AppendTestUtil.write(out, len1 + len2 + len3, len4);
+    }
+
+    AppendTestUtil.check(fs, p, len1 + len2 + len3 + len4);
+  }
 }

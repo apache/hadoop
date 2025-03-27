@@ -423,6 +423,47 @@ public final class RouterYarnClientUtils {
           if (queueInfo.getAccessibleNodeLabels() != null) {
             accessibleNodeLabels.addAll(queueInfo.getAccessibleNodeLabels());
           }
+
+          // set min resourceVCore
+          queueInfo.setMinResourceVCore(queueInfo.getMinResourceVCore() +
+              response.getQueueInfo().getMinResourceVCore());
+
+          // set min resourceMemory
+          queueInfo.setMinResourceMemory(queueInfo.getMinResourceMemory() +
+              response.getQueueInfo().getMinResourceMemory());
+
+          // set max resourceVCore
+          queueInfo.setMinResourceVCore(queueInfo.getMaxResourceVCore() +
+              response.getQueueInfo().getMaxResourceVCore());
+
+          // set max resourceMemory
+          queueInfo.setMinResourceMemory(queueInfo.getMaxResourceMemory() +
+              response.getQueueInfo().getMaxResourceMemory());
+
+          // set reserved resourceVCore
+          queueInfo.setReservedResourceVCore(queueInfo.getReservedResourceVCore() +
+              response.getQueueInfo().getMaxResourceVCore());
+
+          // set reserved resourceMemory
+          queueInfo.setReservedResourceMemory(queueInfo.getReservedResourceMemory() +
+              response.getQueueInfo().getMaxResourceMemory());
+
+          // set maxRunningApp
+          queueInfo.setMaxRunningApp(queueInfo.getMaxRunningApp() +
+              response.getQueueInfo().getMaxRunningApp());
+
+          // set steadyFairShareVCore
+          queueInfo.setSteadyFairShareVCore(queueInfo.getSteadyFairShareVCore() +
+              response.getQueueInfo().getSteadyFairShareVCore());
+
+          // set steadyFairShareMemory
+          queueInfo.setSteadyFairShareMemory(queueInfo.getSteadyFairShareMemory() +
+              response.getQueueInfo().getSteadyFairShareMemory());
+
+          // set Weight
+          queueInfo.setWeight(queueInfo.getWeight() +
+              response.getQueueInfo().getWeight());
+
           if (response.getQueueInfo() != null) {
             accessibleNodeLabels.addAll(response.getQueueInfo().getAccessibleNodeLabels());
           }

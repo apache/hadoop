@@ -21,22 +21,12 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
 
 public class TestFSMainOperationsLocalFileSystem extends FSMainOperationsBaseTest {
 
   @Override
   protected FileSystem createFileSystem() throws IOException {
     return FileSystem.getLocal(new Configuration());
-  }
-    
-  @Override
-  @Before
-  public void setUp() throws Exception {
-    super.setUp();
   }
   
   static Path wd = null;
@@ -46,19 +36,5 @@ public class TestFSMainOperationsLocalFileSystem extends FSMainOperationsBaseTes
       wd = FileSystem.getLocal(new Configuration()).getWorkingDirectory();
     return wd;
   }
-  
-  @Override
-  @After
-  public void tearDown() throws Exception {
-    super.tearDown();
-  }
-  
-  @Test
-  @Override
-  public void testWDAbsolute() throws IOException {
-    Path absoluteDir = getTestRootPath(fSys, "test/existingDir");
-    fSys.mkdirs(absoluteDir);
-    fSys.setWorkingDirectory(absoluteDir);
-    Assert.assertEquals(absoluteDir, fSys.getWorkingDirectory());
-  }
+
 }

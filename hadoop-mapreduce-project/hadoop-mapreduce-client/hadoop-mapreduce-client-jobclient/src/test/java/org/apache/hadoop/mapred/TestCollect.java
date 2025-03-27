@@ -21,7 +21,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.UtilsForTests.RandomInputFormat;
 import org.apache.hadoop.mapreduce.MRConfig;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.*;
 import java.util.*;

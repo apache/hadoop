@@ -102,7 +102,7 @@ public class TestLocalModeWithNewApis {
   static String readOutput(Path outDir, Configuration conf) 
       throws IOException {
     FileSystem fs = outDir.getFileSystem(conf);
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     Path[] fileList = FileUtil.stat2Paths(fs.listStatus(outDir,
            new Utils.OutputFileUtils.OutputFilesFilter()));

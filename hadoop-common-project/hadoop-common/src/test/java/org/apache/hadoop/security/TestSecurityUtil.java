@@ -19,7 +19,11 @@ package org.apache.hadoop.security;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.*;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -42,8 +46,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
@@ -52,7 +56,7 @@ public class TestSecurityUtil {
 
   private static final String ZK_AUTH_VALUE = "a_scheme:a_password";
 
-  @BeforeClass
+  @BeforeAll
   public static void unsetKerberosRealm() {
     // prevent failures if kinit-ed or on os x with no realm
     System.setProperty("java.security.krb5.kdc", "");
@@ -145,7 +149,7 @@ public class TestSecurityUtil {
       // expected
       gotException=true;
     }
-    assertTrue("Exception for empty keytabfile name was expected", gotException);
+    assertTrue(gotException, "Exception for empty keytabfile name was expected");
   }
   
   @Test
@@ -238,7 +242,7 @@ public class TestSecurityUtil {
     } catch (IllegalArgumentException e) {
       bad = true;
     } finally {
-      assertTrue("should be bad: '"+arg+"'", bad);
+      assertTrue(bad, "should be bad: '"+arg+"'");
     }
     for (int port : ports) {
       if (validIfPosPort && port > 0) continue;
@@ -249,7 +253,7 @@ public class TestSecurityUtil {
       } catch (IllegalArgumentException e) {
         bad = true;
       } finally {
-        assertTrue("should be bad: '"+arg+"' (default port:"+port+")", bad);
+        assertTrue(bad, "should be bad: '"+arg+"' (default port:"+port+")");
       }
     }
   }

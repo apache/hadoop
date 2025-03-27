@@ -28,7 +28,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -290,8 +289,11 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
         roleARN);
     removeBaseAndBucketOverrides(conf,
         DELEGATION_TOKEN_BINDING,
-        ENABLE_MULTI_DELETE);
+        ENABLE_MULTI_DELETE,
+        S3EXPRESS_CREATE_SESSION);
     conf.setBoolean(ENABLE_MULTI_DELETE, multiDelete);
+    disableCreateSession(conf);
+    disableFilesystemCaching(conf);
     return conf;
   }
 
@@ -305,13 +307,9 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     removeBucketOverrides(bucketName, conf,
         MAX_THREADS,
         MAXIMUM_CONNECTIONS,
-        DIRECTORY_MARKER_POLICY,
         BULK_DELETE_PAGE_SIZE);
     conf.setInt(MAX_THREADS, EXECUTOR_THREAD_COUNT);
     conf.setInt(MAXIMUM_CONNECTIONS, EXECUTOR_THREAD_COUNT * 2);
-    // use the keep policy to ensure that surplus markers exist
-    // to complicate failures
-    conf.set(DIRECTORY_MARKER_POLICY, DIRECTORY_MARKER_POLICY_KEEP);
     // set the delete page size to its maximum to ensure that all
     // entries are included in the same large delete, even on
     // scale runs. This is needed for assertions on the result.

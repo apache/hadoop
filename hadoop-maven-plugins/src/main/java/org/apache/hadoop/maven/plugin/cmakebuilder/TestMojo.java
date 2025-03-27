@@ -14,6 +14,7 @@
 
 package org.apache.hadoop.maven.plugin.cmakebuilder;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import org.apache.hadoop.maven.plugin.util.Exec;
 import org.apache.maven.execution.MavenSession;
@@ -165,7 +166,7 @@ public class TestMojo extends AbstractMojo {
                 testName + ".pstatus"));
     BufferedWriter out = null;
     try {
-      out = new BufferedWriter(new OutputStreamWriter(fos, "UTF8"));
+      out = new BufferedWriter(new OutputStreamWriter(fos, StandardCharsets.UTF_8));
       out.write(status + "\n");
     } finally {
       if (out != null) {

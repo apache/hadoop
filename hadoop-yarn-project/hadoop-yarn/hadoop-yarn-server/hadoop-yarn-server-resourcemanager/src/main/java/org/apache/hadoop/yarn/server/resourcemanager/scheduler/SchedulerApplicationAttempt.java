@@ -86,7 +86,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.Schedulabl
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
-import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -862,7 +862,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     updateContainerErrors.add(error);
   }
 
-  protected synchronized void addToNewlyAllocatedContainers(
+  @VisibleForTesting
+  public synchronized void addToNewlyAllocatedContainers(
       SchedulerNode node, RMContainer rmContainer) {
     ContainerId matchedContainerId =
         getUpdateContext().matchContainerToOutstandingIncreaseReq(

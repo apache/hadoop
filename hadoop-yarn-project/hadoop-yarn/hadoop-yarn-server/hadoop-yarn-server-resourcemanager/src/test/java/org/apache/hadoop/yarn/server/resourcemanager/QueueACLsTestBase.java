@@ -18,13 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.QueueACL;
-import org.junit.Assert;
 
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
@@ -41,8 +44,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 public abstract class QueueACLsTestBase extends ACLsTestBase {
 
@@ -59,7 +62,7 @@ public abstract class QueueACLsTestBase extends ACLsTestBase {
   abstract public void updateConfigWithDAndD1Queues(String rootAcl,
       String queueDAcl, String queueD1Acl) throws IOException;
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (resourceManager != null) {
       resourceManager.stop();
@@ -211,14 +214,12 @@ public abstract class QueueACLsTestBase extends ACLsTestBase {
     UserGroupInformation user = UserGroupInformation.getCurrentUser();
 
     String failureMsg = "Wrong %s access to %s queue";
-    Assert.assertEquals(
-        String.format(failureMsg, QueueACL.ADMINISTER_QUEUE, queueName),
-        access, resourceManager.getResourceScheduler()
-        .checkAccess(user, QueueACL.ADMINISTER_QUEUE, queueName));
-    Assert.assertEquals(
-        String.format(failureMsg, QueueACL.SUBMIT_APPLICATIONS, queueName),
-        access, resourceManager.getResourceScheduler()
-        .checkAccess(user, QueueACL.SUBMIT_APPLICATIONS, queueName));
+    assertEquals(access, resourceManager.getResourceScheduler()
+        .checkAccess(user, QueueACL.ADMINISTER_QUEUE, queueName),
+        String.format(failureMsg, QueueACL.ADMINISTER_QUEUE, queueName));
+    assertEquals(access, resourceManager.getResourceScheduler()
+        .checkAccess(user, QueueACL.SUBMIT_APPLICATIONS, queueName),
+        String.format(failureMsg, QueueACL.SUBMIT_APPLICATIONS, queueName));
   }
 
   private void verifyGetClientAMToken(String submitter, String queueAdmin,
@@ -236,7 +237,7 @@ public abstract class QueueACLsTestBase extends ACLsTestBase {
     GetApplicationReportResponse adMinUserGetReport =
         adMinUserClient.getApplicationReport(appReportRequest);
 
-    Assert.assertEquals(submitterGetReport.getApplicationReport()
+    assertEquals(submitterGetReport.getApplicationReport()
       .getClientToAMToken(), adMinUserGetReport.getApplicationReport()
       .getClientToAMToken());
   }
@@ -255,12 +256,12 @@ public abstract class QueueACLsTestBase extends ACLsTestBase {
     // Kill app as the killer
     try {
       killerClient.forceKillApplication(finishAppRequest);
-      Assert.fail("App killing by the enemy should fail!!");
+      fail("App killing by the enemy should fail!!");
     } catch (YarnException e) {
       LOG.info("Got exception while killing app as the enemy", e);
-      Assert.assertTrue(e.getMessage().contains(
-        "User " + killer + " cannot perform operation MODIFY_APP on "
-            + applicationId));
+      assertTrue(e.getMessage().contains(
+          "User " + killer + " cannot perform operation MODIFY_APP on "
+          + applicationId));
     }
 
     getRMClientForUser(submitter).forceKillApplication(finishAppRequest);

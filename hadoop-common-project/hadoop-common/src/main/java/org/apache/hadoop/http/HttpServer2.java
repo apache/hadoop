@@ -56,9 +56,11 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.jmx.JMXJsonServletNaNFiltered;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import com.sun.jersey.spi.container.servlet.ServletContainer;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.servlet.ServletContainer;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -116,6 +118,9 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.JMX_NAN_FILTER;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.JMX_NAN_FILTER_DEFAULT;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal is
@@ -785,7 +790,7 @@ public final class HttpServer2 implements FilterContainer {
       }
     }
 
-    addDefaultServlets();
+    addDefaultServlets(conf);
     addPrometheusServlet(conf);
     addAsyncProfilerServlet(contexts, conf);
   }
@@ -976,12 +981,17 @@ public final class HttpServer2 implements FilterContainer {
 
   /**
    * Add default servlets.
+   * @param configuration the hadoop configuration
    */
-  protected void addDefaultServlets() {
+  protected void addDefaultServlets(Configuration configuration) {
     // set up default servlets
     addServlet("stacks", "/stacks", StackServlet.class);
     addServlet("logLevel", "/logLevel", LogLevel.Servlet.class);
-    addServlet("jmx", "/jmx", JMXJsonServlet.class);
+    addServlet("jmx", "/jmx",
+        configuration.getBoolean(JMX_NAN_FILTER, JMX_NAN_FILTER_DEFAULT)
+            ? JMXJsonServletNaNFiltered.class
+            : JMXJsonServlet.class
+    );
     addServlet("conf", "/conf", ConfServlet.class);
   }
 
@@ -1008,8 +1018,7 @@ public final class HttpServer2 implements FilterContainer {
    */
   public void addJerseyResourcePackage(final String packageName,
       final String pathSpec) {
-    addJerseyResourcePackage(packageName, pathSpec,
-        Collections.<String, String>emptyMap());
+    addJerseyResourcePackage(packageName, pathSpec, Collections.emptyMap());
   }
 
   /**
@@ -1020,14 +1029,30 @@ public final class HttpServer2 implements FilterContainer {
    */
   public void addJerseyResourcePackage(final String packageName,
       final String pathSpec, Map<String, String> params) {
-    LOG.info("addJerseyResourcePackage: packageName=" + packageName
-        + ", pathSpec=" + pathSpec);
-    final ServletHolder sh = new ServletHolder(ServletContainer.class);
-    sh.setInitParameter("com.sun.jersey.config.property.resourceConfigClass",
-        "com.sun.jersey.api.core.PackagesResourceConfig");
-    sh.setInitParameter("com.sun.jersey.config.property.packages", packageName);
+    LOG.info("addJerseyResourcePackage: packageName = {}, pathSpec = {}.",
+        packageName, pathSpec);
+    final ResourceConfig config = new ResourceConfig().packages(packageName);
+    final ServletHolder sh = new ServletHolder(new ServletContainer(config));
     for (Map.Entry<String, String> entry : params.entrySet()) {
       sh.setInitParameter(entry.getKey(), entry.getValue());
+    }
+    webAppContext.addServlet(sh, pathSpec);
+  }
+
+  /**
+   * Add a Jersey resource config.
+   * @param config The Jersey ResourceConfig to be registered.
+   * @param pathSpec The path spec for the servlet
+   * @param params properties and features for ResourceConfig
+   */
+  public void addJerseyResourceConfig(final ResourceConfig config,
+      final String pathSpec, Map<String, String> params) {
+    LOG.info("addJerseyResourceConfig: pathSpec = {}.", pathSpec);
+    final ServletHolder sh = new ServletHolder(new ServletContainer(config));
+    if (params != null) {
+      for (Map.Entry<String, String> entry : params.entrySet()) {
+        sh.setInitParameter(entry.getKey(), entry.getValue());
+      }
     }
     webAppContext.addServlet(sh, pathSpec);
   }

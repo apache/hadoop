@@ -23,6 +23,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -33,7 +34,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -297,7 +297,7 @@ public class LogLevel {
 
       // read from the servlet
       BufferedReader in = new BufferedReader(
-          new InputStreamReader(connection.getInputStream(), Charsets.UTF_8));
+          new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));
       for (String line;;) {
         line = in.readLine();
         if (line == null) {

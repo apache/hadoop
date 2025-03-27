@@ -803,7 +803,7 @@ public abstract class CombineFileInputFormat<K, V>
     }
 
     public String toString() {
-      StringBuffer buf = new StringBuffer();
+      StringBuilder buf = new StringBuilder();
       buf.append("[");
       for (PathFilter f: filters) {
         buf.append(f);

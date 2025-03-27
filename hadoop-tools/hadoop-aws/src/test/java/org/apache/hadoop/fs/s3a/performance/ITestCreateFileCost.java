@@ -19,16 +19,23 @@
 package org.apache.hadoop.fs.s3a.performance;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 
 import static java.util.Objects.requireNonNull;
@@ -36,6 +43,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.toChar;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Constants.XA_HEADER_PREFIX;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.CREATE_FILE_NO_OVERWRITE;
@@ -45,6 +53,7 @@ import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILE_STATUS_FIL
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.GET_FILE_STATUS_ON_DIR_MARKER;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.GET_FILE_STATUS_ON_FILE;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.HEAD_OPERATION;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.LIST_OPERATION;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.NO_HEAD_OR_LIST;
 
 /**
@@ -52,13 +61,52 @@ import static org.apache.hadoop.fs.s3a.performance.OperationCost.NO_HEAD_OR_LIST
  * with the FS_S3A_CREATE_PERFORMANCE option.
  */
 @SuppressWarnings("resource")
+@RunWith(Parameterized.class)
 public class ITestCreateFileCost extends AbstractS3ACostTest {
 
   /**
-   * Create with markers kept, always.
+   * This test suite is parameterized for the different create file
+   * options.
+   * @return a list of test parameters.
    */
-  public ITestCreateFileCost() {
-    super(false);
+  @Parameterized.Parameters
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+        {false},
+        {true}
+    });
+  }
+
+  /**
+   * Flag for performance creation; all cost asserts need changing.
+   */
+  private final boolean createPerformance;
+
+  /**
+   * Create.
+   * @param createPerformance use the performance flag
+   */
+  public ITestCreateFileCost(final boolean createPerformance) {
+    this.createPerformance = createPerformance;
+  }
+
+  /**
+   * Determine the expected cost of a create operation;
+   * if {@link #createPerformance} is true, then the cost is always "no IO".
+   * @param source source cost
+   * @return cost to assert
+   */
+  private OperationCost expected(OperationCost source) {
+    return createPerformance ? NO_HEAD_OR_LIST : source;
+  }
+
+  @Override
+  public Configuration createConfiguration() {
+    final Configuration conf = setPerformanceFlags(
+        super.createConfiguration(),
+        createPerformance ? "create" : "");
+    S3ATestUtils.disableFilesystemCaching(conf);
+    return conf;
   }
 
   @Test
@@ -67,7 +115,7 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     Path testFile = methodPath();
     // when overwrite is false, the path is checked for existence.
     create(testFile, false,
-        CREATE_FILE_NO_OVERWRITE);
+        expected(CREATE_FILE_NO_OVERWRITE));
   }
 
   @Test
@@ -75,7 +123,7 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     describe("Test file creation with overwrite");
     Path testFile = methodPath();
     // when overwrite is true: only the directory checks take place.
-    create(testFile, true, CREATE_FILE_OVERWRITE);
+    create(testFile, true, expected(CREATE_FILE_OVERWRITE));
   }
 
   @Test
@@ -85,21 +133,45 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
 
     // now there is a file there, an attempt with overwrite == false will
     // fail on the first HEAD.
-    interceptOperation(FileAlreadyExistsException.class, "",
-        FILE_STATUS_FILE_PROBE,
-        () -> file(testFile, false));
+    if (!createPerformance) {
+      interceptOperation(FileAlreadyExistsException.class, "",
+          FILE_STATUS_FILE_PROBE,
+          () -> file(testFile, false));
+    } else {
+      create(testFile, false, NO_HEAD_OR_LIST);
+    }
   }
 
   @Test
-  public void testCreateFileOverDir() throws Throwable {
-    describe("Test cost of create file failing with existing dir");
+  public void testCreateFileOverDirNoOverwrite() throws Throwable {
+    describe("Test cost of create file overwrite=false failing with existing dir");
     Path testFile = dir(methodPath());
 
-    // now there is a file there, an attempt with overwrite == false will
+    // now there is a dir marker there, an attempt with overwrite == true will
     // fail on the first HEAD.
-    interceptOperation(FileAlreadyExistsException.class, "",
-        GET_FILE_STATUS_ON_DIR_MARKER,
-        () -> file(testFile, false));
+    if (!createPerformance) {
+      interceptOperation(FileAlreadyExistsException.class, "",
+          GET_FILE_STATUS_ON_DIR_MARKER,
+          () -> file(testFile, false));
+    } else {
+      create(testFile, false, NO_HEAD_OR_LIST);
+    }
+  }
+
+  @Test
+  public void testCreateFileOverDirWithOverwrite() throws Throwable {
+    describe("Test cost of create file overwrite=false failing with existing dir");
+    Path testFile = dir(methodPath());
+
+    // now there is a dir marker there, an attempt with overwrite == true will
+    // fail on the LIST; no HEAD is issued.
+    if (!createPerformance) {
+      interceptOperation(FileAlreadyExistsException.class, "",
+          LIST_OPERATION,
+          () -> file(testFile, true));
+    } else {
+      create(testFile, true, NO_HEAD_OR_LIST);
+    }
   }
 
   /**
@@ -117,14 +189,18 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     // files and so briefly the path not being present
     // only make sure the dest path isn't a directory.
     buildFile(testFile, true, false,
-        FILE_STATUS_DIR_PROBE);
+        expected(FILE_STATUS_DIR_PROBE));
 
     // now there is a file there, an attempt with overwrite == false will
     // fail on the first HEAD.
-    interceptOperation(FileAlreadyExistsException.class, "",
-        GET_FILE_STATUS_ON_FILE,
-        () -> buildFile(testFile, false, true,
-            GET_FILE_STATUS_ON_FILE));
+    if (!createPerformance) {
+      interceptOperation(FileAlreadyExistsException.class, "",
+          GET_FILE_STATUS_ON_FILE,
+          () -> buildFile(testFile, false, true,
+              GET_FILE_STATUS_ON_FILE));
+    } else {
+      buildFile(testFile, false, true, NO_HEAD_OR_LIST);
+    }
   }
 
   @Test
@@ -133,8 +209,11 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     S3AFileSystem fs = getFileSystem();
 
     Path path = methodPath();
+    // increment progress events
+    AtomicLong progressEvents = new AtomicLong(0);
     FSDataOutputStreamBuilder builder = fs.createFile(path)
         .overwrite(false)
+        .progress(progressEvents::incrementAndGet)
         .recursive();
 
     // this has a broken return type; something to do with the return value of
@@ -145,6 +224,10 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
         always(NO_HEAD_OR_LIST),
         with(OBJECT_BULK_DELETE_REQUEST, 0),
         with(OBJECT_DELETE_REQUEST, 0));
+
+    Assertions.assertThat(progressEvents.get())
+        .describedAs("progress events")
+        .isGreaterThanOrEqualTo(1);
   }
 
   @Test
@@ -162,7 +245,7 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     builder.must(FS_S3A_CREATE_HEADER + ".h1", custom);
 
     verifyMetrics(() -> build(builder),
-        always(CREATE_FILE_NO_OVERWRITE));
+        always(expected(CREATE_FILE_NO_OVERWRITE)));
 
     // the header is there and the probe should be a single HEAD call.
     String header = verifyMetrics(() ->
@@ -181,7 +264,7 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
 
     verifyMetrics(() ->
             build(fs.createFile(methodPath()).overwrite(true)),
-        always(CREATE_FILE_OVERWRITE));
+        always(expected(CREATE_FILE_OVERWRITE)));
   }
 
 
@@ -196,7 +279,7 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
           .close();
       return "";
     },
-        always(CREATE_FILE_OVERWRITE));
+        always(expected(CREATE_FILE_OVERWRITE)));
   }
 
   private FSDataOutputStream build(final FSDataOutputStreamBuilder builder)

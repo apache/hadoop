@@ -222,7 +222,7 @@ class ExecutionSummarizer implements StatListener<JobStats> {
   // Gets the stringified version of DataStatistics
   static String stringifyDataStatistics(DataStatistics stats) {
     if (stats != null) {
-      StringBuffer buffer = new StringBuffer();
+      StringBuilder buffer = new StringBuilder();
       String compressionStatus = stats.isDataCompressed() 
                                  ? "Compressed" 
                                  : "Uncompressed";

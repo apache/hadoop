@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_KEY;
 import static org.apache.hadoop.util.Time.monotonicNow;
@@ -78,7 +80,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   private static final BlockPlacementStatus ONE_RACK_PLACEMENT =
       new BlockPlacementStatusDefault(1, 1, 1);
 
-  private enum NodeNotChosenReason {
+  protected enum NodeNotChosenReason {
     NOT_IN_SERVICE("the node is not in service"),
     NODE_STALE("the node is stale"),
     NODE_TOO_BUSY("the node is too busy"),
@@ -86,7 +88,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     TOO_MANY_NODES_ON_RACK("the rack has too many chosen nodes"),
     NOT_ENOUGH_STORAGE_SPACE("not enough storage space to place the block"),
     NO_REQUIRED_STORAGE_TYPE("required storage types are unavailable"),
-    NODE_SLOW("the node is too slow");
+    NODE_SLOW("the node is too slow"),
+    NODE_NOT_CONFORM_TO_UD("the node doesn't conform to upgrade domain policy");
 
     private final String text;
 
@@ -111,7 +114,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   private FSClusterStats stats;
   protected long heartbeatInterval;   // interval for DataNode heartbeats
   private long staleInterval;   // interval used to identify stale DataNodes
-  
+  private volatile int minBlocksForWrite; // minimum number of blocks required for write operations.
+
   /**
    * A miss of that many heartbeats is tolerated for replica deletion policy.
    */
@@ -161,6 +165,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     this.excludeSlowNodesEnabled = conf.getBoolean(
         DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY,
         DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_DEFAULT);
+    this.minBlocksForWrite = conf.getInt(
+        DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY,
+        DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_DEFAULT);
   }
 
   @Override
@@ -959,7 +966,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       List<DatanodeStorageInfo> results,
       StorageType storageType) {
     DatanodeStorageInfo storage =
-        dnd.chooseStorage4Block(storageType, blockSize);
+        dnd.chooseStorage4Block(storageType, blockSize, minBlocksForWrite);
     if (storage != null) {
       results.add(storage);
     } else {
@@ -974,7 +981,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     logNodeIsNotChosen(node, reason, null);
   }
 
-  private static void logNodeIsNotChosen(DatanodeDescriptor node,
+  protected static void logNodeIsNotChosen(DatanodeDescriptor node,
       NodeNotChosenReason reason, String reasonDetails) {
     assert reason != null;
     if (LOG.isDebugEnabled()) {
@@ -1385,5 +1392,15 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   @Override
   public boolean getExcludeSlowNodesEnabled() {
     return excludeSlowNodesEnabled;
+  }
+
+  @Override
+  public void setMinBlocksForWrite(int minBlocksForWrite) {
+    this.minBlocksForWrite = minBlocksForWrite;
+  }
+
+  @Override
+  public int getMinBlocksForWrite() {
+    return minBlocksForWrite;
   }
 }

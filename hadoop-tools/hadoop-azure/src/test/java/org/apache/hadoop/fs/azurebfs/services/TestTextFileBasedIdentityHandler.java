@@ -19,9 +19,9 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.NoSuchFileException;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -71,22 +71,22 @@ public class TestTextFileBasedIdentityHandler {
     groupMappingFile = tempDir.newFile("group-mapping.conf");
 
     //Stage data for user mapping
-    FileUtils.writeStringToFile(userMappingFile, testUserDataLine1, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(userMappingFile, testUserDataLine2, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(userMappingFile, testUserDataLine3, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(userMappingFile, testUserDataLine4, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(userMappingFile, testUserDataLine5, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(userMappingFile, testUserDataLine6, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(userMappingFile, testUserDataLine7, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(userMappingFile, NEW_LINE, Charset.forName("UTF-8"), true);
+    FileUtils.writeStringToFile(userMappingFile, testUserDataLine1, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(userMappingFile, testUserDataLine2, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(userMappingFile, testUserDataLine3, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(userMappingFile, testUserDataLine4, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(userMappingFile, testUserDataLine5, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(userMappingFile, testUserDataLine6, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(userMappingFile, testUserDataLine7, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(userMappingFile, NEW_LINE, StandardCharsets.UTF_8, true);
 
     //Stage data for group mapping
-    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine1, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine2, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine3, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine4, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine5, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(groupMappingFile, NEW_LINE, Charset.forName("UTF-8"), true);
+    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine1, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine2, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine3, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine4, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine5, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(groupMappingFile, NEW_LINE, StandardCharsets.UTF_8, true);
   }
 
   private void assertUserLookup(TextFileBasedIdentityHandler handler, String userInTest, String expectedUser)
@@ -114,7 +114,7 @@ public class TestTextFileBasedIdentityHandler {
   public void testLookupForUserFileNotFound() throws Exception {
     TextFileBasedIdentityHandler handler =
         new TextFileBasedIdentityHandler(userMappingFile.getPath() + ".test", groupMappingFile.getPath());
-    intercept(FileNotFoundException.class, "FileNotFoundException",
+    intercept(NoSuchFileException.class, "NoSuchFileException",
         () -> handler.lookupForLocalUserIdentity(testUserDataLine3.split(":")[0]));
   }
 
@@ -143,7 +143,7 @@ public class TestTextFileBasedIdentityHandler {
   public void testLookupForGroupFileNotFound() throws Exception {
     TextFileBasedIdentityHandler handler =
         new TextFileBasedIdentityHandler(userMappingFile.getPath(), groupMappingFile.getPath() + ".test");
-    intercept(FileNotFoundException.class, "FileNotFoundException",
+    intercept(NoSuchFileException.class, "NoSuchFileException",
         () -> handler.lookupForLocalGroupIdentity(testGroupDataLine2.split(":")[0]));
   }
 }

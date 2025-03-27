@@ -73,9 +73,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_DEFAULT;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY;
-
 /**
  * This class supports writing files in striped layout and erasure coded format.
  * Each stripe contains a sequence of cells.
@@ -671,9 +668,9 @@ public class DFSStripedOutputStream extends DFSOutputStream
       // for healthy streamers, wait till all of them have fetched the new block
       // and flushed out all the enqueued packets.
       flushAllInternals();
+      // recheck failed streamers again after the flush
+      newFailed = checkStreamers();
     }
-    // recheck failed streamers again after the flush
-    newFailed = checkStreamers();
     while (newFailed.size() > 0) {
       failedStreamers.addAll(newFailed);
       coordinator.clearFailureStates();
@@ -1200,9 +1197,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
 
   @Override
   protected synchronized void closeImpl() throws IOException {
-    boolean recoverLeaseOnCloseException = dfsClient.getConfiguration()
-        .getBoolean(RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY,
-            RECOVER_LEASE_ON_CLOSE_EXCEPTION_DEFAULT);
+    boolean recoverLeaseOnCloseException = dfsClient.getConf().getRecoverLeaseOnCloseException();
     try {
       if (isClosed()) {
         exceptionLastSeen.check(true);

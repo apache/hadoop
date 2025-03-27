@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.partition;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
@@ -61,13 +61,8 @@ class KeyFieldHelper {
   private boolean keySpecSeen = false;
   
   public void setKeyFieldSeparator(String keyFieldSeparator) {
-    try {
-      this.keyFieldSeparator =
-        keyFieldSeparator.getBytes("UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      throw new RuntimeException("The current system does not " +
-          "support UTF-8 encoding!", e);
-    }    
+    this.keyFieldSeparator =
+      keyFieldSeparator.getBytes(StandardCharsets.UTF_8);
   }
   
   /** Required for backcompatibility with num.key.fields.for.partition in

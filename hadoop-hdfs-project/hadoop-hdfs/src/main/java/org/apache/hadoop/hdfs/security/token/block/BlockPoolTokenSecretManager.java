@@ -141,9 +141,9 @@ public class BlockPoolTokenSecretManager extends
   /**
    * See {@link BlockTokenSecretManager#addKeys(ExportedBlockKeys)}.
    */
-  public void addKeys(String bpid, ExportedBlockKeys exportedKeys)
-      throws IOException {
-    get(bpid).addKeys(exportedKeys);
+  public void addKeys(String bpid, ExportedBlockKeys exportedKeys,
+      boolean updateCurrentKey) throws IOException {
+    get(bpid).addKeys(exportedKeys, updateCurrentKey);
   }
 
   /**

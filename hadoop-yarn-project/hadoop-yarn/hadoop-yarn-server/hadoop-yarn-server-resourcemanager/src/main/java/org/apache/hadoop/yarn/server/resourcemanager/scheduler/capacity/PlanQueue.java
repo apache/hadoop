@@ -52,7 +52,7 @@ public class PlanQueue extends AbstractManagedParentQueue {
 
     // Set the reservation queue attributes for the Plan
     CapacitySchedulerConfiguration conf = queueContext.getConfiguration();
-    String queuePath = super.getQueuePath();
+    QueuePath queuePath = super.getQueuePathObject();
     int maxAppsForReservation = conf.getMaximumApplicationsPerQueue(queuePath);
     showReservationsAsQueues = conf.getShowReservationAsQueues(queuePath);
     if (maxAppsForReservation < 0) {
@@ -72,7 +72,7 @@ public class PlanQueue extends AbstractManagedParentQueue {
     updateQuotas(configuredUserLimit, configuredUserLimitFactor,
         maxAppsForReservation, configuredMaxAppsPerUserForReservation);
 
-    StringBuffer queueInfo = new StringBuffer();
+    StringBuilder queueInfo = new StringBuilder();
     queueInfo.append("Created Plan Queue: ").append(queueName)
         .append("\nwith capacity: [").append(super.getCapacity())
         .append("]\nwith max capacity: [").append(super.getMaximumCapacity())

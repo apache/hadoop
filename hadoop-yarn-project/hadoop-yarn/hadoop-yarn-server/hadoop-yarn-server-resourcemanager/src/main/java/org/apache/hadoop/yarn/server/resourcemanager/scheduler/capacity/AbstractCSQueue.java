@@ -98,7 +98,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   final ResourceCalculator resourceCalculator;
   Set<String> resourceTypes;
   final RMNodeLabelsManager labelManager;
-  private String multiNodeSortingPolicyName = null;
+  private String multiNodeSortingPolicyClassName = null;
 
   Map<AccessType, AccessControlList> acls =
       new HashMap<AccessType, AccessControlList>();
@@ -346,7 +346,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     writeLock.lock();
     try {
       CapacitySchedulerConfiguration configuration = queueContext.getConfiguration();
-      this.acls = configuration.getAcls(getQueuePath());
+      this.acls = configuration.getAcls(getQueuePathObject());
 
       if (isDynamicQueue() || this instanceof AbstractAutoCreatedLeafQueue) {
         parseAndSetDynamicTemplates();
@@ -367,7 +367,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       // Setup queue's maximumAllocation respecting the global
       // and the queue settings
-      this.queueAllocationSettings.setupMaximumAllocation(configuration, getQueuePath(),
+      this.queueAllocationSettings.setupMaximumAllocation(configuration, getQueuePathObject(),
           parent);
 
       // Initialize the queue state based on previous state, configured state
@@ -382,10 +382,10 @@ public abstract class AbstractCSQueue implements CSQueue {
           configuration.getReservationContinueLook();
 
       this.configuredCapacityVectors = configuration
-          .parseConfiguredResourceVector(queuePath.getFullPath(),
+          .parseConfiguredResourceVector(queuePath,
               this.queueNodeLabelsSettings.getConfiguredNodeLabels());
       this.configuredMaxCapacityVectors = configuration
-          .parseConfiguredMaximumCapacityVector(queuePath.getFullPath(),
+          .parseConfiguredMaximumCapacityVector(queuePath,
               this.queueNodeLabelsSettings.getConfiguredNodeLabels(),
               QueueCapacityVector.newInstance());
 
@@ -420,11 +420,11 @@ public abstract class AbstractCSQueue implements CSQueue {
       // Store preemption settings
       this.preemptionSettings = new CSQueuePreemptionSettings(this, configuration);
       this.priority = configuration.getQueuePriority(
-          getQueuePath());
+          getQueuePathObject());
 
       // Update multi-node sorting algorithm for scheduling as configured.
-      setMultiNodeSortingPolicyName(
-          configuration.getMultiNodesSortingAlgorithmPolicy(getQueuePath()));
+      setMultiNodeSortingPolicyClassName(
+          configuration.getMultiNodesSortingAlgorithmPolicy(getQueuePathObject()));
 
       // Setup application related limits
       this.queueAppLifetimeSettings = new QueueAppLifetimeAndLimitSettings(configuration,
@@ -440,7 +440,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   protected void parseAndSetDynamicTemplates() {
     // Set the template properties from the parent to the queuepath of the child
     ((AbstractParentQueue) parent).getAutoCreatedQueueTemplate()
-        .setTemplateEntriesForChild(queueContext.getConfiguration(), getQueuePath(),
+        .setTemplateEntriesForChild(queueContext.getConfiguration(), getQueuePathObject(),
                 this instanceof AbstractLeafQueue);
 
     String parentTemplate = String.format("%s.%s", parent.getQueuePath(),
@@ -488,21 +488,21 @@ public abstract class AbstractCSQueue implements CSQueue {
     // Insert this queue's userWeights, overriding parent's userWeights if
     // there is an overlap.
     unionInheritedWeights.addFrom(
-        queueContext.getConfiguration().getAllUserWeightsForQueue(getQueuePath()));
+        queueContext.getConfiguration().getAllUserWeightsForQueue(getQueuePathObject()));
     return unionInheritedWeights;
   }
 
-  protected Resource getMinimumAbsoluteResource(String queuePath, String label) {
+  protected Resource getMinimumAbsoluteResource(QueuePath queuePath, String label) {
     return queueContext.getConfiguration()
         .getMinimumResourceRequirement(label, queuePath, resourceTypes);
   }
 
-  protected Resource getMaximumAbsoluteResource(String queuePath, String label) {
+  protected Resource getMaximumAbsoluteResource(QueuePath queuePath, String label) {
     return queueContext.getConfiguration()
         .getMaximumResourceRequirement(label, queuePath, resourceTypes);
   }
 
-  protected boolean checkConfigTypeIsAbsoluteResource(String queuePath,
+  protected boolean checkConfigTypeIsAbsoluteResource(QueuePath queuePath,
       String label) {
     return queueContext.getConfiguration().checkConfigTypeIsAbsoluteResource(label,
         queuePath, resourceTypes);
@@ -518,7 +518,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       if (queueContext.getConfiguration().isLegacyQueueMode()) {
         localType = checkConfigTypeIsAbsoluteResource(
-                getQueuePath(), label) ? CapacityConfigType.ABSOLUTE_RESOURCE
+                getQueuePathObject(), label) ? CapacityConfigType.ABSOLUTE_RESOURCE
                 : CapacityConfigType.PERCENTAGE;
       } else {
         // TODO: revisit this later
@@ -556,8 +556,8 @@ public abstract class AbstractCSQueue implements CSQueue {
    */
   protected void updateConfigurableResourceLimits(Resource clusterResource) {
     for (String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
-      final Resource minResource = getMinimumAbsoluteResource(getQueuePath(), label);
-      Resource maxResource = getMaximumAbsoluteResource(getQueuePath(), label);
+      final Resource minResource = getMinimumAbsoluteResource(getQueuePathObject(), label);
+      Resource maxResource = getMaximumAbsoluteResource(getQueuePathObject(), label);
 
       if (parent != null) {
         final Resource parentMax = parent.getQueueResourceQuotas()
@@ -1197,12 +1197,12 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   @Override
-  public String getMultiNodeSortingPolicyName() {
-    return this.multiNodeSortingPolicyName;
+  public String getMultiNodeSortingPolicyClassName() {
+    return this.multiNodeSortingPolicyClassName;
   }
 
-  public void setMultiNodeSortingPolicyName(String policyName) {
-    this.multiNodeSortingPolicyName = policyName;
+  public void setMultiNodeSortingPolicyClassName(String policyName) {
+    this.multiNodeSortingPolicyClassName = policyName;
   }
 
   public long getMaximumApplicationLifetime() {

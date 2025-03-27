@@ -219,6 +219,7 @@ int URI_FUNC(ComposeQueryEngine)(URI_CHAR * dest,
 
 			/* Copy key */
 			if (firstItem == URI_TRUE) {
+				ampersandLen = 1;
 				firstItem = URI_FALSE;
 			} else {
 				write[0] = _UT('&');

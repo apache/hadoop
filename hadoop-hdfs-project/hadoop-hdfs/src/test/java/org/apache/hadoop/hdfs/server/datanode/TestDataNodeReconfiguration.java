@@ -49,6 +49,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_ENABLED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL;
@@ -916,4 +918,34 @@ public class TestDataNodeReconfiguration {
       assertEquals(60000, dn.getDiskBalancer().getPlanValidityIntervalInConfig());
     }
   }
+
+  @Test
+  public void testSlowIoWarningThresholdReconfiguration() throws Exception {
+    int slowIoWarningThreshold = 500;
+    for (int i = 0; i < NUM_DATA_NODE; i++) {
+      DataNode dn = cluster.getDataNodes().get(i);
+
+      // Verify DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY.
+      // Try invalid values.
+      LambdaTestUtils.intercept(ReconfigurationException.class,
+          "Could not change property dfs.datanode.slow.io.warning.threshold.ms from "
+              + "'300' to 'text'",
+          () -> dn.reconfigureProperty(DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY, "text"));
+      LambdaTestUtils.intercept(ReconfigurationException.class,
+          "Could not change property dfs.datanode.slow.io.warning.threshold.ms from "
+              + "'300' to '-1'",
+          () -> dn.reconfigureProperty(DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY, "-1"));
+
+      // Set value is 500.
+      dn.reconfigureProperty(DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY,
+          String.valueOf(slowIoWarningThreshold));
+      assertEquals(slowIoWarningThreshold, dn.getDnConf().getSlowIoWarningThresholdMs());
+
+      // Set default value.
+      dn.reconfigureProperty(DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY, null);
+      assertEquals(DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_DEFAULT,
+          dn.getDnConf().getSlowIoWarningThresholdMs());
+    }
+  }
+
 }

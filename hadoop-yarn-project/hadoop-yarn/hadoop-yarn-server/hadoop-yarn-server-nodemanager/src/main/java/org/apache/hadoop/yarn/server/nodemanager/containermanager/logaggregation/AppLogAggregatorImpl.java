@@ -35,8 +35,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.StringUtils;
@@ -68,12 +71,15 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
+import org.apache.hadoop.yarn.server.nodemanager.security.NMDelegationTokenManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier.HDFS_DELEGATION_KIND;
 
 
 public class AppLogAggregatorImpl implements AppLogAggregator {
@@ -117,6 +123,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
 
   private final LogAggregationFileController logAggregationFileController;
 
+  private NMDelegationTokenManager delegationTokenManager;
 
   /**
    * The value recovered from state store to determine the age of application
@@ -218,6 +225,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
             logAggregationInRolling,
             rollingMonitorInterval,
             this.appId, this.appAcls, this.nodeId, this.userUgi);
+    delegationTokenManager = new NMDelegationTokenManager(conf);
   }
 
   private ContainerLogAggregationPolicy getLogAggPolicy(Configuration conf) {
@@ -286,7 +294,11 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     }
 
     addCredentials();
-
+    try {
+      removeExpiredDelegationTokens();
+    } catch (IOException | InterruptedException e) {
+      LOG.warn("Removing expired delegation tokens failed for " + appId, e);
+    }
     // Create a set of Containers whose logs will be uploaded in this cycle.
     // It includes:
     // a) all containers in pendingContainers: those containers are finished
@@ -427,6 +439,29 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
             userUgi);
         // this will replace old token
         userUgi.addCredentials(systemCredentials);
+      }
+    }
+  }
+
+  private void removeExpiredDelegationTokens()
+      throws IOException, InterruptedException {
+    if (!UserGroupInformation.isSecurityEnabled()) {
+      return;
+    }
+
+    for (Map.Entry<Text, Token<?>> tokenEntry : userUgi.getCredentials().getTokenMap().entrySet()) {
+      Token<?> token = tokenEntry.getValue();
+
+      if (token.getKind().equals(HDFS_DELEGATION_KIND)) {
+        try {
+          delegationTokenManager.renewToken(token);
+          LOG.debug("HDFS Delegation Token for {} is successfully renewed: {}",
+              appId, token);
+        } catch (SecretManager.InvalidToken e) {
+          userUgi.removeToken(tokenEntry.getKey());
+          LOG.info("HDFS Delegation Token for {} is expired, " +
+              "removed from the credentials: {}", appId, token);
+        }
       }
     }
   }

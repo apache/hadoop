@@ -106,6 +106,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto.SaslState;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RPCTraceInfoProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SaslMechanismFactory;
 import org.apache.hadoop.security.SaslPropertiesResolver;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
@@ -350,13 +351,13 @@ public abstract class Server {
    * after the call returns.
    */
   private static final ThreadLocal<Call> CurCall = new ThreadLocal<Call>();
-  
+
   /** @return Get the current call. */
   @VisibleForTesting
   public static ThreadLocal<Call> getCurCall() {
     return CurCall;
   }
-  
+
   /**
    * Returns the currently active RPC call's sequential ID number.  A negative
    * call ID indicates an invalid value, such as if there is no currently active
@@ -516,14 +517,20 @@ public abstract class Server {
   private final long metricsUpdaterInterval;
   private final ScheduledExecutorService scheduledExecutorService;
 
-  private boolean logSlowRPC = false;
+  private volatile boolean logSlowRPC = false;
+  /** Threshold time for log slow rpc. */
+  private volatile long logSlowRPCThresholdTime;
 
   /**
    * Checks if LogSlowRPC is set true.
    * @return true, if LogSlowRPC is set true, false, otherwise.
    */
-  protected boolean isLogSlowRPC() {
+  public boolean isLogSlowRPC() {
     return logSlowRPC;
+  }
+
+  public long getLogSlowRPCThresholdTime() {
+    return logSlowRPCThresholdTime;
   }
 
   public int getNumInProcessHandler() {
@@ -543,8 +550,14 @@ public abstract class Server {
    * @param logSlowRPCFlag input logSlowRPCFlag.
    */
   @VisibleForTesting
-  protected void setLogSlowRPC(boolean logSlowRPCFlag) {
+  public void setLogSlowRPC(boolean logSlowRPCFlag) {
     this.logSlowRPC = logSlowRPCFlag;
+  }
+
+  @VisibleForTesting
+  public void setLogSlowRPCThresholdTime(long logSlowRPCThresholdMs) {
+    this.logSlowRPCThresholdTime = rpcMetrics.getMetricsTimeUnit().
+        convert(logSlowRPCThresholdMs, TimeUnit.MILLISECONDS);
   }
 
   private void setPurgeIntervalNanos(int purgeInterval) {
@@ -568,12 +581,15 @@ public abstract class Server {
    * @param methodName - RPC Request method name
    * @param details - Processing Detail.
    *
-   * if this request took too much time relative to other requests
-   * we consider that as a slow RPC. 3 is a magic number that comes
-   * from 3 sigma deviation. A very simple explanation can be found
-   * by searching for 68-95-99.7 rule. We flag an RPC as slow RPC
-   * if and only if it falls above 99.7% of requests. We start this logic
-   * only once we have enough sample size.
+   * If a request took significant more time than other requests,
+   * and its processing time is at least `logSlowRPCThresholdMs` we consider that as a slow RPC.
+   *
+   * The definition rules for calculating whether the current request took too much time
+   * compared to other requests are as follows:
+   * 3 is a magic number that comes from 3 sigma deviation.
+   * A very simple explanation can be found by searching for 68-95-99.7 rule.
+   * We flag an RPC as slow RPC if and only if it falls above 99.7% of requests.
+   * We start this logic only once we have enough sample size.
    */
   void logSlowRpcCalls(String methodName, Call call,
       ProcessingDetails details) {
@@ -587,15 +603,14 @@ public abstract class Server {
     final double threeSigma = rpcMetrics.getProcessingMean() +
         (rpcMetrics.getProcessingStdDev() * deviation);
 
-    long processingTime =
-            details.get(Timing.PROCESSING, rpcMetrics.getMetricsTimeUnit());
+    final TimeUnit metricsTimeUnit = rpcMetrics.getMetricsTimeUnit();
+    long processingTime = details.get(Timing.PROCESSING, metricsTimeUnit);
     if ((rpcMetrics.getProcessingSampleCount() > minSampleSize) &&
-        (processingTime > threeSigma)) {
-      LOG.warn(
-          "Slow RPC : {} took {} {} to process from client {},"
-              + " the processing detail is {}",
-          methodName, processingTime, rpcMetrics.getMetricsTimeUnit(), call,
-          details.toString());
+        (processingTime > threeSigma) &&
+        (processingTime > getLogSlowRPCThresholdTime())) {
+      LOG.warn("Slow RPC : {} took {} {} to process from client {}, the processing detail is {}," +
+              " and the threshold time is {} {}.", methodName, processingTime, metricsTimeUnit,
+          call, details.toString(), getLogSlowRPCThresholdTime(), metricsTimeUnit);
       rpcMetrics.incrSlowRpc();
     }
   }
@@ -623,7 +638,8 @@ public abstract class Server {
     rpcMetrics.addRpcQueueTime(queueTime);
 
     if (call.isResponseDeferred() || connDropped) {
-      // call was skipped; don't include it in processing metrics
+      // The call was skipped; don't include it in processing metrics.
+      // Will update metrics in method updateDeferredMetrics.
       return;
     }
 
@@ -653,9 +669,41 @@ public abstract class Server {
     }
   }
 
-  void updateDeferredMetrics(String name, long processingTime) {
+  /**
+   * Update rpc metrics for defered calls.
+   * @param call The Rpc Call
+   * @param name Rpc method name
+   * @param processingTime processing call in ms unit.
+   */
+  void updateDeferredMetrics(Call call, String name, long processingTime) {
+    long completionTimeNanos = Time.monotonicNowNanos();
+    long arrivalTimeNanos = call.timestampNanos;
+
+    ProcessingDetails details = call.getProcessingDetails();
+    long waitTime =
+        details.get(Timing.LOCKWAIT, rpcMetrics.getMetricsTimeUnit());
+    long responseTime =
+        details.get(Timing.RESPONSE, rpcMetrics.getMetricsTimeUnit());
+    rpcMetrics.addRpcLockWaitTime(waitTime);
+    rpcMetrics.addRpcProcessingTime(processingTime);
+    rpcMetrics.addRpcResponseTime(responseTime);
     rpcMetrics.addDeferredRpcProcessingTime(processingTime);
     rpcDetailedMetrics.addDeferredProcessingTime(name, processingTime);
+    // don't include lock wait for detailed metrics.
+    processingTime -= waitTime;
+    rpcDetailedMetrics.addProcessingTime(name, processingTime);
+
+    // Overall processing time is from arrival to completion.
+    long overallProcessingTime = rpcMetrics.getMetricsTimeUnit()
+        .convert(completionTimeNanos - arrivalTimeNanos, TimeUnit.NANOSECONDS);
+    rpcDetailedMetrics.addOverallProcessingTime(name, overallProcessingTime);
+    callQueue.addResponseTime(name, call, details);
+    if (isLogSlowRPC()) {
+      logSlowRpcCalls(name, call, details);
+    }
+    if (details.getReturnStatus() == RpcStatusProto.SUCCESS) {
+      rpcMetrics.incrRpcCallSuccesses();
+    }
   }
 
   /**
@@ -948,6 +996,7 @@ public abstract class Server {
     final int callId;            // the client's call id
     final int retryCount;        // the retry count of the call
     private final long timestampNanos; // time the call was received
+    protected long startHandleTimestampNanos; // time the call was run
     long responseTimestampNanos; // time the call was served
     private AtomicInteger responseWaitCount = new AtomicInteger(1);
     final RPC.RpcKind rpcKind;
@@ -1075,7 +1124,10 @@ public abstract class Server {
       int count = responseWaitCount.decrementAndGet();
       assert count >= 0 : "response has already been sent";
       if (count == 0) {
+        long startNanos = Time.monotonicNowNanos();
         doResponse(null);
+        getProcessingDetails().set(Timing.RESPONSE,
+            Time.monotonicNowNanos() - startNanos, TimeUnit.NANOSECONDS);
       }
     }
 
@@ -1148,6 +1200,15 @@ public abstract class Server {
 
     public long getTimestampNanos() {
       return timestampNanos;
+    }
+
+
+    public long getStartHandleTimestampNanos() {
+      return startHandleTimestampNanos;
+    }
+
+    public void setStartHandleTimestampNanos(long startHandleTimestampNanos) {
+      this.startHandleTimestampNanos = startHandleTimestampNanos;
     }
   }
 
@@ -1225,6 +1286,7 @@ public abstract class Server {
       }
 
       long startNanos = Time.monotonicNowNanos();
+      this.setStartHandleTimestampNanos(startNanos);
       Writable value = null;
       ResponseParams responseParams = new ResponseParams();
 
@@ -1243,14 +1305,10 @@ public abstract class Server {
         deltaNanos -= details.get(Timing.LOCKSHARED, TimeUnit.NANOSECONDS);
         deltaNanos -= details.get(Timing.LOCKEXCLUSIVE, TimeUnit.NANOSECONDS);
         details.set(Timing.LOCKFREE, deltaNanos, TimeUnit.NANOSECONDS);
-        startNanos = Time.monotonicNowNanos();
 
         setResponseFields(value, responseParams);
         sendResponse();
-
         details.setReturnStatus(responseParams.returnStatus);
-        deltaNanos = Time.monotonicNowNanos() - startNanos;
-        details.set(Timing.RESPONSE, deltaNanos, TimeUnit.NANOSECONDS);
       } else {
         LOG.debug("Deferring response for callId: {}", this.callId);
       }
@@ -1317,6 +1375,7 @@ public abstract class Server {
      * Send a deferred response, ignoring errors.
      */
     private void sendDeferedResponse() {
+      long startNanos = Time.monotonicNowNanos();
       try {
         connection.sendResponse(this);
       } catch (Exception e) {
@@ -1328,6 +1387,8 @@ public abstract class Server {
             .currentThread().getName() + ", CallId="
             + callId + ", hostname=" + getHostAddress());
       }
+      getProcessingDetails().set(Timing.RESPONSE,
+          Time.monotonicNowNanos() - startNanos, TimeUnit.NANOSECONDS);
     }
 
     @Override
@@ -2021,11 +2082,7 @@ public abstract class Server {
      * Address to which the socket is connected to.
      */
     private final InetAddress addr;
-    /**
-     * Client Host address from where the socket connection is being established to the Server.
-     */
-    private final String hostName;
-    
+
     IpcConnectionContextProto connectionContext;
     String protocolName;
     SaslServer saslServer;
@@ -2068,12 +2125,9 @@ public abstract class Server {
       this.isOnAuxiliaryPort = isOnAuxiliaryPort;
       if (addr == null) {
         this.hostAddress = "*Unknown*";
-        this.hostName = this.hostAddress;
       } else {
         // host IP address
         this.hostAddress = addr.getHostAddress();
-        // host name for the IP address
-        this.hostName = addr.getHostName();
       }
       this.remotePort = socket.getPort();
       this.responseQueue = new LinkedList<RpcCall>();
@@ -2089,7 +2143,7 @@ public abstract class Server {
 
     @Override
     public String toString() {
-      return hostName + ":" + remotePort + " / " + hostAddress + ":" + remotePort;
+      return hostAddress + ":" + remotePort;
     }
 
     boolean setShouldClose() {
@@ -2134,6 +2188,10 @@ public abstract class Server {
 
     public Server getServer() {
       return Server.this;
+    }
+
+    public Configuration getConf() {
+      return Server.this.getConf();
     }
 
     /* Return true if the connection has no outstanding rpc */
@@ -2503,6 +2561,7 @@ public abstract class Server {
           }
 
           if (!RpcConstants.HEADER.equals(dataLengthBuffer)) {
+            final String hostName = addr == null ? this.hostAddress : addr.getHostName();
             LOG.warn("Incorrect RPC Header length from {}:{} / {}:{}. Expected: {}. Actual: {}",
                 hostName, remotePort, hostAddress, remotePort, RpcConstants.HEADER,
                 dataLengthBuffer);
@@ -2510,6 +2569,7 @@ public abstract class Server {
             return -1;
           }
           if (version != CURRENT_VERSION) {
+            final String hostName = addr == null ? this.hostAddress : addr.getHostName();
             //Warning is ok since this is not supposed to happen.
             LOG.warn("Version mismatch from {}:{} / {}:{}. "
                     + "Expected version: {}. Actual version: {} ", hostName,
@@ -2596,7 +2656,8 @@ public abstract class Server {
       RpcSaslProto negotiateMessage = negotiateResponse;
       // accelerate token negotiation by sending initial challenge
       // in the negotiation response
-      if (enabledAuthMethods.contains(AuthMethod.TOKEN)) {
+      if (enabledAuthMethods.contains(AuthMethod.TOKEN)
+          && SaslMechanismFactory.isDefaultMechanism(AuthMethod.TOKEN.getMechanismName())) {
         saslServer = createSaslServer(AuthMethod.TOKEN);
         byte[] challenge = saslServer.evaluateResponse(new byte[0]);
         RpcSaslProto.Builder negotiateBuilder =
@@ -3119,6 +3180,13 @@ public abstract class Server {
       // For example, IPC clients using FailoverOnNetworkExceptionRetry handle
       // RetriableException.
       rpcMetrics.incrClientBackoff();
+      // Clients that are directly put into lowest priority queue are backed off and disconnected.
+      if (cqe.getCause() instanceof RpcServerException) {
+        RpcServerException ex = (RpcServerException) cqe.getCause();
+        if (ex.getRpcStatusProto() == RpcStatusProto.FATAL) {
+          rpcMetrics.incrClientBackoffDisconnected();
+        }
+      }
       // unwrap retriable exception.
       throw cqe.getCause();
     }
@@ -3358,6 +3426,10 @@ public abstract class Server {
     this.setLogSlowRPC(conf.getBoolean(
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC,
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_DEFAULT));
+
+    this.setLogSlowRPCThresholdTime(conf.getLong(
+        CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY,
+        CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_DEFAULT));
 
     this.setPurgeIntervalNanos(conf.getInt(
         CommonConfigurationKeysPublic.IPC_SERVER_PURGE_INTERVAL_MINUTES_KEY,
@@ -3855,6 +3927,16 @@ public abstract class Server {
 
   public void setClientBackoffEnabled(boolean value) {
     callQueue.setClientBackoffEnabled(value);
+  }
+
+  @VisibleForTesting
+  public boolean isServerFailOverEnabled() {
+    return callQueue.isServerFailOverEnabled();
+  }
+
+  @VisibleForTesting
+  public boolean isServerFailOverEnabledByQueue() {
+    return callQueue.isServerFailOverEnabledByQueue();
   }
 
   /**

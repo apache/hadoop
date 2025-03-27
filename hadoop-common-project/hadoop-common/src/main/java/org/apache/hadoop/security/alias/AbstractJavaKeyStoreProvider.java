@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.ProviderUtils;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +32,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -199,7 +199,7 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
 
   public static char[] bytesToChars(byte[] bytes) throws IOException {
     String pass;
-    pass = new String(bytes, Charsets.UTF_8);
+    pass = new String(bytes, StandardCharsets.UTF_8);
     return pass.toCharArray();
   }
 
@@ -268,7 +268,7 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
     writeLock.lock();
     try {
       keyStore.setKeyEntry(alias,
-          new SecretKeySpec(new String(material).getBytes("UTF-8"),
+          new SecretKeySpec(new String(material).getBytes(StandardCharsets.UTF_8),
               getAlgorithm()), password, null);
     } catch (KeyStoreException e) {
       throw new IOException("Can't store credential " + alias + " in " + this,

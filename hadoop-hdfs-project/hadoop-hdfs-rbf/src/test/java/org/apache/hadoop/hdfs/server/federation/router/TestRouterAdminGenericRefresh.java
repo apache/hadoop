@@ -24,17 +24,17 @@ import org.apache.hadoop.hdfs.tools.federation.RouterAdmin;
 import org.apache.hadoop.ipc.RefreshHandler;
 import org.apache.hadoop.ipc.RefreshRegistry;
 import org.apache.hadoop.ipc.RefreshResponse;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Before all tests, a router is spun up.
@@ -49,7 +49,7 @@ public class TestRouterAdminGenericRefresh {
   private static RefreshHandler firstHandler;
   private static RefreshHandler secondHandler;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
 
     // Build and start a router with admin + RPC
@@ -63,7 +63,7 @@ public class TestRouterAdminGenericRefresh {
     admin = new RouterAdmin(config);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownBeforeClass() throws IOException {
     if (router != null) {
       router.stop();
@@ -71,7 +71,7 @@ public class TestRouterAdminGenericRefresh {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // Register Handlers, first one just sends an ok response
     firstHandler = Mockito.mock(RefreshHandler.class);
@@ -91,7 +91,7 @@ public class TestRouterAdminGenericRefresh {
     RefreshRegistry.defaultRegistry().register("secondHandler", secondHandler);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     RefreshRegistry.defaultRegistry().unregisterAll("firstHandler");
     RefreshRegistry.defaultRegistry().unregisterAll("secondHandler");
@@ -101,7 +101,7 @@ public class TestRouterAdminGenericRefresh {
   public void testInvalidCommand() throws Exception {
     String[] args = new String[]{"-refreshRouterArgs", "nn"};
     int exitCode = admin.run(args);
-    assertEquals("RouterAdmin should fail due to bad args", -1, exitCode);
+    assertEquals(-1, exitCode, "RouterAdmin should fail due to bad args");
   }
 
   @Test
@@ -109,8 +109,7 @@ public class TestRouterAdminGenericRefresh {
     String[] argv = new String[]{"-refreshRouterArgs", "localhost:" +
         router.getAdminServerAddress().getPort(), "unregisteredIdentity"};
     int exitCode = admin.run(argv);
-    assertEquals("RouterAdmin should fail due to no handler registered",
-        -1, exitCode);
+    assertEquals(-1, exitCode, "RouterAdmin should fail due to no handler registered");
   }
 
   @Test
@@ -118,7 +117,7 @@ public class TestRouterAdminGenericRefresh {
     String[] args = new String[]{"-refreshRouterArgs", "localhost:" +
         router.getAdminServerAddress().getPort(), "firstHandler"};
     int exitCode = admin.run(args);
-    assertEquals("RouterAdmin should succeed", 0, exitCode);
+    assertEquals(0, exitCode, "RouterAdmin should succeed");
 
     Mockito.verify(firstHandler).handleRefresh("firstHandler", new String[]{});
     // Second handler was never called
@@ -131,12 +130,12 @@ public class TestRouterAdminGenericRefresh {
     String[] args = new String[]{"-refreshRouterArgs", "localhost:" +
         router.getAdminServerAddress().getPort(), "secondHandler", "one"};
     int exitCode = admin.run(args);
-    assertEquals("RouterAdmin should return 2", 2, exitCode);
+    assertEquals(2, exitCode, "RouterAdmin should return 2");
 
     exitCode = admin.run(new String[]{"-refreshRouterArgs", "localhost:" +
         router.getAdminServerAddress().getPort(),
         "secondHandler", "one", "two"});
-    assertEquals("RouterAdmin should now return 3", 3, exitCode);
+    assertEquals(3, exitCode, "RouterAdmin should now return 3");
 
     Mockito.verify(secondHandler).handleRefresh(
         "secondHandler", new String[]{"one"});
@@ -152,7 +151,7 @@ public class TestRouterAdminGenericRefresh {
     String[] args = new String[]{"-refreshRouterArgs", "localhost:" +
         router.getAdminServerAddress().getPort(), "firstHandler"};
     int exitCode = admin.run(args);
-    assertEquals("RouterAdmin should return -1", -1, exitCode);
+    assertEquals(-1, exitCode, "RouterAdmin should return -1");
   }
 
   @Test

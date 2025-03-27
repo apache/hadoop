@@ -31,8 +31,15 @@ package hadoop.hdfs.qjournal;
 import "HdfsServer.proto";
 import "QJournalProtocol.proto";
 
+message GetStorageInfoRequestProto {
+    required JournalIdProto jid = 1;
+    optional string nameServiceId = 2;
+}
 
 service InterQJournalProtocolService {
     rpc getEditLogManifestFromJournal(GetEditLogManifestRequestProto)
     returns (GetEditLogManifestResponseProto);
+
+    rpc getStorageInfo(GetStorageInfoRequestProto)
+    returns (StorageInfoProto);
 }

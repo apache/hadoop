@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -88,7 +89,7 @@ public class TestStreamXmlRecordReader {
     String contents = null;
     try {
       in.readFully(in.getPos(), buf);
-      contents = new String(buf, "UTF-8");
+      contents = new String(buf, StandardCharsets.UTF_8);
     } finally {
       in.close();
     }
@@ -100,9 +101,9 @@ public class TestStreamXmlRecordReader {
     FileOutputStream out = new FileOutputStream(INPUT_FILE.getAbsoluteFile());
     String dummyXmlStartTag = "<PATTERN>\n";
     String dummyXmlEndTag = "</PATTERN>\n";
-    out.write(dummyXmlStartTag.getBytes("UTF-8"));
-    out.write(input.getBytes("UTF-8"));
-    out.write(dummyXmlEndTag.getBytes("UTF-8"));
+    out.write(dummyXmlStartTag.getBytes(StandardCharsets.UTF_8));
+    out.write(input.getBytes(StandardCharsets.UTF_8));
+    out.write(dummyXmlEndTag.getBytes(StandardCharsets.UTF_8));
     out.close();
   }
 

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.federation.policies;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 
 import java.nio.ByteBuffer;
@@ -27,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -47,7 +50,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.mockito.exceptions.base.MockitoException;
 
 /**
  * Base class for policies tests, tests for common reinitialization cases.
@@ -75,52 +79,69 @@ public abstract class BaseFederationPoliciesTest {
         .newInstance("queue1", getPolicy().getClass().getCanonicalName(), buf));
     fpc.setFederationSubclusterResolver(
         FederationPoliciesTestUtil.initResolver());
-    fpc.setFederationStateStoreFacade(FederationPoliciesTestUtil.initFacade());
+    Configuration conf = new Configuration();
+    fpc.setFederationStateStoreFacade(FederationPoliciesTestUtil.initFacade(conf));
     getPolicy().reinitialize(fpc);
   }
 
-  @Test(expected = FederationPolicyInitializationException.class)
+  @Test
   public void testReinitilializeBad1() throws YarnException {
-    getPolicy().reinitialize(null);
+    assertThrows(FederationPolicyInitializationException.class, () -> {
+      getPolicy().reinitialize(null);
+    });
   }
 
-  @Test(expected = FederationPolicyInitializationException.class)
+  @Test
   public void testReinitilializeBad2() throws YarnException {
-    FederationPolicyInitializationContext fpc =
-        new FederationPolicyInitializationContext();
-    getPolicy().reinitialize(fpc);
+    assertThrows(FederationPolicyInitializationException.class, () -> {
+      FederationPolicyInitializationContext fpc =
+          new FederationPolicyInitializationContext();
+      getPolicy().reinitialize(fpc);
+    });
   }
 
-  @Test(expected = FederationPolicyInitializationException.class)
+  @Test
   public void testReinitilializeBad3() throws YarnException {
-    FederationPolicyInitializationContext fpc =
-        new FederationPolicyInitializationContext();
-    ByteBuffer buf = mock(ByteBuffer.class);
-    fpc.setSubClusterPolicyConfiguration(SubClusterPolicyConfiguration
-        .newInstance("queue1", "WrongPolicyName", buf));
-    fpc.setFederationSubclusterResolver(
-        FederationPoliciesTestUtil.initResolver());
-    fpc.setFederationStateStoreFacade(FederationPoliciesTestUtil.initFacade());
-    getPolicy().reinitialize(fpc);
+    ByteBuffer bufTmp = null;
+    try {
+      bufTmp = mock(ByteBuffer.class);
+    } catch (MockitoException e) {
+      assumeTrue(false, "Cannot mock ByteBuffer on Java 19+");
+    }
+    final ByteBuffer buf = bufTmp;
+
+    assertThrows(FederationPolicyInitializationException.class, () -> {
+      FederationPolicyInitializationContext fpc =
+          new FederationPolicyInitializationContext();
+      fpc.setSubClusterPolicyConfiguration(SubClusterPolicyConfiguration
+          .newInstance("queue1", "WrongPolicyName", buf));
+      fpc.setFederationSubclusterResolver(
+          FederationPoliciesTestUtil.initResolver());
+      Configuration conf = new Configuration();
+      fpc.setFederationStateStoreFacade(FederationPoliciesTestUtil.initFacade(conf));
+      getPolicy().reinitialize(fpc);
+    });
   }
 
-  @Test(expected = FederationPolicyException.class)
+  @Test
   public void testNoSubclusters() throws YarnException {
-    // empty the activeSubclusters map
-    FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-        getPolicyInfo(), new HashMap<>());
+    assertThrows(FederationPolicyException.class, () -> {
+      // empty the activeSubclusters map
+      FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
+          getPolicyInfo(), new HashMap<>());
 
-    ConfigurableFederationPolicy localPolicy = getPolicy();
-    if (localPolicy instanceof FederationRouterPolicy) {
-      ((FederationRouterPolicy) localPolicy)
-          .getHomeSubcluster(getApplicationSubmissionContext(), null);
-    } else {
-      String[] hosts = new String[] {"host1", "host2"};
-      List<ResourceRequest> resourceRequests = FederationPoliciesTestUtil
-          .createResourceRequests(hosts, 2 * 1024, 2, 1, 3, null, false);
-      ((FederationAMRMProxyPolicy) localPolicy).splitResourceRequests(
-          resourceRequests, new HashSet<SubClusterId>());
-    }
+      ConfigurableFederationPolicy localPolicy = getPolicy();
+      if (localPolicy instanceof FederationRouterPolicy) {
+        ((FederationRouterPolicy) localPolicy)
+        .getHomeSubcluster(getApplicationSubmissionContext(), null);
+      } else {
+        String[] hosts = new String[] {"host1", "host2"};
+        List<ResourceRequest> resourceRequests = FederationPoliciesTestUtil
+            .createResourceRequests(hosts, 2 * 1024, 2, 1, 3, null, false);
+        ((FederationAMRMProxyPolicy) localPolicy).splitResourceRequests(
+            resourceRequests, new HashSet<SubClusterId>());
+      }
+    });
   }
 
   public ConfigurableFederationPolicy getPolicy() {
@@ -212,9 +233,9 @@ public abstract class BaseFederationPoliciesTest {
   public FederationStateStoreFacade getMemoryFacade() throws YarnException {
 
     // setting up a store and its facade (with caching off)
-    FederationStateStoreFacade fedFacade = FederationStateStoreFacade.getInstance();
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
+    FederationStateStoreFacade fedFacade = FederationStateStoreFacade.getInstance(conf);
     FederationStateStore store = new MemoryFederationStateStore();
     store.init(conf);
     fedFacade.reinitialize(store, conf);

@@ -28,16 +28,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -78,7 +77,7 @@ public class TestFairCallQueue {
   }
 
   @SuppressWarnings("deprecation")
-  @Before
+  @BeforeEach
   public void setUp() {
     Configuration conf = new Configuration();
     conf.setInt("ns." + FairCallQueue.IPC_CALLQUEUE_PRIORITY_LEVELS_KEY, 2);
@@ -105,7 +104,7 @@ public class TestFairCallQueue {
     fairCallQueue = new FairCallQueue<Schedulable>(7, 1025, "ns", conf);
     assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1025);
     fairCallQueue = new FairCallQueue<Schedulable>(7, 1025, "ns",
-        new int[]{7, 6, 5, 4, 3, 2, 1}, conf);
+        new int[]{7, 6, 5, 4, 3, 2, 1}, false, conf);
     assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1025);
   }
 
@@ -170,7 +169,7 @@ public class TestFairCallQueue {
     // default weights i.e. all queues share capacity
     fcq = new FairCallQueue<Schedulable>(numQueues, 4, "ns", conf);
     FairCallQueue<Schedulable> fcq1 = new FairCallQueue<Schedulable>(
-        numQueues, capacity, "ns", new int[]{1, 3}, conf);
+        numQueues, capacity, "ns", new int[]{1, 3}, false, conf);
 
     for (int i=0; i < capacity; i++) {
       Schedulable call = mockCall("u", i%2);
@@ -221,11 +220,10 @@ public class TestFairCallQueue {
     Configuration conf = new Configuration();
     // Config for server to throw StandbyException instead of the
     // regular RetriableException if call queue is full.
-    conf.setBoolean(
-        "ns." + CommonConfigurationKeys.IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE,
-        true);
+
     // 3 queues, 2 slots each.
-    fcq = Mockito.spy(new FairCallQueue<>(3, 6, "ns", conf));
+    fcq = Mockito.spy(new FairCallQueue<>(3, 6, "ns",
+        true, conf));
 
     Schedulable p0 = mockCall("a", 0);
     Schedulable p1 = mockCall("b", 1);
@@ -409,21 +407,21 @@ public class TestFairCallQueue {
   private void checkOverflowException(Exception ex, RpcStatusProto status,
       boolean failOverTriggered) {
     // should be an overflow exception
-    assertTrue(ex.getClass().getName() + " != CallQueueOverflowException",
-        ex instanceof CallQueueOverflowException);
+    assertTrue(ex instanceof CallQueueOverflowException,
+        ex.getClass().getName() + " != CallQueueOverflowException");
     IOException ioe = ((CallQueueOverflowException)ex).getCause();
     assertNotNull(ioe);
-    assertTrue(ioe.getClass().getName() + " != RpcServerException",
-        ioe instanceof RpcServerException);
+    assertTrue(ioe instanceof RpcServerException,
+        ioe.getClass().getName() + " != RpcServerException");
     RpcServerException rse = (RpcServerException)ioe;
     // check error/fatal status and if it embeds a retriable ex or standby ex.
     assertEquals(status, rse.getRpcStatusProto());
     if (failOverTriggered) {
-      assertTrue(rse.getClass().getName() + " != RetriableException",
-          rse.getCause() instanceof StandbyException);
+      assertTrue(rse.getCause() instanceof StandbyException,
+          rse.getClass().getName() + " != RetriableException");
     } else {
-      assertTrue(rse.getClass().getName() + " != RetriableException",
-          rse.getCause() instanceof RetriableException);
+      assertTrue(rse.getCause() instanceof RetriableException,
+          rse.getClass().getName() + " != RetriableException");
     }
   }
 

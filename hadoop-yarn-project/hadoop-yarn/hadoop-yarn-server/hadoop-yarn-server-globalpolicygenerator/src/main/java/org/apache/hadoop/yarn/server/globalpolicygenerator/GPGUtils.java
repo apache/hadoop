@@ -19,20 +19,31 @@
 package org.apache.hadoop.yarn.server.globalpolicygenerator;
 
 import static javax.servlet.http.HttpServletResponse.SC_OK;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.RM_WEB_SERVICE_PATH;
+import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.HTTPS_PREFIX;
+import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.HTTP_PREFIX;
 
+import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
+import org.glassfish.jersey.client.ClientProperties;
 
 /**
  * GPGUtils contains utility functions for the GPG.
@@ -51,31 +62,58 @@ public final class GPGUtils {
    * @param webAddr WebAddress.
    * @param path url path.
    * @param returnType return type.
+   * @param selectParam query parameters.
+   * @param conf configuration.
    * @return response entity.
    */
-  public static <T> T invokeRMWebService(String webAddr, String path, final Class<T> returnType) {
-    Client client = Client.create();
+  public static <T> T invokeRMWebService(String webAddr, String path, final Class<T> returnType,
+      Configuration conf, String selectParam) {
+    Client client = createJerseyClient(conf);
     T obj;
 
-    WebResource webResource = client.resource(webAddr);
-    ClientResponse response = null;
+    // webAddr stores the form of host:port in subClusterInfo
+    InetSocketAddress socketAddress = NetUtils
+        .getConnectAddress(NetUtils.createSocketAddr(webAddr));
+    String scheme = YarnConfiguration.useHttps(conf) ? HTTPS_PREFIX : HTTP_PREFIX;
+    String webAddress = scheme + socketAddress.getHostName() + ":" + socketAddress.getPort();
+    WebTarget webResource = client.target(webAddress);
+
+    if (selectParam != null) {
+      webResource = webResource.queryParam(RMWSConsts.DESELECTS, selectParam);
+    }
+
+    Response response = null;
     try {
-      response = webResource.path("ws/v1/cluster").path(path)
-          .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+      response = webResource.path(RM_WEB_SERVICE_PATH).path(path)
+          .request(MediaType.APPLICATION_XML).get(Response.class);
       if (response.getStatus() == SC_OK) {
-        obj = response.getEntity(returnType);
+        obj = response.readEntity(returnType);
+        return obj;
       } else {
         throw new YarnRuntimeException(
             "Bad response from remote web service: " + response.getStatus());
       }
-      return obj;
     } finally {
       if (response != null) {
         response.close();
-        response = null;
       }
-      client.destroy();
+      client.close();
     }
+  }
+
+  /**
+   * Performs an invocation of the remote RMWebService.
+   *
+   * @param <T> Generic T.
+   * @param webAddr WebAddress.
+   * @param path url path.
+   * @param returnType return type.
+   * @param config configuration.
+   * @return response entity.
+   */
+  public static <T> T invokeRMWebService(String webAddr,
+      String path, final Class<T> returnType, Configuration config) {
+    return invokeRMWebService(webAddr, path, returnType, config, null);
   }
 
   /**
@@ -91,5 +129,23 @@ public final class GPGUtils {
       weights.put(new SubClusterIdInfo(id), 1.0f);
     }
     return weights;
+  }
+
+  /**
+   * Create JerseyClient based on configuration file.
+   * We will set the timeout when creating JerseyClient.
+   *
+   * @param conf Configuration.
+   * @return Jersey Client.
+   */
+  public static Client createJerseyClient(Configuration conf) {
+    Client client = ClientBuilder.newClient();
+    int connectTimeOut = (int) conf.getTimeDuration(YarnConfiguration.GPG_WEBAPP_CONNECT_TIMEOUT,
+        YarnConfiguration.DEFAULT_GPG_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
+    client.property(ClientProperties.CONNECT_TIMEOUT, connectTimeOut);
+    int readTimeout = (int) conf.getTimeDuration(YarnConfiguration.GPG_WEBAPP_READ_TIMEOUT,
+        YarnConfiguration.DEFAULT_GPG_WEBAPP_READ_TIMEOUT, TimeUnit.MILLISECONDS);
+    client.property(ClientProperties.READ_TIMEOUT, readTimeout);
+    return client;
   }
 }

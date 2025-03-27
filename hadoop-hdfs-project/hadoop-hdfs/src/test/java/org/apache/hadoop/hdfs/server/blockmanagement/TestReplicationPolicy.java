@@ -67,6 +67,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.TestINodeFile;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.log4j.Level;
@@ -1406,6 +1407,12 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     FSNamesystem mockNS = mock(FSNamesystem.class);
     when(mockNS.hasWriteLock()).thenReturn(true);
     when(mockNS.hasReadLock()).thenReturn(true);
+    when(mockNS.hasWriteLock(RwLockMode.GLOBAL)).thenReturn(true);
+    when(mockNS.hasReadLock(RwLockMode.GLOBAL)).thenReturn(true);
+    when(mockNS.hasWriteLock(RwLockMode.BM)).thenReturn(true);
+    when(mockNS.hasReadLock(RwLockMode.BM)).thenReturn(true);
+    when(mockNS.hasWriteLock(RwLockMode.FS)).thenReturn(true);
+    when(mockNS.hasReadLock(RwLockMode.FS)).thenReturn(true);
     BlockManager bm = new BlockManager(mockNS, false, new HdfsConfiguration());
     LowRedundancyBlocks lowRedundancyBlocks = bm.neededReconstruction;
 
@@ -1455,6 +1462,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
           throws IOException {
     Namesystem mockNS = mock(Namesystem.class);
     when(mockNS.hasWriteLock()).thenReturn(true);
+    when(mockNS.hasWriteLock(RwLockMode.BM)).thenReturn(true);
 
     BlockManager bm = new BlockManager(mockNS, false, new HdfsConfiguration());
     LowRedundancyBlocks lowRedundancyBlocks = bm.neededReconstruction;
@@ -1732,6 +1740,29 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
           0L, 0L, 0L, 0, 0);
     }
     assertFalse(dnManager.shouldAvoidStaleDataNodesForWrite());
+    resetHeartbeatForStorages();
+  }
+
+  @Test
+  public void testChosenFailureForNotEnoughStorageSpace() {
+    final LogVerificationAppender appender = new LogVerificationAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
+
+    // Set all datanode storage remaining space is 1 * BLOCK_SIZE.
+    for(int i = 0; i < dataNodes.length; i++) {
+      updateHeartbeatWithUsage(dataNodes[i], BLOCK_SIZE, 0L, BLOCK_SIZE,
+          0L, 0L, 0L, 0, 0);
+    }
+
+    // Set chooseStorage4Block required the minimum number of blocks is 2.
+    replicator.setMinBlocksForWrite(2);
+    DatanodeStorageInfo[] targets = chooseTarget(1, dataNodes[1],
+        new ArrayList<DatanodeStorageInfo>(), null);
+    assertEquals(0, targets.length);
+    assertNotEquals(0,
+        appender.countLinesWithMessage("NOT_ENOUGH_STORAGE_SPACE"));
+
     resetHeartbeatForStorages();
   }
 }

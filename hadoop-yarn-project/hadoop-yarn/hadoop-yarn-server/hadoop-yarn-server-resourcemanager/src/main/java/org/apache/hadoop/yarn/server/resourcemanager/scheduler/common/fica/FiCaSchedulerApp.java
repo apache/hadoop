@@ -187,17 +187,17 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       return;
     }
 
-    String queueName = null;
+    String policyClassName = null;
     if (scheduler instanceof CapacityScheduler) {
-      queueName = getCSLeafQueue().getMultiNodeSortingPolicyName();
+      policyClassName = getCSLeafQueue().getMultiNodeSortingPolicyClassName();
     }
 
     if (!appSchedulingInfo.getApplicationSchedulingEnvs().containsKey(
         ApplicationSchedulingConfig.ENV_MULTI_NODE_SORTING_POLICY_CLASS)
-        && queueName != null) {
+        && policyClassName != null) {
       appSchedulingInfo.getApplicationSchedulingEnvs().put(
           ApplicationSchedulingConfig.ENV_MULTI_NODE_SORTING_POLICY_CLASS,
-          queueName);
+          policyClassName);
     }
   }
 
@@ -520,13 +520,13 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
             // When reserve a resource (state == NEW is for new container,
             // state == RUNNING is for increase container).
             // Just check if the node is not already reserved by someone
-            if (schedulerContainer.getSchedulerNode().getReservedContainer()
-                != null) {
+            RMContainer reservedContainer =
+                schedulerContainer.getSchedulerNode().getReservedContainer();
+            if (reservedContainer != null) {
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Try to reserve a container, but the node is "
                     + "already reserved by another container="
-                    + schedulerContainer.getSchedulerNode()
-                    .getReservedContainer().getContainerId());
+                    + reservedContainer.getContainerId());
               }
               return false;
             }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,30 +17,27 @@
  */
 package org.apache.hadoop.util;
 
-import java.io.IOException;
+import java.util.Objects;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Unittests for CrcUtil.
  */
+@Timeout(10)
 public class TestCrcUtil {
-  @Rule
-  public Timeout globalTimeout = new Timeout(10000, TimeUnit.MILLISECONDS);
 
-  private Random rand = new Random(1234);
+  private static final Random RANDOM = new Random(1234);
 
   @Test
-  public void testComposeCrc32() throws IOException {
+  public void testComposeCrc32() {
     byte[] data = new byte[64 * 1024];
-    rand.nextBytes(data);
+    RANDOM.nextBytes(data);
     doTestComposeCrc(data, DataChecksum.Type.CRC32, 512, false);
     doTestComposeCrc(data, DataChecksum.Type.CRC32, 511, false);
     doTestComposeCrc(data, DataChecksum.Type.CRC32, 32 * 1024, false);
@@ -48,9 +45,9 @@ public class TestCrcUtil {
   }
 
   @Test
-  public void testComposeCrc32c() throws IOException {
+  public void testComposeCrc32c() {
     byte[] data = new byte[64 * 1024];
-    rand.nextBytes(data);
+    RANDOM.nextBytes(data);
     doTestComposeCrc(data, DataChecksum.Type.CRC32C, 512, false);
     doTestComposeCrc(data, DataChecksum.Type.CRC32C, 511, false);
     doTestComposeCrc(data, DataChecksum.Type.CRC32C, 32 * 1024, false);
@@ -58,9 +55,9 @@ public class TestCrcUtil {
   }
 
   @Test
-  public void testComposeCrc32WithMonomial() throws IOException {
+  public void testComposeCrc32WithMonomial() {
     byte[] data = new byte[64 * 1024];
-    rand.nextBytes(data);
+    RANDOM.nextBytes(data);
     doTestComposeCrc(data, DataChecksum.Type.CRC32, 512, true);
     doTestComposeCrc(data, DataChecksum.Type.CRC32, 511, true);
     doTestComposeCrc(data, DataChecksum.Type.CRC32, 32 * 1024, true);
@@ -68,9 +65,9 @@ public class TestCrcUtil {
   }
 
   @Test
-  public void testComposeCrc32cWithMonomial() throws IOException {
+  public void testComposeCrc32cWithMonomial() {
     byte[] data = new byte[64 * 1024];
-    rand.nextBytes(data);
+    RANDOM.nextBytes(data);
     doTestComposeCrc(data, DataChecksum.Type.CRC32C, 512, true);
     doTestComposeCrc(data, DataChecksum.Type.CRC32C, 511, true);
     doTestComposeCrc(data, DataChecksum.Type.CRC32C, 32 * 1024, true);
@@ -78,12 +75,12 @@ public class TestCrcUtil {
   }
 
   @Test
-  public void testComposeCrc32ZeroLength() throws IOException {
+  public void testComposeCrc32ZeroLength() {
     doTestComposeCrcZerolength(DataChecksum.Type.CRC32);
   }
 
   @Test
-  public void testComposeCrc32CZeroLength() throws IOException {
+  public void testComposeCrc32CZeroLength() {
     doTestComposeCrcZerolength(DataChecksum.Type.CRC32C);
   }
 
@@ -93,13 +90,13 @@ public class TestCrcUtil {
    * corresponding to ever {@code chunkSize} bytes.
    */
   private static void doTestComposeCrc(
-      byte[] data, DataChecksum.Type type, int chunkSize, boolean useMonomial)
-      throws IOException {
+      byte[] data, DataChecksum.Type type, int chunkSize, boolean useMonomial) {
     int crcPolynomial = DataChecksum.getCrcPolynomialForType(type);
 
     // Get full end-to-end CRC in a single shot first.
     DataChecksum checksum = DataChecksum.newDataChecksum(
         type, Integer.MAX_VALUE);
+    Objects.requireNonNull(checksum, "checksum");
     checksum.update(data, 0, data.length);
     int fullCrc = (int) checksum.getValue();
 
@@ -132,27 +129,24 @@ public class TestCrcUtil {
       compositeCrc = CrcUtil.compose(
           compositeCrc, partialCrc, partialChunkSize, crcPolynomial);
     }
-    assertEquals(
-        String.format(
-            "Using CRC type '%s' with crcPolynomial '0x%08x' and chunkSize '%d'"
-            + ", expected '0x%08x', got '0x%08x'",
-            type, crcPolynomial, chunkSize, fullCrc, compositeCrc),
-        fullCrc,
-        compositeCrc);
+    assertEquals(fullCrc, compositeCrc, String.format(
+        "Using CRC type '%s' with crcPolynomial '0x%08x' and chunkSize '%d'" +
+        ", expected '0x%08x', got '0x%08x'",
+        type, crcPolynomial, chunkSize, fullCrc, compositeCrc));
   }
 
   /**
    * Helper method for testing the behavior of composing a CRC with a
    * zero-length second CRC.
    */
-  private static void doTestComposeCrcZerolength(DataChecksum.Type type)
-      throws IOException {
+  private static void doTestComposeCrcZerolength(DataChecksum.Type type) {
     // Without loss of generality, we can pick any integer as our fake crcA
     // even if we don't happen to know the preimage.
     int crcA = 0xCAFEBEEF;
     int crcPolynomial = DataChecksum.getCrcPolynomialForType(type);
     DataChecksum checksum = DataChecksum.newDataChecksum(
         type, Integer.MAX_VALUE);
+    Objects.requireNonNull(checksum, "checksum");
     int crcB = (int) checksum.getValue();
     assertEquals(crcA, CrcUtil.compose(crcA, crcB, 0, crcPolynomial));
 
@@ -162,7 +156,7 @@ public class TestCrcUtil {
   }
 
   @Test
-  public void testIntSerialization() throws IOException {
+  public void testIntSerialization() {
     byte[] bytes = CrcUtil.intToBytes(0xCAFEBEEF);
     assertEquals(0xCAFEBEEF, CrcUtil.readInt(bytes, 0));
 
@@ -180,13 +174,13 @@ public class TestCrcUtil {
   public void testToSingleCrcStringBadLength()
       throws Exception {
     LambdaTestUtils.intercept(
-        IOException.class,
+        IllegalArgumentException.class,
         "length",
         () -> CrcUtil.toSingleCrcString(new byte[8]));
   }
 
   @Test
-  public void testToSingleCrcString() throws IOException {
+  public void testToSingleCrcString() {
     byte[] buf = CrcUtil.intToBytes(0xcafebeef);
     assertEquals(
         "0xcafebeef", CrcUtil.toSingleCrcString(buf));
@@ -196,14 +190,13 @@ public class TestCrcUtil {
   public void testToMultiCrcStringBadLength()
       throws Exception {
     LambdaTestUtils.intercept(
-        IOException.class,
+        IllegalArgumentException.class,
         "length",
         () -> CrcUtil.toMultiCrcString(new byte[6]));
   }
 
   @Test
-  public void testToMultiCrcStringMultipleElements()
-      throws IOException {
+  public void testToMultiCrcStringMultipleElements() {
     byte[] buf = new byte[12];
     CrcUtil.writeInt(buf, 0, 0xcafebeef);
     CrcUtil.writeInt(buf, 4, 0xababcccc);
@@ -214,8 +207,7 @@ public class TestCrcUtil {
   }
 
   @Test
-  public void testToMultiCrcStringSingleElement()
-      throws IOException {
+  public void testToMultiCrcStringSingleElement() {
     byte[] buf = new byte[4];
     CrcUtil.writeInt(buf, 0, 0xcafebeef);
     assertEquals(
@@ -224,8 +216,7 @@ public class TestCrcUtil {
   }
 
   @Test
-  public void testToMultiCrcStringNoElements()
-      throws IOException {
+  public void testToMultiCrcStringNoElements() {
     assertEquals(
         "[]",
         CrcUtil.toMultiCrcString(new byte[0]));

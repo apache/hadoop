@@ -24,6 +24,7 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.audit.AuditStatisticNames;
 import org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum;
+import org.apache.hadoop.fs.statistics.FileSystemStatisticNames;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
@@ -64,7 +65,49 @@ public enum Statistic {
       "GET request.",
       TYPE_DURATION),
 
+  /* Http error responses */
+  HTTP_RESPONSE_400(
+      StoreStatisticNames.HTTP_RESPONSE_400,
+      "400 response.",
+      TYPE_COUNTER),
+
+  HTTP_RESPONSE_429(
+      StoreStatisticNames.HTTP_RESPONSE_429,
+      "429 response.",
+      TYPE_COUNTER),
+
+  HTTP_RESPONSE_4XX(
+      StoreStatisticNames.HTTP_RESPONSE_4XX,
+      "4XX response.",
+      TYPE_COUNTER),
+
+  HTTP_RESPONSE_500(
+      StoreStatisticNames.HTTP_RESPONSE_500,
+      "500 response.",
+      TYPE_COUNTER),
+
+  HTTP_RESPONSE_503(
+      StoreStatisticNames.HTTP_RESPONSE_503,
+      "503 response.",
+      TYPE_COUNTER),
+
+  HTTP_RESPONSE_5XX(
+      StoreStatisticNames.HTTP_RESPONSE_5XX,
+      "5XX response.",
+      TYPE_COUNTER),
+
+
   /* FileSystem Level statistics */
+
+  FILESYSTEM_INITIALIZATION(
+      FileSystemStatisticNames.FILESYSTEM_INITIALIZATION,
+      "Filesystem initialization",
+      TYPE_DURATION),
+  FILESYSTEM_CLOSE(
+      FileSystemStatisticNames.FILESYSTEM_CLOSE,
+      "Filesystem close",
+      TYPE_DURATION),
+
   DIRECTORIES_CREATED("directories_created",
       "Total number of directories created through the object store.",
       TYPE_COUNTER),
@@ -103,6 +146,10 @@ public enum Statistic {
       StoreStatisticNames.OP_ACCESS,
       "Calls of access()",
       TYPE_DURATION),
+  INVOCATION_BULK_DELETE(
+      StoreStatisticNames.OP_BULK_DELETE,
+      "Calls of bulk delete()",
+      TYPE_COUNTER),
   INVOCATION_COPY_FROM_LOCAL_FILE(
       StoreStatisticNames.OP_COPY_FROM_LOCAL_FILE,
       "Calls of copyFromLocalFile()",
@@ -242,7 +289,10 @@ public enum Statistic {
       StoreStatisticNames.OBJECT_MULTIPART_UPLOAD_ABORTED,
       "Object multipart upload aborted",
       TYPE_DURATION),
-  OBJECT_PUT_REQUESTS(
+  OBJECT_MULTIPART_UPLOAD_LIST(
+      StoreStatisticNames.OBJECT_MULTIPART_UPLOAD_LIST,
+      "Object multipart list request issued",
+      TYPE_DURATION),  OBJECT_PUT_REQUESTS(
       StoreStatisticNames.OBJECT_PUT_REQUEST,
       "Object put/multipart upload count",
       TYPE_DURATION),
@@ -262,9 +312,9 @@ public enum Statistic {
       StoreStatisticNames.OBJECT_PUT_BYTES_PENDING,
       "number of bytes queued for upload/being actively uploaded",
       TYPE_GAUGE),
-  OBJECT_SELECT_REQUESTS(
-      StoreStatisticNames.OBJECT_SELECT_REQUESTS,
-      "Count of S3 Select requests issued",
+  STREAM_LEAKS(
+      StreamStatisticNames.STREAM_LEAKS,
+      "Streams detected as not closed safely",
       TYPE_COUNTER),
   STREAM_READ_ABORTED(
       StreamStatisticNames.STREAM_READ_ABORTED,
@@ -272,6 +322,10 @@ public enum Statistic {
       TYPE_COUNTER),
 
   /* Stream Reads */
+  STREAM_READ_ANALYTICS_OPENED(
+      StreamStatisticNames.STREAM_READ_ANALYTICS_OPENED,
+      "Total count of times an analytics input stream to object store data was opened",
+      TYPE_COUNTER),
   STREAM_READ_BYTES(
       StreamStatisticNames.STREAM_READ_BYTES,
       "Bytes read from an input stream in read() calls",
@@ -447,6 +501,16 @@ public enum Statistic {
       "Total queue duration of all block uploads",
       TYPE_DURATION),
 
+  /* Stream prefetch file cache eviction */
+  STREAM_EVICT_BLOCKS_FROM_FILE_CACHE(
+      StreamStatisticNames.STREAM_EVICT_BLOCKS_FROM_FILE_CACHE,
+      "Count of blocks evicted from the disk cache",
+      TYPE_COUNTER),
+  STREAM_FILE_CACHE_EVICTION(
+      StreamStatisticNames.STREAM_FILE_CACHE_EVICTION,
+      "Duration of the eviction of an element from LRU cache that holds disk cache blocks",
+      TYPE_DURATION),
+
   /* committer stats */
   COMMITTER_COMMITS_CREATED(
       "committer_commits_created",
@@ -519,6 +583,11 @@ public enum Statistic {
       TYPE_DURATION),
 
   /* General Store operations */
+  STORE_CLIENT_CREATION(
+      StoreStatisticNames.STORE_CLIENT_CREATION,
+      "Store Client Creation",
+      TYPE_DURATION),
+
   STORE_EXISTS_PROBE(StoreStatisticNames.STORE_EXISTS_PROBE,
       "Store Existence Probe",
       TYPE_DURATION),
@@ -529,6 +598,10 @@ public enum Statistic {
   STORE_IO_RETRY(StoreStatisticNames.STORE_IO_RETRY,
       "retried requests made of the remote store",
       TYPE_COUNTER),
+
+  STORE_IO_RATE_LIMITED(StoreStatisticNames.STORE_IO_RATE_LIMITED_DURATION,
+      "Duration of rate limited operations",
+      TYPE_DURATION),
 
   STORE_IO_THROTTLED(
       StoreStatisticNames.STORE_IO_THROTTLED,
@@ -567,7 +640,7 @@ public enum Statistic {
       TYPE_COUNTER),
   MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED(
       StoreStatisticNames.MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED,
-      "Multipart Upload Abort Unner Path Invoked",
+      "Multipart Upload Abort Under Path Invoked",
       TYPE_COUNTER),
   MULTIPART_UPLOAD_COMPLETED(
       StoreStatisticNames.MULTIPART_UPLOAD_COMPLETED,

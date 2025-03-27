@@ -65,7 +65,7 @@ public class DockerContainerDeletionTask extends DeletionTask
    */
   @Override
   public String toString() {
-    StringBuffer sb = new StringBuffer("DockerContainerDeletionTask : ");
+    StringBuilder sb = new StringBuilder("DockerContainerDeletionTask : ");
     sb.append("  id : ").append(this.getTaskId());
     sb.append("  containerId : ").append(this.containerId);
     return sb.toString().trim();

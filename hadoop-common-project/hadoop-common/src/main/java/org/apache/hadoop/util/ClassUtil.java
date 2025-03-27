@@ -36,13 +36,25 @@ public class ClassUtil {
    * @return a jar file that contains the class, or null.
    */
   public static String findContainingJar(Class<?> clazz) {
-    ClassLoader loader = clazz.getClassLoader();
-    String classFile = clazz.getName().replaceAll("\\.", "/") + ".class";
+    return findContainingResource(clazz.getClassLoader(), clazz.getName(), "jar");
+  }
+
+  /**
+   * Find the absolute location of the class.
+   *
+   * @param clazz the class to find.
+   * @return the class file with absolute location, or null.
+   */
+  public static String findClassLocation(Class<?> clazz) {
+    return findContainingResource(clazz.getClassLoader(), clazz.getName(), "file");
+  }
+
+  private static String findContainingResource(ClassLoader loader, String clazz, String resource) {
+    String classFile = clazz.replaceAll("\\.", "/") + ".class";
     try {
-      for(final Enumeration<URL> itr = loader.getResources(classFile);
-          itr.hasMoreElements();) {
+      for (final Enumeration<URL> itr = loader.getResources(classFile); itr.hasMoreElements();) {
         final URL url = itr.nextElement();
-        if ("jar".equals(url.getProtocol())) {
+        if (resource.equals(url.getProtocol())) {
           String toReturn = url.getPath();
           if (toReturn.startsWith("file:")) {
             toReturn = toReturn.substring("file:".length());

@@ -30,14 +30,14 @@ import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.TEST
 import static org.apache.hadoop.ipc.CallerContext.PROXY_USER_PORT;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -127,6 +127,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocat
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
@@ -135,12 +136,15 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+
+import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -160,12 +164,12 @@ public class TestRouterRpc {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRouterRpc.class);
 
-  private static final int NUM_SUBCLUSTERS = 2;
+  protected static final int NUM_SUBCLUSTERS = 2;
   // We need at least 6 DNs to test Erasure Coding with RS-6-3-64k
-  private static final int NUM_DNS = 6;
+  protected static final int NUM_DNS = 6;
 
 
-  private static final Comparator<ErasureCodingPolicyInfo> EC_POLICY_CMP =
+  protected static final Comparator<ErasureCodingPolicyInfo> EC_POLICY_CMP =
       new Comparator<ErasureCodingPolicyInfo>() {
         public int compare(
             ErasureCodingPolicyInfo ec0,
@@ -209,8 +213,20 @@ public class TestRouterRpc {
   private String nnFile;
 
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
+    // Start routers with only an RPC service
+    Configuration routerConf = new RouterConfigBuilder()
+        .metrics()
+        .rpc()
+        .build();
+    // We decrease the DN cache times to make the test faster
+    routerConf.setTimeDuration(
+        RBFConfigKeys.DN_REPORT_CACHE_EXPIRE, 1, TimeUnit.SECONDS);
+    setUp(routerConf);
+  }
+
+  public static void setUp(Configuration routerConf) throws Exception {
     Configuration namenodeConf = new Configuration();
     namenodeConf.setBoolean(DFSConfigKeys.HADOOP_CALLER_CONTEXT_ENABLED_KEY,
         true);
@@ -239,14 +255,6 @@ public class TestRouterRpc {
     // Start NNs and DNs and wait until ready
     cluster.startCluster();
 
-    // Start routers with only an RPC service
-    Configuration routerConf = new RouterConfigBuilder()
-        .metrics()
-        .rpc()
-        .build();
-    // We decrease the DN cache times to make the test faster
-    routerConf.setTimeDuration(
-        RBFConfigKeys.DN_REPORT_CACHE_EXPIRE, 1, TimeUnit.SECONDS);
     cluster.addRouterOverrides(routerConf);
     cluster.startRouters();
 
@@ -265,12 +273,18 @@ public class TestRouterRpc {
         .getDatanodeManager().setHeartbeatExpireInterval(3000);
   }
 
-  @AfterClass
+  @AfterEach
+  public void cleanup() {
+    // clear client context
+    CallerContext.setCurrent(null);
+  }
+
+  @AfterAll
   public static void tearDown() {
     cluster.shutdown();
   }
 
-  @Before
+  @BeforeEach
   public void testSetup() throws Exception {
 
     // Create mock locations
@@ -783,9 +797,8 @@ public class TestRouterRpc {
 
     // Verify the root listing has the item via the router
     FileStatus[] files = routerFS.listStatus(new Path("/"));
-    assertEquals(Arrays.toString(files) + " should be " +
-        Arrays.toString(filesInitial) + " + " + dirPath,
-        filesInitial.length + 1, files.length);
+    assertEquals(filesInitial.length + 1, files.length, Arrays.toString(files) + " should be " +
+        Arrays.toString(filesInitial) + " + " + dirPath);
     assertTrue(verifyFileExists(routerFS, dirPath));
 
     // Verify the directory is present in only 1 Namenode
@@ -1157,6 +1170,21 @@ public class TestRouterRpc {
   }
 
   private void testConcat(
+      String source, String target, boolean failureExpected, boolean verfiyException, String msg) {
+    boolean failure = false;
+    try {
+      // Concat test file with fill block length file via router
+      routerProtocol.concat(target, new String[] {source});
+    } catch (IOException ex) {
+      failure = true;
+      if (verfiyException) {
+        assertExceptionContains(msg, ex);
+      }
+    }
+    assertEquals(failureExpected, failure);
+  }
+
+  private void testConcat(
       String source, String target, boolean failureExpected) {
     boolean failure = false;
     try {
@@ -1217,6 +1245,27 @@ public class TestRouterRpc {
     String badPath = "/unknownlocation/unknowndir";
     compareResponses(routerProtocol, nnProtocol, m,
         new Object[] {badPath, new String[] {routerFile}});
+
+    // Test when concat trg is a empty file
+    createFile(routerFS, existingFile, existingFileSize);
+    String sameRouterEmptyFile =
+        cluster.getFederatedTestDirectoryForNS(sameNameservice) +
+            "_newemptyfile";
+    createFile(routerFS, sameRouterEmptyFile, 0);
+    // Concat in same namespaces, succeeds
+    testConcat(existingFile, sameRouterEmptyFile, false);
+    FileStatus mergedStatus = getFileStatus(routerFS, sameRouterEmptyFile);
+    assertEquals(existingFileSize, mergedStatus.getLen());
+
+    // Test when concat srclist has some empty file, namenode will throw IOException.
+    String srcEmptyFile = cluster.getFederatedTestDirectoryForNS(sameNameservice) + "_srcEmptyFile";
+    createFile(routerFS, srcEmptyFile, 0);
+    String targetFile = cluster.getFederatedTestDirectoryForNS(sameNameservice) + "_targetFile";
+    createFile(routerFS, targetFile, existingFileSize);
+    // Concat in same namespaces, succeeds
+    testConcat(srcEmptyFile, targetFile, true, true,
+        "org.apache.hadoop.ipc.RemoteException(org.apache.hadoop.HadoopIllegalArgumentException): "
+            + "concat: source file " + srcEmptyFile + " is invalid or empty or underConstruction");
   }
 
   @Test
@@ -1385,9 +1434,11 @@ public class TestRouterRpc {
 
     // Verify that checking that datanode works
     BlocksWithLocations routerBlockLocations =
-        routerNamenodeProtocol.getBlocks(dn0, 1024, 0, 0);
+        routerNamenodeProtocol.getBlocks(dn0, 1024, 0, 0,
+            null);
     BlocksWithLocations nnBlockLocations =
-        nnNamenodeProtocol.getBlocks(dn0, 1024, 0, 0);
+        nnNamenodeProtocol.getBlocks(dn0, 1024, 0, 0,
+            null);
     BlockWithLocations[] routerBlocks = routerBlockLocations.getBlocks();
     BlockWithLocations[] nnBlocks = nnBlockLocations.getBlocks();
     assertEquals(nnBlocks.length, routerBlocks.length);
@@ -1651,10 +1702,10 @@ public class TestRouterRpc {
       // mark a replica as corrupt
       LocatedBlock block = NameNodeAdapter
           .getBlockLocations(nameNode, testFile, 0, 1024).get(0);
-      namesystem.writeLock();
+      namesystem.writeLock(RwLockMode.BM);
       bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
           "STORAGE_ID", "TEST");
-      namesystem.writeUnlock();
+      namesystem.writeUnlock(RwLockMode.BM, "findAndMarkBlockAsCorrupt");
       BlockManagerTestUtil.updateState(bm);
       DFSTestUtil.waitCorruptReplicas(fileSystem, namesystem,
           new Path(testFile), block.getBlock(), 1);
@@ -1664,8 +1715,8 @@ public class TestRouterRpc {
       assertEquals(1, stats.getCorruptBlocks());
     }
     ReplicatedBlockStats routerStat = routerProtocol.getReplicatedBlockStats();
-    assertEquals("There should be 1 corrupt blocks for each NN",
-        cluster.getNameservices().size(), routerStat.getCorruptBlocks());
+    assertEquals(cluster.getNameservices().size(), routerStat.getCorruptBlocks(),
+        "There should be 1 corrupt blocks for each NN");
   }
 
   @Test
@@ -1835,6 +1886,22 @@ public class TestRouterRpc {
     JSONObject jsonObject = new JSONObject(jsonString0);
     assertEquals(NUM_SUBCLUSTERS * NUM_DNS, jsonObject.names().length());
 
+    JSONObject jsonObjectNn =
+        new JSONObject(cluster.getRandomNamenode().getNamenode().getNamesystem().getLiveNodes());
+    // DN report by NN and router should be the same
+    String randomDn = (String) jsonObjectNn.names().get(0);
+    JSONObject randomReportNn = jsonObjectNn.getJSONObject(randomDn);
+    JSONObject randomReportRouter = jsonObject.getJSONObject(randomDn);
+    JSONArray keys = randomReportNn.names();
+    for (int i = 0; i < keys.length(); i++) {
+      String key = keys.getString(i);
+      // Skip the 2 keys that always return -1
+      if (key.equals("blockScheduled") || key.equals("volfails")) {
+        continue;
+      }
+      assertEquals(randomReportRouter.get(key), randomReportNn.get(key));
+    }
+
     // We should be caching this information
     String jsonString1 = metrics.getLiveNodes();
     assertEquals(jsonString0, jsonString1);
@@ -1960,7 +2027,7 @@ public class TestRouterRpc {
   }
 
   @Test
-  public void testgetGroupsForUser() throws IOException {
+  public void testgetGroupsForUser() throws Exception {
     String[] group = new String[] {"bar", "group2"};
     UserGroupInformation.createUserForTesting("user",
         new String[] {"bar", "group2"});
@@ -2086,10 +2153,10 @@ public class TestRouterRpc {
 
     // The audit log should contains "callerContext=clientIp:...,clientContext"
     final String logOutput = auditlog.getOutput();
-    assertTrue(logOutput.contains("callerContext=clientIp:"));
-    assertTrue(logOutput.contains(",clientContext"));
-    assertTrue(logOutput.contains(",clientId"));
-    assertTrue(logOutput.contains(",clientCallId"));
+    assertTrue(logOutput.contains("clientIp:"));
+    assertTrue(logOutput.contains("clientContext"));
+    assertTrue(logOutput.contains("clientId"));
+    assertTrue(logOutput.contains("clientCallId"));
     assertTrue(verifyFileExists(routerFS, dirPath));
   }
 
@@ -2101,7 +2168,6 @@ public class TestRouterRpc {
 
     // Current callerContext is null
     assertNull(CallerContext.getCurrent());
-
     UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
     UserGroupInformation realUser = UserGroupInformation
         .createUserForTesting("testRealUser", new String[]{"group"});
@@ -2116,15 +2182,15 @@ public class TestRouterRpc {
     // Login user, which is used as the router's user, is different from the realUser.
     assertNotEquals(loginUser.getUserName(), realUser.getUserName());
     // Login user is used in the audit log's ugi field.
-    assertTrue("The login user is the proxyUser in the UGI field",
-         logOutput.contains(String.format("ugi=%s (auth:PROXY) via %s (auth:SIMPLE)",
+    assertTrue(
+        logOutput.contains(String.format("ugi=%s (auth:PROXY) via %s (auth:SIMPLE)",
              proxyUser.getUserName(),
-             loginUser.getUserName())));
+             loginUser.getUserName())), "The login user is the proxyUser in the UGI field");
     // Real user is added to the caller context.
-    assertTrue("The audit log should contain the real user.",
-        logOutput.contains(String.format("realUser:%s", realUser.getUserName())));
-    assertTrue("The audit log should contain the proxyuser port.",
-        logOutput.contains(PROXY_USER_PORT));
+    assertTrue(logOutput.contains(String.format("realUser:%s", realUser.getUserName())),
+        "The audit log should contain the real user.");
+    assertTrue(logOutput.contains(PROXY_USER_PORT),
+        "The audit log should contain the proxyuser port.");
   }
 
   @Test

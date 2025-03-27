@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.URL;
 import java.nio.channels.ClosedChannelException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -60,7 +61,6 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.task.reduce.ShuffleHeader;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.eclipse.jetty.http.HttpHeader;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
@@ -469,7 +469,7 @@ public class ShuffleChannelHandler extends SimpleChannelInboundHandler<FullHttpR
     // verify - throws exception
     SecureShuffleUtils.verifyReply(urlHashStr, encryptedURL, tokenSecret);
     // verification passed - encode the reply
-    String reply = SecureShuffleUtils.generateHash(urlHashStr.getBytes(Charsets.UTF_8),
+    String reply = SecureShuffleUtils.generateHash(urlHashStr.getBytes(StandardCharsets.UTF_8),
         tokenSecret);
     response.headers().set(
         SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH, reply);

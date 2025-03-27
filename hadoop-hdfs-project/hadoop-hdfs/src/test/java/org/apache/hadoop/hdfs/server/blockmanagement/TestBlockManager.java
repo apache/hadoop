@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.LinkedListMultimap;
@@ -74,6 +75,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.erasurecode.ECSchema;
@@ -112,6 +114,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -164,6 +167,10 @@ public class TestBlockManager {
     fsn = Mockito.mock(FSNamesystem.class);
     Mockito.doReturn(true).when(fsn).hasWriteLock();
     Mockito.doReturn(true).when(fsn).hasReadLock();
+    Mockito.doReturn(true).when(fsn).hasWriteLock(RwLockMode.GLOBAL);
+    Mockito.doReturn(true).when(fsn).hasReadLock(RwLockMode.GLOBAL);
+    Mockito.doReturn(true).when(fsn).hasWriteLock(RwLockMode.BM);
+    Mockito.doReturn(true).when(fsn).hasReadLock(RwLockMode.BM);
     Mockito.doReturn(true).when(fsn).isRunning();
     //Make shouldPopulaeReplQueues return true
     HAContext haContext = Mockito.mock(HAContext.class);
@@ -520,7 +527,7 @@ public class TestBlockManager {
     try {
       cluster.waitActive();
       BlockManager blockManager = cluster.getNamesystem().getBlockManager();
-      blockManager.getDatanodeManager().markAllDatanodesStale();
+      blockManager.getDatanodeManager().markAllDatanodesStaleAndSetKeyUpdateIfNeed();
       FileSystem fs = cluster.getFileSystem();
       FSDataOutputStream out = fs.create(file);
       for (int i = 0; i < 1024 * 1024 * 1; i++) {
@@ -1617,7 +1624,7 @@ public class TestBlockManager {
       }
       failedStorageDataNode.updateHeartbeat(reports.toArray(StorageReport
           .EMPTY_ARRAY), 0L, 0L, 0, 0, null);
-      ns.writeLock();
+      ns.writeLock(RwLockMode.BM);
       DatanodeStorageInfo corruptStorageInfo= null;
       for(int i=0; i<corruptStorageDataNode.getStorageInfos().length; i++) {
         corruptStorageInfo = corruptStorageDataNode.getStorageInfos()[i];
@@ -1631,16 +1638,16 @@ public class TestBlockManager {
       blockManager.findAndMarkBlockAsCorrupt(blk, corruptStorageDataNode,
           corruptStorageInfo.getStorageID(),
           CorruptReplicasMap.Reason.ANY.toString());
-      ns.writeUnlock();
+      ns.writeUnlock(RwLockMode.BM, "testBlockManagerMachinesArray");
       BlockInfo[] blockInfos = new BlockInfo[] {blockInfo};
-      ns.readLock();
+      ns.readLock(RwLockMode.BM);
       LocatedBlocks locatedBlocks =
           blockManager.createLocatedBlocks(blockInfos, 3L, false, 0L, 3L,
               false, false, null, null);
       assertTrue("Located Blocks should exclude corrupt" +
               "replicas and failed storages",
           locatedBlocks.getLocatedBlocks().size() == 1);
-      ns.readUnlock();
+      ns.readUnlock(RwLockMode.BM, "open");
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -1831,7 +1838,7 @@ public class TestBlockManager {
     DataInputStream in = new DataInputStream(fstream);
 
     BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     String line;
     try {
       while ((line = reader.readLine()) != null) {
@@ -1859,7 +1866,7 @@ public class TestBlockManager {
     FileInputStream fstream = new FileInputStream(file);
     DataInputStream in = new DataInputStream(fstream);
     BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     String line;
     try {
       while ((line = reader.readLine()) != null) {
@@ -1931,7 +1938,7 @@ public class TestBlockManager {
     FileInputStream fstream = new FileInputStream(file);
     DataInputStream in = new DataInputStream(fstream);
     BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     String line;
     try {
       while ((line = reader.readLine()) != null) {
@@ -1987,7 +1994,7 @@ public class TestBlockManager {
     FileInputStream fstream = new FileInputStream(file);
     DataInputStream in = new DataInputStream(fstream);
     BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     String line;
     try {
       while ((line = reader.readLine()) != null) {
@@ -2199,6 +2206,132 @@ public class TestBlockManager {
       // Delete block numBytes be NO_ACK and will not deletion block report,
       // so check the IncrementalBlockReportsNumOps of DataNode still 1.
       assertEquals(1, getLongCounter("IncrementalBlockReportsNumOps", rb));
+    }
+  }
+
+  /**
+   * Test NameNode should process time out excess redundancy blocks.
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws TimeoutException
+   */
+  @Test(timeout = 360000)
+  public void testProcessTimedOutExcessBlocks() throws IOException,
+      InterruptedException, TimeoutException {
+    Configuration config = new HdfsConfiguration();
+    // Bump up replication interval.
+    config.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 10000);
+    // Set the excess redundancy block timeout.
+    long timeOut = 60L;
+    config.setLong(DFSConfigKeys.DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC_KEY, timeOut);
+
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+
+    final Semaphore semaphore = new Semaphore(0);
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(config).numDataNodes(3).build()) {
+      DistributedFileSystem fs = cluster.getFileSystem();
+      BlockManager blockManager = cluster.getNameNode().getNamesystem().getBlockManager();
+      cluster.waitActive();
+
+      final DataNodeFaultInjector injector = new DataNodeFaultInjector() {
+        @Override
+        public void delayDeleteReplica() {
+          // Lets wait for the remove replica process.
+          try {
+            semaphore.acquire(1);
+          } catch (InterruptedException e) {
+            // ignore.
+          }
+        }
+      };
+      DataNodeFaultInjector.set(injector);
+
+      // Create file.
+      Path path = new Path("/testfile");
+      DFSTestUtil.createFile(fs, path, 1024, (short) 3, 0);
+      DFSTestUtil.waitReplication(fs, path, (short) 3);
+      LocatedBlock lb = DFSTestUtil.getAllBlocks(fs, path).get(0);
+      ExtendedBlock extendedBlock = lb.getBlock();
+      DatanodeInfo[] loc = lb.getLocations();
+      assertEquals(3, loc.length);
+
+      // Set replication as 2, to choose excess.
+      fs.setReplication(path, (short) 2);
+
+      // Check excessRedundancyMap and invalidateBlocks size as 1.
+      assertEquals(1, blockManager.getExcessBlocksCount());
+      assertEquals(1, blockManager.getPendingDeletionBlocksCount());
+      DataNode excessDn = Arrays.stream(loc).
+          filter(datanodeInfo -> blockManager.getExcessSize4Testing(
+              datanodeInfo.getDatanodeUuid()) > 0)
+          .map(datanodeInfo -> cluster.getDataNode(datanodeInfo.getIpcPort()))
+          .findFirst()
+          .orElse(null);
+
+      // Schedule blocks for deletion at excessDn.
+      assertEquals(1, blockManager.computeInvalidateWork(1));
+      // Check excessRedundancyMap size as 1.
+      assertEquals(1, blockManager.getExcessBlocksCount());
+      // Check invalidateBlocks size as 0.
+      assertEquals(0, blockManager.getPendingDeletionBlocksCount());
+      assertNotNull(excessDn);
+
+      // NameNode will ask datanode to delete replicas in heartbeat response.
+      cluster.triggerHeartbeats();
+
+      // Wait for the datanode to process any block deletions
+      // that have already been asynchronously queued.
+      DataNode finalExcessDn = excessDn;
+      GenericTestUtils.waitFor(
+          () -> cluster.getFsDatasetTestUtils(finalExcessDn).getPendingAsyncDeletions() == 1,
+          100, 1000);
+
+      // Restart the datanode.
+      int ipcPort = excessDn.getDatanodeId().getIpcPort();
+      MiniDFSCluster.DataNodeProperties dataNodeProperties = cluster.stopDataNode(
+          excessDn.getDatanodeId().getXferAddr());
+      assertTrue(cluster.restartDataNode(dataNodeProperties, true));
+      semaphore.release(1);
+      cluster.waitActive();
+
+      // Check replica is exists in excessDn.
+      excessDn = cluster.getDataNode(ipcPort);
+      assertNotNull(cluster.getFsDatasetTestUtils(excessDn).fetchReplica(extendedBlock));
+      assertEquals(0, cluster.getFsDatasetTestUtils(excessDn).getPendingAsyncDeletions());
+
+      // Verify excess redundancy blocks have not timed out.
+      blockManager.processTimedOutExcessBlocks();
+      assertEquals(0, blockManager.getPendingDeletionBlocksCount());
+
+      // Verify excess redundancy block time out.
+      Thread.sleep(timeOut * 1000);
+      blockManager.processTimedOutExcessBlocks();
+
+      // Check excessRedundancyMap and invalidateBlocks size as 1.
+      assertEquals(1, blockManager.getExcessSize4Testing(excessDn.getDatanodeUuid()));
+      assertEquals(1, blockManager.getExcessBlocksCount());
+      assertEquals(1, blockManager.getPendingDeletionBlocksCount());
+
+      // Schedule blocks for deletion.
+      assertEquals(1, blockManager.computeInvalidateWork(1));
+
+      cluster.triggerHeartbeats();
+
+      // Make it resume the removeReplicaFromMem method.
+      semaphore.release(1);
+
+      // Wait for the datanode in the cluster to process any block
+      // deletions that have already been asynchronously queued
+      cluster.waitForDNDeletions();
+
+      // Trigger immediate deletion report.
+      cluster.triggerDeletionReports();
+
+      // The replica num should be 2.
+      assertEquals(2, DFSTestUtil.getAllBlocks(fs, path).get(0).getLocations().length);
+      assertEquals(0, blockManager.getExcessBlocksCount());
+    } finally {
+      DataNodeFaultInjector.set(oldInjector);
     }
   }
 }

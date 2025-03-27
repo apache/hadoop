@@ -17,13 +17,18 @@
  */
 package org.apache.hadoop.util;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -31,9 +36,9 @@ import java.util.jar.Manifest;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +51,7 @@ public class TestClasspath {
       .class);
   private static final File TEST_DIR = GenericTestUtils.getTestDir(
       "TestClasspath");
-  private static final Charset UTF8 = Charset.forName("UTF-8");
+  private static final Charset UTF8 = StandardCharsets.UTF_8;
 
   static {
     ExitUtil.disableSystemExit();
@@ -56,7 +61,7 @@ public class TestClasspath {
   private ByteArrayOutputStream stdout, stderr;
   private PrintStream printStdout, printStderr;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     assertTrue(FileUtil.fullyDelete(TEST_DIR));
     assertTrue(TEST_DIR.mkdirs());
@@ -72,7 +77,7 @@ public class TestClasspath {
     System.setErr(printStderr);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     System.setOut(oldStdout);
     System.setErr(oldStderr);

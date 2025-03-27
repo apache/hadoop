@@ -38,6 +38,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -106,7 +108,10 @@ public class TestRetryCacheWithHA {
       defaultEcPolicy.getNumParityUnits() + 1);
   private static final int CHECKTIMES = 10;
   private static final int ResponseSize = 3;
-  
+
+  @Rule
+  public TemporaryFolder baseDir = new TemporaryFolder();
+
   private MiniDFSCluster cluster;
   private DistributedFileSystem dfs;
   private final Configuration conf = new HdfsConfiguration();
@@ -144,7 +149,7 @@ public class TestRetryCacheWithHA {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES, ResponseSize);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
-    cluster = new MiniDFSCluster.Builder(conf)
+    cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot())
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
         .numDataNodes(DataNodes).build();
     cluster.waitActive();

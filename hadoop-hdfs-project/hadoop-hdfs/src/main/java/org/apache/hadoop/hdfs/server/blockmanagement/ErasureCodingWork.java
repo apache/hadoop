@@ -48,7 +48,7 @@ class ErasureCodingWork extends BlockReconstructionWork {
     this.blockPoolId = blockPoolId;
     this.liveBlockIndices = liveBlockIndices;
     this.liveBusyBlockIndices = liveBusyBlockIndices;
-    this.excludeReconstructedIndices=excludeReconstrutedIndices;
+    this.excludeReconstructedIndices = excludeReconstrutedIndices;
     LOG.debug("Creating an ErasureCodingWork to {} reconstruct ",
         block);
   }
@@ -62,10 +62,18 @@ class ErasureCodingWork extends BlockReconstructionWork {
       BlockStoragePolicySuite storagePolicySuite,
       Set<Node> excludedNodes) {
     // TODO: new placement policy for EC considering multiple writers
-    DatanodeStorageInfo[] chosenTargets = blockplacement.chooseTarget(
-        getSrcPath(), getAdditionalReplRequired(), getSrcNodes()[0],
-        getLiveReplicaStorages(), false, excludedNodes, getBlockSize(),
-        storagePolicySuite.getPolicy(getStoragePolicyID()), null);
+    DatanodeStorageInfo[] chosenTargets = null;
+    // HDFS-14720. If the block is deleted, the block size will become
+    // BlockCommand.NO_ACK (LONG.MAX_VALUE) . This kind of block we don't need
+    // to send for replication or reconstruction
+    if (!getBlock().isDeleted()) {
+      chosenTargets = blockplacement.chooseTarget(
+          getSrcPath(), getAdditionalReplRequired(), getSrcNodes()[0],
+          getLiveReplicaStorages(), false, excludedNodes, getBlockSize(),
+          storagePolicySuite.getPolicy(getStoragePolicyID()), null);
+    } else {
+      LOG.warn("ErasureCodingWork could not need choose targets for {}", getBlock());
+    }
     setTargets(chosenTargets);
   }
 
@@ -128,11 +136,11 @@ class ErasureCodingWork extends BlockReconstructionWork {
   }
 
   @Override
-  void addTaskToDatanode(NumberReplicas numberReplicas) {
+  boolean addTaskToDatanode(NumberReplicas numberReplicas) {
     final DatanodeStorageInfo[] targets = getTargets();
     assert targets.length > 0;
     BlockInfoStriped stripedBlk = (BlockInfoStriped) getBlock();
-
+    boolean flag = true;
     if (hasNotEnoughRack()) {
       // if we already have all the internal blocks, but not enough racks,
       // we only need to replicate one internal block to a new rack
@@ -144,6 +152,9 @@ class ErasureCodingWork extends BlockReconstructionWork {
       List<Integer> leavingServiceSources = findLeavingServiceSources();
       // decommissioningSources.size() should be >= targets.length
       final int num = Math.min(leavingServiceSources.size(), targets.length);
+      if (num == 0) {
+        flag = false;
+      }
       for (int i = 0; i < num; i++) {
         createReplicationWork(leavingServiceSources.get(i), targets[i]);
       }
@@ -152,6 +163,7 @@ class ErasureCodingWork extends BlockReconstructionWork {
           new ExtendedBlock(blockPoolId, stripedBlk), getSrcNodes(), targets,
           liveBlockIndices, excludeReconstructedIndices, stripedBlk.getErasureCodingPolicy());
     }
+    return flag;
   }
 
   private void createReplicationWork(int sourceIndex,

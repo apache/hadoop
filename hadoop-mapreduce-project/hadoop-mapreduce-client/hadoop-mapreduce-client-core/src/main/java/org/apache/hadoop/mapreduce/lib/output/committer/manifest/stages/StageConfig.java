@@ -32,6 +32,7 @@ import org.apache.hadoop.util.functional.TaskPool;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.DEFAULT_WRITER_QUEUE_CAPACITY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER_FILE_LIMIT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_MANIFEST_SAVE_ATTEMPTS_DEFAULT;
 
 /**
  * Stage Config.
@@ -171,6 +172,12 @@ public class StageConfig {
    * Number of marker files to include in success file.
    */
   private int successMarkerFileLimit = SUCCESS_MARKER_FILE_LIMIT;
+
+  /**
+   * How many attempts to save a manifest by save and rename
+   * before giving up: {@value}.
+   */
+  private int manifestSaveAttempts = OPT_MANIFEST_SAVE_ATTEMPTS_DEFAULT;
 
   public StageConfig() {
   }
@@ -602,6 +609,21 @@ public class StageConfig {
 
   public int getSuccessMarkerFileLimit() {
     return successMarkerFileLimit;
+  }
+
+  public int getManifestSaveAttempts() {
+    return manifestSaveAttempts;
+  }
+
+  /**
+   * Set builder value.
+   * @param value new value
+   * @return the builder
+   */
+  public StageConfig withManifestSaveAttempts(final int value) {
+    checkOpen();
+    manifestSaveAttempts = value;
+    return this;
   }
 
   /**

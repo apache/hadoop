@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 import static org.apache.hadoop.util.StringUtils.getTrimmedStringCollection;
 
 import org.apache.hadoop.fs.InvalidPathException;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 
@@ -37,12 +39,11 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.hadoop.hdfs.web.JsonUtil;
-import org.apache.hadoop.hdfs.web.ParamFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.AclPermissionParam;
+import org.apache.hadoop.hdfs.web.resources.AllUsersParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
 import org.apache.hadoop.hdfs.web.resources.ConcatSourcesParam;
@@ -117,7 +118,6 @@ import java.util.regex.Pattern;
  * {@link NamenodeWebHdfsMethods}, and tries to reuse as much as possible.
  */
 @Path("")
-@ResourceFilters(ParamFilter.class)
 public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterWebHdfsMethods.class);
@@ -344,7 +344,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final TokenKindParam tokenKind,
       final TokenServiceParam tokenService,
       final NoRedirectParam noredirectParam,
-      final StartAfterParam startAfter
+      final StartAfterParam startAfter,
+      final AllUsersParam allUsers
   ) throws IOException, URISyntaxException {
     try {
       final Router router = getRouter();
@@ -393,7 +394,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
             offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
             excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
             snapshotDiffStartPath, snapshotDiffIndex,
-            tokenKind, tokenService, noredirectParam, startAfter);
+            tokenKind, tokenService, noredirectParam, startAfter, allUsers);
       }
       default:
         throw new UnsupportedOperationException(op + " is not supported");
@@ -479,8 +480,14 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
 
     if (op == PutOpParam.Op.CREATE) {
       try {
-        resolvedNs = rpcServer.getCreateLocation(path).getNameserviceId();
-      } catch (IOException e) {
+        if (rpcServer.isAsync()) {
+          rpcServer.getCreateLocation(path);
+          RemoteLocation remoteLocation = syncReturn(RemoteLocation.class);
+          resolvedNs = remoteLocation.getNameserviceId();
+        } else {
+          resolvedNs = rpcServer.getCreateLocation(path).getNameserviceId();
+        }
+      } catch (Exception e) {
         LOG.error("Cannot get the name service " +
             "to create file for path {} ", path, e);
       }

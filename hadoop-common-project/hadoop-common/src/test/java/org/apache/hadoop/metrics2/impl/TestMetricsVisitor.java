@@ -20,25 +20,28 @@ package org.apache.hadoop.metrics2.impl;
 
 import java.util.List;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.junit.MockitoJUnitRunner;
 
 import org.apache.hadoop.metrics2.MetricsVisitor;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import static org.apache.hadoop.metrics2.lib.Interns.*;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
  * Test the metric visitor interface
  */
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class TestMetricsVisitor {
   @Captor private ArgumentCaptor<MetricsInfo> c1;
   @Captor private ArgumentCaptor<MetricsInfo> c2;
@@ -67,23 +70,23 @@ public class TestMetricsVisitor {
     }
 
     verify(visitor).counter(c1.capture(), eq(1));
-    assertEquals("c1 name", "c1", c1.getValue().name());
-    assertEquals("c1 description", "int counter", c1.getValue().description());
+    assertEquals("c1", c1.getValue().name(), "c1 name");
+    assertEquals("int counter", c1.getValue().description(), "c1 description");
     verify(visitor).counter(c2.capture(), eq(2L));
-    assertEquals("c2 name", "c2", c2.getValue().name());
-    assertEquals("c2 description", "long counter", c2.getValue().description());
+    assertEquals("c2", c2.getValue().name(), "c2 name");
+    assertEquals("long counter", c2.getValue().description(), "c2 description");
     verify(visitor).gauge(g1.capture(), eq(5));
-    assertEquals("g1 name", "g1", g1.getValue().name());
-    assertEquals("g1 description", "int gauge", g1.getValue().description());
+    assertEquals("g1", g1.getValue().name(), "g1 name");
+    assertEquals("int gauge", g1.getValue().description(), "g1 description");
     verify(visitor).gauge(g2.capture(), eq(6L));
-    assertEquals("g2 name", "g2", g2.getValue().name());
-    assertEquals("g2 description", "long gauge", g2.getValue().description());
+    assertEquals("g2", g2.getValue().name(), "g2 name");
+    assertEquals("long gauge", g2.getValue().description(), "g2 description");
     verify(visitor).gauge(g3.capture(), eq(7f));
-    assertEquals("g3 name", "g3", g3.getValue().name());
-    assertEquals("g3 description", "float gauge", g3.getValue().description());
+    assertEquals("g3", g3.getValue().name(), "g3 name");
+    assertEquals("float gauge", g3.getValue().description(), "g3 description");
     verify(visitor).gauge(g4.capture(), eq(8d));
-    assertEquals("g4 name", "g4", g4.getValue().name());
-    assertEquals("g4 description", "double gauge", g4.getValue().description());
+    assertEquals("g4", g4.getValue().name(), "g4 name");
+    assertEquals("double gauge", g4.getValue().description(), "g4 description");
   }
 
 }

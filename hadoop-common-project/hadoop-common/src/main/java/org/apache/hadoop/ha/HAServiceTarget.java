@@ -183,7 +183,7 @@ public abstract class HAServiceTarget {
    * expose to fencing implementations/scripts. Fencing methods are free
    * to use this map as they see fit -- notably, the shell script
    * implementation takes each entry, prepends 'target_', substitutes
-   * '_' for '.', and adds it to the environment of the script.
+   * '_' for '.' and '-', and adds it to the environment of the script.
    *
    * Subclass implementations should be sure to delegate to the superclass
    * implementation as well as adding their own keys.

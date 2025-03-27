@@ -19,9 +19,15 @@
 package org.apache.hadoop.security.token.delegation;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.curator.RetryPolicy;
@@ -106,10 +112,22 @@ public class TestZKDelegationTokenSecretManager {
   @SuppressWarnings("unchecked")
   @Test
   public void testMultiNodeOperations() throws Exception {
+      testMultiNodeOperationsImpl(false);
+  }
+
+  @Test
+  public void testMultiNodeOperationsWithZeroRetry() throws Exception {
+      testMultiNodeOperationsImpl(true);
+  }
+
+  public void testMultiNodeOperationsImpl(boolean setZeroRetry) throws Exception {
     for (int i = 0; i < TEST_RETRIES; i++) {
       DelegationTokenManager tm1, tm2 = null;
       String connectString = zkServer.getConnectString();
       Configuration conf = getSecretConf(connectString);
+      if (setZeroRetry) {
+          conf.setInt(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_NUM_RETRIES, 0);
+      }
       tm1 = new DelegationTokenManager(conf, new Text("bla"));
       tm1.init();
       tm2 = new DelegationTokenManager(conf, new Text("bla"));
@@ -383,7 +401,7 @@ public class TestZKDelegationTokenSecretManager {
         .connectString(connectString)
         .retryPolicy(retryPolicy)
         .aclProvider(digestAclProvider)
-        .authorization("digest", userPass.getBytes("UTF-8"))
+        .authorization("digest", userPass.getBytes(StandardCharsets.UTF_8))
         .build();
     curatorFramework.start();
     ZKDelegationTokenSecretManager.setCurator(curatorFramework);
@@ -572,5 +590,54 @@ public class TestZKDelegationTokenSecretManager {
     LambdaTestUtils.intercept(KeeperException.class,
         "KeeperErrorCode = NodeExists for "+workingPath,
         () -> createModeStat.forPath(workingPath));
+  }
+
+  @Test
+  public void testMultipleInit() throws Exception {
+
+    String connectString = zkServer.getConnectString();
+    RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
+    Configuration conf = getSecretConf(connectString);
+    CuratorFramework curatorFramework =
+        CuratorFrameworkFactory.builder()
+            .connectString(connectString)
+            .retryPolicy(retryPolicy)
+            .build();
+    curatorFramework.start();
+    ZKDelegationTokenSecretManager.setCurator(curatorFramework);
+
+    DelegationTokenManager tm1 = new DelegationTokenManager(conf, new Text("foo"));
+    DelegationTokenManager tm2 = new DelegationTokenManager(conf, new Text("bar"));
+    // When the init method is called,
+    // the ZKDelegationTokenSecretManager#startThread method will be called,
+    // and the creatingParentContainersIfNeeded will be called to create the nameSpace.
+    ExecutorService executorService = Executors.newFixedThreadPool(2);
+
+    Callable<Boolean> tm1Callable = () -> {
+      tm1.init();
+      return true;
+    };
+    Callable<Boolean> tm2Callable = () -> {
+      tm2.init();
+      return true;
+    };
+    List<Future<Boolean>> futures = executorService.invokeAll(
+        Arrays.asList(tm1Callable, tm2Callable));
+    for(Future<Boolean> future : futures) {
+      Assert.assertTrue(future.get());
+    }
+    executorService.shutdownNow();
+    Assert.assertTrue(executorService.awaitTermination(1, TimeUnit.SECONDS));
+    tm1.destroy();
+    tm2.destroy();
+
+    String workingPath = "/" + conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH,
+        ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT) + "/ZKDTSMRoot";
+
+    // Check if the created NameSpace exists.
+    Stat stat = curatorFramework.checkExists().forPath(workingPath);
+    Assert.assertNotNull(stat);
+
+    curatorFramework.close();
   }
 }

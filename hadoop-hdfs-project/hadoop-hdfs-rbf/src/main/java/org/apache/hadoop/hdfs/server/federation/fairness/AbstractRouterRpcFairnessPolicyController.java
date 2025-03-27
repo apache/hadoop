@@ -89,7 +89,8 @@ public class AbstractRouterRpcFairnessPolicyController
     this.permits.put(nsId, new Semaphore(maxPermits));
   }
 
-  protected int getAvailablePermits(String nsId) {
+  @Override
+  public int getAvailablePermits(String nsId) {
     return this.permits.get(nsId).availablePermits();
   }
 
@@ -104,5 +105,10 @@ public class AbstractRouterRpcFairnessPolicyController
       }
     });
     return json.toString();
+  }
+
+  @Override
+  public boolean contains(String nsId) {
+    return permits.containsKey(nsId);
   }
 }

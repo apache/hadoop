@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.GetRe
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ListReconfigurablePropertiesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ListReconfigurablePropertiesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.StartReconfigurationRequestProto;
-import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolTranslator;
@@ -44,7 +43,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+
+import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 
 /**
  * This class is the client side translator to translate the requests made on
@@ -102,37 +102,25 @@ public class ReconfigurationProtocolTranslatorPB implements
 
   @Override
   public void startReconfiguration() throws IOException {
-    try {
-      rpcProxy.startReconfiguration(NULL_CONTROLLER, VOID_START_RECONFIG);
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    ipc(() -> rpcProxy.startReconfiguration(NULL_CONTROLLER, VOID_START_RECONFIG));
   }
 
   @Override
   public ReconfigurationTaskStatus getReconfigurationStatus()
       throws IOException {
-    try {
-      return ReconfigurationProtocolUtils.getReconfigurationStatus(
-          rpcProxy
-          .getReconfigurationStatus(
-              NULL_CONTROLLER,
-              VOID_GET_RECONFIG_STATUS));
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    return ReconfigurationProtocolUtils.getReconfigurationStatus(
+        ipc(() -> rpcProxy
+            .getReconfigurationStatus(
+                NULL_CONTROLLER,
+                VOID_GET_RECONFIG_STATUS)));
   }
 
   @Override
   public List<String> listReconfigurableProperties() throws IOException {
     ListReconfigurablePropertiesResponseProto response;
-    try {
-      response = rpcProxy.listReconfigurableProperties(NULL_CONTROLLER,
-          VOID_LIST_RECONFIGURABLE_PROPERTIES);
-      return response.getNameList();
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    response = ipc(() -> rpcProxy.listReconfigurableProperties(NULL_CONTROLLER,
+        VOID_LIST_RECONFIGURABLE_PROPERTIES));
+    return response.getNameList();
   }
 
   @Override

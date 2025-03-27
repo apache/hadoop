@@ -281,7 +281,7 @@ public class PrivilegedOperationExecutor {
       return null;
     }
 
-    StringBuffer finalOpArg = new StringBuffer(PrivilegedOperation
+    StringBuilder finalOpArg = new StringBuilder(PrivilegedOperation
         .CGROUP_ARG_PREFIX);
     boolean noTasks = true;
 

@@ -87,11 +87,13 @@ public class ITestAzureBlobFileSystemRenameUnicode extends
     assertRenameOutcome(fs, folderPath1, folderPath2, true);
     assertPathDoesNotExist(fs, "renamed", folderPath1);
     assertIsDirectory(fs, folderPath2);
-    assertPathExists(fs, "renamed file", new Path(folderPath2 + "/" + filename));
+    assertPathExists(fs, "renamed file",
+        new Path(folderPath2 + "/" + filename));
 
     FileStatus[] fileStatus = fs.listStatus(folderPath2);
     assertNotNull(fileStatus);
-    assertTrue("Empty listing returned from listStatus(\"" + folderPath2 + "\")",
+    assertTrue(
+        "Empty listing returned from listStatus(\"" + folderPath2 + "\")",
         fileStatus.length > 0);
     assertEquals(fileStatus[0].getPath().getName(), filename);
   }

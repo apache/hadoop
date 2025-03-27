@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -152,6 +153,9 @@ public class CodecPool {
       compressor = codec.createCompressor();
       LOG.info("Got brand-new compressor ["+codec.getDefaultExtension()+"]");
     } else {
+      if (conf == null && codec instanceof Configurable) {
+        conf = ((Configurable)codec).getConf();
+      }
       compressor.reinit(conf);
       if(LOG.isDebugEnabled()) {
         LOG.debug("Got recycled compressor");

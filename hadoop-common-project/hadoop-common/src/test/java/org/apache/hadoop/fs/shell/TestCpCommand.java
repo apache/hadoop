@@ -21,11 +21,11 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
@@ -38,7 +38,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.CopyCommands.Cp;
 
 import static org.apache.hadoop.fs.shell.CopyCommandWithMultiThread.DEFAULT_QUEUE_SIZE;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestCpCommand {
 
@@ -81,7 +82,7 @@ public class TestCpCommand {
     return numTotalFiles;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     conf = new Configuration(false);
     conf.set("fs.file.impl", LocalFileSystem.class.getName());
@@ -94,7 +95,7 @@ public class TestCpCommand {
     fs.setWorkingDirectory(testDir);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws Exception {
     fs.delete(testDir, true);
     fs.close();
@@ -105,13 +106,14 @@ public class TestCpCommand {
     assertEquals(0, cmd.run(args));
   }
 
-  @Before
+  @BeforeEach
   public void initDirectory() throws Exception {
     dir = new Path("dir" + RandomStringUtils.randomNumeric(4));
     numFiles = initialize(dir);
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCp() throws Exception {
     MultiThreadedCp copy = new MultiThreadedCp(1, DEFAULT_QUEUE_SIZE, 0);
     run(copy, new Path(dir, FROM_DIR_NAME).toString(),
@@ -119,21 +121,24 @@ public class TestCpCommand {
     assert copy.getExecutor() == null;
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCpWithThreads() {
     run(new MultiThreadedCp(5, DEFAULT_QUEUE_SIZE, numFiles), "-t", "5",
         new Path(dir, FROM_DIR_NAME).toString(),
         new Path(dir, TO_DIR_NAME).toString());
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCpWithThreadWrong() {
     run(new MultiThreadedCp(1, DEFAULT_QUEUE_SIZE, 0), "-t", "0",
         new Path(dir, FROM_DIR_NAME).toString(),
         new Path(dir, TO_DIR_NAME).toString());
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCpWithThreadsAndQueueSize() {
     int queueSize = 256;
     run(new MultiThreadedCp(5, queueSize, numFiles), "-t", "5", "-q",
@@ -142,7 +147,8 @@ public class TestCpCommand {
         new Path(dir, TO_DIR_NAME).toString());
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCpWithThreadsAndQueueSizeWrong() {
     int queueSize = 0;
     run(new MultiThreadedCp(5, DEFAULT_QUEUE_SIZE, numFiles), "-t", "5", "-q",
@@ -151,7 +157,8 @@ public class TestCpCommand {
         new Path(dir, TO_DIR_NAME).toString());
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCpSingleFile() throws Exception {
     Path fromDirPath = new Path(dir, FROM_DIR_NAME);
     Path subFile = new Path(fromDirPath, "file0");
@@ -186,9 +193,9 @@ public class TestCpCommand {
     protected void processArguments(LinkedList<PathData> args)
         throws IOException {
       // Check if the number of threads are same as expected
-      Assert.assertEquals(expectedThreads, getThreadCount());
+      assertEquals(expectedThreads, getThreadCount());
       // Check if the queue pool size of executor is same as expected
-      Assert.assertEquals(expectedQueuePoolSize, getThreadPoolQueueSize());
+      assertEquals(expectedQueuePoolSize, getThreadPoolQueueSize());
 
       super.processArguments(args);
 
@@ -198,10 +205,10 @@ public class TestCpCommand {
         // 2) There are no active tasks in the executor
         // 3) Executor has shutdown correctly
         ThreadPoolExecutor executor = getExecutor();
-        Assert.assertEquals(expectedCompletedTaskCount,
+        assertEquals(expectedCompletedTaskCount,
             executor.getCompletedTaskCount());
-        Assert.assertEquals(0, executor.getActiveCount());
-        Assert.assertTrue(executor.isTerminated());
+        assertEquals(0, executor.getActiveCount());
+        assertTrue(executor.isTerminated());
       } else {
         assert getExecutor() == null;
       }

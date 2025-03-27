@@ -25,10 +25,9 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.concurrent.TimeUnit;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
-import com.amazonaws.services.securitytoken.model.Credentials;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.StsClientBuilder;
+import software.amazon.awssdk.services.sts.model.Credentials;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -71,7 +70,6 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3ATemporaryCredentials.class);
 
-  @SuppressWarnings("deprecation")
   private static final String TEMPORARY_AWS_CREDENTIALS
       = TemporaryAWSCredentialsProvider.NAME;
 
@@ -117,10 +115,10 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
   public void testSTS() throws IOException {
     Configuration conf = getContract().getConf();
     S3AFileSystem testFS = getFileSystem();
-    credentials = testFS.shareCredentials("testSTS");
+    credentials = getS3AInternals().shareCredentials("testSTS");
 
     String bucket = testFS.getBucket();
-    AWSSecurityTokenServiceClientBuilder builder = STSClientFactory.builder(
+    StsClientBuilder builder = STSClientFactory.builder(
         conf,
         bucket,
         credentials,
@@ -154,7 +152,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
 
     // now create an invalid set of credentials by changing the session
     // token
-    conf2.set(SESSION_TOKEN, "invalid-" + sessionCreds.getSessionToken());
+    conf2.set(SESSION_TOKEN, "invalid-" + sessionCreds.sessionToken());
     try (S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf2)) {
       createAndVerifyFile(fs, path("testSTSInvalidToken"), TEST_FILE_SIZE);
       fail("Expected an access exception, but file access to "
@@ -176,14 +174,13 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testTemporaryCredentialValidation() throws Throwable {
     Configuration conf = new Configuration();
     conf.set(ACCESS_KEY, "accesskey");
     conf.set(SECRET_KEY, "secretkey");
     conf.set(SESSION_TOKEN, "");
     LambdaTestUtils.intercept(CredentialInitializationException.class,
-        () -> new TemporaryAWSCredentialsProvider(conf).getCredentials());
+        () -> new TemporaryAWSCredentialsProvider(conf).resolveCredentials());
   }
 
   /**
@@ -360,25 +357,24 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
    * @return the caught exception.
    * @throws Exception any unexpected exception.
    */
-  @SuppressWarnings("deprecation")
   public <E extends Exception> E expectedSessionRequestFailure(
       final Class<E> clazz,
       final String endpoint,
       final String region,
       final String exceptionText) throws Exception {
     try(AWSCredentialProviderList parentCreds =
-            getFileSystem().shareCredentials("test");
+            getS3AInternals().shareCredentials("test");
         DurationInfo ignored = new DurationInfo(LOG, "requesting credentials")) {
       Configuration conf = new Configuration(getContract().getConf());
-      ClientConfiguration awsConf =
-          S3AUtils.createAwsConf(conf, null, AWS_SERVICE_IDENTIFIER_STS);
+
       return intercept(clazz, exceptionText,
           () -> {
-            AWSSecurityTokenService tokenService =
+            StsClient tokenService =
                 STSClientFactory.builder(parentCreds,
-                    awsConf,
+                    conf,
                     endpoint,
-                    region)
+                    region,
+                    getFileSystem().getBucket())
                     .build();
             Invoker invoker = new Invoker(new S3ARetryPolicy(conf),
                 LOG_AT_ERROR);

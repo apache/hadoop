@@ -34,15 +34,16 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -52,6 +53,7 @@ import org.apache.hadoop.security.AccessControlException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_FILE_ALREADY_EXISTS;
 import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
@@ -211,6 +213,18 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
       String fileContent = new String(readBuffer, 0, bytesRead, StandardCharsets.UTF_8);
       assertEquals(msg2 + msg2 + msg1 + msg1, fileContent);
     }
+  }
+
+  @Test
+  public void checkExceptionForRenameOverwrites() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+
+    Path src = new Path("a/b/f1.txt");
+    Path dest = new Path("a/b/f2.txt");
+    touch(src);
+    touch(dest);
+
+    intercept(FileAlreadyExistsException.class, ERR_FILE_ALREADY_EXISTS, () -> fs.rename(src, dest));
   }
 
   @Test
@@ -390,7 +404,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     fs.create(reqPath).close();
 
     final String propertyName = "user.mime_type";
-    final byte[] propertyValue = "text/plain".getBytes("utf-8");
+    final byte[] propertyValue = "text/plain".getBytes(StandardCharsets.UTF_8);
     fs.setXAttr(reqPath, propertyName, propertyValue);
 
     assertArrayEquals(propertyValue, fs.getXAttr(reqPath, propertyName));
@@ -403,7 +417,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     fs.create(new Path(src)).close();
     AbfsRestOperation abfsHttpRestOperation = fs.getAbfsClient()
         .renamePath(src, "/testABC" + "/abc.txt", null,
-            getTestTracingContext(fs, false), null, false, isHNSEnabled)
+            getTestTracingContext(fs, false), null,
+            false)
         .getOp();
     AbfsHttpOperation result = abfsHttpRestOperation.getResult();
     String url = result.getMaskedUrl();
@@ -420,8 +435,9 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   public void testSignatureMaskOnExceptionMessage() throws Exception {
     intercept(IOException.class, "sig=XXXX",
         () -> getFileSystem().getAbfsClient()
-            .renamePath("testABC/test.xt", "testABC/abc.txt", null,
-                getTestTracingContext(getFileSystem(), false), null, false, isHNSEnabled));
+            .renamePath("testABC/test.xt", "testABC/abc.txt",
+                null, getTestTracingContext(getFileSystem(), false),
+                null, false));
   }
 
   @Test

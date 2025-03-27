@@ -33,6 +33,7 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
@@ -81,6 +82,10 @@ public abstract class BaseRouterWebServicesTest {
   public static final String QUEUE_DEDICATED = "dedicated";
   public static final String QUEUE_DEDICATED_FULL = CapacitySchedulerConfiguration.ROOT +
       CapacitySchedulerConfiguration.DOT + QUEUE_DEDICATED;
+  public static final QueuePath ROOT_QUEUE_PATH =
+      new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  public static final QueuePath DEFAULT_QUEUE_PATH = new QueuePath(QUEUE_DEFAULT_FULL);
+  public static final QueuePath DEDICATED_QUEUE_PATH = new QueuePath(QUEUE_DEDICATED_FULL);
 
   private RouterWebServices routerWebService;
 

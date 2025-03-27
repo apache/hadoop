@@ -20,12 +20,13 @@ package org.apache.hadoop.fs.s3a.audit;
 
 import java.util.List;
 
-import com.amazonaws.handlers.RequestHandler2;
+import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
+
 
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditConfig;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,10 +57,10 @@ public class TestAuditSpanLifecycle extends AbstractAuditingTest {
   }
 
   @Test
-  public void testCreateRequestHandlers() throws Throwable {
-    List<RequestHandler2> handlers
-        = getManager().createRequestHandlers();
-    assertThat(handlers).isNotEmpty();
+  public void testCreateExecutionInterceptors() throws Throwable {
+    List<ExecutionInterceptor> interceptors
+        = getManager().createExecutionInterceptors();
+    assertThat(interceptors).isNotEmpty();
   }
 
   @Test

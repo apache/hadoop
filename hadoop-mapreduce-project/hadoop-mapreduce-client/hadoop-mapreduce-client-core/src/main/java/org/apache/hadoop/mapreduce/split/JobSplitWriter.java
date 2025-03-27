@@ -19,7 +19,7 @@
 package org.apache.hadoop.mapreduce.split;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
@@ -54,16 +54,8 @@ public class JobSplitWriter {
   private static final Logger LOG =
       LoggerFactory.getLogger(JobSplitWriter.class);
   private static final int splitVersion = JobSplit.META_SPLIT_VERSION;
-  private static final byte[] SPLIT_FILE_HEADER;
+  private static final byte[] SPLIT_FILE_HEADER = "SPL".getBytes(StandardCharsets.UTF_8);
 
-  static {
-    try {
-      SPLIT_FILE_HEADER = "SPL".getBytes("UTF-8");
-    } catch (UnsupportedEncodingException u) {
-      throw new RuntimeException(u);
-    }
-  }
-  
   @SuppressWarnings("unchecked")
   public static <T extends InputSplit> void createSplitFiles(Path jobSubmitDir, 
       Configuration conf, FileSystem fs, List<InputSplit> splits) 

@@ -18,8 +18,8 @@
 package org.apache.hadoop.http;
 
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -27,8 +27,9 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -50,7 +51,7 @@ public class TestIsActiveServlet {
   private HttpServletResponse resp;
   private ByteArrayOutputStream respOut;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     req = mock(HttpServletRequest.class);
     resp = mock(HttpServletResponse.class);
@@ -90,6 +91,6 @@ public class TestIsActiveServlet {
 
   private String doGet() throws IOException {
     servlet.doGet(req, resp);
-    return new String(respOut.toByteArray(), "UTF-8");
+    return new String(respOut.toByteArray(), StandardCharsets.UTF_8);
   }
 }

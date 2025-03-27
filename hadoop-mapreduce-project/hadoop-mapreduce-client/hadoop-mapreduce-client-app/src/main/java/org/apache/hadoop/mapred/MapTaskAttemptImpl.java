@@ -30,7 +30,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.util.Clock;
 
 @SuppressWarnings("rawtypes")
 public class MapTaskAttemptImpl extends TaskAttemptImpl {

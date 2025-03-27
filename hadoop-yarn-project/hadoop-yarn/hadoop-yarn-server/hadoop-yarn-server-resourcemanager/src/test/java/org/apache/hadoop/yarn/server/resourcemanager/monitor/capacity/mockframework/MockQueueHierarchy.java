@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.QueueOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
@@ -273,7 +274,7 @@ class MockQueueHierarchy {
 
     // Setup preemption disabled
     when(queue.getPreemptionDisabled()).thenReturn(
-        conf.getPreemptionDisabled(queuePath, false));
+        conf.getPreemptionDisabled(new QueuePath(queuePath), false));
 
     // Setup other queue configurations
     Map<String, String> otherConfigs = getOtherConfigurations(
