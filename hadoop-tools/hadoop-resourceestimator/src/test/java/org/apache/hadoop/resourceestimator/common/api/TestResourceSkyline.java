@@ -20,6 +20,9 @@
 
 package org.apache.hadoop.resourceestimator.common.api;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 import java.util.TreeMap;
 
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -27,7 +30,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResour
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInterval;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -55,40 +57,40 @@ public class TestResourceSkyline {
   }
 
   @Test public final void testGetJobId() {
-    Assertions.assertNull(resourceSkyline);
+    assertNull(resourceSkyline);
     ReservationInterval riAdd = new ReservationInterval(0, 10);
     skylineList.addInterval(riAdd, resource1);
     riAdd = new ReservationInterval(10, 20);
     skylineList.addInterval(riAdd, resource1);
     resourceSkyline =
         new ResourceSkyline("1", 1024.5, 0, 20, resource1, skylineList);
-    Assertions.assertEquals("1", resourceSkyline.getJobId());
+    assertEquals("1", resourceSkyline.getJobId());
   }
 
   @Test public final void testGetJobSubmissionTime() {
-    Assertions.assertNull(resourceSkyline);
+    assertNull(resourceSkyline);
     ReservationInterval riAdd = new ReservationInterval(0, 10);
     skylineList.addInterval(riAdd, resource1);
     riAdd = new ReservationInterval(10, 20);
     skylineList.addInterval(riAdd, resource1);
     resourceSkyline =
         new ResourceSkyline("1", 1024.5, 0, 20, resource1, skylineList);
-    Assertions.assertEquals(0, resourceSkyline.getJobSubmissionTime());
+    assertEquals(0, resourceSkyline.getJobSubmissionTime());
   }
 
   @Test public final void testGetJobFinishTime() {
-    Assertions.assertNull(resourceSkyline);
+    assertNull(resourceSkyline);
     ReservationInterval riAdd = new ReservationInterval(0, 10);
     skylineList.addInterval(riAdd, resource1);
     riAdd = new ReservationInterval(10, 20);
     skylineList.addInterval(riAdd, resource1);
     resourceSkyline =
         new ResourceSkyline("1", 1024.5, 0, 20, resource1, skylineList);
-    Assertions.assertEquals(20, resourceSkyline.getJobFinishTime());
+    assertEquals(20, resourceSkyline.getJobFinishTime());
   }
 
   @Test public final void testGetKthResource() {
-    Assertions.assertNull(resourceSkyline);
+    assertNull(resourceSkyline);
     ReservationInterval riAdd = new ReservationInterval(10, 20);
     skylineList.addInterval(riAdd, resource1);
     riAdd = new ReservationInterval(20, 30);
@@ -98,23 +100,23 @@ public class TestResourceSkyline {
     final RLESparseResourceAllocation skylineList2 =
         resourceSkyline.getSkylineList();
     for (int i = 10; i < 20; i++) {
-      Assertions.assertEquals(resource1.getMemorySize(),
+      assertEquals(resource1.getMemorySize(),
           skylineList2.getCapacityAtTime(i).getMemorySize());
-      Assertions.assertEquals(resource1.getVirtualCores(),
+      assertEquals(resource1.getVirtualCores(),
           skylineList2.getCapacityAtTime(i).getVirtualCores());
     }
     for (int i = 20; i < 30; i++) {
-      Assertions.assertEquals(resource2.getMemorySize(),
+      assertEquals(resource2.getMemorySize(),
           skylineList2.getCapacityAtTime(i).getMemorySize());
-      Assertions.assertEquals(resource2.getVirtualCores(),
+      assertEquals(resource2.getVirtualCores(),
           skylineList2.getCapacityAtTime(i).getVirtualCores());
     }
     // test if resourceSkyline automatically extends the skyline with
     // zero-resource at both ends
-    Assertions.assertEquals(0, skylineList2.getCapacityAtTime(9).getMemorySize());
-    Assertions.assertEquals(0, skylineList2.getCapacityAtTime(9).getVirtualCores());
-    Assertions.assertEquals(0, skylineList2.getCapacityAtTime(30).getMemorySize());
-    Assertions.assertEquals(0, skylineList2.getCapacityAtTime(30).getVirtualCores());
+    assertEquals(0, skylineList2.getCapacityAtTime(9).getMemorySize());
+    assertEquals(0, skylineList2.getCapacityAtTime(9).getVirtualCores());
+    assertEquals(0, skylineList2.getCapacityAtTime(30).getMemorySize());
+    assertEquals(0, skylineList2.getCapacityAtTime(30).getVirtualCores());
   }
 
   @AfterEach

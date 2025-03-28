@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.resourceestimator.solver.impl;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -35,7 +37,6 @@ import org.apache.hadoop.resourceestimator.solver.exceptions.SolverException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Assertions;
 
 /**
  * This LPSolver class will make resource estimation using Linear Programming
@@ -56,22 +57,20 @@ public abstract class TestSolver {
   @Test
   public void testNullJobHistory()
       throws SolverException, SkylineStoreException {
-    Assertions.assertThrows(InvalidInputException.class, () -> {
+    assertThrows(InvalidInputException.class, () -> {
         solver.solve(null);
     });
     // try to solve with null jobHistory
   }
 
   @Test
-  public void testEmptyJobHistory()
-      throws SolverException, SkylineStoreException {
-          Assertions.assertThrows(InvalidInputException.class, () -> {
-              Map<RecurrenceId, List<ResourceSkyline>> jobHistoryInvalid =
-        new HashMap<RecurrenceId, List<ResourceSkyline>>();
-              solver.solve(jobHistoryInvalid);
-          });
-      // try to solve with emty jobHistory
-}
+  public void testEmptyJobHistory() throws SolverException, SkylineStoreException {
+    // try to solve with empty jobHistory
+    assertThrows(InvalidInputException.class, () -> {
+        Map<RecurrenceId, List<ResourceSkyline>> jobHistoryInvalid = new HashMap<RecurrenceId, List<ResourceSkyline>>();
+        solver.solve(jobHistoryInvalid);
+    });
+  }
 
   @AfterEach
   public final void cleanUp() {

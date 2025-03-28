@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.resourceestimator.translator.api;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.text.ParseException;
 
 import org.apache.hadoop.resourceestimator.common.api.RecurrenceId;
@@ -27,7 +29,6 @@ import org.apache.hadoop.resourceestimator.translator.impl.LogParserUtil;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -69,27 +70,27 @@ public class TestJobMetaData {
     final Resource containerAlloc =
         jobMetaData.getResourceSkyline().getContainerSpec();
     final Resource containerAlloc2 = Resource.newInstance(1, 1);
-    Assertions.assertEquals(containerAlloc.getMemorySize(),
+    assertEquals(containerAlloc.getMemorySize(),
         containerAlloc2.getMemorySize());
-    Assertions.assertEquals(containerAlloc.getVirtualCores(),
+    assertEquals(containerAlloc.getVirtualCores(),
         containerAlloc2.getVirtualCores());
   }
 
   @Test public final void testGetJobSize() {
-    Assertions.assertEquals(jobMetaData.getResourceSkyline().getJobInputDataSize(),
+    assertEquals(jobMetaData.getResourceSkyline().getJobInputDataSize(),
         1024.5, 0);
   }
 
   @Test public final void testGetRecurrenceeId() {
     final RecurrenceId recurrenceIdTest =
         new RecurrenceId("Fraud Detection", "17/07/16 16:27:25");
-    Assertions.assertEquals(recurrenceIdTest, jobMetaData.getRecurrenceId());
+    assertEquals(recurrenceIdTest, jobMetaData.getRecurrenceId());
   }
 
   @Test public final void testStringToUnixTimestamp() throws ParseException {
     final long submissionTime =
         logParserUtil.stringToUnixTimestamp("17/07/16 16:27:25");
-    Assertions.assertEquals(jobMetaData.getResourceSkyline().getJobSubmissionTime(),
+    assertEquals(jobMetaData.getResourceSkyline().getJobSubmissionTime(),
         submissionTime);
   }
 
@@ -100,22 +101,22 @@ public class TestJobMetaData {
         jobMetaData.getResourceSkyline().getContainerSpec().getVirtualCores();
     int k;
     for (k = 0; k < 5; k++) {
-      Assertions.assertEquals(0,
+      assertEquals(0,
           skylineList.getCapacityAtTime(k).getVirtualCores() / containerCPU);
     }
     for (k = 5; k < 15; k++) {
-      Assertions.assertEquals(1,
+      assertEquals(1,
           skylineList.getCapacityAtTime(k).getVirtualCores() / containerCPU);
     }
     for (k = 15; k < 605; k++) {
-      Assertions.assertEquals(2,
+      assertEquals(2,
           skylineList.getCapacityAtTime(k).getVirtualCores() / containerCPU);
     }
     for (k = 605; k < 615; k++) {
-      Assertions.assertEquals(1,
+      assertEquals(1,
           skylineList.getCapacityAtTime(k).getVirtualCores() / containerCPU);
     }
-    Assertions.assertEquals(0,
+    assertEquals(0,
         skylineList.getCapacityAtTime(615).getVirtualCores() / containerCPU);
   }
 
@@ -145,14 +146,14 @@ public class TestJobMetaData {
         jobMetaData.getResourceSkyline().getContainerSpec().getVirtualCores();
     int k;
     for (k = 0; k < 5; k++) {
-      Assertions.assertEquals(0,
+      assertEquals(0,
           skylineList.getCapacityAtTime(k).getVirtualCores() / containerCPU);
     }
     for (k = 5; k < 605; k++) {
-      Assertions.assertEquals(1,
+      assertEquals(1,
           skylineList.getCapacityAtTime(k).getVirtualCores() / containerCPU);
     }
-    Assertions.assertEquals(0,
+    assertEquals(0,
         skylineList.getCapacityAtTime(605).getVirtualCores() / containerCPU);
   }
 

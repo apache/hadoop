@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.resourceestimator.translator.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.List;
@@ -37,7 +39,6 @@ import org.apache.hadoop.resourceestimator.translator.api.LogParser;
 import org.apache.hadoop.resourceestimator.translator.exceptions.DataFieldNotFoundException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -74,38 +75,36 @@ public class TestNativeParser {
         new RecurrenceId("tpch_q12", "tpch_q12_0");
     final Map<RecurrenceId, List<ResourceSkyline>> jobSkylineLists =
         skylineStore.getHistory(recurrenceId);
-    Assertions.assertEquals(1, jobSkylineLists.size());
+    assertEquals(1, jobSkylineLists.size());
     final List<ResourceSkyline> jobHistory = jobSkylineLists.get(recurrenceId);
-    Assertions.assertEquals(1, jobHistory.size());
+    assertEquals(1, jobHistory.size());
     final ResourceSkyline resourceSkyline = jobHistory.get(0);
-    Assertions.assertEquals(0, resourceSkyline.getJobInputDataSize(), 0);
-    Assertions.assertEquals("tpch_q12_0", resourceSkyline.getJobId());
-    Assertions.assertEquals(0, resourceSkyline.getJobSubmissionTime());
-    Assertions.assertEquals(25, resourceSkyline.getJobFinishTime());
-    Assertions
-        .assertEquals(1024, resourceSkyline.getContainerSpec().getMemorySize());
-    Assertions
-        .assertEquals(1, resourceSkyline.getContainerSpec().getVirtualCores());
+    assertEquals(0, resourceSkyline.getJobInputDataSize(), 0);
+    assertEquals("tpch_q12_0", resourceSkyline.getJobId());
+    assertEquals(0, resourceSkyline.getJobSubmissionTime());
+    assertEquals(25, resourceSkyline.getJobFinishTime());
+    assertEquals(1024, resourceSkyline.getContainerSpec().getMemorySize());
+    assertEquals(1, resourceSkyline.getContainerSpec().getVirtualCores());
     final RLESparseResourceAllocation skylineLists =
         resourceSkyline.getSkylineList();
     int k;
     for (k = 0; k < 10; k++) {
-      Assertions.assertEquals(1,
+      assertEquals(1,
           skylineLists.getCapacityAtTime(k).getMemorySize() / 1024);
     }
     for (k = 10; k < 15; k++) {
-      Assertions.assertEquals(1074,
+      assertEquals(1074,
           skylineLists.getCapacityAtTime(k).getMemorySize() / 1024);
     }
     for (k = 15; k < 20; k++) {
-      Assertions.assertEquals(2538,
+      assertEquals(2538,
           skylineLists.getCapacityAtTime(k).getMemorySize() / 1024);
     }
     for (k = 20; k < 25; k++) {
-      Assertions.assertEquals(2468,
+      assertEquals(2468,
           skylineLists.getCapacityAtTime(k).getMemorySize() / 1024);
     }
-    Assertions.assertEquals(0,
+    assertEquals(0,
         skylineLists.getCapacityAtTime(25).getMemorySize() / 1024);
   }
 

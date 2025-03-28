@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResour
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInterval;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.google.gson.Gson;
@@ -81,6 +82,7 @@ public class TestResourceEstimatorService extends JerseyTest {
     return config;
   }
 
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();

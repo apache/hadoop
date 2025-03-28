@@ -20,9 +20,10 @@
 
 package org.apache.hadoop.resourceestimator.common.serialization;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -48,13 +49,14 @@ public class TestResourceSerDe {
         .registerTypeAdapter(Resource.class, new ResourceSerDe()).create();
   }
 
-  @Test public final void testSerialization() {
+  @Test
+  public final void testSerialization() {
     final String json = gson.toJson(resource, new TypeToken<Resource>() {
     }.getType());
     final Resource resourceDe = gson.fromJson(json, new TypeToken<Resource>() {
     }.getType());
-    Assertions.assertEquals(resource.getMemorySize(), resourceDe.getMemorySize());
-    Assertions.assertEquals(resource.getVirtualCores(), resourceDe.getVirtualCores());
+    assertEquals(resource.getMemorySize(), resourceDe.getMemorySize());
+    assertEquals(resource.getVirtualCores(), resourceDe.getVirtualCores());
   }
 
   @AfterEach
