@@ -72,7 +72,7 @@ public class TestRmParser {
     logParserUtil.parseLog(logFile);
   }
 
-  @Test 
+  @Test
   public final void testParse()
       throws SkylineStoreException, IOException, ParseException,
       ResourceEstimatorException, DataFieldNotFoundException {

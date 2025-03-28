@@ -238,7 +238,7 @@ public abstract class TestSkylineStore {
               addToStore(recurrenceId3, resourceSkyline2);
               skylineStore.getHistory(null);
           });
-      
+
 
 // try to getHistory with null recurringId
 }
@@ -289,7 +289,7 @@ public abstract class TestSkylineStore {
               resourceSkylines.add(resourceSkyline1);
               skylineStore.addHistory(recurrenceIdNull, resourceSkylines);
           });
-      
+
 }
 
   @Test
@@ -320,7 +320,7 @@ public abstract class TestSkylineStore {
               skylineStore.addHistory(recurrenceId, resourceSkylines);
               skylineStore.addHistory(recurrenceId, resourceSkylines);
           });
-      
+
 }
 
   @Test
@@ -444,7 +444,7 @@ public abstract class TestSkylineStore {
               skylineStore.addHistory(recurrenceId, resourceSkylines);
               skylineStore.updateHistory(recurrenceId, null);
           });
-      
+
 }
 
   @Test
