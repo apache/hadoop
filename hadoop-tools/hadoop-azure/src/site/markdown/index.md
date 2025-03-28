@@ -1071,7 +1071,7 @@ an option on FutureDataInputStreamBuilder.
 See FileSystem#openFile(Path path)
 
 To run under limited memory situations configure the following. Especially
-when there are too many writes from the same process. 
+when there are too many writes from the same process.
 
 `fs.azure.write.max.concurrent.requests`: To set the maximum concurrent
  write requests from an AbfsOutputStream instance  to server at any point of
