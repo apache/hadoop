@@ -17,16 +17,26 @@ fi
 OUTPUT_FILE="abfs-converted-config.xml"
 cp "$FILE" "$OUTPUT_FILE"
 
-endpoint="dfs"
-printf "Select \'HNS\' if you're migrating to Hierarchical Namespace enabled account, or \'Non-HNS\' if you're migrating to Non-Hierarchical Namespace. \n"
+contactTeamMsg="For any queries or support, kindly reach out to us at 'askabfs@microsoft.com'."
+endpoint=".dfs."
+printf "Select 'HNS' if you're migrating to ABFS driver with Hierarchical Namespace enabled account, or 'Non-HNS' if you're migrating with Non-Hierarchical Namespace (FNS) account. \n"
+printf "WARNING: Please ensure the correct option is chosen as it will affect the configuration changes made to the file. \n"
+printf "If you are unsure, follow the instructions below to check from Azure Portal: \n"
+printf "* Go to the Azure Portal and navigate to your storage account. \n"
+printf "* In the left-hand menu, select 'Overview' section and look for 'Properties'. \n"
+printf "* Under 'Blob service', check if 'Hierarchical namespace' is enabled or disabled. \n"
+echo "$contactTeamMsg"
 select namespaceType in "HNS" "NonHNS"
 do
     case $namespaceType in
         HNS)
+            xmlstarlet ed -L -i '//configuration/property[1]' -t elem -n property -v '' \
+              -s '//configuration/property[1]' -t elem -n name -v 'fs.azure.account.hns.enabled' \
+              -s '//configuration/property[1]' -t elem -n value -v 'true' "$OUTPUT_FILE"
             break;
             ;;
         NonHNS)
-            endpoint="blob"
+            endpoint=".blob."
             break;
             ;;
           *)
@@ -35,9 +45,6 @@ do
             ;;
     esac
 done
-
-#change value of default FS from WASB to ABFS
-sed -i '/<name>fs.defaultFS<\/name>/!b;n;s|<value>wasb\(s\?\)://\([^@]*\)@\([^<]*\).blob.core.windows.net</value>|<value>abfs\1://\2@\3.'"$endpoint"'.core.windows.net</value>|' "$OUTPUT_FILE"
 
 # Mapping for renaming configurations
 declare -A rename_configs_map=(
@@ -48,15 +55,14 @@ declare -A rename_configs_map=(
     ["check.block.md5"]="enable.checksum.validation" #fs.azure.check.block.md5 to fs.azure.enable.checksum.validation
 )
 
-# Configs not supported in WASB that would throw error
-# User needs to remove these configs from XML file for the script to run
+# Configs not supported in ABFS
 unsupported_configs_list=(
     "fs.azure.page.blob.dir"
     "fs.azure.block.blob.with.compaction.dir"
     "fs.azure.store.blob.md5"
 )
 
-# Configurations that are not required in ABFS Driver and can be removed
+# Configurations not required in ABFS Driver and can be removed
 obsolete_configs_list=(
     "azure.authorization" #fs.azure.authorization, fs.azure.authorization.caching.enable , fs.azure.authorization.caching.maxentries, fs.azure.authorization.cacheentry.expiry.period, fs.azure.authorization.remote.service.urls
     "azure.selfthrottling" #fs.azure.selfthrottling.enable, fs.azure.selfthrottling.read.factor, fs.azure.selfthrottling.write.factor
@@ -86,30 +92,44 @@ obsolete_configs_list=(
 # Stop the script if any unsupported config is found
 for key in "${unsupported_configs_list[@]}"; do
     if grep -q "$key" "$OUTPUT_FILE"; then
-        echo "FAILURE: Remove the following configuration from file and rerun: '$key' "
-            echo "Exiting..."
-            exit 1
+        echo "FAILURE: Remove the following configuration from file and rerun: '$key'"
+        failure=true
     fi
 done
+
+if [ "$failure" = true ]; then
+    echo "$contactTeamMsg"
+    echo "Exiting..."
+    exit 1
+fi
 
 # Renaming the configs
 for old in "${!rename_configs_map[@]}"; do
     new="${rename_configs_map[$old]}"
-    sed -i "s/\(<name>.*\)$old\(.*<\/name>\)/\1$new\2/g" "$OUTPUT_FILE"
+    xmlstarlet ed -L -u "//property/name[contains(., '$old')]" -x "concat(substring-before(., '$old'), '$new', substring-after(., '$old'))" "$OUTPUT_FILE"
 done
 
 # Remove the obsolete configs
 for key in "${obsolete_configs_list[@]}"; do
-    sed -i "/<name>.*$key.*<\/name>/d;g" "$OUTPUT_FILE"
+    xmlstarlet ed -L -d "//property[name[contains(text(), '$key')]]" "$OUTPUT_FILE"
 done
 
-#change the endpoints for properties if migration is to HNS
-if [ "$endpoint" = "dfs" ];
-then
-    sed -i 's/<name>\(.*\).blob.core.windows.net\(.*\)<\/name>/<name>\1.dfs.core.windows.net\2<\/name>/g' "$OUTPUT_FILE"
+# Change the endpoints for properties if migration is to HNS
+if [ "$endpoint" = ".dfs." ]; then
+    xmlstarlet ed -L -u "//property/name[contains(., '.blob.')]" -x "concat(substring-before(., '.blob.'), '$endpoint', substring-after(., '.blob.'))" "$OUTPUT_FILE"
 fi
 
-#remove the property block if any name tag is empty
-sed -i '/<property>/ { :a; N; /<\/property>/!ba; /<name>/!d; }' "$OUTPUT_FILE"
+# Change the value of fs.defaultFS
+if xmlstarlet sel -t -v "//property[name='fs.defaultFS']/value" "$OUTPUT_FILE" | grep -q "."; then
+    if xmlstarlet sel -t -v "//property[name='fs.defaultFS']/value" "$OUTPUT_FILE" | grep -q ".blob."; then
+        xmlstarlet ed -L -u "//property[name='fs.defaultFS']/value" -x "concat('abfs://', substring-before(substring-after(., 'wasb://'), '@'), '@', substring-before(substring-after(., '@'), '.blob.'), '$endpoint', 'core.windows.net')" "$OUTPUT_FILE"
+    else
+        echo "Error: 'fs.defaultFS' exists but does not contain '.blob.'. Exiting..."
+        exit 1
+    fi
+fi
+
+# Remove the property block if any name tag is empty
+xmlstarlet ed -L -d "//property[not(name) or name='']" "$OUTPUT_FILE"
 
 echo "Updated file: $OUTPUT_FILE"
