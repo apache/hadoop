@@ -85,7 +85,7 @@ public class TestDatanodeRegistration {
     } catch (UnsupportedOperationException e) {
       assumeTrue("Test is skipped because SecurityManager cannot be set (JEP 411)", false);
     }
-    
+
     MiniDFSCluster cluster = null;
     try {
       HdfsConfiguration conf = new HdfsConfiguration();

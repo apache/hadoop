@@ -1104,11 +1104,6 @@ public class TestCapacitySchedulerAsyncScheduling {
   @Test
   @Timeout(value = 30)
   public void testAsyncScheduleThreadExit() throws Exception {
-    // init RM & NM
-    final MockRM rm = new MockRM(conf);
-    rm.start();
-    rm.registerNode("192.168.0.1:1234", 8 * GB);
-    rm.drainEvents();
 
     // Set no exit security manager to catch System.exit
     SecurityManager originalSecurityManager = System.getSecurityManager();
@@ -1120,6 +1115,12 @@ public class TestCapacitySchedulerAsyncScheduling {
       Assumptions.assumeTrue(false,
           "Test is skipped because SecurityManager cannot be set (JEP411)");
     }
+
+    // init RM & NM
+    final MockRM rm = new MockRM(conf);
+    rm.start();
+    rm.registerNode("192.168.0.1:1234", 8 * GB);
+    rm.drainEvents();
 
     // test async-scheduling thread exit
     try{
