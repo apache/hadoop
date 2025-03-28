@@ -682,11 +682,11 @@ public class AbfsConfiguration{
    * @throws IOException if parsing fails.
    */
   public String getPasswordString(String key) throws IOException {
-    char[] passchars = rawConfig.getPassword(containerConf(key)) != null ?
-        rawConfig.getPassword(containerConf(key)) :
-        rawConfig.getPassword(accountConf(key)) != null ?
-            rawConfig.getPassword(accountConf(key)) :
-            rawConfig.getPassword(key);
+    char[] passchars = rawConfig.getPassword(containerConf(key)) != null
+        ? rawConfig.getPassword(containerConf(key))
+        : rawConfig.getPassword(accountConf(key)) != null
+            ? rawConfig.getPassword(accountConf(key))
+            : rawConfig.getPassword(key);
     if (passchars != null) {
       return new String(passchars);
     }

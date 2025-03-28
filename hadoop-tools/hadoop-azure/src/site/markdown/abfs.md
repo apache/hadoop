@@ -784,9 +784,11 @@ ADLS Gen 2 storage accounts.
 them less secure. There is no scope of having delegated access to different users.
 
 *Note:*
-- When both account SAS and service SAS are configured, precedence will be given to the service SAS.
-- When `fs.azure.sas.token.provider.type` and `fs.azure.fixed.sas.token`
-  are both configured, precedence will be given to the custom token provider implementation.
+- Preference order for SAS will be:
+  - fs.azure.sas.token.provider.type
+  - fs.azure.sas.fixed.token.CONTAINER_NAME.ACCOUNT_NAME
+  - fs.azure.sas.fixed.token.ACCOUNT_NAME
+  - fs.azure.sas.fixed.token
 
 ## <a name="technical"></a> Technical notes
 
