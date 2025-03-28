@@ -32,9 +32,10 @@ import org.apache.hadoop.resourceestimator.skylinestore.exceptions.SkylineStoreE
 import org.apache.hadoop.resourceestimator.solver.api.Solver;
 import org.apache.hadoop.resourceestimator.solver.exceptions.InvalidInputException;
 import org.apache.hadoop.resourceestimator.solver.exceptions.SolverException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * This LPSolver class will make resource estimation using Linear Programming
@@ -45,28 +46,35 @@ public abstract class TestSolver {
 
   protected abstract Solver createSolver() throws ResourceEstimatorException;
 
-  @Before public void setup()
+  @BeforeEach
+  public void setup()
       throws SolverException, IOException, SkylineStoreException,
       ResourceEstimatorException {
     solver = createSolver();
   }
 
-  @Test(expected = InvalidInputException.class) public void testNullJobHistory()
+  @Test
+  public void testNullJobHistory()
       throws SolverException, SkylineStoreException {
+    Assertions.assertThrows(InvalidInputException.class, () -> {
+        solver.solve(null);
+    });
     // try to solve with null jobHistory
-    solver.solve(null);
   }
 
-  @Test(expected = InvalidInputException.class)
+  @Test
   public void testEmptyJobHistory()
       throws SolverException, SkylineStoreException {
-    Map<RecurrenceId, List<ResourceSkyline>> jobHistoryInvalid =
+          Assertions.assertThrows(InvalidInputException.class, () -> {
+              Map<RecurrenceId, List<ResourceSkyline>> jobHistoryInvalid =
         new HashMap<RecurrenceId, List<ResourceSkyline>>();
-    // try to solve with emty jobHistory
-    solver.solve(jobHistoryInvalid);
-  }
+              solver.solve(jobHistoryInvalid);
+          });
+      // try to solve with emty jobHistory
+}
 
-  @After public final void cleanUp() {
+  @AfterEach
+  public final void cleanUp() {
     solver.close();
     solver = null;
   }
