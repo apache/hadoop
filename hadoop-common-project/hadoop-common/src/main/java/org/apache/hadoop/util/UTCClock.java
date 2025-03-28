@@ -18,23 +18,46 @@
  */
 package org.apache.hadoop.util;
 
-import java.util.Calendar;
-import java.util.TimeZone;
+import java.time.Instant;
+import java.time.ZoneId;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
+import static java.time.ZoneOffset.UTC;
+
 /**
  * Implementation of {@link Clock} that gives the current UTC time in
  * milliseconds.
+ *
+ * @deprecated use {@link java.time.Clock#systemUTC()} instead
  */
 @Public
 @Evolving
-public class UTCClock implements Clock {
+@Deprecated
+public class UTCClock extends Clock {
 
-  private final TimeZone utcZone = TimeZone.getTimeZone("UTC");
-
-  public long getTime() {
-    return Calendar.getInstance(utcZone).getTimeInMillis();
+  @Override
+  public ZoneId getZone() {
+    return UTC;
   }
+
+  @Override
+  public java.time.Clock withZone(ZoneId zone) {
+    if (!UTC.equals(zone)) {
+      throw new IllegalArgumentException("Only UTC is supported; to use other zones use Clock.system(ZoneId)");
+    }
+    return this;
+  }
+
+  @Override
+  public long millis() {
+    return System.currentTimeMillis();
+  }
+
+  @Override
+  public Instant instant() {
+    return Instant.ofEpochMilli(millis());
+  }
+
 }

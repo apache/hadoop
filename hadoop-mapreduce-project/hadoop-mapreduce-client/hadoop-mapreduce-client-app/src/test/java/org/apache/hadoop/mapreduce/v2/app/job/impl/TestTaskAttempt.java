@@ -348,8 +348,7 @@ public class TestTaskAttempt{
 
   public void verifyMillisCounters(Resource containerResource,
       int minContainerSize) throws Exception {
-    Clock actualClock = SystemClock.getInstance();
-    ControlledClock clock = new ControlledClock(actualClock);
+    ControlledClock clock = new ControlledClock();
     clock.setTime(10);
     MRApp app =
         new MRApp(1, 1, false, "testSlotMillisCounterUpdate", true, clock);

@@ -22,11 +22,23 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 
 /**
- * A simple clock interface that gives you time.
+ * A former clock interface retro-fitted to be eventually replaced by java.time.Clock.
+ *
+ * @deprecated use {@link java.time.Clock} instead
  */
 @Public
 @Stable
-public interface Clock {
+@Deprecated
+public abstract class Clock extends java.time.Clock {
 
-  long getTime();
+  /**
+   * Gets the current millisecond instant of the clock by delegating to {@link java.time.Clock#millis()}.
+   *
+   * @deprecated use {@link #millis()} instead
+   */
+  @Deprecated
+  public final long getTime() {
+    return millis();
+  }
+
 }

@@ -20,6 +20,11 @@ package org.apache.hadoop.util;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
+import java.time.Instant;
+import java.time.ZoneId;
+
+import static java.time.ZoneOffset.UTC;
+
 /**
  * A monotonic clock from some arbitrary time base in the past, counting in
  * milliseconds, and not affected by settimeofday or similar system clock
@@ -31,7 +36,20 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
  */
 @Public
 @Evolving
-public class MonotonicClock implements Clock {
+public class MonotonicClock extends Clock {
+
+  @Override
+  public ZoneId getZone() {
+    return UTC;
+  }
+
+  @Override
+  public java.time.Clock withZone(ZoneId zone) {
+    if (!UTC.equals(zone)) {
+      throw new IllegalArgumentException("Only UTC is supported; to use other zones use Clock.system(ZoneId)");
+    }
+    return this;
+  }
 
   /**
    * Get current time from some arbitrary time base in the past, counting in
@@ -39,7 +57,14 @@ public class MonotonicClock implements Clock {
    * changes.
    * @return a monotonic clock that counts in milliseconds.
    */
-  public long getTime() {
+  @Override
+  public long millis() {
     return Time.monotonicNow();
   }
+
+  @Override
+  public Instant instant() {
+    return Instant.ofEpochMilli(millis());
+  }
+
 }

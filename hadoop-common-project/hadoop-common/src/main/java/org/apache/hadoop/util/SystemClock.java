@@ -20,6 +20,11 @@ package org.apache.hadoop.util;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 
+import java.time.Instant;
+import java.time.ZoneId;
+
+import static java.time.ZoneOffset.UTC;
+
 /**
  * Implementation of {@link Clock} that gives the current time from the system
  * clock in milliseconds.
@@ -27,10 +32,13 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
  * NOTE: Do not use this to calculate a duration of expire or interval to sleep,
  * because it will be broken by settimeofday. Please use {@link MonotonicClock}
  * instead.
+ *
+ * @deprecated use {@link java.time.Clock#systemUTC()} instead
  */
 @Public
 @Stable
-public final class SystemClock implements Clock {
+@Deprecated
+public final class SystemClock extends Clock {
 
   private static final SystemClock INSTANCE = new SystemClock();
 
@@ -42,7 +50,27 @@ public final class SystemClock implements Clock {
     // do nothing
   }
 
-  public long getTime() {
+  @Override
+  public ZoneId getZone() {
+    return UTC;
+  }
+
+  @Override
+  public java.time.Clock withZone(ZoneId zone) {
+    if (!UTC.equals(zone)) {
+      throw new IllegalArgumentException("Only UTC is supported; to use other zones use Clock.system(ZoneId)");
+    }
+    return this;
+  }
+
+  @Override
+  public long millis() {
     return System.currentTimeMillis();
   }
+
+  @Override
+  public Instant instant() {
+    return Instant.ofEpochMilli(millis());
+  }
+
 }

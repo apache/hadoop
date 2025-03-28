@@ -18,42 +18,66 @@
 package org.apache.hadoop.yarn.util;
 
 import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 
-public class ControlledClock implements Clock {
-  private long time = -1;
-  private final Clock actualClock;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static java.time.ZoneOffset.UTC;
+
+public class ControlledClock extends Clock {
+  private final AtomicLong time = new AtomicLong(-1);
+  private final java.time.Clock actualClock;
   // Convenience for getting a controlled clock with overridden time
   public ControlledClock() {
-    this(SystemClock.getInstance());
+    this(java.time.Clock.systemUTC());
     setTime(0);
   }
-  public ControlledClock(Clock actualClock) {
+  public ControlledClock(java.time.Clock actualClock) {
     this.actualClock = actualClock;
   }
-  public synchronized void setTime(long time) {
-    this.time = time;
+  public void setTime(long time) {
+    this.time.set(time);
   }
-  public synchronized void reset() {
-    time = -1;
+  public void reset() {
+    setTime(-1);
   }
-  public synchronized void tickSec(int seconds) {
+  public void tickSec(int seconds) {
     tickMsec(seconds * 1000L);
   }
-  public synchronized void tickMsec(long millisec) {
-    if (time == -1) {
+  public void tickMsec(long millisec) {
+    if (time.get() == -1) {
       throw new IllegalStateException("ControlledClock setTime should be " +
           "called before incrementing time");
     }
-    time = time + millisec;
+    time.addAndGet(millisec);
   }
 
   @Override
-  public synchronized long getTime() {
-    if (time != -1) {
-      return time;
+  public ZoneId getZone() {
+    return UTC;
+  }
+
+  @Override
+  public java.time.Clock withZone(ZoneId zone) {
+    if (!UTC.equals(zone)) {
+      throw new IllegalArgumentException("Only UTC is supported; to use other zones use Clock.system(ZoneId)");
     }
-    return actualClock.getTime();
+    return this;
+  }
+
+  @Override
+  public long millis() {
+    long currVal = time.get();
+    if (currVal != -1) {
+      return currVal;
+    }
+    return actualClock.millis();
+  }
+
+  @Override
+  public Instant instant() {
+    return Instant.ofEpochMilli(millis());
   }
 
 }
