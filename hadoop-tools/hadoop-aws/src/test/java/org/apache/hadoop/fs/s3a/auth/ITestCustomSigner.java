@@ -217,6 +217,11 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     conf.set(TEST_ID_KEY, identifier);
     conf.set(TEST_REGION_KEY, regionName);
 
+    // Having the checksum algorithm in this test causes
+    // x-amz-sdk-checksum-algorithm specified, but no corresponding
+    // x-amz-checksum-* or x-amz-trailer headers were found
+    conf.unset(Constants.CHECKSUM_ALGORITHM);
+
     // make absolutely sure there is no caching.
     disableFilesystemCaching(conf);
 

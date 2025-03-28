@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
-import static org.junit.Assert.assertEquals;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.when;
 
@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Date;
 
+import org.assertj.core.api.Assertions;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
@@ -86,7 +87,20 @@ public class TestS3ADeleteOnExit extends AbstractS3AMockTest {
 
     testFs.deleteOnExit(path);
     testFs.close();
-    assertEquals(0, testFs.getDeleteOnDnExitCount());
+    Assertions.assertThat(testFs.getDeleteOnDnExitCount()).isEqualTo(0);
+  }
+
+  @Test
+  public void testCreateRequestFactoryWithInvalidChecksumAlgorithm() throws Exception {
+    Configuration conf = createConfiguration();
+    conf.set(Constants.CHECKSUM_ALGORITHM, "INVALID");
+    TestS3AFileSystem testFs  = new TestS3AFileSystem();
+    URI uri = URI.create(FS_S3A + "://" + BUCKET);
+    final IllegalArgumentException exception = intercept(IllegalArgumentException.class,
+        () -> testFs.initialize(uri, conf));
+    Assertions.assertThat(exception.getMessage())
+        .describedAs("Error message should say that INVALID is not supported")
+        .isEqualTo("Checksum algorithm is not supported: INVALID");
   }
 
   private ArgumentMatcher<HeadObjectRequest> correctGetMetadataRequest(
