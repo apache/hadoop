@@ -1117,7 +1117,8 @@ public class TestCapacitySchedulerAsyncScheduling {
     try {
       System.setSecurityManager(noExitSecurityManager);
     } catch (UnsupportedOperationException e) {
-      Assumptions.assumeTrue(false, "Test is skipped because SecurityManager cannot be set (JEP411)");
+      Assumptions.assumeTrue(false,
+          "Test is skipped because SecurityManager cannot be set (JEP411)");
     }
 
     // test async-scheduling thread exit
