@@ -22,8 +22,9 @@ import net.jcip.annotations.NotThreadSafe;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -60,13 +61,14 @@ public class TestSLSStreamAMSynth extends BaseSLSRunnerTest {
     });
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     ongoingInvariantFile = "src/test/resources/ongoing-invariants.txt";
     exitInvariantFile = "src/test/resources/exit-invariants.txt";
   }
 
-  @Test(timeout = 90000)
+  @Test
+  @Timeout(value = 90)
   @SuppressWarnings("all")
   public void testSimulatorRunning() throws Exception {
     Configuration conf = new Configuration(false);

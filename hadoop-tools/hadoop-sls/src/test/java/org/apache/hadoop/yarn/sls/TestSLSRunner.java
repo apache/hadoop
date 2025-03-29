@@ -23,8 +23,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.*;
@@ -32,7 +33,7 @@ import org.junit.runners.Parameterized.*;
 import java.security.Security;
 import java.util.*;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * This test performs simple runs of the SLS with different trace types and
@@ -76,13 +77,14 @@ public class TestSLSRunner extends BaseSLSRunnerTest {
     });
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     ongoingInvariantFile = "src/test/resources/ongoing-invariants.txt";
     exitInvariantFile = "src/test/resources/exit-invariants.txt";
   }
 
-  @Test(timeout = 90000)
+  @Test
+  @Timeout(value = 90)
   @SuppressWarnings("all")
   public void testSimulatorRunning() throws Exception {
     Configuration conf = new Configuration(false);

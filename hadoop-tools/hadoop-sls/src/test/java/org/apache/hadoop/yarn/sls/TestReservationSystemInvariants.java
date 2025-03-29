@@ -27,7 +27,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.monitor.invariants.Invarian
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.invariants.ReservationInvariantsChecker;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -53,7 +54,8 @@ public class TestReservationSystemInvariants extends BaseSLSRunnerTest {
     });
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   @SuppressWarnings("all")
   public void testSimulatorRunning() throws Exception {
 

@@ -22,11 +22,11 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.invariants.MetricsInvariantChecker;
-import org.junit.After;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
@@ -63,16 +63,16 @@ public abstract class BaseSLSRunnerTest {
   protected String ongoingInvariantFile;
   protected String exitInvariantFile;
 
-  @BeforeClass
+  @BeforeAll
   public static void checkForJavaScript() {
     Assume.assumeNotNull("JavaScript engine not available (JEP 372)",
         new ScriptEngineManager().getEngineByName("JavaScript"));
   }
 
-  @Before
+  @BeforeEach
   public abstract void setup();
 
-  @After
+  @AfterEach
   public void tearDown() throws InterruptedException {
     if (sls != null) {
       sls.stop();
@@ -136,7 +136,7 @@ public abstract class BaseSLSRunnerTest {
 
       if (!exceptionList.isEmpty()) {
         sls.stop();
-        Assert.fail("TestSLSRunner caught exception from child thread "
+        Assertions.fail("TestSLSRunner caught exception from child thread "
             + "(TaskRunner.TaskDefinition): " + exceptionList);
         break;
       }

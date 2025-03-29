@@ -41,10 +41,10 @@ import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.nodemanager.NMSimulator;
 import org.apache.hadoop.yarn.sls.scheduler.*;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
@@ -85,7 +85,7 @@ public class TestAMSimulator {
     this.scheduler = scheduler;
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     createMetricOutputDir();
 
@@ -129,8 +129,8 @@ public class TestAMSimulator {
           FairSchedulerMetrics.Metric.values()) {
         String key = "variable.app." + appId + "." + metric.getValue() +
             ".memory";
-        Assert.assertTrue(metricRegistry.getGauges().containsKey(key));
-        Assert.assertNotNull(metricRegistry.getGauges().get(key).getValue());
+        Assertions.assertTrue(metricRegistry.getGauges().containsKey(key));
+        Assertions.assertNotNull(metricRegistry.getGauges().get(key).getValue());
       }
     }
   }
@@ -141,7 +141,7 @@ public class TestAMSimulator {
     try {
       metricOutputDir = Files.createTempDirectory(testDir, "output");
     } catch (IOException e) {
-      Assert.fail(e.toString());
+      Assertions.fail(e.toString());
     }
   }
 
@@ -149,7 +149,7 @@ public class TestAMSimulator {
     try {
       FileUtils.deleteDirectory(metricOutputDir.toFile());
     } catch (IOException e) {
-      Assert.fail(e.toString());
+      Assertions.fail(e.toString());
     }
   }
 
@@ -179,8 +179,8 @@ public class TestAMSimulator {
 
     verifySchedulerMetrics(appId);
 
-    Assert.assertEquals(1, rm.getRMContext().getRMApps().size());
-    Assert.assertNotNull(rm.getRMContext().getRMApps().get(app.appId));
+    Assertions.assertEquals(1, rm.getRMContext().getRMApps().size());
+    Assertions.assertNotNull(rm.getRMContext().getRMApps().get(app.appId));
 
     // Finish this app
     app.lastStep();
@@ -220,10 +220,10 @@ public class TestAMSimulator {
 
       ConcurrentMap<ApplicationId, RMApp> rmApps =
           rm.getRMContext().getRMApps();
-      Assert.assertEquals(1, rmApps.size());
+      Assertions.assertEquals(1, rmApps.size());
       RMApp rmApp = rmApps.get(app.appId);
-      Assert.assertNotNull(rmApp);
-      Assert.assertEquals("label1", rmApp.getAmNodeLabelExpression());
+      Assertions.assertNotNull(rmApp);
+      Assertions.assertEquals("label1", rmApp.getAmNodeLabelExpression());
     }
   }
 
@@ -269,7 +269,7 @@ public class TestAMSimulator {
     // are for same rack.
     // All resource requests for nodes would be packaged into 2 as there are
     // two different nodes.
-    Assert.assertEquals(4, res.size());
+    Assertions.assertEquals(4, res.size());
     int anyRequestCount = 0;
     int rackRequestCount = 0;
     int nodeRequestCount = 0;
@@ -285,9 +285,9 @@ public class TestAMSimulator {
       }
     }
 
-    Assert.assertEquals(1, anyRequestCount);
-    Assert.assertEquals(1, rackRequestCount);
-    Assert.assertEquals(2, nodeRequestCount);
+    Assertions.assertEquals(1, anyRequestCount);
+    Assertions.assertEquals(1, rackRequestCount);
+    Assertions.assertEquals(2, nodeRequestCount);
 
     containerSimulators.clear();
     s1 = ContainerSimulator.createFromTaskContainerDefinition(
@@ -313,7 +313,7 @@ public class TestAMSimulator {
     // are for same rack but for two different allocation id.
     // All resource requests for nodes would be packaged into 3 as either node
     // or allocation id is different for each request.
-    Assert.assertEquals(7, res.size());
+    Assertions.assertEquals(7, res.size());
 
     anyRequestCount = 0;
     rackRequestCount = 0;
@@ -323,7 +323,7 @@ public class TestAMSimulator {
       String resourceName = request.getResourceName();
       long allocationId = request.getAllocationRequestId();
       // allocation id should be either 1 or 2
-      Assert.assertTrue(allocationId == 1 || allocationId == 2);
+      Assertions.assertTrue(allocationId == 1 || allocationId == 2);
       if (resourceName.equals("*")) {
         anyRequestCount++;
       } else if (resourceName.equals("/default-rack")) {
@@ -333,9 +333,9 @@ public class TestAMSimulator {
       }
     }
 
-    Assert.assertEquals(2, anyRequestCount);
-    Assert.assertEquals(2, rackRequestCount);
-    Assert.assertEquals(3, nodeRequestCount);
+    Assertions.assertEquals(2, anyRequestCount);
+    Assertions.assertEquals(2, rackRequestCount);
+    Assertions.assertEquals(3, nodeRequestCount);
   }
 
   @Test
@@ -354,11 +354,11 @@ public class TestAMSimulator {
     when(slsRunner.getNmMap()).thenReturn(nmMap);
     app.getRanNodes().add(nm.getNode().getNodeID());
     nm.getNode().getRunningApps().add(app.appId);
-    Assert.assertTrue(nm.getNode().getRunningApps().contains(app.appId));
+    Assertions.assertTrue(nm.getNode().getRunningApps().contains(app.appId));
 
     app.lastStep();
-    Assert.assertFalse(nm.getNode().getRunningApps().contains(app.appId));
-    Assert.assertTrue(nm.getNode().getRunningApps().isEmpty());
+    Assertions.assertFalse(nm.getNode().getRunningApps().contains(app.appId));
+    Assertions.assertTrue(nm.getNode().getRunningApps().isEmpty());
   }
   private TaskContainerDefinition createDefaultTaskContainerDefMock(
       Resource resource, int priority, ExecutionType execType, String type,
@@ -375,7 +375,7 @@ public class TestAMSimulator {
     return taskContainerDef;
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (rm != null) {
       rm.stop();
