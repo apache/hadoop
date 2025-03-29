@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.streaming;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 
@@ -43,11 +43,11 @@ public class TestStreamingCounters extends TestStreaming {
   
   private void validateCounters() throws IOException {
     Counters counters = job.running_.getCounters();
-    assertNotNull("Counters", counters);
+    assertNotNull(counters, "Counters");
     Group group = counters.getGroup("UserCounters");
-    assertNotNull("Group", group);
+    assertNotNull(group, "Group");
     Counter counter = group.getCounterForName("InputLines");
-    assertNotNull("Counter", counter);
+    assertNotNull(counter, "Counter");
     assertEquals(3, counter.getCounter());
   }
 }

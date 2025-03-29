@@ -23,8 +23,8 @@ import java.net.URLClassLoader;
 import java.net.MalformedURLException;
 
 import org.apache.hadoop.util.JarFinder;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -46,7 +46,7 @@ public class TestClassWithNoPackage
     // Get class with no package name.
     String defaultPackage = this.getClass().getPackage().getName();
     Class c = StreamUtil.goodClassOrNull(conf, NAME, defaultPackage);
-    assertNotNull("Class " + NAME + " not found!", c);
+    assertNotNull(c, "Class " + NAME + " not found!");
   }
   public static void main(String[]args) throws Exception
   {

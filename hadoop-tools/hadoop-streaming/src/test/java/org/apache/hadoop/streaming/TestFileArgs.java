@@ -30,8 +30,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.util.Shell;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * This class tests that the '-file' argument to streaming results
@@ -65,7 +65,7 @@ public class TestFileArgs extends TestStreaming
     setTestDir(new File("/tmp/TestFileArgs"));
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws IOException {
     // Set up side file
@@ -79,7 +79,7 @@ public class TestFileArgs extends TestStreaming
     input = "";
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() {
     if (mr != null) {

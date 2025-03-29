@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.streaming.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -38,9 +38,9 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests StreamXmlRecordReader The test creates an XML file, uses
@@ -96,7 +96,7 @@ public class TestStreamXmlRecordReader {
     return contents;
   }
 
-  @Before
+  @BeforeEach
   public void createInput() throws IOException {
     FileOutputStream out = new FileOutputStream(INPUT_FILE.getAbsoluteFile());
     String dummyXmlStartTag = "<PATTERN>\n";
@@ -137,7 +137,7 @@ public class TestStreamXmlRecordReader {
 
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     fs.delete(OUTPUT_DIR, true);
   }
