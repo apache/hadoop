@@ -18,7 +18,7 @@
 package org.apache.hadoop.util;
 
 import java.io.*;
-import java.util.Calendar;
+import java.time.Year;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
@@ -87,7 +87,7 @@ public class ServletUtil {
 
   public static final String HTML_TAIL = "<hr />\n"
     + "<a href='http://hadoop.apache.org'>Hadoop</a>, "
-    + Calendar.getInstance().get(Calendar.YEAR) + ".\n"
+    + Year.now() + ".\n"
     + "</body></html>";
 
   /**

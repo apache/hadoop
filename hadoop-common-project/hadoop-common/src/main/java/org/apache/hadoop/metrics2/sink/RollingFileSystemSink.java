@@ -26,8 +26,8 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -54,6 +54,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import static java.time.ZoneOffset.UTC;
+import static java.time.temporal.ChronoUnit.HOURS;
 
 /**
  * <p>This class is a metrics sink that uses
@@ -194,7 +195,7 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
   protected long rollOffsetIntervalMillis;
   // The time for the nextFlush
   @VisibleForTesting
-  protected Calendar nextFlush = null;
+  protected Instant nextFlush = null;
   // This flag when true causes a metrics write to schedule a flush thread to
   // run immediately, but only if a flush thread is already scheduled. (It's a
   // timing thing.  If the first write forces the flush, it will strand the
@@ -510,7 +511,7 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
     // We check whether currentOutStream is null instead of currentDirPath,
     // because if currentDirPath is null, then currentOutStream is null, but
     // currentOutStream can be null for other reasons.  Same for nextFlush.
-    if ((currentOutStream == null) || now.after(nextFlush.getTime())) {
+    if ((currentOutStream == null) || now.after(Date.from(nextFlush))) {
       // If we're not yet connected to HDFS, create the connection
       if (!initialized) {
         initialized = initFs();
@@ -535,7 +536,7 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
         // Update the time of the next flush
         updateFlushTime(now);
         // Schedule the next flush at that time
-        scheduleFlush(nextFlush.getTime());
+        scheduleFlush(Date.from(nextFlush));
       }
     } else if (forceFlush) {
       scheduleFlush(new Date());
@@ -550,10 +551,10 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
    * @return the current directory
    */
   private Path findCurrentDirectory(Date now) {
-    long offset = ((now.getTime() - nextFlush.getTimeInMillis())
+    long offset = ((now.getTime() - nextFlush.toEpochMilli())
         / rollIntervalMillis) * rollIntervalMillis;
     String currentDir =
-        DATE_FORMAT.format(nextFlush.getTime().toInstant().plusMillis(offset));
+        DATE_FORMAT.format(nextFlush.plusMillis(offset));
 
     return new Path(basePath, currentDir);
   }
@@ -594,10 +595,10 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
     // flush until a time in the future is achieved, thus preserving the
     // original random offset.
     int millis =
-        (int) (((now.getTime() - nextFlush.getTimeInMillis())
+        (int) (((now.getTime() - nextFlush.toEpochMilli())
         / rollIntervalMillis + 1) * rollIntervalMillis);
 
-    nextFlush.add(Calendar.MILLISECOND, millis);
+    nextFlush = nextFlush.plusMillis(millis);
   }
 
   /**
@@ -612,11 +613,7 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
   @VisibleForTesting
   protected void setInitialFlushTime(Date now) {
     // Start with the beginning of the current hour
-    nextFlush = Calendar.getInstance();
-    nextFlush.setTime(now);
-    nextFlush.set(Calendar.MILLISECOND, 0);
-    nextFlush.set(Calendar.SECOND, 0);
-    nextFlush.set(Calendar.MINUTE, 0);
+    nextFlush = now.toInstant().truncatedTo(HOURS);
 
     // In the first round, calculate the first flush as the largest number of
     // intervals from the beginning of the current hour that's not in the
@@ -627,7 +624,7 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
     // 3. Multiply by the roll interval to get the number of millis between
     //    the beginning of the current hour and the beginning of the current
     //    interval.
-    int millis = (int) (((now.getTime() - nextFlush.getTimeInMillis())
+    int millis = (int) (((now.getTime() - nextFlush.toEpochMilli())
         / rollIntervalMillis) * rollIntervalMillis);
 
     // Then add some noise to help prevent all the nodes from
@@ -642,14 +639,14 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
       // would have been the previous interval if there had been one.
       //
       // It's OK if millis comes out negative.
-      while (nextFlush.getTimeInMillis() + millis > now.getTime()) {
+      while (nextFlush.toEpochMilli() + millis > now.getTime()) {
         millis -= rollIntervalMillis;
       }
     }
 
     // Adjust the next flush time by millis to get the time of our ficticious
     // previous next flush
-    nextFlush.add(Calendar.MILLISECOND, millis);
+    nextFlush = nextFlush.plusMillis(millis);
   }
 
   /**
