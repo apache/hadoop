@@ -188,7 +188,6 @@ public class Client implements AutoCloseable {
   private final ConcurrentMap<ConnectionId, Connection> connections =
       new ConcurrentHashMap<>();
   private final Object putLock = new Object();
-  private final Object emptyCondition = new Object();
   private final AtomicBoolean running = new AtomicBoolean(true);
 
   private Class<? extends Writable> valueClass;   // class of call values
@@ -1429,20 +1428,7 @@ public class Client implements AutoCloseable {
       conn.rpcRequestThread.interrupt();
       conn.interruptConnectingThread();
     }
-    
-    // wait until all connections are closed
-    synchronized (emptyCondition) {
-      // synchronized the loop to guarantee wait must be notified.
-      while (!connections.isEmpty()) {
-        try {
-          emptyCondition.wait();
-        } catch (InterruptedException e) {
-          LOG.trace(
-              "Interrupted while waiting on all connections to be closed.");
-          Thread.currentThread().interrupt();
-        }
-      }
-    }
+    connections.clear();
   }
 
   /** 
@@ -1635,12 +1621,7 @@ public class Client implements AutoCloseable {
       Call call, int serviceClass, AtomicBoolean fallbackToSimpleAuth)
       throws IOException {
     final Consumer<Connection> removeMethod = c -> {
-      final boolean removed = connections.remove(remoteId, c);
-      if (removed && connections.isEmpty()) {
-        synchronized (emptyCondition) {
-          emptyCondition.notify();
-        }
-      }
+      connections.remove(remoteId, c);
     };
 
     Connection connection;
