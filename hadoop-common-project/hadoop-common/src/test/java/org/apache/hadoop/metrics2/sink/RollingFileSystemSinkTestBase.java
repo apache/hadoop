@@ -28,10 +28,8 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.TimeZone;
 import java.util.regex.Pattern;
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.conf.Configuration;
@@ -432,10 +430,10 @@ public class RollingFileSystemSinkTestBase {
    */
   protected void preCreateLogFile(String path, int numFiles)
       throws IOException, InterruptedException, URISyntaxException {
-    Calendar now = getNowNotTopOfHour();
+    Instant now = getNowNotTopOfHour();
 
     FileSystem fs = FileSystem.get(new URI(path), new Configuration());
-    Path dir = new Path(path, DATE_FORMAT.format(now.getTime().toInstant()));
+    Path dir = new Path(path, DATE_FORMAT.format(now));
 
     fs.mkdirs(dir);
 
@@ -465,24 +463,23 @@ public class RollingFileSystemSinkTestBase {
   }
 
   /**
-   * Return a calendar based on the current time.  If the current time is very
+   * Return an instant based on the current time.  If the current time is very
    * near the top of the hour (less than 20 seconds), sleep until the new hour
-   * before returning a new Calendar instance.
+   * before returning a new Instant instance.
    *
-   * @return a new Calendar instance that isn't near the top of the hour
+   * @return a new Instant instance that isn't near the top of the hour
    * @throws InterruptedException if interrupted while sleeping
    */
-  public Calendar getNowNotTopOfHour() throws InterruptedException {
-    Calendar now = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+  public Instant getNowNotTopOfHour() throws InterruptedException {
 
     // If we're at the very top of the hour, sleep until the next hour
     // so that we don't get confused by the directory rolling
-    if ((now.get(Calendar.MINUTE) == 59) && (now.get(Calendar.SECOND) > 40)) {
-      Thread.sleep((61 - now.get(Calendar.SECOND)) * 1000L);
-      now.setTime(new Date());
+    ZonedDateTime now = ZonedDateTime.now(UTC);
+    if ((now.getMinute() == 59) && (now.getSecond() > 40)) {
+      Thread.sleep((61 - now.getSecond()) * 1000L);
     }
 
-    return now;
+    return Instant.now();
   }
 
   /**

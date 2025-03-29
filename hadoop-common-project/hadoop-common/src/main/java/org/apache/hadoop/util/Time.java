@@ -19,8 +19,6 @@ package org.apache.hadoop.util;
 
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.util.Calendar;
-import java.util.TimeZone;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -38,8 +36,6 @@ public final class Time {
    * number of nano seconds in 1 millisecond
    */
   private static final long NANOSECONDS_PER_MILLISECOND = 1000000;
-
-  private static final TimeZone UTC_ZONE = TimeZone.getTimeZone("UTC");
 
   private static final DateTimeFormatter DATE_FORMAT =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSSZ").withZone(systemDefault());
@@ -90,8 +86,10 @@ public final class Time {
   /**
    * Get the current UTC time in milliseconds.
    * @return the current UTC time in milliseconds.
+   * @deprecated use {@link #now()} instead, since {@link System#currentTimeMillis()} returns UTC time anyway.
    */
+  @Deprecated
   public static long getUtcTime() {
-    return Calendar.getInstance(UTC_ZONE).getTimeInMillis();
+    return now();
   }
 }
