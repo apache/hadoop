@@ -19,10 +19,10 @@ package org.apache.hadoop.fs.shell.find;
 
 import java.io.InputStream;
 import java.io.PrintStream;
-import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.shell.CommandFactory;
+import org.apache.hadoop.util.Time;
 
 /**
  * Options to be used by the {@link Find} command and its {@link Expression}s.
@@ -53,7 +53,7 @@ public class FindOptions {
   private boolean followArgLink = false;
 
   /** Start time of the find process. */
-  private long startTime = new Date().getTime();
+  private long startTime = Time.now();
 
   /**
    * Depth at which to start applying expressions.

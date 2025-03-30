@@ -40,7 +40,6 @@ import java.net.URISyntaxException;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.LinkedList;
 
 import org.apache.hadoop.conf.Configuration;
@@ -51,6 +50,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.Time;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -64,7 +64,7 @@ public class TestLs {
   private static Configuration conf;
   private static FileSystem mockFs;
 
-  private static final Date NOW = new Date();
+  private static final long NOW = Time.now();
 
   @BeforeAll
   public static void setup() throws IOException {
@@ -564,12 +564,12 @@ public class TestLs {
     TestFile testfile06 = new TestFile("testDirectory", "testFile06");
 
     // set file mtime in different order to file names
-    testfile01.setMtime(NOW.getTime() + 10);
-    testfile02.setMtime(NOW.getTime() + 30);
-    testfile03.setMtime(NOW.getTime() + 20);
-    testfile04.setMtime(NOW.getTime() + 60);
-    testfile05.setMtime(NOW.getTime() + 50);
-    testfile06.setMtime(NOW.getTime() + 40);
+    testfile01.setMtime(NOW + 10);
+    testfile02.setMtime(NOW + 30);
+    testfile03.setMtime(NOW + 20);
+    testfile04.setMtime(NOW + 60);
+    testfile05.setMtime(NOW + 50);
+    testfile06.setMtime(NOW + 40);
 
     TestFile testDir = new TestFile("", "testDirectory");
     testDir.setIsDir(true);
@@ -612,12 +612,12 @@ public class TestLs {
     TestFile testfile06 = new TestFile("testDirectory", "testFile06");
 
     // set file mtime in different order to file names
-    testfile01.setMtime(NOW.getTime() + 10);
-    testfile02.setMtime(NOW.getTime() + 30);
-    testfile03.setMtime(NOW.getTime() + 20);
-    testfile04.setMtime(NOW.getTime() + 60);
-    testfile05.setMtime(NOW.getTime() + 50);
-    testfile06.setMtime(NOW.getTime() + 40);
+    testfile01.setMtime(NOW + 10);
+    testfile02.setMtime(NOW + 30);
+    testfile03.setMtime(NOW + 20);
+    testfile04.setMtime(NOW + 60);
+    testfile05.setMtime(NOW + 50);
+    testfile06.setMtime(NOW + 40);
 
     TestFile testDir = new TestFile("", "testDirectory");
     testDir.setIsDir(true);
@@ -661,12 +661,12 @@ public class TestLs {
     TestFile testfile06 = new TestFile("testDirectory02", "testFile06");
 
     // set file mtime in different order to file names
-    testfile01.setMtime(NOW.getTime() + 10);
-    testfile02.setMtime(NOW.getTime() + 30);
-    testfile03.setMtime(NOW.getTime() + 20);
-    testfile04.setMtime(NOW.getTime() + 60);
-    testfile05.setMtime(NOW.getTime() + 40);
-    testfile06.setMtime(NOW.getTime() + 50);
+    testfile01.setMtime(NOW + 10);
+    testfile02.setMtime(NOW + 30);
+    testfile03.setMtime(NOW + 20);
+    testfile04.setMtime(NOW + 60);
+    testfile05.setMtime(NOW + 40);
+    testfile06.setMtime(NOW + 50);
 
     TestFile testDir01 = new TestFile("", "testDirectory01");
     testDir01.setIsDir(true);
@@ -715,12 +715,12 @@ public class TestLs {
     TestFile testfile06 = new TestFile("testDirectory", "testFile06");
 
     // set file mtime in different order to file names
-    testfile01.setMtime(NOW.getTime() + Integer.MAX_VALUE);
-    testfile02.setMtime(NOW.getTime() + Integer.MIN_VALUE);
-    testfile03.setMtime(NOW.getTime() + 0);
-    testfile04.setMtime(NOW.getTime() + Integer.MAX_VALUE + Integer.MAX_VALUE);
-    testfile05.setMtime(NOW.getTime() + 0);
-    testfile06.setMtime(NOW.getTime() + Integer.MIN_VALUE + Integer.MIN_VALUE);
+    testfile01.setMtime(NOW + Integer.MAX_VALUE);
+    testfile02.setMtime(NOW + Integer.MIN_VALUE);
+    testfile03.setMtime(NOW + 0);
+    testfile04.setMtime(NOW + Integer.MAX_VALUE + Integer.MAX_VALUE);
+    testfile05.setMtime(NOW + 0);
+    testfile06.setMtime(NOW + Integer.MIN_VALUE + Integer.MIN_VALUE);
 
     TestFile testDir = new TestFile("", "testDirectory");
     testDir.setIsDir(true);
@@ -952,20 +952,20 @@ public class TestLs {
     TestFile testfile06 = new TestFile("testDirectory", "testFile06");
 
     // set file atime in different order to file names
-    testfile01.setAtime(NOW.getTime() + 10);
-    testfile02.setAtime(NOW.getTime() + 30);
-    testfile03.setAtime(NOW.getTime() + 20);
-    testfile04.setAtime(NOW.getTime() + 60);
-    testfile05.setAtime(NOW.getTime() + 50);
-    testfile06.setAtime(NOW.getTime() + 40);
+    testfile01.setAtime(NOW + 10);
+    testfile02.setAtime(NOW + 30);
+    testfile03.setAtime(NOW + 20);
+    testfile04.setAtime(NOW + 60);
+    testfile05.setAtime(NOW + 50);
+    testfile06.setAtime(NOW + 40);
 
     // set file mtime in different order to atime
-    testfile01.setMtime(NOW.getTime() + 60);
-    testfile02.setMtime(NOW.getTime() + 50);
-    testfile03.setMtime(NOW.getTime() + 20);
-    testfile04.setMtime(NOW.getTime() + 30);
-    testfile05.setMtime(NOW.getTime() + 10);
-    testfile06.setMtime(NOW.getTime() + 40);
+    testfile01.setMtime(NOW + 60);
+    testfile02.setMtime(NOW + 50);
+    testfile03.setMtime(NOW + 20);
+    testfile04.setMtime(NOW + 30);
+    testfile05.setMtime(NOW + 10);
+    testfile06.setMtime(NOW + 40);
 
     TestFile testDir = new TestFile("", "testDirectory");
     testDir.setIsDir(true);
@@ -1009,20 +1009,20 @@ public class TestLs {
     TestFile testfile06 = new TestFile("testDirectory", "testFile06");
 
     // set file atime in different order to file names
-    testfile01.setAtime(NOW.getTime() + 10);
-    testfile02.setAtime(NOW.getTime() + 30);
-    testfile03.setAtime(NOW.getTime() + 20);
-    testfile04.setAtime(NOW.getTime() + 60);
-    testfile05.setAtime(NOW.getTime() + 50);
-    testfile06.setAtime(NOW.getTime() + 40);
+    testfile01.setAtime(NOW + 10);
+    testfile02.setAtime(NOW + 30);
+    testfile03.setAtime(NOW + 20);
+    testfile04.setAtime(NOW + 60);
+    testfile05.setAtime(NOW + 50);
+    testfile06.setAtime(NOW + 40);
 
     // set file mtime in different order to atime
-    testfile01.setMtime(NOW.getTime() + 60);
-    testfile02.setMtime(NOW.getTime() + 50);
-    testfile03.setMtime(NOW.getTime() + 20);
-    testfile04.setMtime(NOW.getTime() + 30);
-    testfile05.setMtime(NOW.getTime() + 10);
-    testfile06.setMtime(NOW.getTime() + 40);
+    testfile01.setMtime(NOW + 60);
+    testfile02.setMtime(NOW + 50);
+    testfile03.setMtime(NOW + 20);
+    testfile04.setMtime(NOW + 30);
+    testfile05.setMtime(NOW + 10);
+    testfile06.setMtime(NOW + 40);
 
     TestFile testDir = new TestFile("", "testDirectory");
     testDir.setIsDir(true);
@@ -1188,8 +1188,8 @@ public class TestLs {
     private static final String DEFAULT_OWNER = "test_owner";
     private static final String DEFAULT_GROUP = "test_group";
     private static final long DEFAULT_LENGTH = 1234567890L;
-    private static final long DEFAULT_MTIME = NOW.getTime() - 86400000;
-    private static final long DEFAULT_ATIME = NOW.getTime() + 86400000;
+    private static final long DEFAULT_MTIME = NOW - 86400000;
+    private static final long DEFAULT_ATIME = NOW + 86400000;
     private static final long DEFAULT_BLOCKSIZE = 64L * 1024 * 1024;
 
     private String dirname;
