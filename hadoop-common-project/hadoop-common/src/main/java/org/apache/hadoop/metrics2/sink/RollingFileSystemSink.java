@@ -299,7 +299,7 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
       }
 
       flushTimer = new Timer("RollingFileSystemSink Flusher", true);
-      setInitialFlushTime(new Date());
+      setInitialFlushTime(Instant.now());
     }
 
     return success;
@@ -504,14 +504,14 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
    * new directory or new log file
    */
   private void rollLogDirIfNeeded() throws MetricsException {
-    // Because we're working relative to the clock, we use a Date instead
+    // Because we're working relative to the clock, we use an Instant instead
     // of Time.monotonicNow().
-    Date now = new Date();
+    Instant now = Instant.now();
 
     // We check whether currentOutStream is null instead of currentDirPath,
     // because if currentDirPath is null, then currentOutStream is null, but
     // currentOutStream can be null for other reasons.  Same for nextFlush.
-    if ((currentOutStream == null) || now.after(Date.from(nextFlush))) {
+    if ((currentOutStream == null) || now.isAfter(nextFlush)) {
       // If we're not yet connected to HDFS, create the connection
       if (!initialized) {
         initialized = initFs();
@@ -536,10 +536,10 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
         // Update the time of the next flush
         updateFlushTime(now);
         // Schedule the next flush at that time
-        scheduleFlush(Date.from(nextFlush));
+        scheduleFlush(nextFlush);
       }
     } else if (forceFlush) {
-      scheduleFlush(new Date());
+      scheduleFlush(Instant.now());
     }
   }
 
@@ -550,8 +550,8 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
    * @param now the current time
    * @return the current directory
    */
-  private Path findCurrentDirectory(Date now) {
-    long offset = ((now.getTime() - nextFlush.toEpochMilli())
+  private Path findCurrentDirectory(Instant now) {
+    long offset = ((now.toEpochMilli() - nextFlush.toEpochMilli())
         / rollIntervalMillis) * rollIntervalMillis;
     String currentDir =
         DATE_FORMAT.format(nextFlush.plusMillis(offset));
@@ -565,7 +565,7 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
    *
    * @param when the time the thread should run
    */
-  private void scheduleFlush(Date when) {
+  private void scheduleFlush(Instant when) {
     // Store the current currentDirPath to close later
     final PrintStream toClose = currentOutStream;
 
@@ -580,7 +580,7 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
 
         hasFlushed = true;
       }
-    }, when);
+    }, Date.from(when));
   }
 
   /**
@@ -590,13 +590,13 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
    * @param now the current time
    */
   @VisibleForTesting
-  protected void updateFlushTime(Date now) {
+  protected void updateFlushTime(Instant now) {
     // In non-initial rounds, add an integer number of intervals to the last
     // flush until a time in the future is achieved, thus preserving the
     // original random offset.
-    int millis =
-        (int) (((now.getTime() - nextFlush.toEpochMilli())
-        / rollIntervalMillis + 1) * rollIntervalMillis);
+    long millis =
+        ((now.toEpochMilli() - nextFlush.toEpochMilli())
+        / rollIntervalMillis + 1) * rollIntervalMillis;
 
     nextFlush = nextFlush.plusMillis(millis);
   }
@@ -611,9 +611,9 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
    * @param now the current time
    */
   @VisibleForTesting
-  protected void setInitialFlushTime(Date now) {
+  protected void setInitialFlushTime(Instant now) {
     // Start with the beginning of the current hour
-    nextFlush = now.toInstant().truncatedTo(HOURS);
+    nextFlush = now.truncatedTo(HOURS);
 
     // In the first round, calculate the first flush as the largest number of
     // intervals from the beginning of the current hour that's not in the
@@ -624,7 +624,7 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
     // 3. Multiply by the roll interval to get the number of millis between
     //    the beginning of the current hour and the beginning of the current
     //    interval.
-    int millis = (int) (((now.getTime() - nextFlush.toEpochMilli())
+    int millis = (int) (((now.toEpochMilli() - nextFlush.toEpochMilli())
         / rollIntervalMillis) * rollIntervalMillis);
 
     // Then add some noise to help prevent all the nodes from
@@ -639,7 +639,7 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
       // would have been the previous interval if there had been one.
       //
       // It's OK if millis comes out negative.
-      while (nextFlush.toEpochMilli() + millis > now.getTime()) {
+      while (nextFlush.toEpochMilli() + millis > now.toEpochMilli()) {
         millis -= rollIntervalMillis;
       }
     }

@@ -19,7 +19,6 @@ package org.apache.hadoop.fs;
 
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
-import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.shell.TouchCommands.Touch;
@@ -108,24 +107,24 @@ public class TestFsShellTouch {
     }
 
     {
-      String strTime = formatTimestamp(System.currentTimeMillis());
-      Date dateObj = parseTimestamp(strTime);
+      String strTime = formatTimestamp(Instant.now());
+      Instant instant = parseTimestamp(strTime);
 
       assertThat(shellRun("-touch", "-t", strTime, newFileName))
           .as("Expected successful touch on a new file" +
               " with a specified timestamp")
           .isEqualTo(0);
       FileStatus new_status = lfs.getFileStatus(newFile);
-      assertThat(new_status.getAccessTime()).isEqualTo(dateObj.getTime());
+      assertThat(new_status.getAccessTime()).isEqualTo(instant.toEpochMilli());
       assertThat(new_status.getModificationTime())
-          .isEqualTo(dateObj.getTime());
+          .isEqualTo(instant.toEpochMilli());
     }
 
     FileStatus fstatus = lfs.getFileStatus(newFile);
 
     {
-      String strTime = formatTimestamp(System.currentTimeMillis());
-      Date dateObj = parseTimestamp(strTime);
+      String strTime = formatTimestamp(Instant.now());
+      Instant instant = parseTimestamp(strTime);
 
       assertThat(shellRun("-touch", "-a", "-t", strTime, newFileName))
           .as("Expected successful touch with a specified access time")
@@ -133,7 +132,7 @@ public class TestFsShellTouch {
       FileStatus new_status = lfs.getFileStatus(newFile);
       // Verify if access time is recorded correctly (and modification time
       // remains unchanged).
-      assertThat(new_status.getAccessTime()).isEqualTo(dateObj.getTime());
+      assertThat(new_status.getAccessTime()).isEqualTo(instant.toEpochMilli());
       assertThat(new_status.getModificationTime())
           .isEqualTo(fstatus.getModificationTime());
     }
@@ -141,8 +140,8 @@ public class TestFsShellTouch {
     fstatus = lfs.getFileStatus(newFile);
 
     {
-      String strTime = formatTimestamp(System.currentTimeMillis());
-      Date dateObj = parseTimestamp(strTime);
+      String strTime = formatTimestamp(Instant.now());
+      Instant instant = parseTimestamp(strTime);
 
       assertThat(shellRun("-touch", "-m", "-t", strTime, newFileName))
           .as("Expected successful touch with a specified modification time")
@@ -153,12 +152,12 @@ public class TestFsShellTouch {
       assertThat(new_status.getAccessTime())
           .isEqualTo(fstatus.getAccessTime());
       assertThat(new_status.getModificationTime())
-          .isEqualTo(dateObj.getTime());
+          .isEqualTo(instant.toEpochMilli());
     }
 
     {
-      String strTime = formatTimestamp(System.currentTimeMillis());
-      Date dateObj = parseTimestamp(strTime);
+      String strTime = formatTimestamp(Instant.now());
+      Instant instant = parseTimestamp(strTime);
 
       assertThat(shellRun("-touch", "-t", strTime, newFileName))
           .as("Expected successful touch with a specified timestamp")
@@ -166,14 +165,14 @@ public class TestFsShellTouch {
 
       // Verify if both modification and access times are recorded correctly
       FileStatus new_status = lfs.getFileStatus(newFile);
-      assertThat(new_status.getAccessTime()).isEqualTo(dateObj.getTime());
+      assertThat(new_status.getAccessTime()).isEqualTo(instant.toEpochMilli());
       assertThat(new_status.getModificationTime())
-          .isEqualTo(dateObj.getTime());
+          .isEqualTo(instant.toEpochMilli());
     }
 
     {
-      String strTime = formatTimestamp(System.currentTimeMillis());
-      Date dateObj = parseTimestamp(strTime);
+      String strTime = formatTimestamp(Instant.now());
+      Instant instant = parseTimestamp(strTime);
 
       assertThat(shellRun("-touch", "-a", "-m", "-t", strTime, newFileName))
           .as("Expected successful touch with a specified timestamp")
@@ -181,9 +180,9 @@ public class TestFsShellTouch {
 
       // Verify if both modification and access times are recorded correctly
       FileStatus new_status = lfs.getFileStatus(newFile);
-      assertThat(new_status.getAccessTime()).isEqualTo(dateObj.getTime());
+      assertThat(new_status.getAccessTime()).isEqualTo(instant.toEpochMilli());
       assertThat(new_status.getModificationTime())
-          .isEqualTo(dateObj.getTime());
+          .isEqualTo(instant.toEpochMilli());
     }
 
     {
@@ -193,14 +192,14 @@ public class TestFsShellTouch {
     }
 
     // Verify -c option when file exists.
-    String strTime = formatTimestamp(System.currentTimeMillis());
-    Date dateObj = parseTimestamp(strTime);
+    String strTime = formatTimestamp(Instant.now());
+    Instant instant = parseTimestamp(strTime);
     assertThat(shellRun("-touch", "-c", "-t", strTime, newFileName))
         .as("Expected successful touch on a non-existent file with -c option")
         .isEqualTo(0);
     FileStatus fileStatus = lfs.getFileStatus(newFile);
-    assertThat(fileStatus.getAccessTime()).isEqualTo(dateObj.getTime());
-    assertThat(fileStatus.getModificationTime()).isEqualTo(dateObj.getTime());
+    assertThat(fileStatus.getAccessTime()).isEqualTo(instant.toEpochMilli());
+    assertThat(fileStatus.getModificationTime()).isEqualTo(instant.toEpochMilli());
 
     lfs.delete(newFile, true);
     assertThat(lfs.exists(newFile)).isFalse();
@@ -211,7 +210,6 @@ public class TestFsShellTouch {
   public void testTouchDir() throws Exception {
     String strTime;
     final String newFileName = "dir3/newFile3";
-    Date dateObj;
     final Path newFile = new Path(newFileName);
     FileStatus fstatus;
     Path dirPath = new Path("dir3");
@@ -220,31 +218,31 @@ public class TestFsShellTouch {
     lfs.delete(newFile, true);
     assertThat(lfs.exists(newFile)).isFalse();
 
-    strTime = formatTimestamp(System.currentTimeMillis());
-    dateObj = parseTimestamp(strTime);
+    strTime = formatTimestamp(Instant.now());
+    Instant instant = parseTimestamp(strTime);
 
     assertThat(shellRun("-touch", "-t", strTime, newFileName)).as(
         "Expected successful touch on a new file with a specified timestamp").isEqualTo(0);
     FileStatus newStatus = lfs.getFileStatus(newFile);
-    assertThat(newStatus.getAccessTime()).isEqualTo(dateObj.getTime());
-    assertThat(newStatus.getModificationTime()).isEqualTo(dateObj.getTime());
+    assertThat(newStatus.getAccessTime()).isEqualTo(instant.toEpochMilli());
+    assertThat(newStatus.getModificationTime()).isEqualTo(instant.toEpochMilli());
 
     Thread.sleep(500);
-    strTime = formatTimestamp(System.currentTimeMillis());
-    dateObj = parseTimestamp(strTime);
+    strTime = formatTimestamp(Instant.now());
+    instant = parseTimestamp(strTime);
 
     assertThat(shellRun("-touch", "-m", "-a", "-t", strTime, "dir3")).as(
         "Expected successful touch with a specified modification time").isEqualTo(0);
 
     newStatus = lfs.getFileStatus(dirPath);
     // Verify if both modification and access times are recorded correctly
-    assertThat(newStatus.getAccessTime()).isEqualTo(dateObj.getTime());
-    assertThat(newStatus.getModificationTime()).isEqualTo(dateObj.getTime());
+    assertThat(newStatus.getAccessTime()).isEqualTo(instant.toEpochMilli());
+    assertThat(newStatus.getModificationTime()).isEqualTo(instant.toEpochMilli());
 
     fstatus = lfs.getFileStatus(dirPath);
     Thread.sleep(500);
-    strTime = formatTimestamp(System.currentTimeMillis());
-    dateObj = parseTimestamp(strTime);
+    strTime = formatTimestamp(Instant.now());
+    instant = parseTimestamp(strTime);
 
     assertThat(shellRun("-touch", "-m", "-t", strTime, "dir3")).as(
         "Expected successful touch with a specified modification time").isEqualTo(0);
@@ -253,12 +251,12 @@ public class TestFsShellTouch {
     // Verify if modification time is recorded correctly (and access time
     // remains unchanged).
     assertThat(newStatus.getAccessTime()).isEqualTo(fstatus.getAccessTime());
-    assertThat(newStatus.getModificationTime()).isEqualTo(dateObj.getTime());
+    assertThat(newStatus.getModificationTime()).isEqualTo(instant.toEpochMilli());
 
     fstatus = lfs.getFileStatus(dirPath);
     Thread.sleep(500);
-    strTime = formatTimestamp(System.currentTimeMillis());
-    dateObj = parseTimestamp(strTime);
+    strTime = formatTimestamp(Instant.now());
+    instant = parseTimestamp(strTime);
 
     assertThat(shellRun("-touch", "-a", "-t", strTime, "dir3")).as(
         "Expected successful touch with a specified modification time").isEqualTo(0);
@@ -266,7 +264,7 @@ public class TestFsShellTouch {
     newStatus = lfs.getFileStatus(dirPath);
     // Verify if access time is recorded correctly (and modification time
     // remains unchanged).
-    assertThat(newStatus.getAccessTime()).isEqualTo(dateObj.getTime());
+    assertThat(newStatus.getAccessTime()).isEqualTo(instant.toEpochMilli());
     assertThat(newStatus.getModificationTime()).isEqualTo(fstatus.getModificationTime());
 
     lfs.delete(newFile, true);
@@ -275,11 +273,11 @@ public class TestFsShellTouch {
     assertThat(lfs.exists(dirPath)).isFalse();
   }
 
-  private String formatTimestamp(long timeInMillis) {
-    return (new Touch()).getDateFormat().format(Instant.ofEpochMilli(timeInMillis));
+  private String formatTimestamp(Instant instant) {
+    return (new Touch()).getDateFormat().format(instant);
   }
 
-  private Date parseTimestamp(String tstamp) throws DateTimeParseException {
-    return Date.from((new Touch()).getDateFormat().parse(tstamp, Instant::from));
+  private Instant parseTimestamp(String timestamp) throws DateTimeParseException {
+    return (new Touch()).getDateFormat().parse(timestamp, Instant::from);
   }
 }
