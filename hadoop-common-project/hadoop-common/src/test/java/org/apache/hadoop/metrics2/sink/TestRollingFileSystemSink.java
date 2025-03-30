@@ -20,7 +20,6 @@ package org.apache.hadoop.metrics2.sink;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.Date;
 
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.fs.Path;
@@ -79,7 +78,7 @@ public class TestRollingFileSystemSink {
     assertNull(
         rfsSink.nextFlush, "Last flush time should have been null prior to calling init()");
 
-    rfsSink.setInitialFlushTime(Date.from(instant));
+    rfsSink.setInitialFlushTime(instant);
 
     long diff =
         rfsSink.nextFlush.toEpochMilli() - instant.toEpochMilli();
@@ -87,14 +86,14 @@ public class TestRollingFileSystemSink {
     assertEquals(0L, diff, "The initial flush time was calculated incorrectly");
 
     instant = instant.plusMillis(10);
-    rfsSink.setInitialFlushTime(Date.from(instant));
+    rfsSink.setInitialFlushTime(instant);
     diff = rfsSink.nextFlush.toEpochMilli() - instant.toEpochMilli();
 
     assertEquals(
         -10L, diff, "The initial flush time was calculated incorrectly");
 
     instant = instant.plusSeconds(1);
-    rfsSink.setInitialFlushTime(Date.from(instant));
+    rfsSink.setInitialFlushTime(instant);
     diff = rfsSink.nextFlush.toEpochMilli() - instant.toEpochMilli();
 
     assertEquals(
@@ -107,7 +106,7 @@ public class TestRollingFileSystemSink {
         rfsSink.nextFlush, "Last flush time should have been null prior to calling init()");
 
     instant = instant.truncatedTo(HOURS);
-    rfsSink.setInitialFlushTime(Date.from(instant));
+    rfsSink.setInitialFlushTime(instant);
 
     diff = rfsSink.nextFlush.toEpochMilli() - instant.toEpochMilli();
 
@@ -115,14 +114,14 @@ public class TestRollingFileSystemSink {
         "The initial flush time was calculated incorrectly: " + diff);
 
     instant = instant.plusMillis(10);
-    rfsSink.setInitialFlushTime(Date.from(instant));
+    rfsSink.setInitialFlushTime(instant);
     diff = rfsSink.nextFlush.toEpochMilli() - instant.toEpochMilli();
 
     assertTrue((diff >= -10L) && (diff <= 0L) || ((diff > -1000L) && (diff < -910L)),
         "The initial flush time was calculated incorrectly: " + diff);
 
     instant = instant.plusSeconds(1);
-    rfsSink.setInitialFlushTime(Date.from(instant));
+    rfsSink.setInitialFlushTime(instant);
     diff = rfsSink.nextFlush.toEpochMilli() - instant.toEpochMilli();
 
     assertTrue((diff >= -10L) && (diff <= 0L) || ((diff > -1000L) && (diff < -910L)),
@@ -135,7 +134,7 @@ public class TestRollingFileSystemSink {
         "Last flush time should have been null prior to calling init()");
 
     instant = instant.truncatedTo(HOURS).plusMillis(1);
-    rfsSink.setInitialFlushTime(Date.from(instant));
+    rfsSink.setInitialFlushTime(instant);
 
     diff = rfsSink.nextFlush.toEpochMilli() - instant.toEpochMilli();
 
@@ -152,7 +151,7 @@ public class TestRollingFileSystemSink {
     Instant instant = LocalDate.of(2016, 1, 1).atStartOfDay(UTC).toInstant();
 
     rfsSink.nextFlush = instant;
-    rfsSink.updateFlushTime(Date.from(instant));
+    rfsSink.updateFlushTime(instant);
 
     assertEquals(instant.toEpochMilli() + 1000,
         rfsSink.nextFlush.toEpochMilli(),
@@ -160,7 +159,7 @@ public class TestRollingFileSystemSink {
 
     rfsSink.nextFlush = instant;
     instant = instant.plusMillis(10);
-    rfsSink.updateFlushTime(Date.from(instant));
+    rfsSink.updateFlushTime(instant);
 
     assertEquals(instant.toEpochMilli() + 990,
         rfsSink.nextFlush.toEpochMilli(),
@@ -168,7 +167,7 @@ public class TestRollingFileSystemSink {
 
     rfsSink.nextFlush = instant;
     instant = instant.plusSeconds(1).plusMillis(10);
-    rfsSink.updateFlushTime(Date.from(instant));
+    rfsSink.updateFlushTime(instant);
 
     assertEquals(instant.toEpochMilli() + 990,
         rfsSink.nextFlush.toEpochMilli(),

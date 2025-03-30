@@ -206,17 +206,25 @@ public class TrashPolicyDefault extends TrashPolicy {
   @SuppressWarnings("deprecation")
   @Override
   public void createCheckpoint() throws IOException {
-    createCheckpoint(new Date());
+    createCheckpoint(Instant.now());
   }
 
-  @SuppressWarnings("deprecation")
-  public void createCheckpoint(Date date) throws IOException {
+  public void createCheckpoint(Instant instant) throws IOException {
     Collection<FileStatus> trashRoots = fs.getTrashRoots(false);
     for (FileStatus trashRoot: trashRoots) {
       LOG.info("TrashPolicyDefault#createCheckpoint for trashRoot: " +
-          trashRoot.getPath());
-      createCheckpoint(trashRoot.getPath(), date);
+              trashRoot.getPath());
+      createCheckpoint(trashRoot.getPath(), instant);
     }
+  }
+
+  /**
+   * @deprecated use {@link #createCheckpoint(Instant)} instead
+   */
+  @SuppressWarnings("deprecation")
+  @Deprecated
+  public void createCheckpoint(Date date) throws IOException {
+    createCheckpoint(date.toInstant());
   }
 
   @Override
@@ -301,7 +309,7 @@ public class TrashPolicyDefault extends TrashPolicy {
               try {
                 TrashPolicyDefault trash = new TrashPolicyDefault(fs, conf);
                 trash.deleteCheckpoint(trashRoot.getPath(), false);
-                trash.createCheckpoint(trashRoot.getPath(), new Date(now));
+                trash.createCheckpoint(trashRoot.getPath(), Instant.ofEpochMilli(now));
               } catch (IOException e) {
                 LOG.warn("Trash caught: "+e+". Skipping " +
                     trashRoot.getPath() + ".");
@@ -332,11 +340,11 @@ public class TrashPolicyDefault extends TrashPolicy {
     }
   }
 
-  private void createCheckpoint(Path trashRoot, Date date) throws IOException {
+  private void createCheckpoint(Path trashRoot, Instant instant) throws IOException {
     if (!fs.exists(new Path(trashRoot, CURRENT))) {
       return;
     }
-    Path checkpointBase = new Path(trashRoot, CHECKPOINT.format(date.toInstant()));
+    Path checkpointBase = new Path(trashRoot, CHECKPOINT.format(instant));
     Path checkpoint = checkpointBase;
     Path current = new Path(trashRoot, CURRENT);
 
