@@ -359,6 +359,8 @@ public class CopyCommitter extends FileOutputCommitter {
         taskAttemptContext.progress();
         taskAttemptContext.setStatus("Preserving status on directory entries. [" +
             sourceReader.getPosition() * 100 / totalLen + "%]");
+
+        preservedEntries++;
       }
     } finally {
       IOUtils.closeStream(sourceReader);
