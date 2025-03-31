@@ -21,6 +21,11 @@ package org.apache.hadoop.util;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 
+import java.time.Instant;
+import java.time.ZoneId;
+
+import static java.time.ZoneOffset.UTC;
+
 /**
  * A former clock interface retro-fitted to be eventually replaced by java.time.Clock.
  *
@@ -39,6 +44,32 @@ public abstract class Clock extends java.time.Clock {
   @Deprecated
   public final long getTime() {
     return millis();
+  }
+
+  // default java.time.Clock implementation
+
+  @Override
+  public ZoneId getZone() {
+    return UTC;
+  }
+
+  @Override
+  public java.time.Clock withZone(ZoneId zone) {
+    if (!UTC.equals(zone)) {
+      throw new IllegalArgumentException("Only UTC is supported; to use other zones use Clock.system(ZoneId)");
+    }
+    return this;
+  }
+
+  /**
+   * Overridden as abstract because legacy implementations work with millis natively.
+   */
+  @Override
+  public abstract long millis();
+
+  @Override
+  public Instant instant() {
+    return Instant.ofEpochMilli(millis());
   }
 
 }

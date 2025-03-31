@@ -55,7 +55,6 @@ import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.Cluster.JobTrackerStatus;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -763,18 +762,6 @@ public class UtilsForTests {
     }
   }
   
-  static class FakeClock implements Clock {
-    long time = 0;
-    
-    public void advance(long millis) {
-      time += millis;
-    }
-
-    @Override
-    public long getTime() {
-      return time;
-    }
-  }
   // Mapper that fails
   static class FailMapper extends MapReduceBase implements
       Mapper<WritableComparable, Writable, WritableComparable, Writable> {

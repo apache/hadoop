@@ -19,11 +19,7 @@ package org.apache.hadoop.yarn.util;
 
 import org.apache.hadoop.util.Clock;
 
-import java.time.Instant;
-import java.time.ZoneId;
 import java.util.concurrent.atomic.AtomicLong;
-
-import static java.time.ZoneOffset.UTC;
 
 public class ControlledClock extends Clock {
   private final AtomicLong time = new AtomicLong(-1);
@@ -54,30 +50,12 @@ public class ControlledClock extends Clock {
   }
 
   @Override
-  public ZoneId getZone() {
-    return UTC;
-  }
-
-  @Override
-  public java.time.Clock withZone(ZoneId zone) {
-    if (!UTC.equals(zone)) {
-      throw new IllegalArgumentException("Only UTC is supported; to use other zones use Clock.system(ZoneId)");
-    }
-    return this;
-  }
-
-  @Override
   public long millis() {
     long currVal = time.get();
     if (currVal != -1) {
       return currVal;
     }
     return actualClock.millis();
-  }
-
-  @Override
-  public Instant instant() {
-    return Instant.ofEpochMilli(millis());
   }
 
 }

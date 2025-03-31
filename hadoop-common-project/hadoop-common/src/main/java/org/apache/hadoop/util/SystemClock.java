@@ -20,11 +20,6 @@ package org.apache.hadoop.util;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 
-import java.time.Instant;
-import java.time.ZoneId;
-
-import static java.time.ZoneOffset.UTC;
-
 /**
  * Implementation of {@link Clock} that gives the current time from the system
  * clock in milliseconds.
@@ -51,26 +46,8 @@ public final class SystemClock extends Clock {
   }
 
   @Override
-  public ZoneId getZone() {
-    return UTC;
-  }
-
-  @Override
-  public java.time.Clock withZone(ZoneId zone) {
-    if (!UTC.equals(zone)) {
-      throw new IllegalArgumentException("Only UTC is supported; to use other zones use Clock.system(ZoneId)");
-    }
-    return this;
-  }
-
-  @Override
   public long millis() {
     return System.currentTimeMillis();
-  }
-
-  @Override
-  public Instant instant() {
-    return Instant.ofEpochMilli(millis());
   }
 
 }

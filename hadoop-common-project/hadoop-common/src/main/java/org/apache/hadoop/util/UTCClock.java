@@ -18,9 +18,6 @@
  */
 package org.apache.hadoop.util;
 
-import java.time.Instant;
-import java.time.ZoneId;
-
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
@@ -38,26 +35,8 @@ import static java.time.ZoneOffset.UTC;
 public class UTCClock extends Clock {
 
   @Override
-  public ZoneId getZone() {
-    return UTC;
-  }
-
-  @Override
-  public java.time.Clock withZone(ZoneId zone) {
-    if (!UTC.equals(zone)) {
-      throw new IllegalArgumentException("Only UTC is supported; to use other zones use Clock.system(ZoneId)");
-    }
-    return this;
-  }
-
-  @Override
   public long millis() {
     return System.currentTimeMillis();
-  }
-
-  @Override
-  public Instant instant() {
-    return Instant.ofEpochMilli(millis());
   }
 
 }
