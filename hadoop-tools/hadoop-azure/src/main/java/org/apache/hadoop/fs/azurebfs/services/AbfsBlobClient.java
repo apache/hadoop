@@ -815,7 +815,7 @@ public class AbfsBlobClient extends AbfsClient {
         destination, sourceEtag, isAtomicRenameKey(source), tracingContext
     );
     try {
-      if (blobRenameHandler.execute()) {
+      if (blobRenameHandler.execute(false)) {
         final AbfsUriQueryBuilder abfsUriQueryBuilder
             = createDefaultUriQueryBuilder();
         final URL url = createRequestUrl(destination,

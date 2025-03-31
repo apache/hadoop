@@ -1747,7 +1747,7 @@ public class ITestAzureBlobFileSystemRename extends
    */
   private void renameDir(AzureBlobFileSystem currentFs, String producerQueueSize,
       String consumerMaxLag, String maxThread, Path src, Path dst)
-      throws IOException {
+      throws Exception {
     Configuration config = createConfig(producerQueueSize, consumerMaxLag, maxThread);
     try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(), config)) {
       fs.rename(src, dst);
@@ -1780,17 +1780,50 @@ public class ITestAzureBlobFileSystemRename extends
    * @throws IOException If an I/O error occurs during the validation.
    */
   private void validateRename(AzureBlobFileSystem fs, Path src, Path dst,
-      boolean isSrcExist, boolean isDstExist, boolean isJsonExist)
-      throws IOException {
-    Assertions.assertThat(fs.exists(new Path(src.getParent(), src.getName() + SUFFIX)))
-        .describedAs("Renamed Pending Json file should exist.")
-        .isEqualTo(isJsonExist);
-    Assertions.assertThat(fs.exists(src))
-        .describedAs("Renamed Source directory should not exist.")
-        .isEqualTo(isSrcExist);
-    Assertions.assertThat(fs.exists(dst))
-        .describedAs("Renamed Destination directory should exist.")
-        .isEqualTo(isDstExist);
+      boolean isSrcExist, boolean isDstExist, boolean isJsonExist) throws Exception {
+    // Validate pending JSON file status
+    assertPathStatus(fs,
+        new Path(src.getParent(), src.getName() + SUFFIX), isJsonExist,
+        "Pending JSON file");
+
+    // Validate source directory status
+    assertPathStatus(fs, src, isSrcExist, "Source directory");
+
+    // Validate destination directory status
+    assertPathStatus(fs, dst, isDstExist, "Destination directory");
+  }
+
+  /**
+   * Helper method to assert the status of a path in the AzureBlobFileSystem.
+   *
+   * @param fs The AzureBlobFileSystem instance to check the existence on.
+   * @param path The path to check.
+   * @param shouldExist Whether the path should exist or not.
+   * @param description A description for the assertion.
+   * @throws Exception If an error occurs during the assertion.
+   */
+  private void assertPathStatus(AzureBlobFileSystem fs, Path path,
+      boolean shouldExist, String description) throws Exception{
+    TracingContext tracingContext = getTestTracingContext(fs, true);
+    AbfsBlobClient client = ((AbfsBlobClient) fs.getAbfsClient());
+    if (shouldExist) {
+      int actualStatus = client.getPathStatus(
+              path.toUri().getPath(), tracingContext,
+              null, true)
+          .getResult().getStatusCode();
+      Assertions.assertThat(actualStatus)
+          .describedAs("%s should exists", description)
+          .isEqualTo(HTTP_OK);
+    } else {
+      AzureServiceErrorCode errorCode = LambdaTestUtils.intercept(
+          AbfsRestOperationException.class, () -> {
+        client.getPathStatus(path.toUri().getPath(), true,
+            tracingContext, null);
+      }).getErrorCode();
+      Assertions.assertThat(errorCode)
+          .describedAs("%s should not exists", description)
+          .isEqualTo(BLOB_PATH_NOT_FOUND);
+    }
   }
 
   /**
@@ -1866,31 +1899,20 @@ public class ITestAzureBlobFileSystemRename extends
 
       // Track the number of copy operations
       AtomicInteger copyCall = new AtomicInteger(0);
-      Mockito.doAnswer(copyRequest -> {
-        if (copyCall.get() == FAILED_CALL) {
-          throw new AbfsRestOperationException(
-              BLOB_ALREADY_EXISTS.getStatusCode(),
-              BLOB_ALREADY_EXISTS.getErrorCode(),
-              BLOB_ALREADY_EXISTS.getErrorMessage(),
-              new Exception());
-        }
-        copyCall.incrementAndGet();
-        return copyRequest.callRealMethod();
-      }).when(client).copyBlob(Mockito.any(Path.class),
-          Mockito.any(Path.class), Mockito.nullable(String.class),
-          Mockito.any(TracingContext.class));
-
+      renameCrashInBetween(client, copyCall);
       fs.rename(src, dst);
+
       // Validate copy operation count
       Assertions.assertThat(copyCall.get())
           .describedAs("Copy operation count should be less than 10.")
           .isLessThan(TOTAL_FILES);
 
+      // Assertions to validate renamed destination and source
+      validateRename(fs, src, dst, true, true, true);
+
       // Validate that rename redo operation was triggered
       copyCall.set(0);
-
-      // Assertions to validate renamed destination and source
-      validateRename(fs, src, dst, false, true, true);
+      triggerRenameRecovery(fs, src);
 
       Assertions.assertThat(copyCall.get())
           .describedAs("Copy operation count should be greater than 0.")
@@ -1940,10 +1962,12 @@ public class ITestAzureBlobFileSystemRename extends
           .describedAs("Delete operation count should be less than 10.")
           .isLessThan(TOTAL_FILES);
 
-      // Validate that delete redo operation was triggered
-      deleteCall.set(0);
       // Assertions to validate renamed destination and source
-      validateRename(fs, src, dst, false, true, true);
+      validateRename(fs, src, dst, true, true, true);
+
+      // Validate that rename redo operation was triggered
+      deleteCall.set(0);
+      triggerRenameRecovery(fs, src);
 
       Assertions.assertThat(deleteCall.get())
           .describedAs("Delete operation count should be greater than 0.")
@@ -2702,6 +2726,191 @@ public class ITestAzureBlobFileSystemRename extends
   }
 
   /**
+   * Tests renaming a directory with a failure during the copy operation.
+   * Since, destination path already exists, there will be adjustment in the
+   * destination path. After crash recovery, recovery should succeed even in the
+   * case when destination path already exists.
+   * Simulates an error when copying on the 6th call.
+   */
+  @Test
+  public void testRenameAndRecoveryWhenDestAlreadyExist() throws Exception {
+    try (AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem(
+        createConfig("5", "3", "2")))) {
+      assumeBlobServiceType();
+      AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
+      fs.getAbfsStore().setClient(client);
+      Path src = new Path("/hbase/A1/A2");
+      Path dst = new Path("/hbase/A1/A3");
+
+      // Create sample files in the source directory
+      createFiles(fs, src, TOTAL_FILES);
+      // Create the destination directory
+      fs.mkdirs(dst);
+
+      // Track the number of copy operations
+      AtomicInteger copyCall = new AtomicInteger(0);
+      renameCrashInBetween(client, copyCall);
+      fs.rename(src, dst);
+
+      // Validate copy operation count
+      Assertions.assertThat(copyCall.get())
+          .describedAs("Copy operation count should be less than 10.")
+          .isLessThan(TOTAL_FILES);
+
+      // Assertions to validate renamed destination and source
+      validateRename(fs, src, dst, true, true, true);
+
+      copyCall.set(0);
+      // List Status on src, this will internally do rename recovery
+      triggerRenameRecovery(fs, src);
+
+      Assertions.assertThat(copyCall.get())
+          .describedAs("Copy operation count should be greater than 0.")
+          .isGreaterThan(0);
+
+      // Validate final state of destination and source
+      validateRename(fs, src, dst, false, true, false);
+    }
+  }
+
+  /**
+   * Tests renaming a directory with a failure during the copy operation.
+   * Since, destination path already exists, there will be adjustment in the
+   * destination path. After crash recovery, recovery should succeed even in the
+   * case when destination path already exists.
+   * Simulates an error when copying on the 6th call.
+   */
+  @Test
+  public void testRenameRecoveryWithMarkerPresentInDest() throws Exception {
+    try (AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem(
+        createConfig("5", "3", "2")))) {
+      assumeBlobServiceType();
+      AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
+      fs.getAbfsStore().setClient(client);
+      Path src = new Path("/hbase/A1/A2");
+      Path dst = new Path("/hbase/A1/A3");
+
+      // Create sample files in the source directory
+      createFiles(fs, src, TOTAL_FILES);
+
+      // Track the number of copy operations
+      AtomicInteger copyCall = new AtomicInteger(0);
+      renameCrashInBetween(client, copyCall);
+      fs.rename(src, dst);
+
+      // Validate copy operation count
+      Assertions.assertThat(copyCall.get())
+          .describedAs("Copy operation count should be less than 10.")
+          .isLessThan(TOTAL_FILES);
+
+      // This will create marker file in the destination
+      fs.exists(dst);
+
+      copyCall.set(0);
+      // List Status on src, this will internally do rename recovery
+      triggerRenameRecovery(fs, src);
+
+      Assertions.assertThat(copyCall.get())
+          .describedAs("Copy operation count should be greater than 0.")
+          .isGreaterThan(0);
+
+      // Validate final state of destination and source
+      validateRename(fs, src, dst, false, true, false);
+    }
+  }
+
+  /**
+   * Tests renaming a directory when the destination parent directory does not exist.
+   * The test verifies that the rename operation fails as expected.
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
+  @Test
+  public void testRenameWithDestParentNotExist() throws Exception {
+    try (AzureBlobFileSystem fs = this.getFileSystem()) {
+      Path src = new Path("/A1/A2");
+      Path dst = new Path("/A3/A4");
+
+      // Create sample files in the source directory
+      createFiles(fs, src, 1);
+
+      Assertions.assertThat(fs.rename(src, dst))
+          .describedAs("Rename should fail as destination parent not exist.")
+          .isFalse();
+    }
+  }
+
+  /**
+   * Tests renaming a directory when the destination parent directory is the root.
+   * The test verifies that the rename operation succeeds as expected.
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
+  @Test
+  public void testRenameWithDestParentAsRoot() throws Exception {
+    try (AzureBlobFileSystem fs = this.getFileSystem()) {
+      Path src = new Path("/A1/A2");
+      Path dst = new Path("/A3");
+
+      // Create sample files in the source directory
+      fs.create(new Path(src, "file.txt"));
+
+      Assertions.assertThat(fs.rename(src, dst))
+          .describedAs("Rename should succeed.")
+          .isTrue();
+      Assertions.assertThat(fs.exists(new Path(dst, "file.txt")))
+          .describedAs("File should exist in destination directory.")
+          .isTrue();
+    }
+  }
+
+  /**
+   * Tests renaming a file when the destination is root.
+   * The test verifies that the rename operation succeeds as expected.
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
+  @Test
+  public void testFileRenameWithDestAsRoot() throws Exception {
+    try (AzureBlobFileSystem fs = this.getFileSystem()) {
+      Path src = new Path("/A1/A2/file.txt");
+      Path dst = new Path("/");
+
+      fs.create(src);
+
+      Assertions.assertThat(fs.rename(src, dst))
+          .describedAs("Rename should succeed.")
+          .isTrue();
+      Assertions.assertThat(fs.exists(new Path(dst, "file.txt")))
+          .describedAs("File should exist in root.")
+          .isTrue();
+    }
+  }
+
+  /**
+   * Tests renaming a directory when the destination is root.
+   * The test verifies that the rename operation succeeds as expected.
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
+  @Test
+  public void testDirRenameWithDestAsRoot() throws Exception {
+    try (AzureBlobFileSystem fs = this.getFileSystem()) {
+      Path src = new Path("/A1/A2");
+      Path dst = new Path("/");
+
+      createFiles(fs, src, TOTAL_FILES);
+
+      Assertions.assertThat(fs.rename(src, dst))
+          .describedAs("Rename should succeed.")
+          .isTrue();
+      Assertions.assertThat(fs.exists(new Path(dst, src.getName())))
+          .describedAs("A2 directory should exist in root.")
+          .isTrue();
+    }
+  }
+
+  /**
    * Mocks the retry behavior for an AbfsDfsClient request. The method intercepts
    * the Abfs operation and simulates an HTTP conflict (HTTP 404) error on the
    * first invocation. It creates a mock HTTP operation with a PUT method and
@@ -2739,4 +2948,55 @@ public class ITestAzureBlobFileSystemRename extends
            }
          });
    }
+
+
+  /**
+   * Triggers rename recovery by calling getPathStatus on the source path.
+   * This simulates a scenario where the rename operation was interrupted,
+   * and the system needs to recover the state of the source path.
+   *
+   * @param fs The AzureBlobFileSystem instance.
+   * @param src The source path to trigger recovery on.
+   * @throws Exception If an error occurs during the recovery process.
+   */
+  private void triggerRenameRecovery(AzureBlobFileSystem fs, Path src) throws Exception {
+    // Trigger rename recovery
+    TracingContext tracingContext = new TracingContext(
+        getConfiguration().getClientCorrelationId(), fs.getFileSystemId(),
+        FSOperationType.GET_FILESTATUS, TracingHeaderFormat.ALL_ID_FORMAT, null);
+    AzureServiceErrorCode errorCode = LambdaTestUtils.intercept(
+        AbfsRestOperationException.class, () -> {
+          fs.getAbfsStore().getClient().getPathStatus(src.toUri().getPath(), true,
+          tracingContext, null);
+    }).getErrorCode();
+    Assertions.assertThat(errorCode)
+        .describedAs("Path had to be recovered from atomic rename operation.")
+        .isEqualTo(PATH_NOT_FOUND);
+  }
+
+  /**
+   * Simulates a failure during the rename operation by throwing an exception
+   * when the copyBlob method is called. This is used to test the behavior of
+   * the rename recovery operation when a blob already exists at the destination.
+   *
+   * @param client The AbfsBlobClient instance.
+   * @param copyCall The AtomicInteger to track the number of copy calls.
+   * @throws AzureBlobFileSystemException If an error occurs during the operation.
+   */
+  private void renameCrashInBetween(AbfsBlobClient client, AtomicInteger copyCall)
+      throws AzureBlobFileSystemException {
+    Mockito.doAnswer(copyRequest -> {
+      if (copyCall.get() == FAILED_CALL) {
+        throw new AbfsRestOperationException(
+            BLOB_ALREADY_EXISTS.getStatusCode(),
+            BLOB_ALREADY_EXISTS.getErrorCode(),
+            BLOB_ALREADY_EXISTS.getErrorMessage(),
+            new Exception());
+      }
+      copyCall.incrementAndGet();
+      return copyRequest.callRealMethod();
+    }).when(client).copyBlob(Mockito.any(Path.class),
+        Mockito.any(Path.class), Mockito.nullable(String.class),
+        Mockito.any(TracingContext.class));
+  }
 }
