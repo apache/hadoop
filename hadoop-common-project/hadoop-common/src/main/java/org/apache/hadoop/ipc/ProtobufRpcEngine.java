@@ -424,7 +424,8 @@ public class ProtobufRpcEngine implements RpcEngine {
         updateProcessingDetails(call, deltaNanos);
         call.setDeferredError(t);
         String detailedMetricsName = t.getClass().getSimpleName();
-        server.updateDeferredMetrics(call, detailedMetricsName, TimeUnit.NANOSECONDS.toMillis(deltaNanos));
+        server.updateDeferredMetrics(call, detailedMetricsName,
+            TimeUnit.NANOSECONDS.toMillis(deltaNanos));
       }
     }
 
