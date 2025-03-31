@@ -18,10 +18,6 @@
 
 ## <a name="introduction"></a> Introduction
 
-See also:
-* [FNS (non-HNS)](./fns_blob.html)
-* [Legacy-Deprecated-WASB](./wasb.html)
-
 The `hadoop-azure` module provides support for the Azure Data Lake Storage Gen2
 storage layer through the "abfs" connector
 
@@ -36,12 +32,16 @@ export HADOOP_OPTIONAL_TOOLS=hadoop-azure
 You can set this locally in your `.profile`/`.bashrc`, but note it won't
 propagate to jobs running in-cluster.
 
+See also:
+* [FNS (non-HNS)](./fns_blob.html)
+* [Legacy-Deprecated-WASB](./wasb.html)
+* [Testing](./testing_azure.html)
 
 ## <a name="features"></a> Features of the ABFS connector.
 
 * Supports reading and writing data stored in an Azure Blob Storage account.
 * *Fully Consistent* view of the storage across all clients.
-* Can read data written through the `wasb:` connector.
+* Can read data written through the ` deprecated wasb:` connector.
 * Presents a hierarchical file system view by implementing the standard Hadoop
   [`FileSystem`](../api/org/apache/hadoop/fs/FileSystem.html) interface.
 * Supports configuration of multiple Azure Blob Storage accounts.
@@ -87,8 +87,8 @@ creating through the command line, using the option `--hierarchical-namespace tr
 
 _You cannot enable Hierarchical Namespaces on an existing storage account_
 
-Containers in a storage account with Hierarchical Namespaces are
-not (currently) readable through the `wasb:` connector.
+_**Containers in a storage account with Hierarchical Namespaces are
+not (currently) readable through the `deprecated wasb:` connector.**_
 
 Some of the `az storage` command line commands fail too, for example:
 

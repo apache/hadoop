@@ -12,13 +12,13 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# Hadoop Azure Support: Azure Blob Storage
+# Azure Blob Storage Support by Deprecated WASB Driver
 
 <!-- MACRO{toc|fromDepth=1|toDepth=3} -->
 
 See also:
 
-* [WASB](./wasb.html)
+* [WASB Deprecation](./wasb.html)
 * [ABFS](./index.html)
 * [Namespace Disabled Accounts on ABFS](./fns_blob.html)
 * [Testing](./testing_azure.html)
