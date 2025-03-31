@@ -220,6 +220,8 @@ public class TrashPolicyDefault extends TrashPolicy {
 
   /**
    * @deprecated use {@link #createCheckpoint(Instant)} instead
+   * @param date Date to create checkpoint in
+   * @throws IOException raised on errors performing I/O.
    */
   @SuppressWarnings("deprecation")
   @Deprecated
