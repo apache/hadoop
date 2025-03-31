@@ -19,7 +19,8 @@ cp "$FILE" "$OUTPUT_FILE"
 
 contactTeamMsg="For any queries or support, kindly reach out to us at 'askabfs@microsoft.com'."
 endpoint=".dfs."
-printf "Select 'HNS' if you're migrating to ABFS driver with Hierarchical Namespace enabled account, or 'Non-HNS' if you're migrating with Non-Hierarchical Namespace (FNS) account. \n"
+printf "Select 'HNS' if you're migrating to ABFS driver with Hierarchical Namespace enabled account,
+or 'Non-HNS' if you're migrating with Non-Hierarchical Namespace (FNS) account. \n"
 printf "WARNING: Please ensure the correct option is chosen as it will affect the configuration changes made to the file. \n"
 printf "If you are unsure, follow the instructions below to check from Azure Portal: \n"
 printf "* Go to the Azure Portal and navigate to your storage account. \n"
@@ -122,9 +123,10 @@ fi
 # Change the value of fs.defaultFS
 if xmlstarlet sel -t -v "//property[name='fs.defaultFS']/value" "$OUTPUT_FILE" | grep -q "."; then
     if xmlstarlet sel -t -v "//property[name='fs.defaultFS']/value" "$OUTPUT_FILE" | grep -q ".blob."; then
-        xmlstarlet ed -L -u "//property[name='fs.defaultFS']/value" -x "concat('abfs://', substring-before(substring-after(., 'wasb://'), '@'), '@', substring-before(substring-after(., '@'), '.blob.'), '$endpoint', 'core.windows.net')" "$OUTPUT_FILE"
+        xmlstarlet ed -L -u "//property[name='fs.defaultFS']/value" -x "concat('abfs', substring-before(substring-after(., 'wasb'), '@'), '@',
+        substring-before(substring-after(., '@'), '.blob.'), '$endpoint', 'core.windows.net')" "$OUTPUT_FILE"
     else
-        echo "Error: 'fs.defaultFS' exists but does not contain '.blob.'. Exiting..."
+        echo "ERROR: 'fs.defaultFS' exists but does not contain Blob endpoint. Exiting..."
         exit 1
     fi
 fi
