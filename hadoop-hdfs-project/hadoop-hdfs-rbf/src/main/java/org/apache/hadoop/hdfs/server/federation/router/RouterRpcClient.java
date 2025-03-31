@@ -199,8 +199,13 @@ public class RouterRpcClient {
     } else {
       workQueue = new LinkedBlockingQueue<>();
     }
-    this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
-        0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
+    
+    if (router.getRpcServer().isAsync()) {
+      this.executorService = null;
+    } else {
+      this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
+          0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
+    }
 
     this.rpcMonitor = monitor;
 
@@ -364,9 +369,11 @@ public class RouterRpcClient {
    */
   public String getAsyncCallerPoolJson() {
     final Map<String, Integer> info = new LinkedHashMap<>();
-    info.put("active", executorService.getActiveCount());
-    info.put("total", executorService.getPoolSize());
-    info.put("max", executorService.getMaximumPoolSize());
+    if (executorService != null) {
+      info.put("active", executorService.getActiveCount());
+      info.put("total", executorService.getPoolSize());
+      info.put("max", executorService.getMaximumPoolSize());
+    }
     return JSON.toString(info);
   }
 
