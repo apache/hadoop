@@ -19,8 +19,7 @@ package org.apache.hadoop.hdfs.server.federation.router.async.utils;
 
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -31,10 +30,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The TestAsyncUtil class provides a suite of test cases for the
@@ -82,7 +81,6 @@ public class TestAsyncUtil {
     ASYNC
   }
 
-  @Before
   public void setUp(ExecutionMode mode) {
     if (mode.equals(ExecutionMode.ASYNC)) {
       baseClass = new AsyncClass(TIME_CONSUMING);
@@ -92,7 +90,7 @@ public class TestAsyncUtil {
     }
   }
 
-  @After
+  @AfterEach
   public void after() {
     baseClass = null;
     enableAsync = false;

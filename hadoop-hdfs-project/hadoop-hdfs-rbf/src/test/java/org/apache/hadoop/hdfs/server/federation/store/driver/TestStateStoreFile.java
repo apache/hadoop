@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.federation.store.driver;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_STORE_FILE_ASYNC_THREADS;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 

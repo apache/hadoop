@@ -18,12 +18,12 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -72,9 +72,9 @@ import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests quota behaviors in Router-based Federation.
@@ -88,7 +88,7 @@ public class TestRouterQuota {
 
   private static final int BLOCK_SIZE = 512;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
 
     // Build and start a federated cluster
@@ -119,7 +119,7 @@ public class TestRouterQuota {
     resolver = (MountTableResolver) router.getSubclusterResolver();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.stopRouter(routerContext);

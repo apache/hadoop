@@ -18,11 +18,11 @@
 package org.apache.hadoop.hdfs.server.federation.router.async;
 
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 /**
  * Used to test the functionality of {@link RouterAsyncUserProtocol}.
@@ -31,7 +31,7 @@ public class TestRouterAsyncUserProtocol extends RouterAsyncProtocolTestBase {
 
   private RouterAsyncUserProtocol asyncUserProtocol;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     asyncUserProtocol = new RouterAsyncUserProtocol(getRouterAsyncRpcServer());
   }

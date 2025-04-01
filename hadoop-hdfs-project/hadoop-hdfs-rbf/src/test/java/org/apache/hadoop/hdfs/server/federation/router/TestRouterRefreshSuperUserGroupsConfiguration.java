@@ -31,9 +31,9 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +47,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -67,7 +67,7 @@ public class TestRouterRefreshSuperUserGroupsConfiguration {
   private static final String LOOPBACK_ADDRESS = "127.0.0.1";
 
   private String tempResource = null;
-  @Before
+  @BeforeEach
   public void setUpCluster() throws Exception {
     Configuration conf = new RouterConfigBuilder()
         .rpc()
@@ -78,7 +78,7 @@ public class TestRouterRefreshSuperUserGroupsConfiguration {
     cluster.startRouters();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -165,7 +165,7 @@ public class TestRouterRefreshSuperUserGroupsConfiguration {
     int clientRes =
         routerAdmin.run(new String[]{"-refreshSuperUserGroupsConfiguration"});
 
-    assertEquals("CLI command was not successful", 0, clientRes);
+    assertEquals(0, clientRes, "CLI command was not successful");
     ProxyUsers.authorize(ugi, LOOPBACK_ADDRESS);
   }
 
