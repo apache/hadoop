@@ -200,7 +200,7 @@ public class RouterRpcClient {
       workQueue = new LinkedBlockingQueue<>();
     }
     
-    if (router.getRpcServer().isAsync()) {
+    if (router.isAsync()) {
       this.executorService = null;
     } else {
       this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
@@ -2033,7 +2033,6 @@ public class RouterRpcClient {
     }
     return isUnavailableException(ioe);
   }
-
 
   /**
    * The {@link  ExecutionStatus} class is a utility class used to track the status of
