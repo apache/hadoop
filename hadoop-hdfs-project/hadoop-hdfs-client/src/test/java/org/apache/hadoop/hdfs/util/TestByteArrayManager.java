@@ -48,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test {@link ByteArrayManager}.
@@ -187,7 +188,7 @@ public class TestByteArrayManager {
           if (threadState != Thread.State.RUNNABLE
               && threadState != Thread.State.WAITING
               && threadState != Thread.State.TIMED_WAITING) {
-            Assertions.fail("threadState = " + threadState);
+            fail("threadState = " + threadState);
           }
         }
 
@@ -377,7 +378,7 @@ public class TestByteArrayManager {
         for(AssertionError e : runners[i].assertionErrors) {
           LOG.error("AssertionError " + i, e);
         }
-        Assertions.fail(runners[i].assertionErrors.size() + " AssertionError(s)");
+        fail(runners[i].assertionErrors.size() + " AssertionError(s)");
       }
       
       final int arrayLength = Runner.index2arrayLength(i);
@@ -396,7 +397,7 @@ public class TestByteArrayManager {
       Thread.sleep(ms);
     } catch (InterruptedException e) {
       e.printStackTrace();
-      Assertions.fail("Sleep is interrupted: " + e);
+      fail("Sleep is interrupted: " + e);
     }
   }
 
@@ -512,7 +513,7 @@ public class TestByteArrayManager {
             }
           } catch (Exception e) {
             e.printStackTrace();
-            Assertions.fail(this + " has " + e);
+            fail(this + " has " + e);
           }
         }
 

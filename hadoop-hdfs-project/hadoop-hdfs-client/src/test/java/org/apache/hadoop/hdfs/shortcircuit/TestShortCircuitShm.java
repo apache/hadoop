@@ -23,7 +23,6 @@ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.ShmId;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.Slot;
 import org.apache.hadoop.io.nativeio.SharedFileDescriptorFactory;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assume;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -38,6 +37,7 @@ import java.util.Iterator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestShortCircuitShm {
   public static final Logger LOG = LoggerFactory.getLogger(
@@ -47,7 +47,7 @@ public class TestShortCircuitShm {
 
   @BeforeEach
   public void before() {
-    Assume.assumeTrue(null == 
+    assumeTrue(null ==
         SharedFileDescriptorFactory.getLoadingFailureReason());
   }
 

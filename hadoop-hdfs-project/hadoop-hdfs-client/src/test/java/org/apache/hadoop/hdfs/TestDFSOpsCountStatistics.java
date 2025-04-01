@@ -24,12 +24,9 @@ import org.apache.hadoop.fs.StorageStatistics.LongStatistic;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
 
-import org.junit.rules.ExpectedException;
-import org.junit.rules.Timeout;
-
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * This tests basic operations of {@link DFSOpsCountStatistics} class.
  */
+@Timeout(10)
 public class TestDFSOpsCountStatistics {
 
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -62,11 +60,6 @@ public class TestDFSOpsCountStatistics {
   private final DFSOpsCountStatistics statistics =
       new DFSOpsCountStatistics();
   private final Map<OpType, AtomicLong> expectedOpsCountMap = new HashMap<>();
-
-  @Rule
-  public final Timeout globalTimeout = new Timeout(10 * 1000);
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
 
   @BeforeEach
   public void setup() {

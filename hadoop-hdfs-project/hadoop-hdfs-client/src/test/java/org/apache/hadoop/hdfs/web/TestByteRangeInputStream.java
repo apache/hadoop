@@ -102,10 +102,10 @@ public class TestByteRangeInputStream {
     bris.seek(100);
     bris.read();
 
-    assertEquals(
-       100, bris.startPos, "Seek to 100 bytes made incorrectly (offset Check)");
-    assertEquals(101
-,         bris.getPos(), "getPos should return 101 after reading one byte");
+    assertEquals(100, bris.startPos,
+        "Seek to 100 bytes made incorrectly (offset Check)");
+    assertEquals(101, bris.getPos(),
+        "getPos should return 101 after reading one byte");
     verify(rMock, times(1)).connect(100, true);
 
     bris.seek(101);
