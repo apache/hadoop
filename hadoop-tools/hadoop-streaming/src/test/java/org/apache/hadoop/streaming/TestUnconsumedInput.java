@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.streaming;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.DataOutputStream;
 import java.io.File;

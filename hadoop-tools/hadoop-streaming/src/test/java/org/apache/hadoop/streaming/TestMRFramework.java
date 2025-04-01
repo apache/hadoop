@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.streaming;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRConfig;
@@ -31,18 +32,18 @@ public class TestMRFramework {
     JobConf jobConf = new JobConf();
     jobConf.set(JTConfig.JT_IPC_ADDRESS, MRConfig.LOCAL_FRAMEWORK_NAME);
     jobConf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
-    assertFalse(
-        StreamUtil.isLocalJobTracker(jobConf), "Expected 'isLocal' to be false");
+    assertFalse(StreamUtil.isLocalJobTracker(jobConf),
+        "Expected 'isLocal' to be false");
     
     jobConf.set(JTConfig.JT_IPC_ADDRESS, MRConfig.LOCAL_FRAMEWORK_NAME);
     jobConf.set(MRConfig.FRAMEWORK_NAME, MRConfig.CLASSIC_FRAMEWORK_NAME);
-    assertFalse(
-        StreamUtil.isLocalJobTracker(jobConf), "Expected 'isLocal' to be false");
+    assertFalse(StreamUtil.isLocalJobTracker(jobConf),
+        "Expected 'isLocal' to be false");
     
     jobConf.set(JTConfig.JT_IPC_ADDRESS, "jthost:9090");
     jobConf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
-    assertTrue(
-        StreamUtil.isLocalJobTracker(jobConf), "Expected 'isLocal' to be true");
+    assertTrue(StreamUtil.isLocalJobTracker(jobConf),
+        "Expected 'isLocal' to be true");
   }
 
 }

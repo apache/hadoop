@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.streaming;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -32,7 +35,6 @@ import org.apache.hadoop.typedbytes.TypedBytesOutput;
 import org.apache.hadoop.typedbytes.TypedBytesWritable;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
 
 public class TestLoadTypedBytes {
 
@@ -73,8 +75,7 @@ public class TestLoadTypedBytes {
       while (reader.next(key, value)) {
         assertEquals(Long.class, key.getValue().getClass());
         assertEquals(String.class, value.getValue().getClass());
-        assertTrue(
-         Integer.parseInt(value.toString()) % 10 == 0, "Invalid record.");
+        assertTrue(Integer.parseInt(value.toString()) % 10 == 0, "Invalid record.");
         counter++;
       }
       assertEquals(100, counter, "Wrong number of records.");

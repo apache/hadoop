@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.streaming.io;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
-
-import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -39,12 +39,12 @@ public class TestKeyOnlyTextOutputReader {
     KeyOnlyTextOutputReader outputReader = new KeyOnlyTextOutputReader();
     outputReader.initialize(pipeMapRed);
     outputReader.readKeyValue();
-    Assertions.assertEquals(new Text("key,value"), outputReader.getCurrentKey());
+    assertEquals(new Text("key,value"), outputReader.getCurrentKey());
     outputReader.readKeyValue();
-    Assertions.assertEquals(new Text("key2,value2"), outputReader.getCurrentKey());
+    assertEquals(new Text("key2,value2"), outputReader.getCurrentKey());
     outputReader.readKeyValue();
-    Assertions.assertEquals(new Text("nocomma"), outputReader.getCurrentKey());
-    Assertions.assertEquals(false, outputReader.readKeyValue());
+    assertEquals(new Text("nocomma"), outputReader.getCurrentKey());
+    assertEquals(false, outputReader.readKeyValue());
   }
   
   private class MyPipeMapRed extends PipeMapper {

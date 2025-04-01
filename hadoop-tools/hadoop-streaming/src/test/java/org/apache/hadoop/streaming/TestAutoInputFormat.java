@@ -34,10 +34,10 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.streaming.AutoInputFormat;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestAutoInputFormat {
 
@@ -95,11 +95,11 @@ public class TestAutoInputFormat {
           if (key instanceof LongWritable) {
             assertEquals(Text.class, value.getClass(), "Wrong value class.");
             assertTrue(Integer.parseInt(((Text) value)
-              .toString()) % 10 == 0, "Invalid value");
+                .toString()) % 10 == 0, "Invalid value");
           } else {
             assertEquals(IntWritable.class, key.getClass(), "Wrong key class.");
             assertEquals(LongWritable.class, value
-              .getClass(), "Wrong value class.");
+                .getClass(), "Wrong value class.");
             assertTrue(((IntWritable) key).get() % 11 == 0, "Invalid key.");
             assertTrue(((LongWritable) value).get() % 12 == 0, "Invalid value.");
           }

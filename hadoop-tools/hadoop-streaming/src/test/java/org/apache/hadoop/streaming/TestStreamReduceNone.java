@@ -22,7 +22,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.fs.FileUtil;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 /**

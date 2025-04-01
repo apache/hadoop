@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.streaming;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.net.MalformedURLException;
 
 import org.apache.hadoop.util.JarFinder;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
 import org.apache.hadoop.conf.Configuration;
 
 /**

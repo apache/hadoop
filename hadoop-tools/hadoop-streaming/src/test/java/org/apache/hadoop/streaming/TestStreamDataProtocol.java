@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * This class tests hadoopStreaming in MapReduce local mode.

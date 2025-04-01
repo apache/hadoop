@@ -23,7 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.mapred.Counters;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestStreamingCombiner extends TestStreaming {
 

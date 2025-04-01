@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.streaming;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -28,11 +31,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.streaming.DumpTypedBytes;
 import org.apache.hadoop.typedbytes.TypedBytesInput;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
 
 public class TestDumpTypedBytes {
 
@@ -75,8 +76,7 @@ public class TestDumpTypedBytes {
         assertEquals(Long.class, key.getClass()); // offset
         Object value = tbinput.read();
         assertEquals(String.class, value.getClass());
-        assertTrue(
-         Integer.parseInt(value.toString()) % 10 == 0, "Invalid output.");
+        assertTrue(Integer.parseInt(value.toString()) % 10 == 0, "Invalid output.");
         counter++;
         key = tbinput.read();
       }
