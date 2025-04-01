@@ -42,7 +42,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -600,8 +599,8 @@ public class TestRequestHedgingProxyProvider {
         if (ex instanceof RemoteException) {
           Exception rEx = ((RemoteException) ex)
               .unwrapRemoteException();
-          assertTrue(
-             rEx instanceof StandbyException, "Unexpected RemoteException: " + rEx.getMessage());
+          assertTrue(rEx instanceof StandbyException,
+              "Unexpected RemoteException: " + rEx.getMessage());
         } else {
           assertTrue(ex instanceof ConnectException);
         }

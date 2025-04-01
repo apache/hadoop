@@ -24,7 +24,6 @@ import org.apache.hadoop.hdfs.util.ByteArrayManager.FixedLengthManager;
 import org.apache.hadoop.hdfs.util.ByteArrayManager.ManagerMap;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -449,8 +448,8 @@ public class TestByteArrayManager {
               maxArrayLength - lower) + lower + 1;
           final byte[] array = bam.newByteArray(arrayLength);
           try {
-            assertEquals(
-               maxArrayLength, array.length, "arrayLength=" + arrayLength + ", lower=" + lower);
+            assertEquals(maxArrayLength, array.length, "arrayLength=" + arrayLength +
+                ", lower=" + lower);
           } catch(AssertionError e) {
             assertionErrors.add(e);
           }
