@@ -23,9 +23,9 @@ import org.apache.hadoop.fs.StorageStatistics.LongStatistic;
 
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
 
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
@@ -44,11 +44,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.hadoop.util.concurrent.HadoopExecutors.newFixedThreadPool;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This tests basic operations of {@link DFSOpsCountStatistics} class.
@@ -68,7 +68,7 @@ public class TestDFSOpsCountStatistics {
   @Rule
   public final ExpectedException exception = ExpectedException.none();
 
-  @Before
+  @BeforeEach
   public void setup() {
     for (OpType opType : OpType.values()) {
       expectedOpsCountMap.put(opType, new AtomicLong());
@@ -178,7 +178,7 @@ public class TestDFSOpsCountStatistics {
       startBlocker.countDown(); // all threads start making directories
       allDone.await(); // wait until all threads are done
 
-      assertNull("Child failed with exception.", childError.get());
+      assertNull(childError.get(), "Child failed with exception.");
       verifyStatistics();
     } finally {
       threadPool.shutdownNow();
@@ -207,9 +207,9 @@ public class TestDFSOpsCountStatistics {
     for (OpType opType : OpType.values()) {
       assertNotNull(expectedOpsCountMap.get(opType));
       assertNotNull(statistics.getLong(opType.getSymbol()));
-      assertEquals("Not expected count for operation " + opType.getSymbol(),
-          expectedOpsCountMap.get(opType).longValue(),
-          statistics.getLong(opType.getSymbol()).longValue());
+      assertEquals(expectedOpsCountMap.get(opType).longValue(),
+          statistics.getLong(opType.getSymbol()).longValue(),
+          "Not expected count for operation " + opType.getSymbol());
     }
   }
 
