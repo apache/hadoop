@@ -75,6 +75,7 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
@@ -89,6 +90,7 @@ public class AbfsConfiguration{
 
   private final Configuration rawConfig;
   private final String accountName;
+  private String fsName;
   // Service type identified from URL used to initialize FileSystem.
   private final AbfsServiceType fsConfiguredServiceType;
   private final boolean isSecure;
@@ -486,6 +488,24 @@ public class AbfsConfiguration{
   }
 
   /**
+   * Constructor for AbfsConfiguration for retrieve the FsName.
+   * @param rawConfig used to initialize the configuration.
+   * @param accountName the name of the azure storage account.
+   * @param fsName the name of the file system (container name).
+   * @param fsConfiguredServiceType service type configured for the file system.
+   * @throws IllegalAccessException if the field is not accessible.
+   * @throws IOException if an I/O error occurs.
+   */
+  public AbfsConfiguration(final Configuration rawConfig,
+      String accountName,
+      String fsName,
+      AbfsServiceType fsConfiguredServiceType)
+      throws IllegalAccessException, IOException {
+    this(rawConfig, accountName, fsConfiguredServiceType);
+    this.fsName = fsName;
+  }
+
+  /**
    * Constructor for AbfsConfiguration for default service type i.e. DFS.
    * @param rawConfig used to initialize the configuration.
    * @param accountName the name of the azure storage account.
@@ -584,7 +604,17 @@ public class AbfsConfiguration{
    * @return Account-specific configuration key
    */
   public String accountConf(String key) {
-    return key + "." + accountName;
+    return key + DOT + accountName;
+  }
+
+  /**
+   * Appends the container, account name to a configuration key yielding the
+   * container-specific form.
+   * @param key Account-agnostic configuration key
+   * @return Container-specific configuration key
+   */
+  public String containerConf(String key) {
+    return key + DOT + fsName + DOT + accountName;
   }
 
   /**
@@ -642,17 +672,19 @@ public class AbfsConfiguration{
   }
 
   /**
-   * Returns the account-specific password in string form if it exists, then
+   * Returns the container-specific password if it exists,
+   * else searches for the account-specific password, else finally
    * looks for an account-agnostic value.
    * @param key Account-agnostic configuration key
    * @return value in String form if one exists, else null
    * @throws IOException if parsing fails.
    */
   public String getPasswordString(String key) throws IOException {
-    char[] passchars = rawConfig.getPassword(accountConf(key));
-    if (passchars == null) {
-      passchars = rawConfig.getPassword(key);
-    }
+    char[] passchars = rawConfig.getPassword(containerConf(key)) != null
+        ? rawConfig.getPassword(containerConf(key))
+        : rawConfig.getPassword(accountConf(key)) != null
+            ? rawConfig.getPassword(accountConf(key))
+            : rawConfig.getPassword(key);
     if (passchars != null) {
       return new String(passchars);
     }
