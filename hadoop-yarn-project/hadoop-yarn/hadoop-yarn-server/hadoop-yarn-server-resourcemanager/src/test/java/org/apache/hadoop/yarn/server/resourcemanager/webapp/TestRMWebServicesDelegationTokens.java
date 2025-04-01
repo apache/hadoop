@@ -68,23 +68,20 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -95,7 +92,6 @@ import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.logging.LoggingFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 
-@RunWith(Parameterized.class)
 public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
 
   private static File testRootDir;
@@ -217,12 +213,11 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     }
   }
 
-  @Parameters
   public static Collection<Object[]> guiceConfigs() {
-    return Arrays.asList(new Object[][] { { 0 }, { 1 } });
+    return Arrays.asList(new Object[][]{{0}, {1}});
   }
 
-  public TestRMWebServicesDelegationTokens(int run) throws Exception {
+  public void initTestRMWebServicesDelegationTokens(int run) throws Exception {
     switch (run) {
     case 0:
     default:
@@ -232,9 +227,10 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
       config.register(new SimpleAuth());
       break;
     }
+    setUp();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupKDC() throws Exception {
     testRootDir = new File("target",
       TestRMWebServicesDelegationTokens.class.getName() + "-root");
@@ -244,7 +240,6 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
       "client", "client2", "client3");
   }
 
-  @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -255,14 +250,14 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     UserGroupInformation.setConfiguration(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdownKdc() {
     if (testMiniKDC != null) {
       testMiniKDC.stop();
     }
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() throws Exception {
     if (rm != null) {
@@ -275,8 +270,10 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
   // Simple test - try to create a delegation token via web services and check
   // to make sure we get back a valid token. Validate token using RM function
   // calls. It should only succeed with the kerberos filter
-  @Test
-  public void testCreateDelegationToken() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testCreateDelegationToken(int run) throws Exception {
+    initTestRMWebServicesDelegationTokens(run);
     rm.start();
     final String renewer = "test-renewer";
     DelegationToken token = new DelegationToken();
@@ -359,8 +356,10 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
 
   // Test to verify renew functionality - create a token and then try to renew
   // it. The renewer should succeed; owner and third user should fail
-  @Test
-  public void testRenewDelegationToken() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testRenewDelegationToken(int run) throws Exception {
+    initTestRMWebServicesDelegationTokens(run);
     this.client().register(new LoggingFeature());
     rm.start();
     final String renewer = "client2";
@@ -430,7 +429,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
             String message =
                 "Expiration time not as expected: old = " + oldExpirationTime
                     + "; new = " + tok.getNextExpirationTime();
-            assertTrue(message, tok.getNextExpirationTime() > oldExpirationTime);
+            assertTrue(tok.getNextExpirationTime() > oldExpirationTime, message);
             oldExpirationTime = tok.getNextExpirationTime();
             // artificial sleep to ensure we get a different expiration time
             Thread.sleep(1000);
@@ -444,7 +443,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
             message =
                 "Expiration time not as expected: old = " + oldExpirationTime
                     + "; new = " + tok.getNextExpirationTime();
-            assertTrue(message, tok.getNextExpirationTime() > oldExpirationTime);
+            assertTrue(tok.getNextExpirationTime() > oldExpirationTime, message);
             return tok;
           }
         });
@@ -527,8 +526,10 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
 
   // Test to verify cancel functionality - create a token and then try to cancel
   // it. The owner and renewer should succeed; third user should fail
-  @Test
-  public void testCancelDelegationToken() throws Exception {
+  @MethodSource("guiceConfigs")
+  @ParameterizedTest
+  public void testCancelDelegationToken(int run) throws Exception {
+    initTestRMWebServicesDelegationTokens(run);
     rm.start();
     if (isKerberosAuth == false) {
       verifySimpleAuthCancel();
@@ -760,7 +761,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     is.setCharacterStream(new StringReader(tokenXML));
     Document dom = db.parse(is);
     NodeList nodes = dom.getElementsByTagName("delegation-token");
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
     Element element = (Element) nodes.item(0);
     DelegationToken ret = new DelegationToken();
     String token = WebServicesTestUtils.getXmlString(element, "token");
@@ -810,7 +811,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     } catch (InvalidToken it) {
       exceptionCaught = true;
     }
-    assertTrue("InvalidToken exception not thrown", exceptionCaught);
+    assertTrue(exceptionCaught, "InvalidToken exception not thrown");
     assertFalse(rm.getRMContext().getRMDelegationTokenSecretManager()
       .getAllTokens().containsKey(ident));
   }

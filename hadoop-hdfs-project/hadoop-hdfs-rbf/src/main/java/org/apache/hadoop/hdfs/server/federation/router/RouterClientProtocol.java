@@ -2178,12 +2178,12 @@ public class RouterClientProtocol implements ClientProtocol {
   protected HdfsFileStatus getFileInfoAll(final List<RemoteLocation> locations,
       final RemoteMethod method, long timeOutMs) throws IOException {
 
-    // Get the file info from everybody
+    // Get the file info from everybody.
     Map<RemoteLocation, HdfsFileStatus> results =
         rpcClient.invokeConcurrent(locations, method, false, false, timeOutMs,
             HdfsFileStatus.class);
     int children = 0;
-    // We return the first file
+    // We return the first file.
     HdfsFileStatus dirStatus = null;
     for (RemoteLocation loc : locations) {
       HdfsFileStatus fileStatus = results.get(loc);

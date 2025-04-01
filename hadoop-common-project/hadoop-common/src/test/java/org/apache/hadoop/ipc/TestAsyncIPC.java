@@ -38,7 +38,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -65,7 +69,7 @@ public class TestAsyncIPC {
     conf = new Configuration();
     conf.setInt(CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY, 10000);
     Client.setPingInterval(conf, TestIPC.PING_INTERVAL);
-    // set asynchronous mode for main thread
+    // Set asynchronous mode for main thread.
     Client.setAsynchronousMode(true);
   }
 
@@ -78,17 +82,22 @@ public class TestAsyncIPC {
         new HashMap<Integer, Future<LongWritable>>();
     Map<Integer, Long> expectedValues = new HashMap<Integer, Long>();
 
-    public AsyncCaller(Client client, InetSocketAddress server, int count) {
+    AsyncCaller(Client client, InetSocketAddress server, int count,
+        boolean checkAsyncCallEnabled) {
       this.client = client;
+      // Disable checkAsyncCall.
+      if (!checkAsyncCallEnabled) {
+        this.client.setMaxAsyncCalls(-1);
+      }
       this.server = server;
       this.count = count;
-      // set asynchronous mode, since AsyncCaller extends Thread
+      // Set asynchronous mode, since AsyncCaller extends Thread.
       Client.setAsynchronousMode(true);
     }
 
     @Override
     public void run() {
-      // in case Thread#Start is called, which will spawn new thread
+      // In case Thread#Start is called, which will spawn new thread.
       Client.setAsynchronousMode(true);
       for (int i = 0; i < count; i++) {
         try {
@@ -227,7 +236,7 @@ public class TestAsyncIPC {
       this.client = client;
       this.server = server;
       this.count = count;
-      // set asynchronous mode, since AsyncLimitlCaller extends Thread
+      // Set asynchronous mode, since AsyncLimitlCaller extends Thread.
       Client.setAsynchronousMode(true);
       this.callerId = callerId;
     }
@@ -287,10 +296,17 @@ public class TestAsyncIPC {
 
   @Test
   @Timeout(value = 60)
+  public void testAsyncCallCheckDisabled() throws IOException, InterruptedException,
+      ExecutionException {
+    internalTestAsyncCall(3, true, 2, 5, 10, false);
+  }
+
+  @Test
+  @Timeout(value = 60)
   public void testAsyncCall() throws IOException, InterruptedException,
       ExecutionException {
-    internalTestAsyncCall(3, false, 2, 5, 100);
-    internalTestAsyncCall(3, true, 2, 5, 10);
+    internalTestAsyncCall(3, false, 2, 5, 100, true);
+    internalTestAsyncCall(3, true, 2, 5, 10, true);
   }
 
   @Test
@@ -301,7 +317,8 @@ public class TestAsyncIPC {
   }
 
   public void internalTestAsyncCall(int handlerCount, boolean handlerSleep,
-      int clientCount, int callerCount, int callCount) throws IOException,
+      int clientCount, int callerCount, int callCount,
+      boolean checkAsyncCallEnabled) throws IOException,
       InterruptedException, ExecutionException {
     Server server = new TestIPC.TestServer(handlerCount, handlerSleep, conf);
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
@@ -314,10 +331,14 @@ public class TestAsyncIPC {
 
     AsyncCaller[] callers = new AsyncCaller[callerCount];
     for (int i = 0; i < callerCount; i++) {
-      callers[i] = new AsyncCaller(clients[i % clientCount], addr, callCount);
+      callers[i] = new AsyncCaller(clients[i % clientCount], addr, callCount,
+          checkAsyncCallEnabled);
       callers[i].start();
     }
     for (int i = 0; i < callerCount; i++) {
+      if (!checkAsyncCallEnabled) {
+        assertEquals(0, clients[i % clientCount].getAsyncCallCounter());
+      }
       callers[i].join();
       callers[i].assertReturnValues();
     }
@@ -340,7 +361,7 @@ public class TestAsyncIPC {
     int asyncCallCount = client.getAsyncCallCount();
 
     try {
-      AsyncCaller caller = new AsyncCaller(client, addr, callCount);
+      AsyncCaller caller = new AsyncCaller(client, addr, callCount, true);
       caller.run();
       caller.assertReturnValues();
       caller.assertReturnValues();
@@ -364,7 +385,7 @@ public class TestAsyncIPC {
     final Client client = new Client(LongWritable.class, conf);
 
     try {
-      final AsyncCaller caller = new AsyncCaller(client, addr, 10);
+      final AsyncCaller caller = new AsyncCaller(client, addr, 10, true);
       caller.run();
       caller.assertReturnValues(10, TimeUnit.MILLISECONDS);
     } finally {
@@ -463,7 +484,7 @@ public class TestAsyncIPC {
     try {
       InetSocketAddress addr = NetUtils.getConnectAddress(server);
       server.start();
-      final AsyncCaller caller = new AsyncCaller(client, addr, 4);
+      final AsyncCaller caller = new AsyncCaller(client, addr, 4, true);
       caller.run();
       caller.assertReturnValues();
     } finally {
@@ -501,7 +522,7 @@ public class TestAsyncIPC {
     try {
       InetSocketAddress addr = NetUtils.getConnectAddress(server);
       server.start();
-      final AsyncCaller caller = new AsyncCaller(client, addr, 10);
+      final AsyncCaller caller = new AsyncCaller(client, addr, 10, true);
       caller.run();
       caller.assertReturnValues();
     } finally {
@@ -538,7 +559,7 @@ public class TestAsyncIPC {
     try {
       InetSocketAddress addr = NetUtils.getConnectAddress(server);
       server.start();
-      final AsyncCaller caller = new AsyncCaller(client, addr, 10);
+      final AsyncCaller caller = new AsyncCaller(client, addr, 10, true);
       caller.run();
       caller.assertReturnValues();
     } finally {
@@ -580,7 +601,7 @@ public class TestAsyncIPC {
       server.start();
       AsyncCaller[] callers = new AsyncCaller[callerCount];
       for (int i = 0; i < callerCount; ++i) {
-        callers[i] = new AsyncCaller(client, addr, perCallerCallCount);
+        callers[i] = new AsyncCaller(client, addr, perCallerCallCount, true);
         callers[i].start();
       }
       for (int i = 0; i < callerCount; ++i) {

@@ -25,10 +25,17 @@ import org.apache.hadoop.yarn.server.volume.csi.VolumeCapabilityRange;
 import org.apache.hadoop.yarn.server.volume.csi.VolumeMetaData;
 import org.apache.hadoop.yarn.server.volume.csi.exception.InvalidVolumeException;
 import org.apache.hadoop.yarn.server.volume.csi.VolumeId;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test cases for volume specification definition and parsing.
@@ -51,26 +58,26 @@ public class TestVolumeMetaData {
         .mountPoint("/mnt/data")
         .build();
 
-    Assert.assertEquals(new VolumeId("id-000001"), meta.getVolumeId());
-    Assert.assertEquals(1L, meta.getVolumeCapabilityRange().getMinCapacity());
-    Assert.assertEquals(5L, meta.getVolumeCapabilityRange().getMaxCapacity());
-    Assert.assertEquals("Gi", meta.getVolumeCapabilityRange().getUnit());
-    Assert.assertEquals("csi-demo-driver", meta.getDriverName());
-    Assert.assertEquals("/mnt/data", meta.getMountPoint());
-    Assert.assertNull(meta.getVolumeName());
-    Assert.assertTrue(meta.isProvisionedVolume());
+    assertEquals(new VolumeId("id-000001"), meta.getVolumeId());
+    assertEquals(1L, meta.getVolumeCapabilityRange().getMinCapacity());
+    assertEquals(5L, meta.getVolumeCapabilityRange().getMaxCapacity());
+    assertEquals("Gi", meta.getVolumeCapabilityRange().getUnit());
+    assertEquals("csi-demo-driver", meta.getDriverName());
+    assertEquals("/mnt/data", meta.getMountPoint());
+    assertNull(meta.getVolumeName());
+    assertTrue(meta.isProvisionedVolume());
 
     // Test toString
     JsonParser parser = new JsonParser();
     JsonElement element = parser.parse(meta.toString());
     JsonObject json = element.getAsJsonObject();
-    Assert.assertNotNull(json);
-    Assert.assertNull(json.get(CsiConstants.CSI_VOLUME_NAME));
-    Assert.assertEquals("id-000001",
+    assertNotNull(json);
+    assertNull(json.get(CsiConstants.CSI_VOLUME_NAME));
+    assertEquals("id-000001",
         json.get(CsiConstants.CSI_VOLUME_ID).getAsString());
-    Assert.assertEquals("csi-demo-driver",
+    assertEquals("csi-demo-driver",
         json.get(CsiConstants.CSI_DRIVER_NAME).getAsString());
-    Assert.assertEquals("/mnt/data",
+    assertEquals("/mnt/data",
         json.get(CsiConstants.CSI_VOLUME_MOUNT).getAsString());
 
   }
@@ -90,68 +97,74 @@ public class TestVolumeMetaData {
         .driverName("csi-demo-driver")
         .mountPoint("/mnt/data")
         .build();
-    Assert.assertNotNull(meta);
+    assertNotNull(meta);
 
-    Assert.assertEquals("volume-name", meta.getVolumeName());
-    Assert.assertEquals(1L, meta.getVolumeCapabilityRange().getMinCapacity());
-    Assert.assertEquals(5L, meta.getVolumeCapabilityRange().getMaxCapacity());
-    Assert.assertEquals("Gi", meta.getVolumeCapabilityRange().getUnit());
-    Assert.assertEquals("csi-demo-driver", meta.getDriverName());
-    Assert.assertEquals("/mnt/data", meta.getMountPoint());
-    Assert.assertFalse(meta.isProvisionedVolume());
+    assertEquals("volume-name", meta.getVolumeName());
+    assertEquals(1L, meta.getVolumeCapabilityRange().getMinCapacity());
+    assertEquals(5L, meta.getVolumeCapabilityRange().getMaxCapacity());
+    assertEquals("Gi", meta.getVolumeCapabilityRange().getUnit());
+    assertEquals("csi-demo-driver", meta.getDriverName());
+    assertEquals("/mnt/data", meta.getMountPoint());
+    assertFalse(meta.isProvisionedVolume());
 
     // Test toString
     JsonParser parser = new JsonParser();
     JsonElement element = parser.parse(meta.toString());
     JsonObject json = element.getAsJsonObject();
-    Assert.assertNotNull(json);
-    Assert.assertNull(json.get(CsiConstants.CSI_VOLUME_ID));
-    Assert.assertEquals("volume-name",
+    assertNotNull(json);
+    assertNull(json.get(CsiConstants.CSI_VOLUME_ID));
+    assertEquals("volume-name",
         json.get(CsiConstants.CSI_VOLUME_NAME).getAsString());
-    Assert.assertEquals("csi-demo-driver",
+    assertEquals("csi-demo-driver",
         json.get(CsiConstants.CSI_DRIVER_NAME).getAsString());
-    Assert.assertEquals("/mnt/data",
+    assertEquals("/mnt/data",
         json.get(CsiConstants.CSI_VOLUME_MOUNT).getAsString());
   }
 
-  @Test(expected = InvalidVolumeException.class)
+  @Test
   public void testMissingMountpoint() throws InvalidVolumeException {
-    VolumeCapabilityRange cap = VolumeCapabilityRange.newBuilder()
-        .minCapacity(1L)
-        .maxCapacity(5L)
-        .unit("Gi")
-        .build();
+    assertThrows(InvalidVolumeException.class, ()->{
+      VolumeCapabilityRange cap = VolumeCapabilityRange.newBuilder()
+              .minCapacity(1L)
+              .maxCapacity(5L)
+              .unit("Gi")
+              .build();
 
-    VolumeMetaData.newBuilder()
-        .volumeId(new VolumeId("id-000001"))
-        .capability(cap)
-        .driverName("csi-demo-driver")
-        .build();
+      VolumeMetaData.newBuilder()
+              .volumeId(new VolumeId("id-000001"))
+              .capability(cap)
+              .driverName("csi-demo-driver")
+              .build();
+    });
   }
 
 
-  @Test(expected = InvalidVolumeException.class)
+  @Test
   public void testMissingCsiDriverName() throws InvalidVolumeException {
-    VolumeCapabilityRange cap = VolumeCapabilityRange.newBuilder()
-        .minCapacity(1L)
-        .maxCapacity(5L)
-        .unit("Gi")
-        .build();
+    assertThrows(InvalidVolumeException.class, ()->{
+      VolumeCapabilityRange cap = VolumeCapabilityRange.newBuilder()
+              .minCapacity(1L)
+              .maxCapacity(5L)
+              .unit("Gi")
+              .build();
 
-    VolumeMetaData.newBuilder()
-        .volumeId(new VolumeId("id-000001"))
-        .capability(cap)
-        .mountPoint("/mnt/data")
-        .build();
+      VolumeMetaData.newBuilder()
+              .volumeId(new VolumeId("id-000001"))
+              .capability(cap)
+              .mountPoint("/mnt/data")
+              .build();
+    });
   }
 
-  @Test(expected = InvalidVolumeException.class)
+  @Test
   public void testMissingVolumeCapability() throws InvalidVolumeException {
-    VolumeMetaData.newBuilder()
-        .volumeId(new VolumeId("id-000001"))
-        .driverName("csi-demo-driver")
-        .mountPoint("/mnt/data")
-        .build();
+    assertThrows(InvalidVolumeException.class, ()->{
+      VolumeMetaData.newBuilder()
+              .volumeId(new VolumeId("id-000001"))
+              .driverName("csi-demo-driver")
+              .mountPoint("/mnt/data")
+              .build();
+    });
   }
 
   @Test
@@ -160,19 +173,19 @@ public class TestVolumeMetaData {
     VolumeId id11 = new VolumeId("test00001");
     VolumeId id2 = new VolumeId("test00002");
 
-    Assert.assertEquals(id1, id11);
-    Assert.assertEquals(id1.hashCode(), id11.hashCode());
-    Assert.assertNotEquals(id1, id2);
+    assertEquals(id1, id11);
+    assertEquals(id1.hashCode(), id11.hashCode());
+    assertNotEquals(id1, id2);
 
     HashMap<VolumeId, String> map = new HashMap<>();
     map.put(id1, "1");
-    Assert.assertEquals(1, map.size());
-    Assert.assertEquals("1", map.get(id11));
+    assertEquals(1, map.size());
+    assertEquals("1", map.get(id11));
     map.put(id11, "2");
-    Assert.assertEquals(1, map.size());
-    Assert.assertEquals("2", map.get(id11));
-    Assert.assertEquals("2", map.get(new VolumeId("test00001")));
+    assertEquals(1, map.size());
+    assertEquals("2", map.get(id11));
+    assertEquals("2", map.get(new VolumeId("test00001")));
 
-    Assert.assertNotEquals(id1, id2);
+    assertNotEquals(id1, id2);
   }
 }

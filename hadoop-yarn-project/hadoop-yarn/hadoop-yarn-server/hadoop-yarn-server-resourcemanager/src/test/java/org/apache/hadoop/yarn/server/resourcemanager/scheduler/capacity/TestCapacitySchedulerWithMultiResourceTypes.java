@@ -56,13 +56,14 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.Assert;
 
-import static org.junit.Assert.assertEquals;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -142,23 +143,23 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     rm.start();
 
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
-    Assert.assertEquals(3333L,
+    assertEquals(3333L,
         cs.getMaximumResourceCapability().getResourceValue(RESOURCE_1));
-    Assert.assertEquals(3333L,
+    assertEquals(3333L,
         cs.getMaximumAllocation().getResourceValue(RESOURCE_1));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.VCORES_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.VCORES_URI));
@@ -175,26 +176,26 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
       exception = true;
     }
 
-    Assert.assertTrue("Should have exception in CS", exception);
+    assertTrue(exception, "Should have exception in CS");
 
     // Maximum allocation won't be updated
-    Assert.assertEquals(3333L,
+    assertEquals(3333L,
         cs.getMaximumResourceCapability().getResourceValue(RESOURCE_1));
-    Assert.assertEquals(3333L,
+    assertEquals(3333L,
         cs.getMaximumAllocation().getResourceValue(RESOURCE_1));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.VCORES_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.VCORES_URI));
@@ -206,26 +207,26 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     cs.reinitialize(csconf, rm.getRMContext());
 
     // Maximum allocation will be updated
-    Assert.assertEquals(3334,
+    assertEquals(3334,
         cs.getMaximumResourceCapability().getResourceValue(RESOURCE_1));
 
     // Since we haven't updated the real configuration of ResourceUtils,
     // cs.getMaximumAllocation won't be updated.
-    Assert.assertEquals(3333,
+    assertEquals(3333,
         cs.getMaximumAllocation().getResourceValue(RESOURCE_1));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.VCORES_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.VCORES_URI));
@@ -265,7 +266,7 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
       exception = true;
     }
 
-    Assert.assertTrue("Should have exception in CS", exception);
+    assertTrue(exception, "Should have exception in CS");
   }
 
   @Test
@@ -327,12 +328,12 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
 
     // check node report
-    Assert.assertEquals(1 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(9 * GB,
+    assertEquals(1 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(9 * GB,
         report_nm1.getAvailableResource().getMemorySize());
-    Assert.assertEquals(0, report_nm1.getUsedResource()
+    assertEquals(0, report_nm1.getUsedResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
-    Assert.assertEquals(4, report_nm1.getAvailableResource()
+    assertEquals(4, report_nm1.getAvailableResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
 
     nameToValues.put(ResourceInformation.GPU_URI, "4");
@@ -345,17 +346,17 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
             Priority.newInstance(1), "*", containerGpuResource, 1)), null);
     ContainerId containerId2 =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
-    Assert.assertTrue(rm.waitForState(nm1, containerId2,
+    assertTrue(rm.waitForState(nm1, containerId2,
         RMContainerState.ALLOCATED));
     // Acquire this container
     am1.allocate(null, null);
 
     report_nm1 =
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(2 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(4, report_nm1.getUsedResource()
+    assertEquals(2 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(4, report_nm1.getUsedResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
-    Assert.assertEquals(0, report_nm1.getAvailableResource()
+    assertEquals(0, report_nm1.getAvailableResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
 
     nameToValues.clear();
@@ -367,20 +368,21 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
             Priority.newInstance(1), "*", containerResource, 1)), null);
     ContainerId containerId3 =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 3);
-    Assert.assertTrue(rm.waitForState(nm1, containerId3,
+    assertTrue(rm.waitForState(nm1, containerId3,
         RMContainerState.ALLOCATED));
 
     report_nm1 =
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(3 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(4, report_nm1.getUsedResource()
+    assertEquals(3 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(4, report_nm1.getUsedResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
-    Assert.assertEquals(0, report_nm1.getAvailableResource()
+    assertEquals(0, report_nm1.getAvailableResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
   }
 
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testConsumeAllExtendedResourcesWithSmallMinUserLimitPct()
       throws Exception {
     int GB = 1024;

@@ -20,16 +20,17 @@
 
 package org.apache.hadoop.resourceestimator.translator.api;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.text.ParseException;
 
 import org.apache.hadoop.resourceestimator.common.api.RecurrenceId;
 import org.apache.hadoop.resourceestimator.translator.impl.LogParserUtil;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test JobMetaData.
@@ -43,7 +44,8 @@ public class TestJobMetaData {
   private JobMetaData jobMetaData;
   private RecurrenceId recurrenceId;
 
-  @Before public final void setup() throws ParseException {
+  @BeforeEach
+  public final void setup() throws ParseException {
     recurrenceId = new RecurrenceId("Fraud Detection", "17/07/16 16:27:25");
     jobMetaData = new JobMetaData(
         logParserUtil.stringToUnixTimestamp("17/07/16 16:27:25"));
@@ -68,27 +70,27 @@ public class TestJobMetaData {
     final Resource containerAlloc =
         jobMetaData.getResourceSkyline().getContainerSpec();
     final Resource containerAlloc2 = Resource.newInstance(1, 1);
-    Assert.assertEquals(containerAlloc.getMemorySize(),
+    assertEquals(containerAlloc.getMemorySize(),
         containerAlloc2.getMemorySize());
-    Assert.assertEquals(containerAlloc.getVirtualCores(),
+    assertEquals(containerAlloc.getVirtualCores(),
         containerAlloc2.getVirtualCores());
   }
 
   @Test public final void testGetJobSize() {
-    Assert.assertEquals(jobMetaData.getResourceSkyline().getJobInputDataSize(),
+    assertEquals(jobMetaData.getResourceSkyline().getJobInputDataSize(),
         1024.5, 0);
   }
 
   @Test public final void testGetRecurrenceeId() {
     final RecurrenceId recurrenceIdTest =
         new RecurrenceId("Fraud Detection", "17/07/16 16:27:25");
-    Assert.assertEquals(recurrenceIdTest, jobMetaData.getRecurrenceId());
+    assertEquals(recurrenceIdTest, jobMetaData.getRecurrenceId());
   }
 
   @Test public final void testStringToUnixTimestamp() throws ParseException {
     final long submissionTime =
         logParserUtil.stringToUnixTimestamp("17/07/16 16:27:25");
-    Assert.assertEquals(jobMetaData.getResourceSkyline().getJobSubmissionTime(),
+    assertEquals(jobMetaData.getResourceSkyline().getJobSubmissionTime(),
         submissionTime);
   }
 
@@ -99,22 +101,22 @@ public class TestJobMetaData {
         jobMetaData.getResourceSkyline().getContainerSpec().getVirtualCores();
     int k;
     for (k = 0; k < 5; k++) {
-      Assert.assertEquals(0,
+      assertEquals(0,
           skylineList.getCapacityAtTime(k).getVirtualCores() / containerCPU);
     }
     for (k = 5; k < 15; k++) {
-      Assert.assertEquals(1,
+      assertEquals(1,
           skylineList.getCapacityAtTime(k).getVirtualCores() / containerCPU);
     }
     for (k = 15; k < 605; k++) {
-      Assert.assertEquals(2,
+      assertEquals(2,
           skylineList.getCapacityAtTime(k).getVirtualCores() / containerCPU);
     }
     for (k = 605; k < 615; k++) {
-      Assert.assertEquals(1,
+      assertEquals(1,
           skylineList.getCapacityAtTime(k).getVirtualCores() / containerCPU);
     }
-    Assert.assertEquals(0,
+    assertEquals(0,
         skylineList.getCapacityAtTime(615).getVirtualCores() / containerCPU);
   }
 
@@ -144,18 +146,19 @@ public class TestJobMetaData {
         jobMetaData.getResourceSkyline().getContainerSpec().getVirtualCores();
     int k;
     for (k = 0; k < 5; k++) {
-      Assert.assertEquals(0,
+      assertEquals(0,
           skylineList.getCapacityAtTime(k).getVirtualCores() / containerCPU);
     }
     for (k = 5; k < 605; k++) {
-      Assert.assertEquals(1,
+      assertEquals(1,
           skylineList.getCapacityAtTime(k).getVirtualCores() / containerCPU);
     }
-    Assert.assertEquals(0,
+    assertEquals(0,
         skylineList.getCapacityAtTime(605).getVirtualCores() / containerCPU);
   }
 
-  @After public final void cleanUp() {
+  @AfterEach
+  public final void cleanUp() {
     jobMetaData = null;
     recurrenceId = null;
     logParserUtil = null;

@@ -33,7 +33,7 @@ import org.apache.hadoop.resourceestimator.translator.api.LogParser;
 import org.apache.hadoop.resourceestimator.translator.exceptions.DataFieldNotFoundException;
 import org.apache.hadoop.resourceestimator.translator.impl.BaseLogParser;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -46,7 +46,7 @@ import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * This LPSolver class will make resource estimation using Linear Programming

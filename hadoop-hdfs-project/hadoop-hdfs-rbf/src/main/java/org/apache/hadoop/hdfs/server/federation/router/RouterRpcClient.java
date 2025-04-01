@@ -1024,7 +1024,7 @@ public class RouterRpcClient {
       throws IOException {
     UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
     RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
-    acquirePermit(nsId, ugi, method, controller);
+    acquirePermit(nsId, ugi, method.getMethodName(), controller);
     try {
       boolean isObserverRead = isObserverReadEligible(nsId, method.getMethod());
       List<? extends FederationNamenodeContext> nns = getOrderedNamenodes(nsId, isObserverRead);
@@ -1199,7 +1199,7 @@ public class RouterRpcClient {
       boolean isObserverRead = isObserverReadEligible(ns, m);
       List<? extends FederationNamenodeContext> namenodes =
           getOrderedNamenodes(ns, isObserverRead);
-      acquirePermit(ns, ugi, remoteMethod, controller);
+      acquirePermit(ns, ugi, remoteMethod.getMethodName(), controller);
       try {
         Class<?> proto = remoteMethod.getProtocol();
         Object[] params = remoteMethod.getParams(loc);
@@ -1579,7 +1579,7 @@ public class RouterRpcClient {
       return invokeSingle(locations.iterator().next(), method);
     }
     RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
-    acquirePermit(CONCURRENT_NS, ugi, method, controller);
+    acquirePermit(CONCURRENT_NS, ugi, method.getMethodName(), controller);
 
     List<T> orderedLocations = new ArrayList<>();
     List<Callable<Object>> callables = new ArrayList<>();
@@ -1758,7 +1758,7 @@ public class RouterRpcClient {
     final List<? extends FederationNamenodeContext> namenodes =
         getOrderedNamenodes(ns, isObserverRead);
     RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
-    acquirePermit(ns, ugi, method, controller);
+    acquirePermit(ns, ugi, method.getMethodName(), controller);
     try {
       Class<?> proto = method.getProtocol();
       Object[] paramList = method.getParams(location);
@@ -1829,12 +1829,12 @@ public class RouterRpcClient {
    *
    * @param nsId Identifier of the block pool.
    * @param ugi UserGroupIdentifier associated with the user.
-   * @param m Remote method that needs to be invoked.
+   * @param methodName The name of remote method that needs to be invoked.
    * @param controller fairness policy controller to acquire permit from
    * @throws IOException If permit could not be acquired for the nsId.
    */
   protected void acquirePermit(final String nsId, final UserGroupInformation ugi,
-      final RemoteMethod m, RouterRpcFairnessPolicyController controller)
+      final String methodName, RouterRpcFairnessPolicyController controller)
       throws IOException {
     if (controller != null) {
       if (!controller.acquirePermit(nsId)) {
@@ -1845,7 +1845,7 @@ public class RouterRpcClient {
         }
         incrRejectedPermitForNs(nsId);
         LOG.debug("Permit denied for ugi: {} for method: {}",
-            ugi, m.getMethodName());
+            ugi, methodName);
         String msg =
             "Router " + router.getRouterId() +
                 " is overloaded for NS: " + nsId;
@@ -1880,7 +1880,7 @@ public class RouterRpcClient {
     return routerRpcFairnessPolicyController;
   }
 
-  private void incrRejectedPermitForNs(String ns) {
+  protected void incrRejectedPermitForNs(String ns) {
     rejectedPermitsPerNs.computeIfAbsent(ns, k -> new LongAdder()).increment();
   }
 
@@ -1889,7 +1889,7 @@ public class RouterRpcClient {
         rejectedPermitsPerNs.get(ns).longValue() : 0L;
   }
 
-  private void incrAcceptedPermitForNs(String ns) {
+  protected void incrAcceptedPermitForNs(String ns) {
     acceptedPermitsPerNs.computeIfAbsent(ns, k -> new LongAdder()).increment();
   }
 

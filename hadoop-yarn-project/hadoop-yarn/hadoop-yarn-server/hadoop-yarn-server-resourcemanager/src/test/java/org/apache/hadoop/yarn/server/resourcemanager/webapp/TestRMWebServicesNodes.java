@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -100,7 +100,8 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -186,6 +187,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     }
   }
 
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -237,12 +239,12 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject nodes = json.getJSONObject("nodes");
-    assertEquals("incorrect number of elements", 1, nodes.length());
+    assertEquals(1, nodes.length(), "incorrect number of elements");
     JSONArray nodeArray = nodes.getJSONArray("node");
     // 3 nodes, including the unhealthy node and the new node.
-    assertEquals("incorrect number of elements", 3, nodeArray.length());
+    assertEquals(3, nodeArray.length(), "incorrect number of elements");
   }
 
   private RMNode getRunningRMNode(String host, int port, int memory) {
@@ -287,14 +289,14 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject nodes = json.getJSONObject("nodes");
-    assertEquals("incorrect number of elements", 1, nodes.length());
+    assertEquals(1, nodes.length(), "incorrect number of elements");
     JSONObject node = nodes.getJSONObject("node");
     JSONArray nodeArray = new JSONArray();
     nodeArray.put(node);
 
-    assertEquals("incorrect number of elements", 1, nodeArray.length());
+    assertEquals(1, nodeArray.length(), "incorrect number of elements");
     JSONObject info = nodeArray.getJSONObject(0);
 
     verifyNodeInfo(info, rmnode2);
@@ -313,8 +315,8 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
-    assertEquals("nodes is not empty", "", json.get("nodes").toString());
+    assertEquals(1, json.length(), "incorrect number of elements");
+    assertEquals("", json.get("nodes").toString(), "nodes is not empty");
   }
 
   @Test
@@ -334,7 +336,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     String json = response.readEntity(String.class);
     JSONObject msg = new JSONObject(json);
     JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String message = exception.getString("message");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
@@ -365,9 +367,9 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
     JSONObject nodes = json.getJSONObject("nodes");
-    assertEquals("incorrect number of elements", 1, nodes.length());
+    assertEquals(1, nodes.length(), "incorrect number of elements");
     JSONArray nodeArray = nodes.getJSONArray("node");
-    assertEquals("incorrect number of elements", 2, nodeArray.length());
+    assertEquals(2, nodeArray.length(), "incorrect number of elements");
     for (int i = 0; i < nodeArray.length(); ++i) {
       JSONObject info = nodeArray.getJSONObject(i);
       String[] node = info.get("id").toString().split(":");
@@ -399,7 +401,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     JSONObject info = json.getJSONObject("node");
     String id = info.get("id").toString();
 
-    assertEquals("Incorrect Node Information.", "h2:1234", id);
+    assertEquals("h2:1234", id, "Incorrect Node Information.");
 
     RMNode rmNode =
         rm.getRMContext().getInactiveRMNodes().get(rmnode2.getNodeID());
@@ -423,13 +425,13 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject nodes = json.getJSONObject("nodes");
-    assertEquals("incorrect number of elements", 1, nodes.length());
+    assertEquals(1, nodes.length(), "incorrect number of elements");
     JSONObject node = nodes.getJSONObject("node");
     JSONArray nodeArray = new JSONArray();
     nodeArray.put(node);
-    assertEquals("incorrect number of elements", 1, nodeArray.length());
+    assertEquals(1, nodeArray.length(), "incorrect number of elements");
   }
 
   @Test
@@ -444,8 +446,8 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
-    assertEquals("nodes is not empty", "", json.get("nodes").toString());
+    assertEquals(1, json.length(), "incorrect number of elements");
+    assertEquals("", json.get("nodes").toString(), "nodes is not empty");
   }
 
   public void testNodesHelper(String path, String media) throws JSONException,
@@ -459,11 +461,11 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject nodes = json.getJSONObject("nodes");
-    assertEquals("incorrect number of elements", 1, nodes.length());
+    assertEquals(1, nodes.length(), "incorrect number of elements");
     JSONArray nodeArray = nodes.getJSONArray("node");
-    assertEquals("incorrect number of elements", 2, nodeArray.length());
+    assertEquals(2, nodeArray.length(), "incorrect number of elements");
     JSONObject info = nodeArray.getJSONObject(0);
     String id = info.get("id").toString();
 
@@ -506,7 +508,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject info = json.getJSONObject("node");
     verifyNodeInfo(info, nm);
   }
@@ -527,7 +529,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String message = exception.getString("message");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
@@ -549,7 +551,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String message = exception.getString("message");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
@@ -582,11 +584,11 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
   }
 
   private void verifyNonexistNodeException(String message, String type, String classname) {
-    assertTrue("exception message incorrect: " + message,
-        "nodeId, node_invalid:99, is not found".matches(message));
-    assertTrue("exception type incorrect", "NotFoundException".matches(type));
-    assertTrue("exception className incorrect",
-        "org.apache.hadoop.yarn.webapp.NotFoundException".matches(classname));
+    assertTrue("nodeId, node_invalid:99, is not found".matches(message),
+        "exception message incorrect: " + message);
+    assertTrue("NotFoundException".matches(type), "exception type incorrect");
+    assertTrue("org.apache.hadoop.yarn.webapp.NotFoundException".matches(classname),
+        "exception className incorrect");
   }
 
   @Test
@@ -602,7 +604,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String message = exception.getString("message");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
@@ -630,9 +632,9 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     InputSource is = new InputSource(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList nodesApps = dom.getElementsByTagName("nodes");
-    assertEquals("incorrect number of elements", 1, nodesApps.getLength());
+    assertEquals(1, nodesApps.getLength(), "incorrect number of elements");
     NodeList nodes = dom.getElementsByTagName("node");
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
     verifyNodesXML(nodes, rmnode1);
   }
 
@@ -656,7 +658,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList nodes = dom.getElementsByTagName("node");
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
     verifyNodesXML(nodes, rmnode1);
   }
 
@@ -678,9 +680,9 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList nodesApps = dom.getElementsByTagName("nodes");
-    assertEquals("incorrect number of elements", 1, nodesApps.getLength());
+    assertEquals(1, nodesApps.getLength(), "incorrect number of elements");
     NodeList nodes = dom.getElementsByTagName("node");
-    assertEquals("incorrect number of elements", 2, nodes.getLength());
+    assertEquals(2, nodes.getLength(), "incorrect number of elements");
   }
   
   @Test
@@ -702,9 +704,9 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
     JSONObject nodes = json.getJSONObject("nodes");
-    assertEquals("incorrect number of elements", 1, nodes.length());
+    assertEquals(1, nodes.length(), "incorrect number of elements");
     JSONArray nodeArray = nodes.getJSONArray("node");
-    assertEquals("incorrect number of elements", 3, nodeArray.length());
+    assertEquals(3, nodeArray.length(), "incorrect number of elements");
   }
 
   @Test
@@ -734,13 +736,13 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject nodes = json.getJSONObject("nodes");
-    assertEquals("incorrect number of elements", 1, nodes.length());
+    assertEquals(1, nodes.length(), "incorrect number of elements");
     JSONObject jsonNode = nodes.getJSONObject("node");
     JSONArray nodeArray = new JSONArray();
     nodeArray.put(jsonNode);
-    assertEquals("incorrect number of elements", 1, nodeArray.length());
+    assertEquals(1, nodeArray.length(), "incorrect number of elements");
     JSONObject info = nodeArray.getJSONObject(0);
 
     // verify the resource utilization
@@ -801,7 +803,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     JSONObject exception = json.getJSONObject("RemoteException");
     assertEquals("IllegalArgumentException", exception.getString("exception"));
     String msg = exception.getString("message");
-    assertTrue("Wrong message: " + msg, msg.startsWith("Invalid NodeId"));
+    assertTrue(msg.startsWith("Invalid NodeId"), "Wrong message: " + msg);
 
     rm.stop();
   }
@@ -842,7 +844,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
 
   public void verifyNodeInfo(JSONObject nodeInfo, RMNode nm)
       throws JSONException, Exception {
-    assertEquals("incorrect number of elements", 23, nodeInfo.length());
+    assertEquals(23, nodeInfo.length(), "incorrect number of elements");
 
     JSONObject resourceInfo = nodeInfo.getJSONObject("resourceUtilization");
     verifyNodeInfoGeneric(nm, nodeInfo.getString("state"),
@@ -901,47 +903,45 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     if (node.getNodeUtilization() != null) {
       ResourceUtilization nodeResource = ResourceUtilization.newInstance(
           nodePhysicalMemoryMB, nodeVirtualMemoryMB, (float) nodeCPUUsage);
-      assertEquals("nodeResourceUtilization doesn't match",
-          node.getNodeUtilization(), nodeResource);
+      assertEquals(node.getNodeUtilization(), nodeResource,
+          "nodeResourceUtilization doesn't match");
     }
     if (node.getAggregatedContainersUtilization() != null) {
       ResourceUtilization containerResource = ResourceUtilization.newInstance(
           containersPhysicalMemoryMB, containersVirtualMemoryMB,
           (float) containersCPUUsage);
-      assertEquals("containerResourceUtilization doesn't match",
-          node.getAggregatedContainersUtilization(), containerResource);
+      assertEquals(node.getAggregatedContainersUtilization(), containerResource,
+          "containerResourceUtilization doesn't match");
     }
 
     long expectedHealthUpdate = node.getLastHealthReportTime();
-    assertEquals("lastHealthUpdate doesn't match, got: " + lastHealthUpdate
-        + " expected: " + expectedHealthUpdate, expectedHealthUpdate,
-        lastHealthUpdate);
+    assertEquals(expectedHealthUpdate, lastHealthUpdate,
+        "lastHealthUpdate doesn't match, got: " + lastHealthUpdate
+        + " expected: " + expectedHealthUpdate);
 
     if (report != null) {
-      assertEquals("numContainers doesn't match: " + numContainers,
-          report.getNumContainers(), numContainers);
-      assertEquals("usedMemoryMB doesn't match: " + usedMemoryMB, report
-          .getUsedResource().getMemorySize(), usedMemoryMB);
-      assertEquals("availMemoryMB doesn't match: " + availMemoryMB, report
-          .getAvailableResource().getMemorySize(), availMemoryMB);
-      assertEquals("usedVirtualCores doesn't match: " + usedVirtualCores, report
-          .getUsedResource().getVirtualCores(), usedVirtualCores);
-      assertEquals("availVirtualCores doesn't match: " + availVirtualCores, report
-          .getAvailableResource().getVirtualCores(), availVirtualCores);
+      assertEquals(report.getNumContainers(), numContainers,
+          "numContainers doesn't match: " + numContainers);
+      assertEquals(report.getUsedResource().getMemorySize(), usedMemoryMB,
+          "usedMemoryMB doesn't match: " + usedMemoryMB);
+      assertEquals(report.getAvailableResource().getMemorySize(), availMemoryMB,
+          "availMemoryMB doesn't match: " + availMemoryMB);
+      assertEquals(report.getUsedResource().getVirtualCores(), usedVirtualCores,
+          "usedVirtualCores doesn't match: " + usedVirtualCores);
+      assertEquals(report.getAvailableResource().getVirtualCores(), availVirtualCores,
+          "availVirtualCores doesn't match: " + availVirtualCores);
     }
 
     if (opportunisticStatus != null) {
-      assertEquals("numRunningOpportContainers doesn't match: " +
-              numRunningOpportContainers,
-          opportunisticStatus.getRunningOpportContainers(),
+      assertEquals(opportunisticStatus.getRunningOpportContainers(),
+          numRunningOpportContainers, "numRunningOpportContainers doesn't match: " +
           numRunningOpportContainers);
-      assertEquals("usedMemoryOpportGB doesn't match: " + usedMemoryOpportGB,
-          opportunisticStatus.getOpportMemoryUsed(), usedMemoryOpportGB);
-      assertEquals(
-          "usedVirtualCoresOpport doesn't match: " + usedVirtualCoresOpport,
-          opportunisticStatus.getOpportCoresUsed(), usedVirtualCoresOpport);
-      assertEquals("numQueuedContainers doesn't match: " + numQueuedContainers,
-          opportunisticStatus.getQueuedOpportContainers(), numQueuedContainers);
+      assertEquals(opportunisticStatus.getOpportMemoryUsed(), usedMemoryOpportGB,
+          "usedMemoryOpportGB doesn't match: " + usedMemoryOpportGB);
+      assertEquals(opportunisticStatus.getOpportCoresUsed(), usedVirtualCoresOpport,
+          "usedVirtualCoresOpport doesn't match: " + usedVirtualCoresOpport);
+      assertEquals(opportunisticStatus.getQueuedOpportContainers(), numQueuedContainers,
+          "numQueuedContainers doesn't match: " + numQueuedContainers);
     }
   }
 
@@ -1060,8 +1060,8 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
       String nodeId = nodeJson.getString("id");
 
       // Ensure the response contains all nodes info
-      assertTrue("Nodes info should have expected node IDs",
-          expectedAllocationTags.containsKey(nodeId));
+      assertTrue(expectedAllocationTags.containsKey(nodeId),
+          "Nodes info should have expected node IDs");
 
       Map<String, Long> expectedTags = expectedAllocationTags.get(nodeId);
       JSONArray tagsInfo = nodeJson.getJSONObject("allocationTags")

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -43,9 +43,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.Response;
 
@@ -72,7 +72,7 @@ public class TestRMWebServicesHttpStaticUserPermissions {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() {
     try {
       testMiniKDC = new MiniKdc(MiniKdc.createConf(), testRootDir);
@@ -83,7 +83,7 @@ public class TestRMWebServicesHttpStaticUserPermissions {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (testMiniKDC != null) {
       testMiniKDC.stop();

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -29,9 +31,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
@@ -39,7 +40,7 @@ public class TestRMHAForNodeLabels extends RMHATestBase {
   public static final Logger LOG = LoggerFactory
       .getLogger(TestRMHAForNodeLabels.class);
 
-  @Before
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -81,13 +82,12 @@ public class TestRMHAForNodeLabels extends RMHATestBase {
     explicitFailover();
 
     // Check labels in rm2
-    Assert
-        .assertTrue(rm2.getRMContext().getNodeLabelManager()
-            .getClusterNodeLabelNames()
-            .containsAll(ImmutableSet.of("a", "b", "c")));
-    Assert.assertTrue(rm2.getRMContext().getNodeLabelManager()
+    assertTrue(rm2.getRMContext().getNodeLabelManager()
+        .getClusterNodeLabelNames()
+        .containsAll(ImmutableSet.of("a", "b", "c")));
+    assertTrue(rm2.getRMContext().getNodeLabelManager()
         .getNodeLabels().get(NodeId.newInstance("host1", 0)).contains("a"));
-    Assert.assertTrue(rm2.getRMContext().getNodeLabelManager()
+    assertTrue(rm2.getRMContext().getNodeLabelManager()
         .getNodeLabels().get(NodeId.newInstance("host2", 0)).contains("b"));
   }
 }

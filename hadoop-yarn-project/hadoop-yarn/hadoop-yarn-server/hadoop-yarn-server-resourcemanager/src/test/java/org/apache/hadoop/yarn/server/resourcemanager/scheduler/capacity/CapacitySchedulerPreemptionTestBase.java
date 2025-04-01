@@ -32,10 +32,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
-import org.apache.hadoop.util.Clock;
-import org.junit.Assert;
-import org.junit.Before;
+import org.apache.hadoop.yarn.util.Clock;
+import org.junit.jupiter.api.BeforeEach;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -49,7 +50,7 @@ public class CapacitySchedulerPreemptionTestBase {
 
   Clock clock;
 
-  @Before
+  @BeforeEach
   void setUp() throws Exception {
     conf = new CapacitySchedulerConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -106,7 +107,7 @@ public class CapacitySchedulerPreemptionTestBase {
       waitNum++;
     }
 
-    Assert.fail();
+    fail();
   }
 
   public void waitNumberOfReservedContainersFromApp(FiCaSchedulerApp app,
@@ -122,7 +123,7 @@ public class CapacitySchedulerPreemptionTestBase {
       waitNum++;
     }
 
-    Assert.fail();
+    fail();
   }
 
   public void waitNumberOfLiveContainersOnNodeFromApp(FiCaSchedulerNode node,
@@ -144,7 +145,7 @@ public class CapacitySchedulerPreemptionTestBase {
       waitNum++;
     }
 
-    Assert.fail(
+    fail(
         "Check #live-container-on-node-from-app, actual=" + total + " expected="
             + expected);
   }
@@ -160,6 +161,6 @@ public class CapacitySchedulerPreemptionTestBase {
       }
     }
 
-    Assert.assertEquals(expected, total);
+    assertEquals(expected, total);
   }
 }

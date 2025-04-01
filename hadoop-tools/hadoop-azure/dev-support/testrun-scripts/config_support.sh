@@ -20,7 +20,7 @@ cp "$FILE" "$OUTPUT_FILE"
 contactTeamMsg="For any queries or support, kindly reach out to us at 'askabfs@microsoft.com'."
 endpoint=".dfs."
 printf "Select 'HNS' if you're migrating to ABFS driver with Hierarchical Namespace enabled account,
-or 'Non-HNS' if you're migrating with Non-Hierarchical Namespace (FNS) account. \n"
+            or 'Non-HNS' if you're migrating with Non-Hierarchical Namespace (FNS) account. \n"
 printf "WARNING: Please ensure the correct option is chosen as it will affect the configuration changes made to the file. \n"
 printf "If you are unsure, follow the instructions below to check from Azure Portal: \n"
 printf "* Go to the Azure Portal and navigate to your storage account. \n"
@@ -107,7 +107,8 @@ fi
 # Renaming the configs
 for old in "${!rename_configs_map[@]}"; do
     new="${rename_configs_map[$old]}"
-    xmlstarlet ed -L -u "//property/name[contains(., '$old')]" -x "concat(substring-before(., '$old'), '$new', substring-after(., '$old'))" "$OUTPUT_FILE"
+    xmlstarlet ed -L -u "//property/name[contains(., '$old')]" -x "concat(substring-before(., '$old'),
+     '$new', substring-after(., '$old'))" "$OUTPUT_FILE"
 done
 
 # Remove the obsolete configs
@@ -115,18 +116,20 @@ for key in "${obsolete_configs_list[@]}"; do
     xmlstarlet ed -L -d "//property[name[contains(text(), '$key')]]" "$OUTPUT_FILE"
 done
 
-# Change the endpoints for properties if migration is to HNS
+# Change the endpoints to DFS if migrating to HNS
 if [ "$endpoint" = ".dfs." ]; then
-    xmlstarlet ed -L -u "//property/name[contains(., '.blob.')]" -x "concat(substring-before(., '.blob.'), '$endpoint', substring-after(., '.blob.'))" "$OUTPUT_FILE"
+    xmlstarlet ed -L -u "//property/name[contains(., '.blob.')]" -x "concat(substring-before(., '.blob.'),
+     '$endpoint', substring-after(., '.blob.'))" "$OUTPUT_FILE"
 fi
 
 # Change the value of fs.defaultFS
 if xmlstarlet sel -t -v "//property[name='fs.defaultFS']/value" "$OUTPUT_FILE" | grep -q "."; then
     if xmlstarlet sel -t -v "//property[name='fs.defaultFS']/value" "$OUTPUT_FILE" | grep -q ".blob."; then
-        xmlstarlet ed -L -u "//property[name='fs.defaultFS']/value" -x "concat('abfs', substring-before(substring-after(., 'wasb'), '@'), '@',
-        substring-before(substring-after(., '@'), '.blob.'), '$endpoint', 'core.windows.net')" "$OUTPUT_FILE"
+        xmlstarlet ed -L -u "//property[name='fs.defaultFS']/value" -x "concat('abfs', substring-before(substring-after(., 'wasb'), '@'),
+         '@', substring-before(substring-after(., '@'), '.blob.'), '$endpoint', 'core.windows.net')" "$OUTPUT_FILE"
     else
-        echo "ERROR: 'fs.defaultFS' exists but does not contain Blob endpoint. Exiting..."
+        echo "ERROR: 'fs.defaultFS' does not have 'Blob' as endpoint. Exiting..."
+        echo "$contactTeamMsg"
         exit 1
     fi
 fi
