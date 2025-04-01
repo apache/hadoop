@@ -20,6 +20,10 @@
 
 package org.apache.hadoop.resourceestimator.translator.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.List;
@@ -37,10 +41,9 @@ import org.apache.hadoop.resourceestimator.translator.api.LogParser;
 import org.apache.hadoop.resourceestimator.translator.exceptions.DataFieldNotFoundException;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * This sample parser will parse the sample log and extract the resource
@@ -50,7 +53,8 @@ public class TestRmParser {
   private LogParserUtil logParserUtil = new LogParserUtil();
   private SkylineStore skylineStore;
 
-  @Before public final void setup() throws ResourceEstimatorException {
+  @BeforeEach
+  public final void setup() throws ResourceEstimatorException {
     skylineStore = new InMemoryStore();
     final LogParser rmParser = new BaseLogParser();
     Configuration config = new Configuration();
@@ -68,7 +72,8 @@ public class TestRmParser {
     logParserUtil.parseLog(logFile);
   }
 
-  @Test public final void testParse()
+  @Test
+  public final void testParse()
       throws SkylineStoreException, IOException, ParseException,
       ResourceEstimatorException, DataFieldNotFoundException {
     final String logFile = "src/test/resources/trace/rmLog.txt";
@@ -76,50 +81,52 @@ public class TestRmParser {
     final RecurrenceId recurrenceId = new RecurrenceId("FraudDetection", "1");
     final Map<RecurrenceId, List<ResourceSkyline>> jobSkylineLists =
         skylineStore.getHistory(recurrenceId);
-    Assert.assertEquals(1, jobSkylineLists.size());
+    assertEquals(1, jobSkylineLists.size());
     final List<ResourceSkyline> jobHistory = jobSkylineLists.get(recurrenceId);
-    Assert.assertEquals(1, jobHistory.size());
+    assertEquals(1, jobHistory.size());
     final ResourceSkyline resourceSkyline = jobHistory.get(0);
-    Assert.assertEquals(0, resourceSkyline.getJobInputDataSize(), 0);
-    Assert.assertEquals("application_1497832133857_0330",
+    assertEquals(0, resourceSkyline.getJobInputDataSize(), 0);
+    assertEquals("application_1497832133857_0330",
         resourceSkyline.getJobId());
-    Assert.assertEquals(
+    assertEquals(
         logParserUtil.stringToUnixTimestamp("06/21/2017 16:10:13"),
         resourceSkyline.getJobSubmissionTime());
-    Assert.assertEquals(
+    assertEquals(
         logParserUtil.stringToUnixTimestamp("06/21/2017 16:18:35"),
         resourceSkyline.getJobFinishTime());
     final Resource resource = Resource.newInstance(1800, 1);
-    Assert.assertEquals(resource.getMemorySize(),
+    assertEquals(resource.getMemorySize(),
         resourceSkyline.getContainerSpec().getMemorySize());
-    Assert.assertEquals(resource.getVirtualCores(),
+    assertEquals(resource.getVirtualCores(),
         resourceSkyline.getContainerSpec().getVirtualCores());
     final RLESparseResourceAllocation skylineLists =
         resourceSkyline.getSkylineList();
 
     int k;
     for (k = 0; k < 142; k++) {
-      Assert.assertEquals(1,
+      assertEquals(1,
           skylineLists.getCapacityAtTime(k).getMemorySize() / resource
               .getMemorySize());
     }
     for (k = 142; k < 345; k++) {
-      Assert.assertEquals(2,
+      assertEquals(2,
           skylineLists.getCapacityAtTime(k).getMemorySize() / resource
               .getMemorySize());
     }
     for (k = 345; k < 502; k++) {
-      Assert.assertEquals(1,
+      assertEquals(1,
           skylineLists.getCapacityAtTime(k).getMemorySize() / resource
               .getMemorySize());
     }
   }
 
-  @Test(expected = ParseException.class)
+  @Test
   public final void testInvalidDateFormat()
       throws ParseException {
-    logParserUtil.stringToUnixTimestamp("2017.07.16 16:37:45");
-  }
+          assertThrows(ParseException.class, () -> {
+              logParserUtil.stringToUnixTimestamp("2017.07.16 16:37:45");
+          });
+      }
 
   @Test public final void testDuplicateJobSubmissionTime()
       throws SkylineStoreException, IOException, ParseException,
@@ -129,7 +136,7 @@ public class TestRmParser {
     final RecurrenceId recurrenceId = new RecurrenceId("Test", "1");
     final Map<RecurrenceId, List<ResourceSkyline>> jobSkylineLists =
         skylineStore.getHistory(recurrenceId);
-    Assert.assertEquals(
+    assertEquals(
         logParserUtil.stringToUnixTimestamp("06/21/2017 16:10:23"),
         jobSkylineLists.get(recurrenceId).get(0).getJobSubmissionTime());
   }
@@ -140,7 +147,7 @@ public class TestRmParser {
     final String logFile = "src/test/resources/trace/invalidLog2.txt";
     parseFile(logFile);
     final RecurrenceId recurrenceId = new RecurrenceId("Test", "2");
-    Assert.assertNull(skylineStore.getHistory(recurrenceId));
+    assertNull(skylineStore.getHistory(recurrenceId));
   }
 
   @Test public final void testJobIdNotFoundInContainerAlloc()
@@ -151,7 +158,7 @@ public class TestRmParser {
     final RecurrenceId recurrenceId = new RecurrenceId("Test", "3");
     final Map<RecurrenceId, List<ResourceSkyline>> jobSkylineLists =
         skylineStore.getHistory(recurrenceId);
-    Assert.assertEquals(0,
+    assertEquals(0,
         jobSkylineLists.get(recurrenceId).get(0).getSkylineList()
             .getCumulative().size());
   }
@@ -164,7 +171,7 @@ public class TestRmParser {
     final RecurrenceId recurrenceId = new RecurrenceId("Test", "4");
     final Map<RecurrenceId, List<ResourceSkyline>> jobSkylineLists =
         skylineStore.getHistory(recurrenceId);
-    Assert.assertEquals(0,
+    assertEquals(0,
         jobSkylineLists.get(recurrenceId).get(0).getSkylineList()
             .getCumulative().size());
   }
@@ -177,7 +184,7 @@ public class TestRmParser {
     final RecurrenceId recurrenceId = new RecurrenceId("Test", "5");
     final Map<RecurrenceId, List<ResourceSkyline>> jobSkylineLists =
         skylineStore.getHistory(recurrenceId);
-    Assert.assertEquals(
+    assertEquals(
         logParserUtil.stringToUnixTimestamp("06/21/2017 16:10:13"),
         jobSkylineLists.get(recurrenceId).get(0).getJobSubmissionTime());
   }
@@ -188,7 +195,7 @@ public class TestRmParser {
     final String logFile = "src/test/resources/trace/invalidLog6.txt";
     parseFile(logFile);
     final RecurrenceId recurrenceId = new RecurrenceId("Test", "6");
-    Assert.assertNull(skylineStore.getHistory(recurrenceId));
+    assertNull(skylineStore.getHistory(recurrenceId));
   }
 
   @Test public final void testRecurrenceIdNotFoundInJobFinish()
@@ -197,7 +204,7 @@ public class TestRmParser {
     final String logFile = "src/test/resources/trace/invalidLog7.txt";
     parseFile(logFile);
     final RecurrenceId recurrenceId = new RecurrenceId("Test", "7");
-    Assert.assertNull(skylineStore.getHistory(recurrenceId));
+    assertNull(skylineStore.getHistory(recurrenceId));
   }
 
   @Test public final void testJobIdNotFoundInResourceSpec()
@@ -208,10 +215,10 @@ public class TestRmParser {
     final RecurrenceId recurrenceId = new RecurrenceId("Test", "8");
     final Map<RecurrenceId, List<ResourceSkyline>> jobSkylineLists =
         skylineStore.getHistory(recurrenceId);
-    Assert.assertEquals(1024,
+    assertEquals(1024,
         jobSkylineLists.get(recurrenceId).get(0).getContainerSpec()
             .getMemorySize());
-    Assert.assertEquals(1,
+    assertEquals(1,
         jobSkylineLists.get(recurrenceId).get(0).getContainerSpec()
             .getVirtualCores());
   }
@@ -224,15 +231,16 @@ public class TestRmParser {
     final RecurrenceId recurrenceId = new RecurrenceId("Test", "9");
     final Map<RecurrenceId, List<ResourceSkyline>> jobSkylineLists =
         skylineStore.getHistory(recurrenceId);
-    Assert.assertEquals(1024,
+    assertEquals(1024,
         jobSkylineLists.get(recurrenceId).get(0).getContainerSpec()
             .getMemorySize());
-    Assert.assertEquals(1,
+    assertEquals(1,
         jobSkylineLists.get(recurrenceId).get(0).getContainerSpec()
             .getVirtualCores());
   }
 
-  @After public final void cleanUp() {
+  @AfterEach
+  public final void cleanUp() {
     skylineStore = null;
     logParserUtil = null;
   }
