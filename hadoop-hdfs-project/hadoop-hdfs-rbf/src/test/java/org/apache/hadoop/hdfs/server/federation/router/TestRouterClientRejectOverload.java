@@ -24,9 +24,11 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.simul
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.transitionClusterNSToStandby;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.transitionClusterNSToActive;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.URI;
@@ -57,10 +59,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,16 +77,13 @@ public class TestRouterClientRejectOverload {
 
   private StateStoreDFSCluster cluster;
 
-  @After
+  @AfterEach
   public void cleanup() {
     if (cluster != null) {
       cluster.shutdown();
       cluster = null;
     }
   }
-
-  @Rule
-  public ExpectedException exceptionRule = ExpectedException.none();
 
   private void setupCluster(boolean overloadControl, boolean ha)
       throws Exception {
@@ -174,8 +171,8 @@ public class TestRouterClientRejectOverload {
     long proxyOps0 = rpcMetrics0.getProxyOps() - iniProxyOps0;
     long proxyOps1 = rpcMetrics1.getProxyOps() - iniProxyOps1;
     assertEquals(2 * 10, proxyOps0 + proxyOps1);
-    assertTrue(proxyOps0 + " operations: not distributed", proxyOps0 >= 8);
-    assertTrue(proxyOps1 + " operations: not distributed", proxyOps1 >= 8);
+    assertTrue(proxyOps0 >= 8, proxyOps0 + " operations: not distributed");
+    assertTrue(proxyOps1 >= 8, proxyOps1 + " operations: not distributed");
   }
 
   private void testOverloaded(int expOverload) throws Exception {
@@ -221,7 +218,7 @@ public class TestRouterClientRejectOverload {
           routerProto.renewLease(clientName, null);
         } catch (RemoteException re) {
           IOException ioe = re.unwrapRemoteException();
-          assertTrue("Wrong exception: " + ioe, ioe instanceof StandbyException);
+          assertTrue(ioe instanceof StandbyException, "Wrong exception: " + ioe);
           assertExceptionContains("is overloaded", ioe);
           overloadException.incrementAndGet();
         } catch (IOException e) {
@@ -250,10 +247,8 @@ public class TestRouterClientRejectOverload {
     if (expOverloadMin == expOverloadMax) {
       assertEquals(expOverloadMin, num);
     } else {
-      assertTrue("Expected >=" + expOverloadMin + " but was " + num,
-          num >= expOverloadMin);
-      assertTrue("Expected <=" + expOverloadMax + " but was " + num,
-          num <= expOverloadMax);
+      assertTrue(num >= expOverloadMin, "Expected >=" + expOverloadMin + " but was " + num);
+      assertTrue(num <= expOverloadMax, "Expected <=" + expOverloadMax + " but was " + num);
     }
   }
 
@@ -301,7 +296,7 @@ public class TestRouterClientRejectOverload {
    * Client will success after some retries.
    */
   @Test
-  public void testNoNamenodesAvailable() throws Exception{
+  public void testNoNamenodesAvailable() throws Exception {
     setupCluster(false, true);
 
     transitionClusterNSToStandby(cluster);
@@ -322,44 +317,46 @@ public class TestRouterClientRejectOverload {
     FederationRPCMetrics rpcMetrics1 = cluster.getRouters().get(1)
         .getRouter().getRpcServer().getRPCMetrics();
 
-    // Original failures
-    long originalRouter0Failures = rpcMetrics0.getProxyOpNoNamenodes();
-    long originalRouter1Failures = rpcMetrics1.getProxyOpNoNamenodes();
-
     // GetFileInfo will throw Exception
     String exceptionMessage = "org.apache.hadoop.hdfs.server.federation."
         + "router.NoNamenodesAvailableException: No namenodes available "
         + "under nameservice ns0";
-    exceptionRule.expect(RemoteException.class);
-    exceptionRule.expectMessage(exceptionMessage);
-    routerClient.getFileInfo("/");
+    RemoteException remoteException = assertThrows(RemoteException.class, () -> {
 
-    // Router 0 failures will increase
-    assertEquals(originalRouter0Failures + 4,
-        rpcMetrics0.getProxyOpNoNamenodes());
-    // Router 1 failures do not change
-    assertEquals(originalRouter1Failures,
-        rpcMetrics1.getProxyOpNoNamenodes());
+      // Original failures
+      long originalRouter0Failures = rpcMetrics0.getProxyOpNoNamenodes();
+      long originalRouter1Failures = rpcMetrics1.getProxyOpNoNamenodes();
 
-    // Make name services available
-    transitionClusterNSToActive(cluster, 0);
-    for (RouterContext routerContext : cluster.getRouters()) {
-      // Manually trigger the heartbeat
-      Collection<NamenodeHeartbeatService> heartbeatServices = routerContext
-          .getRouter().getNamenodeHeartbeatServices();
-      for (NamenodeHeartbeatService service : heartbeatServices) {
-        service.periodicInvoke();
+      routerClient.getFileInfo("/");
+
+      // Router 0 failures will increase
+      assertEquals(originalRouter0Failures + 4,
+          rpcMetrics0.getProxyOpNoNamenodes());
+      // Router 1 failures do not change
+      assertEquals(originalRouter1Failures,
+          rpcMetrics1.getProxyOpNoNamenodes());
+
+      // Make name services available
+      transitionClusterNSToActive(cluster, 0);
+      for (RouterContext routerContext : cluster.getRouters()) {
+        // Manually trigger the heartbeat
+        Collection<NamenodeHeartbeatService> heartbeatServices = routerContext
+            .getRouter().getNamenodeHeartbeatServices();
+        for (NamenodeHeartbeatService service : heartbeatServices) {
+          service.periodicInvoke();
+        }
+        // Update service cache
+        routerContext.getRouter().getStateStore().refreshCaches(true);
       }
-      // Update service cache
-      routerContext.getRouter().getStateStore().refreshCaches(true);
-    }
 
-    originalRouter0Failures = rpcMetrics0.getProxyOpNoNamenodes();
+      originalRouter0Failures = rpcMetrics0.getProxyOpNoNamenodes();
 
-    // RPC call must be successful
-    routerClient.getFileInfo("/");
-    // Router 0 failures do not change
-    assertEquals(originalRouter0Failures, rpcMetrics0.getProxyOpNoNamenodes());
+      // RPC call must be successful
+      routerClient.getFileInfo("/");
+      // Router 0 failures do not change
+      assertEquals(originalRouter0Failures, rpcMetrics0.getProxyOpNoNamenodes());
+    });
+    assertThat(remoteException.getMessage()).contains(exceptionMessage);
   }
 
   /**

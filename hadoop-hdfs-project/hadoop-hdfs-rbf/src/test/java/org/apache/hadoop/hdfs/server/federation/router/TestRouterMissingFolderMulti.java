@@ -22,7 +22,7 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.creat
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getFileSystem;
 import static org.apache.hadoop.hdfs.server.federation.MockNamenode.registerSubclusters;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.FileNotFoundException;
 import java.util.HashMap;
@@ -44,9 +44,9 @@ import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResol
 import org.apache.hadoop.hdfs.server.federation.resolver.MultipleDestinationMountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +69,7 @@ public class TestRouterMissingFolderMulti {
   private Router router;
 
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     LOG.info("Start the Namenodes");
     Configuration nnConf = new HdfsConfiguration();
@@ -111,7 +111,7 @@ public class TestRouterMissingFolderMulti {
     registerSubclusters(router, namenodes.values());
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws Exception {
     LOG.info("Stopping the cluster");
     for (final MockNamenode nn : namenodes.values()) {

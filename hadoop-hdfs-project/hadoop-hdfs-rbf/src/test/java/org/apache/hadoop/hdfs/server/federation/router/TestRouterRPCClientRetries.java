@@ -20,10 +20,10 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.simulateSlowNamenode;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.GenericTestUtils.waitFor;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -48,15 +48,15 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RemoteException;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test retry behavior of the Router RPC Client.
  */
+@Timeout(100000)
 public class TestRouterRPCClientRetries {
 
   private static StateStoreDFSCluster cluster;
@@ -65,10 +65,7 @@ public class TestRouterRPCClientRetries {
   private static MembershipNamenodeResolver resolver;
   private static ClientProtocol routerProtocol;
 
-  @Rule
-  public final Timeout testTimeout = new Timeout(100000L, TimeUnit.MILLISECONDS);
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // Build and start a federated cluster
     cluster = new StateStoreDFSCluster(false, 2);
@@ -104,7 +101,7 @@ public class TestRouterRPCClientRetries {
     routerProtocol = routerContext.getClient().getNamenode();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.stopRouter(routerContext);

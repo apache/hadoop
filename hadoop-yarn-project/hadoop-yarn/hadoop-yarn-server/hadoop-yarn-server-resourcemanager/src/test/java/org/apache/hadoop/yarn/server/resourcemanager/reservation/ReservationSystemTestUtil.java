@@ -69,7 +69,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSec
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
-import org.junit.jupiter.api.Assertions;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -121,8 +120,7 @@ public class ReservationSystemTestUtil {
     assertEquals(8192, plan.getTotalCapacity().getMemorySize());
     assertTrue(
         plan.getReservationAgent() instanceof AlignedPlannerWithGreedy);
-    Assertions
-        .assertTrue(plan.getSharingPolicy() instanceof CapacityOverTimePolicy);
+    assertTrue(plan.getSharingPolicy() instanceof CapacityOverTimePolicy);
   }
 
   public static void setupFSAllocationFile(String allocationFile) {

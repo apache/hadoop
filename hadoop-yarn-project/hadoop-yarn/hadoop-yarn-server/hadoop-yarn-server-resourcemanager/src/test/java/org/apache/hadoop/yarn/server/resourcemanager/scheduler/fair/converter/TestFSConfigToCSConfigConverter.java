@@ -31,11 +31,14 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.conve
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.RuleAction.ABORT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.RuleAction.WARNING;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
 import java.io.ByteArrayInputStream;
@@ -55,15 +58,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.MappingRulesDescription;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -72,7 +72,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * Unit tests for FSConfigToCSConfigConverter.
  *
  */
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class TestFSConfigToCSConfigConverter {
   private static final String CLUSTER_RESOURCE_STRING =
       "vcores=20, memory-mb=240";
@@ -104,8 +104,6 @@ public class TestFSConfigToCSConfigConverter {
   private FSConfigToCSConfigConverter converter;
   private Configuration config;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
   private FSConfigConverterTestCommons converterTestCommons;
 
   private static String prepareFileName(String f) {
@@ -136,7 +134,7 @@ public class TestFSConfigToCSConfigConverter {
     return new ConversionOptions(new DryRunResultHolder(), false);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     config = new Configuration(false);
     config.set(FairSchedulerConfiguration.ALLOCATION_FILE, FAIR_SCHEDULER_XML);
@@ -147,7 +145,7 @@ public class TestFSConfigToCSConfigConverter {
     converterTestCommons.setUp();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     converterTestCommons.tearDown();
   }
@@ -183,17 +181,17 @@ public class TestFSConfigToCSConfigConverter {
     Float maxAmShare =
         conf.getMaximumApplicationMasterResourcePercent();
 
-    assertEquals("Default max AM share", 0.16f, maxAmShare, 0.0f);
+    assertEquals(0.16f, maxAmShare, 0.0f, "Default max AM share");
 
-    assertEquals("root.admins.alice max-am-resource-percent", 0.15f,
+    assertEquals(0.15f,
         conf.getMaximumApplicationMasterResourcePerQueuePercent(ADMINS_ALICE),
-            0.0f);
+        0.0f, "root.admins.alice max-am-resource-percent");
 
     //root.users.joe don’t have maximum-am-resource-percent set
     // so falling back to the global value
-    assertEquals("root.users.joe maximum-am-resource-percent", 0.16f,
+    assertEquals(0.16f,
         conf.getMaximumApplicationMasterResourcePerQueuePercent(USERS_JOE),
-            0.0f);
+        0.0f, "root.users.joe maximum-am-resource-percent");
   }
 
   @Test
@@ -202,21 +200,21 @@ public class TestFSConfigToCSConfigConverter {
 
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
 
-    assertEquals("root.users user-limit-factor", 1.0f,
-            conf.getUserLimitFactor(USERS), 0.0f);
-    assertEquals("root.users auto-queue-creation-v2.enabled", true,
-            conf.isAutoQueueCreationV2Enabled(USERS));
+    assertEquals(1.0f, conf.getUserLimitFactor(USERS), 0.0f,
+        "root.users user-limit-factor");
+    assertEquals(true, conf.isAutoQueueCreationV2Enabled(USERS),
+        "root.users auto-queue-creation-v2.enabled");
 
-    assertEquals("root.default user-limit-factor", -1.0f,
-            conf.getUserLimitFactor(DEFAULT), 0.0f);
+    assertEquals(-1.0f, conf.getUserLimitFactor(DEFAULT), 0.0f,
+        "root.default user-limit-factor");
 
-    assertEquals("root.users.joe user-limit-factor", -1.0f,
-            conf.getUserLimitFactor(USERS_JOE), 0.0f);
+    assertEquals(-1.0f, conf.getUserLimitFactor(USERS_JOE), 0.0f,
+        "root.users.joe user-limit-factor");
 
-    assertEquals("root.admins.bob user-limit-factor", -1.0f,
-            conf.getUserLimitFactor(ADMINS_BOB), 0.0f);
-    assertEquals("root.admin.bob auto-queue-creation-v2.enabled", false,
-            conf.isAutoQueueCreationV2Enabled(ADMINS_BOB));
+    assertEquals(-1.0f, conf.getUserLimitFactor(ADMINS_BOB), 0.0f,
+        "root.admins.bob user-limit-factor");
+    assertEquals(false, conf.isAutoQueueCreationV2Enabled(ADMINS_BOB),
+        "root.admin.bob auto-queue-creation-v2.enabled");
   }
 
   @Test
@@ -231,20 +229,20 @@ public class TestFSConfigToCSConfigConverter {
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
 
     // -1.0 means disabled ==> 1.0 in CS
-    assertEquals("Default max-am-resource-percent", 1.0f,
-        conf.getMaximumApplicationMasterResourcePercent(), 0.0f);
+    assertEquals(1.0f, conf.getMaximumApplicationMasterResourcePercent(), 0.0f,
+        "Default max-am-resource-percent");
 
     // root.admins.bob is unset,so falling back to the global value
-    assertEquals("root.admins.bob maximum-am-resource-percent", 1.0f,
-        conf.getMaximumApplicationMasterResourcePerQueuePercent(ADMINS_BOB), 0.0f);
+    assertEquals(1.0f, conf.getMaximumApplicationMasterResourcePerQueuePercent(ADMINS_BOB), 0.0f,
+        "root.admins.bob maximum-am-resource-percent");
 
     // root.admins.alice 0.15 != -1.0
-    assertEquals("root.admins.alice max-am-resource-percent", 0.15f,
-        conf.getMaximumApplicationMasterResourcePerQueuePercent(ADMINS_ALICE), 0.0f);
+    assertEquals(0.15f, conf.getMaximumApplicationMasterResourcePerQueuePercent(ADMINS_ALICE), 0.0f,
+        "root.admins.alice max-am-resource-percent");
 
     // root.users.joe is unset,so falling back to the global value
-    assertEquals("root.users.joe maximum-am-resource-percent", 1.0f,
-        conf.getMaximumApplicationMasterResourcePerQueuePercent(USERS_JOE), 0.0f);
+    assertEquals(1.0f, conf.getMaximumApplicationMasterResourcePerQueuePercent(USERS_JOE), 0.0f,
+        "root.users.joe maximum-am-resource-percent");
   }
 
   @Test
@@ -254,34 +252,34 @@ public class TestFSConfigToCSConfigConverter {
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
 
     // root
-    assertEquals("root submit ACL", "alice,bob,joe,john hadoop_users",
-        conf.getAcl(ROOT, QueueACL.SUBMIT_APPLICATIONS).getAclString());
-    assertEquals("root admin ACL", "alice,bob,joe,john hadoop_users",
-        conf.getAcl(ROOT, QueueACL.ADMINISTER_QUEUE).getAclString());
+    assertEquals("alice,bob,joe,john hadoop_users",
+        conf.getAcl(ROOT, QueueACL.SUBMIT_APPLICATIONS).getAclString(), "root submit ACL");
+    assertEquals("alice,bob,joe,john hadoop_users",
+        conf.getAcl(ROOT, QueueACL.ADMINISTER_QUEUE).getAclString(), "root admin ACL");
 
     // root.admins.bob
-    assertEquals("root.admins.bob submit ACL", "bob ",
-        conf.getAcl(ADMINS_BOB, QueueACL.SUBMIT_APPLICATIONS).getAclString());
-    assertEquals("root.admins.bob admin ACL", "bob ",
-        conf.getAcl(ADMINS_BOB, QueueACL.ADMINISTER_QUEUE).getAclString());
+    assertEquals("bob ", conf.getAcl(ADMINS_BOB, QueueACL.SUBMIT_APPLICATIONS).getAclString(),
+        "root.admins.bob submit ACL");
+    assertEquals("bob ", conf.getAcl(ADMINS_BOB, QueueACL.ADMINISTER_QUEUE).getAclString(),
+        "root.admins.bob admin ACL");
 
     // root.admins.alice
-    assertEquals("root.admins.alice submit ACL", "alice ",
-        conf.getAcl(ADMINS_ALICE, QueueACL.SUBMIT_APPLICATIONS).getAclString());
-    assertEquals("root.admins.alice admin ACL", "alice ",
-        conf.getAcl(ADMINS_ALICE, QueueACL.ADMINISTER_QUEUE).getAclString());
+    assertEquals("alice ", conf.getAcl(ADMINS_ALICE, QueueACL.SUBMIT_APPLICATIONS).getAclString(),
+        "root.admins.alice submit ACL");
+    assertEquals("alice ", conf.getAcl(ADMINS_ALICE, QueueACL.ADMINISTER_QUEUE).getAclString(),
+        "root.admins.alice admin ACL");
 
     // root.users.john
-    assertEquals("root.users.john submit ACL", "*",
-        conf.getAcl(USERS_JOHN, QueueACL.SUBMIT_APPLICATIONS).getAclString());
-    assertEquals("root.users.john admin ACL", "*",
-        conf.getAcl(USERS_JOHN, QueueACL.ADMINISTER_QUEUE).getAclString());
+    assertEquals("*", conf.getAcl(USERS_JOHN, QueueACL.SUBMIT_APPLICATIONS).getAclString(),
+        "root.users.john submit ACL");
+    assertEquals("*", conf.getAcl(USERS_JOHN, QueueACL.ADMINISTER_QUEUE).getAclString(),
+        "root.users.john admin ACL");
 
     // root.users.joe
-    assertEquals("root.users.joe submit ACL", "joe ",
-        conf.getAcl(USERS_JOE, QueueACL.SUBMIT_APPLICATIONS).getAclString());
-    assertEquals("root.users.joe admin ACL", "joe ",
-        conf.getAcl(USERS_JOE, QueueACL.ADMINISTER_QUEUE).getAclString());
+    assertEquals("joe ", conf.getAcl(USERS_JOE, QueueACL.SUBMIT_APPLICATIONS).getAclString(),
+        "root.users.joe submit ACL");
+    assertEquals("joe ", conf.getAcl(USERS_JOE, QueueACL.ADMINISTER_QUEUE).getAclString(),
+        "root.users.joe admin ACL");
   }
 
   @Test
@@ -290,8 +288,7 @@ public class TestFSConfigToCSConfigConverter {
 
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
 
-    assertEquals("Default max parallel apps", 15,
-        conf.getDefaultMaxParallelApps(), 0);
+    assertEquals(15, conf.getDefaultMaxParallelApps(), 0, "Default max parallel apps");
   }
 
   @Test
@@ -300,8 +297,8 @@ public class TestFSConfigToCSConfigConverter {
 
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
 
-    assertEquals("root.admins.alice max parallel apps", 2,
-        conf.getMaxParallelAppsForQueue(ADMINS_ALICE), 0);
+    assertEquals(2, conf.getMaxParallelAppsForQueue(ADMINS_ALICE), 0,
+        "root.admins.alice max parallel apps");
   }
 
   @Test
@@ -310,8 +307,8 @@ public class TestFSConfigToCSConfigConverter {
 
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
 
-    assertEquals("Default user max parallel apps", 10,
-        conf.getDefaultMaxParallelAppsPerUser(), 0);
+    assertEquals(10, conf.getDefaultMaxParallelAppsPerUser(), 0,
+        "Default user max parallel apps");
   }
 
   @Test
@@ -320,40 +317,40 @@ public class TestFSConfigToCSConfigConverter {
 
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
 
-    assertEquals("Max parallel apps for alice", 30,
-        conf.getMaxParallelAppsForUser("alice"), 0);
+    assertEquals(30, conf.getMaxParallelAppsForUser("alice"), 0,
+        "Max parallel apps for alice");
 
     //users.bob, user.joe, user.john  don’t have max-parallel-app set
     // so falling back to the global value for .user to 10
-    assertEquals("Max parallel apps for user bob", 10,
-        conf.getMaxParallelAppsForUser("bob"), 0);
-    assertEquals("Max parallel apps for user joe", 10,
-        conf.getMaxParallelAppsForUser("joe"), 0);
-    assertEquals("Max parallel apps for user john", 10,
-        conf.getMaxParallelAppsForUser("john"), 0);
+    assertEquals(10, conf.getMaxParallelAppsForUser("bob"), 0,
+        "Max parallel apps for user bob");
+    assertEquals(10, conf.getMaxParallelAppsForUser("joe"), 0,
+        "Max parallel apps for user joe");
+    assertEquals(10, conf.getMaxParallelAppsForUser("john"), 0,
+        "Max parallel apps for user john");
   }
 
   @Test
   public void testQueueMaxChildCapacityNotSupported() throws Exception {
-    expectedException.expect(UnsupportedPropertyException.class);
-    expectedException.expectMessage("test");
-
-    Mockito.doThrow(new UnsupportedPropertyException("test"))
-      .when(ruleHandler).handleMaxChildCapacity();
-
-    converter.convert(config);
+    UnsupportedPropertyException exception =
+        assertThrows(UnsupportedPropertyException.class, () -> {
+          doThrow(new UnsupportedPropertyException("test"))
+              .when(ruleHandler).handleMaxChildCapacity();
+          converter.convert(config);
+        });
+    assertThat(exception.getMessage()).contains("test");
   }
 
   @Test
   public void testReservationSystemNotSupported() throws Exception {
-    expectedException.expect(UnsupportedPropertyException.class);
-    expectedException.expectMessage("maxCapacity");
-
-    Mockito.doThrow(new UnsupportedPropertyException("maxCapacity"))
-      .when(ruleHandler).handleMaxChildCapacity();
-    config.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
-
-    converter.convert(config);
+    UnsupportedPropertyException exception =
+        assertThrows(UnsupportedPropertyException.class, () -> {
+          doThrow(new UnsupportedPropertyException("maxCapacity"))
+              .when(ruleHandler).handleMaxChildCapacity();
+          config.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
+          converter.convert(config);
+        });
+    assertThat(exception.getMessage()).contains("maxCapacity");
   }
 
   @Test
@@ -362,8 +359,8 @@ public class TestFSConfigToCSConfigConverter {
         .withClusterResource(CLUSTER_RESOURCE_STRING)
         .build();
     converter.convert(params);
-    assertEquals("Resource", Resource.newInstance(240, 20),
-        converter.getClusterResource());
+    assertEquals(Resource.newInstance(240, 20),
+        converter.getClusterResource(), "Resource");
   }
 
   @Test
@@ -373,34 +370,34 @@ public class TestFSConfigToCSConfigConverter {
             .withClusterResource(CLUSTER_RESOURCE_STRING)
             .build();
     converter.convert(params);
-    assertEquals("Resource", Resource.newInstance(240, 20),
-        converter.getClusterResource());
+    assertEquals(Resource.newInstance(240, 20),
+        converter.getClusterResource(), "Resource");
   }
 
   @Test
   public void testConvertFSConfigurationClusterResourceInvalid()
       throws Exception {
-    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
-            .withClusterResource("vcores=20, memory-mb=240G")
-            .build();
-
-    expectedException.expect(ConversionException.class);
-    expectedException.expectMessage("Error while parsing resource");
-
-    converter.convert(params);
+    ConversionException exception =
+        assertThrows(ConversionException.class, () -> {
+          FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
+              .withClusterResource("vcores=20, memory-mb=240G")
+              .build();
+          converter.convert(params);
+        });
+    assertThat(exception.getMessage()).contains("Error while parsing resource");
   }
 
   @Test
   public void testConvertFSConfigurationClusterResourceInvalid2()
       throws Exception {
-    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
-        .withClusterResource("vcores=20, memmmm=240")
-        .build();
-
-    expectedException.expect(ConversionException.class);
-    expectedException.expectMessage("Error while parsing resource");
-
-    converter.convert(params);
+    ConversionException exception =
+        assertThrows(ConversionException.class, () -> {
+          FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
+              .withClusterResource("vcores=20, memmmm=240")
+              .build();
+          converter.convert(params);
+        });
+    assertThat(exception.getMessage()).contains("Error while parsing resource");
   }
 
   @Test
@@ -426,16 +423,11 @@ public class TestFSConfigToCSConfigConverter {
     Map<String, FSConfigToCSConfigRuleHandler.RuleAction> actions =
         ruleHandler.getActions();
 
-    assertEquals("maxCapacityPercentage",
-        ABORT, actions.get(MAX_CAPACITY_PERCENTAGE));
-    assertEquals("maxChildCapacity",
-        ABORT, actions.get(MAX_CHILD_CAPACITY));
-    assertEquals("dynamicMaxAssign",
-        ABORT, actions.get(DYNAMIC_MAX_ASSIGN));
-    assertEquals("reservationSystem",
-        ABORT, actions.get(RESERVATION_SYSTEM));
-    assertEquals("queueAutoCreate",
-        ABORT, actions.get(QUEUE_AUTO_CREATE));
+    assertEquals(ABORT, actions.get(MAX_CAPACITY_PERCENTAGE), "maxCapacityPercentage");
+    assertEquals(ABORT, actions.get(MAX_CHILD_CAPACITY), "maxChildCapacity");
+    assertEquals(ABORT, actions.get(DYNAMIC_MAX_ASSIGN), "dynamicMaxAssign");
+    assertEquals(ABORT, actions.get(RESERVATION_SYSTEM), "reservationSystem");
+    assertEquals(ABORT, actions.get(QUEUE_AUTO_CREATE), "queueAutoCreate");
   }
 
   @Test
@@ -455,44 +447,33 @@ public class TestFSConfigToCSConfigConverter {
     Map<String, FSConfigToCSConfigRuleHandler.RuleAction> actions =
         ruleHandler.getActions();
 
-    assertEquals("maxCapacityPercentage",
-        WARNING, actions.get(MAX_CAPACITY_PERCENTAGE));
-    assertEquals("maxChildCapacity",
-        WARNING, actions.get(MAX_CHILD_CAPACITY));
-    assertEquals("dynamicMaxAssign",
-        WARNING, actions.get(DYNAMIC_MAX_ASSIGN));
-    assertEquals("reservationSystem",
-        WARNING, actions.get(RESERVATION_SYSTEM));
-    assertEquals("queueAutoCreate",
-        WARNING, actions.get(QUEUE_AUTO_CREATE));
-    assertEquals("childStaticDynamicConflict",
-        WARNING, actions.get(CHILD_STATIC_DYNAMIC_CONFLICT));
-    assertEquals("parentChildCreateDiffers",
-        WARNING, actions.get(PARENT_CHILD_CREATE_DIFFERS));
-    assertEquals("fairAsDrf",
-        WARNING, actions.get(FAIR_AS_DRF));
-    assertEquals("maxResources",
-        WARNING, actions.get(MAX_RESOURCES));
-    assertEquals("minResources",
-        WARNING, actions.get(MIN_RESOURCES));
-    assertEquals("parentDynamicCreate",
-        WARNING, actions.get(PARENT_DYNAMIC_CREATE));
+    assertEquals(WARNING, actions.get(MAX_CAPACITY_PERCENTAGE), "maxCapacityPercentage");
+    assertEquals(WARNING, actions.get(MAX_CHILD_CAPACITY), "maxChildCapacity");
+    assertEquals(WARNING, actions.get(DYNAMIC_MAX_ASSIGN), "dynamicMaxAssign");
+    assertEquals(WARNING, actions.get(RESERVATION_SYSTEM), "reservationSystem");
+    assertEquals(WARNING, actions.get(QUEUE_AUTO_CREATE), "queueAutoCreate");
+    assertEquals(WARNING, actions.get(CHILD_STATIC_DYNAMIC_CONFLICT),
+        "childStaticDynamicConflict");
+    assertEquals(WARNING, actions.get(PARENT_CHILD_CREATE_DIFFERS), "parentChildCreateDiffers");
+    assertEquals(WARNING, actions.get(FAIR_AS_DRF), "fairAsDrf");
+    assertEquals(WARNING, actions.get(MAX_RESOURCES), "maxResources");
+    assertEquals(WARNING, actions.get(MIN_RESOURCES), "minResources");
+    assertEquals(WARNING, actions.get(PARENT_DYNAMIC_CREATE), "parentDynamicCreate");
   }
 
   @Test
   public void testConvertFSConfigurationUndefinedYarnSiteConfig()
       throws Exception {
-    FSConfigToCSConfigConverterParams params =
-        FSConfigToCSConfigConverterParams.Builder.create()
-            .withYarnSiteXmlConfig(null)
-            .withOutputDirectory(FSConfigConverterTestCommons.OUTPUT_DIR)
-            .build();
-
-    expectedException.expect(PreconditionException.class);
-    expectedException.expectMessage(
-        "yarn-site.xml configuration is not defined");
-
-    converter.convert(params);
+    PreconditionException exception =
+        assertThrows(PreconditionException.class, () -> {
+          FSConfigToCSConfigConverterParams params =
+              FSConfigToCSConfigConverterParams.Builder.create()
+              .withYarnSiteXmlConfig(null)
+              .withOutputDirectory(FSConfigConverterTestCommons.OUTPUT_DIR)
+              .build();
+          converter.convert(params);
+        });
+    assertThat(exception.getMessage()).contains("yarn-site.xml configuration is not defined");
   }
 
   @Test
@@ -510,65 +491,66 @@ public class TestFSConfigToCSConfigConverter {
 
     File capacityFile = new File(FSConfigConverterTestCommons.OUTPUT_DIR,
         "capacity-scheduler.xml");
-    assertTrue("Capacity file exists", capacityFile.exists());
-    assertTrue("Capacity file length > 0", capacityFile.length() > 0);
-    assertTrue("No. of configuration elements > 0", conf.size() > 0);
+    assertTrue(capacityFile.exists(), "Capacity file exists");
+    assertTrue(capacityFile.length() > 0, "Capacity file length > 0");
+    assertTrue(conf.size() > 0, "No. of configuration elements > 0");
 
     File yarnSiteFile = new File(FSConfigConverterTestCommons.OUTPUT_DIR,
         "yarn-site.xml");
-    assertTrue("Yarn site exists", yarnSiteFile.exists());
-    assertTrue("Yarn site length > 0", yarnSiteFile.length() > 0);
+    assertTrue(yarnSiteFile.exists(), "Yarn site exists");
+    assertTrue(yarnSiteFile.length() > 0, "Yarn site length > 0");
 
     File mappingRulesFile = new File(FSConfigConverterTestCommons.OUTPUT_DIR,
         "mapping-rules.json");
-    assertTrue("Mapping rules file exists", mappingRulesFile.exists());
-    assertTrue("Mapping rules file length > 0", mappingRulesFile.length() > 0);
+    assertTrue(mappingRulesFile.exists(), "Mapping rules file exists");
+    assertTrue(mappingRulesFile.length() > 0, "Mapping rules file length > 0");
   }
 
   @Test
   public void testFairSchedulerXmlIsNotDefinedNeitherDirectlyNorInYarnSiteXml()
       throws Exception {
-    FSConfigToCSConfigConverterParams params =
-        createParamsBuilder(YARN_SITE_XML_NO_REF_TO_FS_XML)
-        .withClusterResource(CLUSTER_RESOURCE_STRING)
-        .build();
-
-    expectedException.expect(PreconditionException.class);
-    expectedException.expectMessage("fair-scheduler.xml is not defined");
-    converter.convert(params);
+    PreconditionException exception =
+        assertThrows(PreconditionException.class, () -> {
+          FSConfigToCSConfigConverterParams params =
+              createParamsBuilder(YARN_SITE_XML_NO_REF_TO_FS_XML)
+              .withClusterResource(CLUSTER_RESOURCE_STRING)
+              .build();
+          converter.convert(params);
+        });
+    assertThat(exception.getMessage()).contains("fair-scheduler.xml is not defined");
   }
 
   @Test
   public void testInvalidFairSchedulerXml() throws Exception {
-    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
-        .withClusterResource(CLUSTER_RESOURCE_STRING)
-        .withFairSchedulerXmlConfig(FAIR_SCHEDULER_XML_INVALID)
-        .build();
-
-    expectedException.expect(RuntimeException.class);
-    converter.convert(params);
+    assertThrows(RuntimeException.class, () -> {
+      FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
+          .withClusterResource(CLUSTER_RESOURCE_STRING)
+          .withFairSchedulerXmlConfig(FAIR_SCHEDULER_XML_INVALID)
+          .build();
+      converter.convert(params);
+    });
   }
 
   @Test
   public void testInvalidYarnSiteXml() throws Exception {
-    FSConfigToCSConfigConverterParams params =
-        createParamsBuilder(YARN_SITE_XML_INVALID)
-        .withClusterResource(CLUSTER_RESOURCE_STRING)
-        .build();
-
-    expectedException.expect(RuntimeException.class);
-    converter.convert(params);
+    assertThrows(RuntimeException.class, () -> {
+      FSConfigToCSConfigConverterParams params =
+          createParamsBuilder(YARN_SITE_XML_INVALID)
+          .withClusterResource(CLUSTER_RESOURCE_STRING)
+          .build();
+      converter.convert(params);
+    });
   }
 
   @Test
   public void testConversionWithInvalidPlacementRules() throws Exception {
-    config = new Configuration(false);
-    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
-        FS_INVALID_PLACEMENT_RULES_XML);
-    config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
-    expectedException.expect(ServiceStateException.class);
-
-    converter.convert(config);
+    assertThrows(ServiceStateException.class, () -> {
+      config = new Configuration(false);
+      config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+          FS_INVALID_PLACEMENT_RULES_XML);
+      config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
+      converter.convert(config);
+    });
   }
 
   @Test
@@ -601,9 +583,9 @@ public class TestFSConfigToCSConfigConverter {
 
     Configuration convertedConfig = converter.getYarnSiteConfig();
 
-    assertEquals("Resource calculator class shouldn't be set", null,
-        convertedConfig.getClass(
-            CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS, null));
+    assertEquals(null, convertedConfig.getClass(
+        CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS, null),
+        "Resource calculator class shouldn't be set");
   }
 
   @Test
@@ -617,9 +599,10 @@ public class TestFSConfigToCSConfigConverter {
 
     Configuration convertedConfig = converter.getYarnSiteConfig();
 
-    assertEquals("Resource calculator type", DominantResourceCalculator.class,
+    assertEquals(DominantResourceCalculator.class,
         convertedConfig.getClass(
-            CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS, null));
+        CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS, null),
+        "Resource calculator type");
   }
 
   @Test
@@ -664,10 +647,10 @@ public class TestFSConfigToCSConfigConverter {
 
     if (hasPlacementRules) {
       // fs.xml defines 5 rules
-      assertEquals("Number of rules", 5, description.getRules().size());
+      assertEquals(5, description.getRules().size(), "Number of rules");
     } else {
       // by default, FS internally creates 2 rules
-      assertEquals("Number of rules", 2, description.getRules().size());
+      assertEquals(2, description.getRules().size(), "Number of rules");
     }
   }
 
@@ -709,15 +692,14 @@ public class TestFSConfigToCSConfigConverter {
   public void testConversionWhenAsyncSchedulingIsEnabled()
           throws Exception {
     boolean schedulingEnabledValue =  testConversionWithAsyncSchedulingOption(true);
-    assertTrue("Asynchronous scheduling should be true", schedulingEnabledValue);
+    assertTrue(schedulingEnabledValue, "Asynchronous scheduling should be true");
   }
 
   @Test
   public void testConversionWhenAsyncSchedulingIsDisabled() throws Exception {
     boolean schedulingEnabledValue =  testConversionWithAsyncSchedulingOption(false);
-    assertEquals("Asynchronous scheduling should be the default value",
-            CapacitySchedulerConfiguration.DEFAULT_SCHEDULE_ASYNCHRONOUSLY_ENABLE,
-            schedulingEnabledValue);
+    assertEquals(CapacitySchedulerConfiguration.DEFAULT_SCHEDULE_ASYNCHRONOUSLY_ENABLE,
+        schedulingEnabledValue, "Asynchronous scheduling should be the default value");
   }
 
   @Test
@@ -729,9 +711,8 @@ public class TestFSConfigToCSConfigConverter {
         .build();
 
     converter.convert(params);
-    assertTrue("The observe only should be true",
-        converter.getCapacitySchedulerConfig().
-            getPreemptionObserveOnly());
+    assertTrue(converter.getCapacitySchedulerConfig().
+        getPreemptionObserveOnly(), "The observe only should be true");
   }
 
   private boolean testConversionWithAsyncSchedulingOption(boolean enabled) throws Exception {

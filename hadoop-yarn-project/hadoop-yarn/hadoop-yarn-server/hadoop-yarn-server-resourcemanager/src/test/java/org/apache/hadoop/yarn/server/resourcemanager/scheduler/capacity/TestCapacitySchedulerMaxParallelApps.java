@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
 import java.util.List;
@@ -46,9 +46,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestCapacitySchedulerMaxParallelApps {
   private CapacitySchedulerConfiguration conf;
@@ -67,7 +68,7 @@ public class TestCapacitySchedulerMaxParallelApps {
   private ParentQueue rootQueue;
   private LeafQueue defaultQueue;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     CapacitySchedulerConfiguration config =
         new CapacitySchedulerConfiguration();
@@ -77,21 +78,23 @@ public class TestCapacitySchedulerMaxParallelApps {
     conf = new CapacitySchedulerConfiguration(config);
   }
 
-  @After
+  @AfterEach
   public void after() {
     if (rm != null) {
       rm.stop();
     }
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMaxParallelAppsExceedsQueueSetting() throws Exception {
     conf.setInt("yarn.scheduler.capacity.root.default.max-parallel-apps", 2);
     executeCommonStepsAndChecks();
     testWhenSettingsExceeded();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMaxParallelAppsExceedsDefaultQueueSetting()
       throws Exception {
     conf.setInt("yarn.scheduler.capacity.max-parallel-apps", 2);
@@ -99,21 +102,24 @@ public class TestCapacitySchedulerMaxParallelApps {
     testWhenSettingsExceeded();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMaxParallelAppsExceedsUserSetting() throws Exception {
     conf.setInt("yarn.scheduler.capacity.user.testuser.max-parallel-apps", 2);
     executeCommonStepsAndChecks();
     testWhenSettingsExceeded();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMaxParallelAppsExceedsDefaultUserSetting() throws Exception {
     conf.setInt("yarn.scheduler.capacity.user.max-parallel-apps", 2);
     executeCommonStepsAndChecks();
     testWhenSettingsExceeded();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMaxParallelAppsWhenReloadingConfig() throws Exception {
     conf.setInt("yarn.scheduler.capacity.root.default.max-parallel-apps", 2);
 
@@ -132,7 +138,8 @@ public class TestCapacitySchedulerMaxParallelApps {
     verifyRunningAndAcceptedApps(4, 0);
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMaxAppsReachedWithNonRunnableApps() throws Exception {
     conf.setInt("yarn.scheduler.capacity.root.default.max-parallel-apps", 2);
     conf.setInt("yarn.scheduler.capacity.root.default.maximum-applications", 4);
@@ -245,20 +252,20 @@ public class TestCapacitySchedulerMaxParallelApps {
 
   private void verifyRunnableAppsInParent(ParentQueue queue,
       int expectedRunnable) {
-    assertEquals("Num of runnable apps", expectedRunnable,
-        queue.getNumRunnableApps());
+    assertEquals(expectedRunnable, queue.getNumRunnableApps(),
+        "Num of runnable apps");
   }
 
   private void verifyRunnableAppsInLeaf(LeafQueue queue, int expectedRunnable,
       Set<ApplicationAttemptId> nonRunnableIds) {
-    assertEquals("Num of runnable apps", expectedRunnable,
-        queue.getNumRunnableApps());
+    assertEquals(expectedRunnable, queue.getNumRunnableApps(),
+        "Num of runnable apps");
 
     queue.getCopyOfNonRunnableAppSchedulables()
         .stream()
         .map(fca -> fca.getApplicationAttemptId())
-        .forEach(id -> assertTrue(id + " not found as non-runnable",
-          nonRunnableIds.contains(id)));
+        .forEach(id -> assertTrue(nonRunnableIds.contains(id),
+        id + " not found as non-runnable"));
   }
 
   private void verifyRunningAndAcceptedApps(int expectedRunning,
@@ -282,8 +289,8 @@ public class TestCapacitySchedulerMaxParallelApps {
           report.getYarnApplicationState() == YarnApplicationState.ACCEPTED)
         .count();
 
-    assertEquals("Running apps count", expectedRunning, runningCount);
-    assertEquals("Accepted apps count", expectedAccepted, acceptedCount);
+    assertEquals(expectedRunning, runningCount, "Running apps count");
+    assertEquals(expectedAccepted, acceptedCount, "Accepted apps count");
   }
 
   private void unregisterAMandWaitForFinish(RMApp app, MockAM am, MockNM nm)

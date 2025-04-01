@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
@@ -31,9 +36,8 @@ import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.Collections;
@@ -123,7 +127,7 @@ public class TestNodeQueueLoadMonitor {
     ResourceUtils.initializeResourcesFromResourceInformationMap(riMap);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void classSetUp() {
     addNewTypesToResources(NETWORK_RESOURCE);
     defaultResourceRequested = newResourceInstance(128, 1, 1);
@@ -139,43 +143,43 @@ public class TestNodeQueueLoadMonitor {
     selector.updateNode(createRMNode("h3", 3, 10, 10));
     selector.computeTask.run();
     List<NodeId> nodeIds = selector.selectNodes();
-    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
-    Assert.assertEquals("h3:3", nodeIds.get(1).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(2).toString());
+    assertEquals("h2:2", nodeIds.get(0).toString());
+    assertEquals("h3:3", nodeIds.get(1).toString());
+    assertEquals("h1:1", nodeIds.get(2).toString());
 
     // Now update node3
     selector.updateNode(createRMNode("h3", 3, 2, 10));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
-    Assert.assertEquals("h3:3", nodeIds.get(0).toString());
-    Assert.assertEquals("h2:2", nodeIds.get(1).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(2).toString());
+    assertEquals("h3:3", nodeIds.get(0).toString());
+    assertEquals("h2:2", nodeIds.get(1).toString());
+    assertEquals("h1:1", nodeIds.get(2).toString());
 
     // Now send update with -1 wait time
     selector.updateNode(createRMNode("h4", 4, -1, 10));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
     // No change
-    Assert.assertEquals("h3:3", nodeIds.get(0).toString());
-    Assert.assertEquals("h2:2", nodeIds.get(1).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(2).toString());
+    assertEquals("h3:3", nodeIds.get(0).toString());
+    assertEquals("h2:2", nodeIds.get(1).toString());
+    assertEquals("h1:1", nodeIds.get(2).toString());
 
     // Now update node 2 to DECOMMISSIONING state
     selector
         .updateNode(createRMNode("h2", 2, 1, 10, NodeState.DECOMMISSIONING));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
-    Assert.assertEquals(2, nodeIds.size());
-    Assert.assertEquals("h3:3", nodeIds.get(0).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
+    assertEquals(2, nodeIds.size());
+    assertEquals("h3:3", nodeIds.get(0).toString());
+    assertEquals("h1:1", nodeIds.get(1).toString());
 
     // Now update node 2 back to RUNNING state
     selector.updateNode(createRMNode("h2", 2, 1, 10, NodeState.RUNNING));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
-    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
-    Assert.assertEquals("h3:3", nodeIds.get(1).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(2).toString());
+    assertEquals("h2:2", nodeIds.get(0).toString());
+    assertEquals("h3:3", nodeIds.get(1).toString());
+    assertEquals("h1:1", nodeIds.get(2).toString());
   }
 
   @Test
@@ -188,18 +192,18 @@ public class TestNodeQueueLoadMonitor {
     selector.computeTask.run();
     List<NodeId> nodeIds = selector.selectNodes();
     System.out.println("1-> " + nodeIds);
-    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
-    Assert.assertEquals("h3:3", nodeIds.get(1).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(2).toString());
+    assertEquals("h2:2", nodeIds.get(0).toString());
+    assertEquals("h3:3", nodeIds.get(1).toString());
+    assertEquals("h1:1", nodeIds.get(2).toString());
 
     // Now update node3
     selector.updateNode(createRMNode("h3", 3, -1, 2));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
     System.out.println("2-> "+ nodeIds);
-    Assert.assertEquals("h3:3", nodeIds.get(0).toString());
-    Assert.assertEquals("h2:2", nodeIds.get(1).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(2).toString());
+    assertEquals("h3:3", nodeIds.get(0).toString());
+    assertEquals("h2:2", nodeIds.get(1).toString());
+    assertEquals("h1:1", nodeIds.get(2).toString());
 
     // Now send update with -1 wait time but valid length
     selector.updateNode(createRMNode("h4", 4, -1, 20));
@@ -207,10 +211,10 @@ public class TestNodeQueueLoadMonitor {
     nodeIds = selector.selectNodes();
     System.out.println("3-> "+ nodeIds);
     // No change
-    Assert.assertEquals("h3:3", nodeIds.get(0).toString());
-    Assert.assertEquals("h2:2", nodeIds.get(1).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(2).toString());
-    Assert.assertEquals("h4:4", nodeIds.get(3).toString());
+    assertEquals("h3:3", nodeIds.get(0).toString());
+    assertEquals("h2:2", nodeIds.get(1).toString());
+    assertEquals("h1:1", nodeIds.get(2).toString());
+    assertEquals("h4:4", nodeIds.get(3).toString());
 
     // Now update h3 and fill its queue.
     selector.updateNode(createRMNode("h3", 3, -1,
@@ -218,29 +222,29 @@ public class TestNodeQueueLoadMonitor {
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
     System.out.println("4-> "+ nodeIds);
-    Assert.assertEquals(3, nodeIds.size());
-    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
-    Assert.assertEquals("h4:4", nodeIds.get(2).toString());
+    assertEquals(3, nodeIds.size());
+    assertEquals("h2:2", nodeIds.get(0).toString());
+    assertEquals("h1:1", nodeIds.get(1).toString());
+    assertEquals("h4:4", nodeIds.get(2).toString());
 
     // Now update h2 to Decommissioning state
     selector.updateNode(createRMNode("h2", 2, -1,
         5, NodeState.DECOMMISSIONING));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
-    Assert.assertEquals(2, nodeIds.size());
-    Assert.assertEquals("h1:1", nodeIds.get(0).toString());
-    Assert.assertEquals("h4:4", nodeIds.get(1).toString());
+    assertEquals(2, nodeIds.size());
+    assertEquals("h1:1", nodeIds.get(0).toString());
+    assertEquals("h4:4", nodeIds.get(1).toString());
 
     // Now update h2 back to Running state
     selector.updateNode(createRMNode("h2", 2, -1,
         5, NodeState.RUNNING));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
-    Assert.assertEquals(3, nodeIds.size());
-    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
-    Assert.assertEquals("h4:4", nodeIds.get(2).toString());
+    assertEquals(3, nodeIds.size());
+    assertEquals("h2:2", nodeIds.get(0).toString());
+    assertEquals("h1:1", nodeIds.get(1).toString());
+    assertEquals("h4:4", nodeIds.get(2).toString());
   }
 
   @Test
@@ -265,10 +269,10 @@ public class TestNodeQueueLoadMonitor {
         Resources.multiply(defaultResourceRequested, 2), defaultCapacity));
     selector.computeTask.run();
     List<NodeId> nodeIds = selector.selectNodes();
-    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
-    Assert.assertEquals("h3:3", nodeIds.get(2).toString());
-    Assert.assertEquals("h4:4", nodeIds.get(3).toString());
+    assertEquals("h2:2", nodeIds.get(0).toString());
+    assertEquals("h1:1", nodeIds.get(1).toString());
+    assertEquals("h3:3", nodeIds.get(2).toString());
+    assertEquals("h4:4", nodeIds.get(3).toString());
 
     // Now update node3
     // node3 should now rank after node4 since it has the same queue length
@@ -278,10 +282,10 @@ public class TestNodeQueueLoadMonitor {
         Resources.multiply(defaultResourceRequested, 3), defaultCapacity));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
-    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
-    Assert.assertEquals("h4:4", nodeIds.get(2).toString());
-    Assert.assertEquals("h3:3", nodeIds.get(3).toString());
+    assertEquals("h2:2", nodeIds.get(0).toString());
+    assertEquals("h1:1", nodeIds.get(1).toString());
+    assertEquals("h4:4", nodeIds.get(2).toString());
+    assertEquals("h3:3", nodeIds.get(3).toString());
 
     // Now update h3 and fill its queue -- it should no longer be available
     selector.updateNode(createRMNode("h3", 3, -1,
@@ -289,10 +293,10 @@ public class TestNodeQueueLoadMonitor {
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
     // h3 is queued up, so we should only have 3 nodes left
-    Assert.assertEquals(3, nodeIds.size());
-    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
-    Assert.assertEquals("h4:4", nodeIds.get(2).toString());
+    assertEquals(3, nodeIds.size());
+    assertEquals("h2:2", nodeIds.get(0).toString());
+    assertEquals("h1:1", nodeIds.get(1).toString());
+    assertEquals("h4:4", nodeIds.get(2).toString());
 
     // Now update h2 to Decommissioning state
     selector.updateNode(createRMNode("h2", 2, -1,
@@ -300,9 +304,9 @@ public class TestNodeQueueLoadMonitor {
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
     // h2 is decommissioned, and h3 is full, so we should only have 2 nodes
-    Assert.assertEquals(2, nodeIds.size());
-    Assert.assertEquals("h1:1", nodeIds.get(0).toString());
-    Assert.assertEquals("h4:4", nodeIds.get(1).toString());
+    assertEquals(2, nodeIds.size());
+    assertEquals("h1:1", nodeIds.get(0).toString());
+    assertEquals("h4:4", nodeIds.get(1).toString());
 
     // Now update h2 back to Running state
     selector.updateNode(createRMNode(
@@ -310,10 +314,10 @@ public class TestNodeQueueLoadMonitor {
         Resources.multiply(defaultResourceRequested, 2), defaultCapacity));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
-    Assert.assertEquals(3, nodeIds.size());
-    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
-    Assert.assertEquals("h4:4", nodeIds.get(2).toString());
+    assertEquals(3, nodeIds.size());
+    assertEquals("h2:2", nodeIds.get(0).toString());
+    assertEquals("h1:1", nodeIds.get(1).toString());
+    assertEquals("h4:4", nodeIds.get(2).toString());
 
     // Now update h2 to have a zero queue capacity.
     // Make sure that here it is still in the pool.
@@ -323,10 +327,10 @@ public class TestNodeQueueLoadMonitor {
         defaultCapacity));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
-    Assert.assertEquals(3, nodeIds.size());
-    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
-    Assert.assertEquals("h4:4", nodeIds.get(2).toString());
+    assertEquals(3, nodeIds.size());
+    assertEquals("h2:2", nodeIds.get(0).toString());
+    assertEquals("h1:1", nodeIds.get(1).toString());
+    assertEquals("h4:4", nodeIds.get(2).toString());
 
     // Now update h2 to have a positive queue length but a zero queue capacity.
     // Make sure that here it is no longer in the pool.
@@ -341,9 +345,9 @@ public class TestNodeQueueLoadMonitor {
         defaultCapacity));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
-    Assert.assertEquals(2, nodeIds.size());
-    Assert.assertEquals("h1:1", nodeIds.get(0).toString());
-    Assert.assertEquals("h4:4", nodeIds.get(1).toString());
+    assertEquals(2, nodeIds.size());
+    assertEquals("h1:1", nodeIds.get(0).toString());
+    assertEquals("h4:4", nodeIds.get(1).toString());
   }
 
   /**
@@ -360,33 +364,33 @@ public class TestNodeQueueLoadMonitor {
     selector.updateSortedNodes();
 
     ClusterNode clusterNode = selector.getClusterNodes().get(node.getNodeID());
-    Assert.assertEquals(Resources.none(),
+    assertEquals(Resources.none(),
         clusterNode.getAllocatedResource());
 
     // Has enough resources
     RMNode selectedNode = selector.selectAnyNode(
         Collections.emptySet(), defaultResourceRequested);
-    Assert.assertNotNull(selectedNode);
-    Assert.assertEquals(node.getNodeID(), selectedNode.getNodeID());
+    assertNotNull(selectedNode);
+    assertEquals(node.getNodeID(), selectedNode.getNodeID());
 
     clusterNode = selector.getClusterNodes().get(node.getNodeID());
-    Assert.assertEquals(defaultResourceRequested,
+    assertEquals(defaultResourceRequested,
         clusterNode.getAllocatedResource());
 
     // Does not have enough resources, but can queue
     selectedNode = selector.selectAnyNode(
         Collections.emptySet(), defaultCapacity);
-    Assert.assertNotNull(selectedNode);
-    Assert.assertEquals(node.getNodeID(), selectedNode.getNodeID());
+    assertNotNull(selectedNode);
+    assertEquals(node.getNodeID(), selectedNode.getNodeID());
 
     clusterNode = selector.getClusterNodes().get(node.getNodeID());
-    Assert.assertEquals(1, clusterNode.getQueueLength());
+    assertEquals(1, clusterNode.getQueueLength());
 
     // Does not have enough resources and cannot queue
     selectedNode = selector.selectAnyNode(
         Collections.emptySet(),
         Resources.add(defaultResourceRequested, defaultCapacity));
-    Assert.assertNull(selectedNode);
+    assertNull(selectedNode);
   }
 
   @Test
@@ -411,10 +415,10 @@ public class TestNodeQueueLoadMonitor {
         Resources.multiply(defaultResourceRequested, 4), defaultCapacity));
     selector.computeTask.run();
     List<NodeId> nodeIds = selector.selectNodes();
-    Assert.assertEquals("h1:1", nodeIds.get(0).toString());
-    Assert.assertEquals("h2:2", nodeIds.get(1).toString());
-    Assert.assertEquals("h3:3", nodeIds.get(2).toString());
-    Assert.assertEquals("h4:4", nodeIds.get(3).toString());
+    assertEquals("h1:1", nodeIds.get(0).toString());
+    assertEquals("h2:2", nodeIds.get(1).toString());
+    assertEquals("h3:3", nodeIds.get(2).toString());
+    assertEquals("h4:4", nodeIds.get(3).toString());
 
     // Now update node1 to have only defaultResourceRequested available
     // by changing its capability to 2x defaultResourceReqeusted
@@ -425,10 +429,10 @@ public class TestNodeQueueLoadMonitor {
         Resources.multiply(defaultResourceRequested, 2)));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
-    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
-    Assert.assertEquals("h3:3", nodeIds.get(1).toString());
-    Assert.assertEquals("h4:4", nodeIds.get(2).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(3).toString());
+    assertEquals("h2:2", nodeIds.get(0).toString());
+    assertEquals("h3:3", nodeIds.get(1).toString());
+    assertEquals("h4:4", nodeIds.get(2).toString());
+    assertEquals("h1:1", nodeIds.get(3).toString());
 
     // Now update node2 to have no resources available
     // by changing its capability to 1x defaultResourceReqeusted
@@ -439,10 +443,10 @@ public class TestNodeQueueLoadMonitor {
         Resources.multiply(defaultResourceRequested, 1)));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
-    Assert.assertEquals("h3:3", nodeIds.get(0).toString());
-    Assert.assertEquals("h4:4", nodeIds.get(1).toString());
-    Assert.assertEquals("h1:1", nodeIds.get(2).toString());
-    Assert.assertEquals("h2:2", nodeIds.get(3).toString());
+    assertEquals("h3:3", nodeIds.get(0).toString());
+    assertEquals("h4:4", nodeIds.get(1).toString());
+    assertEquals("h1:1", nodeIds.get(2).toString());
+    assertEquals("h2:2", nodeIds.get(3).toString());
   }
 
   @Test
@@ -458,12 +462,12 @@ public class TestNodeQueueLoadMonitor {
     QueueLimitCalculator calculator = selector.getThresholdCalculator();
     ContainerQueuingLimit containerQueuingLimit = calculator
         .createContainerQueuingLimit();
-    Assert.assertEquals(6, containerQueuingLimit.getMaxQueueLength());
-    Assert.assertEquals(-1, containerQueuingLimit.getMaxQueueWaitTimeInMs());
+    assertEquals(6, containerQueuingLimit.getMaxQueueLength());
+    assertEquals(-1, containerQueuingLimit.getMaxQueueWaitTimeInMs());
     selector.computeTask.run();
     containerQueuingLimit = calculator.createContainerQueuingLimit();
-    Assert.assertEquals(10, containerQueuingLimit.getMaxQueueLength());
-    Assert.assertEquals(-1, containerQueuingLimit.getMaxQueueWaitTimeInMs());
+    assertEquals(10, containerQueuingLimit.getMaxQueueLength());
+    assertEquals(-1, containerQueuingLimit.getMaxQueueWaitTimeInMs());
 
     // Test Limits do not exceed specified max
     selector.updateNode(createRMNode("h1", 1, -1, 110));
@@ -474,7 +478,7 @@ public class TestNodeQueueLoadMonitor {
     selector.updateNode(createRMNode("h6", 6, -1, 160));
     selector.computeTask.run();
     containerQueuingLimit = calculator.createContainerQueuingLimit();
-    Assert.assertEquals(100, containerQueuingLimit.getMaxQueueLength());
+    assertEquals(100, containerQueuingLimit.getMaxQueueLength());
 
     // Test Limits do not go below specified min
     selector.updateNode(createRMNode("h1", 1, -1, 1));
@@ -485,7 +489,7 @@ public class TestNodeQueueLoadMonitor {
     selector.updateNode(createRMNode("h6", 6, -1, 6));
     selector.computeTask.run();
     containerQueuingLimit = calculator.createContainerQueuingLimit();
-    Assert.assertEquals(6, containerQueuingLimit.getMaxQueueLength());
+    assertEquals(6, containerQueuingLimit.getMaxQueueLength());
 
   }
 
@@ -515,21 +519,21 @@ public class TestNodeQueueLoadMonitor {
     Set<String> blacklist = new HashSet<>();
     RMNode node = selector.selectLocalNode(
         "h1", blacklist, defaultResourceRequested);
-    Assert.assertEquals("h1", node.getHostName());
+    assertEquals("h1", node.getHostName());
 
     // if node has been added to blacklist
     blacklist.add("h1");
     node = selector.selectLocalNode(
         "h1", blacklist, defaultResourceRequested);
-    Assert.assertNull(node);
+    assertNull(node);
 
     node = selector.selectLocalNode(
         "h2", blacklist, defaultResourceRequested);
-    Assert.assertNull(node);
+    assertNull(node);
 
     node = selector.selectLocalNode(
         "h3", blacklist, defaultResourceRequested);
-    Assert.assertEquals("h3", node.getHostName());
+    assertEquals("h3", node.getHostName());
   }
 
   /**
@@ -558,22 +562,22 @@ public class TestNodeQueueLoadMonitor {
     Set<String> blacklist = new HashSet<>();
     RMNode node = selector.selectRackLocalNode(
         "rack1", blacklist, defaultResourceRequested);
-    Assert.assertEquals("h1", node.getHostName());
+    assertEquals("h1", node.getHostName());
 
     // if node has been added to blacklist
     blacklist.add("h1");
     node = selector.selectRackLocalNode(
         "rack1", blacklist, defaultResourceRequested);
-    Assert.assertNull(node);
+    assertNull(node);
 
     node = selector.selectRackLocalNode(
         "rack2", blacklist, defaultResourceRequested);
-    Assert.assertEquals("h3", node.getHostName());
+    assertEquals("h3", node.getHostName());
 
     blacklist.add("h3");
     node = selector.selectRackLocalNode(
         "rack2", blacklist, defaultResourceRequested);
-    Assert.assertNull(node);
+    assertNull(node);
   }
 
   /**
@@ -599,23 +603,23 @@ public class TestNodeQueueLoadMonitor {
 
     selector.computeTask.run();
 
-    Assert.assertEquals(2, selector.getSortedNodes().size());
+    assertEquals(2, selector.getSortedNodes().size());
 
     // basic test for selecting node which has queue length
     // less than queue capacity.
     Set<String> blacklist = new HashSet<>();
     RMNode node = selector.selectAnyNode(blacklist, defaultResourceRequested);
-    Assert.assertTrue(node.getHostName().equals("h1") ||
+    assertTrue(node.getHostName().equals("h1") ||
         node.getHostName().equals("h3"));
 
     // if node has been added to blacklist
     blacklist.add("h1");
     node = selector.selectAnyNode(blacklist, defaultResourceRequested);
-    Assert.assertEquals("h3", node.getHostName());
+    assertEquals("h3", node.getHostName());
 
     blacklist.add("h3");
     node = selector.selectAnyNode(blacklist, defaultResourceRequested);
-    Assert.assertNull(node);
+    assertNull(node);
   }
 
   @Test
@@ -646,7 +650,7 @@ public class TestNodeQueueLoadMonitor {
 
       comparator.setClusterResource(
           Resources.add(cn1.getCapability(), cn2.getCapability()));
-      Assert.assertTrue(comparator.compare(cn1, cn2) < 0);
+      assertTrue(comparator.compare(cn1, cn2) < 0);
     }
 
     // Case 2: Shorter queue should be ranked first before comparing resources
@@ -669,7 +673,7 @@ public class TestNodeQueueLoadMonitor {
 
       comparator.setClusterResource(
           Resources.add(cn1.getCapability(), cn2.getCapability()));
-      Assert.assertTrue(comparator.compare(cn1, cn2) < 0);
+      assertTrue(comparator.compare(cn1, cn2) < 0);
     }
 
     // Case 3: No capability vs with capability,
@@ -693,7 +697,7 @@ public class TestNodeQueueLoadMonitor {
 
       comparator.setClusterResource(
           Resources.add(cn1.getCapability(), cn2.getCapability()));
-      Assert.assertTrue(comparator.compare(cn1, cn2) < 0);
+      assertTrue(comparator.compare(cn1, cn2) < 0);
     }
 
     // Case 4: Compare same values
@@ -716,7 +720,7 @@ public class TestNodeQueueLoadMonitor {
 
       comparator.setClusterResource(
           Resources.add(cn1.getCapability(), cn2.getCapability()));
-      Assert.assertEquals(0, comparator.compare(cn1, cn2));
+      assertEquals(0, comparator.compare(cn1, cn2));
     }
 
     // Case 5: If ratio is the same, compare raw values
@@ -741,7 +745,7 @@ public class TestNodeQueueLoadMonitor {
       comparator.setClusterResource(
           Resources.add(cn1.getCapability(), cn2.getCapability()));
       // Both are 60% allocated, but CN1 has 5 avail VCores, CN2 only has 4
-      Assert.assertTrue(comparator.compare(cn1, cn2) < 0);
+      assertTrue(comparator.compare(cn1, cn2) < 0);
     }
 
     // Case 6: by VCores absolute value
@@ -764,7 +768,7 @@ public class TestNodeQueueLoadMonitor {
 
       comparator.setClusterResource(
           Resources.add(cn1.getCapability(), cn2.getCapability()));
-      Assert.assertTrue(comparator.compare(cn2, cn1) < 0);
+      assertTrue(comparator.compare(cn2, cn1) < 0);
     }
 
     // Case 7: by memory absolute value
@@ -787,7 +791,7 @@ public class TestNodeQueueLoadMonitor {
 
       comparator.setClusterResource(
           Resources.add(cn1.getCapability(), cn2.getCapability()));
-      Assert.assertTrue(comparator.compare(cn2, cn1) < 0);
+      assertTrue(comparator.compare(cn2, cn1) < 0);
     }
 
     // Case 8: Memory should be more constraining in the overall cluster,
@@ -811,7 +815,7 @@ public class TestNodeQueueLoadMonitor {
 
       comparator.setClusterResource(
           Resources.add(cn1.getCapability(), cn2.getCapability()));
-      Assert.assertTrue(comparator.compare(cn1, cn2) < 0);
+      assertTrue(comparator.compare(cn1, cn2) < 0);
     }
   }
 

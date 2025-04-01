@@ -73,7 +73,7 @@ public final class DirectoryStateHelper {
 
     // 2nd condition: listPaths should return some entries.
     AbfsRestOperation op = client.listPath(
-        relativePath, false, 1, null, testTracingContext, false);
+        relativePath, false, 1, null, testTracingContext, null, false).getOp();
     if (op != null && op.getResult() != null) {
       int listSize = op.getResult().getListResultSchema().paths().size();
       if (listSize > 0) {

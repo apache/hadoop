@@ -1064,6 +1064,10 @@ class S3ABlockOutputStream extends OutputStream implements
               return CompletedPart.builder()
                   .eTag(response.eTag())
                   .partNumber(currentPartNumber)
+                  .checksumCRC32(response.checksumCRC32())
+                  .checksumCRC32C(response.checksumCRC32C())
+                  .checksumSHA1(response.checksumSHA1())
+                  .checksumSHA256(response.checksumSHA256())
                   .build();
             } catch (Exception e) {
               final IOException ex = e instanceof IOException

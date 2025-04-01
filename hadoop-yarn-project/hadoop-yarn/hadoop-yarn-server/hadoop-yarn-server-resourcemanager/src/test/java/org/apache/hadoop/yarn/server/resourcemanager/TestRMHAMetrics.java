@@ -23,15 +23,16 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 
-import static junit.framework.TestCase.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Metrics related RM HA testing. Metrics are mostly static singletons. To
@@ -47,7 +48,7 @@ public class TestRMHAMetrics {
   private static final String RM2_ADDRESS = "0.0.0.0:0";
   private static final String RM2_NODE_ID = "rm2";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     configuration = new Configuration();
     UserGroupInformation.setConfiguration(configuration);
@@ -65,7 +66,8 @@ public class TestRMHAMetrics {
     DefaultMetricsSystem.shutdown();
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testMetricsAfterTransitionToStandby() throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     Configuration conf = new YarnConfiguration(configuration);
@@ -76,20 +78,19 @@ public class TestRMHAMetrics {
     ObjectName mxbeanName =
         new ObjectName("Hadoop:service=ResourceManager,name=RMInfo");
 
-    Assert.assertEquals("initializing",
+    assertEquals("initializing",
         (String) mbs.getAttribute(mxbeanName, "State"));
 
     rm.start();
-    Assert.assertEquals("standby",
+    assertEquals("standby",
         (String) mbs.getAttribute(mxbeanName, "State"));
 
     rm.transitionToActive();
-    Assert
-        .assertEquals("active",
+    assertEquals("active",
             (String) mbs.getAttribute(mxbeanName, "State"));
 
     rm.transitionToStandby(true);
-    Assert.assertEquals("standby",
+    assertEquals("standby",
         (String) mbs.getAttribute(mxbeanName, "State"));
 
     assertNotNull(DefaultMetricsSystem.instance().getSource("JvmMetrics"));

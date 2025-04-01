@@ -101,6 +101,7 @@ public class MockResolver
     final RemoteLocation remoteLocation =
         new RemoteLocation(nsId, location, mount);
     if (locationsList != null) {
+      locations.remove(mount);
       return locationsList.remove(remoteLocation);
     }
     return false;

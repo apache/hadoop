@@ -32,9 +32,9 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,8 +43,8 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.ForkJoinPool;
 
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestAsyncRpcProtocolPBUtil {
   private static final Logger LOG = LoggerFactory.getLogger(TestAsyncRpcProtocolPBUtil.class);
@@ -52,7 +52,7 @@ public class TestAsyncRpcProtocolPBUtil {
   private TestClientProtocolTranslatorPB clientPB;
   private Server rpcServer;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     AsyncRpcProtocolPBUtil.setAsyncResponderExecutor(ForkJoinPool.commonPool());
     Configuration conf = new Configuration();
@@ -82,7 +82,7 @@ public class TestAsyncRpcProtocolPBUtil {
     clientPB.ping();
   }
 
-  @After
+  @AfterEach
   public void clear() {
     if (clientPB != null) {
       clientPB.close();

@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
@@ -64,6 +65,7 @@ import org.apache.hadoop.fs.azurebfs.services.BlobRenameHandler;
 import org.apache.hadoop.fs.azurebfs.services.RenameAtomicity;
 import org.apache.hadoop.fs.azurebfs.services.RenameAtomicityTestUtils;
 import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.VersionedFileStatus;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
@@ -869,8 +871,8 @@ public class ITestAzureBlobFileSystemRename extends
     /*
      * Create renameJson file.
      */
-    AzureBlobFileSystemStore.VersionedFileStatus fileStatus
-        = (AzureBlobFileSystemStore.VersionedFileStatus) fs.getFileStatus(path);
+    VersionedFileStatus fileStatus
+        = (VersionedFileStatus) fs.getFileStatus(path);
     int jsonLen = new RenameAtomicity(path,
         new Path("/hbase/test4"), renameJson,
         getTestTracingContext(fs, true), fileStatus.getEtag(),
@@ -1433,12 +1435,12 @@ public class ITestAzureBlobFileSystemRename extends
           String continuation = answer.getArgument(3);
           TracingContext context = answer.getArgument(4);
           return getFileSystem().getAbfsClient()
-              .listPath(path, recursive, 1, continuation, context);
+              .listPath(path, recursive, 1, continuation, context, null);
         })
         .when(spiedClient)
         .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
             Mockito.nullable(String.class),
-            Mockito.any(TracingContext.class));
+            Mockito.any(TracingContext.class), Mockito.nullable(URI.class));
     fs.rename(new Path("/testDir/dir1"), new Path("/testDir/dir2"));
     for (int i = 0; i < 10; i++) {
       Assertions.assertThat(fs.exists(new Path("/testDir/dir2/file" + i)))
@@ -1516,13 +1518,13 @@ public class ITestAzureBlobFileSystemRename extends
             listCallInvocation[0]++;
             return getFileSystem().getAbfsClient().listPath(answer.getArgument(0),
                 answer.getArgument(1), 1,
-                answer.getArgument(3), answer.getArgument(4));
+                answer.getArgument(3), answer.getArgument(4), answer.getArgument(5));
           }
           return answer.callRealMethod();
         })
         .when(spiedClient)
         .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
-            Mockito.nullable(String.class), Mockito.any(TracingContext.class));
+            Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(URI.class));
     intercept(AccessDeniedException.class,
         () -> {
           fs.rename(new Path("/src"), new Path("/dst"));
@@ -1780,15 +1782,15 @@ public class ITestAzureBlobFileSystemRename extends
   private void validateRename(AzureBlobFileSystem fs, Path src, Path dst,
       boolean isSrcExist, boolean isDstExist, boolean isJsonExist)
       throws IOException {
-    Assertions.assertThat(fs.exists(dst))
-        .describedAs("Renamed Destination directory should exist.")
-        .isEqualTo(isDstExist);
     Assertions.assertThat(fs.exists(new Path(src.getParent(), src.getName() + SUFFIX)))
         .describedAs("Renamed Pending Json file should exist.")
         .isEqualTo(isJsonExist);
     Assertions.assertThat(fs.exists(src))
-        .describedAs("Renamed Destination directory should exist.")
+        .describedAs("Renamed Source directory should not exist.")
         .isEqualTo(isSrcExist);
+    Assertions.assertThat(fs.exists(dst))
+        .describedAs("Renamed Destination directory should exist.")
+        .isEqualTo(isDstExist);
   }
 
   /**
@@ -2087,8 +2089,8 @@ public class ITestAzureBlobFileSystemRename extends
     fs.setWorkingDirectory(new Path(ROOT_PATH));
     fs.create(new Path(path, "file.txt"));
 
-    AzureBlobFileSystemStore.VersionedFileStatus fileStatus
-        = (AzureBlobFileSystemStore.VersionedFileStatus) fs.getFileStatus(path);
+    VersionedFileStatus fileStatus
+        = (VersionedFileStatus) fs.getFileStatus(path);
 
     new RenameAtomicity(path, new Path("/hbase/test4"),
         renameJson, getTestTracingContext(fs, true),
@@ -2301,8 +2303,8 @@ public class ITestAzureBlobFileSystemRename extends
       fs.create(new Path(path2, "file3.txt"));
 
       Path renameJson2 = new Path(path2.getParent(), path2.getName() + SUFFIX);
-      AzureBlobFileSystemStore.VersionedFileStatus fileStatus
-          = (AzureBlobFileSystemStore.VersionedFileStatus) fs.getFileStatus(path2);
+      VersionedFileStatus fileStatus
+          = (VersionedFileStatus) fs.getFileStatus(path2);
 
       new RenameAtomicity(path2, new Path("/hbase/test4"),
           renameJson2, getTestTracingContext(fs, true),

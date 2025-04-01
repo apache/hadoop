@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -54,29 +54,28 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * This test class verifies that mount table cache is updated on all the routers
  * when MountTableRefreshService is enabled and there is a change in mount table
  * entries.
  */
-@RunWith(Parameterized.class)
 public class TestRouterMountTableCacheRefresh {
   private static TestingServer curatorTestingServer;
   private static MiniRouterDFSCluster cluster;
   private static RouterContext routerContext;
   private static MountTableManager mountTableManager;
 
-  @Parameterized.Parameters
   public static Collection<Object> data() {
     return Arrays.asList(new Object[] {true, false});
   }
 
-  public TestRouterMountTableCacheRefresh(boolean useIpForHeartbeats) throws Exception {
+  public void initTestRouterMountTableCacheRefresh(boolean pUseIpForHeartbeats)
+      throws Exception {
     // Initialize only once per parameter
     if (curatorTestingServer != null) {
       return;
@@ -93,7 +92,7 @@ public class TestRouterMountTableCacheRefresh {
         FileSubclusterResolver.class);
     conf.set(RBFConfigKeys.FEDERATION_STORE_ZK_ADDRESS, connectString);
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_STORE_ENABLE, true);
-    conf.setBoolean(RBFConfigKeys.DFS_ROUTER_HEARTBEAT_WITH_IP_ENABLE, useIpForHeartbeats);
+    conf.setBoolean(RBFConfigKeys.DFS_ROUTER_HEARTBEAT_WITH_IP_ENABLE, pUseIpForHeartbeats);
     cluster.addRouterOverrides(conf);
     cluster.startCluster();
     cluster.startRouters();
@@ -107,8 +106,8 @@ public class TestRouterMountTableCacheRefresh {
         numNameservices, 60000);
   }
 
-  @Parameterized.AfterParam
-  public static void destroy() {
+  @AfterEach
+  public void destroy() {
     try {
       if (curatorTestingServer != null) {
         curatorTestingServer.close();
@@ -121,7 +120,7 @@ public class TestRouterMountTableCacheRefresh {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     clearEntries();
   }
@@ -140,10 +139,12 @@ public class TestRouterMountTableCacheRefresh {
    * addMountTableEntry API should internally update the cache on all the
    * routers.
    */
-  @Test
-  public void testMountTableEntriesCacheUpdatedAfterAddAPICall()
-      throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testMountTableEntriesCacheUpdatedAfterAddAPICall(boolean pUseIpForHeartbeats)
+      throws Exception {
 
+    initTestRouterMountTableCacheRefresh(pUseIpForHeartbeats);
     // Existing mount table size
     int existingEntriesCount = getNumMountTableEntries();
     String srcPath = "/addPath";
@@ -168,9 +169,11 @@ public class TestRouterMountTableCacheRefresh {
    * removeMountTableEntry API should internally update the cache on all the
    * routers.
    */
-  @Test
-  public void testMountTableEntriesCacheUpdatedAfterRemoveAPICall()
-      throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testMountTableEntriesCacheUpdatedAfterRemoveAPICall(boolean pUseIpForHeartbeats)
+      throws Exception {
+    initTestRouterMountTableCacheRefresh(pUseIpForHeartbeats);
     // add
     String srcPath = "/removePathSrc";
     MountTable newEntry = MountTable.newInstance(srcPath,
@@ -194,9 +197,11 @@ public class TestRouterMountTableCacheRefresh {
    * updateMountTableEntry API should internally update the cache on all the
    * routers.
    */
-  @Test
-  public void testMountTableEntriesCacheUpdatedAfterUpdateAPICall()
-      throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testMountTableEntriesCacheUpdatedAfterUpdateAPICall(boolean pUseIpForHeartbeats)
+      throws Exception {
+    initTestRouterMountTableCacheRefresh(pUseIpForHeartbeats);
     // add
     String srcPath = "/updatePathSrc";
     MountTable newEntry = MountTable.newInstance(srcPath,
@@ -216,8 +221,7 @@ public class TestRouterMountTableCacheRefresh {
             UpdateMountTableEntryRequest.newInstance(upateEntry));
     assertTrue(updateMountTableEntry.getStatus());
     MountTable updatedMountTable = getMountTableEntry(srcPath);
-    assertNotNull("Updated mount table entrty cannot be null",
-        updatedMountTable);
+    assertNotNull(updatedMountTable, "Updated mount table entrty cannot be null");
     assertEquals(1, updatedMountTable.getDestinations().size());
     assertEquals(key,
         updatedMountTable.getDestinations().get(0).getNameserviceId());
@@ -229,9 +233,11 @@ public class TestRouterMountTableCacheRefresh {
    * successful on other available router. The router which is not running
    * should be ignored.
    */
-  @Test
-  public void testCachedRouterClientBehaviourAfterRouterStoped()
-      throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testCachedRouterClientBehaviourAfterRouterStoped(boolean pUseIpForHeartbeats)
+      throws Exception {
+    initTestRouterMountTableCacheRefresh(pUseIpForHeartbeats);
     String srcPath = "/addPathClientCache";
     MountTable newEntry = MountTable.newInstance(srcPath,
         Collections.singletonMap("ns0", "/addPathClientCacheDest"), Time.now(),
@@ -282,8 +288,10 @@ public class TestRouterMountTableCacheRefresh {
     return result;
   }
 
-  @Test
-  public void testRefreshMountTableEntriesAPI() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testRefreshMountTableEntriesAPI(boolean pUseIpForHeartbeats) throws Exception {
+    initTestRouterMountTableCacheRefresh(pUseIpForHeartbeats);
     RefreshMountTableEntriesRequest request =
         RefreshMountTableEntriesRequest.newInstance();
     RefreshMountTableEntriesResponse refreshMountTableEntriesRes =
@@ -296,8 +304,12 @@ public class TestRouterMountTableCacheRefresh {
    * Verify cache update timeouts when any of the router takes more time than
    * the configured timeout period.
    */
-  @Test(timeout = 10000)
-  public void testMountTableEntriesCacheUpdateTimeout() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 100)
+  public void testMountTableEntriesCacheUpdateTimeout(boolean pUseIpForHeartbeats)
+      throws Exception {
+    initTestRouterMountTableCacheRefresh(pUseIpForHeartbeats);
     // Resources will be closed when router is closed
     @SuppressWarnings("resource")
     MountTableRefresherService mountTableRefresherService =
@@ -332,8 +344,10 @@ public class TestRouterMountTableCacheRefresh {
    * Verify Cached RouterClient connections are removed from cache and closed
    * when their max live time is elapsed.
    */
-  @Test
-  public void testRouterClientConnectionExpiration() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testRouterClientConnectionExpiration(boolean pUseIpForHeartbeats) throws Exception {
+    initTestRouterMountTableCacheRefresh(pUseIpForHeartbeats);
     final AtomicInteger createCounter = new AtomicInteger();
     final AtomicInteger removeCounter = new AtomicInteger();
     // Resources will be closed when router is closed
@@ -362,7 +376,7 @@ public class TestRouterMountTableCacheRefresh {
     mountTableRefresherService.init(config);
     // Do refresh to created RouterClient
     mountTableRefresherService.refresh();
-    assertNotEquals("No RouterClient is created.", 0, createCounter.get());
+    assertNotEquals(0, createCounter.get(), "No RouterClient is created.");
     /*
      * Wait for clients to expire. Let's wait triple the cache eviction period.
      * After cache eviction period all created client must be removed and
