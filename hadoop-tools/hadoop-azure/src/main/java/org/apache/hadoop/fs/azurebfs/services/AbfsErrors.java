@@ -72,7 +72,7 @@ public final class AbfsErrors {
   public static final String ERR_CREATE_RECOVERY =
       "Error while recovering from create failure.";
   public static final String ERR_RENAME_RECOVERY =
-      "Error while recovering from rename failure.";
+      "Error while recovering from rename failure for path: ";
   public static final String INCORRECT_INGRESS_TYPE = "Ingress Type Cannot be DFS for Blob endpoint configured filesystem.";
   private AbfsErrors() {}
 }

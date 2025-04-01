@@ -1560,11 +1560,9 @@ public class AbfsDfsClient extends AbfsClient {
     try {
       incrementAbfsRenamePath();
       op.execute(tracingContext);
-      // AbfsClientResult contains the AbfsOperation, If recovery happened or
-      // not, and the incompleteMetaDataState is true or false.
-      // If we successfully rename a path and isMetadataIncompleteState was
-      // true, then rename was recovered, else it didn't, this is why
-      // isMetadataIncompleteState is used for renameRecovery(as the 2nd param).
+      // If we successfully rename a path and isMetadataIncompleteState is true,
+      // then the rename was recovered; otherwise, it wasn’t.
+      // This is why isMetadataIncompleteState is used for renameRecovery (as the second parameter).
       return new AbfsClientRenameResult(op, isMetadataIncompleteState,
           isMetadataIncompleteState);
     } catch (AzureBlobFileSystemException e) {
@@ -1652,11 +1650,9 @@ public class AbfsDfsClient extends AbfsClient {
     try {
       incrementAbfsRenamePath();
       op.execute(tracingContext);
-      // AbfsClientResult contains the AbfsOperation, If recovery happened or
-      // not, and the incompleteMetaDataState is true or false.
-      // If we successfully rename a path and isMetadataIncompleteState was
-      // true, then rename was recovered, else it didn't, this is why
-      // isMetadataIncompleteState is used for renameRecovery(as the 2nd param).
+      // If we successfully rename a path and isMetadataIncompleteState is true,
+      // then the rename was recovered; otherwise, it wasn’t.
+      // This is why isMetadataIncompleteState is used for renameRecovery (as the second parameter).
       return new AbfsClientRenameResult(op, isMetadataIncompleteState,
           isMetadataIncompleteState);
     } catch (AzureBlobFileSystemException e) {
@@ -1741,7 +1737,7 @@ public class AbfsDfsClient extends AbfsClient {
       return clientTransactionId.equals(
           abfsHttpOperation.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID));
     } catch (AzureBlobFileSystemException exception) {
-      throw new AbfsDriverException(ERR_RENAME_RECOVERY, exception);
+      throw new AbfsDriverException(ERR_RENAME_RECOVERY + destination, exception);
     }
   }
 
@@ -1781,7 +1777,7 @@ public class AbfsDfsClient extends AbfsClient {
    * @param op The ABFS operation result for the rename attempt.
    * @param isMetadataIncompleteState Flag indicating if metadata is incomplete.
    * @throws IOException If an I/O error occurs during the rename operation.
-   * @throws FileAlreadyExistsException If the destination file already exists and overwrite is unauthorized.
+   * @throws FileAlreadyExistsException If the destination file already exists.
    */
   private void handleRenameException(final String source,
       final String destination, final String continuation,

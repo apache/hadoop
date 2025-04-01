@@ -286,7 +286,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // +2 for getPathStatus calls
     int totalConnections = 4;
     if (!getConfiguration().getIsClientTransactionIdEnabled()) {
-      // 1 additional call for transaction id
+      // 1 additional getPathStatus call to get dest etag
       totalConnections++;
     }
     assertThatStatisticCounter(ioStats,
