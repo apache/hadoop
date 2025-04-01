@@ -227,7 +227,7 @@ public class RouterRpcClient {
     }
     this.lastActiveNNRefreshTimes = new ConcurrentHashMap<>();
   }
-  
+
   protected void initConcurrentCallExecutorService(Configuration conf) {
     int numThreads = conf.getInt(
         RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE,

@@ -118,7 +118,7 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
 
   @Override
   protected void initConcurrentCallExecutorService(Configuration conf) {
-    // No need to initialize the thread pool for concurrent call. 
+    // No need to initialize the thread pool for concurrent call.
   }
 
   /**
