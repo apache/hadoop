@@ -2385,4 +2385,45 @@ public class TestRouterRpc {
       fileSystem1.delete(new Path(testPath2), true);
     }
   }
+
+  @Test
+  public void testCallerContextNotResetByAsyncHandler() throws IOException {
+    GenericTestUtils.LogCapturer auditLog =
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
+    String dirPath = "/test";
+
+    // The reason we start this child thread is that CallContext use InheritableThreadLocal.
+    Thread t1 = new Thread(() -> {
+      // Set flag async:true.
+      CallerContext.setCurrent(
+          new CallerContext.Builder("async:true").build());
+      // Issue some RPCs via the router to populate the CallerContext of async handler thread.
+      for (int i = 0; i < 10; i++) {
+        try {
+          routerProtocol.mkdirs(dirPath, new FsPermission("755"), false);
+          assertTrue(verifyFileExists(routerFS, dirPath));
+          routerProtocol.delete(dirPath, true);
+          assertFalse(verifyFileExists(routerFS, dirPath));
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      // The audit log should contains async:true.
+      assertTrue(auditLog.getOutput().contains("async:true"));
+      auditLog.clearOutput();
+      assertFalse(auditLog.getOutput().contains("async:true"));
+    });
+
+    t1.start();
+    try {
+      t1.join();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+
+    routerProtocol.getFileInfo(dirPath);
+    // The audit log should not contain async:true.
+    assertFalse(auditLog.getOutput().contains("async:true"));
+  }
 }

@@ -758,22 +758,41 @@ requests. User can specify them as fixed SAS Token to be used across all the req
         </property>
         ```
 
-    1.  Fixed SAS Token:
+  2. Account SAS (Fixed SAS Token at Account Level):
         ```xml
         <property>
-          <name>fs.azure.sas.fixed.token</name>
-          <value>FIXED_SAS_TOKEN</value>
+          <name>fs.azure.sas.fixed.token.ACCOUNT_NAME</name>
+          <value>FIXED_ACCOUNT_SAS_TOKEN</value>
         </property>
         ```
 
-    Replace `FIXED_SAS_TOKEN` with fixed Account/Service SAS. You can also
-generate SAS from Azure portal. Account -> Security + Networking -> Shared Access Signature
+    - Replace `FIXED_ACCOUNT_SAS_TOKEN` with fixed Account/Service SAS. You can also
+      generate SAS from Azure portal. Account -> Security + Networking -> Shared Access Signature
+
+    3. Service  SAS (Fixed SAS Token at Container Level):
+        ```xml
+           <property>
+             <name>fs.azure.sas.fixed.token.CONTAINER_NAME.ACCOUNT_NAME</name>
+             <value>FIXED_SAS_TOKEN</value>
+           </property>
+           ```
+
+    - Replace `FIXED_SERVICE_SAS_TOKEN` with fixed Service SAS. You can also
+      generate SAS from Azure portal. Account -> Data storage -> Containers ->
+      right click on your container and select generate SAS ->
+      Give valid permissions and expiry time -> Click on generate SAS and copy
+      the SAS token.
+
 
 - **Security**: Account/Service SAS requires account keys to be used which makes
-them less secure. There is no scope of having delegated access to different users.
+  them less secure. There is no scope of having delegated access to different users.
 
-*Note:* When `fs.azure.sas.token.provider.type` and `fs.azure.fixed.sas.token`
-are both configured, precedence will be given to the custom token provider implementation.
+*Note:*
+- Preference order for SAS will be:
+    - fs.azure.sas.token.provider.type
+    - fs.azure.sas.fixed.token.CONTAINER_NAME.ACCOUNT_NAME
+    - fs.azure.sas.fixed.token.ACCOUNT_NAME
+    - fs.azure.sas.fixed.token
 
 ## <a name="technical"></a> Technical notes
 

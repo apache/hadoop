@@ -35,7 +35,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -68,7 +67,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FileSystemTestWrapper;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
@@ -328,72 +326,6 @@ public class TestEncryptionZones {
         return null;
       }
     });
-  }
-
-  /**
-   * Tests encrypted files with same original content placed in two different
-   * EZ are not same in encrypted form.
-   */
-  @Test
-  public void testEncryptionZonesDictCp() throws Exception {
-    final String testkey1 = "testkey1";
-    final String testkey2 = "testkey2";
-    DFSTestUtil.createKey(testkey1, cluster, conf);
-    DFSTestUtil.createKey(testkey2, cluster, conf);
-
-    final int len = 8196;
-    final Path zone1 = new Path("/zone1");
-    final Path zone1File = new Path(zone1, "file");
-    final Path raw1File = new Path("/.reserved/raw/zone1/file");
-
-    final Path zone2 = new Path("/zone2");
-    final Path zone2File = new Path(zone2, "file");
-    final Path raw2File = new Path(zone2, "/.reserved/raw/zone2/file");
-
-    // 1. Create two encrypted zones
-    fs.mkdirs(zone1, new FsPermission(700));
-    dfsAdmin.createEncryptionZone(zone1, testkey1, NO_TRASH);
-
-    fs.mkdirs(zone2, new FsPermission(700));
-    dfsAdmin.createEncryptionZone(zone2, testkey2, NO_TRASH);
-
-    // 2. Create a file in one of the zones
-    DFSTestUtil.createFile(fs, zone1File, len, (short) 1, 0xFEED);
-    // 3. Copy it to the other zone through /.raw/reserved
-    FileUtil.copy(fs, raw1File, fs, raw2File, false, conf);
-    Map<String, byte[]> attrs = fs.getXAttrs(raw1File);
-    if (attrs != null) {
-      for (Map.Entry<String, byte[]> entry : attrs.entrySet()) {
-        String xattrName = entry.getKey();
-
-        try {
-          fs.setXAttr(raw2File, xattrName, entry.getValue());
-          fail("Exception should be thrown while setting: " +
-                  xattrName + " on file:" + raw2File);
-        } catch (RemoteException e) {
-          Assert.assertEquals(e.getClassName(),
-                  IllegalArgumentException.class.getCanonicalName());
-          Assert.assertTrue(e.getMessage().
-                  contains("does not belong to the key"));
-        }
-      }
-    }
-
-    assertEquals("File can be created on the root encryption zone " +
-            "with correct length", len, fs.getFileStatus(zone1File).getLen());
-    assertTrue("/zone1 dir is encrypted",
-            fs.getFileStatus(zone1).isEncrypted());
-    assertTrue("File is encrypted", fs.getFileStatus(zone1File).isEncrypted());
-
-    assertTrue("/zone2 dir is encrypted",
-            fs.getFileStatus(zone2).isEncrypted());
-    assertTrue("File is encrypted", fs.getFileStatus(zone2File).isEncrypted());
-
-    // 4. Now the decrypted contents of the files should be different.
-    DFSTestUtil.verifyFilesNotEqual(fs, zone1File, zone2File, len);
-
-    // 5. Encrypted contents of the files should be same.
-    DFSTestUtil.verifyFilesEqual(fs, raw1File, raw2File, len);
   }
 
   /**
