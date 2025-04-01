@@ -128,7 +128,7 @@ public class RouterRpcClient {
   /** Connection pool to the Namenodes per user for performance. */
   private final ConnectionManager connectionManager;
   /** Service to run asynchronous calls. */
-  private final ThreadPoolExecutor executorService;
+  private ThreadPoolExecutor executorService;
   /** Retry policy for router -> NN communication. */
   private final RetryPolicy retryPolicy;
   /** Optional perf monitor. */
@@ -184,29 +184,7 @@ public class RouterRpcClient {
     this.connectionManager.start();
     this.routerRpcFairnessPolicyController =
         FederationUtil.newFairnessPolicyController(conf);
-
-    int numThreads = conf.getInt(
-        RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE,
-        RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE_DEFAULT);
-    ThreadFactory threadFactory = new ThreadFactoryBuilder()
-        .setNameFormat("RPC Router Client-%d")
-        .build();
-    BlockingQueue<Runnable> workQueue;
-    if (conf.getBoolean(
-        RBFConfigKeys.DFS_ROUTER_CLIENT_REJECT_OVERLOAD,
-        RBFConfigKeys.DFS_ROUTER_CLIENT_REJECT_OVERLOAD_DEFAULT)) {
-      workQueue = new ArrayBlockingQueue<>(numThreads);
-    } else {
-      workQueue = new LinkedBlockingQueue<>();
-    }
-    
-    if (router.isAsync()) {
-      this.executorService = null;
-    } else {
-      this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
-          0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
-    }
-
+    initConcurrentCallExecutorService(conf);
     this.rpcMonitor = monitor;
 
     int maxFailoverAttempts = conf.getInt(
@@ -248,6 +226,25 @@ public class RouterRpcClient {
           activeNNStateIdRefreshPeriodMs);
     }
     this.lastActiveNNRefreshTimes = new ConcurrentHashMap<>();
+  }
+  
+  protected void initConcurrentCallExecutorService(Configuration conf) {
+    int numThreads = conf.getInt(
+        RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE,
+        RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE_DEFAULT);
+    ThreadFactory threadFactory = new ThreadFactoryBuilder()
+        .setNameFormat("RPC Router Client-%d")
+        .build();
+    BlockingQueue<Runnable> workQueue;
+    if (conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_CLIENT_REJECT_OVERLOAD,
+        RBFConfigKeys.DFS_ROUTER_CLIENT_REJECT_OVERLOAD_DEFAULT)) {
+      workQueue = new ArrayBlockingQueue<>(numThreads);
+    } else {
+      workQueue = new LinkedBlockingQueue<>();
+    }
+    this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
+        0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
   }
 
   /**
