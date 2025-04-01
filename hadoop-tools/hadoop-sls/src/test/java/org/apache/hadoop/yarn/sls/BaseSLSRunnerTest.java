@@ -27,9 +27,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -42,21 +39,16 @@ import javax.script.ScriptEngineManager;
 /**
  * This is a base class to ease the implementation of SLS-based tests.
  */
-@RunWith(value = Parameterized.class)
 @NotThreadSafe
 @SuppressWarnings("VisibilityModifier")
 public abstract class BaseSLSRunnerTest {
 
-  @Parameter(value = 0)
   public String schedulerType;
 
-  @Parameter(value = 1)
   public String traceType;
 
-  @Parameter(value = 2)
   public String traceLocation;
 
-  @Parameter(value = 3)
   public String nodeFile;
 
   protected SLSRunner sls;

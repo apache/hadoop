@@ -23,11 +23,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -35,11 +33,9 @@ import java.util.Collection;
 /**
  * This test performs simple runs of the SLS with the generic syn json format.
  */
-@RunWith(value = Parameterized.class)
 @NotThreadSafe
 public class TestSLSDagAMSimulator extends BaseSLSRunnerTest {
 
-  @Parameters(name = "Testing with: {1}, {0}, (nodeFile {3})")
   public static Collection<Object[]> data() {
 
     String capScheduler = CapacityScheduler.class.getCanonicalName();
@@ -61,16 +57,28 @@ public class TestSLSDagAMSimulator extends BaseSLSRunnerTest {
     });
   }
 
+  public void initTestSLSDagAMSimulator(String pSchedulerType,
+      String pTraceType, String pTraceLocation, String pNodeFile) {
+    this.schedulerType = pSchedulerType;
+    this.traceType = pTraceType;
+    this.traceLocation = pTraceLocation;
+    this.nodeFile = pNodeFile;
+    setup();
+  }
+
   @BeforeEach
   public void setup() {
     ongoingInvariantFile = "src/test/resources/ongoing-invariants.txt";
     exitInvariantFile = "src/test/resources/exit-invariants.txt";
   }
 
-  @Test
+  @ParameterizedTest(name = "Testing with: {1}, {0}, (nodeFile {3})")
   @Timeout(value = 90)
+  @MethodSource("data")
   @SuppressWarnings("all")
-  public void testSimulatorRunning() throws Exception {
+  public void testSimulatorRunning(String pSchedulerType,
+    String pTraceType, String pTraceLocation, String pNodeFile) throws Exception {
+    initTestSLSDagAMSimulator(pSchedulerType, pTraceType, pTraceLocation, pNodeFile);
     Configuration conf = new Configuration(false);
     long timeTillShutdownInsec = 20L;
     runSLS(conf, timeTillShutdownInsec);
