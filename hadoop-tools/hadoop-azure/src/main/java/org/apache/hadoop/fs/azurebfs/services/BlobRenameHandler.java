@@ -116,6 +116,7 @@ public class BlobRenameHandler extends ListActionTaker {
 
   /**
    * Orchestrates the rename operation.
+   * @param isRenameRecovery true if the rename operation is a recovery of a previous failed atomic rename operation
    *
    * @return AbfsClientRenameResult containing the result of the rename operation
    * @throws AzureBlobFileSystemException if server call fails
@@ -259,6 +260,7 @@ public class BlobRenameHandler extends ListActionTaker {
    * @param src source path
    * @param dst destination path
    * @param pathInformation object in which path information of the source path would be stored
+   * @param isRenameRecovery true if the rename operation is a recovery of a previous failed atomic rename operation
    *
    * @return true if the pre-checks pass
    * @throws AzureBlobFileSystemException if server call fails or given paths are invalid.
@@ -329,6 +331,7 @@ public class BlobRenameHandler extends ListActionTaker {
    * @param src source path
    * @param dst destination path
    * @param pathInformation object containing the path information of the source path
+   * @param isRenameRecovery true if the rename operation is a recovery of a previous failed atomic rename operation
    *
    * @throws AbfsRestOperationException if the destination path already exists
    */

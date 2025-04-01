@@ -1900,7 +1900,9 @@ public class ITestAzureBlobFileSystemRename extends
       // Track the number of copy operations
       AtomicInteger copyCall = new AtomicInteger(0);
       renameCrashInBetween(client, copyCall);
-      fs.rename(src, dst);
+      Assertions.assertThat(fs.rename(src, dst))
+          .describedAs("Rename should crash in between.")
+          .isFalse();
 
       // Validate copy operation count
       Assertions.assertThat(copyCall.get())
@@ -1955,7 +1957,9 @@ public class ITestAzureBlobFileSystemRename extends
       }).when(client).deleteBlobPath(Mockito.any(Path.class),
           Mockito.anyString(), Mockito.any(TracingContext.class));
 
-      fs.rename(src, dst);
+      Assertions.assertThat(fs.rename(src, dst))
+          .describedAs("Rename should crash in between.")
+          .isFalse();
 
       // Validate delete operation count
       Assertions.assertThat(deleteCall.get())
@@ -2020,7 +2024,9 @@ public class ITestAzureBlobFileSystemRename extends
         .isTrue();
 
     // Perform rename
-    fs.rename(src, dst);
+    Assertions.assertThat(fs.rename(src, dst))
+        .describedAs("Rename should succeed.")
+        .isTrue();
 
     // Assert the destination directory and file exist after rename
     Assertions.assertThat(fs.exists(new Path(dst, fileName)))
@@ -2750,7 +2756,9 @@ public class ITestAzureBlobFileSystemRename extends
       // Track the number of copy operations
       AtomicInteger copyCall = new AtomicInteger(0);
       renameCrashInBetween(client, copyCall);
-      fs.rename(src, dst);
+      Assertions.assertThat(fs.rename(src, dst))
+          .describedAs("Rename should crash in between.")
+          .isFalse();
 
       // Validate copy operation count
       Assertions.assertThat(copyCall.get())
@@ -2796,7 +2804,9 @@ public class ITestAzureBlobFileSystemRename extends
       // Track the number of copy operations
       AtomicInteger copyCall = new AtomicInteger(0);
       renameCrashInBetween(client, copyCall);
-      fs.rename(src, dst);
+      Assertions.assertThat(fs.rename(src, dst))
+          .describedAs("Rename should crash in between.")
+          .isFalse();
 
       // Validate copy operation count
       Assertions.assertThat(copyCall.get())
@@ -2819,6 +2829,48 @@ public class ITestAzureBlobFileSystemRename extends
     }
   }
 
+  @Test
+  public void testRenameWhenAlreadyRenameRecoveryJsonFilePresent() throws Exception {
+    try (AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem(
+        createConfig("5", "3", "2")))) {
+      assumeBlobServiceType();
+      AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
+      fs.getAbfsStore().setClient(client);
+      Path src = new Path("/hbase/A1/A2");
+      Path dst = new Path("/hbase/A1/A3");
+
+      // Create sample files in the source directory
+      createFiles(fs, src, TOTAL_FILES);
+
+      // Track the number of copy operations
+      AtomicInteger copyCall = new AtomicInteger(0);
+      renameCrashInBetween(client, copyCall);
+      Assertions.assertThat(fs.rename(src, dst))
+          .describedAs("Rename should crash in between.")
+          .isFalse();
+
+      // Validate copy operation count
+      Assertions.assertThat(copyCall.get())
+          .describedAs("Copy operation count should be less than 10.")
+          .isLessThan(TOTAL_FILES);
+
+      // Validate final state of destination and source
+      validateRename(fs, src, dst, true, true, true);
+
+      copyCall.set(0);
+      Assertions.assertThat(fs.rename(src, dst))
+          .describedAs("Rename should succeed.")
+          .isTrue();
+
+      Assertions.assertThat(copyCall.get())
+          .describedAs("Copy operation count should be greater than 0.")
+          .isGreaterThan(0);
+
+      // Validate final state of destination and source
+      validateRename(fs, src, dst, false, true, false);
+    }
+  }
+
   /**
    * Tests renaming a directory when the destination parent directory does not exist.
    * The test verifies that the rename operation fails as expected.
@@ -2830,8 +2882,6 @@ public class ITestAzureBlobFileSystemRename extends
     try (AzureBlobFileSystem fs = this.getFileSystem()) {
       Path src = new Path("/A1/A2");
       Path dst = new Path("/A3/A4");
-
-      // Create sample files in the source directory
       createFiles(fs, src, 1);
 
       Assertions.assertThat(fs.rename(src, dst))
@@ -2851,8 +2901,6 @@ public class ITestAzureBlobFileSystemRename extends
     try (AzureBlobFileSystem fs = this.getFileSystem()) {
       Path src = new Path("/A1/A2");
       Path dst = new Path("/A3");
-
-      // Create sample files in the source directory
       fs.create(new Path(src, "file.txt"));
 
       Assertions.assertThat(fs.rename(src, dst))
@@ -2875,7 +2923,6 @@ public class ITestAzureBlobFileSystemRename extends
     try (AzureBlobFileSystem fs = this.getFileSystem()) {
       Path src = new Path("/A1/A2/file.txt");
       Path dst = new Path("/");
-
       fs.create(src);
 
       Assertions.assertThat(fs.rename(src, dst))
@@ -2898,7 +2945,6 @@ public class ITestAzureBlobFileSystemRename extends
     try (AzureBlobFileSystem fs = this.getFileSystem()) {
       Path src = new Path("/A1/A2");
       Path dst = new Path("/");
-
       createFiles(fs, src, TOTAL_FILES);
 
       Assertions.assertThat(fs.rename(src, dst))
@@ -2948,7 +2994,6 @@ public class ITestAzureBlobFileSystemRename extends
            }
          });
    }
-
 
   /**
    * Triggers rename recovery by calling getPathStatus on the source path.
