@@ -115,8 +115,8 @@ public class TestPiecewiseLinearInterpolation {
 
     System.out.println("Cumulative error is " + RMSNormalizedError);
 
-    assertTrue(
-       RMSNormalizedError <= maximumRelativeError, "The RMS relative error per bucket, " + RMSNormalizedError
+    assertTrue(RMSNormalizedError <= maximumRelativeError,
+        "The RMS relative error per bucket, " + RMSNormalizedError
         + ", exceeds our tolerance of " + maximumRelativeError);
 
   }

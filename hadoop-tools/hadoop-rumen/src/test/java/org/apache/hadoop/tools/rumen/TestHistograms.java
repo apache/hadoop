@@ -108,12 +108,11 @@ public class TestHistograms {
     List<Long> measurements = data.getData();
     List<Long> typeProbeData = new HistogramRawTestData().getData();
 
-    assertTrue(
-    
-       measurements.getClass() == typeProbeData.getClass(), "The data attribute of a jackson-reconstructed HistogramRawTestData "
-            + " should be a " + typeProbeData.getClass().getName()
-            + ", like a virgin HistogramRawTestData, but it's a "
-            + measurements.getClass().getName());
+    assertTrue(measurements.getClass() == typeProbeData.getClass(),
+        "The data attribute of a jackson-reconstructed HistogramRawTestData "
+        + " should be a " + typeProbeData.getClass().getName()
+        + ", like a virgin HistogramRawTestData, but it's a "
+        + measurements.getClass().getName());
 
     for (int j = 0; j < measurements.size(); ++j) {
       hist.enter(measurements.get(j));
