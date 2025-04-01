@@ -94,8 +94,8 @@ public class TestUnconsumedInput {
       assertEquals(0, exitCode, "Job failed");
       outFile = new File(OUTPUT_DIR, outFileName).getAbsoluteFile();
       String output = StreamUtil.slurp(outFile);
-      assertEquals(EXPECTED_OUTPUT_SIZE
-,           StringUtils.countMatches(output, "\t"), "Output was truncated");
+      assertEquals(EXPECTED_OUTPUT_SIZE, StringUtils.countMatches(output, "\t"),
+          "Output was truncated");
     } finally {
       INPUT_FILE.delete();
       FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
