@@ -34,15 +34,12 @@ import org.apache.hadoop.yarn.sls.scheduler.SLSFairScheduler;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
 
-@RunWith(Parameterized.class)
 public class TestNMSimulator {
   private final int GB = 1024;
   private ResourceManager rm;
@@ -51,7 +48,6 @@ public class TestNMSimulator {
   private Class slsScheduler;
   private Class scheduler;
 
-  @Parameterized.Parameters
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][] {
         {SLSFairScheduler.class, FairScheduler.class},
@@ -59,12 +55,12 @@ public class TestNMSimulator {
     });
   }
 
-  public TestNMSimulator(Class slsScheduler, Class scheduler) {
-    this.slsScheduler = slsScheduler;
-    this.scheduler = scheduler;
+  public void initTestNMSimulator(Class pSlsScheduler, Class pScheduler) {
+    this.slsScheduler = pSlsScheduler;
+    this.scheduler = pScheduler;
+    setup();
   }
 
-  @BeforeEach
   public void setup() {
     conf = new YarnConfiguration();
     conf.set(YarnConfiguration.RM_SCHEDULER, slsScheduler.getName());
@@ -75,8 +71,10 @@ public class TestNMSimulator {
     rm.start();
   }
 
-  @Test
-  public void testNMSimulator() throws Exception {
+  @ParameterizedTest
+  @MethodSource("params")
+  public void testNMSimulator(Class<?> pSlsScheduler, Class<?> pScheduler) throws Exception {
+    initTestNMSimulator(pSlsScheduler, pScheduler);
     // Register one node
     NMSimulator node1 = new NMSimulator();
     node1.init("/rack1/node1", Resources.createResource(GB * 10, 10), 0, 1000,
@@ -139,8 +137,11 @@ public class TestNMSimulator {
             appAttemptId), cId);
   }
 
-  @Test
-  public void testNMSimAppAddedAndRemoved() throws Exception {
+  @ParameterizedTest
+  @MethodSource("params")
+  public void testNMSimAppAddedAndRemoved(Class<?> pSlsScheduler, Class<?> pScheduler)
+    throws Exception {
+    initTestNMSimulator(pSlsScheduler, pScheduler);
     // Register one node
     NMSimulator node = new NMSimulator();
     node.init("/rack1/node1", Resources.createResource(GB * 10, 10), 0, 1000,
@@ -186,8 +187,11 @@ public class TestNMSimulator {
        node.getNode().getRunningApps().size(), 0, "Node should have no runningApps.");
   }
 
-  @Test
-  public void testNMSimNullAppAddedAndRemoved() throws Exception {
+  @ParameterizedTest
+  @MethodSource("params")
+  public void testNMSimNullAppAddedAndRemoved(Class<?> pSlsScheduler, Class<?> pScheduler)
+    throws Exception {
+    initTestNMSimulator(pSlsScheduler, pScheduler);
     // Register one node
     NMSimulator node = new NMSimulator();
     node.init("/rack1/node1", Resources.createResource(GB * 10, 10), 0, 1000,

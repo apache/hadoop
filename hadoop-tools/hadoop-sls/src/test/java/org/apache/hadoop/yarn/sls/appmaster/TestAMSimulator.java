@@ -43,10 +43,8 @@ import org.apache.hadoop.yarn.sls.scheduler.*;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -63,7 +61,6 @@ import java.util.concurrent.ConcurrentMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith(Parameterized.class)
 public class TestAMSimulator {
   private ResourceManager rm;
   private YarnConfiguration conf;
@@ -72,7 +69,6 @@ public class TestAMSimulator {
   private Class<?> slsScheduler;
   private Class<?> scheduler;
 
-  @Parameterized.Parameters
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][] {
         {SLSFairScheduler.class, FairScheduler.class},
@@ -80,12 +76,12 @@ public class TestAMSimulator {
     });
   }
 
-  public TestAMSimulator(Class<?> slsScheduler, Class<?> scheduler) {
-    this.slsScheduler = slsScheduler;
-    this.scheduler = scheduler;
+  public void initTestAMSimulator(Class<?> pSlsScheduler, Class<?> pScheduler) {
+    this.slsScheduler = pSlsScheduler;
+    this.scheduler = pScheduler;
+    setup();
   }
 
-  @BeforeEach
   public void setup() {
     createMetricOutputDir();
 
@@ -153,8 +149,10 @@ public class TestAMSimulator {
     }
   }
 
-  @Test
-  public void testAMSimulator() throws Exception {
+  @ParameterizedTest
+  @MethodSource("params")
+  public void testAMSimulator(Class<?> pSlsScheduler, Class<?> pScheduler) throws Exception {
+    initTestAMSimulator(pSlsScheduler, pScheduler);
     // Register one app
     MockAMSimulator app = new MockAMSimulator();
     String appId = "app1";
@@ -186,8 +184,11 @@ public class TestAMSimulator {
     app.lastStep();
   }
 
-  @Test
-  public void testAMSimulatorWithNodeLabels() throws Exception {
+  @ParameterizedTest
+  @MethodSource("params")
+  public void testAMSimulatorWithNodeLabels(Class<?> pSlsScheduler, Class<?> pScheduler)
+    throws Exception {
+    initTestAMSimulator(pSlsScheduler, pScheduler);
     if (scheduler.equals(CapacityScheduler.class)) {
       // add label to the cluster
       RMAdminCLI rmAdminCLI = new RMAdminCLI(conf);
@@ -227,8 +228,11 @@ public class TestAMSimulator {
     }
   }
 
-  @Test
-  public void testPackageRequests() throws YarnException {
+  @ParameterizedTest
+  @MethodSource("params")
+  public void testPackageRequests(Class<?> pSlsScheduler, Class<?> pScheduler)
+      throws YarnException {
+    initTestAMSimulator(pSlsScheduler, pScheduler);
     MockAMSimulator app = new MockAMSimulator();
     List<ContainerSimulator> containerSimulators = new ArrayList<>();
     Resource resource = Resources.createResource(1024);
@@ -338,8 +342,11 @@ public class TestAMSimulator {
     Assertions.assertEquals(3, nodeRequestCount);
   }
 
-  @Test
-  public void testAMSimulatorRanNodesCleared() throws Exception {
+  @ParameterizedTest
+  @MethodSource("params")
+  public void testAMSimulatorRanNodesCleared(Class<?> pSlsScheduler,
+      Class<?> pScheduler) throws Exception {
+    initTestAMSimulator(pSlsScheduler, pScheduler);
     NMSimulator nm = new NMSimulator();
     nm.init("/rack1/testNode1", Resources.createResource(1024 * 10, 10), 0, 1000,
         rm, -1f);
