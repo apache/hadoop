@@ -260,7 +260,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
   private boolean waitUamRegisterDone;
 
-  private final MonotonicClock clock = new MonotonicClock();
+  private final MonotonicClock clock = MonotonicClock.get();
 
   /*
    * For UAM, keepContainersAcrossApplicationAttempts is always true.
@@ -289,7 +289,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     this.justRecovered = false;
     this.finishAMCalled = false;
     this.lastSCResponseTime = new ConcurrentHashMap<>();
-    this.lastAMHeartbeatTime = this.clock.getTime();
+    this.lastAMHeartbeatTime = this.clock.millis();
     this.nmTokenMapFromRegisterSecondaryCluster = new ConcurrentHashSet<>();
   }
 
@@ -469,7 +469,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           nmTokenMapFromRegisterSecondaryCluster.addAll(response.getNMTokensFromPreviousAttempts());
 
           // Set sub-cluster to be timed out initially
-          lastSCResponseTime.put(subClusterId, clock.getTime() - subClusterTimeOut);
+          lastSCResponseTime.put(subClusterId, clock.millis() - subClusterTimeOut);
 
           // Running containers from secondary RMs
           List<Container> previousAttempts = response.getContainersFromPreviousAttempts();
@@ -728,7 +728,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       throws YarnException, IOException {
     Preconditions.checkArgument(this.policyInterpreter != null,
         "Allocate should be called after registerApplicationMaster");
-    this.lastAMHeartbeatTime = this.clock.getTime();
+    this.lastAMHeartbeatTime = this.clock.millis();
 
     if (this.justRecovered) {
       throw new ApplicationMasterNotRegisteredException(
@@ -776,14 +776,14 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       sendRequestsToResourceManagers(requests);
 
       // Wait for the first async response to arrive
-      long startTime = this.clock.getTime();
+      long startTime = this.clock.millis();
       synchronized (this.asyncResponseSink) {
         try {
           this.asyncResponseSink.wait(this.heartbeatMaxWaitTimeMs);
         } catch (InterruptedException e) {
         }
       }
-      long firstResponseTime = this.clock.getTime() - startTime;
+      long firstResponseTime = this.clock.millis() - startTime;
 
       // An extra brief wait for other async heart beats, so that most of their
       // responses can make it back to AM in the same heart beat round trip.
@@ -1087,7 +1087,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
                   amRegistrationRequest);
 
               // Set sub-cluster to be timed out initially
-              lastSCResponseTime.put(subClusterId, clock.getTime() - subClusterTimeOut);
+              lastSCResponseTime.put(subClusterId, clock.millis() - subClusterTimeOut);
 
               if (response != null && response.getContainersFromPreviousAttempts() != null) {
                 cacheAllocatedContainers(response.getContainersFromPreviousAttempts(),
@@ -1289,7 +1289,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       if (!subClusterId.equals(this.homeSubClusterId) && !this.uamPool.hasUAMId(id)) {
         newSubClusters.add(subClusterId);
         // Set sub-cluster to be timed out initially
-        lastSCResponseTime.put(subClusterId, clock.getTime() - subClusterTimeOut);
+        lastSCResponseTime.put(subClusterId, clock.millis() - subClusterTimeOut);
       }
     });
 
@@ -1747,7 +1747,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         // should not consider the SC as timed out
         continue;
       }
-      long duration = this.clock.getTime() - entry.getValue();
+      long duration = this.clock.millis() - entry.getValue();
       if (duration > this.subClusterTimeOut) {
         if (verbose) {
           LOG.warn("Subcluster {} doesn't have a successful heartbeat for {} seconds for {}",
@@ -1850,7 +1850,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         asyncResponseSink.notifyAll();
       }
       lastSCResponse.put(subClusterId, response);
-      lastSCResponseTime.put(subClusterId, clock.getTime());
+      lastSCResponseTime.put(subClusterId, clock.millis());
 
       // Notify policy of allocate response
       try {

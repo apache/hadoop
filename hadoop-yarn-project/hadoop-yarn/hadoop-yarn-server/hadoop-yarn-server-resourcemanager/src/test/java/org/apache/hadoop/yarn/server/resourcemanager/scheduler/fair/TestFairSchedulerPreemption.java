@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile.AllocationFileQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.util.ControlledClock;
-import org.apache.hadoop.util.SystemClock;
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -41,6 +40,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -195,7 +195,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     scheduler = (FairScheduler) resourceManager.getResourceScheduler();
     // YARN-6249, FSLeafQueue#lastTimeAtMinShare is initialized to the time in
     // the real world, so we should keep the clock up with it.
-    clock.setTime(SystemClock.getInstance().getTime());
+    clock.setTime(Clock.systemUTC().millis());
     scheduler.setClock(clock);
     resourceManager.start();
 

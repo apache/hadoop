@@ -492,7 +492,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
 
           compInstance.scheduler.getServiceTimelinePublisher()
               .componentFinished(comp.getComponentSpec(), ComponentState.FAILED,
-                  scheduler.getSystemClock().getTime());
+                  scheduler.getSystemClock().millis());
 
           compInstance.scheduler.getServiceTimelinePublisher()
               .serviceAttemptUnregistered(comp.getContext(),

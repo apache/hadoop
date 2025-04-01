@@ -41,10 +41,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
-import org.apache.hadoop.util.SystemClock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
+import java.time.Clock;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -250,7 +250,7 @@ public class ActivitiesManager extends AbstractService {
 
   public void turnOnAppActivitiesRecording(ApplicationId applicationId,
       double maxTime) {
-    long startTS = SystemClock.getInstance().getTime();
+    long startTS = Clock.systemUTC().millis();
     long endTS = startTS + (long) (maxTime * 1000);
     recordingAppActivitiesUntilSpecifiedTime.put(applicationId, endTS);
   }
@@ -301,7 +301,7 @@ public class ActivitiesManager extends AbstractService {
         while (!stopped && !Thread.currentThread().isInterrupted()) {
           Iterator<Map.Entry<NodeId, List<NodeAllocation>>> ite =
               completedNodeAllocations.entrySet().iterator();
-          long curTS = SystemClock.getInstance().getTime();
+          long curTS = Clock.systemUTC().millis();
           while (ite.hasNext()) {
             Map.Entry<NodeId, List<NodeAllocation>> nodeAllocation = ite.next();
             List<NodeAllocation> allocations = nodeAllocation.getValue();
@@ -454,7 +454,7 @@ public class ActivitiesManager extends AbstractService {
   void finishAppAllocationRecording(ApplicationId applicationId,
       ContainerId containerId, ActivityState appState, String diagnostic) {
     if (shouldRecordThisApp(applicationId)) {
-      long currTS = SystemClock.getInstance().getTime();
+      long currTS = Clock.systemUTC().millis();
       AppAllocation appAllocation = appsAllocation.get().remove(applicationId);
       appAllocation.updateAppContainerStateAndTime(containerId, appState,
           currTS, diagnostic);
@@ -485,7 +485,7 @@ public class ActivitiesManager extends AbstractService {
 
   void finishNodeUpdateRecording(NodeId nodeID, String partition) {
     List<NodeAllocation> value = recordingNodesAllocation.get().get(nodeID);
-    long timestamp = SystemClock.getInstance().getTime();
+    long timestamp = Clock.systemUTC().millis();
 
     if (value != null) {
       if (value.size() > 0) {

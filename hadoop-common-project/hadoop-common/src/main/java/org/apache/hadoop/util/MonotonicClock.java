@@ -31,7 +31,16 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
  */
 @Public
 @Evolving
-public class MonotonicClock implements Clock {
+public class MonotonicClock extends AbstractClock {
+
+  private MonotonicClock() {
+  }
+
+  private static final MonotonicClock INSTANCE = MonotonicClock.get();
+
+  public static MonotonicClock get() {
+    return INSTANCE;
+  }
 
   /**
    * Get current time from some arbitrary time base in the past, counting in
@@ -39,7 +48,9 @@ public class MonotonicClock implements Clock {
    * changes.
    * @return a monotonic clock that counts in milliseconds.
    */
-  public long getTime() {
+  @Override
+  public long millis() {
     return Time.monotonicNow();
   }
+
 }

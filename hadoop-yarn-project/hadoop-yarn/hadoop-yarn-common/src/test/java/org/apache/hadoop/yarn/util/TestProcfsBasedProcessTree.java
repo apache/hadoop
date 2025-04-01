@@ -32,8 +32,7 @@ import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
+import java.time.Clock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -583,7 +582,7 @@ public class TestProcfsBasedProcessTree {
       // crank up the process tree class.
       ProcfsBasedProcessTree processTree =
           createProcessTree("100", procfsRootDir.getAbsolutePath(),
-              SystemClock.getInstance());
+              Clock.systemUTC());
       setSmapsInProceTree(processTree, smapEnabled);
 
       // verify virtual memory
@@ -710,7 +709,7 @@ public class TestProcfsBasedProcessTree {
 
       // crank up the process tree class.
       createProcessTree(pid, procfsRootDir.getAbsolutePath(),
-          SystemClock.getInstance());
+          Clock.systemUTC());
 
       // Let us not create stat file for pid 100.
       assertTrue(ProcfsBasedProcessTree.checkPidPgrpidForMatch(pid,
@@ -781,7 +780,7 @@ public class TestProcfsBasedProcessTree {
 
       ProcfsBasedProcessTree processTree =
           createProcessTree("100", procfsRootDir.getAbsolutePath(),
-              SystemClock.getInstance());
+              Clock.systemUTC());
       // build the process tree.
       processTree.updateProcessTree();
 

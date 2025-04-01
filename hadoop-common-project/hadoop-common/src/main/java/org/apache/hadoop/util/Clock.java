@@ -23,9 +23,12 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 
 /**
  * A simple clock interface that gives you time.
+ *
+ * @deprecated use {@link java.time.Clock} instead
  */
 @Public
 @Stable
+@Deprecated
 public interface Clock {
 
   long getTime();

@@ -357,7 +357,7 @@ public class FairScheduler extends
   @Override
   public void update() {
     // Storing start time for fsOpDurations
-    long start = getClock().getTime();
+    long start = getClock().millis();
     FSQueue rootQueue = queueMgr.getRootQueue();
 
     // Update demands and fairshares
@@ -392,7 +392,7 @@ public class FairScheduler extends
     } finally {
       readLock.unlock();
     }
-    fsOpDurations.addUpdateThreadRunDuration(getClock().getTime() - start);
+    fsOpDurations.addUpdateThreadRunDuration(getClock().millis() - start);
   }
 
   public RMContainerTokenSecretManager
@@ -928,7 +928,7 @@ public class FairScheduler extends
     // TODO, normalize SchedulingRequest
 
     // Record container allocation start time
-    application.recordContainerRequestTime(getClock().getTime());
+    application.recordContainerRequestTime(getClock().millis());
 
     // Release containers
     releaseContainers(release, application);
@@ -977,7 +977,7 @@ public class FairScheduler extends
         application.pullNewlyAllocatedContainers();
     // Record container allocation time
     if (!(newlyAllocatedContainers.isEmpty())) {
-      application.recordContainerAllocationTime(getClock().getTime());
+      application.recordContainerAllocationTime(getClock().millis());
     }
 
     Resource headroom = application.getHeadroom();
@@ -1026,13 +1026,13 @@ public class FairScheduler extends
   protected void nodeUpdate(RMNode nm) {
     writeLock.lock();
     try {
-      long start = getClock().getTime();
+      long start = getClock().millis();
       super.nodeUpdate(nm);
 
       FSSchedulerNode fsNode = getFSSchedulerNode(nm.getNodeID());
       attemptScheduling(fsNode);
 
-      long duration = getClock().getTime() - start;
+      long duration = getClock().millis() - start;
       fsOpDurations.addNodeUpdateDuration(duration);
     } finally {
       writeLock.unlock();
@@ -1041,7 +1041,7 @@ public class FairScheduler extends
 
   @Deprecated
   void continuousSchedulingAttempt() throws InterruptedException {
-    long start = getClock().getTime();
+    long start = getClock().millis();
     TreeSet<FSSchedulerNode> nodeIdSet;
     // Hold a lock to prevent node changes as much as possible.
     readLock.lock();
@@ -1071,7 +1071,7 @@ public class FairScheduler extends
       }
     }
 
-    long duration = getClock().getTime() - start;
+    long duration = getClock().millis() - start;
     fsOpDurations.addContinuousSchedulingRunDuration(duration);
   }
 

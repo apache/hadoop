@@ -27,7 +27,10 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 /**
  * Implementation of {@link Clock} that gives the current UTC time in
  * milliseconds.
+ *
+ * @deprecated use {@link java.time.Clock#systemUTC()} instead
  */
+@Deprecated
 @Public
 @Evolving
 public class UTCClock implements Clock {

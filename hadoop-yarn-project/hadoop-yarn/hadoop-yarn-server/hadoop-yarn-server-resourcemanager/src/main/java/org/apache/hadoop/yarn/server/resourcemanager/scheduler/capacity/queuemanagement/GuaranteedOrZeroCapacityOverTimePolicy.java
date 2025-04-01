@@ -35,11 +35,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedP
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueManagementChange;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -85,7 +85,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
 
   private LeafQueueState leafQueueState = new LeafQueueState();
 
-  private Clock clock = new MonotonicClock();
+  private Clock clock = MonotonicClock.get();
 
   private class LeafQueueState {
 
@@ -170,13 +170,13 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
 
     private boolean activate() {
       boolean ret = isActive.compareAndSet(false, true);
-      mostRecentActivationTime = clock.getTime();
+      mostRecentActivationTime = clock.millis();
       return ret;
     }
 
     private boolean deactivate() {
       boolean ret = isActive.compareAndSet(true, false);
-      mostRecentDeactivationTime = clock.getTime();
+      mostRecentDeactivationTime = clock.millis();
       return ret;
     }
   }

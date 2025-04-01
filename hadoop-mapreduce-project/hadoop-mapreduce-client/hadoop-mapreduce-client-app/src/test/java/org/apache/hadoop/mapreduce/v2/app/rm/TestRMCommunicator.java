@@ -22,10 +22,11 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMCommunicator.AllocatorRunnable;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.util.Clock;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.stubbing.Answer;
+
+import java.time.Clock;
 
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -60,7 +61,7 @@ public class TestRMCommunicator {
     doThrow(new RMContainerAllocationException("Test")).doNothing()
         .when(communicator).heartbeat();
 
-    when(mockClock.getTime()).thenReturn(1L).thenThrow(new AssertionError(
+    when(mockClock.millis()).thenReturn(1L).thenThrow(new AssertionError(
         "GetClock called second time, when it should not have since the " +
         "thread should have quit"));
 
@@ -83,7 +84,7 @@ public class TestRMCommunicator {
     doThrow(new YarnRuntimeException("Test")).doNothing()
         .when(communicator).heartbeat();
 
-    when(mockClock.getTime()).thenReturn(1L).thenAnswer(
+    when(mockClock.millis()).thenReturn(1L).thenAnswer(
         (Answer<Long>) invocation -> {
         communicator.stop();
         return 2L;
@@ -94,6 +95,6 @@ public class TestRMCommunicator {
     AllocatorRunnable testRunnable = communicator.new AllocatorRunnable();
     testRunnable.run();
 
-    verify(mockClock, times(2)).getTime();
+    verify(mockClock, times(2)).millis();
   }
 }

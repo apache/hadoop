@@ -33,6 +33,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -104,9 +105,7 @@ import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
@@ -348,7 +347,7 @@ public class TestTaskAttempt{
 
   public void verifyMillisCounters(Resource containerResource,
       int minContainerSize) throws Exception {
-    Clock actualClock = SystemClock.getInstance();
+    Clock actualClock = Clock.systemUTC();
     ControlledClock clock = new ControlledClock(actualClock);
     clock.setTime(10);
     MRApp app =
@@ -413,7 +412,7 @@ public class TestTaskAttempt{
 
   private TaskAttemptImpl createMapTaskAttemptImplForTest(
       EventHandler eventHandler, TaskSplitMetaInfo taskSplitMetaInfo) {
-    Clock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     return createMapTaskAttemptImplForTest(eventHandler, taskSplitMetaInfo,
         clock, new JobConf());
   }
@@ -620,7 +619,7 @@ public class TestTaskAttempt{
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
           new Token(), new Credentials(),
-          SystemClock.getInstance(), null);
+          Clock.systemUTC(), null);
 
     NodeId nid = NodeId.newInstance("127.0.0.1", 0);
     ContainerId contId = ContainerId.newContainerId(appAttemptId, 3);
@@ -677,7 +676,7 @@ public class TestTaskAttempt{
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
           new Token(), new Credentials(),
-          SystemClock.getInstance(), appCtx);
+          Clock.systemUTC(), appCtx);
 
     NodeId nid = NodeId.newInstance("127.0.0.2", 0);
     ContainerId contId = ContainerId.newContainerId(appAttemptId, 3);
@@ -736,7 +735,7 @@ public class TestTaskAttempt{
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
           new Token(), new Credentials(),
-          SystemClock.getInstance(), appCtx);
+          Clock.systemUTC(), appCtx);
 
     NodeId nid = NodeId.newInstance("127.0.0.1", 0);
     ContainerId contId = ContainerId.newContainerId(appAttemptId, 3);
@@ -801,7 +800,7 @@ public class TestTaskAttempt{
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
           new Token(), new Credentials(),
-          SystemClock.getInstance(), appCtx);
+          Clock.systemUTC(), appCtx);
 
     NodeId nid = NodeId.newInstance("127.0.0.1", 0);
     ContainerId contId = ContainerId.newContainerId(appAttemptId, 3);
@@ -872,7 +871,7 @@ public class TestTaskAttempt{
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
         jobFile, 1, splits, jobConf, taListener,
-        new Token(), new Credentials(), SystemClock.getInstance(), appCtx);
+        new Token(), new Credentials(), Clock.systemUTC(), appCtx);
 
     NodeId nid = NodeId.newInstance("127.0.0.1", 0);
     ContainerId contId = ContainerId.newContainerId(appAttemptId, 3);
@@ -929,7 +928,7 @@ public class TestTaskAttempt{
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
         splits, jobConf, taListener,
         mock(Token.class), new Credentials(),
-        SystemClock.getInstance(), appCtx);
+        Clock.systemUTC(), appCtx);
 
     NodeId nid = NodeId.newInstance("127.0.0.1", 0);
     ContainerId contId = ContainerId.newContainerId(appAttemptId, 3);
@@ -998,7 +997,7 @@ public class TestTaskAttempt{
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
         jobFile, 1, splits, jobConf, taListener,
-        new Token(), new Credentials(), SystemClock.getInstance(), appCtx);
+        new Token(), new Credentials(), Clock.systemUTC(), appCtx);
 
     NodeId nid = NodeId.newInstance("127.0.0.1", 0);
     ContainerId contId = ContainerId.newContainerId(appAttemptId, 3);
@@ -1047,7 +1046,7 @@ public class TestTaskAttempt{
     TaskAttemptImpl taImpl =
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
       splits, jobConf, taListener,mock(Token.class), new Credentials(),
-      SystemClock.getInstance(), appCtx);
+      Clock.systemUTC(), appCtx);
 
     NodeId nid = NodeId.newInstance("127.0.0.1", 0);
     ContainerId contId = ContainerId.newContainerId(appAttemptId, 3);
@@ -1098,7 +1097,7 @@ public class TestTaskAttempt{
         new MapTaskAttemptImpl(taskId, 1, eventHandler, mock(Path.class), 1,
             mock(TaskSplitMetaInfo.class), new JobConf(),
             mock(TaskAttemptListener.class), mock(Token.class),
-            new Credentials(), SystemClock.getInstance(),
+            new Credentials(), Clock.systemUTC(),
             mock(AppContext.class));
     if (scheduleAttempt) {
       taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
@@ -1161,7 +1160,7 @@ public class TestTaskAttempt{
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
         jobFile, 1, splits, jobConf, taListener, new Token(),
-        new Credentials(), SystemClock.getInstance(), appCtx);
+        new Credentials(), Clock.systemUTC(), appCtx);
 
     NodeId nid = NodeId.newInstance("127.0.0.2", 0);
     ContainerId contId = ContainerId.newContainerId(appAttemptId, 3);
@@ -1217,7 +1216,7 @@ public class TestTaskAttempt{
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
         jobFile, 1, splits, jobConf, taListener, new Token(),
-        new Credentials(), SystemClock.getInstance(), appCtx);
+        new Credentials(), Clock.systemUTC(), appCtx);
 
     NodeId nid = NodeId.newInstance("127.0.0.2", 0);
     ContainerId contId = ContainerId.newContainerId(appAttemptId, 3);
@@ -1275,7 +1274,7 @@ public class TestTaskAttempt{
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
         jobFile, 1, splits, jobConf, taListener, new Token(),
-        new Credentials(), SystemClock.getInstance(), appCtx);
+        new Credentials(), Clock.systemUTC(), appCtx);
 
     NodeId nid = NodeId.newInstance("127.0.0.2", 0);
     ContainerId contId = ContainerId.newContainerId(appAttemptId, 3);
@@ -1622,7 +1621,7 @@ public class TestTaskAttempt{
     initResourceTypes();
     EventHandler eventHandler = mock(EventHandler.class);
     TaskSplitMetaInfo taskSplitMetaInfo = new TaskSplitMetaInfo();
-    Clock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     JobConf jobConf = new JobConf();
     jobConf.setLong(MRJobConfig.MAP_RESOURCE_TYPE_PREFIX
         + CUSTOM_RESOURCE_NAME, 7L);
@@ -1640,7 +1639,7 @@ public class TestTaskAttempt{
   public void testReducerCustomResourceTypes() {
     initResourceTypes();
     EventHandler eventHandler = mock(EventHandler.class);
-    Clock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     JobConf jobConf = new JobConf();
     jobConf.set(MRJobConfig.REDUCE_RESOURCE_TYPE_PREFIX
         + CUSTOM_RESOURCE_NAME, "3m");
@@ -1657,7 +1656,7 @@ public class TestTaskAttempt{
   @Test
   public void testReducerMemoryRequestViaMapreduceReduceMemoryMb() {
     EventHandler eventHandler = mock(EventHandler.class);
-    Clock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     JobConf jobConf = new JobConf();
     jobConf.setInt(MRJobConfig.REDUCE_MEMORY_MB, 2048);
     TaskAttemptImpl taImpl =
@@ -1671,7 +1670,7 @@ public class TestTaskAttempt{
   @Test
   public void testReducerMemoryRequestViaMapreduceReduceResourceMemory() {
     EventHandler eventHandler = mock(EventHandler.class);
-    Clock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     JobConf jobConf = new JobConf();
     jobConf.set(MRJobConfig.REDUCE_RESOURCE_TYPE_PREFIX +
         MRJobConfig.RESOURCE_TYPE_NAME_MEMORY, "2 Gi");
@@ -1686,7 +1685,7 @@ public class TestTaskAttempt{
   @Test
   public void testReducerMemoryRequestDefaultMemory() {
     EventHandler eventHandler = mock(EventHandler.class);
-    Clock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     TaskAttemptImpl taImpl =
         createReduceTaskAttemptImplForTest(eventHandler, clock, new JobConf());
     long memorySize =
@@ -1697,7 +1696,7 @@ public class TestTaskAttempt{
 
   @Test
   public void testReducerMemoryRequestWithoutUnits() {
-    Clock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     for (String memoryResourceName : ImmutableList.of(
         MRJobConfig.RESOURCE_TYPE_NAME_MEMORY,
         MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY)) {
@@ -1725,7 +1724,7 @@ public class TestTaskAttempt{
         TaskAttemptImpl.RESOURCE_REQUEST_CACHE.clear();
         logger.addAppender(testAppender);
         EventHandler eventHandler = mock(EventHandler.class);
-        Clock clock = SystemClock.getInstance();
+        Clock clock = Clock.systemUTC();
         JobConf jobConf = new JobConf();
         jobConf.set(MRJobConfig.REDUCE_RESOURCE_TYPE_PREFIX + memoryName,
             "3Gi");
@@ -1751,7 +1750,7 @@ public class TestTaskAttempt{
   public void testReducerMemoryRequestMultipleName() {
     assertThrows(IllegalArgumentException.class, ()->{
       EventHandler eventHandler = mock(EventHandler.class);
-      Clock clock = SystemClock.getInstance();
+      Clock clock = Clock.systemUTC();
       JobConf jobConf = new JobConf();
       for (String memoryName : ImmutableList.of(
           MRJobConfig.RESOURCE_TYPE_NAME_MEMORY,
@@ -1766,7 +1765,7 @@ public class TestTaskAttempt{
   @Test
   public void testReducerCpuRequestViaMapreduceReduceCpuVcores() {
     EventHandler eventHandler = mock(EventHandler.class);
-    Clock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     JobConf jobConf = new JobConf();
     jobConf.setInt(MRJobConfig.REDUCE_CPU_VCORES, 3);
     TaskAttemptImpl taImpl =
@@ -1780,7 +1779,7 @@ public class TestTaskAttempt{
   @Test
   public void testReducerCpuRequestViaMapreduceReduceResourceVcores() {
     EventHandler eventHandler = mock(EventHandler.class);
-    Clock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     JobConf jobConf = new JobConf();
     jobConf.set(MRJobConfig.REDUCE_RESOURCE_TYPE_PREFIX +
         MRJobConfig.RESOURCE_TYPE_NAME_VCORE, "5");
@@ -1795,7 +1794,7 @@ public class TestTaskAttempt{
   @Test
   public void testReducerCpuRequestDefaultMemory() {
     EventHandler eventHandler = mock(EventHandler.class);
-    Clock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     TaskAttemptImpl taImpl =
         createReduceTaskAttemptImplForTest(eventHandler, clock, new JobConf());
     int vCores =
@@ -1811,7 +1810,7 @@ public class TestTaskAttempt{
     try {
       logger.addAppender(testAppender);
       EventHandler eventHandler = mock(EventHandler.class);
-      Clock clock = SystemClock.getInstance();
+      Clock clock = Clock.systemUTC();
       JobConf jobConf = new JobConf();
       jobConf.set(MRJobConfig.REDUCE_RESOURCE_TYPE_PREFIX +
           MRJobConfig.RESOURCE_TYPE_NAME_VCORE, "7");
@@ -1861,7 +1860,7 @@ public class TestTaskAttempt{
     assertThrows(IllegalArgumentException.class, () -> {
       initResourceTypes();
       EventHandler eventHandler = mock(EventHandler.class);
-      Clock clock = SystemClock.getInstance();
+      Clock clock = Clock.systemUTC();
       JobConf jobConf = new JobConf();
       jobConf.set(MRJobConfig.REDUCE_RESOURCE_TYPE_PREFIX
           + CUSTOM_RESOURCE_NAME, "3z");
@@ -1994,7 +1993,7 @@ public class TestTaskAttempt{
         new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
             splits, jobConf, taListener,
             mock(Token.class), new Credentials(),
-            SystemClock.getInstance(), appCtx);
+            Clock.systemUTC(), appCtx);
 
     NodeId nid = NodeId.newInstance("127.0.0.1", 0);
     ContainerId contId = ContainerId.newInstance(appAttemptId, 3);

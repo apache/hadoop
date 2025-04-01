@@ -26,6 +26,7 @@ import java.io.PrintStream;
 import java.io.Writer;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -64,7 +65,6 @@ import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -263,7 +263,7 @@ public class TestLogAggregationIndexedFileController
             + LogAggregationIndexedFileController.CHECK_SUM_FILE_SUFFIX);
     FSDataOutputStream fInput = null;
     try {
-      String nodeName = logPath.getName() + "_" + clock.getTime();
+      String nodeName = logPath.getName() + "_" + clock.millis();
       fInput = FileSystem.create(fs, checksumFile, LOG_FILE_UMASK);
       fInput.writeInt(nodeName.length());
       fInput.write(nodeName.getBytes(
@@ -575,7 +575,7 @@ public class TestLogAggregationIndexedFileController
             + LogAggregationIndexedFileController.CHECK_SUM_FILE_SUFFIX);
     FSDataOutputStream fInput = null;
     try {
-      String nodeName = logPath.getName() + "_" + clock.getTime();
+      String nodeName = logPath.getName() + "_" + clock.millis();
       fInput = FileSystem.create(fs, checksumFile, LOG_FILE_UMASK);
       fInput.writeInt(nodeName.length());
       fInput.write(nodeName.getBytes(

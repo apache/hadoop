@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import java.net.InetAddress;
+import java.time.Clock;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -106,8 +107,6 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -435,7 +434,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       long submitTime, String applicationType, Set<String> applicationTags,
       List<ResourceRequest> amReqs, ApplicationPlacementContext
       placementContext, long startTime) {
-    this.systemClock = SystemClock.getInstance();
+    this.systemClock = Clock.systemUTC();
 
     this.applicationId = applicationId;
     this.name = StringInterner.weakIntern(name);
@@ -452,7 +451,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.masterService = masterService;
     this.submitTime = submitTime;
     if (startTime <= 0) {
-      this.startTime = this.systemClock.getTime();
+      this.startTime = this.systemClock.millis();
     } else {
       this.startTime = startTime;
     }
@@ -806,7 +805,7 @@ public class RMAppImpl implements RMApp, Recoverable {
           timeout.setRemainingTime(0);
         } else {
           timeout.setRemainingTime(
-              Math.max((timeoutInMillis - systemClock.getTime()) / 1000, 0));
+              Math.max((timeoutInMillis - systemClock.millis()) / 1000, 0));
         }
       }
       report.setApplicationTimeouts(
@@ -1046,7 +1045,7 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.rmContext.getSystemMetricsPublisher().appStateUpdated(
-          app, stateToATS, app.systemClock.getTime());
+          app, stateToATS, app.systemClock.millis());
     };
   }
 
@@ -1144,7 +1143,7 @@ public class RMAppImpl implements RMApp, Recoverable {
         app.rmContext.getRMAppLifetimeMonitor().registerApp(app.applicationId,
             timeout.getKey(), timeout.getValue());
         if (LOG.isDebugEnabled()) {
-          long remainingTime = timeout.getValue() - app.systemClock.getTime();
+          long remainingTime = timeout.getValue() - app.systemClock.millis();
           LOG.debug("Application " + app.applicationId
               + " is registered for timeout monitor, type=" + timeout.getKey()
               + " remaining timeout=" + (remainingTime > 0 ?
@@ -1308,7 +1307,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       RMAppState stateToBeStored) {
     rememberTargetTransitions(event, transitionToDo, targetFinalState);
     this.stateBeforeFinalSaving = getState();
-    this.storedFinishTime = this.systemClock.getTime();
+    this.storedFinishTime = this.systemClock.millis();
 
     LOG.info("Updating application " + this.applicationId
         + " with final state: " + this.targetedFinalState);
@@ -1536,11 +1535,11 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     private void handleAppFinished(RMAppImpl app) {
       app.logAggregation
-          .recordLogAggregationStartTime(app.systemClock.getTime());
+          .recordLogAggregationStartTime(app.systemClock.millis());
       // record finish time
       app.finishTime = app.storedFinishTime;
       if (app.finishTime == 0) {
-        app.finishTime = app.systemClock.getTime();
+        app.finishTime = app.systemClock.millis();
       }
 
       //record finish in history and metrics
@@ -1638,7 +1637,7 @@ public class RMAppImpl implements RMApp, Recoverable {
         ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
             app.getApplicationId(), app.firstAttemptIdInStateStore);
         RMAppAttempt rmAppAttempt = app.getRMAppAttempt(attemptId);
-        long endTime = app.systemClock.getTime();
+        long endTime = app.systemClock.millis();
         if (rmAppAttempt.getFinishTime() < (endTime
             - app.attemptFailuresValidityInterval)) {
           app.firstAttemptIdInStateStore++;
@@ -1836,7 +1835,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     String appViewACLs = submissionContext.getAMContainerSpec()
         .getApplicationACLs().get(ApplicationAccessType.VIEW_APP);
     rmContext.getSystemMetricsPublisher().appACLsUpdated(
-        this, appViewACLs, systemClock.getTime());
+        this, appViewACLs, systemClock.millis());
   }
 
   @Private

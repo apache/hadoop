@@ -154,37 +154,37 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     // Default level should be node-local
     assertEquals(NodeType.NODE_LOCAL,
             schedulerApp.getAllowedLocalityLevelByTime(prio,
-                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
+                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.millis()));
 
     // after 4 seconds should remain node local
     clock.tickSec(4);
     assertEquals(NodeType.NODE_LOCAL,
             schedulerApp.getAllowedLocalityLevelByTime(prio,
-                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
+                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.millis()));
 
     // after 6 seconds should switch to rack local
     clock.tickSec(2);
     assertEquals(NodeType.RACK_LOCAL,
             schedulerApp.getAllowedLocalityLevelByTime(prio,
-                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
+                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.millis()));
 
     // manually set back to node local
     schedulerApp.resetAllowedLocalityLevel(prio, NodeType.NODE_LOCAL);
-    schedulerApp.resetSchedulingOpportunities(prio, clock.getTime());
+    schedulerApp.resetSchedulingOpportunities(prio, clock.millis());
     assertEquals(NodeType.NODE_LOCAL,
             schedulerApp.getAllowedLocalityLevelByTime(prio,
-                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
+                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.millis()));
 
     // Now escalate again to rack-local, then to off-switch
     clock.tickSec(6);
     assertEquals(NodeType.RACK_LOCAL,
             schedulerApp.getAllowedLocalityLevelByTime(prio,
-                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
+                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.millis()));
 
     clock.tickSec(7);
     assertEquals(NodeType.OFF_SWITCH,
             schedulerApp.getAllowedLocalityLevelByTime(prio,
-                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
+                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.millis()));
   }
 
   @Test

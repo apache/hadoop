@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import java.time.Clock;
 import java.util.Set;
 
 import org.apache.avro.util.Utf8;
@@ -31,7 +32,6 @@ import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
-import org.apache.hadoop.util.SystemClock;
 
 /**
  * Event to record successful task completion
@@ -84,7 +84,7 @@ public class TaskAttemptFinishedEvent  implements HistoryEvent {
       String taskStatus, long finishTime, String rackName, String hostname,
       String state, Counters counters) {
     this(id, taskType, taskStatus, finishTime, rackName, hostname, state,
-        counters, SystemClock.getInstance().getTime());
+        counters, Clock.systemUTC().millis());
   }
 
   TaskAttemptFinishedEvent() {}

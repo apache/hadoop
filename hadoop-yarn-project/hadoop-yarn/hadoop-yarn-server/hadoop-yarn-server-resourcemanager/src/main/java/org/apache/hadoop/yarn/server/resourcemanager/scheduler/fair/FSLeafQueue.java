@@ -81,7 +81,7 @@ public class FSLeafQueue extends FSQueue {
       FSParentQueue parent) {
     super(name, scheduler, parent);
     this.context = scheduler.getContext();
-    this.lastTimeAtMinShare = scheduler.getClock().getTime();
+    this.lastTimeAtMinShare = scheduler.getClock().millis();
     activeUsersManager = new ActiveUsersManager(getMetrics());
     amResourceUsage = Resource.newInstance(0, 0);
     getMetrics().setAMResourceUsage(amResourceUsage);
@@ -599,7 +599,7 @@ public class FSLeafQueue extends FSQueue {
     Resources.subtractFromNonNegative(starvation, getResourceUsage());
 
     boolean starved = !Resources.isNone(starvation);
-    long now = scheduler.getClock().getTime();
+    long now = scheduler.getClock().millis();
 
     if (!starved) {
       // Record that the queue is not starved

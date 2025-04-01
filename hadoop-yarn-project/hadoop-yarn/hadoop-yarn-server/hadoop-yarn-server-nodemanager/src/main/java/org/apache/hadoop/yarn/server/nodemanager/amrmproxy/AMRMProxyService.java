@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -77,7 +78,6 @@ import org.apache.hadoop.yarn.server.nodemanager.security.authorize
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.util.MonotonicClock;
 import org.slf4j.Logger;
@@ -101,7 +101,7 @@ public class AMRMProxyService extends CompositeService implements
   private static final String NMSS_USER_KEY = "user";
   private static final String NMSS_AMRMTOKEN_KEY = "amrmtoken";
 
-  private final Clock clock = new MonotonicClock();
+  private final Clock clock = MonotonicClock.get();
   private Server server;
   private final Context nmContext;
   private final AsyncDispatcher dispatcher;
@@ -220,7 +220,7 @@ public class AMRMProxyService extends CompositeService implements
         .getAppContexts().entrySet()) {
       ApplicationAttemptId attemptId = entry.getKey();
       LOG.info("Recovering app attempt {}.", attemptId);
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
 
       // Try recover for the running application attempt
       try {
@@ -275,7 +275,7 @@ public class AMRMProxyService extends CompositeService implements
         // Create the interceptor pipeline for the AM
         initializePipeline(attemptId, user, amrmToken, localToken,
             entry.getValue(), true, amCred);
-        long endTime = clock.getTime();
+        long endTime = clock.millis();
         this.metrics.succeededRecoverRequests(endTime - startTime);
       } catch (Throwable e) {
         LOG.error("Exception when recovering {}, removing it from NMStateStore and move on.",
@@ -296,7 +296,7 @@ public class AMRMProxyService extends CompositeService implements
       RegisterApplicationMasterRequest request) throws YarnException,
       IOException {
     this.metrics.incrRequestCount();
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     try {
       RequestInterceptorChainWrapper pipeline =
           authorizeAndGetInterceptorChain();
@@ -308,7 +308,7 @@ public class AMRMProxyService extends CompositeService implements
       RegisterApplicationMasterResponse response =
           pipeline.getRootInterceptor().registerApplicationMaster(request);
 
-      long endTime = clock.getTime();
+      long endTime = clock.millis();
       this.metrics.succeededRegisterAMRequests(endTime - startTime);
       LOG.info("RegisterAM processing finished in {} ms for application {}.",
           endTime - startTime, pipeline.getApplicationAttemptId());
@@ -329,7 +329,7 @@ public class AMRMProxyService extends CompositeService implements
       FinishApplicationMasterRequest request) throws YarnException,
       IOException {
     this.metrics.incrRequestCount();
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     try {
       RequestInterceptorChainWrapper pipeline =
           authorizeAndGetInterceptorChain();
@@ -338,7 +338,7 @@ public class AMRMProxyService extends CompositeService implements
       FinishApplicationMasterResponse response =
           pipeline.getRootInterceptor().finishApplicationMaster(request);
 
-      long endTime = clock.getTime();
+      long endTime = clock.millis();
       this.metrics.succeededFinishAMRequests(endTime - startTime);
       LOG.info("FinishAM finished with isUnregistered = {} in {} ms for {}.",
           response.getIsUnregistered(), endTime - startTime,
@@ -361,7 +361,7 @@ public class AMRMProxyService extends CompositeService implements
   public AllocateResponse allocate(AllocateRequest request)
       throws YarnException, IOException {
     this.metrics.incrAllocateCount();
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     try {
       AMRMTokenIdentifier amrmTokenIdentifier =
           YarnServerSecurityUtils.authorizeRequest();
@@ -372,7 +372,7 @@ public class AMRMProxyService extends CompositeService implements
 
       updateAMRMTokens(amrmTokenIdentifier, pipeline, allocateResponse);
 
-      long endTime = clock.getTime();
+      long endTime = clock.millis();
       this.metrics.succeededAllocateRequests(endTime - startTime);
       LOG.info("Allocate processing finished in {} ms for application {}.",
           endTime - startTime, pipeline.getApplicationAttemptId());
@@ -394,7 +394,7 @@ public class AMRMProxyService extends CompositeService implements
   public void processApplicationStartRequest(StartContainerRequest request)
       throws IOException, YarnException {
     this.metrics.incrRequestCount();
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     try {
       ContainerTokenIdentifier containerTokenIdentifierForKey =
           BuilderUtils.newContainerTokenIdentifier(request.getContainerToken());
@@ -436,7 +436,7 @@ public class AMRMProxyService extends CompositeService implements
           containerTokenIdentifierForKey.getApplicationSubmitter(), amrmToken,
           localToken, null, false, credentials);
 
-      long endTime = clock.getTime();
+      long endTime = clock.millis();
       this.metrics.succeededAppStartRequests(endTime - startTime);
     } catch (Throwable t) {
       this.metrics.incrFailedAppStartRequests();
@@ -556,7 +556,7 @@ public class AMRMProxyService extends CompositeService implements
     RequestInterceptorChainWrapper pipeline =
         this.applPipelineMap.remove(applicationId);
     boolean isStopSuccess = true;
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
 
     if (pipeline == null) {
       LOG.info("No interceptor pipeline for application {},"
@@ -588,7 +588,7 @@ public class AMRMProxyService extends CompositeService implements
     }
 
     if (isStopSuccess) {
-      long endTime = clock.getTime();
+      long endTime = clock.millis();
       this.metrics.succeededAppStopRequests(endTime - startTime);
     } else {
       this.metrics.incrFailedAppStopRequests();
@@ -603,7 +603,7 @@ public class AMRMProxyService extends CompositeService implements
         (AMRMProxyApplicationContextImpl) pipeline.getRootInterceptor().getApplicationContext();
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
 
       // check to see if the RM has issued a new AMRMToken & accordingly update
       // the real ARMRMToken in the current context
@@ -651,7 +651,7 @@ public class AMRMProxyService extends CompositeService implements
                       localToken.getService().toString()));
         }
       }
-      long endTime = clock.getTime();
+      long endTime = clock.millis();
       this.metrics.succeededUpdateTokenRequests(endTime - startTime);
     } catch (IOException e) {
       LOG.error("Error storing AMRMProxy application context entry for {}.",

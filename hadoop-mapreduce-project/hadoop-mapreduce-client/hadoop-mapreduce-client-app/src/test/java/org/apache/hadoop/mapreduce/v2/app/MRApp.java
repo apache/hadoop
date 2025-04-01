@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.time.Clock;
 import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
@@ -96,8 +97,6 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -160,7 +159,7 @@ public class MRApp extends MRAppMaster {
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart, String assignedQueue) {
     this(maps, reduces, autoComplete, testName, cleanOnStart, 1,
-        SystemClock.getInstance(), assignedQueue);
+        Clock.systemUTC(), assignedQueue);
   }
 
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
@@ -194,13 +193,13 @@ public class MRApp extends MRAppMaster {
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart, int startCount) {
     this(maps, reduces, autoComplete, testName, cleanOnStart, startCount,
-        SystemClock.getInstance(), null);
+        Clock.systemUTC(), null);
   }
 
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart, int startCount, boolean unregistered) {
     this(maps, reduces, autoComplete, testName, cleanOnStart, startCount,
-        SystemClock.getInstance(), unregistered);
+        Clock.systemUTC(), unregistered);
   }
 
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
@@ -221,14 +220,14 @@ public class MRApp extends MRAppMaster {
       int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart, int startCount, boolean unregistered) {
     this(appAttemptId, amContainerId, maps, reduces, autoComplete, testName,
-        cleanOnStart, startCount, SystemClock.getInstance(), unregistered, null);
+        cleanOnStart, startCount, Clock.systemUTC(), unregistered, null);
   }
 
   public MRApp(ApplicationAttemptId appAttemptId, ContainerId amContainerId,
       int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart, int startCount) {
     this(appAttemptId, amContainerId, maps, reduces, autoComplete, testName,
-        cleanOnStart, startCount, SystemClock.getInstance(), true, null);
+        cleanOnStart, startCount, Clock.systemUTC(), true, null);
   }
 
   public MRApp(ApplicationAttemptId appAttemptId, ContainerId amContainerId,
@@ -592,7 +591,7 @@ public class MRApp extends MRAppMaster {
 
     @Override
     public long getLastHeartbeatTime() {
-      return getContext().getClock().getTime();
+      return getContext().getClock().millis();
     }
 
     @Override

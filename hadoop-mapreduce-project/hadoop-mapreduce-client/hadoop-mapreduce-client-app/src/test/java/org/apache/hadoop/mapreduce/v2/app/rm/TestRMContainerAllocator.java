@@ -46,6 +46,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -152,11 +153,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.hadoop.util.SystemClock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -451,7 +450,7 @@ public class TestRMContainerAllocator {
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
             0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     final MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
-        appAttemptId, mockJob, SystemClock.getInstance());
+        appAttemptId, mockJob, Clock.systemUTC());
     // add resources to scheduler
     rm.drainEvents();
 
@@ -508,7 +507,7 @@ public class TestRMContainerAllocator {
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
             0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
-        appAttemptId, mockJob, SystemClock.getInstance());
+        appAttemptId, mockJob, Clock.systemUTC());
     allocator.setMapResourceRequest(Resources.createResource(1024));
     allocator.setReduceResourceRequest(Resources.createResource(1024));
     RMContainerAllocator.AssignedRequests assignedRequests =
@@ -576,16 +575,16 @@ public class TestRMContainerAllocator {
                 new String[] {"h1"}, false, false);
     scheduledRequests.maps.put(mock(TaskAttemptId.class),
         new RMContainerRequestor.ContainerRequest(event1, null,
-                clock.getTime()));
+                clock.millis()));
     assignedRequests.reduces.put(mock(TaskAttemptId.class),
         mock(Container.class));
 
-    clock.setTime(clock.getTime() + 1);
+    clock.setTime(clock.millis() + 1);
     allocator.preemptReducesIfNeeded();
     assertEquals(0, assignedRequests.preemptionWaitingReduces.size(),
         "The reducer is aggressively preempted");
 
-    clock.setTime(clock.getTime() + (preemptThreshold) * 1000);
+    clock.setTime(clock.millis() + (preemptThreshold) * 1000);
     allocator.preemptReducesIfNeeded();
     assertEquals(1, assignedRequests.preemptionWaitingReduces.size(),
         "The reducer is not preempted");
@@ -641,16 +640,16 @@ public class TestRMContainerAllocator {
                 new String[] {"h1"}, false, false);
     scheduledRequests.maps.put(mock(TaskAttemptId.class),
         new RMContainerRequestor.ContainerRequest(event1, null,
-                clock.getTime()));
+                clock.millis()));
     assignedRequests.reduces.put(mock(TaskAttemptId.class),
         mock(Container.class));
 
-    clock.setTime(clock.getTime() + 1);
+    clock.setTime(clock.millis() + 1);
     allocator.preemptReducesIfNeeded();
     assertEquals(0, assignedRequests.preemptionWaitingReduces.size(),
         "The reducer is preempted too soon");
 
-    clock.setTime(clock.getTime() + 1000 * forcePreemptThresholdSecs);
+    clock.setTime(clock.millis() + 1000 * forcePreemptThresholdSecs);
     allocator.preemptReducesIfNeeded();
     assertEquals(1, assignedRequests.preemptionWaitingReduces.size(),
         "The reducer is not preempted");
@@ -680,7 +679,7 @@ public class TestRMContainerAllocator {
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
             0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     final MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
-        appAttemptId, mockJob, SystemClock.getInstance());
+        appAttemptId, mockJob, Clock.systemUTC());
 
     // request to allocate two reduce priority containers
     final String[] locations = new String[] {host};
@@ -729,7 +728,7 @@ public class TestRMContainerAllocator {
     final MockScheduler mockScheduler = new MockScheduler(appAttemptId);
     MyContainerAllocator allocator =
         new MyContainerAllocator(null, conf, appAttemptId, mockJob,
-            SystemClock.getInstance()) {
+            Clock.systemUTC()) {
           @Override
           protected void register() {
           }
@@ -830,7 +829,7 @@ public class TestRMContainerAllocator {
         new MockSchedulerForTimelineCollector(collectorInfo);
     MyContainerAllocator allocator =
         new MyContainerAllocator(null, conf, attemptId, mockJob,
-            SystemClock.getInstance()) {
+            Clock.systemUTC()) {
           @Override
           protected void register() {
           }
@@ -912,7 +911,7 @@ public class TestRMContainerAllocator {
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
             0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
-        appAttemptId, mockJob, SystemClock.getInstance());
+        appAttemptId, mockJob, Clock.systemUTC());
 
     // add resources to scheduler
     MockNM nodeManager1 = rm.registerNode("h1:1234", 1024);
@@ -2753,7 +2752,7 @@ public class TestRMContainerAllocator {
     final Configuration conf = new Configuration();
 
     final MyContainerAllocator allocator = new MyContainerAllocator(null,
-        conf, appAttemptId, mock(Job.class), SystemClock.getInstance()) {
+        conf, appAttemptId, mock(Job.class), Clock.systemUTC()) {
       @Override
       protected void register() {
       }
@@ -2792,7 +2791,7 @@ public class TestRMContainerAllocator {
     final Configuration conf = new Configuration();
 
     final MyContainerAllocator allocator = new MyContainerAllocator(null,
-        conf, appAttemptId, mock(Job.class), SystemClock.getInstance()) {
+        conf, appAttemptId, mock(Job.class), Clock.systemUTC()) {
       @Override
       protected void register() {
       }
@@ -2972,7 +2971,7 @@ public class TestRMContainerAllocator {
     final MockScheduler mockScheduler = new MockScheduler(appAttemptId);
     MyContainerAllocator allocator =
         new MyContainerAllocator(null, conf, appAttemptId, mockJob,
-            SystemClock.getInstance()) {
+            Clock.systemUTC()) {
           @Override
           protected void register() {
           }
@@ -3036,7 +3035,7 @@ public class TestRMContainerAllocator {
 
     final MockScheduler mockScheduler = new MockScheduler(appAttemptId);
     MyContainerAllocator allocator = new MyContainerAllocator(null, conf,
-        appAttemptId, mockJob, SystemClock.getInstance()) {
+        appAttemptId, mockJob, Clock.systemUTC()) {
           @Override
           protected void register() {
           }

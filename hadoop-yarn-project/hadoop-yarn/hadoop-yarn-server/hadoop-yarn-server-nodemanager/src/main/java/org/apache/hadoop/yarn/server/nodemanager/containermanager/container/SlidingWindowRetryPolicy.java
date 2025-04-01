@@ -21,8 +21,8 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
 import org.apache.hadoop.yarn.api.records.ContainerRetryPolicy;
-import org.apache.hadoop.util.Clock;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -65,7 +65,7 @@ public class SlidingWindowRetryPolicy {
         retryContext.containerRetryContext;
     if (containerRC.getFailuresValidityInterval() > 0) {
       int validFailuresCount = 0;
-      long currentTime = clock.getTime();
+      long currentTime = clock.millis();
       for (int i = retryContext.restartTimes.size() - 1; i >= 0; i--) {
         long restartTime = retryContext.restartTimes.get(i);
         if (currentTime - restartTime
@@ -93,7 +93,7 @@ public class SlidingWindowRetryPolicy {
     if (retryContext.containerRetryContext.getFailuresValidityInterval() > 0) {
       ContainerRetryContext containerRC = retryContext.containerRetryContext;
       Iterator<Long> iterator = retryContext.getRestartTimes().iterator();
-      long currentTime = clock.getTime();
+      long currentTime = clock.millis();
 
       while (iterator.hasNext()) {
         long restartTime = iterator.next();

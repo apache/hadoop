@@ -27,6 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.text.MessageFormat;
+import java.time.Clock;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -51,7 +52,6 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ReservationDefinitionPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ReservationRequestsPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.junit.jupiter.api.AfterEach;
@@ -79,7 +79,7 @@ public class TestReservationInputValidator {
     rSystem = mock(ReservationSystem.class);
     plans.put(PLAN_NAME, plan);
     rrValidator = new ReservationInputValidator(clock);
-    when(clock.getTime()).thenReturn(1L);
+    when(clock.millis()).thenReturn(1L);
     ResourceCalculator rCalc = new DefaultResourceCalculator();
     Resource resource = Resource.newInstance(10240, 10);
     when(plan.getResourceCalculator()).thenReturn(rCalc);

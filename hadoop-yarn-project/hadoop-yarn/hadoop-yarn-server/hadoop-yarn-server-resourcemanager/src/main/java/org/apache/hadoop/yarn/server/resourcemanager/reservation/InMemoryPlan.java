@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -41,8 +42,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.Plan
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.Planner;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.ReservationAgent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
@@ -115,7 +114,7 @@ public class InMemoryPlan implements Plan {
       long maxPeriodicity, RMContext rmContext) {
     this(queueMetrics, policy, agent, totalCapacity, step, resCalc, minAlloc,
         maxAlloc, queueName, replanner, getMoveOnExpiry, maxPeriodicity,
-        rmContext, new UTCClock());
+        rmContext, Clock.systemUTC());
   }
 
   @SuppressWarnings("checkstyle:parameternumber")
@@ -347,7 +346,7 @@ public class InMemoryPlan implements Plan {
       if (!isRecovering) {
         policy.validate(this, inMemReservation);
         // we record here the time in which the allocation has been accepted
-        reservation.setAcceptanceTimestamp(clock.getTime());
+        reservation.setAcceptanceTimestamp(clock.millis());
         if (rmStateStore != null) {
           rmStateStore.storeNewReservation(
               ReservationSystemUtil.buildStateProto(inMemReservation),

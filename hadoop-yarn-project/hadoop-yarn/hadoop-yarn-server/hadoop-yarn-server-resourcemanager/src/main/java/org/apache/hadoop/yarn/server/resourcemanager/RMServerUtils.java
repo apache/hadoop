@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -77,8 +78,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
@@ -104,7 +103,7 @@ public class RMServerUtils {
   protected static final RecordFactory RECORD_FACTORY =
       RecordFactoryProvider.getRecordFactory(null);
 
-  private static Clock clock = SystemClock.getInstance();
+  private static Clock clock = Clock.systemUTC();
 
   public static List<RMNode> queryRMNodes(RMContext context,
       EnumSet<NodeState> acceptedStates) {
@@ -566,7 +565,7 @@ public class RMServerUtils {
   public static Map<ApplicationTimeoutType, Long> validateISO8601AndConvertToLocalTimeEpoch(
       Map<ApplicationTimeoutType, String> timeoutsInISO8601)
       throws YarnException {
-    long currentTimeMillis = clock.getTime();
+    long currentTimeMillis = clock.millis();
     Map<ApplicationTimeoutType, Long> newApplicationTimeout =
         new HashMap<ApplicationTimeoutType, Long>();
     if (timeoutsInISO8601 != null) {

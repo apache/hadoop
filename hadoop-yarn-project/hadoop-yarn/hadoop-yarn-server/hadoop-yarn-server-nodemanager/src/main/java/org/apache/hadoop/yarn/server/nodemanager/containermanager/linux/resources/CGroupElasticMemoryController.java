@@ -28,13 +28,13 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.util.MonotonicClock;
 
 import java.io.File;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -58,7 +58,7 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 public class CGroupElasticMemoryController extends Thread {
   protected static final Logger LOG = LoggerFactory
       .getLogger(CGroupElasticMemoryController.class);
-  private final Clock clock = new MonotonicClock();
+  private final Clock clock = MonotonicClock.get();
   private String yarnCGroupPath;
   private String oomListenerPath;
   private Runnable oomHandler;
@@ -335,7 +335,7 @@ public class CGroupElasticMemoryController extends Thread {
   private void resolveOOM(ExecutorService executor)
       throws InterruptedException, java.util.concurrent.ExecutionException {
     // Just log, when we are still in OOM after a couple of seconds
-    final long start = clock.getTime();
+    final long start = clock.millis();
     Future<Boolean> watchdog =
         executor.submit(() -> watchAndLogOOMState(start));
     // Kill something to resolve the issue
@@ -363,7 +363,7 @@ public class CGroupElasticMemoryController extends Thread {
       long end = start;
       // Throw an error, if we are still in OOM after 5 seconds
       while(end - start < timeoutMS) {
-        end = clock.getTime();
+        end = clock.millis();
         String underOOM = cgroups.getCGroupParam(
             CGroupsHandler.CGroupController.MEMORY,
             "",
@@ -390,7 +390,7 @@ public class CGroupElasticMemoryController extends Thread {
       LOG.warn("Exception running logging thread", e);
     }
     LOG.warn(String.format("OOM was not resolved in %d ms",
-        clock.getTime() - start));
+        clock.millis() - start));
     stopListening();
     return false;
   }

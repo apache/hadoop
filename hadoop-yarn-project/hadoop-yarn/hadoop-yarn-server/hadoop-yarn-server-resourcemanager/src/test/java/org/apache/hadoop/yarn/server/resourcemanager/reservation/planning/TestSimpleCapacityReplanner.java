@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -45,7 +46,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.SharingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.junit.jupiter.api.Test;
@@ -69,7 +69,7 @@ public class TestSimpleCapacityReplanner {
 
     QueueMetrics queueMetrics = mock(QueueMetrics.class);
 
-    when(clock.getTime()).thenReturn(0L);
+    when(clock.millis()).thenReturn(0L);
     SimpleCapacityReplanner enf = new SimpleCapacityReplanner(clock);
 
     RMContext context = ReservationSystemTestUtil.createMockRMContext();
@@ -97,25 +97,25 @@ public class TestSimpleCapacityReplanner {
         new InMemoryReservationAllocation(r1, rDef, "u3",
         "dedicated", 0, 0 + f5.length, generateAllocation(0, f5), res,
         minAlloc), false), plan.toString());
-    when(clock.getTime()).thenReturn(1L);
+    when(clock.millis()).thenReturn(1L);
     ReservationId r2 = ReservationId.newInstance(ts, 2);
     assertTrue(plan.addReservation(
         new InMemoryReservationAllocation(r2, rDef, "u4",
         "dedicated", 0, 0 + f5.length, generateAllocation(0, f5), res,
         minAlloc), false), plan.toString());
-    when(clock.getTime()).thenReturn(2L);
+    when(clock.millis()).thenReturn(2L);
     ReservationId r3 = ReservationId.newInstance(ts, 3);
     assertTrue(plan.addReservation(
         new InMemoryReservationAllocation(r3, rDef, "u5",
         "dedicated", 0, 0 + f5.length, generateAllocation(0, f5), res,
         minAlloc), false), plan.toString());
-    when(clock.getTime()).thenReturn(3L);
+    when(clock.millis()).thenReturn(3L);
     ReservationId r4 = ReservationId.newInstance(ts, 4);
     assertTrue(plan.addReservation(
         new InMemoryReservationAllocation(r4, rDef, "u6",
         "dedicated", 0, 0 + f5.length, generateAllocation(0, f5), res,
         minAlloc), false), plan.toString());
-    when(clock.getTime()).thenReturn(4L);
+    when(clock.millis()).thenReturn(4L);
     ReservationId r5 = ReservationId.newInstance(ts, 5);
     assertTrue(plan.addReservation(new InMemoryReservationAllocation(r5, rDef, "u7",
         "dedicated", 0, 0 + f5.length, generateAllocation(0, f5), res,
@@ -127,7 +127,7 @@ public class TestSimpleCapacityReplanner {
         new InMemoryReservationAllocation(r6, rDef, "u3",
         "dedicated", 10, 10 + f6.length, generateAllocation(10, f6), res,
         minAlloc), false), plan.toString());
-    when(clock.getTime()).thenReturn(6L);
+    when(clock.millis()).thenReturn(6L);
     ReservationId r7 = ReservationId.newInstance(ts, 7);
     assertTrue(plan.addReservation(
         new InMemoryReservationAllocation(r7, rDef, "u4",
@@ -137,7 +137,7 @@ public class TestSimpleCapacityReplanner {
     // remove some of the resources (requires replanning)
     plan.setTotalCapacity(Resource.newInstance(70 * 1024, 70));
 
-    when(clock.getTime()).thenReturn(0L);
+    when(clock.millis()).thenReturn(0L);
 
     // run the replanner
     enf.plan(plan, null);

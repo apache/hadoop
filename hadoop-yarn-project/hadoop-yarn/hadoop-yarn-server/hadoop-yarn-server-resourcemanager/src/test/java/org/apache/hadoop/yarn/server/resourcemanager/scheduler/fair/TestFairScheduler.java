@@ -5314,7 +5314,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         + " MaxAMShare: 0.5,"
         + " MaxAMResource: <memory:0, vCores:0>,"
         + " AMResourceUsage: <memory:0, vCores:0>,"
-        + " LastTimeAtMinShare: " + clock.getTime()
+        + " LastTimeAtMinShare: " + clock.millis()
         + "}";
 
     assertEquals(childQueueString, child1.dumpState(),

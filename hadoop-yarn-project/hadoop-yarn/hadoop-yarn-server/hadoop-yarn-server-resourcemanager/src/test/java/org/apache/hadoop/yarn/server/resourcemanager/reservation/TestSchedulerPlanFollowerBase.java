@@ -41,9 +41,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSch
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+
+import java.time.Clock;
 
 public abstract class TestSchedulerPlanFollowerBase {
   final static int GB = 1024;
@@ -98,7 +99,7 @@ public abstract class TestSchedulerPlanFollowerBase {
 
     AbstractSchedulerPlanFollower planFollower = createPlanFollower();
 
-    when(mClock.getTime()).thenReturn(0L);
+    when(mClock.millis()).thenReturn(0L);
     planFollower.run();
 
     Queue q = getReservationQueue(r1.toString());
@@ -132,7 +133,7 @@ public abstract class TestSchedulerPlanFollowerBase {
     assertReservationQueueDoesNotExist(r2);
     assertReservationQueueDoesNotExist(r3);
 
-    when(mClock.getTime()).thenReturn(3L);
+    when(mClock.millis()).thenReturn(3L);
     planFollower.run();
 
     assertEquals(0, getNumberOfApplications(defQ));
@@ -141,7 +142,7 @@ public abstract class TestSchedulerPlanFollowerBase {
     assertReservationQueueExists(r2, 0.1, 0.1);
     assertReservationQueueDoesNotExist(r3);
 
-    when(mClock.getTime()).thenReturn(10L);
+    when(mClock.millis()).thenReturn(10L);
     planFollower.run();
 
     q = getReservationQueue(r1.toString());
@@ -161,7 +162,7 @@ public abstract class TestSchedulerPlanFollowerBase {
     assertReservationQueueDoesNotExist(r2);
     assertReservationQueueExists(r3, 0, 1.0);
 
-    when(mClock.getTime()).thenReturn(11L);
+    when(mClock.millis()).thenReturn(11L);
     planFollower.run();
 
     if (isMove) {
@@ -175,14 +176,14 @@ public abstract class TestSchedulerPlanFollowerBase {
     assertReservationQueueDoesNotExist(r2);
     assertReservationQueueExists(r3, 0.1, 0.1);
 
-    when(mClock.getTime()).thenReturn(12L);
+    when(mClock.millis()).thenReturn(12L);
     planFollower.run();
 
     assertReservationQueueDoesNotExist(r1);
     assertReservationQueueDoesNotExist(r2);
     assertReservationQueueExists(r3, 0.2, 0.2);
 
-    when(mClock.getTime()).thenReturn(16L);
+    when(mClock.millis()).thenReturn(16L);
     planFollower.run();
 
     assertReservationQueueDoesNotExist(r1);

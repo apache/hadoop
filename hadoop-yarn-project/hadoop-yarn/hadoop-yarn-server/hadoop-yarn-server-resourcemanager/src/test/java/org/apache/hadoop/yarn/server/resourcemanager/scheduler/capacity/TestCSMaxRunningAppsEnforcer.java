@@ -130,7 +130,7 @@ public class TestCSMaxRunningAppsEnforcer {
         rmContext, Priority.newInstance(0), false,
         activitiesManager) {
 
-      private final long startTime = clock.getTime();
+      private final long startTime = clock.millis();
 
       @Override
       public long getStartTime() {

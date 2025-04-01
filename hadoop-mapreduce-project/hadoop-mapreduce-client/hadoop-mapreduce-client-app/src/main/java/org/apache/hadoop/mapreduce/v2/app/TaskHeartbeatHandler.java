@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
+import java.time.Clock;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,7 +35,6 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.util.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -146,19 +146,19 @@ public class TaskHeartbeatHandler extends AbstractService {
     ReportTime time = runningAttempts.get(attemptID);
     if(time != null) {
       time.reported.compareAndSet(false, true);
-      time.setLastProgress(clock.getTime());
+      time.setLastProgress(clock.millis());
     }
   }
 
   
   public void register(TaskAttemptId attemptID) {
-    runningAttempts.put(attemptID, new ReportTime(clock.getTime()));
+    runningAttempts.put(attemptID, new ReportTime(clock.millis()));
   }
 
   public void unregister(TaskAttemptId attemptID) {
     runningAttempts.remove(attemptID);
     recentlyUnregisteredAttempts.put(attemptID,
-        new ReportTime(clock.getTime()));
+        new ReportTime(clock.millis()));
   }
 
   public boolean hasRecentlyUnregistered(TaskAttemptId attemptID) {
@@ -170,7 +170,7 @@ public class TaskHeartbeatHandler extends AbstractService {
     @Override
     public void run() {
       while (!stopped && !Thread.currentThread().isInterrupted()) {
-        long currentTime = clock.getTime();
+        long currentTime = clock.millis();
         checkRunning(currentTime);
         checkRecentlyUnregistered(currentTime);
         try {

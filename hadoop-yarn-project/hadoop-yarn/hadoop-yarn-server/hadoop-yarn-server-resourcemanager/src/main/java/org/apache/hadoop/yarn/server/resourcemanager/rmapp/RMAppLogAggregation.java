@@ -94,7 +94,7 @@ public class RMAppLogAggregation {
     this.readLock.lock();
     try {
       if (!isLogAggregationFinished() && RMAppImpl.isAppInFinalState(rmApp) &&
-          rmApp.getSystemClock().getTime() > this.logAggregationStartTime
+          rmApp.getSystemClock().millis() > this.logAggregationStartTime
               + this.logAggregationStatusTimeout) {
         for (Map.Entry<NodeId, LogAggregationReport> output :
             logAggregationStatus.entrySet()) {

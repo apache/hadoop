@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import java.time.Clock;
 import java.util.Set;
 
 import org.apache.avro.util.Utf8;
@@ -33,7 +34,6 @@ import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
-import org.apache.hadoop.util.SystemClock;
 
 /**
  * Event to record unsuccessful (Killed/Failed) completion of task attempts
@@ -110,7 +110,7 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
       int port, String rackName, String error, Counters counters,
       int[][] allSplits) {
     this(id, taskType, status, finishTime, hostname, port, rackName, error,
-        counters, allSplits, SystemClock.getInstance().getTime());
+        counters, allSplits, Clock.systemUTC().millis());
   }
 
   /**

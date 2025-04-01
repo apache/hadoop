@@ -26,10 +26,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueueManager;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.util.Collection;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,7 +44,7 @@ public class TestFairSchedulerQueueInfo {
     FairSchedulerConfiguration fsConf = new FairSchedulerConfiguration();
     RMContext rmContext = mock(RMContext.class);
     PlacementManager placementManager = new PlacementManager();
-    SystemClock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     FairScheduler scheduler = mock(FairScheduler.class);
     when(scheduler.getConf()).thenReturn(fsConf);
     when(scheduler.getConfig()).thenReturn(fsConf);

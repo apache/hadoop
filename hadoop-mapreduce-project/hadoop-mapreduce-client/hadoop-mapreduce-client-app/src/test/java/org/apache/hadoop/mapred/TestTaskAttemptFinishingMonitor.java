@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 
 import java.io.IOException;
+import java.time.Clock;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -35,7 +36,6 @@ import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.util.SystemClock;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -47,7 +47,7 @@ public class TestTaskAttemptFinishingMonitor {
   @Test
   public void testFinshingAttemptTimeout()
       throws IOException, InterruptedException {
-    SystemClock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     Configuration conf = new Configuration();
     conf.setInt(MRJobConfig.TASK_EXIT_TIMEOUT, 100);
     conf.setInt(MRJobConfig.TASK_EXIT_TIMEOUT_CHECK_INTERVAL_MS, 10);

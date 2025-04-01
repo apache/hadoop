@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
@@ -66,7 +67,6 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.ControlledClock;
-import org.apache.hadoop.util.SystemClock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -312,7 +312,7 @@ public class TestTaskAttemptListenerImpl {
   @Test
   @Timeout(value = 10)
   public void testCommitWindow() throws IOException {
-    SystemClock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
 
     configureMocks();
 
@@ -344,7 +344,7 @@ public class TestTaskAttemptListenerImpl {
 
     // verify commit allowed when RM heartbeat is recent
     when(rmHeartbeatHandler.getLastHeartbeatTime())
-      .thenReturn(clock.getTime());
+      .thenReturn(clock.millis());
     canCommit = listener.canCommit(tid);
     assertTrue(canCommit);
     verify(mockTask, times(1)).canCommit(any(TaskAttemptId.class));

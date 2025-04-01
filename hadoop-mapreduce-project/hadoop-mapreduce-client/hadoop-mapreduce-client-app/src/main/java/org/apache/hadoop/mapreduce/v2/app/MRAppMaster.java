@@ -25,6 +25,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -150,8 +151,6 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
@@ -249,7 +248,7 @@ public class MRAppMaster extends CompositeService {
       ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,
       long appSubmitTime) {
     this(applicationAttemptId, containerId, nmHost, nmPort, nmHttpPort,
-        SystemClock.getInstance(), appSubmitTime);
+        Clock.systemUTC(), appSubmitTime);
   }
 
   public MRAppMaster(ApplicationAttemptId applicationAttemptId,
@@ -257,7 +256,7 @@ public class MRAppMaster extends CompositeService {
       Clock clock, long appSubmitTime) {
     super(MRAppMaster.class.getName());
     this.clock = clock;
-    this.startTime = clock.getTime();
+    this.startTime = clock.millis();
     this.appSubmitTime = appSubmitTime;
     this.appAttemptID = applicationAttemptId;
     this.containerID = containerId;
@@ -1280,7 +1279,7 @@ public class MRAppMaster extends CompositeService {
         // send init to speculator only for non-uber jobs. 
         // This won't yet start as dispatcher isn't started yet.
         dispatcher.getEventHandler().handle(
-            new SpeculatorEvent(job.getID(), clock.getTime()));
+            new SpeculatorEvent(job.getID(), clock.millis()));
         LOG.info("MRAppMaster launching normal, non-uberized, multi-container "
             + "job " + job.getID() + ".");
       }

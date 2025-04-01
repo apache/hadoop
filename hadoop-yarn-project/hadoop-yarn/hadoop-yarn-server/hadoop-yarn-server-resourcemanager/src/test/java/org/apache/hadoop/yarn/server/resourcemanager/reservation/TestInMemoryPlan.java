@@ -27,6 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.sql.Timestamp;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -47,8 +48,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.Plan
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.Planner;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.ReservationAgent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.junit.jupiter.api.AfterEach;
@@ -88,7 +87,7 @@ public class TestInMemoryPlan {
     policy = new NoOverCommitPolicy();
     replanner = mock(Planner.class);
 
-    when(clock.getTime()).thenReturn(1L);
+    when(clock.millis()).thenReturn(1L);
 
     context = ReservationSystemTestUtil.createMockRMContext();
   }
@@ -132,7 +131,7 @@ public class TestInMemoryPlan {
       maxPeriodicity = 100;
       Plan plan = new InMemoryPlan(queueMetrics, policy, agent, totalCapacity, 1L,
           resCalc, minAlloc, maxAlloc, planName, replanner, true, maxPeriodicity,
-          context, new UTCClock());
+          context, Clock.systemUTC());
 
       // we expect the plan to complaint as the range 330-150 > 50
       RLESparseResourceAllocation availableBefore =
@@ -146,7 +145,7 @@ public class TestInMemoryPlan {
     maxPeriodicity = 100;
     Plan plan = new InMemoryPlan(queueMetrics, policy, agent, totalCapacity, 1L,
         resCalc, minAlloc, maxAlloc, planName, replanner, true, maxPeriodicity,
-        context, new UTCClock());
+        context, Clock.systemUTC());
 
     ReservationId reservationID =
         ReservationSystemTestUtil.getNewReservationId();
@@ -530,12 +529,12 @@ public class TestInMemoryPlan {
     }
 
     // Now archive completed reservations
-    when(clock.getTime()).thenReturn(106L);
+    when(clock.millis()).thenReturn(106L);
     when(sharingPolicy.getValidWindow()).thenReturn(1L);
     try {
       // will only remove 2nd reservation as only that has fallen out of the
       // archival window
-      plan.archiveCompletedReservations(clock.getTime());
+      plan.archiveCompletedReservations(clock.millis());
     } catch (PlanningException e) {
       fail(e.getMessage());
     }
@@ -543,11 +542,11 @@ public class TestInMemoryPlan {
     assertNull(plan.getReservationById(reservationID2));
     checkAllocation(plan, alloc1, start, 0);
 
-    when(clock.getTime()).thenReturn(107L);
+    when(clock.millis()).thenReturn(107L);
     try {
       // will remove 1st reservation also as it has fallen out of the archival
       // window
-      plan.archiveCompletedReservations(clock.getTime());
+      plan.archiveCompletedReservations(clock.millis());
     } catch (PlanningException e) {
       fail(e.getMessage());
     }
@@ -934,7 +933,7 @@ public class TestInMemoryPlan {
     maxPeriodicity = period * periodMultiplier;
     Plan plan = new InMemoryPlan(queueMetrics, policy, agent, totalCapacity, 1L,
         resCalc, minAlloc, maxAlloc, planName, replanner, true, maxPeriodicity,
-        context, new UTCClock());
+        context, Clock.systemUTC());
 
     ReservationId reservationID = submitReservation(plan, reservationStart,
         reservationEnd, period);
@@ -955,7 +954,7 @@ public class TestInMemoryPlan {
     maxPeriodicity = period * periodMultiplier;
     Plan plan = new InMemoryPlan(queueMetrics, policy, agent, totalCapacity, 1L,
         resCalc, minAlloc, maxAlloc, planName, replanner, true, maxPeriodicity,
-        context, new UTCClock());
+        context, Clock.systemUTC());
     submitReservation(plan, reservationStart, reservationEnd, period);
 
     for (int i = 0; i < cycles; i++) {

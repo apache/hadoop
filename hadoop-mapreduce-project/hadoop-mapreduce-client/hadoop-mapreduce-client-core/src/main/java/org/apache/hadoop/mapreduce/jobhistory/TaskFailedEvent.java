@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import java.time.Clock;
 import java.util.Set;
 
 import org.apache.avro.util.Utf8;
@@ -32,7 +33,6 @@ import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
-import org.apache.hadoop.util.SystemClock;
 
 /**
  * Event to record the failure of a task
@@ -82,7 +82,7 @@ public class TaskFailedEvent implements HistoryEvent {
       String error, String status, TaskAttemptID failedDueToAttempt,
       Counters counters) {
     this(id, finishTime, taskType, error, status, failedDueToAttempt, counters,
-        SystemClock.getInstance().getTime());
+        Clock.systemUTC().millis());
   }
 
   public TaskFailedEvent(TaskID id, long finishTime, 

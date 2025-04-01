@@ -34,7 +34,6 @@ import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.scheduler.TaskRunner;
 import org.apache.hadoop.yarn.sls.synthetic.SynthJob;
 import org.apache.hadoop.yarn.sls.synthetic.SynthTraceJobProducer;
-import org.apache.hadoop.util.UTCClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +43,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -239,8 +239,8 @@ public class AMRunner {
       if (jobDef.getReservationId() != null) {
         // if we have a ReservationId, delegate reservation creation to
         // AMSim (reservation shape is impl specific)
-        UTCClock clock = new UTCClock();
-        amSim.initReservation(jobDef.getReservationId(), jobDef.getDeadline(), clock.getTime());
+        Clock clock = Clock.systemUTC();
+        amSim.initReservation(jobDef.getReservationId(), jobDef.getDeadline(), clock.millis());
       }
       runner.schedule(amSim);
       maxRuntime = Math.max(maxRuntime, amDef.getJobFinishTime());

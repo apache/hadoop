@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app.rm;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -83,7 +84,6 @@ import org.apache.hadoop.yarn.exceptions.InvalidLabelResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.RackResolver;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -628,7 +628,7 @@ public class RMContainerAllocator extends RMContainerRequestor
     if (allocationDelayThresholdMs <= 0)
       return requestMap.size();
     int hangingRequests = 0;
-    long currTime = clock.getTime();
+    long currTime = clock.millis();
     for (ContainerRequest request: requestMap.values()) {
       long delay = currTime - request.requestTimeMs;
       if (delay > allocationDelayThresholdMs)

@@ -50,14 +50,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
     .allocationfile.AllocationFileQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
     .allocationfile.AllocationFileWriter;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.UTCClock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -190,8 +189,8 @@ public class TestYarnClientWithReservation {
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
-      Clock clock = new UTCClock();
-      long arrival = clock.getTime();
+      Clock clock = Clock.systemUTC();
+      long arrival = clock.millis();
       long duration = 60000;
       long deadline = (long) (arrival + 1.05 * duration);
       ReservationSubmissionRequest sRequest =
@@ -203,7 +202,7 @@ public class TestYarnClientWithReservation {
 
       // Submit the reservation with the same reservation id but different
       // reservation definition, and ensure YarnException is thrown.
-      arrival = clock.getTime();
+      arrival = clock.millis();
       ReservationDefinition rDef = sRequest.getReservationDefinition();
       rDef.setArrival(arrival + duration);
       sRequest.setReservationDefinition(rDef);
@@ -231,8 +230,8 @@ public class TestYarnClientWithReservation {
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
-      Clock clock = new UTCClock();
-      long arrival = clock.getTime();
+      Clock clock = Clock.systemUTC();
+      long arrival = clock.millis();
       long duration = 60000;
       long deadline = (long) (arrival + 1.05 * duration);
       ReservationSubmissionRequest sRequest =
@@ -243,7 +242,7 @@ public class TestYarnClientWithReservation {
           rDef.getReservationRequests().getReservationResources().get(0);
       ReservationId reservationID = sRequest.getReservationId();
       rr.setNumContainers(5);
-      arrival = clock.getTime();
+      arrival = clock.millis();
       duration = 30000;
       deadline = (long) (arrival + 1.05 * duration);
       rr.setDuration(duration);
@@ -291,8 +290,8 @@ public class TestYarnClientWithReservation {
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
-      Clock clock = new UTCClock();
-      long arrival = clock.getTime();
+      Clock clock = Clock.systemUTC();
+      long arrival = clock.millis();
       long duration = 60000;
       long deadline = (long) (arrival + 1.05 * duration);
       ReservationSubmissionRequest sRequest =
@@ -326,8 +325,8 @@ public class TestYarnClientWithReservation {
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
-      Clock clock = new UTCClock();
-      long arrival = clock.getTime();
+      Clock clock = Clock.systemUTC();
+      long arrival = clock.millis();
       long duration = 60000;
       long deadline = (long) (arrival + 1.05 * duration);
       ReservationSubmissionRequest sRequest =
@@ -335,7 +334,7 @@ public class TestYarnClientWithReservation {
 
       // List reservations, search by a point in time within the reservation
       // range.
-      arrival = clock.getTime();
+      arrival = clock.millis();
       ReservationId reservationID = sRequest.getReservationId();
       ReservationListRequest request = ReservationListRequest.newInstance(
           ReservationSystemTestUtil.reservationQ, "", arrival + duration / 2,
@@ -384,8 +383,8 @@ public class TestYarnClientWithReservation {
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
-      Clock clock = new UTCClock();
-      long arrival = clock.getTime();
+      Clock clock = Clock.systemUTC();
+      long arrival = clock.millis();
       long duration = 60000;
       long deadline = (long) (arrival + 1.05 * duration);
       ReservationSubmissionRequest sRequest =
@@ -427,8 +426,8 @@ public class TestYarnClientWithReservation {
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
-      Clock clock = new UTCClock();
-      long arrival = clock.getTime();
+      Clock clock = Clock.systemUTC();
+      long arrival = clock.millis();
       long duration = 60000;
       long deadline = (long) (arrival + 1.05 * duration);
       ReservationSubmissionRequest sRequest =
@@ -460,7 +459,7 @@ public class TestYarnClientWithReservation {
       assertNotNull(response);
       assertThat(response.getReservationAllocationState()).isEmpty();
 
-      arrival = clock.getTime();
+      arrival = clock.millis();
       // List reservations, search by end time before the reservation start
       // time.
       request = ReservationListRequest.newInstance(
@@ -499,8 +498,8 @@ public class TestYarnClientWithReservation {
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
-      Clock clock = new UTCClock();
-      long arrival = clock.getTime();
+      Clock clock = Clock.systemUTC();
+      long arrival = clock.millis();
       long duration = 60000;
       long deadline = (long) (arrival + 1.05 * duration);
       ReservationSubmissionRequest sRequest =

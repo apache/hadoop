@@ -29,7 +29,8 @@ import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.util.Clock;
+
+import java.time.Clock;
 
 @SuppressWarnings("rawtypes")
 public class ReduceTaskAttemptImpl extends TaskAttemptImpl {

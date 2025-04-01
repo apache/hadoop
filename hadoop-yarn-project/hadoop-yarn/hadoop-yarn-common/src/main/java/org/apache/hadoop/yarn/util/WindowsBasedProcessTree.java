@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.util;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,8 +31,6 @@ import org.apache.hadoop.util.CpuTimeTracker;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 
 @Private
 public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
@@ -84,7 +83,7 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
    * @param pid Identifier of the job object.
    */
   public WindowsBasedProcessTree(final String pid) {
-    this(pid, SystemClock.getInstance());
+    this(pid, Clock.systemUTC());
   }
 
   /**
@@ -269,7 +268,7 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
   @Override
   public float getCpuUsagePercent() {
     BigInteger processTotalMs = getTotalProcessMs();
-    cpuTimeTracker.updateElapsedJiffies(processTotalMs, clock.getTime());
+    cpuTimeTracker.updateElapsedJiffies(processTotalMs, clock.millis());
 
     return cpuTimeTracker.getCpuTrackerUsagePercent();
   }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -81,7 +82,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.IteratorSe
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.server.utils.Lock.NoLock;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -1104,7 +1104,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
         if (null != application) {
           ActivitiesLogger.APP.startAppAllocationRecording(activitiesManager,
-              node, SystemClock.getInstance().getTime(), application);
+              node, Clock.systemUTC().millis(), application);
           CSAssignment assignment = application.assignContainers(
               clusterResource, candidates, currentResourceLimits,
               schedulingMode, reservedContainer);
@@ -1213,7 +1213,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       FiCaSchedulerApp application = assignmentIterator.next();
 
       ActivitiesLogger.APP.startAppAllocationRecording(activitiesManager,
-          node, SystemClock.getInstance().getTime(), application);
+          node, Clock.systemUTC().millis(), application);
 
       // Check queue max-capacity limit
       Resource appReserved = application.getCurrentReservation();

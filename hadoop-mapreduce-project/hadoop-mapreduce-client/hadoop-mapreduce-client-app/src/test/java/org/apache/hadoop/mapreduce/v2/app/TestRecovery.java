@@ -33,6 +33,7 @@ import java.util.function.Supplier;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -104,8 +105,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -1944,7 +1943,7 @@ public class TestRecovery {
     Token<JobTokenIdentifier> jobToken =
         (Token<JobTokenIdentifier>) mock(Token.class);
     Credentials credentials = null;
-    Clock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     int appAttemptId = 3;
     MRAppMetrics metrics = mock(MRAppMetrics.class);
     Resource minContainerRequirements = mock(Resource.class);

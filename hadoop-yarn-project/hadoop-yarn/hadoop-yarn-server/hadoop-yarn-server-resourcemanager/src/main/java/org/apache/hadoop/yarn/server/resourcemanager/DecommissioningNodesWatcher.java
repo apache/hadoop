@@ -99,7 +99,7 @@ public class DecommissioningNodesWatcher {
     public DecommissioningNodeContext(NodeId nodeId, int timeoutSec) {
       this.nodeId = nodeId;
       this.appIds = new ArrayList<>();
-      this.decommissioningStartTime = mclock.getTime();
+      this.decommissioningStartTime = mclock.millis();
       this.timeoutMs = 1000L * timeoutSec;
     }
 
@@ -118,7 +118,7 @@ public class DecommissioningNodesWatcher {
   public DecommissioningNodesWatcher(RMContext rmContext) {
     this.rmContext = rmContext;
     pollTimer = new Timer(true);
-    mclock = new MonotonicClock();
+    mclock = MonotonicClock.get();
   }
 
   public void init(Configuration conf) {
@@ -136,7 +136,7 @@ public class DecommissioningNodesWatcher {
    */
   public synchronized void update(RMNode rmNode, NodeStatus remoteNodeStatus) {
     DecommissioningNodeContext context = decomNodes.get(rmNode.getNodeID());
-    long now = mclock.getTime();
+    long now = mclock.millis();
     if (rmNode.getState() == NodeState.DECOMMISSIONED) {
       if (context == null) {
         return;
@@ -239,7 +239,7 @@ public class DecommissioningNodesWatcher {
       return DecommissioningNodeStatus.DECOMMISSIONED;
     }
 
-    long waitTime = mclock.getTime() - context.decommissioningStartTime;
+    long waitTime = mclock.millis() - context.decommissioningStartTime;
     if (context.numActiveContainers > 0) {
       return (context.timeoutMs < 0 || waitTime < context.timeoutMs)?
           DecommissioningNodeStatus.WAIT_CONTAINER :
@@ -270,7 +270,7 @@ public class DecommissioningNodesWatcher {
 
     public void run() {
       logDecommissioningNodesStatus();
-      long now = mclock.getTime();
+      long now = mclock.millis();
       Set<NodeId> staleNodes = new HashSet<NodeId>();
 
       for (Iterator<Map.Entry<NodeId, DecommissioningNodeContext>> it =
@@ -342,7 +342,7 @@ public class DecommissioningNodesWatcher {
       return -1;
     }
 
-    long now = mclock.getTime();
+    long now = mclock.millis();
     long timeout = context.decommissioningStartTime + context.timeoutMs - now;
     return Math.max(0, (int)(timeout / 1000));
   }
@@ -351,7 +351,7 @@ public class DecommissioningNodesWatcher {
     if (!LOG.isDebugEnabled() || decomNodes.size() == 0) {
       return;
     }
-    long now = mclock.getTime();
+    long now = mclock.millis();
     for (DecommissioningNodeContext d : decomNodes.values()) {
       StringBuilder sb = new StringBuilder();
       DecommissioningNodeStatus s = checkDecommissioningStatus(d.nodeId);
@@ -376,7 +376,7 @@ public class DecommissioningNodesWatcher {
               (rmApp.getApplicationType() == null)?
                   "" : rmApp.getApplicationType(),
               100.0 * rmApp.getProgress(),
-              (mclock.getTime() - rmApp.getStartTime()) / 1000));
+              (mclock.millis() - rmApp.getStartTime()) / 1000));
         }
       }
       LOG.debug("Decommissioning node: " + sb.toString());

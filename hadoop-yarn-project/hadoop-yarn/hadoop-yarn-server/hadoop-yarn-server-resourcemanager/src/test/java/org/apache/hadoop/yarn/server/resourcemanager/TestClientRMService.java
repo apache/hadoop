@@ -50,6 +50,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -186,8 +187,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineC
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -1804,8 +1803,8 @@ public class TestClientRMService {
   public void testCreateReservation() {
     resourceManager = setupResourceManager();
     ClientRMService clientService = resourceManager.getClientRMService();
-    Clock clock = new UTCClock();
-    long arrival = clock.getTime();
+    Clock clock = Clock.systemUTC();
+    long arrival = clock.millis();
     long duration = 60000;
     long deadline = (long) (arrival + 1.05 * duration);
     ReservationSubmissionRequest sRequest =
@@ -1821,7 +1820,7 @@ public class TestClientRMService {
 
     // Submit the reservation with the same reservation id but different
     // reservation definition, and ensure YarnException is thrown.
-    arrival = clock.getTime();
+    arrival = clock.millis();
     ReservationDefinition rDef = sRequest.getReservationDefinition();
     rDef.setArrival(arrival + duration);
     sRequest.setReservationDefinition(rDef);
@@ -1839,8 +1838,8 @@ public class TestClientRMService {
   public void testUpdateReservation() {
     resourceManager = setupResourceManager();
     ClientRMService clientService = resourceManager.getClientRMService();
-    Clock clock = new UTCClock();
-    long arrival = clock.getTime();
+    Clock clock = Clock.systemUTC();
+    long arrival = clock.millis();
     long duration = 60000;
     long deadline = (long) (arrival + 1.05 * duration);
     ReservationSubmissionRequest sRequest =
@@ -1851,7 +1850,7 @@ public class TestClientRMService {
         rDef.getReservationRequests().getReservationResources().get(0);
     ReservationId reservationID = sRequest.getReservationId();
     rr.setNumContainers(5);
-    arrival = clock.getTime();
+    arrival = clock.millis();
     duration = 30000;
     deadline = (long) (arrival + 1.05 * duration);
     rr.setDuration(duration);
@@ -1873,8 +1872,8 @@ public class TestClientRMService {
   public void testListReservationsByReservationId() {
     resourceManager = setupResourceManager();
     ClientRMService clientService = resourceManager.getClientRMService();
-    Clock clock = new UTCClock();
-    long arrival = clock.getTime();
+    Clock clock = Clock.systemUTC();
+    long arrival = clock.millis();
     long duration = 60000;
     long deadline = (long) (arrival + 1.05 * duration);
     ReservationSubmissionRequest sRequest =
@@ -1902,8 +1901,8 @@ public class TestClientRMService {
   public void testListReservationsByTimeInterval() {
     resourceManager = setupResourceManager();
     ClientRMService clientService = resourceManager.getClientRMService();
-    Clock clock = new UTCClock();
-    long arrival = clock.getTime();
+    Clock clock = Clock.systemUTC();
+    long arrival = clock.millis();
     long duration = 60000;
     long deadline = (long) (arrival + 1.05 * duration);
     ReservationSubmissionRequest sRequest =
@@ -1911,7 +1910,7 @@ public class TestClientRMService {
 
     // List reservations, search by a point in time within the reservation
     // range.
-    arrival = clock.getTime();
+    arrival = clock.millis();
     ReservationId reservationID = sRequest.getReservationId();
     ReservationListRequest request = ReservationListRequest.newInstance(
         ReservationSystemTestUtil.reservationQ, "", arrival + duration / 2,
@@ -1959,8 +1958,8 @@ public class TestClientRMService {
   public void testListReservationsByInvalidTimeInterval() {
     resourceManager = setupResourceManager();
     ClientRMService clientService = resourceManager.getClientRMService();
-    Clock clock = new UTCClock();
-    long arrival = clock.getTime();
+    Clock clock = Clock.systemUTC();
+    long arrival = clock.millis();
     long duration = 60000;
     long deadline = (long) (arrival + 1.05 * duration);
     ReservationSubmissionRequest sRequest =
@@ -2001,8 +2000,8 @@ public class TestClientRMService {
   public void testListReservationsByTimeIntervalContainingNoReservations() {
     resourceManager = setupResourceManager();
     ClientRMService clientService = resourceManager.getClientRMService();
-    Clock clock = new UTCClock();
-    long arrival = clock.getTime();
+    Clock clock = Clock.systemUTC();
+    long arrival = clock.millis();
     long duration = 60000;
     long deadline = (long) (arrival + 1.05 * duration);
     ReservationSubmissionRequest sRequest =
@@ -2043,7 +2042,7 @@ public class TestClientRMService {
     assertNotNull(response);
     assertThat(response.getReservationAllocationState()).isEmpty();
 
-    arrival = clock.getTime();
+    arrival = clock.millis();
     // List reservations, search by end time before the reservation start
     // time.
     request = ReservationListRequest.newInstance(
@@ -2081,8 +2080,8 @@ public class TestClientRMService {
   public void testReservationDelete() {
     resourceManager = setupResourceManager();
     ClientRMService clientService = resourceManager.getClientRMService();
-    Clock clock = new UTCClock();
-    long arrival = clock.getTime();
+    Clock clock = Clock.systemUTC();
+    long arrival = clock.millis();
     long duration = 60000;
     long deadline = (long) (arrival + 1.05 * duration);
     ReservationSubmissionRequest sRequest =

@@ -49,7 +49,7 @@ import org.apache.hadoop.util.MonotonicClock;
  */
 public class FederationStateStoreTestUtil {
 
-  private static final MonotonicClock CLOCK = new MonotonicClock();
+  private static final MonotonicClock CLOCK = MonotonicClock.get();
 
   public static final String SC_PREFIX = "SC-";
   public static final String Q_PREFIX = "queue-";
@@ -71,7 +71,7 @@ public class FederationStateStoreTestUtil {
 
     return SubClusterInfo.newInstance(subClusterId, amRMAddress,
         clientRMAddress, rmAdminAddress, webAppAddress,
-        SubClusterState.SC_RUNNING, CLOCK.getTime(), "capability");
+        SubClusterState.SC_RUNNING, CLOCK.millis(), "capability");
   }
 
   public void registerSubCluster(SubClusterId subClusterId)

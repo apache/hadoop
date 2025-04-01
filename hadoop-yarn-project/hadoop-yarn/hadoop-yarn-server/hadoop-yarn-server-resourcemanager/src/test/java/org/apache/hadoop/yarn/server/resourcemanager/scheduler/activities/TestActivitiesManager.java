@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +56,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
-import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -83,6 +83,8 @@ public class TestActivitiesManager {
 
   private final static int NUM_THREADS = 5;
 
+  private Clock clock;
+
   private RMContext rmContext;
 
   private TestingActivitiesManager activitiesManager;
@@ -95,6 +97,7 @@ public class TestActivitiesManager {
 
   @BeforeEach
   public void setup() {
+    clock = Clock.systemUTC();
     rmContext = mock(RMContext.class);
     Configuration conf = new Configuration();
     when(rmContext.getYarnConfiguration()).thenReturn(conf);
@@ -234,7 +237,7 @@ public class TestActivitiesManager {
       Callable<Void> task = () -> {
         ActivitiesLogger.APP.startAppAllocationRecording(activitiesManager,
             (FiCaSchedulerNode) nodes.get(0),
-            SystemClock.getInstance().getTime(), randomApp);
+            clock.millis(), randomApp);
         for (SchedulerNode node : nodes) {
           ActivitiesLogger.APP
               .recordAppActivityWithoutAllocation(activitiesManager, node,
@@ -286,7 +289,7 @@ public class TestActivitiesManager {
     for (int i = 0; i < numActivities; i++) {
       ActivitiesLogger.APP
           .startAppAllocationRecording(newActivitiesManager, node,
-              SystemClock.getInstance().getTime(), app);
+              clock.millis(), app);
       ActivitiesLogger.APP
           .recordAppActivityWithoutAllocation(newActivitiesManager, node, app,
               new SchedulerRequestKey(Priority.newInstance(0), 0, null),
@@ -324,7 +327,7 @@ public class TestActivitiesManager {
     int testingTimes = 10;
     for (int ano = 0; ano < numActivities; ano++) {
       ActivitiesLogger.APP.startAppAllocationRecording(activitiesManager, node,
-          SystemClock.getInstance().getTime(), app);
+          clock.millis(), app);
       for (int i = 0; i < numNodes; i++) {
         NodeId nodeId = NodeId.newInstance("host" + i, 0);
         activitiesManager
@@ -467,9 +470,9 @@ public class TestActivitiesManager {
       Supplier<Void> supplier, int testingTimes) {
     long totalTime = 0;
     for (int i = 0; i < testingTimes; i++) {
-      long startTime = System.currentTimeMillis();
+      long startTime = clock.millis();
       supplier.get();
-      totalTime += System.currentTimeMillis() - startTime;
+      totalTime += clock.millis() - startTime;
     }
     System.out.println("#" + testingName + ", testing times : " + testingTimes
         + ", total cost time : " + totalTime + " ms, average cost time : "

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -97,8 +98,6 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class ContainerImpl implements Container {
@@ -179,7 +178,7 @@ public class ContainerImpl implements Container {
   private long containerLocalizationStartTime;
   private long containerLaunchStartTime;
   private ContainerMetrics containerMetrics;
-  private static Clock clock = SystemClock.getInstance();
+  private static Clock clock = Clock.systemUTC();
 
   private ContainerRetryContext containerRetryContext;
   private SlidingWindowRetryPolicy.RetryContext windowRetryContext;
@@ -217,7 +216,7 @@ public class ContainerImpl implements Container {
       NodeManagerMetrics metrics,
       ContainerTokenIdentifier containerTokenIdentifier, Context context) {
     this(conf, dispatcher, launchContext, creds, metrics,
-        containerTokenIdentifier, context, SystemClock.getInstance().getTime());
+        containerTokenIdentifier, context, Clock.systemUTC().millis());
   }
 
   public ContainerImpl(Configuration conf, Dispatcher dispatcher,
@@ -258,7 +257,7 @@ public class ContainerImpl implements Container {
           YarnConfiguration.DEFAULT_NM_CONTAINER_METRICS_UNREGISTER_DELAY_MS);
       containerMetrics = ContainerMetrics
           .forContainer(containerId, flushPeriod, unregisterDelay);
-      containerMetrics.recordStartTime(clock.getTime());
+      containerMetrics.recordStartTime(clock.millis());
     }
 
     // Configure the Retry Context
@@ -1030,7 +1029,7 @@ public class ContainerImpl implements Container {
         launcherEvent = ContainersLauncherEventType.RECOVER_PAUSED_CONTAINER;
       }
 
-      containerLaunchStartTime = clock.getTime();
+      containerLaunchStartTime = clock.millis();
       dispatcher.getEventHandler().handle(
           new ContainersLauncherEvent(this, launcherEvent));
     }
@@ -1077,7 +1076,7 @@ public class ContainerImpl implements Container {
   // resource usage.
   @SuppressWarnings("unchecked") // dispatcher not typed
   private void sendContainerMonitorStartEvent() {
-    long launchDuration = clock.getTime() - containerLaunchStartTime;
+    long launchDuration = clock.millis() - containerLaunchStartTime;
     metrics.addContainerLaunchDuration(launchDuration);
 
     long pmemBytes = getResource().getMemorySize() * 1024 * 1024L;
@@ -1222,7 +1221,7 @@ public class ContainerImpl implements Container {
         }
       }
 
-      container.containerLocalizationStartTime = clock.getTime();
+      container.containerLocalizationStartTime = clock.millis();
       // duration = end - start;
       // record in RequestResourcesTransition: -start
       // add in LocalizedTransition: +end
@@ -1971,7 +1970,7 @@ public class ContainerImpl implements Container {
           container.containerTokenIdentifier.getResource());
       if (container.containerMetrics != null) {
         container.containerMetrics
-            .recordFinishTimeAndExitCode(clock.getTime(), container.exitCode);
+            .recordFinishTimeAndExitCode(clock.millis(), container.exitCode);
         container.containerMetrics.finished(false);
       }
       container.sendFinishedEvents();

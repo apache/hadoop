@@ -224,7 +224,7 @@ public class TaskAttemptListenerImpl extends CompositeService
 
     // tell task to retry later if AM has not heard from RM within the commit
     // window to help avoid double-committing in a split-brain situation
-    long now = context.getClock().getTime();
+    long now = context.getClock().millis();
     if (now - rmHeartbeatHandler.getLastHeartbeatTime() > commitWindowMs) {
       return false;
     }

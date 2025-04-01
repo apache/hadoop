@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.federation;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
@@ -89,7 +90,6 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.util.MonotonicClock;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -116,7 +116,7 @@ public class FederationStateStoreService extends AbstractService
   private long heartbeatInterval;
   private long heartbeatInitialDelay;
   private RMContext rmContext;
-  private final Clock clock = new MonotonicClock();
+  private final Clock clock = MonotonicClock.get();
   private FederationStateStoreServiceMetrics metrics;
   private String cleanUpThreadNamePrefix = "FederationStateStoreService-Clean-Thread";
   private int cleanUpRetryCountNum;

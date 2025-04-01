@@ -23,6 +23,7 @@ import java.io.DataOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.nio.ByteBuffer;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -114,9 +115,7 @@ import org.apache.hadoop.yarn.server.federation.store.utils.FederationRouterRMTo
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.ACL;
 import org.slf4j.Logger;
@@ -222,7 +221,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @VisibleForTesting
   public static final String ROUTER_APP_ROOT_HIERARCHIES = "HIERARCHIES";
 
-  private volatile Clock clock = SystemClock.getInstance();
+  private volatile Clock clock = Clock.systemUTC();
 
   protected static final Version CURRENT_VERSION_INFO = Version.newInstance(1, 1);
 
@@ -384,7 +383,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public AddApplicationHomeSubClusterResponse addApplicationHomeSubCluster(
       AddApplicationHomeSubClusterRequest request) throws YarnException {
 
-    long start = clock.getTime();
+    long start = clock.millis();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
 
     // parse parameters
@@ -415,7 +414,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       ApplicationHomeSubCluster actualAppHomeSubCluster =
           getApplicationHomeSubCluster(requestApplicationId);
       SubClusterId responseSubClusterId = actualAppHomeSubCluster.getHomeSubCluster();
-      long end = clock.getTime();
+      long end = clock.millis();
       opDurations.addAppHomeSubClusterDuration(start, end);
       return AddApplicationHomeSubClusterResponse.newInstance(responseSubClusterId);
     } catch (Exception e) {
@@ -442,7 +441,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public UpdateApplicationHomeSubClusterResponse updateApplicationHomeSubCluster(
       UpdateApplicationHomeSubClusterRequest request) throws YarnException {
 
-    long start = clock.getTime();
+    long start = clock.millis();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationHomeSubCluster requestApplicationHomeSubCluster =
         request.getApplicationHomeSubCluster();
@@ -468,7 +467,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     storeOrUpdateApplicationHomeSubCluster(requestApplicationId,
         requestApplicationHomeSubCluster, true);
 
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addUpdateAppHomeSubClusterDuration(start, end);
     return UpdateApplicationHomeSubClusterResponse.newInstance();
   }
@@ -486,7 +485,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public GetApplicationHomeSubClusterResponse getApplicationHomeSubCluster(
       GetApplicationHomeSubClusterRequest request) throws YarnException {
 
-    long start = clock.getTime();
+    long start = clock.millis();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationId requestApplicationId = request.getApplicationId();
 
@@ -501,7 +500,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     SubClusterId subClusterId = zkStoreApplicationHomeSubCluster.getHomeSubCluster();
     long createTime = zkStoreApplicationHomeSubCluster.getCreateTime();
 
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addGetAppHomeSubClusterDuration(start, end);
 
     // If the request asks for an ApplicationSubmissionContext to be returned,
@@ -534,14 +533,14 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     }
 
     try {
-      long start = clock.getTime();
+      long start = clock.millis();
       SubClusterId requestSC = request.getSubClusterId();
       List<ApplicationHomeSubCluster> result = loadRouterApplications().stream()
           .sorted(Comparator.comparing(ApplicationHomeSubCluster::getCreateTime).reversed())
           .filter(appHomeSC -> filterHomeSubCluster(requestSC, appHomeSC.getHomeSubCluster()))
           .limit(maxAppsInStateStore)
           .collect(Collectors.toList());
-      long end = clock.getTime();
+      long end = clock.millis();
       opDurations.addGetAppsHomeSubClusterDuration(start, end);
       LOG.info("filterSubClusterId = {}, appCount = {}.", requestSC, result.size());
       return GetApplicationsHomeSubClusterResponse.newInstance(result);
@@ -567,7 +566,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public DeleteApplicationHomeSubClusterResponse deleteApplicationHomeSubCluster(
       DeleteApplicationHomeSubClusterRequest request) throws YarnException {
-    long start = clock.getTime();
+    long start = clock.millis();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationId appId = request.getApplicationId();
     String appIdRemovePath = getLeafAppIdNodePath(appId.toString(), false);
@@ -602,7 +601,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot delete app: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addDeleteAppHomeSubClusterDuration(start, end);
     return DeleteApplicationHomeSubClusterResponse.newInstance();
   }
@@ -610,7 +609,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public SubClusterRegisterResponse registerSubCluster(
       SubClusterRegisterRequest request) throws YarnException {
-    long start = clock.getTime();
+    long start = clock.millis();
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterInfo subClusterInfo = request.getSubClusterInfo();
     SubClusterId subclusterId = subClusterInfo.getSubClusterId();
@@ -625,7 +624,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot register subcluster: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addRegisterSubClusterDuration(start, end);
     return SubClusterRegisterResponse.newInstance();
   }
@@ -633,7 +632,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public SubClusterDeregisterResponse deregisterSubCluster(
       SubClusterDeregisterRequest request) throws YarnException {
-    long start = clock.getTime();
+    long start = clock.millis();
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterId subClusterId = request.getSubClusterId();
     SubClusterState state = request.getState();
@@ -647,7 +646,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       subClusterInfo.setState(state);
       putSubclusterInfo(subClusterId, subClusterInfo, true);
     }
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addDeregisterSubClusterDuration(start, end);
     return SubClusterDeregisterResponse.newInstance();
   }
@@ -655,7 +654,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public SubClusterHeartbeatResponse subClusterHeartbeat(
       SubClusterHeartbeatRequest request) throws YarnException {
-    long start = clock.getTime();
+    long start = clock.millis();
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterId subClusterId = request.getSubClusterId();
 
@@ -672,7 +671,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     subClusterInfo.setCapability(request.getCapability());
 
     putSubclusterInfo(subClusterId, subClusterInfo, true);
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addSubClusterHeartbeatDuration(start, end);
     return SubClusterHeartbeatResponse.newInstance();
   }
@@ -680,7 +679,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public GetSubClusterInfoResponse getSubCluster(
       GetSubClusterInfoRequest request) throws YarnException {
-    long start = clock.getTime();
+    long start = clock.millis();
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterId subClusterId = request.getSubClusterId();
     SubClusterInfo subClusterInfo = null;
@@ -694,7 +693,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot get subcluster: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addGetSubClusterDuration(start, end);
     return GetSubClusterInfoResponse.newInstance(subClusterInfo);
   }
@@ -702,7 +701,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public GetSubClustersInfoResponse getSubClusters(
       GetSubClustersInfoRequest request) throws YarnException {
-    long start = clock.getTime();
+    long start = clock.millis();
     List<SubClusterInfo> result = new ArrayList<>();
 
     try {
@@ -718,7 +717,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot get subclusters: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addGetSubClustersDuration(start, end);
     return GetSubClustersInfoResponse.newInstance(result);
   }
@@ -727,7 +726,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public GetSubClusterPolicyConfigurationResponse getPolicyConfiguration(
       GetSubClusterPolicyConfigurationRequest request) throws YarnException {
-    long start = clock.getTime();
+    long start = clock.millis();
     FederationPolicyStoreInputValidator.validate(request);
     String queue = request.getQueue();
     SubClusterPolicyConfiguration policy = null;
@@ -742,7 +741,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       LOG.warn("Policy for queue: {} does not exist.", queue);
       return null;
     }
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addGetPolicyConfigurationDuration(start, end);
     return GetSubClusterPolicyConfigurationResponse
         .newInstance(policy);
@@ -751,7 +750,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public SetSubClusterPolicyConfigurationResponse setPolicyConfiguration(
       SetSubClusterPolicyConfigurationRequest request) throws YarnException {
-    long start = clock.getTime();
+    long start = clock.millis();
     FederationPolicyStoreInputValidator.validate(request);
     SubClusterPolicyConfiguration policy =
         request.getPolicyConfiguration();
@@ -762,7 +761,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot set policy: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addSetPolicyConfigurationDuration(start, end);
     return SetSubClusterPolicyConfigurationResponse.newInstance();
   }
@@ -770,7 +769,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public GetSubClusterPoliciesConfigurationsResponse getPoliciesConfigurations(
       GetSubClusterPoliciesConfigurationsRequest request) throws YarnException {
-    long start = clock.getTime();
+    long start = clock.millis();
     List<SubClusterPolicyConfiguration> result = new ArrayList<>();
 
     try {
@@ -786,7 +785,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot get policies: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addGetPoliciesConfigurationsDuration(start, end);
     return GetSubClusterPoliciesConfigurationsResponse.newInstance(result);
   }
@@ -1182,7 +1181,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public AddReservationHomeSubClusterResponse addReservationHomeSubCluster(
       AddReservationHomeSubClusterRequest request) throws YarnException {
 
-    long start = clock.getTime();
+    long start = clock.millis();
     FederationReservationHomeSubClusterStoreInputValidator.validate(request);
     ReservationHomeSubCluster reservationHomeSubCluster = request.getReservationHomeSubCluster();
     ReservationId reservationId = reservationHomeSubCluster.getReservationId();
@@ -1203,7 +1202,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot check app home subcluster for " + reservationId;
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addReservationHomeSubClusterDuration(start, end);
     return AddReservationHomeSubClusterResponse.newInstance(homeSubCluster);
   }
@@ -1212,7 +1211,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public GetReservationHomeSubClusterResponse getReservationHomeSubCluster(
       GetReservationHomeSubClusterRequest request) throws YarnException {
 
-    long start = clock.getTime();
+    long start = clock.millis();
     FederationReservationHomeSubClusterStoreInputValidator.validate(request);
     ReservationId reservationId = request.getReservationId();
     SubClusterId homeSubCluster = getReservation(reservationId);
@@ -1224,7 +1223,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
     ReservationHomeSubCluster reservationHomeSubCluster =
         ReservationHomeSubCluster.newInstance(reservationId, homeSubCluster);
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addGetReservationHomeSubClusterDuration(start, end);
     return GetReservationHomeSubClusterResponse.newInstance(reservationHomeSubCluster);
   }
@@ -1232,7 +1231,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster(
       GetReservationsHomeSubClusterRequest request) throws YarnException {
-    long start = clock.getTime();
+    long start = clock.millis();
     List<ReservationHomeSubCluster> result = new ArrayList<>();
 
     try {
@@ -1247,7 +1246,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot get apps: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addGetReservationsHomeSubClusterDuration(start, end);
     return GetReservationsHomeSubClusterResponse.newInstance(result);
   }
@@ -1255,7 +1254,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public DeleteReservationHomeSubClusterResponse deleteReservationHomeSubCluster(
       DeleteReservationHomeSubClusterRequest request) throws YarnException {
-    long start = clock.getTime();
+    long start = clock.millis();
     FederationReservationHomeSubClusterStoreInputValidator.validate(request);
     ReservationId reservationId = request.getReservationId();
     String reservationZNode = getNodePath(reservationsZNode, reservationId.toString());
@@ -1279,7 +1278,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot delete reservation: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addDeleteReservationHomeSubClusterDuration(start, end);
     return DeleteReservationHomeSubClusterResponse.newInstance();
   }
@@ -1288,7 +1287,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
       UpdateReservationHomeSubClusterRequest request) throws YarnException {
 
-    long start = clock.getTime();
+    long start = clock.millis();
     FederationReservationHomeSubClusterStoreInputValidator.validate(request);
     ReservationHomeSubCluster reservationHomeSubCluster = request.getReservationHomeSubCluster();
     ReservationId reservationId = reservationHomeSubCluster.getReservationId();
@@ -1301,7 +1300,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
     SubClusterId newSubClusterId = reservationHomeSubCluster.getHomeSubCluster();
     putReservation(reservationId, newSubClusterId, true);
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addUpdateReservationHomeSubClusterDuration(start, end);
     return UpdateReservationHomeSubClusterResponse.newInstance();
   }
@@ -1318,7 +1317,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
 
-    long start = clock.getTime();
+    long start = clock.millis();
     // For the verification of the request, after passing the verification,
     // the request and the internal objects will not be empty and can be used directly.
     FederationRouterRMTokenInputValidator.validate(request);
@@ -1338,7 +1337,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
     // Get the stored masterKey from zk.
     RouterMasterKey masterKeyFromZK = getRouterMasterKeyFromZK(nodeCreatePath);
-    long end = clock.getTime();
+    long end = clock.millis();
     opDurations.addStoreNewMasterKeyDuration(start, end);
     return RouterMasterKeyResponse.newInstance(masterKeyFromZK);
   }
@@ -1355,7 +1354,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
 
-    long start = clock.getTime();
+    long start = clock.millis();
     // For the verification of the request, after passing the verification,
     // the request and the internal objects will not be empty and can be used directly.
     FederationRouterRMTokenInputValidator.validate(request);
@@ -1375,7 +1374,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
       // try to remove masterKey.
       zkManager.delete(nodeRemovePath);
-      long end = clock.getTime();
+      long end = clock.millis();
       opDurations.removeStoredMasterKeyDuration(start, end);
       return RouterMasterKeyResponse.newInstance(masterKey);
     } catch (Exception e) {
@@ -1395,7 +1394,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
 
-    long start = clock.getTime();
+    long start = clock.millis();
     // For the verification of the request, after passing the verification,
     // the request and the internal objects will not be empty and can be used directly.
     FederationRouterRMTokenInputValidator.validate(request);
@@ -1413,7 +1412,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
       // Get the stored masterKey from zk.
       RouterMasterKey routerMasterKey = getRouterMasterKeyFromZK(nodePath);
-      long end = clock.getTime();
+      long end = clock.millis();
       opDurations.getMasterKeyByDelegationKeyDuration(start, end);
       return RouterMasterKeyResponse.newInstance(routerMasterKey);
     } catch (Exception e) {
@@ -1486,7 +1485,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
 
-    long start = clock.getTime();
+    long start = clock.millis();
     // We verify the RouterRMTokenRequest to ensure that the request is not empty,
     // and that the internal RouterStoreToken is not empty.
     FederationRouterRMTokenInputValidator.validate(request);
@@ -1498,7 +1497,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
       // Get the stored delegationToken from ZK and return.
       RouterStoreToken resultStoreToken = getStoreTokenFromZK(request);
-      long end = clock.getTime();
+      long end = clock.millis();
       opDurations.getStoreNewTokenDuration(start, end);
       return RouterRMTokenResponse.newInstance(resultStoreToken);
     } catch (YarnException | IOException e) {
@@ -1523,7 +1522,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
 
-    long start = clock.getTime();
+    long start = clock.millis();
     // We verify the RouterRMTokenRequest to ensure that the request is not empty,
     // and that the internal RouterStoreToken is not empty.
     FederationRouterRMTokenInputValidator.validate(request);
@@ -1551,7 +1550,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
       // Get the stored delegationToken from ZK and return.
       RouterStoreToken resultStoreToken = getStoreTokenFromZK(request);
-      long end = clock.getTime();
+      long end = clock.millis();
       opDurations.updateStoredTokenDuration(start, end);
       return RouterRMTokenResponse.newInstance(resultStoreToken);
     } catch (YarnException | IOException e) {
@@ -1576,7 +1575,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
 
-    long start = clock.getTime();
+    long start = clock.millis();
     // We verify the RouterRMTokenRequest to ensure that the request is not empty,
     // and that the internal RouterStoreToken is not empty.
     FederationRouterRMTokenInputValidator.validate(request);
@@ -1599,7 +1598,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       }
 
       // return deleted token data.
-      long end = clock.getTime();
+      long end = clock.millis();
       opDurations.removeStoredTokenDuration(start, end);
       return RouterRMTokenResponse.newInstance(storeToken);
     } catch (YarnException | IOException e) {
@@ -1621,7 +1620,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
 
-    long start = clock.getTime();
+    long start = clock.millis();
     // We verify the RouterRMTokenRequest to ensure that the request is not empty,
     // and that the internal RouterStoreToken is not empty.
     FederationRouterRMTokenInputValidator.validate(request);
@@ -1639,7 +1638,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       // Get the stored delegationToken from ZK and return.
       RouterStoreToken resultStoreToken = getStoreTokenFromZK(request);
       // return deleted token data.
-      long end = clock.getTime();
+      long end = clock.millis();
       opDurations.getTokenByRouterStoreTokenDuration(start, end);
       return RouterRMTokenResponse.newInstance(resultStoreToken);
     } catch (YarnException | IOException e) {

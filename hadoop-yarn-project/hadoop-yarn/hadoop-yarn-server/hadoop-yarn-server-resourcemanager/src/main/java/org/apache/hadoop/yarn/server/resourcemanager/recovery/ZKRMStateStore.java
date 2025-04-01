@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;
@@ -72,6 +70,7 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -236,7 +235,7 @@ public class ZKRMStateStore extends RMStateStore {
   /** Manager for the ZooKeeper connection. */
   private ZKCuratorManager zkManager;
 
-  private volatile Clock clock = SystemClock.getInstance();
+  private volatile Clock clock = Clock.systemUTC();
   @VisibleForTesting
   protected ZKRMStateStoreOpDurations opDurations;
 
@@ -526,7 +525,7 @@ public class ZKRMStateStore extends RMStateStore {
 
   @Override
   public synchronized RMState loadState() throws Exception {
-    long start = clock.getTime();
+    long start = clock.millis();
     RMState rmState = new RMState();
     // recover DelegationTokenSecretManager
     loadRMDTSecretManagerState(rmState);
@@ -538,7 +537,7 @@ public class ZKRMStateStore extends RMStateStore {
     loadReservationSystemState(rmState);
     // recover ProxyCAManager state
     loadProxyCAManagerState(rmState);
-    opDurations.addLoadStateCallDuration(clock.getTime() - start);
+    opDurations.addLoadStateCallDuration(clock.millis() - start);
     return rmState;
   }
 
@@ -844,7 +843,7 @@ public class ZKRMStateStore extends RMStateStore {
   @Override
   public synchronized void storeApplicationStateInternal(ApplicationId appId,
       ApplicationStateData appStateDataPB) throws Exception {
-    long start = clock.getTime();
+    long start = clock.millis();
     String nodeCreatePath = getLeafAppIdNodePath(appId.toString(), true);
 
     LOG.debug("Storing info for app: {} at: {}", appId, nodeCreatePath);
@@ -861,14 +860,14 @@ public class ZKRMStateStore extends RMStateStore {
           + " exceeds the maximum allowed size for application data. "
           + "See yarn.resourcemanager.zk-max-znode-size.bytes.");
     }
-    opDurations.addStoreApplicationStateCallDuration(clock.getTime() - start);
+    opDurations.addStoreApplicationStateCallDuration(clock.millis() - start);
   }
 
   @Override
   protected synchronized void updateApplicationStateInternal(
       ApplicationId appId, ApplicationStateData appStateDataPB)
       throws Exception {
-    long start = clock.getTime();
+    long start = clock.millis();
     String nodeUpdatePath = getLeafAppIdNodePath(appId.toString(), false);
     boolean pathExists = true;
     // Look for paths based on other split indices if path as per split index
@@ -905,7 +904,7 @@ public class ZKRMStateStore extends RMStateStore {
       LOG.debug("Path {} for {} didn't exist. Creating a new znode to update"
           + " the application state.", nodeUpdatePath, appId);
     }
-    opDurations.addUpdateApplicationStateCallDuration(clock.getTime() - start);
+    opDurations.addUpdateApplicationStateCallDuration(clock.millis() - start);
   }
 
   /*
@@ -990,10 +989,10 @@ public class ZKRMStateStore extends RMStateStore {
   @Override
   protected synchronized void removeApplicationStateInternal(
       ApplicationStateData appState) throws Exception {
-    long start = clock.getTime();
+    long start = clock.millis();
     removeApp(appState.getApplicationSubmissionContext().
         getApplicationId().toString(), true, appState.attempts.keySet());
-    opDurations.addRemoveApplicationStateCallDuration(clock.getTime() - start);
+    opDurations.addRemoveApplicationStateCallDuration(clock.millis() - start);
   }
 
   private void removeApp(String removeAppId) throws Exception {

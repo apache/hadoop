@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.yarn.util;
 
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +61,7 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
   }
 
   public AbstractLivelinessMonitor(String name) {
-    this(name, new MonotonicClock());
+    this(name, MonotonicClock.get());
   }
 
   @Override
@@ -101,12 +101,12 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
   public synchronized void receivedPing(O ob) {
     //only put for the registered objects
     if (running.containsKey(ob)) {
-      running.put(ob, clock.getTime());
+      running.put(ob, clock.millis());
     }
   }
 
   public synchronized void register(O ob) {
-    register(ob, clock.getTime());
+    register(ob, clock.millis());
   }
 
   public synchronized void register(O ob, long expireTime) {
@@ -119,7 +119,7 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
 
   public synchronized void resetTimer() {
     if (resetTimerOnStart) {
-      long time = clock.getTime();
+      long time = clock.millis();
       for (O ob : running.keySet()) {
         running.put(ob, time);
       }
@@ -139,7 +139,7 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
           Iterator<Map.Entry<O, Long>> iterator = running.entrySet().iterator();
 
           // avoid calculating current time everytime in loop
-          long currentTime = clock.getTime();
+          long currentTime = clock.millis();
 
           while (iterator.hasNext()) {
             Map.Entry<O, Long> entry = iterator.next();

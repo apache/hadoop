@@ -690,7 +690,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     SubClusterInfo subClusterInfo = SubClusterInfo.newInstance(subClusterId,
             amRMAddress, clientRMAddress, rmAdminAddress, webAppAddress,
-            SubClusterState.SC_RUNNING, new MonotonicClock().getTime(),
+            SubClusterState.SC_RUNNING, MonotonicClock.get().millis(),
             "capability");
     stateStore.registerSubCluster(
             SubClusterRegisterRequest.newInstance(subClusterInfo));

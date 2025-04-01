@@ -46,13 +46,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCap
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptableQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.io.IOException;
 import java.text.MessageFormat;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -143,7 +142,7 @@ public class ProportionalCapacityPreemptionPolicy
   private Set<ContainerId> killableContainers;
 
   public ProportionalCapacityPreemptionPolicy() {
-    clock = SystemClock.getInstance();
+    clock = Clock.systemUTC();
     allPartitions = Collections.emptySet();
     leafQueueNames = Collections.emptySet();
     preemptableQueues = Collections.emptyMap();
@@ -334,14 +333,14 @@ public class ProportionalCapacityPreemptionPolicy
   public synchronized void editSchedule() {
     updateConfigIfNeeded();
 
-    long startTs = clock.getTime();
+    long startTs = clock.millis();
 
     CSQueue root = scheduler.getRootQueue();
     Resource clusterResources = Resources.clone(scheduler.getClusterResource());
     containerBasedPreemptOrKill(root, clusterResources);
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Total time used=" + (clock.getTime() - startTs) + " ms.");
+      LOG.debug("Total time used=" + (clock.millis() - startTs) + " ms.");
     }
   }
 
@@ -504,7 +503,7 @@ public class ProportionalCapacityPreemptionPolicy
         LOG.debug(MessageFormat
             .format("Trying to use {0} to select preemption candidates",
                 selector.getClass().getName()));
-        startTime = clock.getTime();
+        startTime = clock.millis();
       }
       Map<ApplicationAttemptId, Set<RMContainer>> curCandidates =
           selector.selectCandidates(toPreempt, clusterResources,
@@ -514,7 +513,7 @@ public class ProportionalCapacityPreemptionPolicy
       if (LOG.isDebugEnabled()) {
         LOG.debug(MessageFormat
             .format("{0} uses {1} millisecond to run",
-                selector.getClass().getName(), clock.getTime() - startTime));
+                selector.getClass().getName(), clock.millis() - startTime));
         int totalSelected = 0;
         int curSelected = 0;
         for (Set<RMContainer> set : toPreempt.values()) {
@@ -547,7 +546,7 @@ public class ProportionalCapacityPreemptionPolicy
     // containers. The bottom line is, we shouldn't preempt a queue which is already
     // below its guaranteed resource.
 
-    long currentTime = clock.getTime();
+    long currentTime = clock.millis();
 
     pcsMap = toPreemptPerSelector;
 
@@ -661,7 +660,7 @@ public class ProportionalCapacityPreemptionPolicy
   // plotting)
   private void logToCSV(List<String> leafQueueNames){
     Collections.sort(leafQueueNames);
-    String queueState = " QUEUESTATE: " + clock.getTime();
+    String queueState = " QUEUESTATE: " + clock.millis();
     StringBuilder sb = new StringBuilder();
     sb.append(queueState);
 

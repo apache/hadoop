@@ -577,7 +577,7 @@ import org.junit.jupiter.api.Timeout;
     return new RMHeartbeatHandler() {
       @Override
       public long getLastHeartbeatTime() {
-        return appContext.getClock().getTime();
+        return appContext.getClock().millis();
       }
       @Override
       public void runOnNextHeartbeat(Runnable callback) {

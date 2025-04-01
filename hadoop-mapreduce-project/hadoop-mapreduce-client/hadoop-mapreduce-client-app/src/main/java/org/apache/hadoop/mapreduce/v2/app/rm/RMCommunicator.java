@@ -287,7 +287,7 @@ public abstract class RMCommunicator extends AbstractService
             // TODO: for other exceptions
           }
 
-          lastHeartbeatTime = context.getClock().getTime();
+          lastHeartbeatTime = context.getClock().millis();
           executeHeartbeatCallbacks();
         } catch (InterruptedException e) {
           if (!stopped.get()) {

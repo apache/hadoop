@@ -24,11 +24,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AutoCreatedQueueDeletionEvent;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Clock;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -109,13 +109,13 @@ public class AutoCreatedQueueDeletionPolicy implements SchedulingEditPolicy {
 
   @Override
   public void editSchedule() {
-    long startTs = clock.getTime();
+    long startTs = clock.millis();
 
     prepareForAutoDeletion();
     triggerAutoDeletionForExpiredQueues();
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Total time used=" + (clock.getTime() - startTs) + " ms.");
+      LOG.debug("Total time used=" + (clock.millis() - startTs) + " ms.");
     }
   }
 

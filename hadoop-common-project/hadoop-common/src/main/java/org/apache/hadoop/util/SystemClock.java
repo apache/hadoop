@@ -27,9 +27,12 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
  * NOTE: Do not use this to calculate a duration of expire or interval to sleep,
  * because it will be broken by settimeofday. Please use {@link MonotonicClock}
  * instead.
+ *
+ * @deprecated use {@link java.time.Clock#systemUTC()} instead
  */
 @Public
 @Stable
+@Deprecated
 public final class SystemClock implements Clock {
 
   private static final SystemClock INSTANCE = new SystemClock();

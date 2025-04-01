@@ -18,11 +18,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.invariants;
 
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
-import org.apache.hadoop.util.UTCClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.Collection;
 
 /**
@@ -33,7 +33,7 @@ public class ReservationInvariantsChecker extends InvariantsChecker {
   private static final Logger LOG =
       LoggerFactory.getLogger(ReservationInvariantsChecker.class);
 
-  private UTCClock clock = new UTCClock();
+  private Clock clock = Clock.systemUTC();
 
   @Override
   public void editSchedule() {
@@ -43,7 +43,7 @@ public class ReservationInvariantsChecker extends InvariantsChecker {
     try {
       for (Plan plan : plans) {
         long currReservations =
-            plan.getReservationsAtTime(clock.getTime()).size();
+            plan.getReservationsAtTime(clock.millis()).size();
         long numberReservationQueues = getContext().getScheduler()
             .getQueueInfo(plan.getQueueName(), true, false).getChildQueues()
             .size();

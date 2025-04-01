@@ -27,6 +27,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -140,7 +141,6 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.RackResolver;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -1463,7 +1463,7 @@ public abstract class TaskAttemptImpl implements
     computeRackAndLocality();
     launchTime = taInfo.getStartTime();
     finishTime = (taInfo.getFinishTime() != -1) ?
-        taInfo.getFinishTime() : clock.getTime();
+        taInfo.getFinishTime() : clock.millis();
     shufflePort = taInfo.getShufflePort();
     trackerName = taInfo.getHostname();
     httpPort = taInfo.getHttpPort();
@@ -1597,7 +1597,7 @@ public abstract class TaskAttemptImpl implements
   private void setFinishTime() {
     //set the finish time only if launch time is set
     if (launchTime != 0) {
-      finishTime = clock.getTime();
+      finishTime = clock.millis();
     }
   }
 
@@ -1724,7 +1724,7 @@ public abstract class TaskAttemptImpl implements
     if (null == taskAttempt.container) {
       return;
     }
-    taskAttempt.launchTime = taskAttempt.clock.getTime();
+    taskAttempt.launchTime = taskAttempt.clock.millis();
 
     InetSocketAddress nodeHttpInetAddr =
         NetUtils.createSocketAddr(taskAttempt.container.getNodeHttpAddress());
@@ -1777,7 +1777,7 @@ public abstract class TaskAttemptImpl implements
 
     WrappedProgressSplitsBlock splitsBlock = getProgressSplitBlock();
     if (splitsBlock != null) {
-      long now = clock.getTime();
+      long now = clock.millis();
       long start = getLaunchTime(); // TODO Ensure not 0
 
       if (start != 0 && now - start <= Integer.MAX_VALUE) {
@@ -1996,7 +1996,7 @@ public abstract class TaskAttemptImpl implements
         (TaskAttemptContainerLaunchedEvent) evnt;
 
       //set the launch time
-      taskAttempt.launchTime = taskAttempt.clock.getTime();
+      taskAttempt.launchTime = taskAttempt.clock.millis();
       taskAttempt.shufflePort = event.getShufflePort();
 
       // register it to TaskAttemptListener so that it can start monitoring it.
@@ -2011,7 +2011,7 @@ public abstract class TaskAttemptImpl implements
       taskAttempt.sendLaunchedEvents();
       taskAttempt.eventHandler.handle
           (new SpeculatorEvent
-              (taskAttempt.attemptId, true, taskAttempt.clock.getTime()));
+              (taskAttempt.attemptId, true, taskAttempt.clock.millis()));
       //make remoteTask reference as null as it is no more needed
       //and free up the memory
       taskAttempt.remoteTask = null;
@@ -2443,7 +2443,7 @@ public abstract class TaskAttemptImpl implements
           TaskEventType.T_ATTEMPT_SUCCEEDED));
       taskAttempt.eventHandler.handle
           (new SpeculatorEvent
-              (taskAttempt.reportedStatus, taskAttempt.clock.getTime()));
+              (taskAttempt.reportedStatus, taskAttempt.clock.millis()));
 
     }
   }
@@ -2514,7 +2514,7 @@ public abstract class TaskAttemptImpl implements
       // send event to speculator about the reported status
       taskAttempt.eventHandler.handle
           (new SpeculatorEvent
-              (taskAttempt.reportedStatus, taskAttempt.clock.getTime()));
+              (taskAttempt.reportedStatus, taskAttempt.clock.millis()));
       taskAttempt.updateProgressSplits();
       //if fetch failures are present, send the fetch failure event to job
       //this only will happen in reduce attempt type

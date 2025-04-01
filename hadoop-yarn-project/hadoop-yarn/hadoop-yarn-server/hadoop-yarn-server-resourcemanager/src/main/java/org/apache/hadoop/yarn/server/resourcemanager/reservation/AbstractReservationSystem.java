@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -54,8 +55,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.security.CapacityReservationsACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.FairReservationsACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ReservationsACLsManager;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,7 +80,7 @@ public abstract class AbstractReservationSystem extends AbstractService
 
   private boolean initialized = false;
 
-  private final Clock clock = new UTCClock();
+  private final Clock clock = Clock.systemUTC();
 
   private AtomicLong resCounter = new AtomicLong();
 

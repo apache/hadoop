@@ -17,29 +17,36 @@
 */
 package org.apache.hadoop.yarn.util;
 
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
+import org.apache.hadoop.util.AbstractClock;
+import java.time.Clock;
 
-public class ControlledClock implements Clock {
+public class ControlledClock extends AbstractClock {
+
   private long time = -1;
   private final Clock actualClock;
+
   // Convenience for getting a controlled clock with overridden time
   public ControlledClock() {
-    this(SystemClock.getInstance());
+    this(Clock.systemUTC());
     setTime(0);
   }
+
   public ControlledClock(Clock actualClock) {
     this.actualClock = actualClock;
   }
+
   public synchronized void setTime(long time) {
     this.time = time;
   }
+
   public synchronized void reset() {
     time = -1;
   }
+
   public synchronized void tickSec(int seconds) {
     tickMsec(seconds * 1000L);
   }
+
   public synchronized void tickMsec(long millisec) {
     if (time == -1) {
       throw new IllegalStateException("ControlledClock setTime should be " +
@@ -49,11 +56,11 @@ public class ControlledClock implements Clock {
   }
 
   @Override
-  public synchronized long getTime() {
+  public synchronized long millis() {
     if (time != -1) {
       return time;
     }
-    return actualClock.getTime();
+    return actualClock.millis();
   }
 
 }

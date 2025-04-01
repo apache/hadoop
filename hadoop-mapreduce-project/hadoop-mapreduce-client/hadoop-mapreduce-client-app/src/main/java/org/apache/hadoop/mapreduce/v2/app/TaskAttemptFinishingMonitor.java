@@ -25,7 +25,8 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.AbstractLivelinessMonitor;
-import org.apache.hadoop.util.SystemClock;
+
+import java.time.Clock;
 
 /**
  * This class generates TA_TIMED_OUT if the task attempt stays in FINISHING
@@ -38,7 +39,7 @@ public class TaskAttemptFinishingMonitor extends
   private EventHandler eventHandler;
 
   public TaskAttemptFinishingMonitor(EventHandler eventHandler) {
-    super("TaskAttemptFinishingMonitor", SystemClock.getInstance());
+    super("TaskAttemptFinishingMonitor", Clock.systemUTC());
     this.eventHandler = eventHandler;
   }
 

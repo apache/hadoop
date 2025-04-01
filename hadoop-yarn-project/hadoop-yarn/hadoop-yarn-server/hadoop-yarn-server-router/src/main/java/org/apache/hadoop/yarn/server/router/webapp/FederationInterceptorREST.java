@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -142,7 +143,6 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.util.MonotonicClock;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -214,7 +214,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   private FederationStateStoreFacade federationFacade;
   private RouterPolicyFacade policyFacade;
   private RouterMetrics routerMetrics;
-  private final Clock clock = new MonotonicClock();
+  private final Clock clock = MonotonicClock.get();
   private boolean returnPartialReport;
   private boolean appInfosCacheEnabled;
   private int appInfosCacheCount;
@@ -384,7 +384,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public Response createNewApplication(HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
 
     try {
       Map<SubClusterId, SubClusterInfo> subClustersActive =
@@ -400,7 +400,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       // If the response is not empty and the status is SC_OK,
       // this request can be returned directly.
       if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededAppsCreated(stopTime - startTime);
         return response;
       }
@@ -539,7 +539,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public Response submitApplication(ApplicationSubmissionContextInfo newApp, HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
 
     // We verify the parameters to ensure that newApp is not empty and
     // that the format of applicationId is correct.
@@ -570,7 +570,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           invokeSubmitApplication(newApp, blackList, hsr, retryCount)).
           runWithRetries(actualRetryNums, submitIntervalTime);
       if (response != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededAppsSubmitted(stopTime - startTime);
         return response;
       }
@@ -680,7 +680,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public AppInfo getApp(HttpServletRequest hsr, String appId, Set<String> unselectedFields) {
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
 
       // Get SubClusterInfo according to applicationId
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
@@ -689,7 +689,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         return null;
       }
       AppInfo response = interceptor.getApp(hsr, appId, unselectedFields);
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       routerMetrics.succeededAppsRetrieved(stopTime - startTime);
       return response;
     } catch (YarnException e) {
@@ -722,7 +722,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public Response updateAppState(AppState targetState, HttpServletRequest hsr, String appId)
       throws AuthorizationException, YarnException, InterruptedException, IOException {
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
 
     ApplicationId applicationId;
     try {
@@ -753,7 +753,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         subClusterInfo.getRMWebServiceAddress()).updateAppState(targetState,
             hsr, appId);
 
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededAppsRetrieved(stopTime - startTime);
 
     return response;
@@ -797,7 +797,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     AppsInfo apps = new AppsInfo();
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
 
     // HttpServletRequest does not work with ExecutorCompletionService.
     // Create a duplicate hsr.
@@ -824,7 +824,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     appsInfos.forEach(appsInfo -> {
       if (appsInfo != null) {
         apps.addAll(appsInfo.getApps());
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededMultipleAppsRetrieved(stopTime - startTime);
       }
     });
@@ -1330,7 +1330,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     // Step2. Call dumpSchedulerLogs of each subcluster.
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       Collection<SubClusterInfo> subClustersActive = federationFacade.getActiveSubClusters();
       final HttpServletRequest hsrCopy = clone(hsr);
       Class[] argsClasses = new Class[]{String.class, HttpServletRequest.class};
@@ -1344,7 +1344,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         stringBuilder.append("subClusterId")
             .append(subClusterId).append(" : ").append(msg).append("; ");
       });
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       RouterAuditLogger.logSuccess(getUser().getShortUserName(), DUMP_SCHEDULERLOGS,
           TARGET_WEB_SERVICE);
       routerMetrics.succeededDumpSchedulerLogsRetrieved(stopTime - startTime);
@@ -1391,12 +1391,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       // Query SubClusterInfo according to id,
       // if the nodeId cannot get SubClusterInfo, an exception will be thrown directly.
       // Call the corresponding subCluster to get ActivitiesInfo.
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByNodeId(nodeId);
       final HttpServletRequest hsrCopy = clone(hsr);
       ActivitiesInfo activitiesInfo = interceptor.getActivities(hsrCopy, nodeId, groupBy);
       if (activitiesInfo != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_ACTIVITIES,
             TARGET_WEB_SERVICE);
         routerMetrics.succeededGetActivitiesLatencyRetrieved(stopTime - startTime);
@@ -1442,7 +1442,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           subClustersActive, remoteMethod, BulkActivitiesInfo.class);
 
       // Step3. Generate Federation objects and set subCluster information.
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       FederationBulkActivitiesInfo fedBulkActivitiesInfo = new FederationBulkActivitiesInfo();
       appStatisticsMap.forEach((subClusterInfo, bulkActivitiesInfo) -> {
         SubClusterId subClusterId = subClusterInfo.getSubClusterId();
@@ -1451,7 +1451,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       });
       RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_BULKACTIVITIES,
           TARGET_WEB_SERVICE);
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       routerMetrics.succeededGetBulkActivitiesRetrieved(stopTime - startTime);
       return fedBulkActivitiesInfo;
     } catch (IllegalArgumentException e) {
@@ -1493,13 +1493,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       Set<String> actions, boolean summarize) {
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       final HttpServletRequest hsrCopy = clone(hsr);
       AppActivitiesInfo appActivitiesInfo = interceptor.getAppActivities(hsrCopy, appId, time,
           requestPriorities, allocationRequestIds, groupBy, limit, actions, summarize);
       if (appActivitiesInfo != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededGetAppActivitiesRetrieved(stopTime - startTime);
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_APPACTIVITIES,
             TARGET_WEB_SERVICE);
@@ -1528,7 +1528,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public ApplicationStatisticsInfo getAppStatistics(HttpServletRequest hsr,
       Set<String> stateQueries, Set<String> typeQueries) {
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       Collection<SubClusterInfo> subClustersActive = federationFacade.getActiveSubClusters();
       final HttpServletRequest hsrCopy = clone(hsr);
       Class[] argsClasses = new Class[]{HttpServletRequest.class, Set.class, Set.class};
@@ -1539,7 +1539,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       ApplicationStatisticsInfo applicationStatisticsInfo  =
           RouterWebServiceUtil.mergeApplicationStatisticsInfo(appStatisticsMap.values());
       if (applicationStatisticsInfo != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededGetAppStatisticsRetrieved(stopTime - startTime);
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_APPSTATISTICS,
             TARGET_WEB_SERVICE);
@@ -1577,7 +1577,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr)
       throws IOException {
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       Collection<SubClusterInfo> subClustersActive = federationFacade.getActiveSubClusters();
       final HttpServletRequest hsrCopy = clone(hsr);
       Class[] argsClasses = new Class[]{HttpServletRequest.class};
@@ -1588,7 +1588,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       NodeToLabelsInfo nodeToLabelsInfo =
           RouterWebServiceUtil.mergeNodeToLabels(nodeToLabelsInfoMap);
       if (nodeToLabelsInfo != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededGetNodeToLabelsRetrieved(stopTime - startTime);
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_NODETOLABELS,
             TARGET_WEB_SERVICE);
@@ -1614,7 +1614,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) throws IOException {
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       Collection<SubClusterInfo> subClustersActive = federationFacade.getActiveSubClusters();
       final HttpServletRequest hsrCopy = clone(hsr);
       Class[] argsClasses = new Class[]{HttpServletRequest.class};
@@ -1625,7 +1625,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       NodeLabelsInfo nodeToLabelsInfo =
           RouterWebServiceUtil.mergeNodeLabelsInfo(nodeToLabelsInfoMap);
       if (nodeToLabelsInfo != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededGetRMNodeLabelsRetrieved(stopTime - startTime);
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_RMNODELABELS,
             TARGET_WEB_SERVICE);
@@ -1652,7 +1652,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public LabelsToNodesInfo getLabelsToNodes(Set<String> labels)
       throws IOException {
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       Collection<SubClusterInfo> subClustersActive = federationFacade.getActiveSubClusters();
       Class[] argsClasses = new Class[]{Set.class};
       Object[] args = new Object[]{labels};
@@ -1672,7 +1672,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       });
       LabelsToNodesInfo labelsToNodesInfo = new LabelsToNodesInfo(labelToNodesMap);
       if (labelsToNodesInfo != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_LABELSTONODES,
             TARGET_WEB_SERVICE);
         routerMetrics.succeededGetLabelsToNodesRetrieved(stopTime - startTime);
@@ -1747,7 +1747,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       });
 
       // Step4. Traverse the subCluster and call the replaceLabelsOnNodes interface.
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       final HttpServletRequest hsrCopy = clone(hsr);
       StringBuilder builder = new StringBuilder();
       subClusterToNodeToLabelsEntryList.forEach((subClusterInfo, nodeToLabelsEntryList) -> {
@@ -1762,7 +1762,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           builder.append("subCluster-").append(subClusterId.getId()).append(":Failed,");
         }
       });
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       RouterAuditLogger.logSuccess(getUser().getShortUserName(), REPLACE_LABELSONNODES,
           TARGET_WEB_SERVICE);
       routerMetrics.succeededReplaceLabelsOnNodesRetrieved(stopTime - startTime);
@@ -1810,14 +1810,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     try {
       // Step2. We find the subCluster according to the nodeId,
       // and then call the replaceLabelsOnNode of the subCluster.
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByNodeId(nodeId);
       final HttpServletRequest hsrCopy = clone(hsr);
       interceptor.replaceLabelsOnNode(newNodeLabelsName, hsrCopy, nodeId);
 
       // Step3. Return the response result.
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       RouterAuditLogger.logSuccess(getUser().getShortUserName(), REPLACE_LABELSONNODE,
           TARGET_WEB_SERVICE);
       routerMetrics.succeededReplaceLabelsOnNodeRetrieved(stopTime - startTime);
@@ -1835,7 +1835,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public NodeLabelsInfo getClusterNodeLabels(HttpServletRequest hsr)
       throws IOException {
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       Collection<SubClusterInfo> subClustersActive = federationFacade.getActiveSubClusters();
       final HttpServletRequest hsrCopy = clone(hsr);
       Class[] argsClasses = new Class[]{HttpServletRequest.class};
@@ -1847,7 +1847,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       nodeToLabelsInfoMap.values().forEach(item -> hashSets.addAll(item.getNodeLabels()));
       NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo(hashSets);
       if (nodeLabelsInfo != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededGetClusterNodeLabelsRetrieved(stopTime - startTime);
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_CLUSTER_NODELABELS,
             TARGET_WEB_SERVICE);
@@ -1900,7 +1900,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       Collection<SubClusterInfo> subClustersActives = federationFacade.getActiveSubClusters();
       final HttpServletRequest hsrCopy = clone(hsr);
       Class[] argsClasses = new Class[]{NodeLabelsInfo.class, HttpServletRequest.class};
@@ -1912,7 +1912,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       // SubCluster-0:SUCCESS,SubCluster-1:SUCCESS
       responseInfoMap.forEach((subClusterInfo, response) ->
           buildAppendMsg(subClusterInfo, buffer, response));
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       RouterAuditLogger.logSuccess(getUser().getShortUserName(), ADD_TO_CLUSTER_NODELABELS,
           TARGET_WEB_SERVICE);
       routerMetrics.succeededAddToClusterNodeLabelsRetrieved((stopTime - startTime));
@@ -1957,7 +1957,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       Collection<SubClusterInfo> subClustersActives = federationFacade.getActiveSubClusters();
       final HttpServletRequest hsrCopy = clone(hsr);
       Class[] argsClasses = new Class[]{Set.class, HttpServletRequest.class};
@@ -1970,7 +1970,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       // SubCluster-0:SUCCESS,SubCluster-1:SUCCESS
       responseInfoMap.forEach((subClusterInfo, response) ->
           buildAppendMsg(subClusterInfo, buffer, response));
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       RouterAuditLogger.logSuccess(getUser().getShortUserName(), REMOVE_FROM_CLUSTERNODELABELS,
           TARGET_WEB_SERVICE);
       routerMetrics.succeededRemoveFromClusterNodeLabelsRetrieved(stopTime - startTime);
@@ -2014,7 +2014,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public NodeLabelsInfo getLabelsOnNode(HttpServletRequest hsr, String nodeId)
       throws IOException {
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       Collection<SubClusterInfo> subClustersActive = federationFacade.getActiveSubClusters();
       final HttpServletRequest hsrCopy = clone(hsr);
       Class[] argsClasses = new Class[]{HttpServletRequest.class, String.class};
@@ -2026,7 +2026,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       nodeToLabelsInfoMap.values().forEach(item -> hashSets.addAll(item.getNodeLabels()));
       NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo(hashSets);
       if (nodeLabelsInfo != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededGetLabelsToNodesRetrieved(stopTime - startTime);
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_LABELS_ON_NODE,
             TARGET_WEB_SERVICE);
@@ -2056,11 +2056,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throws AuthorizationException {
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       AppPriority appPriority = interceptor.getAppPriority(hsr, appId);
       if (appPriority != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededGetAppPriorityRetrieved(stopTime - startTime);
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_APP_PRIORITY,
             TARGET_WEB_SERVICE);
@@ -2097,11 +2097,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       Response response = interceptor.updateApplicationPriority(targetPriority, hsr, appId);
       if (response != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededUpdateAppPriorityRetrieved(stopTime - startTime);
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), UPDATE_APPLICATIONPRIORITY,
             TARGET_WEB_SERVICE);
@@ -2130,11 +2130,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throws AuthorizationException {
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       AppQueue queue = interceptor.getAppQueue(hsr, appId);
       if (queue != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededGetAppQueueRetrieved((stopTime - startTime));
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_QUEUEINFO,
             TARGET_WEB_SERVICE);
@@ -2170,11 +2170,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       Response response = interceptor.updateAppQueue(targetQueue, hsr, appId);
       if (response != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededUpdateAppQueueRetrieved(stopTime - startTime);
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), UPDATE_APP_QUEUE,
             TARGET_WEB_SERVICE);
@@ -2421,7 +2421,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public Response createNewReservation(HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     try {
       Map<SubClusterId, SubClusterInfo> subClustersActive =
           federationFacade.getSubClusters(true);
@@ -2434,7 +2434,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       // If the response is not empty and the status is SC_OK,
       // this request can be returned directly.
       if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_NEW_RESERVATION,
             TARGET_WEB_SERVICE);
         routerMetrics.succeededGetNewReservationRetrieved(stopTime - startTime);
@@ -2488,7 +2488,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public Response submitReservation(ReservationSubmissionRequestInfo resContext,
       HttpServletRequest hsr) throws AuthorizationException, IOException, InterruptedException {
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     if (resContext == null || resContext.getReservationId() == null
         || resContext.getReservationDefinition() == null || resContext.getQueue() == null) {
       routerMetrics.incrSubmitReservationFailedRetrieved();
@@ -2518,7 +2518,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           invokeSubmitReservation(resContext, blackList, hsr, retryCount)).
           runWithRetries(actualRetryNums, submitIntervalTime);
       if (response != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), SUBMIT_RESERVATION,
             TARGET_WEB_SERVICE);
         routerMetrics.succeededSubmitReservationRetrieved(stopTime - startTime);
@@ -2723,7 +2723,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     try {
-      long startTime1 = clock.getTime();
+      long startTime1 = clock.millis();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByReservationId(reservationId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
@@ -2731,7 +2731,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       Response response = interceptor.listReservation(queue, reservationId, startTime, endTime,
           includeResourceAllocations, hsrCopy);
       if (response != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), LIST_RESERVATIONS,
             TARGET_WEB_SERVICE);
         routerMetrics.succeededListReservationRetrieved(stopTime - startTime1);
@@ -2762,11 +2762,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       AppTimeoutInfo appTimeoutInfo = interceptor.getAppTimeout(hsr, appId, type);
       if (appTimeoutInfo != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_APP_TIMEOUT,
             TARGET_WEB_SERVICE);
         routerMetrics.succeededGetAppTimeoutRetrieved((stopTime - startTime));
@@ -2795,11 +2795,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throws AuthorizationException {
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       AppTimeoutsInfo appTimeoutsInfo = interceptor.getAppTimeouts(hsr, appId);
       if (appTimeoutsInfo != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_APP_TIMEOUTS,
             TARGET_WEB_SERVICE);
         routerMetrics.succeededGetAppTimeoutsRetrieved((stopTime - startTime));
@@ -2841,7 +2841,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       Response response = interceptor.updateApplicationTimeout(appTimeout, hsr, appId);
       if (response != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), UPDATE_APPLICATIONTIMEOUTS,
             TARGET_WEB_SERVICE);
         routerMetrics.succeededUpdateAppTimeoutsRetrieved((stopTime - startTime));
@@ -3028,7 +3028,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       ContainersInfo containersInfo = new ContainersInfo();
       Collection<SubClusterInfo> subClustersActive = federationFacade.getActiveSubClusters();
       Class[] argsClasses = new Class[]{
@@ -3042,7 +3042,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
             containersInfo.addAll(containers.getContainers()));
       }
       if (containersInfo != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_CONTAINERS,
             TARGET_WEB_SERVICE);
         routerMetrics.succeededGetContainersRetrieved(stopTime - startTime);
@@ -3164,13 +3164,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     // Get the subClusterInfo , then update the scheduler configuration.
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       SubClusterInfo subClusterInfo = getActiveSubCluster(pSubClusterId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       Response response = interceptor.updateSchedulerConfiguration(mutationInfo, hsr);
       if (response != null) {
-        long endTime = clock.getTime();
+        long endTime = clock.millis();
         routerMetrics.succeededUpdateSchedulerConfigurationRetrieved(endTime - startTime);
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), UPDATE_SCHEDULER_CONFIGURATION,
             TARGET_WEB_SERVICE);
@@ -3210,7 +3210,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public Response getSchedulerConfiguration(HttpServletRequest hsr)
       throws AuthorizationException {
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       FederationConfInfo federationConfInfo = new FederationConfInfo();
       Collection<SubClusterInfo> subClustersActive = federationFacade.getActiveSubClusters();
       final HttpServletRequest hsrCopy = clone(hsr);
@@ -3233,7 +3233,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           federationConfInfo.getList().add(fedConfInfo);
         }
       });
-      long endTime = clock.getTime();
+      long endTime = clock.millis();
       routerMetrics.succeededGetSchedulerConfigurationRetrieved(endTime - startTime);
       RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_SCHEDULER_CONFIGURATION,
           TARGET_WEB_SERVICE);

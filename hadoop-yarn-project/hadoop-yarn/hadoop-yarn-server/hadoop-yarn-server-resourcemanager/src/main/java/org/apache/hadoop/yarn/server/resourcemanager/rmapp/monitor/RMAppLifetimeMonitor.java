@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp.monitor;
 
+import java.time.Clock;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -33,7 +34,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.util.AbstractLivelinessMonitor;
-import org.apache.hadoop.util.SystemClock;
 
 /**
  * This service will monitor the applications against the lifetime value given.
@@ -48,7 +48,7 @@ public class RMAppLifetimeMonitor
   private RMContext rmContext;
 
   public RMAppLifetimeMonitor(RMContext rmContext) {
-    super(RMAppLifetimeMonitor.class.getName(), SystemClock.getInstance());
+    super(RMAppLifetimeMonitor.class.getName(), Clock.systemUTC());
     this.rmContext = rmContext;
   }
 

@@ -27,8 +27,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +41,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -98,7 +97,7 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
     this.parsedMtab = new HashMap<>();
     this.rwLock = new ReentrantReadWriteLock();
     this.privilegedOperationExecutor = privilegedOperationExecutor;
-    this.clock = SystemClock.getInstance();
+    this.clock = Clock.systemUTC();
     mtabFile = mtab;
     init();
   }
@@ -480,7 +479,7 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
 
     LOG.debug("deleteCGroup: {}", cGroupPath);
 
-    long start = clock.getTime();
+    long start = clock.millis();
 
     do {
       try {
@@ -491,7 +490,7 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
       } catch (InterruptedException ex) {
         // NOP
       }
-    } while (!deleted && (clock.getTime() - start) < deleteCGroupTimeout);
+    } while (!deleted && (clock.millis() - start) < deleteCGroupTimeout);
 
     if (!deleted) {
       LOG.warn(String.format("Unable to delete  %s, tried to delete for %d ms",

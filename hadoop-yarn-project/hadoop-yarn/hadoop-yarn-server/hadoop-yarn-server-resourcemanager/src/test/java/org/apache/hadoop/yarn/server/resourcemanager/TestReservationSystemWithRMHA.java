@@ -37,11 +37,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSyst
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.UTCClock;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.time.Clock;
 import java.util.Map;
 
 public class TestReservationSystemWithRMHA extends RMHATestBase {
@@ -208,8 +207,8 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
 
   private ReservationSubmissionRequest createReservationSubmissionRequest(
       ReservationId reservationId) {
-    Clock clock = new UTCClock();
-    long arrival = clock.getTime();
+    Clock clock = Clock.systemUTC();
+    long arrival = clock.millis();
     long duration = 60000;
     long deadline = (long) (arrival + duration + 1500);
     return ReservationSystemTestUtil.createSimpleReservationRequest(

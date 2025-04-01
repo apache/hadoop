@@ -24,11 +24,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.AppAllocation;
-import org.apache.hadoop.util.SystemClock;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -54,7 +54,7 @@ public class AppActivitiesInfo {
   public AppActivitiesInfo(String errorMessage, String applicationId) {
     this.diagnostic = errorMessage;
     this.applicationId = applicationId;
-    setTime(SystemClock.getInstance().getTime());
+    setTime(Clock.systemUTC().millis());
   }
 
   public AppActivitiesInfo(List<AppAllocation> appAllocations,
@@ -65,7 +65,7 @@ public class AppActivitiesInfo {
 
     if (appAllocations == null) {
       diagnostic = "waiting for display";
-      setTime(SystemClock.getInstance().getTime());
+      setTime(Clock.systemUTC().millis());
     } else {
       for (int i = appAllocations.size() - 1; i > -1; i--) {
         AppAllocation appAllocation = appAllocations.get(i);

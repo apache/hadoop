@@ -104,7 +104,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 public abstract class FederationStateStoreBaseTest {
 
-  private static final MonotonicClock CLOCK = new MonotonicClock();
+  private static final MonotonicClock CLOCK = MonotonicClock.get();
   private FederationStateStore stateStore;
   private static final int NUM_APPS_10 = 10;
   private static final int NUM_APPS_20 = 20;
@@ -650,7 +650,7 @@ public abstract class FederationStateStoreBaseTest {
 
     return SubClusterInfo.newInstance(subClusterId, amRMAddress,
         clientRMAddress, rmAdminAddress, webAppAddress, SubClusterState.SC_NEW,
-        CLOCK.getTime(), "capability");
+        CLOCK.millis(), "capability");
   }
 
   private SubClusterPolicyConfiguration createSCPolicyConf(String queueName,

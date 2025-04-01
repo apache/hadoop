@@ -26,7 +26,8 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.AbstractLivelinessMonitor;
-import org.apache.hadoop.util.Clock;
+
+import java.time.Clock;
 
 import java.util.concurrent.TimeUnit;
 

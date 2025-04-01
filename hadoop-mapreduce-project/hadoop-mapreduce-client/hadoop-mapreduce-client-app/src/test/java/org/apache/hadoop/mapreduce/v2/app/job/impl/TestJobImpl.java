@@ -36,6 +36,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -113,7 +114,6 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.hadoop.util.SystemClock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -818,7 +818,7 @@ public class TestJobImpl {
         .newRecord(ApplicationAttemptId.class), new Configuration(),
         mock(EventHandler.class),
         null, mock(JobTokenSecretManager.class), null,
-        SystemClock.getInstance(), null,
+        Clock.systemUTC(), null,
         mrAppMetrics, null, true, null, 0, null, mockContext, null, null);
     job.handle(diagUpdateEvent);
     String diagnostics = job.getReport().getDiagnostics();
@@ -829,7 +829,7 @@ public class TestJobImpl {
         .newRecord(ApplicationAttemptId.class), new Configuration(),
         mock(EventHandler.class),
         null, mock(JobTokenSecretManager.class), null,
-        SystemClock.getInstance(), null,
+        Clock.systemUTC(), null,
         mrAppMetrics, null, true, null, 0, null, mockContext, null, null);
     job.handle(new JobEvent(jobId, JobEventType.JOB_KILL));
     job.handle(diagUpdateEvent);
@@ -1044,7 +1044,7 @@ public class TestJobImpl {
 
   private static CommitterEventHandler createCommitterEventHandler(
       Dispatcher dispatcher, OutputCommitter committer) {
-    final SystemClock clock = SystemClock.getInstance();
+    final Clock clock = Clock.systemUTC();
     AppContext appContext = mock(AppContext.class);
     when(appContext.getEventHandler()).thenReturn(
         dispatcher.getEventHandler());
@@ -1052,7 +1052,7 @@ public class TestJobImpl {
     RMHeartbeatHandler heartbeatHandler = new RMHeartbeatHandler() {
       @Override
       public long getLastHeartbeatTime() {
-        return clock.getTime();
+        return clock.millis();
       }
       @Override
       public void runOnNextHeartbeat(Runnable callback) {
@@ -1254,7 +1254,7 @@ public class TestJobImpl {
         String user, int numSplits, AppContext appContext) {
       super(jobId, applicationAttemptId, conf, eventHandler,
           null, new JobTokenSecretManager(), new Credentials(),
-          SystemClock.getInstance(), Collections.<TaskId, TaskInfo> emptyMap(),
+          Clock.systemUTC(), Collections.<TaskId, TaskInfo> emptyMap(),
           MRAppMetrics.create(), null, newApiCommitter, user,
           System.currentTimeMillis(), null, appContext, null, null);
 

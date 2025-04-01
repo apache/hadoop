@@ -32,8 +32,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
-import org.apache.hadoop.yarn.util.Clock;
 import org.junit.jupiter.api.BeforeEach;
+
+import java.time.Clock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -75,7 +76,7 @@ public class CapacitySchedulerPreemptionTestBase {
     mgr = new NullRMNodeLabelsManager();
     mgr.init(this.conf);
     clock = mock(Clock.class);
-    when(clock.getTime()).thenReturn(0L);
+    when(clock.millis()).thenReturn(0L);
   }
 
   SchedulingEditPolicy getSchedulingEditPolicy(MockRM rm) {

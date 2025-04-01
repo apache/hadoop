@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.time.Clock;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -58,8 +59,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.VolumeManager;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 
 /**
  * The RMActiveServiceContext is the class that maintains <b>Active</b> service
@@ -108,7 +107,7 @@ public class RMActiveServiceContext {
   private NodeAttributesManager nodeAttributesManager;
   private RMDelegatedNodeLabelsUpdater rmDelegatedNodeLabelsUpdater;
   private long epoch;
-  private Clock systemClock = SystemClock.getInstance();
+  private Clock systemClock = Clock.systemUTC();
   private long schedulerRecoveryStartTime = 0;
   private long schedulerRecoveryWaitTime = 0;
   private boolean printLog = true;
@@ -482,7 +481,7 @@ public class RMActiveServiceContext {
   @Private
   @Unstable
   public void setSchedulerRecoveryStartAndWaitTime(long waitTime) {
-    this.schedulerRecoveryStartTime = systemClock.getTime();
+    this.schedulerRecoveryStartTime = systemClock.millis();
     this.schedulerRecoveryWaitTime = waitTime;
   }
 
@@ -493,7 +492,7 @@ public class RMActiveServiceContext {
       return isSchedulerReady;
     }
     isSchedulerReady =
-        (systemClock.getTime() - schedulerRecoveryStartTime) > schedulerRecoveryWaitTime;
+        (systemClock.millis() - schedulerRecoveryStartTime) > schedulerRecoveryWaitTime;
     if (!isSchedulerReady && printLog) {
       LOG.info("Skip allocating containers. Scheduler is waiting for recovery.");
       printLog = false;

@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.io.IOException;
 import java.net.URL;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -47,8 +48,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocation.AllocationFileParser;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocation.AllocationFileQueueParser;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocation.QueueProperties;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,7 +101,7 @@ public class AllocationFileLoaderService extends AbstractService {
   private volatile boolean running = true;
 
   public AllocationFileLoaderService(FairScheduler scheduler) {
-    this(SystemClock.getInstance(), scheduler);
+    this(Clock.systemUTC(), scheduler);
   }
 
   private List<Permission> defaultPermissions;
@@ -124,7 +123,7 @@ public class AllocationFileLoaderService extends AbstractService {
             synchronized (this) {
               reloadListener.onCheck();
             }
-            long time = clock.getTime();
+            long time = clock.millis();
             long lastModified =
                 fs.getFileStatus(allocFile).getModificationTime();
             if (lastModified > lastSuccessfulReload &&
@@ -275,7 +274,7 @@ public class AllocationFileLoaderService extends AbstractService {
     AllocationConfiguration info = new AllocationConfiguration(queueProperties,
         allocationFileParser, globalReservationQueueConfig);
 
-    lastSuccessfulReload = clock.getTime();
+    lastSuccessfulReload = clock.millis();
     lastReloadAttemptFailed = false;
 
     reloadListener.onReload(info);

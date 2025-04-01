@@ -20,10 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.time.Clock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -37,7 +38,7 @@ public class TestFSParentQueue {
   public void setUp() {
     FairSchedulerConfiguration conf = new FairSchedulerConfiguration();
     RMContext rmContext = mock(RMContext.class);
-    SystemClock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     PlacementManager placementManager = new PlacementManager();
     FairScheduler scheduler = mock(FairScheduler.class);
     when(scheduler.getRMContext()).thenReturn(rmContext);

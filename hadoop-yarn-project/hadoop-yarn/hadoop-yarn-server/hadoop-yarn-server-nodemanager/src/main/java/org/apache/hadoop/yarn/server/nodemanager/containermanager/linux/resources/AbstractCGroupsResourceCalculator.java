@@ -23,6 +23,7 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -37,9 +38,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.CpuTimeTracker;
 import org.apache.hadoop.util.SysInfoLinux;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
-import org.apache.hadoop.util.SystemClock;
 
 /**
  * Common code base for the CGroupsResourceCalculator implementations.
@@ -48,7 +47,7 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractCGroupsResourceCalculator.class);
   private final String pid;
-  private final Clock clock = SystemClock.getInstance();
+  private final Clock clock = Clock.systemUTC();
   private final Map<String, String> stats = new ConcurrentHashMap<>();
 
   private long jiffyLengthMs = SysInfoLinux.JIFFY_LENGTH_IN_MILLIS;
@@ -130,7 +129,7 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
       }
     }
     LOG.debug("After updateProcessTree the {} pid has stats {}", pid, stats);
-    cpuTimeTracker.updateElapsedJiffies(BigInteger.valueOf(getTotalJiffies()), clock.getTime());
+    cpuTimeTracker.updateElapsedJiffies(BigInteger.valueOf(getTotalJiffies()), clock.millis());
   }
 
   private void addSingleLineToStat(Path file, String line) {

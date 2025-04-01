@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.util.ControlledClock;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.AfterEach;
@@ -56,6 +55,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -88,7 +88,7 @@ public class TestAllocationFileLoaderService {
 
   @BeforeEach
   public void setup() {
-    SystemClock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     PlacementManager placementManager = new PlacementManager();
     FairSchedulerConfiguration fsConf = new FairSchedulerConfiguration();
     RMContext rmContext = mock(RMContext.class);

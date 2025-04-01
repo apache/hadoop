@@ -128,7 +128,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
       .newInstance(1, 1);
   private byte[] version;
 
-  private final MonotonicClock clock = new MonotonicClock();
+  private final MonotonicClock clock = MonotonicClock.get();
 
   public static final Logger LOG =
       LoggerFactory.getLogger(MemoryFederationStateStore.class);
@@ -159,7 +159,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @Override
   public SubClusterRegisterResponse registerSubCluster(SubClusterRegisterRequest request)
       throws YarnException {
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
 
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterInfo subClusterInfo = request.getSubClusterInfo();
@@ -176,7 +176,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
             subClusterInfo.getCapability());
 
     membership.put(subClusterInfo.getSubClusterId(), subClusterInfoToSave);
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
 
     FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
     return SubClusterRegisterResponse.newInstance();

@@ -33,10 +33,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
     .QueueManagementChangeEvent;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -69,7 +68,7 @@ public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
    * Instantiated by CapacitySchedulerConfiguration
    */
   public QueueManagementDynamicEditPolicy() {
-    clock = SystemClock.getInstance();
+    clock = Clock.systemUTC();
   }
 
   @SuppressWarnings("unchecked")
@@ -144,13 +143,13 @@ public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
 
   @Override
   public void editSchedule() {
-    long startTs = clock.getTime();
+    long startTs = clock.millis();
 
     initQueues();
     manageAutoCreatedLeafQueues();
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Total time used=" + (clock.getTime() - startTs) + " ms.");
+      LOG.debug("Total time used=" + (clock.millis() - startTs) + " ms.");
     }
   }
 
@@ -189,7 +188,7 @@ public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
           parentQueue.getAutoCreatedQueueManagementPolicy();
       long startTime = 0;
       try {
-        startTime = clock.getTime();
+        startTime = clock.millis();
 
         queueManagementChanges = policyClazz.computeQueueManagementChanges();
 
@@ -204,7 +203,7 @@ public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
 
         if (LOG.isDebugEnabled()) {
           LOG.debug("{} uses {} millisecond" + " to run",
-              policyClazz.getClass().getName(), clock.getTime() - startTime);
+              policyClazz.getClass().getName(), clock.millis() - startTime);
           if (queueManagementChanges.size() > 0) {
             LOG.debug(" Updated queue management changes for parent queue" + " "
                     + "{}: [{}]", parentQueue.getQueuePath(),

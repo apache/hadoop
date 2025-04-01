@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.Collection;
 import java.util.List;
 
@@ -34,7 +35,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlanQueu
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .ReservationQueue;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

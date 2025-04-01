@@ -122,7 +122,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     super(applicationAttemptId, user, queue, activeUsersManager, rmContext);
 
     this.scheduler = scheduler;
-    this.startTime = scheduler.getClock().getTime();
+    this.startTime = scheduler.getClock().millis();
     this.lastTimeAtFairShare = this.startTime;
     this.appPriority = Priority.newInstance(1);
     this.enableAMPreemption = scheduler.getConf()
@@ -994,7 +994,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
           allowedLocality = getAllowedLocalityLevelByTime(schedulerKey,
               scheduler.getNodeLocalityDelayMs(),
               scheduler.getRackLocalityDelayMs(),
-              scheduler.getClock().getTime());
+              scheduler.getClock().millis());
         } else {
           allowedLocality = getAllowedLocalityLevel(schedulerKey,
               scheduler.getNumClusterNodes(),
@@ -1159,7 +1159,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
    * @return freshly computed fairshare starvation
    */
   Resource fairShareStarvation() {
-    long now = scheduler.getClock().getTime();
+    long now = scheduler.getClock().millis();
     Resource threshold = Resources.multiply(
         getFairShare(), getQueue().getFairSharePreemptionThreshold());
     Resource fairDemand = Resources.componentwiseMin(threshold, demand);
@@ -1272,14 +1272,14 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
    */
   void preemptionTriggered(long delayBeforeNextStarvationCheck) {
     nextStarvationCheck =
-        scheduler.getClock().getTime() + delayBeforeNextStarvationCheck;
+        scheduler.getClock().millis() + delayBeforeNextStarvationCheck;
   }
 
   /**
    * Whether this app's starvation should be considered.
    */
   boolean shouldCheckForStarvation() {
-    return scheduler.getClock().getTime() >= nextStarvationCheck;
+    return scheduler.getClock().millis() >= nextStarvationCheck;
   }
 
   /* Schedulable methods implementation */

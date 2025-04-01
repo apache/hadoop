@@ -26,6 +26,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.util.Collections;
 import java.util.Set;
 
@@ -35,7 +36,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,7 +57,7 @@ public class TestQueueManager {
     FairSchedulerConfiguration conf = new FairSchedulerConfiguration();
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getQueuePlacementManager()).thenReturn(placementManager);
-    SystemClock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
 
     scheduler = mock(FairScheduler.class);
     when(scheduler.getConf()).thenReturn(conf);

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.event;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -31,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.yarn.metrics.EventTypeMetrics;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,7 +95,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   private Map<Class<? extends Enum>,
       EventTypeMetrics> eventTypeMetricsMap;
 
-  private Clock clock = new MonotonicClock();
+  private Clock clock = MonotonicClock.get();
 
   private ThreadPoolExecutor printEventDetailsExecutor;
 
@@ -153,11 +153,11 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
           if (event != null) {
             if (eventTypeMetricsMap.
                 get(event.getType().getDeclaringClass()) != null) {
-              long startTime = clock.getTime();
+              long startTime = clock.millis();
               dispatch(event);
               eventTypeMetricsMap.get(event.getType().getDeclaringClass())
                   .increment(event.getType(),
-                      clock.getTime() - startTime);
+                      clock.millis() - startTime);
             } else {
               dispatch(event);
             }

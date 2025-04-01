@@ -33,10 +33,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolic
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
 import java.io.IOException;
+import java.time.Clock;
 
 
 /**
@@ -72,7 +72,7 @@ public class QueueConfigurationAutoRefreshPolicy
    * Instantiated by CapacitySchedulerConfiguration.
    */
   public QueueConfigurationAutoRefreshPolicy() {
-    clock = new MonotonicClock();
+    clock = MonotonicClock.get();
   }
 
   @Override
@@ -104,7 +104,7 @@ public class QueueConfigurationAutoRefreshPolicy
 
   @Override
   public void editSchedule() {
-    long startTs = clock.getTime();
+    long startTs = clock.millis();
 
     try {
 
@@ -128,21 +128,21 @@ public class QueueConfigurationAutoRefreshPolicy
       lastModified =
           fs.getFileStatus(allocCsFile).getModificationTime();
 
-      long time = clock.getTime();
+      long time = clock.millis();
 
       if (lastModified > lastReloadAttempt &&
           time > lastReloadAttempt + monitoringInterval) {
         try {
           rmContext.getRMAdminService().refreshQueues();
           LOG.info("Queue auto refresh completed successfully");
-          lastReloadAttempt = clock.getTime();
+          lastReloadAttempt = clock.millis();
         } catch (IOException | YarnException e) {
           LOG.error("Can't refresh queue: " + e);
           if (!lastReloadAttemptFailed) {
             LOG.error("Failed to reload capacity scheduler config file - " +
                 "will use existing conf. Message: {}", e.getMessage());
           }
-          lastReloadAttempt = clock.getTime();
+          lastReloadAttempt = clock.millis();
           lastReloadAttemptFailed = true;
         }
 
@@ -160,7 +160,7 @@ public class QueueConfigurationAutoRefreshPolicy
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Total time used=" + (clock.getTime() - startTs) + " ms.");
+      LOG.debug("Total time used=" + (clock.millis() - startTs) + " ms.");
     }
   }
 

@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.event;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.metrics.EventTypeMetrics;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +29,7 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
+import java.time.Clock;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
@@ -57,7 +57,7 @@ public class EventDispatcher<T extends Event> extends
   private static final Marker FATAL =
       MarkerFactory.getMarker("FATAL");
 
-  private Clock clock = new MonotonicClock();
+  private Clock clock = MonotonicClock.get();
 
   private final class EventProcessor implements Runnable {
     @Override
@@ -75,10 +75,10 @@ public class EventDispatcher<T extends Event> extends
 
         try {
           if (metrics != null) {
-            long startTime = clock.getTime();
+            long startTime = clock.millis();
             handler.handle(event);
             metrics.increment(event.getType(),
-                clock.getTime() - startTime);
+                clock.millis() - startTime);
           } else {
             handler.handle(event);
           }

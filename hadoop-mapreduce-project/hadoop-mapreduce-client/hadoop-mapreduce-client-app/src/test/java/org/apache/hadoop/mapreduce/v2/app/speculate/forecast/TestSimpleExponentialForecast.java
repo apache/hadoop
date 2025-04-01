@@ -41,14 +41,14 @@ public class TestSimpleExponentialForecast {
     clock.tickMsec(clockTicks);
     SimpleExponentialSmoothing forecaster =
         new SimpleExponentialSmoothing(10000,
-            12, 10000, clock.getTime());
+            12, 10000, clock.millis());
 
 
     double progress = 0.0;
 
     while(progress <= 1.0) {
       clock.tickMsec(clockTicks);
-      forecaster.incorporateReading(clock.getTime(), progress);
+      forecaster.incorporateReading(clock.millis(), progress);
       LOG.info("progress: " + progress + " --> " + forecaster.toString());
       progress += 0.005;
     }
@@ -62,14 +62,14 @@ public class TestSimpleExponentialForecast {
     clock.tickMsec(clockTicks);
     SimpleExponentialSmoothing forecaster =
         new SimpleExponentialSmoothing(800,
-            12, 10000, clock.getTime());
+            12, 10000, clock.millis());
 
     double progress = 0.0;
 
     double[] progressRates = new double[]{0.005, 0.004, 0.002, 0.001};
     while(progress <= 1.0) {
       clock.tickMsec(clockTicks);
-      forecaster.incorporateReading(clock.getTime(), progress);
+      forecaster.incorporateReading(clock.millis(), progress);
       LOG.info("progress: " + progress + " --> " + forecaster.toString());
       progress += progressRates[(int)(progress / 0.25)];
     }
@@ -82,7 +82,7 @@ public class TestSimpleExponentialForecast {
     clock.tickMsec(clockTicks);
     SimpleExponentialSmoothing forecaster =
         new SimpleExponentialSmoothing(800,
-            12, 10000, clock.getTime());
+            12, 10000, clock.millis());
 
     double progress = 0.0;
 
@@ -90,7 +90,7 @@ public class TestSimpleExponentialForecast {
     int progressInd = 0;
     while(progress <= 1.0) {
       clock.tickMsec(clockTicks);
-      forecaster.incorporateReading(clock.getTime(), progress);
+      forecaster.incorporateReading(clock.millis(), progress);
       LOG.info("progress: " + progress + " --> " + forecaster.toString());
       int currInd = progressInd++ > 1000 ? 4 : (int)(progress / 0.25);
       progress += progressRates[currInd];

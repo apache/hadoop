@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import java.time.Clock;
 import java.util.Set;
 
 import org.apache.avro.util.Utf8;
@@ -32,7 +33,6 @@ import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
-import org.apache.hadoop.util.SystemClock;
 
 /**
  * Event to record successful completion of a reduce attempt
@@ -110,7 +110,7 @@ public class ReduceAttemptFinishedEvent implements HistoryEvent {
       String state, Counters counters, int[][] allSplits) {
     this(id, taskType, taskStatus, shuffleFinishTime, sortFinishTime,
         finishTime, hostname, port, rackName, state, counters, allSplits,
-        SystemClock.getInstance().getTime());
+        Clock.systemUTC().millis());
   }
 
   /**

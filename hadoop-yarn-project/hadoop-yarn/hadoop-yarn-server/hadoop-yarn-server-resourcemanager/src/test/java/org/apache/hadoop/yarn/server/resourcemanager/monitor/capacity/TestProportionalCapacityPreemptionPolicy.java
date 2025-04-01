@@ -54,7 +54,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -68,6 +67,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Deque;
@@ -299,17 +299,17 @@ public class TestProportionalCapacityPreemptionPolicy {
     ProportionalCapacityPreemptionPolicy policy = buildPolicy(qData);
 
     // ensure all pending rsrc from A get preempted from other queues
-    when(mClock.getTime()).thenReturn(0L);
+    when(mClock.millis()).thenReturn(0L);
     policy.editSchedule();
     verify(mDisp, times(10)).handle(argThat(new IsPreemptionRequestFor(appC)));
 
     // requests reiterated
-    when(mClock.getTime()).thenReturn(killTime / 2);
+    when(mClock.millis()).thenReturn(killTime / 2);
     policy.editSchedule();
     verify(mDisp, times(10)).handle(argThat(new IsPreemptionRequestFor(appC)));
 
     // kill req sent
-    when(mClock.getTime()).thenReturn(killTime + 1);
+    when(mClock.millis()).thenReturn(killTime + 1);
     policy.editSchedule();
     verify(mDisp, times(20)).handle(evtCaptor.capture());
     List<ContainerPreemptEvent> events = evtCaptor.getAllValues();

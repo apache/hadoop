@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Clock;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileSystem;
@@ -61,8 +62,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -122,7 +121,7 @@ public class TestCommitterEventHandler {
     TestingJobEventHandler jeh = new TestingJobEventHandler();
     dispatcher.register(JobEventType.class, jeh);
 
-    SystemClock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     AppContext appContext = mock(AppContext.class);
     ApplicationAttemptId attemptid = ApplicationAttemptId.fromString(
         "appattempt_1234567890000_0001_0");
@@ -154,7 +153,7 @@ public class TestCommitterEventHandler {
         "committer should not have committed");
 
     // set a fresh heartbeat and verify commit completes
-    rmhh.setLastHeartbeatTime(clock.getTime());
+    rmhh.setLastHeartbeatTime(clock.millis());
     timeToWaitMs = 5000;
     while (jeh.numCommitCompletedEvents != 1 && timeToWaitMs > 0) {
       Thread.sleep(10);

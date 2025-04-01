@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -60,8 +61,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeDecommissionin
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
@@ -108,7 +107,7 @@ public class NodesListManager extends CompositeService implements
       resolver = new DirectResolver();
     } else {
       resolver =
-          new CachedResolver(SystemClock.getInstance(), nodeIpCacheTimeout);
+          new CachedResolver(Clock.systemUTC(), nodeIpCacheTimeout);
       addIfService(resolver);
     }
 
@@ -569,7 +568,7 @@ public class NodesListManager extends CompositeService implements
 
     @VisibleForTesting
     public void addToCache(String hostName, String ip) {
-      cache.put(hostName, new CacheEntry(ip, clock.getTime()));
+      cache.put(hostName, new CacheEntry(ip, clock.millis()));
     }
 
     public void removeFromCache(String hostName) {
@@ -599,7 +598,7 @@ public class NodesListManager extends CompositeService implements
     private class ExpireChecker extends TimerTask {
       @Override
       public void run() {
-        long currentTime = clock.getTime();
+        long currentTime = clock.millis();
         Iterator<Map.Entry<String, CacheEntry>> iterator =
             cache.entrySet().iterator();
         while (iterator.hasNext()) {

@@ -22,6 +22,7 @@ package org.apache.hadoop.mapreduce.v2.hs;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
+import java.time.Clock;
 import java.util.UUID;
 import java.util.List;
 
@@ -43,9 +44,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
-import org.apache.hadoop.util.SystemClock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -198,7 +197,7 @@ public class TestHistoryFileManager {
       }
     }.start();
     testCreateHistoryDirs(dfsCluster.getConfiguration(0),
-        SystemClock.getInstance());
+        Clock.systemUTC());
   }
 
   @Test

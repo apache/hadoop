@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.app.speculate;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.time.Clock;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -47,7 +48,6 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.util.Clock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.event.Event;
@@ -193,7 +193,7 @@ public class DefaultSpeculator extends AbstractService implements
             @Override
             public void run() {
               while (!stopped && !Thread.currentThread().isInterrupted()) {
-                long backgroundRunStartTime = clock.getTime();
+                long backgroundRunStartTime = clock.millis();
                 try {
                   int speculations = computeSpeculations();
                   long mininumRecomp
@@ -201,7 +201,7 @@ public class DefaultSpeculator extends AbstractService implements
                                          : soonestRetryAfterNoSpeculate;
 
                   long wait = Math.max(mininumRecomp,
-                        clock.getTime() - backgroundRunStartTime);
+                        clock.millis() - backgroundRunStartTime);
 
                   if (speculations > 0) {
                     LOG.info("We launched " + speculations
@@ -238,7 +238,7 @@ public class DefaultSpeculator extends AbstractService implements
 
   @Override
   public void handleAttempt(TaskAttemptStatus status) {
-    long timestamp = clock.getTime();
+    long timestamp = clock.millis();
     statusUpdate(status, timestamp);
   }
 
@@ -488,7 +488,7 @@ public class DefaultSpeculator extends AbstractService implements
   private int maybeScheduleASpeculation(TaskType type) {
     int successes = 0;
 
-    long now = clock.getTime();
+    long now = clock.millis();
 
     ConcurrentMap<JobId, AtomicInteger> containerNeeds
         = type == TaskType.MAP ? mapContainerNeeds : reduceContainerNeeds;

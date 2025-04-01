@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -52,8 +53,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.CpuTimeTracker;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.SysInfoLinux;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
@@ -134,7 +133,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
     new HashMap<String, ProcessInfo>();
 
   public ProcfsBasedProcessTree(String pid) {
-    this(pid, PROCFS, SystemClock.getInstance());
+    this(pid, PROCFS, Clock.systemUTC());
   }
 
   @Override
@@ -148,7 +147,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   }
 
   public ProcfsBasedProcessTree(String pid, String procfsDir) {
-    this(pid, procfsDir, SystemClock.getInstance());
+    this(pid, procfsDir, Clock.systemUTC());
   }
 
   /**
@@ -469,7 +468,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
     BigInteger processTotalJiffies = getTotalProcessJiffies();
     LOG.debug("Process {} jiffies:{}", pid, processTotalJiffies);
     cpuTimeTracker.updateElapsedJiffies(processTotalJiffies,
-        clock.getTime());
+        clock.millis());
     return cpuTimeTracker.getCpuTrackerUsagePercent();
   }
 

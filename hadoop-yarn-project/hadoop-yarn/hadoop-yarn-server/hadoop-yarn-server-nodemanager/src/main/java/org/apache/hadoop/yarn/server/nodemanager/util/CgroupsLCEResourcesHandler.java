@@ -28,6 +28,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -56,9 +57,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsCpuResourceHandlerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
-import org.apache.hadoop.util.SystemClock;
 
 /**
  * Resource handler that lets you setup cgroups
@@ -99,7 +98,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
 
   public CgroupsLCEResourcesHandler() {
     this.controllerPaths = new HashMap<String, String>();
-    clock = SystemClock.getInstance();
+    clock = Clock.systemUTC();
   }
 
   @Override
@@ -297,7 +296,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     boolean deleted = false;
 
     LOG.debug("deleteCgroup: {}", cgroupPath);
-    long start = clock.getTime();
+    long start = clock.millis();
     do {
       try {
         deleted = checkAndDeleteCgroup(new File(cgroupPath));
@@ -307,7 +306,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
       } catch (InterruptedException ex) {
         // NOP
       }
-    } while (!deleted && (clock.getTime() - start) < deleteCgroupTimeout);
+    } while (!deleted && (clock.millis() - start) < deleteCgroupTimeout);
 
     if (!deleted) {
       LOG.warn("Unable to delete cgroup at: " + cgroupPath +

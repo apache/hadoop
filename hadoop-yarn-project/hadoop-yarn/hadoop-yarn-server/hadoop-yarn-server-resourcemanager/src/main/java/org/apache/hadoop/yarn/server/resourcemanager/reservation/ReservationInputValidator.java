@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import java.time.Clock;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
@@ -35,7 +36,6 @@ import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class ReservationInputValidator {
@@ -84,7 +84,7 @@ public class ReservationInputValidator {
           "validate reservation input definition", "ClientRMService", message);
       throw RPCUtil.getRemoteException(message);
     }
-    if (contract.getDeadline() <= clock.getTime()) {
+    if (contract.getDeadline() <= clock.millis()) {
       message = "The specified deadline: " + contract.getDeadline()
           + " is the past. Please try again with deadline in the future.";
       RMAuditLogger.logFailure("UNKNOWN", auditConstant,

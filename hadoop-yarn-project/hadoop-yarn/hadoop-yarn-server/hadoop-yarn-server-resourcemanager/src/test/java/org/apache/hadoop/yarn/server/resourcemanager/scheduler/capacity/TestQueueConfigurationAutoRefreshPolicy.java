@@ -264,7 +264,7 @@ public class TestQueueConfigurationAutoRefreshPolicy  {
     assertTrue(maxAppsAfter != maxAppsBefore);
 
     // Trigger interval for refresh.
-    GenericTestUtils.waitFor(() -> (policy.getClock().getTime() -
+    GenericTestUtils.waitFor(() -> (policy.getClock().millis() -
             policy.getLastReloadAttempt()) / 1000 > 1,
         500, 3000);
 
@@ -289,7 +289,7 @@ public class TestQueueConfigurationAutoRefreshPolicy  {
         getMaximumSystemApplications(), 3000);
 
     // Trigger interval for refresh.
-    GenericTestUtils.waitFor(() -> (policy.getClock().getTime() -
+    GenericTestUtils.waitFor(() -> (policy.getClock().millis() -
           policy.getLastReloadAttempt()) / 1000 > 1,
         500, 3000);
 

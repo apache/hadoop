@@ -25,6 +25,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.AccessControlException;
 import java.text.MessageFormat;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -193,9 +194,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ReservationsACLsMa
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.hadoop.util.UTCClock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -248,7 +247,7 @@ public class ClientRMService extends AbstractService implements
       QueueACLsManager queueACLsManager,
       RMDelegationTokenSecretManager rmDTSecretManager) {
     this(rmContext, scheduler, rmAppManager, applicationACLsManager,
-        queueACLsManager, rmDTSecretManager, new UTCClock());
+        queueACLsManager, rmDTSecretManager, Clock.systemUTC());
   }
 
   public ClientRMService(RMContext rmContext, YarnScheduler scheduler,
@@ -1544,7 +1543,7 @@ public class ClientRMService extends AbstractService implements
 
   private void refreshScheduler(String planName,
       ReservationDefinition contract, String reservationId) {
-    if ((contract.getArrival() - clock.getTime()) < reservationSystem
+    if ((contract.getArrival() - clock.millis()) < reservationSystem
         .getPlanFollowerTimeStep()) {
       LOG.debug("Reservation {} is within threshold so attempting to"
           + " create synchronously.", reservationId);

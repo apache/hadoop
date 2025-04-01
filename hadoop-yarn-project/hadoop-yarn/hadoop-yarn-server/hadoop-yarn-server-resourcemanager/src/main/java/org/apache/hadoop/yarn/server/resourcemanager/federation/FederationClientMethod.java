@@ -19,11 +19,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.federation;
 
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
-import org.apache.hadoop.util.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
+import java.time.Clock;
 import java.util.Arrays;
 
 /**
@@ -104,11 +104,11 @@ public class FederationClientMethod<R> {
    */
   protected R invoke() throws YarnException {
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       Method method = FederationStateStore.class.getMethod(methodName, types);
       R result = clazz.cast(method.invoke(stateStoreClient, params));
 
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
           methodName, stopTime - startTime);
       return result;

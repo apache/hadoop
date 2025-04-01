@@ -31,6 +31,7 @@ import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -122,7 +123,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.BoundedAppender;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
@@ -1133,7 +1133,7 @@ public class ApplicationMaster {
           Long containerStartTime =
               containerStartTimes.get(containerStatus.getContainerId());
           if (containerStartTime == null) {
-            containerStartTime = SystemClock.getInstance().getTime();
+            containerStartTime = Clock.systemUTC().millis();
             containerStartTimes.put(containerStatus.getContainerId(),
                 containerStartTime);
           }
@@ -1338,7 +1338,7 @@ public class ApplicationMaster {
             containerId, container.getNodeId());
       }
       if (applicationMaster.timelineServiceV2Enabled) {
-        long startTime = SystemClock.getInstance().getTime();
+        long startTime = Clock.systemUTC().millis();
         applicationMaster.getContainerStartTimes().put(containerId, startTime);
         applicationMaster.publishContainerStartEventOnTimelineServiceV2(
             container, startTime);

@@ -207,13 +207,13 @@ public class CommitterEventHandler extends AbstractService
       threadCommitting.interrupt();
 
       // wait up to configured timeout for commit thread to finish
-      long now = context.getClock().getTime();
+      long now = context.getClock().millis();
       long timeoutTimestamp = now + commitThreadCancelTimeoutMs;
       try {
         while (jobCommitThread == threadCommitting
             && now > timeoutTimestamp) {
           wait(now - timeoutTimestamp);
-          now = context.getClock().getTime();
+          now = context.getClock().millis();
         }
       } catch (InterruptedException e) {
       }
@@ -331,7 +331,7 @@ public class CommitterEventHandler extends AbstractService
     private synchronized void waitForValidCommitWindow()
         throws InterruptedException {
       long lastHeartbeatTime = rmHeartbeatHandler.getLastHeartbeatTime();
-      long now = context.getClock().getTime();
+      long now = context.getClock().millis();
 
       while (now - lastHeartbeatTime > commitWindowMs) {
         rmHeartbeatHandler.runOnNextHeartbeat(new Runnable() {
@@ -345,7 +345,7 @@ public class CommitterEventHandler extends AbstractService
 
         wait();
         lastHeartbeatTime = rmHeartbeatHandler.getLastHeartbeatTime();
-        now = context.getClock().getTime();
+        now = context.getClock().millis();
       }
     }
   }

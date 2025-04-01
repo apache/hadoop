@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
+import java.time.Clock;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -75,9 +76,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
-import org.apache.hadoop.util.SystemClock;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -210,7 +209,7 @@ public class TestRuntimeEstimators {
                     >= taskTypeSlots(task.getType())) {
             MyTaskAttemptImpl attemptImpl = (MyTaskAttemptImpl)attempt;
             SpeculatorEvent event
-                = new SpeculatorEvent(attempt.getID(), false, clock.getTime());
+                = new SpeculatorEvent(attempt.getID(), false, clock.millis());
             speculator.handle(event);
             attemptImpl.startUp();
           } else {
@@ -221,7 +220,7 @@ public class TestRuntimeEstimators {
             status.progress = attempt.getProgress();
             status.stateString = attempt.getState().name();
             status.taskState = attempt.getState();
-            SpeculatorEvent event = new SpeculatorEvent(status, clock.getTime());
+            SpeculatorEvent event = new SpeculatorEvent(status, clock.millis());
             speculator.handle(event);
           }
         }
@@ -239,7 +238,7 @@ public class TestRuntimeEstimators {
 
       clock.tickMsec(1000L);
 
-      if (clock.getTime() % 10000L == 0L) {
+      if (clock.millis() % 10000L == 0L) {
         speculator.scanForSpeculations();
       }
     }
@@ -586,7 +585,7 @@ public class TestRuntimeEstimators {
     }
 
     void startUp() {
-      startMockTime = clock.getTime();
+      startMockTime = clock.millis();
       overridingState = null;
 
       slotsInUse.addAndGet(taskTypeSlots(myAttemptID.getTaskId().getTaskType()));
@@ -660,7 +659,7 @@ public class TestRuntimeEstimators {
       float runtime = getCodeRuntime();
 
       return Math.min
-          ((float) (clock.getTime() - startMockTime) / (runtime * 1000.0F), 1.0F);
+          ((float) (clock.millis() - startMockTime) / (runtime * 1000.0F), 1.0F);
     }
 
     private float getReduceProgress() {
@@ -679,10 +678,10 @@ public class TestRuntimeEstimators {
       }
 
       if (numberMaps == numberDoneMaps) {
-        shuffleCompletedTime = Math.min(shuffleCompletedTime, clock.getTime());
+        shuffleCompletedTime = Math.min(shuffleCompletedTime, clock.millis());
 
         return Math.min
-            ((float) (clock.getTime() - shuffleCompletedTime)
+            ((float) (clock.millis() - shuffleCompletedTime)
                         / (runtime * 2000.0F) + 0.5F,
              1.0F);
       } else {
@@ -738,11 +737,11 @@ public class TestRuntimeEstimators {
               float hisProgress = otherAttempt.getProgress();
               long hisStartTime = ((MyTaskAttemptImpl)otherAttempt).startMockTime;
               System.out.println("TLTRE:A speculation finished at time "
-                  + clock.getTime()
+                  + clock.millis()
                   + ".  The stalled attempt is at " + (hisProgress * 100.0)
                   + "% progress, and it started at "
                   + hisStartTime + ", which is "
-                  + (clock.getTime() - hisStartTime) + " ago.");
+                  + (clock.millis() - hisStartTime) + " ago.");
               long originalTaskEndEstimate
                   = (hisStartTime
                       + estimator.estimatedRuntime(otherAttempt.getID()));
@@ -750,7 +749,7 @@ public class TestRuntimeEstimators {
                   "TLTRE: We would have expected the original attempt to take "
                   + estimator.estimatedRuntime(otherAttempt.getID())
                   + ", finishing at " + originalTaskEndEstimate);
-              long estimatedSavings = originalTaskEndEstimate - clock.getTime();
+              long estimatedSavings = originalTaskEndEstimate - clock.millis();
               taskTimeSavedBySpeculation.addAndGet(estimatedSavings);
               System.out.println("TLTRE: The task is " + task.getID());
               slotsInUse.addAndGet(- taskTypeSlots(myAttemptID.getTaskId().getTaskType()));
@@ -819,7 +818,7 @@ public class TestRuntimeEstimators {
       public MyAppMaster(Clock clock) {
         super(MyAppMaster.class.getName());
         if (clock == null) {
-          clock = SystemClock.getInstance();
+          clock = Clock.systemUTC();
         }
       this.clock = clock;
       LOG.info("Created MyAppMaster");
@@ -833,7 +832,7 @@ public class TestRuntimeEstimators {
     private final Map<JobId, Job> allJobs;
 
     MyAppContext(int numberMaps, int numberReduces) {
-      myApplicationID = ApplicationId.newInstance(clock.getTime(), 1);
+      myApplicationID = ApplicationId.newInstance(clock.millis(), 1);
 
       myAppAttemptID = ApplicationAttemptId.newInstance(myApplicationID, 0);
       myJobID = recordFactory.newRecordInstance(JobId.class);

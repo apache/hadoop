@@ -26,6 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -47,7 +48,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.FSPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserPlacementRule;
-import org.apache.hadoop.util.SystemClock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -78,7 +78,7 @@ public class TestQueuePlacementPolicy {
 
   @BeforeEach
   public void initTest() {
-    SystemClock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     RMContext rmContext = mock(RMContext.class);
     placementManager = new PlacementManager();
     scheduler = mock(FairScheduler.class);

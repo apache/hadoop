@@ -22,6 +22,7 @@ import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.time.Clock;
 import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -97,8 +98,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSyst
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
@@ -353,8 +352,8 @@ public abstract class BaseRouterClientRMTest {
         .doAs(new PrivilegedExceptionAction<ReservationSubmissionResponse>() {
           @Override
           public ReservationSubmissionResponse run() throws Exception {
-            Clock clock = new UTCClock();
-            long arrival = clock.getTime();
+            Clock clock = Clock.systemUTC();
+            long arrival = clock.millis();
             long duration = 60000;
             long deadline = (long) (arrival + 1.05 * duration);
             ReservationSubmissionRequest req = ReservationSystemTestUtil
@@ -374,8 +373,8 @@ public abstract class BaseRouterClientRMTest {
         .doAs(new PrivilegedExceptionAction<ReservationUpdateResponse>() {
           @Override
           public ReservationUpdateResponse run() throws Exception {
-            Clock clock = new UTCClock();
-            long arrival = clock.getTime();
+            Clock clock = Clock.systemUTC();
+            long arrival = clock.millis();
             long duration = 60000;
             long deadline = (long) (arrival + 1.05 * duration);
             ReservationDefinition rDef =

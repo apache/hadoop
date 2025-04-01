@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -91,7 +92,6 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.util.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -521,7 +521,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
   private long getFinishTime(TaskAttemptId taId) {
     if (taId == null) {
-      return clock.getTime();
+      return clock.millis();
     }
     long finishTime = 0;
     for (TaskAttempt at : attempts.values()) {
@@ -903,7 +903,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     @Override
     public void transition(TaskImpl task, TaskEvent event) {
       task.addAndScheduleAttempt(Avataar.VIRGIN);
-      task.scheduledTime = task.clock.getTime();
+      task.scheduledTime = task.clock.millis();
       task.sendTaskStartedEvent();
     }
   }

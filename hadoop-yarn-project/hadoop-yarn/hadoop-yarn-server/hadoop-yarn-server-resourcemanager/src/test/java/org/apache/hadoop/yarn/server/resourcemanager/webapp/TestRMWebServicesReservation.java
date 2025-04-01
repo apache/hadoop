@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.net.URL;
 import java.security.Principal;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Enumeration;
@@ -71,8 +72,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.UTCClock;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
@@ -99,7 +98,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
   private static MockRM rm;
 
   private static final int MINIMUM_RESOURCE_DURATION = 100000;
-  private static final Clock clock = new UTCClock();
+  private static final Clock clock = Clock.systemUTC();
   private static final int MAXIMUM_PERIOD = 86400000;
   private static final int DEFAULT_RECURRENCE = MAXIMUM_PERIOD / 10;
   private static final String TEST_DIR = new File(System.getProperty(
@@ -358,7 +357,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     setupCluster(100);
 
     ReservationId rid = getReservationIdTestHelper(1);
-    long currentTimestamp = clock.getTime() + MINIMUM_RESOURCE_DURATION;
+    long currentTimestamp = clock.millis() + MINIMUM_RESOURCE_DURATION;
     Response response = reservationSubmissionTestHelper(
         "reservation/submit", MediaType.APPLICATION_JSON, currentTimestamp, "",
         rid);
@@ -390,7 +389,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     setupCluster(100);
 
     ReservationId rid = getReservationIdTestHelper(1);
-    long currentTimestamp = clock.getTime() + MINIMUM_RESOURCE_DURATION;
+    long currentTimestamp = clock.millis() + MINIMUM_RESOURCE_DURATION;
     Response response =
         reservationSubmissionTestHelper("reservation/submit", MediaType.APPLICATION_JSON,
         currentTimestamp, "res1", rid);
@@ -457,7 +456,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.start();
     setupCluster(100);
 
-    long time = clock.getTime() + MINIMUM_RESOURCE_DURATION;
+    long time = clock.millis() + MINIMUM_RESOURCE_DURATION;
 
     ReservationId id1 = getReservationIdTestHelper(1);
     ReservationId id2 = getReservationIdTestHelper(2);
@@ -501,7 +500,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.start();
     setupCluster(100);
 
-    long time = clock.getTime() + MINIMUM_RESOURCE_DURATION;
+    long time = clock.millis() + MINIMUM_RESOURCE_DURATION;
 
     ReservationId id1 = getReservationIdTestHelper(1);
     ReservationId id2 = getReservationIdTestHelper(2);
@@ -550,7 +549,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.start();
     setupCluster(100);
 
-    long time = clock.getTime() + MINIMUM_RESOURCE_DURATION;
+    long time = clock.millis() + MINIMUM_RESOURCE_DURATION;
 
     ReservationId id1 = getReservationIdTestHelper(1);
     ReservationId id2 = getReservationIdTestHelper(2);
@@ -593,7 +592,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.start();
     setupCluster(100);
 
-    long time = clock.getTime() + MINIMUM_RESOURCE_DURATION;
+    long time = clock.millis() + MINIMUM_RESOURCE_DURATION;
 
     ReservationId id1 = getReservationIdTestHelper(1);
     ReservationId id2 = getReservationIdTestHelper(2);
@@ -647,7 +646,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.start();
     setupCluster(100);
 
-    long time = clock.getTime() + MINIMUM_RESOURCE_DURATION;
+    long time = clock.millis() + MINIMUM_RESOURCE_DURATION;
 
     ReservationId id1 = getReservationIdTestHelper(1);
     ReservationId id2 = getReservationIdTestHelper(2);
@@ -700,7 +699,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     rm.start();
     setupCluster(100);
 
-    long time = clock.getTime() + MINIMUM_RESOURCE_DURATION;
+    long time = clock.millis() + MINIMUM_RESOURCE_DURATION;
 
     ReservationId id1 = getReservationIdTestHelper(1);
     ReservationId id2 = getReservationIdTestHelper(2);
@@ -750,7 +749,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id1 = getReservationIdTestHelper(1);
     ReservationId id2 = getReservationIdTestHelper(2);
 
-    long time = clock.getTime() + MINIMUM_RESOURCE_DURATION;
+    long time = clock.millis() + MINIMUM_RESOURCE_DURATION;
 
     reservationSubmissionTestHelper("reservation/submit",
             MediaType.APPLICATION_JSON, time, "res_1", id1);
@@ -794,9 +793,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id2 = getReservationIdTestHelper(2);
 
     reservationSubmissionTestHelper("reservation/submit",
-        MediaType.APPLICATION_JSON, clock.getTime(), "res_1", id1);
+        MediaType.APPLICATION_JSON, clock.millis(), "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-        MediaType.APPLICATION_JSON, clock.getTime(), "res_2", id2);
+        MediaType.APPLICATION_JSON, clock.millis(), "res_2", id2);
 
     WebTarget target = constructWebResource(LIST_RESERVATION_PATH)
             .queryParam("queue", DEFAULT_QUEUE);
@@ -828,9 +827,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id2 = getReservationIdTestHelper(2);
 
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, clock.getTime(), "res_1", id1);
+            MediaType.APPLICATION_JSON, clock.millis(), "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, clock.getTime(), "res_2", id2);
+            MediaType.APPLICATION_JSON, clock.millis(), "res_2", id2);
 
     WebTarget target = constructWebResource(LIST_RESERVATION_PATH);
 
@@ -851,9 +850,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id2 = getReservationIdTestHelper(2);
 
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, clock.getTime(), "res_1", id1);
+            MediaType.APPLICATION_JSON, clock.millis(), "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, clock.getTime(), "res_2", id2);
+            MediaType.APPLICATION_JSON, clock.millis(), "res_2", id2);
 
     WebTarget target = constructWebResource(LIST_RESERVATION_PATH)
             .queryParam("queue", DEFAULT_QUEUE + "_invalid");
@@ -875,11 +874,11 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id2 = getReservationIdTestHelper(2);
 
     reservationSubmissionTestHelper("reservation/submit",
-        MediaType.APPLICATION_JSON, clock.getTime(), "res_1", id1);
+        MediaType.APPLICATION_JSON, clock.millis(), "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-        MediaType.APPLICATION_JSON, clock.getTime(), "res_1", id1);
+        MediaType.APPLICATION_JSON, clock.millis(), "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-        MediaType.APPLICATION_JSON, clock.getTime(), "res_2", id2);
+        MediaType.APPLICATION_JSON, clock.millis(), "res_2", id2);
 
     WebTarget target = constructWebResource(LIST_RESERVATION_PATH)
             .queryParam("include-resource-allocations", "true")
@@ -918,7 +917,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id1 = getReservationIdTestHelper(1);
 
     reservationSubmissionTestHelper("reservation/submit",
-        MediaType.APPLICATION_JSON, clock.getTime(), "res_1", id1);
+        MediaType.APPLICATION_JSON, clock.millis(), "res_1", id1);
 
     WebTarget target = constructWebResource(LIST_RESERVATION_PATH)
             .queryParam("queue", DEFAULT_QUEUE);
@@ -942,7 +941,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     ReservationId id1 = getReservationIdTestHelper(1);
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, clock.getTime(), "res_1", id1);
+            MediaType.APPLICATION_JSON, clock.millis(), "res_1", id1);
 
     WebTarget target = constructWebResource(LIST_RESERVATION_PATH)
             .queryParam("include-resource-allocations", "true")
@@ -981,7 +980,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id1 = getReservationIdTestHelper(1);
 
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, clock.getTime(), "res_1", id1);
+            MediaType.APPLICATION_JSON, clock.millis(), "res_1", id1);
 
     WebTarget target = constructWebResource(LIST_RESERVATION_PATH)
             .queryParam("include-resource-allocations", "false")
@@ -1058,7 +1057,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     if (!this.isAuthenticationEnabled()) {
       assertResponseStatusCode(Response.Status.UNAUTHORIZED, response.getStatusInfo());
-      return ReservationId.newInstance(clock.getTime(), fallbackReservationId);
+      return ReservationId.newInstance(clock.millis(), fallbackReservationId);
     }
 
     System.out.println("RESPONSE:" + response);
@@ -1081,7 +1080,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
   private Response reservationSubmissionTestHelper(String path,
       String media, ReservationId reservationId) throws Exception {
-    long arrival = clock.getTime() + MINIMUM_RESOURCE_DURATION;
+    long arrival = clock.millis() + MINIMUM_RESOURCE_DURATION;
 
     return reservationSubmissionTestHelper(path, media, arrival, "res_1",
       reservationId);

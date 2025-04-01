@@ -30,6 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -84,8 +85,6 @@ import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
 import org.apache.hadoop.yarn.logaggregation.ExtendedLogMetaRequest;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.View.ViewContext;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
@@ -164,7 +163,7 @@ public class LogAggregationIndexedFileController
     this.ugi = userUgi;
     logAggregationSuccessfullyInThisCyCle = false;
     logsMetaInThisCycle = new IndexedPerAggregationLogMeta();
-    logAggregationTimeInThisCycle = this.sysClock.getTime();
+    logAggregationTimeInThisCycle = this.sysClock.millis();
     logsMetaInThisCycle.setUploadTimeStamp(logAggregationTimeInThisCycle);
     logsMetaInThisCycle.setRemoteNodeFile(remoteLogFile.getName());
     try {
@@ -308,7 +307,7 @@ public class LogAggregationIndexedFileController
       indexedLogsMeta.getLogMetas().clear();
       overwriteCheckSum = true;
       aggregatedLogFile = new Path(remoteLogFile.getParent(),
-          remoteLogFile.getName() + "_" + sysClock.getTime());
+          remoteLogFile.getName() + "_" + sysClock.millis());
       fsDataOStream = fc.create(aggregatedLogFile,
           EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
           new Options.CreateOpts[] {});
@@ -1351,7 +1350,7 @@ public class LogAggregationIndexedFileController
   @Private
   @VisibleForTesting
   public Clock getSystemClock() {
-    return SystemClock.getInstance();
+    return Clock.systemUTC();
   }
 
   private byte[] createUUID(ApplicationId appId) throws IOException {

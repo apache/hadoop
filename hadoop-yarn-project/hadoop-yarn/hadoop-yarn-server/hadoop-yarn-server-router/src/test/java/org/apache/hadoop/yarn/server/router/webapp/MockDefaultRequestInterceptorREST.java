@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.router.webapp;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.security.Principal;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.Map;
@@ -155,7 +156,6 @@ import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
@@ -865,7 +865,7 @@ public class MockDefaultRequestInterceptorREST
     int numActivities = 10;
     for (int i = 0; i < numActivities; i++) {
       ActivitiesLogger.APP.startAppAllocationRecording(newActivitiesManager, node,
-          SystemClock.getInstance().getTime(), app);
+          Clock.systemUTC().millis(), app);
       ActivitiesLogger.APP.recordAppActivityWithoutAllocation(newActivitiesManager, node, app,
           new SchedulerRequestKey(Priority.newInstance(0), 0, null),
           ActivityDiagnosticConstant.NODE_IS_BLACKLISTED, ActivityState.REJECTED,

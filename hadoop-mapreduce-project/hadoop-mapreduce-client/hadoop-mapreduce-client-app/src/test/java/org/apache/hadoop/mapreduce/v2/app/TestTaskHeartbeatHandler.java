@@ -38,11 +38,10 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
-import org.apache.hadoop.util.SystemClock;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
@@ -53,7 +52,7 @@ public class TestTaskHeartbeatHandler {
   @Test
   public void testTaskTimeout() throws InterruptedException {
     EventHandler mockHandler = mock(EventHandler.class);
-    Clock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     TaskHeartbeatHandler hb = new TaskHeartbeatHandler(mockHandler, clock, 1);
     
     
@@ -87,7 +86,7 @@ public class TestTaskHeartbeatHandler {
   @SuppressWarnings("unchecked")
   public void testTaskTimeoutDisable() throws InterruptedException {
     EventHandler mockHandler = mock(EventHandler.class);
-    Clock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     TaskHeartbeatHandler hb = new TaskHeartbeatHandler(mockHandler, clock, 1);
 
     Configuration conf = new Configuration();
@@ -127,7 +126,7 @@ public class TestTaskHeartbeatHandler {
   @Test
   public void testTaskStuck() throws InterruptedException {
     EventHandler mockHandler = mock(EventHandler.class);
-    Clock clock = SystemClock.getInstance();
+    Clock clock = Clock.systemUTC();
     TaskHeartbeatHandler hb = new TaskHeartbeatHandler(mockHandler, clock, 1);
 
 
@@ -252,7 +251,7 @@ public class TestTaskHeartbeatHandler {
   private static void verifyTaskTimeoutConfig(final Configuration conf,
       final long expectedTimeout) {
     final TaskHeartbeatHandler hb =
-        new TaskHeartbeatHandler(null, SystemClock.getInstance(), 1);
+        new TaskHeartbeatHandler(null, Clock.systemUTC(), 1);
     hb.init(conf);
 
     assertEquals(hb.getTaskTimeOut(), expectedTimeout,

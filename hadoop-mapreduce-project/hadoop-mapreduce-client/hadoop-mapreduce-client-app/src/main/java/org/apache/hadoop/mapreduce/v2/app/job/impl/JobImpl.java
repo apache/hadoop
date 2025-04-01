@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -128,7 +129,6 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.util.Clock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -1097,7 +1097,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   }
 
   void setFinishTime() {
-    finishTime = clock.getTime();
+    finishTime = clock.millis();
   }
 
   void logJobHistoryFinishedEvent() {
@@ -1676,7 +1676,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       if (jse.getRecoveredJobStartTime() != -1L) {
         job.startTime = jse.getRecoveredJobStartTime();
       } else {
-        job.startTime = job.clock.getTime();
+        job.startTime = job.clock.millis();
       }
       JobInitedEvent jie =
         new JobInitedEvent(job.oldJobId,

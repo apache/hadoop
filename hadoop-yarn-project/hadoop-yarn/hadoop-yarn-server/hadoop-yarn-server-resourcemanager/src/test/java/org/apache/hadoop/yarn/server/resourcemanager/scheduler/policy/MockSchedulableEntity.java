@@ -21,8 +21,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+
+import java.time.Clock;
 
 
 public class MockSchedulableEntity implements SchedulableEntity {
@@ -41,7 +42,7 @@ public class MockSchedulableEntity implements SchedulableEntity {
     this.serial = serial;
     this.priority = Priority.newInstance(priority);
     this.isRecovering = isRecovering;
-    this.startTime = SystemClock.getInstance().getTime();
+    this.startTime = Clock.systemUTC().millis();
   }
 
   public void setId(String id) {

@@ -25,6 +25,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -140,7 +141,6 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.router.RouterAuditLogger;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Records;
 import org.slf4j.Logger;
@@ -205,7 +205,7 @@ public class FederationClientInterceptor
   private RouterPolicyFacade policyFacade;
   private RouterMetrics routerMetrics;
   private ThreadPoolExecutor executorService;
-  private final Clock clock = new MonotonicClock();
+  private final Clock clock = MonotonicClock.get();
   private boolean returnPartialReport;
   private long submitIntervalTime;
   private boolean allowPartialResult;
@@ -344,7 +344,7 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException(errMsg, null);
     }
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     Map<SubClusterId, SubClusterInfo> subClustersActive =
         federationFacade.getSubClusters(true);
 
@@ -360,7 +360,7 @@ public class FederationClientInterceptor
           runWithRetries(actualRetryNums, submitIntervalTime);
 
       if (response != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededAppsCreated(stopTime - startTime);
         return response;
       }
@@ -497,7 +497,7 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException(errMsg, null);
     }
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ApplicationId applicationId =
         request.getApplicationSubmissionContext().getApplicationId();
     List<SubClusterId> blacklist = new ArrayList<>();
@@ -518,7 +518,7 @@ public class FederationClientInterceptor
           runWithRetries(actualRetryNums, submitIntervalTime);
 
       if (response != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededAppsSubmitted(stopTime - startTime);
         return response;
       }
@@ -640,7 +640,7 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException(msg, null);
     }
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
 
     ApplicationId applicationId = request.getApplicationId();
     SubClusterId subClusterId = null;
@@ -690,7 +690,7 @@ public class FederationClientInterceptor
           applicationId, subClusterId.getId());
     }
 
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededAppsKilled(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), FORCE_KILL_APP,
         TARGET_CLIENT_RM_SERVICE, applicationId);
@@ -725,7 +725,7 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException(errMsg, null);
     }
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     SubClusterId subClusterId = null;
 
     try {
@@ -760,7 +760,7 @@ public class FederationClientInterceptor
           + "the application {} to SubCluster {}.",
           request.getApplicationId(), subClusterId.getId());
     }
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededAppsRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_APP_REPORT,
         TARGET_CLIENT_RM_SERVICE, request.getApplicationId());
@@ -796,7 +796,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
     }
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ClientMethod remoteMethod = new ClientMethod("getApplications",
         new Class[] {GetApplicationsRequest.class}, new Object[] {request});
     Collection<GetApplicationsResponse> applications = null;
@@ -809,7 +809,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, ex);
     }
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededMultipleAppsRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_APPLICATIONS,
         TARGET_CLIENT_RM_SERVICE);
@@ -827,7 +827,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
     }
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
         new Class[] {GetClusterMetricsRequest.class}, new Object[] {request});
     Collection<GetClusterMetricsResponse> clusterMetrics = null;
@@ -840,7 +840,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, ex);
     }
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededGetClusterMetricsRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_CLUSTERMETRICS,
         TARGET_CLIENT_RM_SERVICE);
@@ -979,13 +979,13 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
     }
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ClientMethod remoteMethod = new ClientMethod("getClusterNodes",
         new Class[]{GetClusterNodesRequest.class}, new Object[]{request});
     try {
       Collection<GetClusterNodesResponse> clusterNodes =
           invokeConcurrent(remoteMethod, GetClusterNodesResponse.class);
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       routerMetrics.succeededGetClusterNodesRetrieved(stopTime - startTime);
       RouterAuditLogger.logSuccess(user.getShortUserName(), GET_CLUSTERNODES,
           TARGET_CLIENT_RM_SERVICE);
@@ -1027,7 +1027,7 @@ public class FederationClientInterceptor
     }
     String rSubCluster = request.getSubClusterId();
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ClientMethod remoteMethod = new ClientMethod("getQueueInfo",
         new Class[]{GetQueueInfoRequest.class}, new Object[]{request});
     Collection<GetQueueInfoResponse> queues = null;
@@ -1044,7 +1044,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, ex);
     }
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededGetQueueInfoRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_QUEUEINFO, TARGET_CLIENT_RM_SERVICE);
     // Merge the GetQueueInfoResponse
@@ -1061,7 +1061,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg);
     }
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ClientMethod remoteMethod = new ClientMethod("getQueueUserAcls",
         new Class[] {GetQueueUserAclsInfoRequest.class}, new Object[] {request});
     Collection<GetQueueUserAclsInfoResponse> queueUserAcls = null;
@@ -1074,7 +1074,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, ex);
     }
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededGetQueueUserAclsRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_QUEUE_USER_ACLS,
         TARGET_CLIENT_RM_SERVICE);
@@ -1095,7 +1095,7 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException(msg);
     }
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     SubClusterId subClusterId = null;
 
     ApplicationId applicationId = request.getApplicationId();
@@ -1127,7 +1127,7 @@ public class FederationClientInterceptor
            request.getApplicationId(), request.getTargetQueue(), subClusterId.getId());
     }
 
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     RouterAuditLogger.logSuccess(user.getShortUserName(), MOVE_APPLICATION_ACROSS_QUEUES,
         TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
     routerMetrics.succeededMoveApplicationAcrossQueuesRetrieved(stopTime - startTime);
@@ -1146,7 +1146,7 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException(errMsg, null);
     }
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     Map<SubClusterId, SubClusterInfo> subClustersActive = federationFacade.getSubClusters(true);
 
     for (int i = 0; i < numSubmitRetries; ++i) {
@@ -1156,7 +1156,7 @@ public class FederationClientInterceptor
       try {
         GetNewReservationResponse response = clientRMProxy.getNewReservation(request);
         if (response != null) {
-          long stopTime = clock.getTime();
+          long stopTime = clock.millis();
           routerMetrics.succeededGetNewReservationRetrieved(stopTime - startTime);
           RouterAuditLogger.logSuccess(user.getShortUserName(), GET_NEW_RESERVATION,
               TARGET_CLIENT_RM_SERVICE);
@@ -1192,7 +1192,7 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException(msg, null);
     }
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ReservationId reservationId = request.getReservationId();
 
     for (int i = 0; i < numSubmitRetries; i++) {
@@ -1224,7 +1224,7 @@ public class FederationClientInterceptor
         ReservationSubmissionResponse response = clientRMProxy.submitReservation(request);
         if (response != null) {
           LOG.info("Reservation {} submitted on subCluster {}.", reservationId, subClusterId);
-          long stopTime = clock.getTime();
+          long stopTime = clock.millis();
           routerMetrics.succeededSubmitReservationRetrieved(stopTime - startTime);
           RouterAuditLogger.logSuccess(user.getShortUserName(), SUBMIT_RESERVATION,
               TARGET_CLIENT_RM_SERVICE);
@@ -1252,7 +1252,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
     }
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ClientMethod remoteMethod = new ClientMethod("listReservations",
         new Class[] {ReservationListRequest.class}, new Object[] {request});
     Collection<ReservationListResponse> listResponses = null;
@@ -1265,7 +1265,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, ex);
     }
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededListReservationsRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), LIST_RESERVATIONS,
         TARGET_CLIENT_RM_SERVICE);
@@ -1286,7 +1286,7 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException(msg, null);
     }
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ReservationId reservationId = request.getReservationId();
     SubClusterId subClusterId = getReservationHomeSubCluster(reservationId);
 
@@ -1294,7 +1294,7 @@ public class FederationClientInterceptor
       ApplicationClientProtocol client = getClientRMProxyForSubCluster(subClusterId);
       ReservationUpdateResponse response = client.updateReservation(request);
       if (response != null) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededUpdateReservationRetrieved(stopTime - startTime);
         RouterAuditLogger.logSuccess(user.getShortUserName(), UPDATE_RESERVATION,
             TARGET_CLIENT_RM_SERVICE);
@@ -1326,7 +1326,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
     }
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ReservationId reservationId = request.getReservationId();
     SubClusterId subClusterId = getReservationHomeSubCluster(reservationId);
 
@@ -1335,7 +1335,7 @@ public class FederationClientInterceptor
       ReservationDeleteResponse response = client.deleteReservation(request);
       if (response != null) {
         federationFacade.deleteReservationHomeSubCluster(reservationId);
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededDeleteReservationRetrieved(stopTime - startTime);
         RouterAuditLogger.logSuccess(user.getShortUserName(), DELETE_RESERVATION,
             TARGET_CLIENT_RM_SERVICE);
@@ -1366,7 +1366,7 @@ public class FederationClientInterceptor
       RouterAuditLogger.logFailure(user.getShortUserName(), GET_NODETOLABELS, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, msg);
     }
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ClientMethod remoteMethod = new ClientMethod("getNodeToLabels",
         new Class[] {GetNodesToLabelsRequest.class}, new Object[] {request});
     Collection<GetNodesToLabelsResponse> clusterNodes = null;
@@ -1379,7 +1379,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, ex);
     }
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededGetNodeToLabelsRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_NODETOLABELS,
         TARGET_CLIENT_RM_SERVICE);
@@ -1397,7 +1397,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
     }
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ClientMethod remoteMethod = new ClientMethod("getLabelsToNodes",
          new Class[] {GetLabelsToNodesRequest.class}, new Object[] {request});
     Collection<GetLabelsToNodesResponse> labelNodes = null;
@@ -1410,7 +1410,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, ex);
     }
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededGetLabelsToNodesRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_LABELSTONODES,
         TARGET_CLIENT_RM_SERVICE);
@@ -1428,7 +1428,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
     }
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ClientMethod remoteMethod = new ClientMethod("getClusterNodeLabels",
          new Class[] {GetClusterNodeLabelsRequest.class}, new Object[] {request});
     Collection<GetClusterNodeLabelsResponse> nodeLabels = null;
@@ -1441,7 +1441,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, ex);
     }
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededGetClusterNodeLabelsRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_CLUSTERNODELABELS,
         TARGET_CLIENT_RM_SERVICE);
@@ -1480,7 +1480,7 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException(msg, null);
     }
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     SubClusterId subClusterId = null;
     ApplicationId applicationId = request.getApplicationAttemptId().getApplicationId();
     try {
@@ -1517,7 +1517,7 @@ public class FederationClientInterceptor
           request.getApplicationAttemptId(), subClusterId.getId());
     }
 
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededAppAttemptReportRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_APPLICATION_ATTEMPT_REPORT,
         TARGET_CLIENT_RM_SERVICE);
@@ -1535,7 +1535,7 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException(msg);
     }
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ApplicationId applicationId = request.getApplicationId();
     SubClusterId subClusterId = null;
     try {
@@ -1567,7 +1567,7 @@ public class FederationClientInterceptor
            subClusterId.getId());
     }
 
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_APPLICATION_ATTEMPTS,
         TARGET_CLIENT_RM_SERVICE, applicationId);
     routerMetrics.succeededAppAttemptsRetrieved(stopTime - startTime);
@@ -1585,7 +1585,7 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException(msg, null);
     }
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ApplicationId applicationId = request.getContainerId().
         getApplicationAttemptId().getApplicationId();
     SubClusterId subClusterId = null;
@@ -1616,7 +1616,7 @@ public class FederationClientInterceptor
            subClusterId.getId());
     }
 
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_CONTAINERREPORT,
         TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
     routerMetrics.succeededGetContainerReportRetrieved(stopTime - startTime);
@@ -1634,7 +1634,7 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException(msg, null);
     }
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ApplicationId applicationId = request.getApplicationAttemptId().getApplicationId();
     SubClusterId subClusterId = null;
     try {
@@ -1667,7 +1667,7 @@ public class FederationClientInterceptor
           subClusterId.getId());
     }
 
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_CONTAINERS,
         TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
     routerMetrics.succeededGetContainersRetrieved(stopTime - startTime);
@@ -1696,7 +1696,7 @@ public class FederationClientInterceptor
         throw new IOException(msg);
       }
 
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
       Text owner = new Text(ugi.getUserName());
       Text realUser = null;
@@ -1714,7 +1714,7 @@ public class FederationClientInterceptor
               realRMDToken.getKind().toString(),
               realRMDToken.getPassword(), realRMDToken.getService().toString());
 
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       routerMetrics.succeededGetDelegationTokenRetrieved((stopTime - startTime));
       RouterAuditLogger.logSuccess(user.getShortUserName(), GET_DELEGATIONTOKEN,
           TARGET_CLIENT_RM_SERVICE);
@@ -1740,7 +1740,7 @@ public class FederationClientInterceptor
         throw new IOException(msg);
       }
 
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       org.apache.hadoop.yarn.api.records.Token protoToken = request.getDelegationToken();
       Token<RMDelegationTokenIdentifier> token = new Token<>(
           protoToken.getIdentifier().array(), protoToken.getPassword().array(),
@@ -1750,7 +1750,7 @@ public class FederationClientInterceptor
       RenewDelegationTokenResponse renewResponse =
           Records.newRecord(RenewDelegationTokenResponse.class);
       renewResponse.setNextExpirationTime(nextExpTime);
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       routerMetrics.succeededRenewDelegationTokenRetrieved((stopTime - startTime));
       RouterAuditLogger.logSuccess(user.getShortUserName(), RENEW_DELEGATIONTOKEN,
           TARGET_CLIENT_RM_SERVICE);
@@ -1776,14 +1776,14 @@ public class FederationClientInterceptor
         throw new IOException(msg);
       }
 
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       org.apache.hadoop.yarn.api.records.Token protoToken = request.getDelegationToken();
       Token<RMDelegationTokenIdentifier> token = new Token<>(
           protoToken.getIdentifier().array(), protoToken.getPassword().array(),
           new Text(protoToken.getKind()), new Text(protoToken.getService()));
       String currentUser = UserGroupInformation.getCurrentUser().getUserName();
       this.getTokenSecretManager().cancelToken(token, currentUser);
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       routerMetrics.succeededCancelDelegationTokenRetrieved((stopTime - startTime));
       RouterAuditLogger.logSuccess(user.getShortUserName(), CANCEL_DELEGATIONTOKEN,
           TARGET_CLIENT_RM_SERVICE);
@@ -1808,7 +1808,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
     }
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     SubClusterId subClusterId = null;
     ApplicationAttemptId applicationAttemptId = request.getApplicationAttemptId();
     ApplicationId applicationId = applicationAttemptId.getApplicationId();
@@ -1844,7 +1844,7 @@ public class FederationClientInterceptor
           request.getApplicationAttemptId(), subClusterId.getId());
     }
 
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededFailAppAttemptRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), FAIL_APPLICATIONATTEMPT,
         TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
@@ -1865,7 +1865,7 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException(msg, null);
     }
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     SubClusterId subClusterId = null;
     ApplicationId applicationId = request.getApplicationId();
 
@@ -1899,7 +1899,7 @@ public class FederationClientInterceptor
            applicationId, subClusterId.getId());
     }
 
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededUpdateAppPriorityRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), UPDATE_APPLICATIONPRIORITY,
         TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
@@ -1918,7 +1918,7 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException(msg, null);
     }
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     SubClusterId subClusterId = null;
     ApplicationId applicationId =
         request.getContainerId().getApplicationAttemptId().getApplicationId();
@@ -1949,7 +1949,7 @@ public class FederationClientInterceptor
           "the applicationId {} to SubCluster {}.", applicationId, subClusterId);
     }
 
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededSignalToContainerRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), SIGNAL_TOCONTAINER,
         TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
@@ -1970,7 +1970,7 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException(msg, null);
     }
 
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     SubClusterId subClusterId = null;
     ApplicationId applicationId = request.getApplicationId();
     try {
@@ -2002,7 +2002,7 @@ public class FederationClientInterceptor
           applicationId, subClusterId.getId());
     }
 
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededUpdateAppTimeoutsRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), UPDATE_APPLICATIONTIMEOUTS,
         TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
@@ -2019,7 +2019,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
     }
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ClientMethod remoteMethod = new ClientMethod("getResourceProfiles",
         new Class[] {GetAllResourceProfilesRequest.class}, new Object[] {request});
     Collection<GetAllResourceProfilesResponse> resourceProfiles = null;
@@ -2033,7 +2033,7 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException("Unable to get resource profiles due to exception.",
           ex);
     }
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededGetResourceProfilesRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_RESOURCEPROFILES,
         TARGET_CLIENT_RM_SERVICE);
@@ -2050,7 +2050,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
     }
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ClientMethod remoteMethod = new ClientMethod("getResourceProfile",
         new Class[] {GetResourceProfileRequest.class}, new Object[] {request});
     Collection<GetResourceProfileResponse> resourceProfile = null;
@@ -2063,7 +2063,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, ex);
     }
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededGetResourceProfileRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_RESOURCEPROFILE,
         TARGET_CLIENT_RM_SERVICE);
@@ -2080,7 +2080,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
     }
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ClientMethod remoteMethod = new ClientMethod("getResourceTypeInfo",
         new Class[] {GetAllResourceTypeInfoRequest.class}, new Object[] {request});
     Collection<GetAllResourceTypeInfoResponse> listResourceTypeInfo;
@@ -2094,7 +2094,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       throw ex;
     }
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededGetResourceTypeInfoRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_RESOURCETYPEINFO,
         TARGET_CLIENT_RM_SERVICE);
@@ -2118,7 +2118,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
     }
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ClientMethod remoteMethod = new ClientMethod("getAttributesToNodes",
         new Class[] {GetAttributesToNodesRequest.class}, new Object[] {request});
     Collection<GetAttributesToNodesResponse> attributesToNodesResponses = null;
@@ -2132,7 +2132,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, ex);
     }
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededGetAttributesToNodesRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_ATTRIBUTESTONODES,
         TARGET_CLIENT_RM_SERVICE);
@@ -2149,7 +2149,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
     }
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ClientMethod remoteMethod = new ClientMethod("getClusterNodeAttributes",
         new Class[] {GetClusterNodeAttributesRequest.class}, new Object[] {request});
     Collection<GetClusterNodeAttributesResponse> clusterNodeAttributesResponses = null;
@@ -2163,7 +2163,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, ex);
     }
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededGetClusterNodeAttributesRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_CLUSTERNODEATTRIBUTES,
         TARGET_CLIENT_RM_SERVICE);
@@ -2180,7 +2180,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
     }
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     ClientMethod remoteMethod = new ClientMethod("getNodesToAttributes",
         new Class[] {GetNodesToAttributesRequest.class}, new Object[] {request});
     Collection<GetNodesToAttributesResponse> nodesToAttributesResponses = null;
@@ -2194,7 +2194,7 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, ex);
     }
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededGetNodesToAttributesRetrieved(stopTime - startTime);
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_NODESTOATTRIBUTES,
         TARGET_CLIENT_RM_SERVICE);

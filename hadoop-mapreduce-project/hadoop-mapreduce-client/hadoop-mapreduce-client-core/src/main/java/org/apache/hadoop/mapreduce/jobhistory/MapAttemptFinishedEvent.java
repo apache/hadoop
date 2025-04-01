@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import java.time.Clock;
 import java.util.Set;
 
 import org.apache.avro.util.Utf8;
@@ -32,7 +33,6 @@ import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
-import org.apache.hadoop.util.SystemClock;
 
 /**
  * Event to record successful completion of a map attempt.
@@ -110,7 +110,7 @@ public class MapAttemptFinishedEvent implements HistoryEvent {
       int[][] allSplits) {
     this(id, taskType, taskStatus, mapFinishTime, finishTime, hostname, port,
         rackName, state, counters, allSplits,
-        SystemClock.getInstance().getTime());
+        Clock.systemUTC().millis());
   }
 
   /** 

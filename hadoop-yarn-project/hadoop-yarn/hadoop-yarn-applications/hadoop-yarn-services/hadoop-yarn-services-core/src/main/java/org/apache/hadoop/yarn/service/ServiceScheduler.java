@@ -84,8 +84,6 @@ import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.ServiceRegistryUtils;
 import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.apache.hadoop.yarn.util.BoundedAppender;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,6 +99,7 @@ import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
+import java.time.Clock;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -199,7 +198,7 @@ public class ServiceScheduler extends CompositeService {
     super(context.getService().getName());
     this.context = context;
     this.app = context.getService();
-    this.systemClock = SystemClock.getInstance();
+    this.systemClock = Clock.systemUTC();
   }
 
   public void buildInstance(ServiceContext context, Configuration configuration)
@@ -1024,7 +1023,7 @@ public class ServiceScheduler extends CompositeService {
         if (isTimelineServiceEnabled()) {
           // record in ATS
           serviceTimelinePublisher.componentFinished(comp.getComponentSpec(),
-              comp.getComponentSpec().getState(), systemClock.getTime());
+              comp.getComponentSpec().getState(), systemClock.millis());
         }
       } else {
         shouldTerminate = false;

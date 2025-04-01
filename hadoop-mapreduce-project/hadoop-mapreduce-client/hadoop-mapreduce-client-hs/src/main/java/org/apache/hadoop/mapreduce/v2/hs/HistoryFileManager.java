@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.hs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.ConnectException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -73,8 +74,6 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -595,7 +594,7 @@ public class HistoryFileManager extends AbstractService {
     long maxFSWaitTime = conf.getLong(
         JHAdminConfig.MR_HISTORY_MAX_START_WAIT_TIME,
         JHAdminConfig.DEFAULT_MR_HISTORY_MAX_START_WAIT_TIME);
-    createHistoryDirs(SystemClock.getInstance(), 10 * 1000, maxFSWaitTime);
+    createHistoryDirs(Clock.systemUTC(), 10 * 1000, maxFSWaitTime);
 
     maxTasksForLoadedJob = conf.getInt(
         JHAdminConfig.MR_HS_LOADED_JOBS_TASKS_MAX,
@@ -629,11 +628,11 @@ public class HistoryFileManager extends AbstractService {
   @VisibleForTesting
   void createHistoryDirs(Clock clock, long intervalCheckMillis,
       long timeOutMillis) throws IOException {
-    long start = clock.getTime();
+    long start = clock.millis();
     boolean done = false;
     int counter = 0;
     while (!done &&
-        ((timeOutMillis == -1) || (clock.getTime() - start < timeOutMillis))) {
+        ((timeOutMillis == -1) || (clock.millis() - start < timeOutMillis))) {
       done = tryCreatingHistoryDirs(counter++ % 3 == 0); // log every 3 attempts, 30sec
       if (done) {
         break;

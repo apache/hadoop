@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 
+import java.time.Clock;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -32,8 +33,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationAllocation;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -62,7 +61,7 @@ public class SimpleCapacityReplanner implements Planner {
   private long lengthOfCheckZone;
 
   public SimpleCapacityReplanner() {
-    this(new UTCClock());
+    this(Clock.systemUTC());
   }
 
   @VisibleForTesting
@@ -87,7 +86,7 @@ public class SimpleCapacityReplanner implements Planner {
 
     ResourceCalculator resCalc = plan.getResourceCalculator();
     Resource totCap = plan.getTotalCapacity();
-    long now = clock.getTime();
+    long now = clock.millis();
 
     // loop on all moment in time from now to the end of the check Zone
     // or the end of the planned sessions whichever comes first

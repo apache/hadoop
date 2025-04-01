@@ -28,6 +28,7 @@ import java.sql.SQLException;
 import java.sql.Blob;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -115,7 +116,6 @@ import org.apache.hadoop.yarn.server.federation.store.sql.RouterStoreTokenHandle
 import org.apache.hadoop.yarn.server.federation.store.sql.RowCountHandler;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -236,7 +236,7 @@ public class SQLFederationStateStore implements FederationStateStore {
   private String url;
   private int maximumPoolSize;
   private HikariDataSource dataSource = null;
-  private final Clock clock = new MonotonicClock();
+  private final Clock clock = MonotonicClock.get();
   @VisibleForTesting
   private Connection conn = null;
   private int maxAppsInStateStore;
@@ -338,9 +338,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.registerOutParameter("rowCount_OUT", INTEGER);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       cstmt.executeUpdate();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       // Check the ROWCOUNT value, if it is equal to 0 it means the call
       // did not add a new subcluster into FederationStateStore
@@ -393,9 +393,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.registerOutParameter("rowCount_OUT", INTEGER);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       cstmt.executeUpdate();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       // Check the ROWCOUNT value, if it is equal to 0 it means the call
       // did not deregister the subcluster into FederationStateStore
@@ -447,9 +447,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.registerOutParameter("rowCount_OUT", INTEGER);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       cstmt.executeUpdate();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       // Check the ROWCOUNT value, if it is equal to 0 it means the call
       // did not update the subcluster into FederationStateStore
@@ -506,9 +506,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.registerOutParameter("capability_OUT", VARCHAR);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       cstmt.execute();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       String amRMAddress = cstmt.getString("amRMServiceAddress_OUT");
       String clientRMAddress = cstmt.getString("clientRMServiceAddress_OUT");
@@ -564,9 +564,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt = getCallableStatement(CALL_SP_GET_SUBCLUSTERS);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       rs = cstmt.executeQuery();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       while (rs.next()) {
 
@@ -648,9 +648,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.registerOutParameter("rowCount_OUT", INTEGER);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       cstmt.executeUpdate();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       subClusterHome = cstmt.getString("storedHomeSubCluster_OUT");
       SubClusterId subClusterIdHome = SubClusterId.newInstance(subClusterHome);
@@ -732,9 +732,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.registerOutParameter("rowCount_OUT", INTEGER);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       cstmt.executeUpdate();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       // Check the ROWCOUNT value, if it is equal to 0 it means the call
       // did not update the application into FederationStateStore
@@ -787,9 +787,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.registerOutParameter("applicationContext_OUT", Types.BLOB);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       cstmt.execute();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       String homeSubCluster = cstmt.getString("homeSubCluster_OUT");
       if (homeSubCluster != null) {
@@ -854,9 +854,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.setString("homeSubCluster_IN", homeSubClusterIN);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       rs = cstmt.executeQuery();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       while (rs.next() && appsHomeSubClusters.size() <= maxAppsInStateStore) {
 
@@ -900,9 +900,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.registerOutParameter("rowCount_OUT", INTEGER);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       cstmt.executeUpdate();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       // Check the ROWCOUNT value, if it is equal to 0 it means the call
       // did not delete the application from FederationStateStore
@@ -951,9 +951,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.registerOutParameter("params_OUT", java.sql.Types.VARBINARY);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       cstmt.executeUpdate();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       // Check if the output it is a valid policy
       String policyType = cstmt.getString("policyType_OUT");
@@ -1002,9 +1002,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.registerOutParameter("rowCount_OUT", INTEGER);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       cstmt.executeUpdate();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       // Check the ROWCOUNT value, if it is equal to 0 it means the call
       // did not add a new policy into FederationStateStore
@@ -1046,9 +1046,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt = getCallableStatement(CALL_SP_GET_POLICIES_CONFIGURATIONS);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       rs = cstmt.executeQuery();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       while (rs.next()) {
         // Extract the output for each tuple
@@ -1153,9 +1153,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       callableStatement.registerOutParameter("versionComment_OUT", VARCHAR);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       callableStatement.executeUpdate();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       // Parsing version information.
       String versionComment = callableStatement.getString("versionComment_OUT");
@@ -1207,9 +1207,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       callableStatement.registerOutParameter("rowCount_OUT", INTEGER);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       callableStatement.executeUpdate();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       // Check the ROWCOUNT value, if it is equal to 0 it means the call
       // did not add a new version into FederationStateStore
@@ -1323,9 +1323,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.registerOutParameter("rowCount_OUT", INTEGER);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       cstmt.executeUpdate();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       // Get SubClusterHome
       String subClusterHomeIdString = cstmt.getString("storedHomeSubCluster_OUT");
@@ -1411,9 +1411,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.registerOutParameter("homeSubCluster_OUT", VARCHAR);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       cstmt.execute();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       // Get Result
       String subClusterHomeIdString = cstmt.getString("homeSubCluster_OUT");
@@ -1466,9 +1466,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt = getCallableStatement(CALL_SP_GET_RESERVATIONS_HOME_SUBCLUSTER);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       rs = cstmt.executeQuery();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       while (rs.next()) {
         // Extract the output for each tuple
@@ -1529,9 +1529,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.registerOutParameter("rowCount_OUT", INTEGER);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       cstmt.executeUpdate();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       int rowCount = cstmt.getInt("rowCount_OUT");
 
@@ -1598,9 +1598,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.registerOutParameter("rowCount_OUT", INTEGER);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       cstmt.executeUpdate();
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       int rowCount = cstmt.getInt("rowCount_OUT");
 
@@ -1669,10 +1669,10 @@ public class SQLFederationStateStore implements FederationStateStore {
           new FederationSQLOutParameter<>("rowCount_OUT", INTEGER, Integer.class);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       Integer rowCount = getRowCountByProcedureSQL(CALL_SP_ADD_MASTERKEY, keyId,
           delegationKeyStr, rowCountOUT);
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       // We hope that 1 record can be written to the database.
       // If the number of records is not 1, it means that the data was written incorrectly.
@@ -1722,12 +1722,12 @@ public class SQLFederationStateStore implements FederationStateStore {
     try {
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       FederationSQLOutParameter<Integer> rowCountOUT =
           new FederationSQLOutParameter<>("rowCount_OUT", INTEGER, Integer.class);
       Integer rowCount = getRowCountByProcedureSQL(CALL_SP_DELETE_MASTERKEY,
           paramKeyId, rowCountOUT);
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       // if it is equal to 0 it means the call
       // did not delete the reservation from FederationStateStore
@@ -1790,10 +1790,10 @@ public class SQLFederationStateStore implements FederationStateStore {
           new FederationSQLOutParameter<>("masterKey_OUT", VARCHAR, String.class);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RouterMasterKey routerMasterKey = runner.execute(
           conn, CALL_SP_GET_MASTERKEY, new RouterMasterKeyHandler(), paramKeyId, masterKeyOUT);
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       LOG.info("Got the information about the specified masterKey = {} according to keyId = {}.",
           routerMasterKey, paramKeyId);
@@ -1917,11 +1917,11 @@ public class SQLFederationStateStore implements FederationStateStore {
         new FederationSQLOutParameter<>("rowCount_OUT", INTEGER, Integer.class);
 
     // Execute the query
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     String procedure = isAdd ? CALL_SP_ADD_DELEGATIONTOKEN : CALL_SP_UPDATE_DELEGATIONTOKEN;
     Integer rowCount = runner.execute(conn, procedure, new RowCountHandler("rowCount_OUT"),
         sequenceNum, tokenIdentifier, tokenInfo, renewDate, rowCountOUT);
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
 
     // Get rowCount
     // In the process of updating the code, rowCount may be 0 or 1;
@@ -1971,10 +1971,10 @@ public class SQLFederationStateStore implements FederationStateStore {
           new FederationSQLOutParameter<>("rowCount_OUT", INTEGER, Integer.class);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       Integer rowCount = getRowCountByProcedureSQL(CALL_SP_DELETE_DELEGATIONTOKEN,
           sequenceNum, rowCountOUT);
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       // if it is equal to 0 it means the call
       // did not delete the reservation from FederationStateStore
@@ -2032,10 +2032,10 @@ public class SQLFederationStateStore implements FederationStateStore {
           new FederationSQLOutParameter<>("renewDate_OUT", BIGINT, Long.class);
 
       // Execute the query
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RouterStoreToken resultToken = runner.execute(conn, CALL_SP_GET_DELEGATIONTOKEN,
           new RouterStoreTokenHandler(), sequenceNum, tokenIdentOUT, tokenOUT, renewDateOUT);
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
 
       FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
       return RouterRMTokenResponse.newInstance(resultToken);

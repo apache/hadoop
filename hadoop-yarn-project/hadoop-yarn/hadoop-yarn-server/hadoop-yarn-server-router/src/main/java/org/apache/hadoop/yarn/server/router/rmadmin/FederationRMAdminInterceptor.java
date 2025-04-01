@@ -92,13 +92,13 @@ import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
-import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.Clock;
 import java.util.List;
 import java.util.Arrays;
 import java.util.ArrayList;
@@ -132,7 +132,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
   private Map<SubClusterId, ResourceManagerAdministrationProtocol> adminRMProxies;
   private FederationStateStoreFacade federationFacade;
-  private final Clock clock = new MonotonicClock();
+  private final Clock clock = MonotonicClock.get();
   private RouterMetrics routerMetrics;
   private ThreadPoolExecutor executorService;
   private Configuration conf;
@@ -238,7 +238,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     // call refreshQueues of activeSubClusters.
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
            new Class[] {RefreshQueuesRequest.class}, new Object[] {request});
 
@@ -250,7 +250,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       // it means that the call has been successful,
       // and the RefreshQueuesResponse method can be reconstructed and returned.
       if (CollectionUtils.isNotEmpty(refreshQueueResps)) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededRefreshQueuesRetrieved(stopTime - startTime);
         return RefreshQueuesResponse.newInstance();
       }
@@ -295,7 +295,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     // call refreshNodes of activeSubClusters.
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
           new Class[] {RefreshNodesRequest.class}, new Object[] {request});
 
@@ -304,7 +304,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
           remoteMethod.invokeConcurrent(this, RefreshNodesResponse.class, subClusterId);
 
       if (CollectionUtils.isNotEmpty(refreshNodesResps)) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededRefreshNodesRetrieved(stopTime - startTime);
         return RefreshNodesResponse.newInstance();
       }
@@ -352,7 +352,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     // call refreshSuperUserGroupsConfiguration of activeSubClusters.
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
           new Class[] {RefreshSuperUserGroupsConfigurationRequest.class}, new Object[] {request});
 
@@ -362,7 +362,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
           subClusterId);
 
       if (CollectionUtils.isNotEmpty(refreshSuperUserGroupsConfResps)) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededRefreshSuperUserGroupsConfRetrieved(stopTime - startTime);
         return RefreshSuperUserGroupsConfigurationResponse.newInstance();
       }
@@ -409,7 +409,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     // call refreshUserToGroupsMappings of activeSubClusters.
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
           new Class[] {RefreshUserToGroupsMappingsRequest.class}, new Object[] {request});
 
@@ -419,7 +419,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
           subClusterId);
 
       if (CollectionUtils.isNotEmpty(refreshUserToGroupsMappingsResps)) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededRefreshUserToGroupsMappingsRetrieved(stopTime - startTime);
         return RefreshUserToGroupsMappingsResponse.newInstance();
       }
@@ -445,14 +445,14 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     // call refreshAdminAcls of activeSubClusters.
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
           new Class[] {RefreshAdminAclsRequest.class}, new Object[] {request});
       String subClusterId = request.getSubClusterId();
       Collection<RefreshAdminAclsResponse> refreshAdminAclsResps =
           remoteMethod.invokeConcurrent(this, RefreshAdminAclsResponse.class, subClusterId);
       if (CollectionUtils.isNotEmpty(refreshAdminAclsResps)) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededRefreshAdminAclsRetrieved(stopTime - startTime);
         return RefreshAdminAclsResponse.newInstance();
       }
@@ -478,14 +478,14 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     // call refreshAdminAcls of activeSubClusters.
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
           new Class[]{RefreshServiceAclsRequest.class}, new Object[]{request});
       String subClusterId = request.getSubClusterId();
       Collection<RefreshServiceAclsResponse> refreshServiceAclsResps =
           remoteMethod.invokeConcurrent(this, RefreshServiceAclsResponse.class, subClusterId);
       if (CollectionUtils.isNotEmpty(refreshServiceAclsResps)) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededRefreshServiceAclsRetrieved(stopTime - startTime);
         return RefreshServiceAclsResponse.newInstance();
       }
@@ -516,13 +516,13 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
           new Class[]{UpdateNodeResourceRequest.class}, new Object[]{request});
       Collection<UpdateNodeResourceResponse> updateNodeResourceResps =
           remoteMethod.invokeConcurrent(this, UpdateNodeResourceResponse.class, subClusterId);
       if (CollectionUtils.isNotEmpty(updateNodeResourceResps)) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededUpdateNodeResourceRetrieved(stopTime - startTime);
         return UpdateNodeResourceResponse.newInstance();
       }
@@ -553,13 +553,13 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
           new Class[]{RefreshNodesResourcesRequest.class}, new Object[]{request});
       Collection<RefreshNodesResourcesResponse> refreshNodesResourcesResps =
           remoteMethod.invokeConcurrent(this, RefreshNodesResourcesResponse.class, subClusterId);
       if (CollectionUtils.isNotEmpty(refreshNodesResourcesResps)) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededRefreshNodesResourcesRetrieved(stopTime - startTime);
         return RefreshNodesResourcesResponse.newInstance();
       }
@@ -589,13 +589,13 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
           new Class[]{AddToClusterNodeLabelsRequest.class}, new Object[]{request});
       Collection<AddToClusterNodeLabelsResponse> addToClusterNodeLabelsResps =
           remoteMethod.invokeConcurrent(this, AddToClusterNodeLabelsResponse.class, subClusterId);
       if (CollectionUtils.isNotEmpty(addToClusterNodeLabelsResps)) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededAddToClusterNodeLabelsRetrieved(stopTime - startTime);
         return AddToClusterNodeLabelsResponse.newInstance();
       }
@@ -627,14 +627,14 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
           new Class[]{RemoveFromClusterNodeLabelsRequest.class}, new Object[]{request});
       Collection<RemoveFromClusterNodeLabelsResponse> refreshNodesResourcesResps =
           remoteMethod.invokeConcurrent(this, RemoveFromClusterNodeLabelsResponse.class,
           subClusterId);
       if (CollectionUtils.isNotEmpty(refreshNodesResourcesResps)) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededRemoveFromClusterNodeLabelsRetrieved(stopTime - startTime);
         return RemoveFromClusterNodeLabelsResponse.newInstance();
       }
@@ -664,13 +664,13 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
           new Class[]{ReplaceLabelsOnNodeRequest.class}, new Object[]{request});
       Collection<ReplaceLabelsOnNodeResponse> replaceLabelsOnNodeResps =
           remoteMethod.invokeConcurrent(this, ReplaceLabelsOnNodeResponse.class, subClusterId);
       if (CollectionUtils.isNotEmpty(replaceLabelsOnNodeResps)) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededRemoveFromClusterNodeLabelsRetrieved(stopTime - startTime);
         return ReplaceLabelsOnNodeResponse.newInstance();
       }
@@ -702,7 +702,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
           new Class[]{CheckForDecommissioningNodesRequest.class}, new Object[]{request});
 
@@ -716,7 +716,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
             responses.stream().collect(Collectors.toList());
         if (!collects.isEmpty() && collects.size() == 1) {
           CheckForDecommissioningNodesResponse response = collects.get(0);
-          long stopTime = clock.getTime();
+          long stopTime = clock.millis();
           routerMetrics.succeededCheckForDecommissioningNodesRetrieved((stopTime - startTime));
           Set<NodeId> nodes = response.getDecommissioningNodes();
           return CheckForDecommissioningNodesResponse.newInstance(nodes);
@@ -750,14 +750,14 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
           new Class[]{RefreshClusterMaxPriorityRequest.class}, new Object[]{request});
       Collection<RefreshClusterMaxPriorityResponse> refreshClusterMaxPriorityResps =
           remoteMethod.invokeConcurrent(this, RefreshClusterMaxPriorityResponse.class,
           subClusterId);
       if (CollectionUtils.isNotEmpty(refreshClusterMaxPriorityResps)) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededRefreshClusterMaxPriorityRetrieved(stopTime - startTime);
         return RefreshClusterMaxPriorityResponse.newInstance();
       }
@@ -787,14 +787,14 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
           new Class[]{NodesToAttributesMappingRequest.class}, new Object[]{request});
       Collection<NodesToAttributesMappingResponse> mapAttributesToNodesResps =
           remoteMethod.invokeConcurrent(this, NodesToAttributesMappingResponse.class,
           subClusterId);
       if (CollectionUtils.isNotEmpty(mapAttributesToNodesResps)) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         routerMetrics.succeededMapAttributesToNodesRetrieved(stopTime - startTime);
         return NodesToAttributesMappingResponse.newInstance();
       }
@@ -817,13 +817,13 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
           new Class[]{String.class}, new Object[]{user});
       Collection<String[]> getGroupsForUserResps =
           remoteMethod.invokeConcurrent(this, String[].class, null);
       if (CollectionUtils.isNotEmpty(getGroupsForUserResps)) {
-        long stopTime = clock.getTime();
+        long stopTime = clock.millis();
         Set<String> groups = new HashSet<>();
         for (String[] groupArr : getGroupsForUserResps) {
           if (groupArr != null && groupArr.length > 0) {
@@ -878,7 +878,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       List<DeregisterSubClusters> deregisterSubClusterList = new ArrayList<>();
       String reqSubClusterId = request.getSubClusterId();
       if (StringUtils.isNotBlank(reqSubClusterId)) {
@@ -895,7 +895,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
           deregisterSubClusterList.add(deregisterSubClusters);
         }
       }
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       routerMetrics.succeededDeregisterSubClusterRetrieved(stopTime - startTime);
       return DeregisterSubClusterResponse.newInstance(deregisterSubClusterList);
     } catch (Exception e) {
@@ -956,7 +956,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     FederationQueueWeight.checkHeadRoomAlphaValid(headRoomAlpha);
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
 
       // Step2, parse amRMPolicyWeights.
       Map<SubClusterIdInfo, Float> amRMPolicyWeights = getSubClusterWeightMap(amRmWeight);
@@ -977,7 +977,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
           SubClusterPolicyConfiguration.newInstance(queue, policyManagerClassName,
           weightedPolicyInfo.toByteBuffer());
       federationFacade.setPolicyConfiguration(policyConfiguration);
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       routerMetrics.succeededSaveFederationQueuePolicyRetrieved(stopTime - startTime);
       return SaveFederationQueuePolicyResponse.newInstance("save policy success.");
     } catch (Exception e) {
@@ -1016,11 +1016,11 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     }
 
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       for (FederationQueueWeight federationQueueWeight : federationQueueWeights) {
         saveFederationQueuePolicy(federationQueueWeight);
       }
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       routerMetrics.succeededBatchSaveFederationQueuePoliciesRetrieved(stopTime - startTime);
       return BatchSaveFederationQueuePoliciesResponse.newInstance("batch save policies success.");
     } catch (Exception e) {
@@ -1068,7 +1068,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     try {
       QueryFederationQueuePoliciesResponse response;
 
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       String queue = request.getQueue();
       List<String> queues = request.getQueues();
       int currentPage = request.getCurrentPage();
@@ -1094,7 +1094,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         // If we don't have any filtering criteria, we should also support paginating the results.
         response = filterPoliciesConfigurations(policiesConfigurations, pageSize, currentPage);
       }
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       routerMetrics.succeededListFederationQueuePoliciesRetrieved(stopTime - startTime);
       if (response == null) {
         response = QueryFederationQueuePoliciesResponse.newInstance();
@@ -1130,10 +1130,10 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     // Try calling deleteApplicationHomeSubCluster to delete the application.
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       ApplicationId applicationId = ApplicationId.fromString(application);
       federationFacade.deleteApplicationHomeSubCluster(applicationId);
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       routerMetrics.succeededDeleteFederationApplicationFailedRetrieved(stopTime - startTime);
       return DeleteFederationApplicationResponse.newInstance(
           "applicationId = " + applicationId + " delete success.");
@@ -1170,7 +1170,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     // Step2. Get FederationSubCluster data.
     List<FederationSubCluster> federationSubClusters = new ArrayList<>();
-    long startTime = clock.getTime();
+    long startTime = clock.millis();
     for (Map.Entry<SubClusterId, SubClusterInfo> subCluster : subClusters.entrySet()) {
       SubClusterId subClusterId = subCluster.getKey();
       try {
@@ -1185,7 +1185,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         LOG.error("getSubClusters SubClusterId = [%s] error.", subClusterId, e);
       }
     }
-    long stopTime = clock.getTime();
+    long stopTime = clock.millis();
     routerMetrics.succeededGetFederationSubClustersRetrieved(stopTime - startTime);
 
     // Step3. Return results.
@@ -1219,9 +1219,9 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     // Try calling deleteApplicationHomeSubCluster to delete the application.
     try {
-      long startTime = clock.getTime();
+      long startTime = clock.millis();
       federationFacade.deletePolicyConfigurations(queues);
-      long stopTime = clock.getTime();
+      long stopTime = clock.millis();
       routerMetrics.succeededDeleteFederationPoliciesByQueuesRetrieved(stopTime - startTime);
       return DeleteFederationQueuePoliciesResponse.newInstance(
          "queues = " + StringUtils.join(queues, ",") + " delete success.");
