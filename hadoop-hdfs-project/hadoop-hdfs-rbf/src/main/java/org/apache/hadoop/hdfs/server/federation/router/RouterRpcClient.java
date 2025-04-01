@@ -281,6 +281,15 @@ public class RouterRpcClient {
   }
 
   /**
+   * Get the executor service used by invoking concurrent calls.
+   * @return
+   */
+  @VisibleForTesting
+  public ThreadPoolExecutor getExecutorService() {
+    return executorService;
+  }
+
+  /**
    * Shutdown the client.
    */
   public void shutdown() {

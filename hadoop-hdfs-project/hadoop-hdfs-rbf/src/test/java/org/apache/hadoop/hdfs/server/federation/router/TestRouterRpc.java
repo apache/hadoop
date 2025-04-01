@@ -2426,4 +2426,9 @@ public class TestRouterRpc {
     // The audit log should not contain async:true.
     assertFalse(auditLog.getOutput().contains("async:true"));
   }
+
+  @Test
+  public void testConcurrentCallExecutorInitial() {
+    assertNotNull(router.getRouterRpcClient().getExecutorService());
+  }
 }
