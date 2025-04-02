@@ -43,12 +43,12 @@ import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 
 public class TestSQLDelegationTokenSecretManagerImpl {
@@ -58,17 +58,17 @@ public class TestSQLDelegationTokenSecretManagerImpl {
   private static final int TOKEN_EXPIRATION_SCAN_SECONDS = 1;
   private static Configuration conf;
 
-  @Before
+  @BeforeEach
   public void init() throws SQLException {
     createTestDBTables();
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws SQLException {
     dropTestDBTables();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void initDatabase() throws SQLException {
     DriverManager.getConnection(CONNECTION_URL + ";create=true");
 
@@ -82,7 +82,7 @@ public class TestSQLDelegationTokenSecretManagerImpl {
     conf.setInt(DelegationTokenManager.REMOVAL_SCAN_INTERVAL, TOKEN_EXPIRATION_SCAN_SECONDS);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupDatabase() {
     try {
       DriverManager.getConnection(CONNECTION_URL + ";drop=true");
@@ -226,10 +226,10 @@ public class TestSQLDelegationTokenSecretManagerImpl {
         }
       }, 100, 6000);
 
-      Assert.assertTrue("Renewed token must not be cleaned up",
-          isTokenInSQL(secretManager, tokenId1));
-      Assert.assertTrue("Token with future expiration must not be cleaned up",
-          isTokenInSQL(secretManager, tokenId3));
+      Assertions.assertTrue(isTokenInSQL(secretManager, tokenId1),
+          "Renewed token must not be cleaned up");
+      Assertions.assertTrue(isTokenInSQL(secretManager, tokenId3),
+          "Token with future expiration must not be cleaned up");
     } finally {
       stopTokenManager(tokenManager);
     }
@@ -262,7 +262,7 @@ public class TestSQLDelegationTokenSecretManagerImpl {
       TestDelegationTokenSecretManager secretManager, AbstractDelegationTokenIdentifier tokenId,
       boolean expectedInSQL) throws SQLException {
     secretManager.removeExpiredStoredToken(tokenId);
-    Assert.assertEquals(expectedInSQL, isTokenInSQL(secretManager, tokenId));
+    Assertions.assertEquals(expectedInSQL, isTokenInSQL(secretManager, tokenId));
   }
 
   private boolean isTokenInSQL(TestDelegationTokenSecretManager secretManager,
@@ -291,36 +291,36 @@ public class TestSQLDelegationTokenSecretManagerImpl {
         sequenceNums.addAll(sequenceNums3);
       }
 
-      Assert.assertEquals("Verify that all tokens were created with unique sequence numbers",
-          tokensPerManager * 3, sequenceNums.size());
-      Assert.assertEquals("Verify that tokenManager1 generated unique sequence numbers",
-          tokensPerManager, sequenceNums1.size());
-      Assert.assertEquals("Verify that tokenManager2 generated unique sequence number",
-          tokensPerManager, sequenceNums2.size());
-      Assert.assertEquals("Verify that tokenManager3 generated unique sequence numbers",
-          tokensPerManager, sequenceNums3.size());
+      Assertions.assertEquals(tokensPerManager * 3, sequenceNums.size(),
+          "Verify that all tokens were created with unique sequence numbers");
+      Assertions.assertEquals(tokensPerManager, sequenceNums1.size(),
+          "Verify that tokenManager1 generated unique sequence numbers");
+      Assertions.assertEquals(tokensPerManager, sequenceNums2.size(),
+          "Verify that tokenManager2 generated unique sequence number");
+      Assertions.assertEquals(tokensPerManager, sequenceNums3.size(),
+          "Verify that tokenManager3 generated unique sequence numbers");
 
       // Validate sequence number batches allocated in order to each token manager
       int batchSize = SQLDelegationTokenSecretManagerImpl.DEFAULT_SEQ_NUM_BATCH_SIZE;
       for (int seqNum = 1; seqNum < tokensPerManager;) {
         // First batch allocated tokenManager1
         for (int i = 0; i < batchSize; i++, seqNum++) {
-          Assert.assertTrue(sequenceNums1.contains(seqNum));
+          Assertions.assertTrue(sequenceNums1.contains(seqNum));
         }
         // Second batch allocated tokenManager2
         for (int i = 0; i < batchSize; i++, seqNum++) {
-          Assert.assertTrue(sequenceNums2.contains(seqNum));
+          Assertions.assertTrue(sequenceNums2.contains(seqNum));
         }
         // Third batch allocated tokenManager3
         for (int i = 0; i < batchSize; i++, seqNum++) {
-          Assert.assertTrue(sequenceNums3.contains(seqNum));
+          Assertions.assertTrue(sequenceNums3.contains(seqNum));
         }
       }
 
       SQLDelegationTokenSecretManagerImpl secretManager =
           (SQLDelegationTokenSecretManagerImpl) tokenManager1.getDelegationTokenSecretManager();
-      Assert.assertEquals("Verify that the counter is set to the highest sequence number",
-          tokensPerManager * 3, secretManager.getDelegationTokenSeqNum());
+      Assertions.assertEquals(tokensPerManager * 3, secretManager.getDelegationTokenSeqNum(),
+          "Verify that the counter is set to the highest sequence number");
     } finally {
       stopTokenManager(tokenManager1);
       stopTokenManager(tokenManager2);
@@ -343,13 +343,13 @@ public class TestSQLDelegationTokenSecretManagerImpl {
       // Allocate sequence numbers before they are rolled over
       for (int seqNum = Integer.MAX_VALUE - tokenBatch; seqNum < Integer.MAX_VALUE; seqNum++) {
         allocateSequenceNum(tokenManager, sequenceNums);
-        Assert.assertTrue(sequenceNums.contains(seqNum + 1));
+        Assertions.assertTrue(sequenceNums.contains(seqNum + 1));
       }
 
       // Allocate sequence numbers after they are rolled over
       for (int seqNum = 0; seqNum < tokenBatch; seqNum++) {
         allocateSequenceNum(tokenManager, sequenceNums);
-        Assert.assertTrue(sequenceNums.contains(seqNum + 1));
+        Assertions.assertTrue(sequenceNums.contains(seqNum + 1));
       }
     } finally {
       stopTokenManager(tokenManager);
@@ -381,7 +381,7 @@ public class TestSQLDelegationTokenSecretManagerImpl {
         ((TestDelegationTokenSecretManager) secretManager2).lockKeyRoll();
         int keyId2 = secretManager2.getCurrentKeyId();
 
-        Assert.assertNotEquals("Each secret manager has its own key", keyId1, keyId2);
+        Assertions.assertNotEquals(keyId1, keyId2, "Each secret manager has its own key");
 
         // Validate that latest key2 is assigned to tokenManager2 tokens
         Token<? extends AbstractDelegationTokenIdentifier> token2 =
@@ -416,7 +416,7 @@ public class TestSQLDelegationTokenSecretManagerImpl {
 
     // Verifying property is correctly set in datasource
     HikariDataSourceConnectionFactory factory2 = new HikariDataSourceConnectionFactory(hikariConf);
-    Assert.assertEquals(factory2.getDataSource().getMaximumPoolSize(),
+    Assertions.assertEquals(factory2.getDataSource().getMaximumPoolSize(),
         defaultMaximumPoolSize + 1);
     factory2.shutdown();
   }
@@ -434,7 +434,7 @@ public class TestSQLDelegationTokenSecretManagerImpl {
       // Reset counter and expect a single request when inserting a token
       TestRetryHandler.resetExecutionAttemptCounter();
       tokenManager.createToken(UserGroupInformation.getCurrentUser(), "foo");
-      Assert.assertEquals(1, TestRetryHandler.getExecutionAttempts());
+      Assertions.assertEquals(1, TestRetryHandler.getExecutionAttempts());
 
       // Breaking database connections to cause retries
       secretManager.setReadOnly(true);
@@ -442,7 +442,7 @@ public class TestSQLDelegationTokenSecretManagerImpl {
       // Reset counter and expect a multiple retries when failing to insert a token
       TestRetryHandler.resetExecutionAttemptCounter();
       tokenManager.createToken(UserGroupInformation.getCurrentUser(), "foo");
-      Assert.assertEquals(TEST_MAX_RETRIES + 1, TestRetryHandler.getExecutionAttempts());
+      Assertions.assertEquals(TEST_MAX_RETRIES + 1, TestRetryHandler.getExecutionAttempts());
     } finally {
       // Fix database connections
       secretManager.setReadOnly(false);
@@ -466,8 +466,8 @@ public class TestSQLDelegationTokenSecretManagerImpl {
     Token<? extends AbstractDelegationTokenIdentifier> token =
         tokenManager.createToken(UserGroupInformation.getCurrentUser(), "foo");
     AbstractDelegationTokenIdentifier tokenIdentifier = token.decodeIdentifier();
-    Assert.assertFalse("Verify sequence number is unique",
-        sequenceNums.contains(tokenIdentifier.getSequenceNumber()));
+    Assertions.assertFalse(sequenceNums.contains(tokenIdentifier.getSequenceNumber()),
+        "Verify sequence number is unique");
 
     sequenceNums.add(tokenIdentifier.getSequenceNumber());
   }
@@ -484,29 +484,29 @@ public class TestSQLDelegationTokenSecretManagerImpl {
 
     byte[] tokenInfo1 = secretManager.selectTokenInfo(tokenIdentifier.getSequenceNumber(),
         tokenIdentifier.getBytes());
-    Assert.assertNotNull("Verify token exists in database", tokenInfo1);
+    Assertions.assertNotNull(tokenInfo1, "Verify token exists in database");
 
     // Renew token using token manager
     tokenManager.renewToken(token, "foo");
 
     byte[] tokenInfo2 = secretManager.selectTokenInfo(tokenIdentifier.getSequenceNumber(),
         tokenIdentifier.getBytes());
-    Assert.assertNotNull("Verify token exists in database", tokenInfo2);
-    Assert.assertFalse("Verify token has been updated in database",
-        Arrays.equals(tokenInfo1, tokenInfo2));
+    Assertions.assertNotNull(tokenInfo2, "Verify token exists in database");
+    Assertions.assertFalse(Arrays.equals(tokenInfo1, tokenInfo2),
+        "Verify token has been updated in database");
 
     // Cancel token using token manager
     tokenManager.cancelToken(token, "foo");
     byte[] tokenInfo3 = secretManager.selectTokenInfo(tokenIdentifier.getSequenceNumber(),
         tokenIdentifier.getBytes());
-    Assert.assertNull("Verify token was removed from database", tokenInfo3);
+    Assertions.assertNull(tokenInfo3, "Verify token was removed from database");
   }
 
   private void validateKeyId(Token<? extends AbstractDelegationTokenIdentifier> token,
       int expectedKeyiD) throws IOException {
     AbstractDelegationTokenIdentifier tokenIdentifier = token.decodeIdentifier();
-    Assert.assertEquals("Verify that keyId is assigned to token",
-        tokenIdentifier.getMasterKeyId(), expectedKeyiD);
+    Assertions.assertEquals(tokenIdentifier.getMasterKeyId(), expectedKeyiD,
+        "Verify that keyId is assigned to token");
   }
 
   private static Connection getTestDBConnection() {

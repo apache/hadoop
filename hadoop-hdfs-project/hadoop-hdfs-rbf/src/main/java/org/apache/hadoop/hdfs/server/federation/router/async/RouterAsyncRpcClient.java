@@ -58,7 +58,6 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 
-import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.Async.warpCompletionException;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncApply;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncApplyUseExecutor;
@@ -178,8 +177,14 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
             namenodes.toString(), params);
       }
       threadLocalContext.transfer();
+      RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
+      acquirePermit(nsid, ugi, method.getName(), controller);
       invokeMethodAsync(ugi, (List<FederationNamenodeContext>) namenodes,
           useObserver, protocol, method, params);
+      asyncFinally(object -> {
+        releasePermit(nsid, ugi, method, controller);
+        return object;
+      });
     }, router.getRpcServer().getAsyncRouterHandlerExecutors().getOrDefault(nsid,
         router.getRpcServer().getRouterAsyncHandlerDefaultExecutor()));
     return null;
@@ -227,7 +232,7 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
             connection[0] = getConnection(ugi, nsId, rpcAddress, protocol);
             NameNodeProxiesClient.ProxyAndInfo<?> client = connection[0].getClient();
             invoke(namenode, status.isShouldUseObserver(), 0, method,
-                  client.getProxy(), params);
+                client.getProxy(), params);
             asyncApply(res -> {
               status.setComplete(true);
               postProcessResult(method, status, namenode, nsId, client);
@@ -363,7 +368,6 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
       Class<T> expectedResultClass, Object expectedResultValue)
       throws IOException {
 
-    RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
     final UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
     final Method m = remoteMethod.getMethod();
     List<IOException> thrownExceptions = new ArrayList<>();
@@ -378,7 +382,6 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
           boolean isObserverRead = isObserverReadEligible(ns, m);
           List<? extends FederationNamenodeContext> namenodes =
               getOrderedNamenodes(ns, isObserverRead);
-          acquirePermit(ns, ugi, remoteMethod, controller);
           asyncTry(() -> {
             Class<?> proto = remoteMethod.getProtocol();
             Object[] params = remoteMethod.getParams(loc);
@@ -419,10 +422,6 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
             }
             return ret;
           }, Exception.class);
-          asyncFinally(ret -> {
-            releasePermit(ns, ugi, remoteMethod, controller);
-            return ret;
-          });
         });
     asyncApply(result -> {
       if (status.isComplete()) {
@@ -498,7 +497,6 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
   protected <T extends RemoteLocationContext, R> List<RemoteResult<T, R>> getRemoteResults(
       RemoteMethod method, long timeOutMs, RouterRpcFairnessPolicyController controller,
       List<T> orderedLocations, List<Callable<Object>> callables) throws IOException {
-    final UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
     final Method m = method.getMethod();
     final CompletableFuture<Object>[] futures =
         new CompletableFuture[callables.size()];
@@ -523,8 +521,6 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
             LOG.error("Unexpected error while invoking API: {}", e.getMessage());
             throw warpCompletionException(new IOException(
                 "Unexpected error while invoking API " + e.getMessage(), e));
-          } finally {
-            releasePermit(CONCURRENT_NS, ugi, method, controller);
           }
         }));
     return asyncReturn(List.class);
@@ -553,8 +549,6 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
     boolean isObserverRead = isObserverReadEligible(ns, m);
     final List<? extends FederationNamenodeContext> namenodes =
         getOrderedNamenodes(ns, isObserverRead);
-    RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
-    acquirePermit(ns, ugi, method, controller);
     asyncTry(() -> {
       Class<?> proto = method.getProtocol();
       Object[] paramList = method.getParams(location);
@@ -567,10 +561,6 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
     asyncCatch((o, ioe) -> {
       throw processException(ioe, location);
     }, IOException.class);
-    asyncFinally(o -> {
-      releasePermit(ns, ugi, method, controller);
-      return o;
-    });
     return asyncReturn(List.class);
   }
 
@@ -589,21 +579,13 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
   public Object invokeSingle(final String nsId, RemoteMethod method)
       throws IOException {
     UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
-    RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
-    acquirePermit(nsId, ugi, method, controller);
-    asyncTry(() -> {
-      boolean isObserverRead = isObserverReadEligible(nsId, method.getMethod());
-      List<? extends FederationNamenodeContext> nns = getOrderedNamenodes(nsId, isObserverRead);
-      RemoteLocationContext loc = new RemoteLocation(nsId, "/", "/");
-      Class<?> proto = method.getProtocol();
-      Method m = method.getMethod();
-      Object[] params = method.getParams(loc);
-      invokeMethod(ugi, nns, isObserverRead, proto, m, params);
-    });
-    asyncFinally(o -> {
-      releasePermit(nsId, ugi, method, controller);
-      return o;
-    });
+    boolean isObserverRead = isObserverReadEligible(nsId, method.getMethod());
+    List<? extends FederationNamenodeContext> nns = getOrderedNamenodes(nsId, isObserverRead);
+    RemoteLocationContext loc = new RemoteLocation(nsId, "/", "/");
+    Class<?> proto = method.getProtocol();
+    Method m = method.getMethod();
+    Object[] params = method.getParams(loc);
+    invokeMethod(ugi, nns, isObserverRead, proto, m, params);
     return null;
   }
 
@@ -626,5 +608,22 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
     List<RemoteLocationContext> locations = Collections.singletonList(location);
     invokeSequential(locations, remoteMethod);
     return asyncReturn(clazz);
+  }
+
+  /**
+   * Release permit for specific nsId after processing against downstream
+   * nsId is completed.
+   *  @param nsId Identifier of the block pool.
+   * @param ugi UserGroupIdentifier associated with the user.
+   * @param m Remote method that needs to be invoked.
+   * @param controller fairness policy controller to release permit from
+   */
+  protected void releasePermit(final String nsId, final UserGroupInformation ugi,
+      final Method m, RouterRpcFairnessPolicyController controller) {
+    if (controller != null) {
+      controller.releasePermit(nsId);
+      LOG.trace("Permit released for ugi: {} for method: {}", ugi,
+          m.getName());
+    }
   }
 }

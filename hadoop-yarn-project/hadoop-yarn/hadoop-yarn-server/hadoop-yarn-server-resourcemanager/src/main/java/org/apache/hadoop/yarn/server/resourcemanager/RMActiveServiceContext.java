@@ -58,8 +58,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.VolumeManager;
-import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.util.SystemClock;
 
 /**
  * The RMActiveServiceContext is the class that maintains <b>Active</b> service

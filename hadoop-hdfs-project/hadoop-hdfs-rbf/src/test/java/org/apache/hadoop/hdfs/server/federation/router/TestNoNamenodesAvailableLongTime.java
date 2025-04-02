@@ -36,8 +36,8 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServi
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.Lists;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 
 import java.io.IOException;
@@ -47,9 +47,9 @@ import java.util.List;
 import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.ACTIVE;
 import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.DEFAULT_HEARTBEAT_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * When failover occurs, the router may record that the ns has no active namenode
@@ -68,7 +68,7 @@ public class TestNoNamenodesAvailableLongTime {
   private RouterContext routerContext;
   private FederationRPCMetrics rpcMetrics;
 
-  @After
+  @AfterEach
   public void cleanup() throws IOException {
     rpcMetrics = null;
     routerContext = null;

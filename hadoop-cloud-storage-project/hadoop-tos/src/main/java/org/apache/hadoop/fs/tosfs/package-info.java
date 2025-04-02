@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,13 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred;
-
 /**
- * A clock class - can be mocked out for testing.
+ * Classes for hadoop-tos tosfs.
  */
-class Clock {
-  long getTime() {
-    return System.currentTimeMillis();
-  }
-}
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce", "YARN", "Hive"})
+@InterfaceStability.Evolving
+package org.apache.hadoop.fs.tosfs;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

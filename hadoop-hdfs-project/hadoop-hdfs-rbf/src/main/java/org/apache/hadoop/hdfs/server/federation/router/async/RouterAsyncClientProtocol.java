@@ -355,7 +355,6 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
       return rpcClient.invokeAll(locations, method);
     }
 
-    asyncComplete(false);
     if (locations.size() > 1) {
       // Check if this directory already exists
       asyncTry(() -> {
@@ -368,32 +367,41 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
           return false;
         });
       });
-      asyncCatch((ret, ex) -> {
+      asyncCatch((ret, ioe) -> {
         // Can't query if this file exists or not.
         LOG.error("Error getting file info for {} while proxying mkdirs: {}",
-            src, ex.getMessage());
+            src, ioe.getMessage());
         return false;
       }, IOException.class);
-    }
 
-    final RemoteLocation firstLocation = locations.get(0);
-    asyncApply((AsyncApplyFunction<Boolean, Boolean>) success -> {
-      if (success) {
-        asyncComplete(true);
-        return;
-      }
+      asyncApply((AsyncApplyFunction<Boolean, Boolean>)ret -> {
+        if (!ret) {
+          final RemoteLocation firstLocation = locations.get(0);
+          asyncTry(() -> {
+            rpcClient.invokeSingle(firstLocation, method, Boolean.class);
+          });
+          asyncCatch((AsyncCatchFunction<Object, IOException>) (o, ioe) -> {
+            final List<RemoteLocation> newLocations = checkFaultTolerantRetry(
+                method, src, ioe, firstLocation, locations);
+            rpcClient.invokeSequential(
+                newLocations, method, Boolean.class, Boolean.TRUE);
+          }, IOException.class);
+        } else {
+          asyncComplete(ret);
+        }
+      });
+    } else {
+      final RemoteLocation firstLocation = locations.get(0);
       asyncTry(() -> {
         rpcClient.invokeSingle(firstLocation, method, Boolean.class);
       });
-
       asyncCatch((AsyncCatchFunction<Object, IOException>) (o, ioe) -> {
         final List<RemoteLocation> newLocations = checkFaultTolerantRetry(
             method, src, ioe, firstLocation, locations);
         rpcClient.invokeSequential(
             newLocations, method, Boolean.class, Boolean.TRUE);
       }, IOException.class);
-    });
-
+    }
     return asyncReturn(Boolean.class);
   }
 
@@ -487,6 +495,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
               return null;
             });
           });
+          boolean finalNamenodeListingExists = namenodeListingExists;
           asyncApply(o -> {
             // Update the remaining count to include left mount points
             if (nnListing.size() > 0) {
@@ -499,10 +508,12 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
                 }
               }
             }
-            return null;
+            return finalNamenodeListingExists;
           });
+        } else {
+          asyncComplete(namenodeListingExists);
         }
-        asyncComplete(namenodeListingExists);
+
         asyncApply((ApplyFunction<Boolean, Object>) exists -> {
           if (!exists && nnListing.size() == 0 && children == null) {
             // NN returns a null object if the directory cannot be found and has no
@@ -526,28 +537,26 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
   @Override
   protected List<RemoteResult<RemoteLocation, DirectoryListing>> getListingInt(
       String src, byte[] startAfter, boolean needLocation) throws IOException {
-    List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, false, false);
-    // Locate the dir and fetch the listing.
-    if (locations.isEmpty()) {
-      asyncComplete(new ArrayList<>());
-      return asyncReturn(List.class);
-    }
-    asyncTry(() -> {
+    try {
+      List<RemoteLocation> locations =
+          rpcServer.getLocationsForPath(src, false, false);
+      // Locate the dir and fetch the listing.
+      if (locations.isEmpty()) {
+        asyncComplete(new ArrayList<>());
+        return asyncReturn(List.class);
+      }
       RemoteMethod method = new RemoteMethod("getListing",
           new Class<?>[] {String.class, startAfter.getClass(), boolean.class},
           new RemoteParam(), startAfter, needLocation);
       rpcClient.invokeConcurrent(locations, method, false, -1,
           DirectoryListing.class);
-    });
-    asyncCatch((CatchFunction<List, RouterResolveException>) (o, e) -> {
+    } catch (NoLocationException | RouterResolveException e) {
       LOG.debug("Cannot get locations for {}, {}.", src, e.getMessage());
-      LOG.info("Cannot get locations for {}, {}.", src, e.getMessage());
-      return new ArrayList<>();
-    }, RouterResolveException.class);
+      asyncComplete(new ArrayList<>());
+    }
+
     return asyncReturn(List.class);
   }
-
 
   @Override
   public HdfsFileStatus getFileInfo(String src) throws IOException {
@@ -571,7 +580,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
           || e instanceof RouterResolveException) {
         noLocationException[0] = e;
       }
-      throw e;
+      return null;
     }, IOException.class);
 
     asyncApply((AsyncApplyFunction<HdfsFileStatus, Object>) ret -> {
@@ -589,7 +598,11 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
           // The src is a mount point, but there are no files or directories
           getMountPointStatus(src, 0, 0, false);
         } else {
+          if (noLocationException[0] != null) {
+            throw noLocationException[0];
+          }
           asyncComplete(null);
+          return;
         }
         asyncApply((ApplyFunction<HdfsFileStatus, HdfsFileStatus>) result -> {
           // Can't find mount point for path and the path didn't contain any sub monit points,
@@ -597,7 +610,6 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
           if (result == null && noLocationException[0] != null) {
             throw noLocationException[0];
           }
-
           return result;
         });
       } else {
@@ -646,7 +658,14 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
     final int[] childrenNums = new int[]{childrenNum};
     final EnumSet<HdfsFileStatus.Flags>[] flags =
         new EnumSet[]{EnumSet.noneOf(HdfsFileStatus.Flags.class)};
-    asyncComplete(null);
+    long inodeId = 0;
+    HdfsFileStatus.Builder builder = new HdfsFileStatus.Builder();
+    if (setPath) {
+      Path path = new Path(name);
+      String nameStr = path.getName();
+      builder.path(DFSUtil.string2Bytes(nameStr));
+    }
+
     if (getSubclusterResolver() instanceof MountTableResolver) {
       asyncTry(() -> {
         String mName = name.startsWith("/") ? name : "/" + name;
@@ -671,13 +690,45 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
                   .getFlags(fInfo.isEncrypted(), fInfo.isErasureCoded(),
                       fInfo.isSnapshotEnabled(), fInfo.hasAcl());
             }
-            return fInfo;
+            return builder.isdir(true)
+                .mtime(modTime)
+                .atime(accessTime)
+                .perm(permission[0])
+                .owner(owner[0])
+                .group(group[0])
+                .symlink(new byte[0])
+                .fileId(inodeId)
+                .children(childrenNums[0])
+                .flags(flags[0])
+                .build();
           });
+        } else {
+          asyncComplete(builder.isdir(true)
+              .mtime(modTime)
+              .atime(accessTime)
+              .perm(permission[0])
+              .owner(owner[0])
+              .group(group[0])
+              .symlink(new byte[0])
+              .fileId(inodeId)
+              .children(childrenNums[0])
+              .flags(flags[0])
+              .build());
         }
       });
       asyncCatch((CatchFunction<HdfsFileStatus, IOException>) (status, e) -> {
         LOG.error("Cannot get mount point: {}", e.getMessage());
-        return status;
+        return builder.isdir(true)
+            .mtime(modTime)
+            .atime(accessTime)
+            .perm(permission[0])
+            .owner(owner[0])
+            .group(group[0])
+            .symlink(new byte[0])
+            .fileId(inodeId)
+            .children(childrenNums[0])
+            .flags(flags[0])
+            .build();
       }, IOException.class);
     } else {
       try {
@@ -691,44 +742,33 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
         } else {
           LOG.debug(msg);
         }
+      } finally {
+        asyncComplete(builder.isdir(true)
+            .mtime(modTime)
+            .atime(accessTime)
+            .perm(permission[0])
+            .owner(owner[0])
+            .group(group[0])
+            .symlink(new byte[0])
+            .fileId(inodeId)
+            .children(childrenNums[0])
+            .flags(flags[0])
+            .build());
       }
     }
-    long inodeId = 0;
-    HdfsFileStatus.Builder builder = new HdfsFileStatus.Builder();
-    asyncApply((ApplyFunction<HdfsFileStatus, HdfsFileStatus>) status -> {
-      if (setPath) {
-        Path path = new Path(name);
-        String nameStr = path.getName();
-        builder.path(DFSUtil.string2Bytes(nameStr));
-      }
-
-      return builder.isdir(true)
-          .mtime(modTime)
-          .atime(accessTime)
-          .perm(permission[0])
-          .owner(owner[0])
-          .group(group[0])
-          .symlink(new byte[0])
-          .fileId(inodeId)
-          .children(childrenNums[0])
-          .flags(flags[0])
-          .build();
-    });
     return asyncReturn(HdfsFileStatus.class);
   }
 
   @Override
   protected HdfsFileStatus getFileInfoAll(final List<RemoteLocation> locations,
       final RemoteMethod method, long timeOutMs) throws IOException {
-
-    asyncComplete(null);
-    // Get the file info from everybody
+    // Get the file info from everybody.
     rpcClient.invokeConcurrent(locations, method, false, false, timeOutMs,
         HdfsFileStatus.class);
     asyncApply(res -> {
       Map<RemoteLocation, HdfsFileStatus> results = (Map<RemoteLocation, HdfsFileStatus>) res;
       int children = 0;
-      // We return the first file
+      // We return the first file.
       HdfsFileStatus dirStatus = null;
       for (RemoteLocation loc : locations) {
         HdfsFileStatus fileStatus = results.get(loc);

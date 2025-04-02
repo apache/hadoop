@@ -61,6 +61,7 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMCommunicator;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.junit.jupiter.api.Test;
@@ -124,20 +125,38 @@ public class TestJobEndNotifier extends JobEndNotifier {
         "Proxy shouldn't be set because port wasn't numeric");
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "somehost:1000");
     setConf(conf);
-    assertEquals("HTTP @ somehost:1000", proxyToUse.toString(),
-        "Proxy should have been set but wasn't ");
-    conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "socks@somehost:1000");
-    setConf(conf);
-    assertEquals("SOCKS @ somehost:1000", proxyToUse.toString(),
-        "Proxy should have been socks but wasn't ");
-    conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "SOCKS@somehost:1000");
-    setConf(conf);
-    assertEquals("SOCKS @ somehost:1000", proxyToUse.toString(),
-        "Proxy should have been socks but wasn't ");
-    conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "sfafn@somehost:1000");
-    setConf(conf);
-    assertEquals("HTTP @ somehost:1000", proxyToUse.toString(),
-        "Proxy should have been http but wasn't ");
+    // JDK-8225499. The string format of unresolved address has been changed.
+    if (Shell.isJavaVersionAtLeast(14)) {
+      assertEquals("HTTP @ somehost/<unresolved>:1000", proxyToUse.toString(),
+          "Proxy should have been set but wasn't ");
+      conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "socks@somehost:1000");
+      setConf(conf);
+      assertEquals("SOCKS @ somehost/<unresolved>:1000", proxyToUse.toString(),
+          "Proxy should have been socks but wasn't ");
+      conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "SOCKS@somehost:1000");
+      setConf(conf);
+      assertEquals("SOCKS @ somehost/<unresolved>:1000", proxyToUse.toString(),
+          "Proxy should have been socks but wasn't ");
+      conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "sfafn@somehost:1000");
+      setConf(conf);
+      assertEquals("HTTP @ somehost/<unresolved>:1000", proxyToUse.toString(),
+          "Proxy should have been http but wasn't ");
+    } else {
+      assertEquals("HTTP @ somehost:1000", proxyToUse.toString(),
+          "Proxy should have been set but wasn't ");
+      conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "socks@somehost:1000");
+      setConf(conf);
+      assertEquals("SOCKS @ somehost:1000", proxyToUse.toString(),
+          "Proxy should have been socks but wasn't ");
+      conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "SOCKS@somehost:1000");
+      setConf(conf);
+      assertEquals("SOCKS @ somehost:1000", proxyToUse.toString(),
+          "Proxy should have been socks but wasn't ");
+      conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "sfafn@somehost:1000");
+      setConf(conf);
+      assertEquals("HTTP @ somehost:1000", proxyToUse.toString(),
+          "Proxy should have been http but wasn't ");
+    }
   }
 
   /**

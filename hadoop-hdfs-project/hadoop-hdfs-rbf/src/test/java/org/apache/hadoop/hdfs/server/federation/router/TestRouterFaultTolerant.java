@@ -24,11 +24,11 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getFi
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.refreshRoutersCaches;
 import static org.apache.hadoop.hdfs.server.federation.MockNamenode.registerSubclusters;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -76,9 +76,9 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,7 +106,7 @@ public class TestRouterFaultTolerant {
   private ExecutorService service;
 
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     LOG.info("Start the Namenodes");
     Configuration nnConf = new HdfsConfiguration();
@@ -160,7 +160,7 @@ public class TestRouterFaultTolerant {
     service = Executors.newFixedThreadPool(10);
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws Exception {
     LOG.info("Stopping the cluster");
     for (final MockNamenode nn : namenodes.values()) {
@@ -311,13 +311,13 @@ public class TestRouterFaultTolerant {
     int filesExpected = dirs0.length + results.getSuccess();
     tasks.add(getListSuccessTask(router1Fs, mountPoint, filesExpected));
     results = collectResults("List " + mountPoint, tasks);
-    assertEquals("Failed listing", 2, results.getSuccess());
+    assertEquals(2, results.getSuccess(), "Failed listing");
 
     tasks.add(getContentSummaryFailTask(router0Fs, mountPoint));
     tasks.add(getContentSummarySuccessTask(
         router1Fs, mountPoint, filesExpected));
     results = collectResults("Content summary "  + mountPoint, tasks);
-    assertEquals("Failed content summary", 2, results.getSuccess());
+    assertEquals(2, results.getSuccess(), "Failed content summary");
   }
 
   /**
@@ -346,15 +346,11 @@ public class TestRouterFaultTolerant {
 
     LOG.info("Check files results for {}: {}", dir0, results);
     if (faultTolerant) {
-      assertEquals("Not enough success in " + mountPoint,
-          NUM_FILES, results.getSuccess());
-      assertEquals("Nothing should fail in " + mountPoint, 0,
-          results.getFailure());
+      assertEquals(NUM_FILES, results.getSuccess(), "Not enough success in " + mountPoint);
+      assertEquals(0, results.getFailure(), "Nothing should fail in " + mountPoint);
     } else {
-      assertEquals("Nothing should succeed in " + mountPoint,
-          0, results.getSuccess());
-      assertEquals("Everything should fail in " + mountPoint,
-          NUM_FILES, results.getFailure());
+      assertEquals(0, results.getSuccess(), "Nothing should succeed in " + mountPoint);
+      assertEquals(NUM_FILES, results.getFailure(), "Everything should fail in " + mountPoint);
     }
 
     LOG.info("Check files listing for {}", dir0);
@@ -420,8 +416,7 @@ public class TestRouterFaultTolerant {
         // We don't write because we have no mock Datanodes
         os.close();
         FileStatus fileStatus = checkFs.getFileStatus(path);
-        assertTrue("File not created properly: " + fileStatus,
-            fileStatus.getLen() > 0);
+        assertTrue(fileStatus.getLen() > 0, "File not created properly: " + fileStatus);
         return true;
       } catch (RemoteException re) {
         return false;
@@ -474,7 +469,7 @@ public class TestRouterFaultTolerant {
       FileSystem fs, Path path, int expected) {
     return () -> {
       final FileStatus[] dirs = fs.listStatus(path);
-      assertEquals(toString(dirs), expected, dirs.length);
+      assertEquals(expected, dirs.length, toString(dirs));
       return true;
     };
   }
@@ -509,8 +504,7 @@ public class TestRouterFaultTolerant {
       FileSystem fs, Path path, int expected) {
     return () -> {
       ContentSummary summary = fs.getContentSummary(path);
-      assertEquals("Wrong summary for " + path,
-          expected, summary.getFileAndDirectoryCount());
+      assertEquals(expected, summary.getFileAndDirectoryCount(), "Wrong summary for " + path);
       return true;
     };
   }
@@ -590,9 +584,9 @@ public class TestRouterFaultTolerant {
    */
   private static void assertBothResults(String msg,
       int expected, TaskResults actual) {
-    assertEquals(msg, expected, actual.getTotal());
-    assertTrue("Expected some success for " + msg, actual.getSuccess() > 0);
-    assertTrue("Expected some failure for " + msg, actual.getFailure() > 0);
+    assertEquals(expected, actual.getTotal(), msg);
+    assertTrue(actual.getSuccess() > 0, "Expected some success for " + msg);
+    assertTrue(actual.getFailure() > 0, "Expected some failure for " + msg);
   }
 
   /**
@@ -641,7 +635,7 @@ public class TestRouterFaultTolerant {
 
     // We should be able to read existing files
     FSDataInputStream fsdis = fs.open(fileexisting);
-    assertNotNull("We should be able to read the file", fsdis);
+    assertNotNull(fsdis, "We should be able to read the file");
     // We shouldn't be able to read non-existing files
     LambdaTestUtils.intercept(FileNotFoundException.class,
         () -> fs.open(filenotexisting));
@@ -657,13 +651,13 @@ public class TestRouterFaultTolerant {
       try {
         FileStatus fileStatus = nnfs.getFileStatus(fileexisting);
         assertNotNull(fileStatus);
-        assertNull("The file cannot be in two subclusters", nsIdWithFile);
+        assertNull(nsIdWithFile, "The file cannot be in two subclusters");
         nsIdWithFile = nsId;
       } catch (FileNotFoundException fnfe) {
         LOG.debug("File not found in {}", nsId);
       }
     }
-    assertNotNull("The file has to be in one subcluster", nsIdWithFile);
+    assertNotNull(nsIdWithFile, "The file has to be in one subcluster");
 
     LOG.info("Stop {} to simulate an unavailable subcluster", nsIdWithFile);
     namenodes.get(nsIdWithFile).stop();
@@ -674,8 +668,8 @@ public class TestRouterFaultTolerant {
       fail("It should throw an unavailable cluster exception");
     } catch(RemoteException re) {
       IOException ioe = re.unwrapRemoteException();
-      assertTrue("Expected an unavailable exception for:" + ioe.getClass(),
-          RouterRpcClient.isUnavailableException(ioe));
+      assertTrue(RouterRpcClient.isUnavailableException(ioe),
+          "Expected an unavailable exception for:" + ioe.getClass());
     }
   }
 }

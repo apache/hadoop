@@ -193,9 +193,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ReservationsACLsMa
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.hadoop.yarn.util.UTCClock;
+import org.apache.hadoop.util.UTCClock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;

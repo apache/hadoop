@@ -38,9 +38,8 @@ import org.codehaus.jettison.json.JSONObject;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -49,8 +48,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
@@ -59,18 +58,16 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServic
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.backupSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createRM;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.restoreSchedulerConfigFileInTarget;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith(Parameterized.class)
 public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
-  private final boolean legacyQueueMode;
+  private boolean legacyQueueMode;
   private MockRM rm;
   private ResourceConfig config;
 
-  @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
   public static Collection<Boolean> getParameters() {
     return Arrays.asList(true, false);
   }
@@ -109,24 +106,26 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     }
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
   }
 
-  public TestRMWebServicesCapacitySched(boolean legacyQueueMode) {
-    this.legacyQueueMode = legacyQueueMode;
+  public void initTestRMWebServicesCapacitySched(boolean pLegacyQueueMode) {
+    this.legacyQueueMode = pLegacyQueueMode;
     backupSchedulerConfigFileInTarget();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() {
     restoreSchedulerConfigFileInTarget();
   }
 
-  @Test
-  public void testClusterScheduler() throws Exception {
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testClusterScheduler(boolean pLegacyQueueMode) throws Exception {
+    initTestRMWebServicesCapacitySched(pLegacyQueueMode);
     rm.registerNode("h1:1234", 32 * GB, 32);
     assertJsonResponse(target().path("ws/v1/cluster/scheduler")
         .request(MediaType.APPLICATION_JSON).get(Response.class),
@@ -142,8 +141,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
         "webapp/scheduler-response.xml");
   }
 
-  @Test
-  public void testPerUserResources() throws Exception {
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testPerUserResources(boolean pLegacyQueueMode) throws Exception {
+    initTestRMWebServicesCapacitySched(pLegacyQueueMode);
     rm.registerNode("h1:1234", 32 * GB, 32);
 
     MockRMAppSubmitter.submit(rm, MockRMAppSubmissionData.Builder
@@ -174,8 +175,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
         "webapp/scheduler-response-PerUserResources.json");
   }
 
-  @Test
-  public void testClusterSchedulerOverviewCapacity() throws Exception {
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testClusterSchedulerOverviewCapacity(boolean pLegacyQueueMode) throws Exception {
+    initTestRMWebServicesCapacitySched(pLegacyQueueMode);
     rm.registerNode("h1:1234", 32 * GB, 32);
     Response response = targetWithJsonObject().path("ws/v1/cluster/scheduler-overview")
         .request(MediaType.APPLICATION_JSON).get(Response.class);
@@ -185,8 +188,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     TestRMWebServices.verifyClusterSchedulerOverView(scheduler, "Capacity Scheduler");
   }
 
-  @Test
-  public void testResourceInfo() {
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testResourceInfo(boolean pLegacyQueueMode) {
+    initTestRMWebServicesCapacitySched(pLegacyQueueMode);
     Resource res = Resources.createResource(10, 1);
     // If we add a new resource (e.g. disks), then
     // CapacitySchedulerPage and these RM WebServices + docs need to be updated

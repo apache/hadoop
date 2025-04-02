@@ -26,7 +26,7 @@ import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,7 +112,7 @@ public class RouterWebHDFSContract extends HDFSContract {
 
   public static FileSystem getFileSystem() throws IOException {
     //assumes cluster is not null
-    Assert.assertNotNull("cluster not created", cluster);
+    Assertions.assertNotNull(cluster, "cluster not created");
 
     // Create a connection to WebHDFS
     try {

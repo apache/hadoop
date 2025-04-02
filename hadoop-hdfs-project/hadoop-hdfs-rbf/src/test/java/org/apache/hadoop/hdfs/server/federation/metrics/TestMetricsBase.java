@@ -25,8 +25,8 @@ import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStor
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.createMockRegistrationForNamenode;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.synchronizeRecords;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.waitStateStore;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -56,9 +56,9 @@ import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
 import org.apache.hadoop.util.Time;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the basic metrics functionality.
@@ -77,7 +77,7 @@ public class TestMetricsBase {
   private List<RouterState> mockRouters;
   private List<String> nameservices;
 
-  @Before
+  @BeforeEach
   public void setupBase() throws Exception {
 
     if (router == null) {
@@ -104,7 +104,7 @@ public class TestMetricsBase {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDownBase() throws IOException {
     if (router != null) {
       router.stop();
@@ -212,7 +212,7 @@ public class TestMetricsBase {
     String jsonString = metrics.getNameservices();
     JSONObject jsonObject = new JSONObject(jsonString);
     Map<String, String> map = getNameserviceStateMap(jsonObject);
-    assertTrue("Cannot find ns0 in: " + jsonString, map.containsKey("ns0"));
+    assertTrue(map.containsKey("ns0"), "Cannot find ns0 in: " + jsonString);
     assertEquals("OBSERVER", map.get("ns0"));
   }
 

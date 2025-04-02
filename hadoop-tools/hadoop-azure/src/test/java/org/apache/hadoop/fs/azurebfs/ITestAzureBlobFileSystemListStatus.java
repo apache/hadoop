@@ -28,6 +28,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
@@ -39,21 +40,20 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.contracts.services.DfsListResultEntrySchema;
-import org.apache.hadoop.fs.azurebfs.contracts.services.DfsListResultSchema;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.services.ListResponseData;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
+import org.apache.hadoop.fs.azurebfs.utils.DirectoryStateHelper;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static java.net.HttpURLConnection.HTTP_OK;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LIST_MAX_RESULTS;
+import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicity.SUFFIX;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_JDK_MESSAGE;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
@@ -72,7 +72,7 @@ import static org.mockito.Mockito.when;
 public class ITestAzureBlobFileSystemListStatus extends
     AbstractAbfsIntegrationTest {
   private static final int TEST_FILES_NUMBER = 6000;
-  private static final String TEST_CONTINUATION_TOKEN = "continuation";
+  public static final String TEST_CONTINUATION_TOKEN = "continuation";
 
   public ITestAzureBlobFileSystemListStatus() throws Exception {
     super();
@@ -122,43 +122,20 @@ public class ITestAzureBlobFileSystemListStatus extends
    */
   @Test
   public void testListPathTracingContext() throws Exception {
-    assumeDfsServiceType();
-    final AzureBlobFileSystem fs = getFileSystem();
-    final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
-    final AzureBlobFileSystemStore spiedStore = Mockito.spy(fs.getAbfsStore());
-    final AbfsClient spiedClient = Mockito.spy(fs.getAbfsClient());
+    final AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
+    final AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
+    final AbfsClient spiedClient = Mockito.spy(spiedFs.getAbfsClient());
     final TracingContext spiedTracingContext = Mockito.spy(
         new TracingContext(
-            fs.getClientCorrelationId(), fs.getFileSystemId(),
+            spiedFs.getClientCorrelationId(), spiedFs.getFileSystemId(),
             FSOperationType.LISTSTATUS, true, TracingHeaderFormat.ALL_ID_FORMAT, null));
 
     Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
-    spiedStore.setClient(spiedClient);
+    Mockito.doReturn(spiedClient).when(spiedStore).getClient();
     spiedFs.setWorkingDirectory(new Path("/"));
 
-    AbfsClientTestUtil.setMockAbfsRestOperationForListPathOperation(spiedClient,
+    AbfsClientTestUtil.setMockAbfsRestOperationForListOperation(spiedClient,
         (httpOperation) -> {
-
-          ListResultEntrySchema entry = new DfsListResultEntrySchema()
-              .withName("a")
-              .withIsDirectory(true);
-          List<ListResultEntrySchema> paths = new ArrayList<>();
-          paths.add(entry);
-          paths.clear();
-          entry = new DfsListResultEntrySchema()
-              .withName("abc.txt")
-              .withIsDirectory(false);
-          paths.add(entry);
-          ListResultSchema schema1 = new DfsListResultSchema().withPaths(paths);
-          ListResultSchema schema2 = new DfsListResultSchema().withPaths(paths);
-
-          when(httpOperation.getListResultSchema()).thenReturn(schema1)
-              .thenReturn(schema2);
-          when(httpOperation.getResponseHeader(
-              HttpHeaderConfigurations.X_MS_CONTINUATION))
-              .thenReturn(TEST_CONTINUATION_TOKEN)
-              .thenReturn(EMPTY_STRING);
-
           Stubber stubber = Mockito.doThrow(
               new SocketTimeoutException(CONNECTION_TIMEOUT_JDK_MESSAGE));
           stubber.doNothing().when(httpOperation).processResponse(
@@ -176,12 +153,12 @@ public class ITestAzureBlobFileSystemListStatus extends
     Mockito.verify(spiedClient, times(1)).listPath(
         "/", false,
         spiedFs.getAbfsStore().getAbfsConfiguration().getListMaxResults(),
-        null, spiedTracingContext);
+        null, spiedTracingContext, spiedFs.getAbfsStore().getUri());
     // 2. With continuation token
     Mockito.verify(spiedClient, times(1)).listPath(
         "/", false,
         spiedFs.getAbfsStore().getAbfsConfiguration().getListMaxResults(),
-        TEST_CONTINUATION_TOKEN, spiedTracingContext);
+        TEST_CONTINUATION_TOKEN, spiedTracingContext, spiedFs.getAbfsStore().getUri());
 
     // Assert that none of the API calls used the same tracing header.
     Mockito.verify(spiedTracingContext, times(0)).constructHeader(any(), any(), any());
@@ -342,5 +319,209 @@ public class ITestAzureBlobFileSystemListStatus extends
     }
     assertTrue("Attempt to create file that ended with a dot should"
         + " throw IllegalArgumentException", exceptionThrown);
+  }
+
+
+
+  /**
+   * Test to verify that listStatus returns the correct file status all types
+   * of paths viz. implicit, explicit, file.
+   * @throws Exception if there is an error or test assertions fails.
+   */
+  @Test
+  public void testListStatusWithImplicitExplicitChildren() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.setWorkingDirectory(new Path(ROOT_PATH));
+    Path root = new Path(ROOT_PATH);
+
+    // Create an implicit directory under root
+    Path dir = new Path("a");
+    Path fileInsideDir = new Path("a/file");
+    createAzCopyFolder(dir);
+
+    // Assert that implicit directory is returned
+    FileStatus[] fileStatuses = fs.listStatus(root);
+    Assertions.assertThat(fileStatuses.length)
+        .describedAs("List size is not expected").isEqualTo(1);
+    assertImplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(dir));
+
+    // Create a marker blob for the directory.
+    fs.create(fileInsideDir);
+
+    // Assert that only one entry of explicit directory is returned
+    fileStatuses = fs.listStatus(root);
+    Assertions.assertThat(fileStatuses.length)
+        .describedAs("List size is not expected").isEqualTo(1);
+    assertExplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(dir));
+
+    // Create a file under root
+    Path file1 = new Path("b");
+    fs.create(file1);
+
+    // Assert that two entries are returned in alphabetic order.
+    fileStatuses = fs.listStatus(root);
+    Assertions.assertThat(fileStatuses.length)
+        .describedAs("List size is not expected").isEqualTo(2);
+    assertExplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(dir));
+    assertFilePathFileStatus(fileStatuses[1], fs.makeQualified(file1));
+
+    // Create another implicit directory under root.
+    Path dir2 = new Path("c");
+    createAzCopyFolder(dir2);
+
+    // Assert that three entries are returned in alphabetic order.
+    fileStatuses = fs.listStatus(root);
+    Assertions.assertThat(fileStatuses.length)
+        .describedAs("List size is not expected").isEqualTo(3);
+    assertExplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(dir));
+    assertFilePathFileStatus(fileStatuses[1], fs.makeQualified(file1));
+    assertImplicitDirectoryFileStatus(fileStatuses[2], fs.makeQualified(dir2));
+  }
+
+  /**
+   * Test to verify that listStatus returns the correct file status when called on an implicit path
+   * @throws Exception if there is an error or test assertions fails.
+   */
+  @Test
+  public void testListStatusOnImplicitDirectoryPath() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path implicitPath = new Path("/implicitDir");
+    createAzCopyFolder(implicitPath);
+
+    FileStatus[] statuses = fs.listStatus(implicitPath);
+    Assertions.assertThat(statuses.length)
+        .describedAs("List size is not expected").isGreaterThanOrEqualTo(1);
+    assertImplicitDirectoryFileStatus(statuses[0], fs.makeQualified(statuses[0].getPath()));
+
+    FileStatus[] statuses1 = fs.listStatus(new Path(statuses[0].getPath().toString()));
+    Assertions.assertThat(statuses1.length)
+        .describedAs("List size is not expected").isGreaterThanOrEqualTo(1);
+    assertFilePathFileStatus(statuses1[0], fs.makeQualified(statuses1[0].getPath()));
+  }
+
+  @Test
+  public void testListStatusOnEmptyDirectory() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path emptyDir = new Path("/emptyDir");
+    fs.mkdirs(emptyDir);
+
+    FileStatus[] statuses = fs.listStatus(emptyDir);
+    Assertions.assertThat(statuses.length)
+        .describedAs("List size is not expected").isEqualTo(0);
+  }
+
+  @Test
+  public void testListStatusOnRenamePendingJsonFile() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path renamePendingJsonPath = new Path("/hbase/A/A-" + SUFFIX);
+    fs.create(renamePendingJsonPath);
+
+    FileStatus[] statuses = fs.listStatus(renamePendingJsonPath);
+    Assertions.assertThat(statuses.length)
+        .describedAs("List size is not expected").isEqualTo(1);
+    assertFilePathFileStatus(statuses[0], fs.makeQualified(statuses[0].getPath()));
+  }
+
+  @Test
+  public void testContinuationTokenAcrossListStatus() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path("/testContinuationToken");
+    fs.mkdirs(path);
+    fs.create(new Path(path + "/file1"));
+    fs.create(new Path(path + "/file2"));
+
+    fs.listStatus(path);
+
+    ListResponseData listResponseData = fs.getAbfsStore().getClient().listPath(
+        "/testContinuationToken", false, 1, null, getTestTracingContext(fs, true),
+        fs.getAbfsStore().getUri());
+
+    Assertions.assertThat(listResponseData.getContinuationToken())
+        .describedAs("Continuation Token Should not be null").isNotNull();
+    Assertions.assertThat(listResponseData.getFileStatusList())
+        .describedAs("Listing Size Not as expected").hasSize(1);
+
+    ListResponseData listResponseData1 =  fs.getAbfsStore().getClient().listPath(
+        "/testContinuationToken", false, 1, listResponseData.getContinuationToken(), getTestTracingContext(fs, true),
+        fs.getAbfsStore().getUri());
+
+    Assertions.assertThat(listResponseData1.getContinuationToken())
+        .describedAs("Continuation Token Should be null").isNull();
+    Assertions.assertThat(listResponseData1.getFileStatusList())
+        .describedAs("Listing Size Not as expected").hasSize(1);
+  }
+
+  @Test
+  public void testInvalidContinuationToken() throws Exception {
+    assumeHnsDisabled();
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path("/testInvalidContinuationToken");
+    fs.mkdirs(path);
+    fs.create(new Path(path + "/file1"));
+    fs.create(new Path(path + "/file2"));
+
+    intercept(AbfsRestOperationException.class,
+        () -> fs.getAbfsStore().getClient().listPath(
+            "/testInvalidContinuationToken", false, 1, "invalidToken",
+            getTestTracingContext(fs, true), fs.getAbfsStore().getUri()));
+  }
+
+  @Test
+  public void testEmptyContinuationToken() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path("/testInvalidContinuationToken");
+    fs.mkdirs(path);
+    fs.create(new Path(path + "/file1"));
+    fs.create(new Path(path + "/file2"));
+
+    ListResponseData listResponseData = fs.getAbfsStore().getClient().listPath(
+        "/testInvalidContinuationToken", false, 1, "",
+        getTestTracingContext(fs, true), fs.getAbfsStore().getUri());
+
+    Assertions.assertThat(listResponseData.getContinuationToken())
+        .describedAs("Continuation Token Should Not be null").isNotNull();
+    Assertions.assertThat(listResponseData.getFileStatusList())
+        .describedAs("Listing Size Not as expected").hasSize(1);
+  }
+
+  private void assertFilePathFileStatus(final FileStatus fileStatus,
+      final Path qualifiedPath) {
+    Assertions.assertThat(fileStatus.getPath())
+        .describedAs("Path Not as expected").isEqualTo(qualifiedPath);
+    Assertions.assertThat(fileStatus.isFile())
+        .describedAs("Expecting a File Path").isEqualTo(true);
+    Assertions.assertThat(fileStatus.isDirectory())
+        .describedAs("Expecting a File Path").isEqualTo(false);
+    Assertions.assertThat(fileStatus.getModificationTime()).isNotEqualTo(0);
+  }
+
+  private void assertImplicitDirectoryFileStatus(final FileStatus fileStatus,
+      final Path qualifiedPath) throws Exception {
+    assertDirectoryFileStatus(fileStatus, qualifiedPath);
+    DirectoryStateHelper.isImplicitDirectory(qualifiedPath, getFileSystem(),
+        getTestTracingContext(getFileSystem(), true));
+    Assertions.assertThat(fileStatus.getModificationTime())
+        .describedAs("Last Modified Time Not as Expected").isEqualTo(0);
+  }
+
+  private void assertExplicitDirectoryFileStatus(final FileStatus fileStatus,
+      final Path qualifiedPath) throws Exception {
+    assertDirectoryFileStatus(fileStatus, qualifiedPath);
+    DirectoryStateHelper.isExplicitDirectory(qualifiedPath, getFileSystem(),
+        getTestTracingContext(getFileSystem(), true));
+    Assertions.assertThat(fileStatus.getModificationTime())
+        .describedAs("Last Modified Time Not as Expected").isNotEqualTo(0);
+  }
+
+  private void assertDirectoryFileStatus(final FileStatus fileStatus,
+      final Path qualifiedPath) {
+    Assertions.assertThat(fileStatus.getPath())
+        .describedAs("Path Not as Expected").isEqualTo(qualifiedPath);
+    Assertions.assertThat(fileStatus.isDirectory())
+        .describedAs("Expecting a Directory Path").isEqualTo(true);
+    Assertions.assertThat(fileStatus.isFile())
+        .describedAs("Expecting a Directory Path").isEqualTo(false);
+    Assertions.assertThat(fileStatus.getLen())
+        .describedAs("Content Length Not as Expected").isEqualTo(0);
   }
 }

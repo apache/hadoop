@@ -34,13 +34,11 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.checkQueueStructureCapacities;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.getDefaultCapacities;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.List;
 
-import org.junit.After;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -54,9 +52,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestCapacitySchedulerDynamicBehavior {
   private static final Logger LOG = LoggerFactory
@@ -66,7 +64,7 @@ public class TestCapacitySchedulerDynamicBehavior {
 
   private MockRM rm;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupPlanQueueConfiguration(conf);
@@ -78,7 +76,7 @@ public class TestCapacitySchedulerDynamicBehavior {
     rm.registerNode("n1:1234", 64 * GB, 64);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (rm != null) {
       rm.stop();
@@ -249,7 +247,7 @@ public class TestCapacitySchedulerDynamicBehavior {
     String queue =
         scheduler.getApplicationAttempt(appsInB1.get(0)).getQueue()
             .getQueueName();
-    Assert.assertEquals("b1", queue);
+    assertEquals("b1", queue);
 
     List<ApplicationAttemptId> appsInRoot = scheduler.getAppsInQueue("root");
     assertTrue(appsInRoot.contains(appAttemptId));
@@ -275,7 +273,7 @@ public class TestCapacitySchedulerDynamicBehavior {
     queue =
         scheduler.getApplicationAttempt(appsInDefQ.get(0)).getQueue()
             .getQueueName();
-    Assert.assertTrue(queue.equals(defQName));
+    assertTrue(queue.equals(defQName));
 
     appsInA = scheduler.getAppsInQueue("a");
     assertTrue(appsInA.contains(appAttemptId));

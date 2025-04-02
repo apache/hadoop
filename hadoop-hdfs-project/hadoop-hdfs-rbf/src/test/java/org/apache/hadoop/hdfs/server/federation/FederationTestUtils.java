@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.federation;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
@@ -124,12 +124,11 @@ public final class FederationTestUtils {
       triggeredException = e;
     }
     if (exceptionClass != null) {
-      assertNotNull("No exception was triggered, expected exception"
-          + exceptionClass.getName(), triggeredException);
+      assertNotNull(triggeredException, "No exception was triggered, expected exception"
+          + exceptionClass.getName());
       assertEquals(exceptionClass, triggeredException.getClass());
     } else {
-      assertNull("Exception was triggered but no exception was expected",
-          triggeredException);
+      assertNull(triggeredException, "Exception was triggered but no exception was expected");
     }
   }
 
@@ -524,7 +523,7 @@ public final class FederationTestUtils {
     GetMountTableEntriesResponse getResponse =
         mountTable.getMountTableEntries(getRequest);
     List<MountTable> entries = getResponse.getEntries();
-    assertEquals("Too many entries: " + entries, 1, entries.size());
+    assertEquals(1, entries.size(), "Too many entries: " + entries);
     assertEquals(mountPoint, entries.get(0).getSourcePath());
   }
 

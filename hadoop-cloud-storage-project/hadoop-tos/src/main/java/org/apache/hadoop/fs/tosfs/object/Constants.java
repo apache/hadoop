@@ -1,5 +1,4 @@
-
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,24 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapred;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+package org.apache.hadoop.fs.tosfs.object;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-/**
- * test Clock class
- */
-public class TestClock {
-
-  @Test
-  @Timeout(value = 10)
-  public void testClock(){
-    Clock clock = new Clock();
-    long templateTime = System.currentTimeMillis();
-    long time = clock.getTime();
-    assertEquals(templateTime, time, 30);
+public final class Constants {
+  private Constants() {
   }
+
+  public static final String TOS_FS = "TOS_FS";
+
+  // Magic checksum means doesn't support checksum, if the file type is dir or the filesystem/object
+  // storage doesn't implement checksum algorithm will use magic checksum as the file checksum.
+  public static final byte[] MAGIC_CHECKSUM = new byte[] {'M'};
+
+  public static final String SLASH = "/";
 }

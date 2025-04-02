@@ -69,9 +69,10 @@ import org.apache.hadoop.yarn.server.security.MasterKeyData;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.data.ACL;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
@@ -80,12 +81,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -125,13 +126,13 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     return curatorFramework;
   }
 
-  @Before
+  @BeforeEach
   public void setupCurator() throws Exception {
     curatorTestingServer = setupCuratorServer();
     curatorFramework = setupCuratorFramework(curatorTestingServer);
   }
 
-  @After
+  @AfterEach
   public void cleanupCuratorServer() throws IOException {
     curatorFramework.close();
     curatorTestingServer.stop();
@@ -280,7 +281,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     }
   }
 
-  @Test (timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testZKRMStateStoreRealZK() throws Exception {
     TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
     testRMAppStateStore(zkTester);
@@ -333,7 +335,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     ;
   }
 
-  @Test (timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testCheckMajorVersionChange() throws Exception {
     TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester() {
       Version VERSION_INFO = Version.newInstance(Integer.MAX_VALUE, 0);
@@ -376,8 +379,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     RMStateStore store = zkTester.getRMStateStore();
     Version defaultVersion = zkTester.getCurrentVersion();
     store.checkVersion();
-    assertEquals("Store had wrong version",
-        defaultVersion, store.loadVersion());
+    assertEquals(
+        defaultVersion, store.loadVersion(), "Store had wrong version");
   }
 
   public static Configuration createHARMConf(String rmIds, String rmId,
@@ -487,22 +490,22 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     ResourceManager rm1 = new MockRM(conf1);
     rm1.start();
     rm1.getRMContext().getRMAdminService().transitionToActive(req);
-    assertEquals("RM with ZKStore didn't start",
-        Service.STATE.STARTED, rm1.getServiceState());
-    assertEquals("RM should be Active",
-        HAServiceProtocol.HAServiceState.ACTIVE,
-        rm1.getRMContext().getRMAdminService().getServiceStatus().getState());
+    assertEquals(Service.STATE.STARTED, rm1.getServiceState(),
+        "RM with ZKStore didn't start");
+    assertEquals(HAServiceProtocol.HAServiceState.ACTIVE,
+        rm1.getRMContext().getRMAdminService().getServiceStatus().getState(),
+        "RM should be Active");
 
     Configuration conf2 =
         createHARMConf("rm1,rm2", "rm2", 5678, false, curatorTestingServer);
     ResourceManager rm2 = new MockRM(conf2);
     rm2.start();
     rm2.getRMContext().getRMAdminService().transitionToActive(req);
-    assertEquals("RM with ZKStore didn't start",
-        Service.STATE.STARTED, rm2.getServiceState());
-    assertEquals("RM should be Active",
-        HAServiceProtocol.HAServiceState.ACTIVE,
-        rm2.getRMContext().getRMAdminService().getServiceStatus().getState());
+    assertEquals(Service.STATE.STARTED, rm2.getServiceState(),
+        "RM with ZKStore didn't start");
+    assertEquals(HAServiceProtocol.HAServiceState.ACTIVE,
+        rm2.getRMContext().getRMAdminService().getServiceStatus().getState(),
+        "RM should be Active");
 
     for (int i = 0; i < ZK_TIMEOUT_MS / 50; i++) {
       if (HAServiceProtocol.HAServiceState.ACTIVE ==
@@ -510,12 +513,12 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
         Thread.sleep(100);
       }
     }
-    assertEquals("RM should have been fenced",
-        HAServiceProtocol.HAServiceState.STANDBY,
-        rm1.getRMContext().getRMAdminService().getServiceStatus().getState());
-    assertEquals("RM should be Active",
-        HAServiceProtocol.HAServiceState.ACTIVE,
-        rm2.getRMContext().getRMAdminService().getServiceStatus().getState());
+    assertEquals(HAServiceProtocol.HAServiceState.STANDBY,
+        rm1.getRMContext().getRMAdminService().getServiceStatus().getState(),
+        "RM should have been fenced");
+    assertEquals(HAServiceProtocol.HAServiceState.ACTIVE,
+        rm2.getRMContext().getRMAdminService().getServiceStatus().getState(),
+        "RM should be Active");
     rm1.close();
     rm2.close();
   }
@@ -527,8 +530,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
 
     // Move state to FENCED from ACTIVE
     store.updateFencedState();
-    assertEquals("RMStateStore should have been in fenced state",
-            true, store.isFencedState());    
+    assertEquals(true, store.isFencedState(),
+        "RMStateStore should have been in fenced state");
 
     long submitTime = System.currentTimeMillis();
     long startTime = submitTime + 1000;
@@ -542,8 +545,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     when(mockApp.getApplicationSubmissionContext()).thenReturn(context);
     when(mockApp.getUser()).thenReturn("test");
     store.storeNewApplication(mockApp);
-    assertEquals("RMStateStore should have been in fenced state",
-            true, store.isFencedState());
+    assertEquals(true, store.isFencedState(),
+        "RMStateStore should have been in fenced state");
 
     // Add a new attempt
     ClientToAMTokenSecretManagerInRM clientToAMTokenMgr =
@@ -566,8 +569,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     when(mockRmAppAttemptMetrics.getAggregateAppResourceUsage())
         .thenReturn(new AggregateAppResourceUsage(new HashMap<>()));
     store.storeNewApplicationAttempt(mockAttempt);
-    assertEquals("RMStateStore should have been in fenced state",
-            true, store.isFencedState());
+    assertEquals(true, store.isFencedState(),
+        "RMStateStore should have been in fenced state");
 
     long finishTime = submitTime + 1000;
     // Update attempt
@@ -578,20 +581,20 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
             "test", FinalApplicationStatus.SUCCEEDED, 100, 
             finishTime, new HashMap<>(), new HashMap<>(), 0);
     store.updateApplicationAttemptState(newAttemptState);
-    assertEquals("RMStateStore should have been in fenced state",
-            true, store.isFencedState());
+    assertEquals(true, store.isFencedState(),
+        "RMStateStore should have been in fenced state");
 
     // Update app
     ApplicationStateData appState = ApplicationStateData.newInstance(submitTime, 
             startTime, context, "test");
     store.updateApplicationState(appState);
-    assertEquals("RMStateStore should have been in fenced state",
-            true, store.isFencedState());
+    assertEquals(true, store.isFencedState(),
+        "RMStateStore should have been in fenced state");
 
     // Remove app
     store.removeApplication(mockApp);
-    assertEquals("RMStateStore should have been in fenced state",
-            true, store.isFencedState());
+    assertEquals(true, store.isFencedState(),
+        "RMStateStore should have been in fenced state");
 
     // store RM delegation token;
     RMDelegationTokenIdentifier dtId1 =
@@ -599,43 +602,40 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
             new Text("renewer1"), new Text("realuser1"));
     Long renewDate1 = new Long(System.currentTimeMillis()); 
     dtId1.setSequenceNumber(1111);
-    assertFalse("Token " + dtId1
-        + " should not exist but was found in ZooKeeper",
-        zkTester.delegationTokenExists(dtId1, 0));
+    assertFalse(zkTester.delegationTokenExists(dtId1, 0),
+        "Token " + dtId1 + " should not exist but was found in ZooKeeper");
     store.storeRMDelegationToken(dtId1, renewDate1);
-    assertFalse("Token " + dtId1
-        + " should not exist but was found in ZooKeeper",
-        zkTester.delegationTokenExists(dtId1, 0));
-    assertEquals("RMStateStore should have been in fenced state", true,
-        store.isFencedState());
+    assertFalse(zkTester.delegationTokenExists(dtId1, 0),
+        "Token " + dtId1 + " should not exist but was found in ZooKeeper");
+    assertEquals(true, store.isFencedState(),
+        "RMStateStore should have been in fenced state");
 
     store.updateRMDelegationToken(dtId1, renewDate1);
-    assertFalse("Token " + dtId1
-        + " should not exist but was found in ZooKeeper",
-        zkTester.delegationTokenExists(dtId1, 0));
-    assertEquals("RMStateStore should have been in fenced state", true,
-        store.isFencedState());
+    assertFalse(zkTester.delegationTokenExists(dtId1, 0), "Token " + dtId1
+        + " should not exist but was found in ZooKeeper");
+    assertEquals(true, store.isFencedState(),
+        "RMStateStore should have been in fenced state");
 
     // remove delegation key;
     store.removeRMDelegationToken(dtId1);
-    assertEquals("RMStateStore should have been in fenced state", true,
-        store.isFencedState());
+    assertEquals(true, store.isFencedState(),
+        "RMStateStore should have been in fenced state");
 
     // store delegation master key;
     DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
     store.storeRMDTMasterKey(key);
-    assertEquals("RMStateStore should have been in fenced state", true,
-        store.isFencedState());
+    assertEquals(true, store.isFencedState(),
+        "RMStateStore should have been in fenced state");
 
     // remove delegation master key;
     store.removeRMDTMasterKey(key);
-    assertEquals("RMStateStore should have been in fenced state", true,
-        store.isFencedState());
+    assertEquals(true, store.isFencedState(),
+        "RMStateStore should have been in fenced state");
 
     // store or update AMRMToken;
     store.storeOrUpdateAMRMTokenSecretManager(null, false);
-    assertEquals("RMStateStore should have been in fenced state", true,
-        store.isFencedState());
+    assertEquals(true, store.isFencedState(),
+        "RMStateStore should have been in fenced state");
 
     store.close();
   }
@@ -707,19 +707,20 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       ApplicationId appId, String user, long submitTime, long startTime,
       RMAppState state, long finishTime, String diagnostics) {
     // Check if app is loaded correctly
-    assertNotNull("App " + appId + " should have been loaded.", appState);
-    assertEquals("App submit time in app state", submitTime,
-        appState.getSubmitTime());
-    assertEquals("App start time in app state", startTime,
-        appState.getStartTime());
-    assertEquals("App ID in app state", appId,
-        appState.getApplicationSubmissionContext().getApplicationId());
-    assertEquals("App state", state, appState.getState());
-    assertEquals("Finish time in app state", finishTime,
-        appState.getFinishTime());
-    assertEquals("User in app state", user, appState.getUser());
-    assertEquals("Diagnostics in app state", diagnostics,
-        appState.getDiagnostics());
+    assertNotNull(appState, "App " + appId + " should have been loaded.");
+    assertEquals(submitTime,
+        appState.getSubmitTime(), "App submit time in app state");
+    assertEquals(startTime,
+        appState.getStartTime(), "App start time in app state");
+    assertEquals(appId,
+        appState.getApplicationSubmissionContext().getApplicationId(),
+        "App ID in app state");
+    assertEquals(state, appState.getState(), "App state");
+    assertEquals(finishTime,
+        appState.getFinishTime(), "Finish time in app state");
+    assertEquals(user, appState.getUser(), "User in app state");
+    assertEquals(diagnostics,
+        appState.getDiagnostics(), "Diagnostics in app state");
   }
 
   private static void verifyLoadedApp(RMState rmState,
@@ -737,14 +738,14 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     Map<ApplicationId, ApplicationStateData> rmAppState =
         rmState.getApplicationState();
     ApplicationStateData appState = rmAppState.get(appId);
-    assertNotNull(appId + " is not there in loaded apps", appState);
+    assertNotNull(appState, appId + " is not there in loaded apps");
     verifyLoadedApp(appState, appId, "test", submitTime, startTime,
         isFinished ? RMAppState.FINISHED : null, finishTime,
         isFinished ? "appDiagnostics" : "");
     // Check attempt state.
     if (attempts != null) {
-      assertEquals("Attempts loaded for app " + appId, attempts.size(),
-          appState.attempts.size());
+      assertEquals(attempts.size(),
+          appState.attempts.size(), "Attempts loaded for app " + appId);
       if (finalStatuses != null && amExitStatuses != null) {
         for (int i = 0; i < attempts.size(); i++) {
           if (finalStatuses.get(i) != null) {
@@ -757,8 +758,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
         }
       }
     } else {
-      assertEquals(
-          "Attempts loaded for app " + appId, 0, appState.attempts.size());
+      assertEquals(0, appState.attempts.size(),
+          "Attempts loaded for app " + appId);
     }
   }
 
@@ -778,28 +779,29 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       int amExitStatus, FinalApplicationStatus finalStatus) {
     ApplicationAttemptStateData attemptState = appState.getAttempt(attemptId);
     // Check if attempt is loaded correctly
-    assertNotNull(
-        "Attempt " + attemptId + " should have been loaded.", attemptState);
-    assertEquals("Attempt Id in attempt state",
-        attemptId, attemptState.getAttemptId());
-    assertEquals("Master Container Id in attempt state",
-        masterContainerId, attemptState.getMasterContainer().getId());
+    assertNotNull(attemptState,
+        "Attempt " + attemptId + " should have been loaded.");
+    assertEquals(attemptId, attemptState.getAttemptId(),
+        "Attempt Id in attempt state");
+    assertEquals(masterContainerId, attemptState.getMasterContainer().getId(),
+        "Master Container Id in attempt state");
     if (null != clientTokenKey) {
-      assertArrayEquals("Client token key in attempt state",
-          clientTokenKey.getEncoded(), attemptState.getAppAttemptTokens().
-          getSecretKey(RMStateStore.AM_CLIENT_TOKEN_MASTER_KEY_NAME));
+      assertArrayEquals(clientTokenKey.getEncoded(),
+          attemptState.getAppAttemptTokens().
+          getSecretKey(RMStateStore.AM_CLIENT_TOKEN_MASTER_KEY_NAME),
+          "Client token key in attempt state");
     }
-    assertEquals("Attempt state", state, attemptState.getState());
-    assertEquals("Finish time in attempt state", finishTime,
-        attemptState.getFinishTime());
-    assertEquals("Diagnostics in attempt state", diagnostics,
-        attemptState.getDiagnostics());
-    assertEquals("AM Container exit status in attempt state", amExitStatus,
-        attemptState.getAMContainerExitStatus());
-    assertEquals("Final app status in attempt state", finalStatus,
-        attemptState.getFinalApplicationStatus());
-    assertEquals("Tracking URL in attempt state", trackingURL,
-        attemptState.getFinalTrackingUrl());
+    assertEquals(state, attemptState.getState(), "Attempt state");
+    assertEquals(finishTime, attemptState.getFinishTime(),
+        "Finish time in attempt state");
+    assertEquals(diagnostics, attemptState.getDiagnostics(),
+        "Diagnostics in attempt state");
+    assertEquals(amExitStatus, attemptState.getAMContainerExitStatus(),
+        "AM Container exit status in attempt state");
+    assertEquals(finalStatus, attemptState.getFinalApplicationStatus(),
+        "Final app status in attempt state");
+    assertEquals(trackingURL, attemptState.getFinalTrackingUrl(),
+        "Tracking URL in attempt state");
   }
 
   private static ApplicationStateData createAppState(
@@ -931,8 +933,9 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
         ZKRMStateStore.ROOT_ZNODE_NAME, ZKRMStateStore.RM_APP_ROOT,
         ZKRMStateStore.RM_APP_ROOT_HIERARCHIES, String.valueOf(splitIndex),
         appParent, appPath);
-    assertTrue("Application with id " + appIdStr + " does not exist as per " +
-        "split in state store.", ((ZKRMStateStore)store).exists(path));
+    assertTrue(((ZKRMStateStore)store).exists(path),
+        "Application with id " + appIdStr + " does not exist as per " +
+        "split in state store.");
   }
 
   private static void verifyAppInHierarchicalPath(RMStateStore store,
@@ -946,8 +949,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     } else {
       path = createPath(path, appId);
     }
-    assertTrue(appId + " should exist in path " + path,
-        ((ZKRMStateStore)store).exists(createPath(path)));
+    assertTrue(((ZKRMStateStore)store).exists(createPath(path)),
+        appId + " should exist in path " + path);
   }
 
   private static void assertHierarchicalPaths(RMStateStore store,
@@ -959,9 +962,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
         path = createPath(path, ZKRMStateStore.RM_APP_ROOT_HIERARCHIES,
             String.valueOf(entry.getKey()));
       }
-      assertEquals("Number of childrens for path " + path,
-          (int) entry.getValue(),
-          ((ZKRMStateStore)store).getChildren(path).size());
+      assertEquals((int) entry.getValue(), ((ZKRMStateStore)store).getChildren(path).size(),
+          "Number of childrens for path " + path);
     }
   }
 
@@ -1056,7 +1058,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
         FinalApplicationStatus.SUCCEEDED));
 
     // assert store is in expected state after everything is cleaned
-    assertTrue("Store is not in expected state", zkTester.isFinalStateValid());
+    assertTrue(zkTester.isFinalStateValid(), "Store is not in expected state");
     store.close();
   }
 
@@ -1128,8 +1130,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     store = zkTester.getRMStateStore(createConfForAppNodeSplit(0));
     store.setRMDispatcher(dispatcher);
     state = store.loadState();
-    assertEquals("Number of Apps loaded should be 4.", 4,
-        state.getApplicationState().size());
+    assertEquals(4, state.getApplicationState().size(),
+        "Number of Apps loaded should be 4.");
     verifyLoadedApp(state, appId1, submitTime, startTime, 1234, true,
         Lists.newArrayList(attemptId1, attemptId2), Lists.newArrayList(-1000,
         100), Lists.newArrayList(null, FinalApplicationStatus.SUCCEEDED));
@@ -1144,8 +1146,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     store = zkTester.getRMStateStore(createConfForAppNodeSplit(3));
     store.setRMDispatcher(dispatcher);
     state = store.loadState();
-    assertEquals("Number of apps loaded should be 5.", 5,
-        state.getApplicationState().size());
+    assertEquals(5, state.getApplicationState().size(),
+        "Number of apps loaded should be 5.");
     verifyLoadedApp(state, dummyAppId, submitTime, startTime, 1234, true,
         Lists.newArrayList(dummyAttemptId), Lists.newArrayList(111),
         Lists.newArrayList(FinalApplicationStatus.SUCCEEDED));
@@ -1192,8 +1194,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     store = zkTester.getRMStateStore(createConfForAppNodeSplit(3));
     store.setRMDispatcher(dispatcher);
     state = store.loadState();
-    assertEquals("Number of apps loaded should be 0.", 0,
-        state.getApplicationState().size());
+    assertEquals(0, state.getApplicationState().size(),
+        "Number of apps loaded should be 0.");
     // Close the state store.
     store.close();
   }
@@ -1213,16 +1215,15 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       int sequenceNumber) throws Exception {
     RMStateStore.RMDTSecretManagerState secretManagerState =
         zkTester.store.loadState().getRMDTSecretManagerState();
-    assertEquals("Unexpected token state",
-        tokensWithRenewal, secretManagerState.getTokenState());
-    assertEquals("Unexpected sequence number", sequenceNumber,
-        secretManagerState.getDTSequenceNumber());
+    assertEquals(tokensWithRenewal, secretManagerState.getTokenState(),
+        "Unexpected token state");
+    assertEquals(sequenceNumber, secretManagerState.getDTSequenceNumber(),
+        "Unexpected sequence number");
     for (Map.Entry<RMDelegationTokenIdentifier, Integer> tokenEntry
         : tokensWithIndex.entrySet()) {
-      assertTrue("Expected to find token " + tokenEntry.getKey()
-          + " in zookeeper but did not",
-          zkTester.delegationTokenExists(tokenEntry.getKey(),
-          tokenEntry.getValue()));
+      assertTrue(zkTester.delegationTokenExists(tokenEntry.getKey(),
+          tokenEntry.getValue()), "Expected to find token " + tokenEntry.getKey()
+          + " in zookeeper but did not");
     }
   }
 
@@ -1233,12 +1234,12 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
         zkTester.store.loadState().getRMDTSecretManagerState();
     Map<RMDelegationTokenIdentifier, Long> tokenState =
         secretManagerState.getTokenState();
-    assertTrue("token state does not contain " + token,
-        tokenState.containsKey(token));
-    assertTrue("token state does not contain a token with renewal " + renewDate,
-        tokenState.containsValue(renewDate));
-    assertTrue("Token " + token + "should exist but was not found in ZooKeeper",
-        zkTester.delegationTokenExists(token, index));
+    assertTrue(tokenState.containsKey(token),
+        "token state does not contain " + token);
+    assertTrue(tokenState.containsValue(renewDate),
+        "token state does not contain a token with renewal " + renewDate);
+    assertTrue(zkTester.delegationTokenExists(token, index),
+        "Token " + token + "should exist but was not found in ZooKeeper");
   }
 
   private RMDelegationTokenIdentifier storeUpdateAndVerifyDelegationToken(
@@ -1250,8 +1251,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     RMDelegationTokenIdentifier token =
         new RMDelegationTokenIdentifier(new Text("owner"),
             new Text("renewer"), new Text("realuser"));
-    assertFalse("Token should not exist but was found in ZooKeeper",
-        zkTester.delegationTokenExists(token, split));
+    assertFalse(zkTester.delegationTokenExists(token, split),
+        "Token should not exist but was found in ZooKeeper");
     token.setSequenceNumber(sequenceNumber);
     Long renewDate = System.currentTimeMillis();
     zkTester.store.storeRMDelegationToken(token, renewDate);
@@ -1281,28 +1282,28 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     // Valid values
     TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
     zkTester.getRMStateStore(createConfForDelegationTokenNodeSplit(0)).close();
-    assertEquals("Incorrect split index",
-        0, zkTester.getDelegationTokenNodeSplitIndex());
+    assertEquals(0, zkTester.getDelegationTokenNodeSplitIndex(),
+        "Incorrect split index");
     zkTester.getRMStateStore(createConfForDelegationTokenNodeSplit(1)).close();
-    assertEquals("Incorrect split index",
-        1, zkTester.getDelegationTokenNodeSplitIndex());
+    assertEquals(1, zkTester.getDelegationTokenNodeSplitIndex(),
+        "Incorrect split index");
     zkTester.getRMStateStore(createConfForDelegationTokenNodeSplit(2)).close();
-    assertEquals("Incorrect split index",
-        2, zkTester.getDelegationTokenNodeSplitIndex());
+    assertEquals(2, zkTester.getDelegationTokenNodeSplitIndex(),
+        "Incorrect split index");
     zkTester.getRMStateStore(createConfForDelegationTokenNodeSplit(3)).close();
-    assertEquals("Incorrect split index",
-        3, zkTester.getDelegationTokenNodeSplitIndex());
+    assertEquals(3, zkTester.getDelegationTokenNodeSplitIndex(),
+        "Incorrect split index");
     zkTester.getRMStateStore(createConfForDelegationTokenNodeSplit(4)).close();
-    assertEquals("Incorrect split index",
-        4, zkTester.getDelegationTokenNodeSplitIndex());
+    assertEquals(4, zkTester.getDelegationTokenNodeSplitIndex(),
+        "Incorrect split index");
 
     // Invalid values --> override to 0
     zkTester.getRMStateStore(createConfForDelegationTokenNodeSplit(-1)).close();
-    assertEquals("Incorrect split index",
-        0, zkTester.getDelegationTokenNodeSplitIndex());
+    assertEquals(0, zkTester.getDelegationTokenNodeSplitIndex(),
+        "Incorrect split index");
     zkTester.getRMStateStore(createConfForDelegationTokenNodeSplit(5)).close();
-    assertEquals("Incorrect split index",
-        0, zkTester.getDelegationTokenNodeSplitIndex());
+    assertEquals(0, zkTester.getDelegationTokenNodeSplitIndex(),
+        "Incorrect split index");
   }
 
   @Test
@@ -1348,12 +1349,12 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
         store.loadState().getRMDTSecretManagerState();
     tokensWithRenewal.clear();
     tokensWithIndex.clear();
-    assertEquals("Unexpected token state",
-        tokensWithRenewal, state.getTokenState());
-    assertEquals("Unexpected sequence number",
-        sequenceNumber, state.getDTSequenceNumber());
-    assertFalse("Token should not exist but was found in ZooKeeper",
-        zkTester.delegationTokenExists(token, split));
+    assertEquals(tokensWithRenewal, state.getTokenState(),
+        "Unexpected token state");
+    assertEquals(sequenceNumber, state.getDTSequenceNumber(),
+        "Unexpected sequence number");
+    assertFalse(zkTester.delegationTokenExists(token, split),
+        "Token should not exist but was found in ZooKeeper");
     store.close();
   }
 
@@ -1375,8 +1376,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
               new Text("renewer" + i), new Text("realuser" + i));
       sequenceNumber = i;
       token.setSequenceNumber(sequenceNumber);
-      assertFalse("Token should not exist but was found in ZooKeeper",
-          zkTester.delegationTokenExists(token, 1));
+      assertFalse(zkTester.delegationTokenExists(token, 1),
+          "Token should not exist but was found in ZooKeeper");
       Long renewDate = System.currentTimeMillis();
       store.storeRMDelegationToken(token, renewDate);
       modifyRMDelegationTokenState();
@@ -1419,9 +1420,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     verifyDelegationTokensStateStore(zkTester, tokensWithRenewal,
         tokensWithIndex, sequenceNumber);
     for (RMDelegationTokenIdentifier token : tokensToDelete) {
-      assertFalse("Token " + token
-              + " should not exist but was found in ZooKeeper",
-          zkTester.delegationTokenExists(token, 1));
+      assertFalse(zkTester.delegationTokenExists(token, 1),
+          "Token " + token + " should not exist but was found in ZooKeeper");
     }
     store.close();
   }
@@ -1495,15 +1495,12 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     tokensWithIndex.clear();
     verifyDelegationTokensStateStore(
         zkTester, tokensWithRenewal, tokensWithIndex, sequenceNumber);
-    assertFalse("Token " + token1
-            + " should not exist but was found in ZooKeeper",
-        zkTester.delegationTokenExists(token1, 1));
-    assertFalse("Token " + token1
-            + " should not exist but was found in ZooKeeper",
-        zkTester.delegationTokenExists(token2, 2));
-    assertFalse("Token " + token1
-            + " should not exist but was found in ZooKeeper",
-        zkTester.delegationTokenExists(token0, 0));
+    assertFalse(zkTester.delegationTokenExists(token1, 1),
+        "Token " + token1 + " should not exist but was found in ZooKeeper");
+    assertFalse(zkTester.delegationTokenExists(token2, 2), "Token " + token1 +
+        " should not exist but was found in ZooKeeper");
+    assertFalse(zkTester.delegationTokenExists(token0, 0), "Token " + token1 +
+        " should not exist but was found in ZooKeeper");
     // Store a token with index 3
     sequenceNumber++;
     storeUpdateAndVerifyDelegationToken(zkTester, tokensWithRenewal,
@@ -1550,10 +1547,11 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     ctx = rmState.getApplicationState().get(appId)
         .getApplicationSubmissionContext();
 
-    assertEquals("ApplicationSchedulingPropertiesMap should not have been "
+    assertEquals(schedulingPropertiesMap,
+        ctx.getApplicationSchedulingPropertiesMap(),
+        "ApplicationSchedulingPropertiesMap should not have been "
         + "pruned from the application submission context before the "
-        + "FINISHED state",
-        schedulingPropertiesMap, ctx.getApplicationSchedulingPropertiesMap());
+        + "FINISHED state");
 
     appState.setState(RMAppState.FINISHED);
     store.handleStoreEvent(new RMStateUpdateAppEvent(appState, false, null));
@@ -1566,9 +1564,9 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     assertEquals("a_queue", ctx.getQueue());
     assertNotNull(ctx.getAMContainerSpec());
     assertEquals(17L, ctx.getResource().getMemorySize());
-    assertEquals("ApplicationSchedulingPropertiesMap should have been pruned"
-        + " from the application submission context when in FINISHED STATE",
-        Collections.emptyMap(), ctx.getApplicationSchedulingPropertiesMap());
+    assertEquals(Collections.emptyMap(), ctx.getApplicationSchedulingPropertiesMap(),
+        "ApplicationSchedulingPropertiesMap should have been pruned"
+        + " from the application submission context when in FINISHED STATE");
     store.close();
   }
 
@@ -1589,8 +1587,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     Thread.sleep(110);
 
     opDurations.getMetrics(collector, true);
-    assertEquals("Incorrect number of perf metrics", 1,
-        collector.getRecords().size());
+    assertEquals(1, collector.getRecords().size(),
+        "Incorrect number of perf metrics");
     MetricsRecord record = collector.getRecords().get(0);
     MetricsRecords.assertTag(record,
         ZKRMStateStoreOpDurations.RECORD_INFO.name(),

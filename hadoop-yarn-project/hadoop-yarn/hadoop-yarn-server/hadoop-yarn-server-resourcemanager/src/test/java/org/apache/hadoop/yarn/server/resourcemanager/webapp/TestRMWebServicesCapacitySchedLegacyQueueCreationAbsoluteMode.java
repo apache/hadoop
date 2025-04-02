@@ -30,10 +30,10 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.AfterClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.glassfish.jersey.test.TestProperties;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -54,15 +54,13 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServic
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith(Parameterized.class)
 public class TestRMWebServicesCapacitySchedLegacyQueueCreationAbsoluteMode extends
     JerseyTestBase {
 
-  private final boolean legacyQueueMode;
+  private boolean legacyQueueMode;
 
   private MockRM rm;
 
-  @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
   public static Collection<Boolean> getParameters() {
     return Arrays.asList(true, false);
   }
@@ -75,6 +73,7 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreationAbsoluteMode exten
     config.register(GenericExceptionHandler.class);
     config.register(TestRMWebServicesAppsModification.TestRMCustomAuthFilter.class);
     config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
   }
 
@@ -111,19 +110,28 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreationAbsoluteMode exten
     }
   }
 
-  public TestRMWebServicesCapacitySchedLegacyQueueCreationAbsoluteMode(boolean legacyQueueMode) {
-    this.legacyQueueMode = legacyQueueMode;
-    backupSchedulerConfigFileInTarget();
+  @Override
+  public void setUp() throws Exception {
+    super.setUp();
   }
 
-  @AfterClass
+  public void initTestRMWebServicesCapacitySchedLegacyQueueCreationAbsoluteMode(
+      boolean pLegacyQueueMode) throws Exception {
+    this.legacyQueueMode = pLegacyQueueMode;
+    backupSchedulerConfigFileInTarget();
+    setUp();
+  }
+
+  @AfterAll
   public static void afterClass() {
     restoreSchedulerConfigFileInTarget();
   }
 
-  @Test
-  public void testSchedulerResponseAbsoluteModeLegacyAutoCreation()
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testSchedulerResponseAbsoluteModeLegacyAutoCreation(boolean pLegacyQueueMode)
       throws Exception {
+    initTestRMWebServicesCapacitySchedLegacyQueueCreationAbsoluteMode(pLegacyQueueMode);
     rm.registerNode("h1:1234", 32 * GB, 32);
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     CapacitySchedulerQueueManager autoQueueHandler = cs.getCapacitySchedulerQueueManager();

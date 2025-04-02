@@ -127,7 +127,7 @@ public final class AsyncUtil {
     try {
       return (R) completableFuture.get();
     } catch (ExecutionException e) {
-      throw (Exception)e.getCause();
+      throw (Exception) e.getCause();
     }
   }
 

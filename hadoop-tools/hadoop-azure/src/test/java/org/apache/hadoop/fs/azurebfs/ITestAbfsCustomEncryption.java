@@ -54,6 +54,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
 import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.azurebfs.services.VersionedFileStatus;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
@@ -64,6 +65,7 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA;
@@ -300,10 +302,10 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
            */
           FileStatus status = fs.listStatus(testPath)[0];
           Assertions.assertThat(status)
-              .isInstanceOf(AzureBlobFileSystemStore.VersionedFileStatus.class);
+              .isInstanceOf(VersionedFileStatus.class);
 
           Assertions.assertThat(
-                  ((AzureBlobFileSystemStore.VersionedFileStatus) status).getEncryptionContext())
+                  ((VersionedFileStatus) status).getEncryptionContext())
               .isNotNull();
 
           try (FSDataInputStream in = fs.openFileWithOptions(testPath,
@@ -320,7 +322,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
           return ingressClient.flush(path, 3, false, false, null,
               null, encryptionAdapter, getTestTracingContext(fs, false));
         } else {
-          byte[] buffer = generateBlockListXml(new ArrayList<>()).getBytes(StandardCharsets.UTF_8);
+          byte[] buffer = generateBlockListXml(EMPTY_STRING).getBytes(StandardCharsets.UTF_8);
           return ingressClient.flush(buffer, path, false, null,
               null, null, encryptionAdapter, getTestTracingContext(fs, false));
         }
@@ -342,7 +344,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
           getTestTracingContext(fs, false));
       case LISTSTATUS:
         return client.listPath(path, false, 5, null,
-          getTestTracingContext(fs, true));
+          getTestTracingContext(fs, true), null).getOp();
       case RENAME:
         TracingContext tc = getTestTracingContext(fs, true);
         return client.renamePath(path, new Path(path + "_2").toString(),

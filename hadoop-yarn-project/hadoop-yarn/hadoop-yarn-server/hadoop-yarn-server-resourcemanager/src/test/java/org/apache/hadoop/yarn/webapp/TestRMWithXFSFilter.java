@@ -18,15 +18,18 @@
 
 package org.apache.hadoop.yarn.webapp;
 
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -62,7 +65,7 @@ public class TestRMWithXFSFilter {
     URL url = new URL("http://localhost:8088/ws/v1/cluster/info");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
-    Assert.assertTrue(xfoHeader.endsWith(HttpServer2.XFrameOption
+    assertTrue(xfoHeader.endsWith(HttpServer2.XFrameOption
         .SAMEORIGIN.toString()));
   }
 
@@ -74,7 +77,7 @@ public class TestRMWithXFSFilter {
     URL url = new URL("http://localhost:8088/ws/v1/cluster/info");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
-    Assert.assertTrue(xfoHeader.endsWith(HttpServer2.XFrameOption
+    assertTrue(xfoHeader.endsWith(HttpServer2.XFrameOption
         .SAMEORIGIN.toString()));
   }
 
@@ -86,7 +89,7 @@ public class TestRMWithXFSFilter {
     URL url = new URL("http://localhost:8088/logs");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
-    Assert.assertTrue(xfoHeader.endsWith(HttpServer2.XFrameOption
+    assertTrue(xfoHeader.endsWith(HttpServer2.XFrameOption
         .SAMEORIGIN.toString()));
   }
 
@@ -97,17 +100,17 @@ public class TestRMWithXFSFilter {
     URL url = new URL("http://localhost:8088/ws/v1/cluster/info");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
-    Assert.assertNull("Unexpected X-FRAME-OPTION in header", xfoHeader);
+    assertNull(xfoHeader, "Unexpected X-FRAME-OPTION in header");
   }
 
   @Test
   public void testXFrameOptionsIllegalOption() {
-    IllegalArgumentException e = Assert.assertThrows(
+    IllegalArgumentException e = assertThrows(
         IllegalArgumentException.class,
         () -> createMockRm(true, "otherValue"));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     rm.close();
   }

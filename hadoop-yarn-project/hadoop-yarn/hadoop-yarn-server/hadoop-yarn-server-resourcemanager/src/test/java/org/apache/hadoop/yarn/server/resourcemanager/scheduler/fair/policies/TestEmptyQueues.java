@@ -21,8 +21,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,7 +31,7 @@ import java.util.Collection;
 public class TestEmptyQueues {
   private Collection<? extends Schedulable> schedulables;
 
-  @Before
+  @BeforeEach
   public void setup() {
     schedulables = new ArrayList<Schedulable>();
   }
@@ -39,17 +40,20 @@ public class TestEmptyQueues {
     policy.computeShares(schedulables, Resources.none());
   }
 
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testFifoPolicy() {
     testComputeShares(SchedulingPolicy.getInstance(FifoPolicy.class));
   }
 
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testFairSharePolicy() {
     testComputeShares(SchedulingPolicy.getInstance(FairSharePolicy.class));
   }
 
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testDRFPolicy() {
     testComputeShares(
         SchedulingPolicy.getInstance(DominantResourceFairnessPolicy.class));

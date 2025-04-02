@@ -2409,6 +2409,7 @@ The switch to turn S3A auditing on or off.
   <value>100</value>
   <description>
     Define the maximum number of outstanding async calls.
+    If negative, there is no limit on the number of outstanding async calls.
   </description>
 </property>
 

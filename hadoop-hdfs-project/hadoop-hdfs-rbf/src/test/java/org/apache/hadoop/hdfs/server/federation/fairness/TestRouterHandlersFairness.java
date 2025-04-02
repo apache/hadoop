@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.federation.fairness;
 import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -50,17 +50,15 @@ import org.apache.hadoop.hdfs.server.federation.router.RouterRpcClient;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.After;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test the Router handlers fairness control rejects and accepts requests.
  */
-@RunWith(Parameterized.class)
 public class TestRouterHandlersFairness {
 
   private static final Logger LOG =
@@ -75,21 +73,20 @@ public class TestRouterHandlersFairness {
   /**
    * Initialize test parameters.
    *
-   * @param policyControllerClass RouterRpcFairnessPolicyController type.
-   * @param handlerCount The total number of handlers in the router.
-   * @param configuration Custom configuration.
-   * @param expectedHandlerPerNs The number of handlers expected for each ns.
+   * @param pPolicyControllerClass RouterRpcFairnessPolicyController type.
+   * @param pHandlerCount The total number of handlers in the router.
+   * @param pConfiguration Custom configuration.
+   * @param pExpectedHandlerPerNs The number of handlers expected for each ns.
    */
-  public TestRouterHandlersFairness(
-      Class<RouterRpcFairnessPolicyController> policyControllerClass, int handlerCount,
-      Map<String, String> configuration, Map<String, Integer> expectedHandlerPerNs) {
-    this.expectedHandlerPerNs = expectedHandlerPerNs;
-    this.policyControllerClass = policyControllerClass;
-    this.handlerCount = handlerCount;
-    this.configuration = configuration;
+  public void initTestRouterHandlersFairness(
+      Class<RouterRpcFairnessPolicyController> pPolicyControllerClass, int pHandlerCount,
+      Map<String, String> pConfiguration, Map<String, Integer> pExpectedHandlerPerNs) {
+    this.expectedHandlerPerNs = pExpectedHandlerPerNs;
+    this.policyControllerClass = pPolicyControllerClass;
+    this.handlerCount = pHandlerCount;
+    this.configuration = pConfiguration;
   }
 
-  @Parameterized.Parameters
   public static Collection primes() {
     return Arrays.asList(new Object[][]{
         {
@@ -113,7 +110,7 @@ public class TestRouterHandlersFairness {
     });
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     if (cluster != null) {
       cluster.shutdown();
@@ -156,14 +153,26 @@ public class TestRouterHandlersFairness {
     cluster.waitClusterUp();
   }
 
-  @Test
-  public void testFairnessControlOff() throws Exception {
+  @MethodSource("primes")
+  @ParameterizedTest
+  public void testFairnessControlOff(
+      Class<RouterRpcFairnessPolicyController> pPolicyControllerClass, int pHandlerCount,
+      Map<String, String> pConfiguration, Map<String, Integer> pExpectedHandlerPerNs)
+      throws Exception {
+    initTestRouterHandlersFairness(pPolicyControllerClass, pHandlerCount, pConfiguration,
+        pExpectedHandlerPerNs);
     setupCluster(false, false);
     startLoadTest(false);
   }
 
-  @Test
-  public void testFairnessControlOn() throws Exception {
+  @MethodSource("primes")
+  @ParameterizedTest
+  public void testFairnessControlOn(
+      Class<RouterRpcFairnessPolicyController> pPolicyControllerClass, int pHandlerCount,
+      Map<String, String> pConfiguration, Map<String, Integer> pExpectedHandlerPerNs)
+      throws Exception {
+    initTestRouterHandlersFairness(pPolicyControllerClass, pHandlerCount, pConfiguration,
+        pExpectedHandlerPerNs);
     setupCluster(true, false);
     startLoadTest(true);
   }
@@ -172,8 +181,14 @@ public class TestRouterHandlersFairness {
    * Ensure that the semaphore is not acquired,
    * when invokeSequential or invokeConcurrent throws any exception.
    */
-  @Test
-  public void testReleasedWhenExceptionOccurs() throws Exception{
+  @MethodSource("primes")
+  @ParameterizedTest
+  public void testReleasedWhenExceptionOccurs(
+      Class<RouterRpcFairnessPolicyController> pPolicyControllerClass, int pHandlerCount,
+      Map<String, String> pConfiguration, Map<String, Integer> pExpectedHandlerPerNs)
+      throws Exception {
+    initTestRouterHandlersFairness(pPolicyControllerClass, pHandlerCount, pConfiguration,
+        pExpectedHandlerPerNs);
     setupCluster(true, false);
     RouterContext routerContext = cluster.getRandomRouter();
     RouterRpcClient rpcClient =
@@ -295,8 +310,7 @@ public class TestRouterHandlersFairness {
         }
       }
     } else {
-      assertEquals("Number of failed RPCs without fairness configured",
-          0, overloadException.get());
+      assertEquals(0, overloadException.get(), "Number of failed RPCs without fairness configured");
     }
 
     // Test when handlers are not overloaded
@@ -357,8 +371,7 @@ public class TestRouterHandlersFairness {
         }
       } catch (RemoteException re) {
         IOException ioe = re.unwrapRemoteException();
-        assertTrue("Wrong exception: " + ioe,
-            ioe instanceof StandbyException);
+        assertTrue(ioe instanceof StandbyException, "Wrong exception: " + ioe);
         assertExceptionContains("is overloaded for NS", ioe);
         overloadException.incrementAndGet();
       } catch (Throwable e) {
