@@ -878,10 +878,4 @@ public class Router extends CompositeService implements
     this.conf = conf;
   }
 
-  @VisibleForTesting
-  public boolean isAsync() {
-    return getRpcServer() != null ? getRpcServer().isAsync() :
-        getConfig() != null ? getConfig().getBoolean(DFS_ROUTER_ASYNC_RPC_ENABLE_KEY,
-            DFS_ROUTER_ASYNC_RPC_ENABLE_DEFAULT) : DFS_ROUTER_ASYNC_RPC_ENABLE_DEFAULT;
-  }
 }
