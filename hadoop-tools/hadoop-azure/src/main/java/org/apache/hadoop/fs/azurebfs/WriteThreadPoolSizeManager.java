@@ -3,8 +3,12 @@ package org.apache.hadoop.fs.azurebfs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -12,6 +16,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static java.lang.Boolean.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HIGH_CPU_THRESHOLD;
@@ -21,19 +26,22 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.MEDIUM_C
 /**
  * Manages a thread pool for writing operations, adjusting the pool size based on CPU utilization.
  */
-public class WriteThreadPoolSizeManager {
-  private static WriteThreadPoolSizeManager instance;
+public class WriteThreadPoolSizeManager implements Closeable {
   private final int maxThreadPoolSize;
   private final ScheduledExecutorService cpuMonitorExecutor;
-  private final ExecutorService boundedThreadPool;
+  private volatile ExecutorService boundedThreadPool;
   private final Lock lock = new ReentrantLock();
   private volatile int newMaxPoolSize;
   private static final Logger LOG = LoggerFactory.getLogger(WriteThreadPoolSizeManager.class);
+  private static final ConcurrentHashMap<String, WriteThreadPoolSizeManager>
+      poolSizeManagerMap = new ConcurrentHashMap<>();
+  String filesystemName;
 
   /**
    * Private constructor to initialize the thread pool and CPU monitor executor.
    */
-  private WriteThreadPoolSizeManager(AbfsConfiguration abfsConfiguration) {
+  private WriteThreadPoolSizeManager(String filesystemName, AbfsConfiguration abfsConfiguration) {
+    this.filesystemName = filesystemName;
     int maxPoolSize = Math.max(1, abfsConfiguration.getWriteMaxConcurrentRequestCount());
     this.maxThreadPoolSize = Math.max(maxPoolSize, abfsConfiguration.getWriteMaxThreadPoolSize());
     boundedThreadPool = Executors.newFixedThreadPool(maxPoolSize);
@@ -45,15 +53,28 @@ public class WriteThreadPoolSizeManager {
   }
 
   /**
-   * Returns the singleton instance of WriteThreadPoolSizeManager.
+   * Returns the singleton instance of WriteThreadPoolSizeManager for the given filesystem.
    *
+   * @param filesystemName the name of the filesystem.
+   * @param abfsConfiguration the configuration for the ABFS.
    * @return the singleton instance.
    */
-  public static synchronized WriteThreadPoolSizeManager getInstance(AbfsConfiguration abfsConfiguration) {
-    if (instance == null) {
-      instance = new WriteThreadPoolSizeManager(abfsConfiguration);
+  public static synchronized WriteThreadPoolSizeManager getInstance(
+      String filesystemName, AbfsConfiguration abfsConfiguration) {
+    // Check if an instance already exists in the map for the given filesystem
+    WriteThreadPoolSizeManager existingInstance = poolSizeManagerMap.get(filesystemName);
+
+    // If an existing instance is found, return it
+    if (existingInstance != null && existingInstance.boundedThreadPool != null
+        && !existingInstance.boundedThreadPool.isShutdown()) {
+      return existingInstance;
     }
-    return instance;
+
+    // Otherwise, create a new instance, put it in the map, and return it
+    LOG.warn("Creating new WriteThreadPoolSizeManager instance for filesystem: {}", filesystemName);
+    WriteThreadPoolSizeManager newInstance = new WriteThreadPoolSizeManager(filesystemName, abfsConfiguration);
+    poolSizeManagerMap.put(filesystemName, newInstance);
+    return newInstance;
   }
 
   /**
@@ -88,7 +109,9 @@ public class WriteThreadPoolSizeManager {
       try {
         adjustThreadPoolSizeBasedOnCPU(cpuUtilization);
       } catch (InterruptedException e) {
-        e.printStackTrace();
+        throw new RuntimeException(String.format(
+            "Thread pool size adjustment interrupted for filesystem %s",
+            filesystemName), e);
       }
     }, 0, 60, TimeUnit.SECONDS);
   }
@@ -129,6 +152,9 @@ public class WriteThreadPoolSizeManager {
       } else {
         newMaxPoolSize = currentPoolSize;
       }
+      synchronized (this) {
+        newMaxPoolSize = Math.max(1, newMaxPoolSize); // Ensure newMaxPoolSize is not 0
+      }
       LOG.debug("Adjusting pool size from " + currentPoolSize + " to " + newMaxPoolSize);
     } finally {
       lock.unlock();
@@ -139,25 +165,31 @@ public class WriteThreadPoolSizeManager {
   }
 
   /**
-   * Shuts down the thread pool and CPU monitor executor.
-   *
-   * @throws InterruptedException if the shutdown process is interrupted.
-   */
-  public void shutdown() throws InterruptedException {
-    instance = null;
-    cpuMonitorExecutor.shutdown();
-    boundedThreadPool.shutdown();
-    if (!boundedThreadPool.awaitTermination(30, TimeUnit.SECONDS)) {
-      boundedThreadPool.shutdownNow();
-    }
-  }
-
-  /**
    * Returns the executor service for the thread pool.
    *
    * @return the executor service.
    */
   public ExecutorService getExecutorService() {
     return boundedThreadPool;
+  }
+
+  @Override
+  public void close() throws IOException {
+    synchronized (this) {
+      try {
+        // Shutdown executors
+        cpuMonitorExecutor.shutdown();
+        HadoopExecutors.shutdown(boundedThreadPool, LOG, 30, TimeUnit.SECONDS);
+        boundedThreadPool = null;
+
+        // Remove from the map
+        poolSizeManagerMap.remove(filesystemName);
+        LOG.debug("Closed and removed instance for filesystem: {}",
+            filesystemName);
+      } catch (Exception e) {
+        LOG.warn("Failed to properly close instance for filesystem: {}",
+            filesystemName, e);
+      }
+    }
   }
 }

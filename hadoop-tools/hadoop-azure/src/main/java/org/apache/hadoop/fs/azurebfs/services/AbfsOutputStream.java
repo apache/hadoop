@@ -127,7 +127,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   private long blockCount = 0;
 
   /** Executor service to carry out the parallel upload requests. */
-  private final ListeningExecutorService executorService;
+  private ListeningExecutorService executorService;
 
   /** The etag of the blob. */
   private final String eTag;
@@ -150,8 +150,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   /** The handler for managing Abfs client operations. */
   private final AbfsClientHandler clientHandler;
 
+  private final AbfsOutputStreamContext abfsOutputStreamContext;
+
   public AbfsOutputStream(AbfsOutputStreamContext abfsOutputStreamContext)
       throws IOException {
+    this.abfsOutputStreamContext = abfsOutputStreamContext;
     this.statistics = abfsOutputStreamContext.getStatistics();
     this.path = abfsOutputStreamContext.getPath();
     this.position = abfsOutputStreamContext.getPosition();
@@ -685,6 +688,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       // Check if Executor Service got shutdown before the writes could be
       // completed.
       if (hasActiveBlockDataToUpload() && executorService.isShutdown()) {
+        LOG.debug("Closed for filesystem: {} and path: {}", getClient().getFileSystem(), path);
         throw new PathIOException(path, "Executor Service closed before "
             + "writes could be completed.");
       }

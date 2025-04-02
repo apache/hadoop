@@ -46,6 +46,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -283,7 +284,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
     this.blockFactory = abfsStoreBuilder.blockFactory;
     this.blockOutputActiveBlocks = abfsStoreBuilder.blockOutputActiveBlocks;
-    this.poolSizeManager = WriteThreadPoolSizeManager.getInstance(abfsConfiguration);
+    this.poolSizeManager = WriteThreadPoolSizeManager.getInstance(
+        getClient().getFileSystem() + "-" + UUID.randomUUID(),
+        abfsConfiguration);
     poolSizeManager.startCPUMonitoring();
     this.boundedThreadPool = poolSizeManager.getExecutorService();
   }
@@ -337,21 +340,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     try {
       Futures.allAsList(futures).get();
       // shutdown the threadPool and set it to null.
-      HadoopExecutors.shutdown(boundedThreadPool, LOG,
-          30, TimeUnit.SECONDS);
-      boundedThreadPool = null;
     } catch (InterruptedException e) {
       LOG.error("Interrupted freeing leases", e);
       Thread.currentThread().interrupt();
     } catch (ExecutionException e) {
       LOG.error("Error freeing leases", e);
     } finally {
-      try {
-        poolSizeManager.shutdown();
-      } catch (InterruptedException e) {
-        LOG.error("Interrupted freeing boundedThreadPool", e);
-      }
-      IOUtils.cleanupWithLogger(LOG, getClient());
+      IOUtils.cleanupWithLogger(LOG, poolSizeManager, getClient());
     }
   }
 
