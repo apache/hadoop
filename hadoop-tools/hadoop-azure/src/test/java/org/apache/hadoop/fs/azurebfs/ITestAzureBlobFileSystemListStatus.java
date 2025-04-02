@@ -543,7 +543,7 @@ public class ITestAzureBlobFileSystemListStatus extends
    * @param abfsBlobClient the mocked AbfsBlobClient
    * @param newHeader the header to add in place of the old one
    */
-  public static void mockAbfsRestOperation(AbfsBlobClient abfsBlobClient, String ...newHeader) {
+  public static void mockAbfsRestOperation(AbfsBlobClient abfsBlobClient, String... newHeader) {
     Mockito.doAnswer(invocation -> {
       List<AbfsHttpHeader> requestHeaders = invocation.getArgument(3);
 
