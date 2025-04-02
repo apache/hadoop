@@ -314,6 +314,22 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
 
   /**{@inheritDoc}*/
   @Override
+  public String getResponseHeaderIgnoreCase(final String headerName) {
+    Map<String, List<String>> responseHeaders = getResponseHeaders();
+    if (responseHeaders == null || responseHeaders.isEmpty()) {
+      return null;
+    }
+    // Search for the header value case-insensitively
+    return responseHeaders.entrySet().stream()
+        .filter(entry -> entry.getKey() != null
+            && entry.getKey().equalsIgnoreCase(headerName))
+        .flatMap(entry -> entry.getValue().stream())
+        .findFirst()
+        .orElse(null); // Return null if no match is found
+  }
+
+  /**{@inheritDoc}*/
+  @Override
   protected InputStream getContentInputStream()
       throws IOException {
     if (httpResponse == null || httpResponse.getEntity() == null) {

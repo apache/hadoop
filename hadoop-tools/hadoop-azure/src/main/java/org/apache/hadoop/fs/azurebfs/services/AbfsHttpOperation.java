@@ -24,7 +24,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -235,6 +234,14 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   public abstract String getResponseHeader(String httpHeader);
 
   public abstract Map<String, List<String>> getResponseHeaders();
+
+  /**
+   * Get response header value for the given headerKey ignoring case.
+   *
+   * @param httpHeader header key.
+   * @return header value.
+   */
+  public abstract String getResponseHeaderIgnoreCase(String httpHeader);
 
   // Returns a trace message for the request
   @Override
@@ -744,12 +751,18 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
     @Override
     public String getResponseHeader(final String httpHeader) {
-      return "";
+      return EMPTY_STRING;
     }
 
     @Override
     public Map<String, List<String>> getResponseHeaders() {
       return new HashMap<>();
+    }
+
+    /**{@inheritDoc}*/
+    @Override
+    public String getResponseHeaderIgnoreCase(final String headerName) {
+      return EMPTY_STRING;
     }
 
     @Override
@@ -777,7 +790,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     @Override
     public String getResponseHeader(final String httpHeader) {
       // Directories on FNS-Blob are identified by a special metadata header.
-      if (httpHeader.equalsIgnoreCase(X_MS_META_HDI_ISFOLDER)) {
+      if (httpHeader.equals(X_MS_META_HDI_ISFOLDER)) {
         return TRUE;
       }
       return EMPTY_STRING;
@@ -785,8 +798,17 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
     @Override
     public Map<String, List<String>> getResponseHeaders() {
-      return Collections.singletonMap(X_MS_META_HDI_ISFOLDER,
-          Collections.singletonList(TRUE));
+      return new HashMap<>();
+    }
+
+    /**{@inheritDoc}*/
+    @Override
+    public String getResponseHeaderIgnoreCase(final String httpHeader) {
+      // Directories on FNS-Blob are identified by a special metadata header.
+      if (httpHeader.equalsIgnoreCase(X_MS_META_HDI_ISFOLDER)) {
+        return TRUE;
+      }
+      return EMPTY_STRING;
     }
 
     @Override
@@ -937,12 +959,18 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
     @Override
     public String getResponseHeader(final String httpHeader) {
-      return "";
+      return EMPTY_STRING;
     }
 
     @Override
     public Map<String, List<String>> getResponseHeaders() {
       return new HashMap<>();
+    }
+
+    /**{@inheritDoc}*/
+    @Override
+    public String getResponseHeaderIgnoreCase(final String headerName) {
+      return EMPTY_STRING;
     }
 
     @Override
