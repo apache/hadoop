@@ -25,13 +25,13 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Testing DFSClient renewLease with same INodeId.
@@ -44,7 +44,7 @@ public class TestRenewLeaseWithSameINodeId {
   /** The first Router Context for this federated cluster. */
   private static MiniRouterDFSCluster.RouterContext routerContext;
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     cluster = new MiniRouterDFSCluster(false, 2);
     cluster.setNumDatanodesPerNameservice(3);
@@ -65,7 +65,7 @@ public class TestRenewLeaseWithSameINodeId {
     routerContext = cluster.getRouters().get(0);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     cluster.shutdown();
   }

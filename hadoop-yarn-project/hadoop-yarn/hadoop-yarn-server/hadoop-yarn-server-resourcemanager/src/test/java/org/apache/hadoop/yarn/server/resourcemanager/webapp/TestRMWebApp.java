@@ -20,8 +20,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNodes.newResource;
 import static org.apache.hadoop.yarn.webapp.Params.TITLE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -70,8 +71,7 @@ import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import com.google.inject.Binder;
@@ -126,7 +126,7 @@ public class TestRMWebApp {
     Map<String, String> moreParams =
         rmViewInstance.context().requestContext().moreParams();
     String appsTableColumnsMeta = moreParams.get("ui.dataTables.apps.init");
-    Assert.assertTrue(appsTableColumnsMeta.indexOf("natural") != -1);
+    assertTrue(appsTableColumnsMeta.indexOf("natural") != -1);
   }
 
   @Test
@@ -184,14 +184,14 @@ public class TestRMWebApp {
     String tableInit = WebPageUtils.appsTableInit(true);
     for (String tableLine : tableInit.split("\\n")) {
       if (tableLine.contains("parseHadoopID")) {
-        assertTrue(tableLine + " should have id " + colsId,
-            tableLine.contains(colsId.toString()));
+        assertTrue(tableLine.contains(colsId.toString()),
+            tableLine + " should have id " + colsId);
       } else if (tableLine.contains("renderHadoopDate")) {
-        assertTrue(tableLine + " should have dates " + colsTime,
-            tableLine.contains(colsTime.toString()));
+        assertTrue(tableLine.contains(colsTime.toString()),
+            tableLine + " should have dates " + colsTime);
       } else if (tableLine.contains("parseHadoopProgress")) {
-        assertTrue(tableLine + " should have progress " + colsProgress,
-            tableLine.contains(colsProgress.toString()));
+        assertTrue(tableLine.contains(colsProgress.toString()),
+            tableLine + " should have progress " + colsProgress);
       }
     }
   }
@@ -316,7 +316,7 @@ public class TestRMWebApp {
       when(clientRMService.getApplications(any(GetApplicationsRequest.class)))
           .thenReturn(response);
     } catch (YarnException e) {
-      Assert.fail("Exception is not expected.");
+      fail("Exception is not expected.");
     }
     return clientRMService;
   }

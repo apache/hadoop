@@ -33,9 +33,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
@@ -61,7 +63,11 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMe
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_CONTAINERS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_MB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_V_CORES;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -78,7 +84,7 @@ public class TestQueueMetrics {
   private static final Configuration conf = new Configuration();
   private MetricsSystem ms;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     ms = new MetricsSystemImpl();
     QueueMetrics.clearQueueMetrics();
@@ -743,15 +749,15 @@ public class TestQueueMetrics {
       QueueMetrics metrics =
           QueueMetrics.forQueue(ms, leafQueueName, parentQueue1, true, conf);
 
-      Assert.assertNotNull("QueueMetrics for A shoudn't be null", metrics);
+      assertNotNull(metrics, "QueueMetrics for A shoudn't be null");
 
       // Re-register to check for cache hit, shouldn't blow up metrics-system...
       // also, verify parent-metrics
       QueueMetrics alterMetrics =
           QueueMetrics.forQueue(ms, leafQueueName, parentQueue1, true, conf);
 
-      Assert.assertNotNull("QueueMetrics for alterMetrics shoudn't be null", 
-          alterMetrics);
+      assertNotNull(alterMetrics,
+          "QueueMetrics for alterMetrics shoudn't be null");
     } finally {
       ms.shutdown();
     }
@@ -784,14 +790,71 @@ public class TestQueueMetrics {
       // do not collect all metrics
       AppMetricsChecker.create()
           .checkAgainst(queueSource, false);
-      Assert.fail();
+      fail();
     } catch (AssertionError e) {
-      Assert.assertTrue(
+      assertTrue(
               e.getMessage().contains("Expected exactly one metric for name "));
     }
     // collect all metrics
     AppMetricsChecker.create()
         .checkAgainst(queueSource, true);
+  }
+
+  @Test
+  public void testQueueMetricsRaceCondition() throws InterruptedException {
+    final CountDownLatch latch = new CountDownLatch(2);
+    final int numIterations = 100000;
+    final AtomicInteger exceptionCount = new AtomicInteger(0);
+    final AtomicInteger getCount = new AtomicInteger(0);
+
+    // init a queue metrics for testing
+    String queueName = "test";
+    QueueMetrics metrics =
+        QueueMetrics.forQueue(ms, queueName, null, false, conf);
+    QueueMetrics.getQueueMetrics().put(queueName, metrics);
+
+    /*
+     * simulate the concurrent calls for QueueMetrics#getQueueMetrics
+     */
+    // thread A will keep querying the same queue metrics for a specified number of iterations
+    Thread threadA = new Thread(() -> {
+      try {
+        for (int i = 0; i < numIterations; i++) {
+          QueueMetrics qm = QueueMetrics.getQueueMetrics().get(queueName);
+          if (qm != null) {
+            getCount.incrementAndGet();
+          }
+        }
+      } catch (Exception e) {
+        System.out.println("Exception: " + e.getMessage());
+        exceptionCount.incrementAndGet();
+      } finally {
+        latch.countDown();
+      }
+    });
+    // thread B will keep adding new queue metrics for a specified number of iterations
+    Thread threadB = new Thread(() -> {
+      try {
+        for (int i = 0; i < numIterations; i++) {
+          QueueMetrics.getQueueMetrics().put("q" + i, metrics);
+        }
+      } catch (Exception e) {
+        exceptionCount.incrementAndGet();
+      } finally {
+        latch.countDown();
+      }
+    });
+
+    // start threads and wait for them to finish
+    threadA.start();
+    threadB.start();
+    latch.await();
+
+    // check if all get operations are successful to
+    // make sure there is no race condition
+    assertEquals(numIterations, getCount.get());
+    // check if there is any exception
+    assertEquals(0, exceptionCount.get());
   }
 
   private static void checkAggregatedNodeTypes(MetricsSource source,

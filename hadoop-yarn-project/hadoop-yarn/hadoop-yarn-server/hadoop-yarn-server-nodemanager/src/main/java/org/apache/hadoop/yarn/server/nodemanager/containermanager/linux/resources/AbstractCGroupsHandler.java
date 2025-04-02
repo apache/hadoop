@@ -27,8 +27,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
-import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

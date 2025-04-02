@@ -33,10 +33,9 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.AfterClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -70,14 +69,12 @@ import static org.mockito.Mockito.when;
  *     root.test_1.test_1_2      2/16      [memory=2048,  vcores=2]       6.25%
  *     root.test_1.test_1_3     12/16      [memory=12288, vcores=12]      37.5%
  */
-@RunWith(Parameterized.class)
 public class TestRMWebServicesCapacitySchedDynamicConfigWeightModeDQC extends JerseyTestBase {
 
-  private final boolean legacyQueueMode;
+  private boolean legacyQueueMode;
 
   private MockRM rm;
 
-  @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
   public static Collection<Boolean> getParameters() {
     return Arrays.asList(true, false);
   }
@@ -86,9 +83,16 @@ public class TestRMWebServicesCapacitySchedDynamicConfigWeightModeDQC extends Je
 
   private Configuration conf;
 
-  public TestRMWebServicesCapacitySchedDynamicConfigWeightModeDQC(boolean legacyQueueMode) {
-    this.legacyQueueMode = legacyQueueMode;
+  @Override
+  public void setUp() throws Exception {
+    super.setUp();
+  }
+
+  public void initTestRMWebServicesCapacitySchedDynamicConfigWeightModeDQC(
+      boolean pLegacyQueueMode) throws Exception {
+    this.legacyQueueMode = pLegacyQueueMode;
     backupSchedulerConfigFileInTarget();
+    setUp();
   }
 
   @Override
@@ -135,13 +139,15 @@ public class TestRMWebServicesCapacitySchedDynamicConfigWeightModeDQC extends Je
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() {
     restoreSchedulerConfigFileInTarget();
   }
 
-  @Test
-  public void testWeightModeFlexibleAQC() throws Exception {
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testWeightModeFlexibleAQC(boolean pLegacyQueueMode) throws Exception {
+    initTestRMWebServicesCapacitySchedDynamicConfigWeightModeDQC(pLegacyQueueMode);
     // capacity and normalizedWeight are set differently between legacy/non-legacy queue mode
     rm.registerNode("h1:1234", 32 * GB, 32);
     assertJsonResponse(sendRequest(target()),

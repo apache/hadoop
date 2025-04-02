@@ -216,7 +216,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
 
     WebAppProxyServer webAppProxyServer = new WebAppProxyServer();
     try {
-      conf.set(YarnConfiguration.PROXY_ADDRESS, "0.0.0.0:9099");
+      conf.set(YarnConfiguration.PROXY_ADDRESS, "localhost:9099");
       cluster.init(conf);
       cluster.start();
       getAdminService(0).transitionToActive(req);
@@ -231,7 +231,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
 
       // send httpRequest with fakeApplicationId
       // expect to get "Not Found" response and 404 response code
-      URL wrongUrl = new URL("http://0.0.0.0:9099/proxy/" + fakeAppId);
+      URL wrongUrl = new URL("http://localhost:9099/proxy/" + fakeAppId);
       HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl
           .openConnection();
 
@@ -258,7 +258,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
 
     // send httpRequest with fakeApplicationId
     // expect to get "Not Found" response and 404 response code
-    URL wrongUrl = new URL("http://0.0.0.0:18088/proxy/" + fakeAppId);
+    URL wrongUrl = new URL("http://localhost:18088/proxy/" + fakeAppId);
     HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl
         .openConnection();
 
@@ -286,8 +286,8 @@ public class TestRMFailover extends ClientBaseWithFixes {
     cluster.init(conf);
     cluster.start();
     getAdminService(0).transitionToActive(req);
-    String rm1Url = "http://0.0.0.0:18088";
-    String rm2Url = "http://0.0.0.0:28088";
+    String rm1Url = "http://localhost:18088";
+    String rm2Url = "http://localhost:28088";
 
     String redirectURL = getRedirectURL(rm2Url);
     // if uri is null, RMWebAppFilter will append a slash at the trail of the redirection url

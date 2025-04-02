@@ -112,7 +112,7 @@ public class AuditLogDirectParser implements AuditCommandParser {
   }
 
   @Override
-  public AuditReplayCommand parse(Text inputLine,
+  public AuditReplayCommand parse(Long sequence, Text inputLine,
       Function<Long, Long> relativeToAbsolute) throws IOException {
     Matcher m = logLineParseRegex.matcher(inputLine.toString());
     if (!m.find()) {
@@ -147,7 +147,8 @@ public class AuditLogDirectParser implements AuditCommandParser {
       }
     }
 
-    return new AuditReplayCommand(relativeToAbsolute.apply(relativeTimestamp),
+    return new AuditReplayCommand(sequence,
+        relativeToAbsolute.apply(relativeTimestamp),
         // Split the UGI on space to remove the auth and proxy portions of it
         SPACE_SPLITTER.split(parameterMap.get("ugi")).iterator().next(),
         parameterMap.get("cmd").replace("(options:", "(options="),

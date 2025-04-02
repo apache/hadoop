@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 
 import software.amazon.s3.analyticsaccelerator.S3SeekableInputStreamConfiguration;
 import software.amazon.s3.analyticsaccelerator.common.ConnectorConfiguration;
-import software.amazon.s3.analyticsaccelerator.util.PrefetchMode;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_PARQUET;
@@ -64,8 +63,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBase {
 
   private static final String PHYSICAL_IO_PREFIX = "physicalio";
-  private static final String LOGICAL_IO_PREFIX = "logicalio";
-
 
   private Path externalTestFile;
 
@@ -174,35 +171,6 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
     }
 
     verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
-  }
-
-  @Test
-  public void testConnectorFrameworkConfigurable() {
-    describe("Verify S3 connector framework reads configuration");
-
-    Configuration conf = new Configuration(getConfiguration());
-
-    //Disable Predictive Prefetching
-    conf.set(ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX +
-        "." + LOGICAL_IO_PREFIX + ".prefetching.mode", "all");
-
-    //Set Blobstore Capacity
-    conf.setInt(ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX +
-        "." + PHYSICAL_IO_PREFIX + ".blobstore.capacity", 1);
-
-    ConnectorConfiguration connectorConfiguration =
-        new ConnectorConfiguration(conf, ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX);
-
-    S3SeekableInputStreamConfiguration configuration =
-        S3SeekableInputStreamConfiguration.fromConfiguration(connectorConfiguration);
-
-    Assertions.assertThat(configuration.getLogicalIOConfiguration().getPrefetchingMode())
-            .as("AnalyticsStream configuration is not set to expected value")
-            .isSameAs(PrefetchMode.ALL);
-
-    Assertions.assertThat(configuration.getPhysicalIOConfiguration().getBlobStoreCapacity())
-            .as("AnalyticsStream configuration is not set to expected value")
-            .isEqualTo(1);
   }
 
   @Test

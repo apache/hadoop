@@ -45,9 +45,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.Applicatio
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,12 +78,12 @@ public class TestZKRMStateStorePerf extends RMStateStoreTestBase
   private ClientToAMTokenSecretManagerInRM clientToAMTokenMgr;
   private TestingServer curatorTestingServer;
 
-  @Before
+  @BeforeEach
   public void setUpZKServer() throws Exception {
     curatorTestingServer = new TestingServer();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (store != null) {
       store.stop();

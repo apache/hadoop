@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TimeoutException;
@@ -257,34 +256,12 @@ public class BlobRenameHandler extends ListActionTaker {
   private boolean preCheck(final Path src, final Path dst,
       final PathInformation pathInformation)
       throws AzureBlobFileSystemException {
-    validateDestinationPath(src, dst);
+    validateDestinationIsNotSubDir(src, dst);
     validateSourcePath(pathInformation);
     validateDestinationPathNotExist(src, dst, pathInformation);
     validateDestinationParentExist(src, dst, pathInformation);
 
     return true;
-  }
-
-  /**
-   * Validate if the format of the destination path is correct and if the destination
-   * path is not a sub-directory of the source path.
-   *
-   * @param src source path
-   * @param dst destination path
-   *
-   * @throws AbfsRestOperationException if the destination path is invalid
-   */
-  private void validateDestinationPath(final Path src, final Path dst)
-      throws AbfsRestOperationException {
-    if (containsColon(dst)) {
-      throw new AbfsRestOperationException(
-          HttpURLConnection.HTTP_BAD_REQUEST,
-          AzureServiceErrorCode.INVALID_RENAME_DESTINATION.getErrorCode(), null,
-          new PathIOException(dst.toUri().getPath(),
-              "Destination path contains colon"));
-    }
-
-    validateDestinationIsNotSubDir(src, dst);
   }
 
   /**

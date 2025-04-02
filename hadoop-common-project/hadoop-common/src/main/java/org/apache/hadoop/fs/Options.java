@@ -723,16 +723,17 @@ public final class Options {
   public interface CreateFileOptionKeys {
 
     /**
-     * {code createFile()} option to write a file in the close() operation iff
+     * {@code createFile()} option to write a file in the close() operation iff
      * there is nothing at the destination.
-     * this is the equivalent of {@code create(path, overwrite=true}
+     * this is the equivalent of {@code create(path, overwrite=true)}
      * <i>except that the existence check is postponed to the end of the write</i>.
      * <p>
      * Value {@value}.
+     * </p>
      * <p>
      * This can be set in the builder.
-     * <p>
-     *   <ol>
+     * </p>
+     * <ol>
      *     <li>It is for object stores stores which only upload/manifest files
      *         at the end of the stream write.</li>
      *     <li>Streams which support it SHALL not manifest any object to
@@ -745,7 +746,7 @@ public final class Options {
      *         the option value is {@code true}, and it is supported/enabled,
      *         the FS SHALL omit all overwrite checks in {@code create},
      *         including for the existence of an object or a directory underneath.
-     *         Instead, during {close()} the object will only be manifest
+     *         Instead, during {@code close()} the object will only be manifest
      *         at the target path if there is no object at the destination.
      *     </li>
      *     <li>The existence check and object creation SHALL be atomic.</li>
@@ -759,8 +760,8 @@ public final class Options {
      *         the request, or it MAY enable the feature.
      *         Any filesystem which does not support the feature, including
      *         from older releases, SHALL ignore it.
-     *   </ol>
-
+     *     </li>
+     * </ol>
      */
     String FS_OPTION_CREATE_CONDITIONAL_OVERWRITE = "fs.option.create.conditional.overwrite";
 
@@ -785,11 +786,11 @@ public final class Options {
      *       exception, or  a{@code java.nio.file.FileAlreadyExistsException}
      *    </li>
      *   <li>If there is an object there, its Etag SHALL be compared to the
-     *       value passed here.<li>
+     *       value passed here.</li>
      *   <li>If there is no match, the operation SHALL be rejected by raising
      *       either a {@code org.apache.hadoop.fs.FileAlreadyExistsException}
      *       exception, or  a{@code java.nio.file.FileAlreadyExistsException}
-     *    </li>     *
+     *    </li>
      *   <li>If the etag does match, the file SHALL be created.</li>
      *   <li>The check and create SHALL be atomic</li>
      *   <li>The check and create MAY be at the end of the write, in {@code close()},
@@ -797,8 +798,6 @@ public final class Options {
      *       MAY perform the check early</li>
      *   <li>If supported and enabled, stores MAY check for the existence of subdirectories;
      *       this behavior is implementation-specific.</li>
-     *   <li></li>
-     *   <li></li>
      * </ol>
      */
     String FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG =

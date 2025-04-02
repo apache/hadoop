@@ -135,7 +135,7 @@ import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeIn
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterUserInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
-import org.apache.hadoop.yarn.util.MonotonicClock;
+import org.apache.hadoop.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.BadRequestException;

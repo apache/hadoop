@@ -38,31 +38,32 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.TimelineDocument;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.entity.TimelineEntityDocument;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.mockito.ArgumentMatchers;
 import org.mockito.MockedStatic;
 
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
  * Test case for {@link DocumentStoreTimelineReaderImpl}.
  */
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(DocumentStoreFactory.class)
+@ExtendWith(MockitoExtension.class)
 public class TestDocumentStoreTimelineReaderImpl {
 
   private final DocumentStoreReader<TimelineDocument> documentStoreReader = new
@@ -84,7 +85,7 @@ public class TestDocumentStoreTimelineReaderImpl {
 
   private MockedStatic<DocumentStoreFactory> documentStoreFactoryMockedStatic;
 
-  @Before
+  @BeforeEach
   public void setUp() throws YarnException {
     conf.set(DocumentStoreUtils.TIMELINE_SERVICE_DOCUMENTSTORE_DATABASE_NAME,
         "TestDB");
@@ -98,14 +99,16 @@ public class TestDocumentStoreTimelineReaderImpl {
         .thenReturn(documentStoreReader);
   }
 
-  @After
+  @AfterEach
   public void close() {
     documentStoreFactoryMockedStatic.close();
   }
 
-  @Test(expected = YarnException.class)
+  @Test
   public void testFailOnNoCosmosDBConfigs() throws Exception {
-    DocumentStoreUtils.validateCosmosDBConf(new Configuration());
+    assertThrows(YarnException.class, () -> {
+      DocumentStoreUtils.validateCosmosDBConf(new Configuration());
+    });
   }
 
   @Test
@@ -120,12 +123,12 @@ public class TestDocumentStoreTimelineReaderImpl {
     TimelineEntity timelineEntity = timelineReader.getEntity(context,
         dataToRetrieve);
 
-    Assert.assertEquals(appTimelineEntity.getCreatedTime(), timelineEntity
+    assertEquals(appTimelineEntity.getCreatedTime(), timelineEntity
         .getCreatedTime().longValue());
-    Assert.assertEquals(0, timelineEntity .getMetrics().size());
-    Assert.assertEquals(0, timelineEntity.getEvents().size());
-    Assert.assertEquals(0, timelineEntity.getConfigs().size());
-    Assert.assertEquals(appTimelineEntity.getInfo().size(),
+    assertEquals(0, timelineEntity .getMetrics().size());
+    assertEquals(0, timelineEntity.getEvents().size());
+    assertEquals(0, timelineEntity.getConfigs().size());
+    assertEquals(appTimelineEntity.getInfo().size(),
         timelineEntity.getInfo().size());
   }
 
@@ -139,13 +142,13 @@ public class TestDocumentStoreTimelineReaderImpl {
     TimelineEntity timelineEntity = timelineReader.getEntity(context,
         dataToRetrieve);
 
-    Assert.assertEquals(appTimelineEntity.getCreatedTime(), timelineEntity
+    assertEquals(appTimelineEntity.getCreatedTime(), timelineEntity
         .getCreatedTime().longValue());
-    Assert.assertEquals(appTimelineEntity.getMetrics().size(),
+    assertEquals(appTimelineEntity.getMetrics().size(),
         timelineEntity.getMetrics().size());
-    Assert.assertEquals(0, timelineEntity.getEvents().size());
-    Assert.assertEquals(0, timelineEntity.getConfigs().size());
-    Assert.assertEquals(appTimelineEntity.getInfo().size(),
+    assertEquals(0, timelineEntity.getEvents().size());
+    assertEquals(0, timelineEntity.getConfigs().size());
+    assertEquals(appTimelineEntity.getInfo().size(),
         timelineEntity.getInfo().size());
   }
 
@@ -159,15 +162,15 @@ public class TestDocumentStoreTimelineReaderImpl {
     TimelineEntity timelineEntity = timelineReader.getEntity(context,
         dataToRetrieve);
 
-    Assert.assertEquals(appTimelineEntity.getCreatedTime(), timelineEntity
+    assertEquals(appTimelineEntity.getCreatedTime(), timelineEntity
         .getCreatedTime().longValue());
-    Assert.assertEquals(appTimelineEntity.getMetrics().size(),
+    assertEquals(appTimelineEntity.getMetrics().size(),
         timelineEntity .getMetrics().size());
-    Assert.assertEquals(appTimelineEntity.getEvents().size(),
+    assertEquals(appTimelineEntity.getEvents().size(),
         timelineEntity.getEvents().size());
-    Assert.assertEquals(appTimelineEntity.getConfigs().size(),
+    assertEquals(appTimelineEntity.getConfigs().size(),
         timelineEntity.getConfigs().size());
-    Assert.assertEquals(appTimelineEntity.getInfo().size(),
+    assertEquals(appTimelineEntity.getInfo().size(),
         timelineEntity.getInfo().size());
   }
 
@@ -181,7 +184,7 @@ public class TestDocumentStoreTimelineReaderImpl {
     Set<TimelineEntity> actualEntities = timelineReader.getEntities(context,
         new TimelineEntityFilters.Builder().build(), dataToRetrieve);
 
-    Assert.assertEquals(entities.size(), actualEntities.size());
+    assertEquals(entities.size(), actualEntities.size());
   }
 
   @Test
@@ -194,7 +197,7 @@ public class TestDocumentStoreTimelineReaderImpl {
         new TimelineEntityFilters.Builder().entityLimit(2L).build(),
         dataToRetrieve);
 
-    Assert.assertEquals(2, actualEntities.size());
+    assertEquals(2, actualEntities.size());
   }
 
   @Test
@@ -207,7 +210,7 @@ public class TestDocumentStoreTimelineReaderImpl {
         new TimelineEntityFilters.Builder().createdTimeBegin(1533985554927L)
             .createTimeEnd(1533985554927L).build(), dataToRetrieve);
 
-    Assert.assertEquals(1, actualEntities.size());
+    assertEquals(1, actualEntities.size());
   }
 
   @Test
@@ -227,11 +230,11 @@ public class TestDocumentStoreTimelineReaderImpl {
         new TimelineEntityFilters.Builder().infoFilters(infoFilterList).build(),
         dataToRetrieve);
 
-    Assert.assertEquals(1, actualEntities.size());
+    assertEquals(1, actualEntities.size());
     // Only one entity with type YARN_APPLICATION_ATTEMPT should be returned.
     for (TimelineEntity entity : actualEntities) {
       if (!entity.getType().equals("YARN_APPLICATION_ATTEMPT")) {
-        Assert.fail("Incorrect filtering based on info filters");
+        fail("Incorrect filtering based on info filters");
       }
     }
 
@@ -245,11 +248,11 @@ public class TestDocumentStoreTimelineReaderImpl {
         new TimelineEntityFilters.Builder().configFilters(confFilterList)
             .build(), dataToRetrieve);
 
-    Assert.assertEquals(1, actualEntities.size());
+    assertEquals(1, actualEntities.size());
     // Only one entity with type YARN_APPLICATION should be returned.
     for (TimelineEntity entity : actualEntities) {
       if (!entity.getType().equals("YARN_APPLICATION")) {
-        Assert.fail("Incorrect filtering based on info filters");
+        fail("Incorrect filtering based on info filters");
       }
     }
 
@@ -263,11 +266,11 @@ public class TestDocumentStoreTimelineReaderImpl {
         new TimelineEntityFilters.Builder().eventFilters(eventFilters).build(),
         dataToRetrieve);
 
-    Assert.assertEquals(1, actualEntities.size());
+    assertEquals(1, actualEntities.size());
     // Only one entity with type YARN_CONTAINER should be returned.
     for (TimelineEntity entity : actualEntities) {
       if (!entity.getType().equals("YARN_CONTAINER")) {
-        Assert.fail("Incorrect filtering based on info filters");
+        fail("Incorrect filtering based on info filters");
       }
     }
 
@@ -279,11 +282,11 @@ public class TestDocumentStoreTimelineReaderImpl {
         new TimelineEntityFilters.Builder().metricFilters(metricFilterList)
             .build(), dataToRetrieve);
 
-    Assert.assertEquals(1, actualEntities.size());
+    assertEquals(1, actualEntities.size());
     // Only one entity with type YARN_CONTAINER should be returned.
     for (TimelineEntity entity : actualEntities) {
       if (!entity.getType().equals("YARN_CONTAINER")) {
-        Assert.fail("Incorrect filtering based on info filters");
+        fail("Incorrect filtering based on info filters");
       }
     }
   }
@@ -300,7 +303,7 @@ public class TestDocumentStoreTimelineReaderImpl {
     TimelineEntity timelineEntity = timelineReader.getEntity(context,
         dataToRetrieve);
 
-    Assert.assertEquals(TimelineEntityType.YARN_FLOW_ACTIVITY.toString(),
+    assertEquals(TimelineEntityType.YARN_FLOW_ACTIVITY.toString(),
         timelineEntity.getType());
 
     // reading YARN_FLOW_RUN
@@ -308,7 +311,7 @@ public class TestDocumentStoreTimelineReaderImpl {
     timelineEntity = timelineReader.getEntity(context,
         dataToRetrieve);
 
-    Assert.assertEquals(TimelineEntityType.YARN_FLOW_RUN.toString(),
+    assertEquals(TimelineEntityType.YARN_FLOW_RUN.toString(),
         timelineEntity.getType());
 
     // reading YARN_APPLICATION
@@ -316,7 +319,7 @@ public class TestDocumentStoreTimelineReaderImpl {
     timelineEntity = timelineReader.getEntity(context,
         dataToRetrieve);
 
-    Assert.assertEquals(TimelineEntityType.YARN_APPLICATION.toString(),
+    assertEquals(TimelineEntityType.YARN_APPLICATION.toString(),
         timelineEntity.getType());
   }
 
@@ -327,9 +330,9 @@ public class TestDocumentStoreTimelineReaderImpl {
 
     context.setEntityType(TimelineEntityType.YARN_CONTAINER.toString());
     Set<String> entityTypes = timelineReader.getEntityTypes(context);
-    Assert.assertTrue(entityTypes.contains(TimelineEntityType.YARN_CONTAINER
+    assertTrue(entityTypes.contains(TimelineEntityType.YARN_CONTAINER
         .toString()));
-    Assert.assertTrue(entityTypes.contains(TimelineEntityType
+    assertTrue(entityTypes.contains(TimelineEntityType
         .YARN_APPLICATION_ATTEMPT.toString()));
   }
 
@@ -351,7 +354,7 @@ public class TestDocumentStoreTimelineReaderImpl {
     context.setEntityType(TimelineEntityType.YARN_APPLICATION.toString());
     TimelineEntity timelineEntity = timelineReader.getEntity(context,
         dataToRetrieve);
-    Assert.assertEquals(0, timelineEntity.getMetrics().size());
+    assertEquals(0, timelineEntity.getMetrics().size());
 
     timelineFilterList.addFilter(new TimelinePrefixFilter(
         TimelineCompareOp.EQUAL,
@@ -361,19 +364,19 @@ public class TestDocumentStoreTimelineReaderImpl {
     context.setEntityType(TimelineEntityType.YARN_APPLICATION.toString());
     timelineEntity = timelineReader.getEntity(context,
         dataToRetrieve);
-    Assert.assertTrue(timelineEntity.getMetrics().size() > 0);
+    assertTrue(timelineEntity.getMetrics().size() > 0);
 
     //testing metrics prefix for AND condition
     timelineFilterList.setOperator(TimelineFilterList.Operator.AND);
     timelineEntity = timelineReader.getEntity(context,
         dataToRetrieve);
-    Assert.assertEquals(0, timelineEntity.getMetrics().size());
+    assertEquals(0, timelineEntity.getMetrics().size());
 
     dataToRetrieve.getMetricsToRetrieve().getFilterList().remove(0);
     context.setEntityType(TimelineEntityType.YARN_APPLICATION.toString());
     timelineEntity = timelineReader.getEntity(context,
         dataToRetrieve);
-    Assert.assertTrue(timelineEntity.getMetrics().size() > 0);
+    assertTrue(timelineEntity.getMetrics().size() > 0);
   }
 
   @Test
@@ -394,7 +397,7 @@ public class TestDocumentStoreTimelineReaderImpl {
     context.setEntityType(TimelineEntityType.YARN_APPLICATION.toString());
     TimelineEntity timelineEntity = timelineReader.getEntity(context,
         dataToRetrieve);
-    Assert.assertEquals(0, timelineEntity.getConfigs().size());
+    assertEquals(0, timelineEntity.getConfigs().size());
 
     timelineFilterList.addFilter(new TimelinePrefixFilter(
         TimelineCompareOp.EQUAL, "YARN_AM_NODE_LABEL_EXPRESSION"));
@@ -403,18 +406,18 @@ public class TestDocumentStoreTimelineReaderImpl {
     context.setEntityType(TimelineEntityType.YARN_APPLICATION.toString());
     timelineEntity = timelineReader.getEntity(context,
         dataToRetrieve);
-    Assert.assertTrue(timelineEntity.getConfigs().size() > 0);
+    assertTrue(timelineEntity.getConfigs().size() > 0);
 
     //testing metrics prefix for AND condition
     timelineFilterList.setOperator(TimelineFilterList.Operator.AND);
     timelineEntity = timelineReader.getEntity(context,
         dataToRetrieve);
-    Assert.assertEquals(0, timelineEntity.getConfigs().size());
+    assertEquals(0, timelineEntity.getConfigs().size());
 
     dataToRetrieve.getConfsToRetrieve().getFilterList().remove(0);
     context.setEntityType(TimelineEntityType.YARN_APPLICATION.toString());
     timelineEntity = timelineReader.getEntity(context,
         dataToRetrieve);
-    Assert.assertTrue(timelineEntity.getConfigs().size() > 0);
+    assertTrue(timelineEntity.getConfigs().size() > 0);
   }
 }

@@ -22,10 +22,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +42,7 @@ import org.apache.hadoop.hdfs.server.federation.router.RouterRpcClient;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestRouterRefreshFairnessPolicyController {
 
@@ -53,12 +53,12 @@ public class TestRouterRefreshFairnessPolicyController {
 
   private StateStoreDFSCluster cluster;
 
-  @BeforeClass
+  @BeforeAll
   public static void setLogLevel() {
     GenericTestUtils.setLogLevel(AbstractRouterRpcFairnessPolicyController.LOG, Level.DEBUG);
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     if (cluster != null) {
       cluster.shutdown();
@@ -66,7 +66,7 @@ public class TestRouterRefreshFairnessPolicyController {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setupCluster() throws Exception {
     cluster = new StateStoreDFSCluster(false, 2);
     Configuration conf = new RouterConfigBuilder().stateStore().rpc().build();

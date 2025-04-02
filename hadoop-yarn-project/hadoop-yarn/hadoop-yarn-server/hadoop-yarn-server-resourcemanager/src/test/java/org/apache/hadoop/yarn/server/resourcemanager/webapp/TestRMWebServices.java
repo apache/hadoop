@@ -19,9 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
@@ -109,9 +111,8 @@ import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -161,7 +162,7 @@ public class TestRMWebServices extends JerseyTestBase {
   public TestRMWebServices() {
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void initClusterMetrics() {
     ClusterMetrics clusterMetrics = ClusterMetrics.getMetrics();
     clusterMetrics.incrDecommisionedNMs();
@@ -317,7 +318,7 @@ public class TestRMWebServices extends JerseyTestBase {
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList nodes = dom.getElementsByTagName("clusterInfo");
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
 
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
@@ -341,9 +342,9 @@ public class TestRMWebServices extends JerseyTestBase {
 
   public void verifyClusterInfo(JSONObject json) throws JSONException,
       Exception {
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject info = json.getJSONObject("clusterInfo");
-    assertEquals("incorrect number of elements", 12, info.length());
+    assertEquals(12, info.length(), "incorrect number of elements");
     verifyClusterGeneric(info.getLong("id"), info.getLong("startedOn"),
         info.getString("state"), info.getString("haState"),
         info.getString("haZooKeeperConnectionState"),
@@ -362,14 +363,13 @@ public class TestRMWebServices extends JerseyTestBase {
       String resourceManagerVersionBuiltOn, String resourceManagerBuildVersion,
       String resourceManagerVersion) {
 
-    assertEquals("clusterId doesn't match: ",
-        ResourceManager.getClusterTimeStamp(), clusterid);
-    assertEquals("startedOn doesn't match: ",
-        ResourceManager.getClusterTimeStamp(), startedon);
-    assertTrue("stated doesn't match: " + state,
-        state.matches(STATE.INITED.toString()));
-    assertTrue("HA state doesn't match: " + haState,
-        haState.matches("INITIALIZING"));
+    assertEquals(ResourceManager.getClusterTimeStamp(),
+        clusterid, "clusterId doesn't match: ");
+    assertEquals(ResourceManager.getClusterTimeStamp(),
+        startedon, "startedOn doesn't match: ");
+    assertTrue(state.matches(STATE.INITED.toString()),
+        "stated doesn't match: " + state);
+    assertTrue(haState.matches("INITIALIZING"), "HA state doesn't match: " + haState);
 
     WebServicesTestUtils.checkStringMatch("hadoopVersionBuiltOn",
         VersionInfo.getDate(), hadoopVersionBuiltOn);
@@ -443,7 +443,7 @@ public class TestRMWebServices extends JerseyTestBase {
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList nodes = dom.getElementsByTagName("clusterMetrics");
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
 
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
@@ -474,9 +474,9 @@ public class TestRMWebServices extends JerseyTestBase {
 
   public void verifyClusterMetricsJSON(JSONObject json) throws JSONException,
       Exception {
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject clusterinfo = json.getJSONObject("clusterMetrics");
-    assertEquals("incorrect number of elements", 37, clusterinfo.length());
+    assertEquals(37, clusterinfo.length(), "incorrect number of elements");
     verifyClusterMetrics(
         clusterinfo.getInt("appsSubmitted"), clusterinfo.getInt("appsCompleted"),
         clusterinfo.getInt("reservedMB"), clusterinfo.getInt("availableMB"),
@@ -510,49 +510,37 @@ public class TestRMWebServices extends JerseyTestBase {
         metrics.getAvailableMB() + metrics.getAllocatedMB();
     long totalVirtualCoresExpect =
         metrics.getAvailableVirtualCores() + metrics.getAllocatedVirtualCores();
-    assertEquals("appsSubmitted doesn't match",
-        metrics.getAppsSubmitted(), submittedApps);
-    assertEquals("appsCompleted doesn't match",
-        metrics.getAppsCompleted(), completedApps);
-    assertEquals("reservedMB doesn't match",
-        metrics.getReservedMB(), reservedMB);
-    assertEquals("availableMB doesn't match",
-        metrics.getAvailableMB(), availableMB);
-    assertEquals("allocatedMB doesn't match",
-        metrics.getAllocatedMB(), allocMB);
-    assertEquals("pendingMB doesn't match",
-            metrics.getPendingMB(), pendingMB);
-    assertEquals("reservedVirtualCores doesn't match",
-        metrics.getReservedVirtualCores(), reservedVirtualCores);
-    assertEquals("availableVirtualCores doesn't match",
-        metrics.getAvailableVirtualCores(), availableVirtualCores);
-    assertEquals("pendingVirtualCores doesn't match",
-        metrics.getPendingVirtualCores(), pendingVirtualCores);
-    assertEquals("allocatedVirtualCores doesn't match",
-        metrics.getAllocatedVirtualCores(), allocVirtualCores);
-    assertEquals("totalVirtualCores doesn't match",
-        totalVirtualCoresExpect, totalVirtualCores);
+    assertEquals(metrics.getAppsSubmitted(), submittedApps, "appsSubmitted doesn't match");
+    assertEquals(metrics.getAppsCompleted(), completedApps, "appsCompleted doesn't match");
+    assertEquals(metrics.getReservedMB(), reservedMB, "reservedMB doesn't match");
+    assertEquals(metrics.getAvailableMB(), availableMB, "availableMB doesn't match");
+    assertEquals(metrics.getAllocatedMB(), allocMB, "allocatedMB doesn't match");
+    assertEquals(metrics.getPendingMB(), pendingMB, "pendingMB doesn't match");
+    assertEquals(metrics.getReservedVirtualCores(), reservedVirtualCores,
+        "reservedVirtualCores doesn't match");
+    assertEquals(metrics.getAvailableVirtualCores(), availableVirtualCores,
+        "availableVirtualCores doesn't match");
+    assertEquals(metrics.getPendingVirtualCores(), pendingVirtualCores,
+        "pendingVirtualCores doesn't match");
+    assertEquals(metrics.getAllocatedVirtualCores(), allocVirtualCores,
+        "allocatedVirtualCores doesn't match");
+    assertEquals(totalVirtualCoresExpect, totalVirtualCores, "totalVirtualCores doesn't match");
 
-    assertEquals("containersAllocated doesn't match", 0, containersAlloc);
-    assertEquals("totalMB doesn't match", totalMBExpect, totalMB);
-    assertEquals(
-        "totalNodes doesn't match",
-        clusterMetrics.getNumActiveNMs() + clusterMetrics.getNumLostNMs()
-            + clusterMetrics.getNumDecommisionedNMs()
-            + clusterMetrics.getNumRebootedNMs()
-            + clusterMetrics.getUnhealthyNMs(), totalNodes);
-    assertEquals("lostNodes doesn't match", clusterMetrics.getNumLostNMs(),
-        lostNodes);
-    assertEquals("unhealthyNodes doesn't match",
-        clusterMetrics.getUnhealthyNMs(), unhealthyNodes);
-    assertEquals("decommissionedNodes doesn't match",
-        clusterMetrics.getNumDecommisionedNMs(), decommissionedNodes);
-    assertEquals("rebootedNodes doesn't match",
-        clusterMetrics.getNumRebootedNMs(), rebootedNodes);
-    assertEquals("activeNodes doesn't match", clusterMetrics.getNumActiveNMs(),
-        activeNodes);
-    assertEquals("shutdownNodes doesn't match",
-        clusterMetrics.getNumShutdownNMs(), shutdownNodes);
+    assertEquals(0, containersAlloc, "containersAllocated doesn't match");
+    assertEquals(totalMBExpect, totalMB, "totalMB doesn't match");
+    assertEquals(clusterMetrics.getNumActiveNMs() + clusterMetrics.getNumLostNMs()
+        + clusterMetrics.getNumDecommisionedNMs()
+        + clusterMetrics.getNumRebootedNMs()
+        + clusterMetrics.getUnhealthyNMs(), totalNodes, "totalNodes doesn't match");
+    assertEquals(clusterMetrics.getNumLostNMs(), lostNodes, "lostNodes doesn't match");
+    assertEquals(clusterMetrics.getUnhealthyNMs(), unhealthyNodes,
+        "unhealthyNodes doesn't match");
+    assertEquals(clusterMetrics.getNumDecommisionedNMs(), decommissionedNodes,
+        "decommissionedNodes doesn't match");
+    assertEquals(clusterMetrics.getNumRebootedNMs(), rebootedNodes,
+        "rebootedNodes doesn't match");
+    assertEquals(clusterMetrics.getNumActiveNMs(), activeNodes, "activeNodes doesn't match");
+    assertEquals(clusterMetrics.getNumShutdownNMs(), shutdownNodes, "shutdownNodes doesn't match");
   }
 
   @Test
@@ -614,9 +602,9 @@ public class TestRMWebServices extends JerseyTestBase {
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList nodesSched = dom.getElementsByTagName("scheduler");
-    assertEquals("incorrect number of elements", 1, nodesSched.getLength());
+    assertEquals(1, nodesSched.getLength(), "incorrect number of elements");
     NodeList nodes = dom.getElementsByTagName("schedulerInfo");
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
 
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
@@ -638,13 +626,13 @@ public class TestRMWebServices extends JerseyTestBase {
 
   public void verifyClusterSchedulerFifo(JSONObject json) throws JSONException,
       Exception {
-    assertEquals("incorrect number of elements in: " + json, 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements in: " + json);
     JSONObject info = json.getJSONObject("scheduler");
-    assertEquals("incorrect number of elements in: " + info, 1, info.length());
+    assertEquals(1, info.length(), "incorrect number of elements in: " + info);
     info = info.getJSONObject("schedulerInfo");
 
     LOG.debug("schedulerInfo: {}", info);
-    assertEquals("incorrect number of elements in: " + info, 11, info.length());
+    assertEquals(11, info.length(), "incorrect number of elements in: " + info);
 
     verifyClusterSchedulerFifoGeneric(info.getString("@xsi.type"),
         info.getString("qstate"), (float) info.getDouble("capacity"),
@@ -662,22 +650,19 @@ public class TestRMWebServices extends JerseyTestBase {
       int availNodeCapacity, int totalNodeCapacity, int numContainers)
       throws JSONException, Exception {
 
-    assertEquals("type doesn't match", "fifoScheduler", type);
-    assertEquals("qstate doesn't match", QueueState.RUNNING.toString(), state);
-    assertEquals("capacity doesn't match", 1.0, capacity, 0.0);
-    assertEquals("usedCapacity doesn't match", 0.0, usedCapacity, 0.0);
-    assertEquals(
-        "minQueueMemoryCapacity doesn't match",
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
-        minQueueCapacity);
-    assertEquals("maxQueueMemoryCapacity doesn't match",
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
-        maxQueueCapacity);
-    assertEquals("numNodes doesn't match", 0, numNodes);
-    assertEquals("usedNodeCapacity doesn't match", 0, usedNodeCapacity);
-    assertEquals("availNodeCapacity doesn't match", 0, availNodeCapacity);
-    assertEquals("totalNodeCapacity doesn't match", 0, totalNodeCapacity);
-    assertEquals("numContainers doesn't match", 0, numContainers);
+    assertEquals("fifoScheduler", type, "type doesn't match");
+    assertEquals(QueueState.RUNNING.toString(), state, "qstate doesn't match");
+    assertEquals(1.0, capacity, 0.0, "capacity doesn't match");
+    assertEquals(0.0, usedCapacity, 0.0, "usedCapacity doesn't match");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        minQueueCapacity, "minQueueMemoryCapacity doesn't match");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        maxQueueCapacity, "maxQueueMemoryCapacity doesn't match");
+    assertEquals(0, numNodes, "numNodes doesn't match");
+    assertEquals(0, usedNodeCapacity, "usedNodeCapacity doesn't match");
+    assertEquals(0, availNodeCapacity, "availNodeCapacity doesn't match");
+    assertEquals(0, totalNodeCapacity, "totalNodeCapacity doesn't match");
+    assertEquals(0, numContainers, "numContainers doesn't match");
 
   }
 
@@ -752,7 +737,7 @@ public class TestRMWebServices extends JerseyTestBase {
     } catch (ForbiddenException ae) {
       exceptionThrown = true;
     }
-    assertTrue("ForbiddenException expected", exceptionThrown);
+    assertTrue(exceptionThrown, "ForbiddenException expected");
     exceptionThrown = false;
     when(mockHsr.getUserPrincipal()).thenReturn(new Principal() {
       @Override
@@ -766,7 +751,7 @@ public class TestRMWebServices extends JerseyTestBase {
     } catch (ForbiddenException ae) {
       exceptionThrown = true;
     }
-    assertTrue("ForbiddenException expected", exceptionThrown);
+    assertTrue(exceptionThrown, "ForbiddenException expected");
 
     when(mockHsr.getUserPrincipal()).thenReturn(new Principal() {
       @Override
@@ -790,7 +775,7 @@ public class TestRMWebServices extends JerseyTestBase {
       targetFile = "yarn-scheduler-debug.log";
     }
     File logFile = new File(System.getProperty("yarn.log.dir"), targetFile);
-    assertTrue("scheduler log file doesn't exist", logFile.exists());
+    assertTrue(logFile.exists(), "scheduler log file doesn't exist");
     FileUtils.deleteQuietly(logFile);
   }
 
@@ -854,7 +839,7 @@ public class TestRMWebServices extends JerseyTestBase {
     } catch (ForbiddenException e) {
       caughtException = true;
     }
-    Assert.assertTrue(caughtException);
+    assertTrue(caughtException);
 
     // Case 2: request an unknown ACL causes BAD_REQUEST
     mockHsr = mockHttpServletRequestByUserName("admin");
@@ -864,27 +849,27 @@ public class TestRMWebServices extends JerseyTestBase {
     } catch (BadRequestException e) {
       caughtException = true;
     }
-    Assert.assertTrue(caughtException);
+    assertTrue(caughtException);
 
     // Case 3: get FORBIDDEN for rejected ACL
     mockHsr = mockHttpServletRequestByUserName("admin");
-    Assert.assertFalse(webSvc.checkUserAccessToQueue("queue", "jack",
+    assertFalse(webSvc.checkUserAccessToQueue("queue", "jack",
         QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).isAllowed());
-    Assert.assertFalse(webSvc.checkUserAccessToQueue("queue", "jack",
+    assertFalse(webSvc.checkUserAccessToQueue("queue", "jack",
         QueueACL.ADMINISTER_QUEUE.name(), mockHsr).isAllowed());
 
     // Case 4: get OK for listed ACLs
     mockHsr = mockHttpServletRequestByUserName("admin");
-    Assert.assertTrue(webSvc.checkUserAccessToQueue("queue", "admin",
+    assertTrue(webSvc.checkUserAccessToQueue("queue", "admin",
         QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).isAllowed());
-    Assert.assertTrue(webSvc.checkUserAccessToQueue("queue", "admin",
+    assertTrue(webSvc.checkUserAccessToQueue("queue", "admin",
         QueueACL.ADMINISTER_QUEUE.name(), mockHsr).isAllowed());
 
     // Case 5: get OK only for SUBMIT_APP acl for "yarn" user
     mockHsr = mockHttpServletRequestByUserName("admin");
-    Assert.assertTrue(webSvc.checkUserAccessToQueue("queue", "yarn",
+    assertTrue(webSvc.checkUserAccessToQueue("queue", "yarn",
         QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).isAllowed());
-    Assert.assertFalse(webSvc.checkUserAccessToQueue("queue", "yarn",
+    assertFalse(webSvc.checkUserAccessToQueue("queue", "yarn",
         QueueACL.ADMINISTER_QUEUE.name(), mockHsr).isAllowed());
   }
 
@@ -962,9 +947,9 @@ public class TestRMWebServices extends JerseyTestBase {
         null, null, null, null, null, null, null, emptySet, emptySet,
         null, null);
 
-    assertEquals("Incorrect Number of Apps", 1, appsInfo.getApps().size());
-    assertEquals("Invalid XML Characters Present",
-        "java.lang.Exception: \uFFFD", appsInfo.getApps().get(0).getNote());
+    assertEquals(1, appsInfo.getApps().size(), "Incorrect Number of Apps");
+    assertEquals("java.lang.Exception: \uFFFD", appsInfo.getApps().get(0).getNote(),
+        "Invalid XML Characters Present");
   }
 
   @Test
@@ -987,10 +972,10 @@ public class TestRMWebServices extends JerseyTestBase {
 
   public void verifyClusterUserInfo(ClusterUserInfo userInfo,
             String rmLoginUser, String requestedUser) {
-    assertEquals("rmLoginUser doesn't match: ",
-            rmLoginUser, userInfo.getRmLoginUser());
-    assertEquals("requestedUser doesn't match: ",
-            requestedUser, userInfo.getRequestedUser());
+    assertEquals(rmLoginUser, userInfo.getRmLoginUser(),
+        "rmLoginUser doesn't match: ");
+    assertEquals(requestedUser, userInfo.getRequestedUser(),
+        "requestedUser doesn't match: ");
   }
 
   @Test
@@ -1002,11 +987,11 @@ public class TestRMWebServices extends JerseyTestBase {
     HttpServletRequest mockHsr = prepareServletRequestForValidation();
     Response response = webService
             .validateAndGetSchedulerConfiguration(mutationInfo, mockHsr);
-    Assert.assertEquals(Response.Status.BAD_REQUEST
-            .getStatusCode(), response.getStatus());
-    Assert.assertTrue(response.getEntity().toString()
-            .contains(String.format("Configuration change validation only supported by %s.",
-                MutableConfScheduler.class.getSimpleName())));
+    assertEquals(Response.Status.BAD_REQUEST
+        .getStatusCode(), response.getStatus());
+    assertTrue(response.getEntity().toString()
+        .contains(String.format("Configuration change validation only supported by %s.",
+        MutableConfScheduler.class.getSimpleName())));
   }
 
   @Test
@@ -1025,10 +1010,8 @@ public class TestRMWebServices extends JerseyTestBase {
     HttpServletRequest mockHsr = prepareServletRequestForValidation();
 
     Response response = webService.validateAndGetSchedulerConfiguration(mutationInfo, mockHsr);
-    Assert.assertEquals(Response.Status.BAD_REQUEST
-            .getStatusCode(), response.getStatus());
-    Assert.assertTrue(response.getEntity().toString()
-            .contains("IOException"));
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    assertTrue(response.getEntity().toString().contains("IOException"));
   }
 
   @Test
@@ -1057,7 +1040,7 @@ public class TestRMWebServices extends JerseyTestBase {
 
     Response response = webService
         .validateAndGetSchedulerConfiguration(mutationInfo, mockHsr);
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
   }
 
   private CapacityScheduler prepareCSForValidation(Configuration config)
@@ -1115,7 +1098,7 @@ public class TestRMWebServices extends JerseyTestBase {
       JSONObject json, String expectedSchedulerType) throws Exception {
 
     // why json contains 8 elements because we defined 8 fields
-    assertEquals("incorrect number of elements in: " + json, 8, json.length());
+    assertEquals(8, json.length(), "incorrect number of elements in: " + json);
 
     // 1.Verify that the schedulerType is as expected
     String schedulerType = json.getString("schedulerType");
@@ -1193,31 +1176,31 @@ public class TestRMWebServices extends JerseyTestBase {
         "mock_user", "mock_queue", null, null, null, null, null, emptySet,
         emptySet, null, null);
     LRUCache<AppsCacheKey, AppsInfo> cache = webSvc.getAppsLRUCache();
-    Assert.assertEquals(1, cache.size());
+    assertEquals(1, cache.size());
     AppsCacheKey appsCacheKey = AppsCacheKey.newInstance(null, emptySet,
         null, "mock_user", "mock_queue", null, null, null, null, null, emptySet,
         emptySet, null, null);
-    Assert.assertEquals(appsInfo, cache.get(appsCacheKey));
+    assertEquals(appsInfo, cache.get(appsCacheKey));
 
     AppsInfo appsInfo1 = webSvc.getApps(mockHsr, null, emptySet, null,
         "mock_user1", "mock_queue", null, null, null, null, null, emptySet,
         emptySet, null, null);
-    Assert.assertEquals(2, cache.size());
+    assertEquals(2, cache.size());
     AppsCacheKey appsCacheKey1 = AppsCacheKey.newInstance(null, emptySet,
         null, "mock_user1", "mock_queue", null, null, null, null, null, emptySet,
         emptySet, null, null);
-    Assert.assertEquals(appsInfo1, cache.get(appsCacheKey1));
+    assertEquals(appsInfo1, cache.get(appsCacheKey1));
 
     AppsInfo appsInfo2 = webSvc.getApps(mockHsr, null, emptySet, null,
         "mock_user2", "mock_queue", null, null, null, null, null, emptySet,
         emptySet, null, null);
-    Assert.assertEquals(2, cache.size());
+    assertEquals(2, cache.size());
     AppsCacheKey appsCacheKey2 = AppsCacheKey.newInstance(null, emptySet,
         null, "mock_user2", "mock_queue", null, null, null, null, null, emptySet,
         emptySet, null, null);
-    Assert.assertEquals(appsInfo2, cache.get(appsCacheKey2));
+    assertEquals(appsInfo2, cache.get(appsCacheKey2));
     // appsCacheKey have removed
-    Assert.assertNull(cache.get(appsCacheKey));
+    assertNull(cache.get(appsCacheKey));
 
     GenericTestUtils.waitFor(() -> cache.get(appsCacheKey1) == null,
         300, 1000);

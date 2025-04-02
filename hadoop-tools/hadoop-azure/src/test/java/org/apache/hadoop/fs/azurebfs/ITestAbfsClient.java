@@ -65,7 +65,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     try {
       AbfsRestOperation op = abfsClient
           .listPath("/", true, LIST_MAX_RESULTS, "===========",
-              getTestTracingContext(fs, true));
+              getTestTracingContext(fs, true), null).getOp();
       Assert.assertTrue(false);
     } catch (AbfsRestOperationException ex) {
       Assert.assertEquals("InvalidQueryParameterValue", ex.getErrorCode().getErrorCode());
@@ -106,7 +106,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
       AbfsRestOperation op = getFileSystem().getAbfsClient().listPath(
           directory.toString(), false, getListMaxResults(), null,
-          getTestTracingContext(getFileSystem(), true));
+          getTestTracingContext(getFileSystem(), true), null).getOp();
 
       List<? extends ListResultEntrySchema> list = op.getResult().getListResultSchema().paths();
       String continuationToken = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
@@ -141,7 +141,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     AbfsRestOperation op = getFileSystem().getAbfsClient().listPath(
         directory.toString(), false, getListMaxResults(), null,
-        getTestTracingContext(getFileSystem(), true));
+        getTestTracingContext(getFileSystem(), true), null).getOp();
 
     List<? extends ListResultEntrySchema> list = op.getResult().getListResultSchema().paths();
     String continuationToken = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
@@ -179,7 +179,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       throws IOException {
     return getFileSystem().getAbfsClient()
         .listPath(directory, false, getListMaxResults(), null,
-            getTestTracingContext(getFileSystem(), true)).getResult()
+            getTestTracingContext(getFileSystem(), true), null).getOp().getResult()
         .getListResultSchema().paths();
   }
 

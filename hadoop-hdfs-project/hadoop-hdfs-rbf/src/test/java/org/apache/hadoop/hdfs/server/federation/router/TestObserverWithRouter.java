@@ -21,10 +21,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
@@ -215,8 +215,8 @@ public class TestObserverWithRouter {
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
-    assertEquals("First namenode should be observer", namenodes.get(0).getState(),
-        FederationNamenodeServiceState.OBSERVER);
+    assertEquals(namenodes.get(0).getState(), FederationNamenodeServiceState.OBSERVER,
+        "First namenode should be observer");
     Path path = new Path("/testFile");
     // Send create call
     fileSystem.create(path).close();
@@ -227,12 +227,12 @@ public class TestObserverWithRouter {
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // Create and complete calls should be sent to active
-    assertEquals("Two calls should be sent to active", 2, rpcCountForActive);
+    assertEquals(2, rpcCountForActive, "Two calls should be sent to active");
 
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
     // getBlockLocations should be sent to observer
-    assertEquals("One call should be sent to observer", 1, rpcCountForObserver);
+    assertEquals(1, rpcCountForObserver, "One call should be sent to observer");
   }
 
   @EnumSource(ConfigSetting.class)
@@ -247,8 +247,8 @@ public class TestObserverWithRouter {
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
-    assertEquals("First namenode should be observer", namenodes.get(0).getState(),
-        FederationNamenodeServiceState.OBSERVER);
+    assertEquals(namenodes.get(0).getState(), FederationNamenodeServiceState.OBSERVER,
+        "First namenode should be observer");
     Path path = new Path("/testFile");
     // Send Create call to active
     fileSystem.create(path).close();
@@ -259,11 +259,11 @@ public class TestObserverWithRouter {
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // Create, complete and getBlockLocations calls should be sent to active
-    assertEquals("Three calls should be sent to active", 3, rpcCountForActive);
+    assertEquals(3, rpcCountForActive, "Three calls should be sent to active");
 
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
-    assertEquals("No call should be sent to observer", 0, rpcCountForObserver);
+    assertEquals(0, rpcCountForObserver, "No call should be sent to observer");
   }
 
   @EnumSource(ConfigSetting.class)
@@ -284,11 +284,11 @@ public class TestObserverWithRouter {
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // Create, complete and read calls should be sent to active
-    assertEquals("Three calls should be sent to active", 3, rpcCountForActive);
+    assertEquals(3, rpcCountForActive, "Three calls should be sent to active");
 
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
-    assertEquals("Zero calls should be sent to observer", 0, rpcCountForObserver);
+    assertEquals(0, rpcCountForObserver, "Zero calls should be sent to observer");
   }
 
   @EnumSource(ConfigSetting.class)
@@ -301,9 +301,9 @@ public class TestObserverWithRouter {
 
     // Stop observer NN
     int nnIndex = stopObserver(1);
-    assertNotEquals("No observer found", 3, nnIndex);
+    assertNotEquals(3, nnIndex, "No observer found");
     nnIndex = stopObserver(1);
-    assertNotEquals("No observer found", 4, nnIndex);
+    assertNotEquals(4, nnIndex, "No observer found");
 
     // Send read request
     fileSystem.open(path).close();
@@ -311,13 +311,11 @@ public class TestObserverWithRouter {
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // Create, complete and getBlockLocation calls should be sent to active
-    assertEquals("Three calls should be sent to active", 3,
-        rpcCountForActive);
+    assertEquals(3, rpcCountForActive, "Three calls should be sent to active");
 
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
-    assertEquals("No call should send to observer", 0,
-        rpcCountForObserver);
+    assertEquals(0, rpcCountForObserver, "No call should send to observer");
   }
 
   @EnumSource(ConfigSetting.class)
@@ -341,14 +339,13 @@ public class TestObserverWithRouter {
     long expectedObserverRpc = 1;
 
     // Create and complete calls should be sent to active
-    assertEquals("Two calls should be sent to active",
-        expectedActiveRpc, rpcCountForActive);
+    assertEquals(expectedActiveRpc, rpcCountForActive, "Two calls should be sent to active");
 
     long rpcCountForObserver = routerContext.getRouter()
         .getRpcServer().getRPCMetrics().getObserverProxyOps();
     // getBlockLocation call should send to observer
-    assertEquals("Read should be success with another observer",
-        expectedObserverRpc, rpcCountForObserver);
+    assertEquals(expectedObserverRpc, rpcCountForObserver,
+        "Read should be success with another observer");
 
     // Stop one observer NN
     stopObserver(1);
@@ -361,13 +358,11 @@ public class TestObserverWithRouter {
 
     // getBlockLocation call should be sent to active
     expectedActiveRpc += 1;
-    assertEquals("One call should be sent to active", expectedActiveRpc,
-        rpcCountForActive);
+    assertEquals(expectedActiveRpc, rpcCountForActive, "One call should be sent to active");
     expectedObserverRpc += 0;
     rpcCountForObserver = routerContext.getRouter()
         .getRpcServer().getRPCMetrics().getObserverProxyOps();
-    assertEquals("No call should send to observer",
-        expectedObserverRpc, rpcCountForObserver);
+    assertEquals(expectedObserverRpc, rpcCountForObserver, "No call should send to observer");
   }
 
   private int stopObserver(int num) {
@@ -478,8 +473,7 @@ public class TestObserverWithRouter {
 
     // Create, complete and getBlockLocations
     // calls should be sent to active.
-    assertEquals("Three calls should be send to active",
-        3, rpcCountForActive);
+    assertEquals(3, rpcCountForActive, "Three calls should be send to active");
 
 
     boolean hasUnavailable = false;
@@ -494,7 +488,7 @@ public class TestObserverWithRouter {
     }
     // After attempting to communicate with unavailable observer namenode,
     // its state is updated to unavailable.
-    assertTrue("There must be unavailable namenodes", hasUnavailable);
+    assertTrue(hasUnavailable, "There must be unavailable namenodes");
   }
 
   @EnumSource(ConfigSetting.class)
@@ -508,16 +502,14 @@ public class TestObserverWithRouter {
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // Create and complete calls should be sent to active
-    assertEquals("Two calls should be sent to active", 2,
-        rpcCountForActive);
+    assertEquals(2, rpcCountForActive, "Two calls should be sent to active");
 
     // Send msync
     fileSystem.msync();
     rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // 2 msync calls should be sent. One to each active namenode in the two namespaces.
-    assertEquals("Four calls should be sent to active", 4,
-        rpcCountForActive);
+    assertEquals(4, rpcCountForActive, "Four calls should be sent to active");
   }
 
   @EnumSource(ConfigSetting.class)
@@ -527,8 +519,8 @@ public class TestObserverWithRouter {
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
-    assertEquals("First namenode should be observer", namenodes.get(0).getState(),
-        FederationNamenodeServiceState.OBSERVER);
+    assertEquals(namenodes.get(0).getState(), FederationNamenodeServiceState.OBSERVER,
+        "First namenode should be observer");
     Path path = new Path("/");
 
     long rpcCountForActive;
@@ -541,12 +533,12 @@ public class TestObserverWithRouter {
     rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // getListingCall sent to active.
-    assertEquals("Only one call should be sent to active", 1, rpcCountForActive);
+    assertEquals(1, rpcCountForActive, "Only one call should be sent to active");
 
     rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
     // getList call should be sent to observer
-    assertEquals("No calls should be sent to observer", 0, rpcCountForObserver);
+    assertEquals(0, rpcCountForObserver, "No calls should be sent to observer");
   }
 
   @Test
@@ -555,8 +547,8 @@ public class TestObserverWithRouter {
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
-    assertEquals("First namenode should be observer", namenodes.get(0).getState(),
-        FederationNamenodeServiceState.OBSERVER);
+    assertEquals(namenodes.get(0).getState(), FederationNamenodeServiceState.OBSERVER,
+        "First namenode should be observer");
     Path path = new Path("/");
 
     long rpcCountForActive;
@@ -569,12 +561,12 @@ public class TestObserverWithRouter {
     rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // Two msync calls to the active namenodes.
-    assertEquals("Two calls should be sent to active", 2, rpcCountForActive);
+    assertEquals(2, rpcCountForActive, "Two calls should be sent to active");
 
     rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
     // getList call should be sent to observer
-    assertEquals("One call should be sent to observer", 1, rpcCountForObserver);
+    assertEquals(1, rpcCountForObserver, "One call should be sent to observer");
   }
 
   @Test
@@ -695,7 +687,7 @@ public class TestObserverWithRouter {
 
     // Get object storing state of the namespace in the shared RouterStateIdContext
     LongAccumulator namespaceStateId  = routerStateIdContext.getNamespaceStateId("ns0");
-    assertEquals("Router's shared should have progressed.", 21, namespaceStateId.get());
+    assertEquals(21, namespaceStateId.get(), "Router's shared should have progressed.");
   }
 
   @EnumSource(ConfigSetting.class)
@@ -736,9 +728,9 @@ public class TestObserverWithRouter {
         .getRPCMetrics().getObserverProxyOps();
 
     // First list status goes to active
-    assertEquals("One call should be sent to active", 1, rpcCountForActive);
+    assertEquals(1, rpcCountForActive, "One call should be sent to active");
     // Last two listStatuses  go to observer.
-    assertEquals("Two calls should be sent to observer", 2, rpcCountForObserver);
+    assertEquals(2, rpcCountForObserver, "Two calls should be sent to observer");
 
     Assertions.assertSame(namespaceStateId1, namespaceStateId2,
         "The same object should be used in the shared RouterStateIdContext");
@@ -811,8 +803,8 @@ public class TestObserverWithRouter {
         10000,
         "Timeout: Namespace state was never considered stale.");
     FileStatus[] rootFolderAfterMkdir = fileSystem.listStatus(rootPath);
-    assertEquals("List-status should show newly created directories.",
-        initialLengthOfRootListing + 10, rootFolderAfterMkdir.length);
+    assertEquals(initialLengthOfRootListing + 10, rootFolderAfterMkdir.length,
+        "List-status should show newly created directories.");
   }
 
   @EnumSource(ConfigSetting.class)
@@ -828,8 +820,8 @@ public class TestObserverWithRouter {
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
-    assertEquals("First namenode should be observer", namenodes.get(0).getState(),
-        FederationNamenodeServiceState.OBSERVER);
+    assertEquals(namenodes.get(0).getState(), FederationNamenodeServiceState.OBSERVER,
+        "First namenode should be observer");
     Path path = new Path("/");
 
     long rpcCountForActive;
@@ -851,18 +843,18 @@ public class TestObserverWithRouter {
     switch (configSetting) {
     case USE_NAMENODE_PROXY_FLAG:
       // First read goes to active.
-      assertEquals("Calls sent to the active", 1, rpcCountForActive);
+      assertEquals(1, rpcCountForActive, "Calls sent to the active");
       // The rest of the reads are sent to the observer.
-      assertEquals("Reads sent to observer", numListings - 1, rpcCountForObserver);
+      assertEquals(numListings - 1, rpcCountForObserver, "Reads sent to observer");
       break;
     case USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER:
     case USE_ROUTER_OBSERVER_READ_CONFIGURED_FAILOVER_PROXY_PROVIDER:
       // An msync is sent to each active namenode for each read.
       // Total msyncs will be (numListings * num_of_nameservices).
-      assertEquals("Msyncs sent to the active namenodes",
-          NUM_NAMESERVICES * numListings, rpcCountForActive);
+      assertEquals(NUM_NAMESERVICES * numListings, rpcCountForActive,
+          "Msyncs sent to the active namenodes");
       // All reads should be sent of the observer.
-      assertEquals("Reads sent to observer", numListings, rpcCountForObserver);
+      assertEquals(numListings, rpcCountForObserver, "Reads sent to observer");
       break;
     default:
       Assertions.fail("Unknown config setting: " + configSetting);
@@ -882,8 +874,8 @@ public class TestObserverWithRouter {
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
-    assertEquals("First namenode should be observer", namenodes.get(0).getState(),
-        FederationNamenodeServiceState.OBSERVER);
+    assertEquals(namenodes.get(0).getState(), FederationNamenodeServiceState.OBSERVER,
+        "First namenode should be observer");
     Path path = new Path("/");
 
     long rpcCountForActive;
@@ -904,18 +896,17 @@ public class TestObserverWithRouter {
     switch (configSetting) {
     case USE_NAMENODE_PROXY_FLAG:
       // First read goes to active.
-      assertEquals("Calls sent to the active", 1, rpcCountForActive);
+      assertEquals(1, rpcCountForActive, "Calls sent to the active");
       // The rest of the reads are sent to the observer.
-      assertEquals("Reads sent to observer", 2, rpcCountForObserver);
+      assertEquals(2, rpcCountForObserver, "Reads sent to observer");
       break;
     case USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER:
     case USE_ROUTER_OBSERVER_READ_CONFIGURED_FAILOVER_PROXY_PROVIDER:
       // 4 msyncs expected. 2 for the first read, and 2 for the third read
       // after the auto-msync period has elapsed during the sleep.
-      assertEquals("Msyncs sent to the active namenodes",
-          4, rpcCountForActive);
+      assertEquals(4, rpcCountForActive, "Msyncs sent to the active namenodes");
       // All three reads should be sent of the observer.
-      assertEquals("Reads sent to observer", 3, rpcCountForObserver);
+      assertEquals(3, rpcCountForObserver, "Reads sent to observer");
       break;
     default:
       Assertions.fail("Unknown config setting: " + configSetting);
@@ -935,8 +926,8 @@ public class TestObserverWithRouter {
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
-    assertEquals("First namenode should be observer", namenodes.get(0).getState(),
-        FederationNamenodeServiceState.OBSERVER);
+    assertEquals(namenodes.get(0).getState(), FederationNamenodeServiceState.OBSERVER,
+        "First namenode should be observer");
     Path path = new Path("/");
 
     long rpcCountForActive;
@@ -957,19 +948,18 @@ public class TestObserverWithRouter {
     switch (configSetting) {
     case USE_NAMENODE_PROXY_FLAG:
       // First listing and mkdir go to the active.
-      assertEquals("Calls sent to the active namenodes", 2, rpcCountForActive);
+      assertEquals(2, rpcCountForActive, "Calls sent to the active namenodes");
       // Second listing goes to the observer.
-      assertEquals("Read sent to observer", 1, rpcCountForObserver);
+      assertEquals(1, rpcCountForObserver, "Read sent to observer");
       break;
     case USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER:
     case USE_ROUTER_OBSERVER_READ_CONFIGURED_FAILOVER_PROXY_PROVIDER:
       // 5 calls to the active namenodes expected. 4 msync and a mkdir.
       // Each of the 2 reads results in an msync to 2 nameservices.
       // The mkdir also goes to the active.
-      assertEquals("Calls sent to the active namenodes",
-          5, rpcCountForActive);
+      assertEquals(5, rpcCountForActive, "Calls sent to the active namenodes");
       // Both reads should be sent of the observer.
-      assertEquals("Reads sent to observer", 2, rpcCountForObserver);
+      assertEquals(2, rpcCountForObserver, "Reads sent to observer");
       break;
     default:
       Assertions.fail("Unknown config setting: " + configSetting);
@@ -994,7 +984,7 @@ public class TestObserverWithRouter {
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // There should only be one call to the namespace that has an observer.
-    assertEquals("Only one call to the namespace with an observer", 1, rpcCountForActive);
+    assertEquals(1, rpcCountForActive, "Only one call to the namespace with an observer");
   }
 
   @EnumSource(ConfigSetting.class)
@@ -1014,7 +1004,7 @@ public class TestObserverWithRouter {
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // There should no calls to any namespace.
-    assertEquals("No calls to any namespace", 0, rpcCountForActive);
+    assertEquals(0, rpcCountForActive, "No calls to any namespace");
   }
 
   @EnumSource(ConfigSetting.class)
@@ -1043,12 +1033,12 @@ public class TestObserverWithRouter {
 
     long observerCount2 = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
-    assertEquals("There should no extra calls to the observer", observerCount1, observerCount2);
+    assertEquals(observerCount1, observerCount2, "There should no extra calls to the observer");
 
     fileSystem.open(path).close();
     long observerCount3 = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
-    assertTrue("Old filesystem will send calls to observer", observerCount3 > observerCount2);
+    assertTrue(observerCount3 > observerCount2, "Old filesystem will send calls to observer");
   }
 
   void restartActiveWithStateIDContextDisabled() throws Exception {

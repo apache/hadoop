@@ -27,11 +27,9 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.Rule;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -39,11 +37,12 @@ import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Test functionalities of {@link ConnectionManager}, which manages a pool
@@ -62,7 +61,7 @@ public class TestConnectionManager {
   private static final String TEST_NN_ADDRESS = "nn1:8080";
   private static final String UNRESOLVED_TEST_NN_ADDRESS = "unknownhost:8080";
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new Configuration();
     connManager = new ConnectionManager(conf);
@@ -71,10 +70,7 @@ public class TestConnectionManager {
     connManager.start();
   }
 
-  @Rule
-  public ExpectedException exceptionRule = ExpectedException.none();
-
-  @After
+  @AfterEach
   public void shutdown() {
     if (connManager != null) {
       connManager.close();
@@ -199,13 +195,13 @@ public class TestConnectionManager {
   @Test
   public void testGetConnectionWithException() throws Exception {
     String exceptionCause = "java.net.UnknownHostException: unknownhost";
-    exceptionRule.expect(IllegalArgumentException.class);
-    exceptionRule.expectMessage(exceptionCause);
 
-    // Create a bad connection pool pointing to unresolvable namenode address.
-    ConnectionPool badPool = new ConnectionPool(
-        conf, UNRESOLVED_TEST_NN_ADDRESS, TEST_USER1, 1, 10, 0.5f,
-        ClientProtocol.class, null);
+    assertThrows(IllegalArgumentException.class, () -> {
+      // Create a bad connection pool pointing to unresolvable namenode address.
+      ConnectionPool badPool = new ConnectionPool(
+          conf, UNRESOLVED_TEST_NN_ADDRESS, TEST_USER1, 1, 10, 0.5f,
+          ClientProtocol.class, null);
+    }, exceptionCause);
   }
 
   @Test

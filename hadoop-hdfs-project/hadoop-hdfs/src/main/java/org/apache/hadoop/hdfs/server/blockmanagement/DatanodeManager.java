@@ -228,6 +228,8 @@ public class DatanodeManager {
    */
   private final long timeBetweenResendingCachingDirectivesMs;
 
+  private final boolean randomNodeOrderEnabled;
+
   DatanodeManager(final BlockManager blockManager, final Namesystem namesystem,
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
@@ -359,6 +361,9 @@ public class DatanodeManager {
     this.blocksPerPostponedMisreplicatedBlocksRescan = conf.getLong(
         DFSConfigKeys.DFS_NAMENODE_BLOCKS_PER_POSTPONEDBLOCKS_RESCAN_KEY,
         DFSConfigKeys.DFS_NAMENODE_BLOCKS_PER_POSTPONEDBLOCKS_RESCAN_KEY_DEFAULT);
+    this.randomNodeOrderEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_RANDOM_NODE_ORDER_ENABLED,
+        DFSConfigKeys.DFS_NAMENODE_RANDOM_NODE_ORDER_ENABLED_DEFAULT);
   }
 
   /**
@@ -662,12 +667,16 @@ public class DatanodeManager {
       --lastActiveIndex;
     }
     int activeLen = lastActiveIndex + 1;
-    if(nonDatanodeReader) {
-      networktopology.sortByDistanceUsingNetworkLocation(client,
-          lb.getLocations(), activeLen, createSecondaryNodeSorter());
+    if (!randomNodeOrderEnabled) {
+      if(nonDatanodeReader) {
+        networktopology.sortByDistanceUsingNetworkLocation(client,
+            lb.getLocations(), activeLen, createSecondaryNodeSorter());
+      } else {
+        networktopology.sortByDistance(client, lb.getLocations(), activeLen,
+            createSecondaryNodeSorter());
+      }
     } else {
-      networktopology.sortByDistance(client, lb.getLocations(), activeLen,
-          createSecondaryNodeSorter());
+      networktopology.shuffle(lb.getLocations(), activeLen);
     }
     // move PROVIDED storage to the end to prefer local replicas.
     lb.moveProvidedToEnd(activeLen);

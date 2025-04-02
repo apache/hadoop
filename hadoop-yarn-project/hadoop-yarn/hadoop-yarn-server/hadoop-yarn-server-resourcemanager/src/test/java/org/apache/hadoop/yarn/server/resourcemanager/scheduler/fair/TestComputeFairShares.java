@@ -18,17 +18,17 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.ComputeFairShares;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Exercise the computeFairShares method in SchedulingAlgorithms.
@@ -36,7 +36,7 @@ import org.junit.Test;
 public class TestComputeFairShares {
   private List<Schedulable> scheds;
   
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     scheds = new ArrayList<>();
   }
@@ -241,11 +241,11 @@ public class TestComputeFairShares {
    * Check that a given list of shares have been assigned to this.scheds.
    */
   private void verifyMemoryShares(long... shares) {
-    Assert.assertEquals("Number of shares and schedulables are not consistent",
-        scheds.size(), shares.length);
+    assertEquals(scheds.size(), shares.length,
+        "Number of shares and schedulables are not consistent");
     for (int i = 0; i < shares.length; i++) {
-      Assert.assertEquals("Expected share number " + i + " in list wrong",
-          shares[i], scheds.get(i).getFairShare().getMemorySize());
+      assertEquals(shares[i], scheds.get(i).getFairShare().getMemorySize(),
+          "Expected share number " + i + " in list wrong");
     }
   }
   
@@ -253,11 +253,11 @@ public class TestComputeFairShares {
    * Check that a given list of shares have been assigned to this.scheds.
    */
   private void verifyCPUShares(int... shares) {
-    Assert.assertEquals("Number of shares and schedulables are not consistent",
-        scheds.size(), shares.length);
+    assertEquals(scheds.size(), shares.length,
+        "Number of shares and schedulables are not consistent");
     for (int i = 0; i < shares.length; i++) {
-      Assert.assertEquals("Expected share number " + i + " in list wrong",
-          shares[i], scheds.get(i).getFairShare().getVirtualCores());
+      assertEquals(shares[i], scheds.get(i).getFairShare().getVirtualCores(),
+          "Expected share number " + i + " in list wrong");
     }
   }
 }

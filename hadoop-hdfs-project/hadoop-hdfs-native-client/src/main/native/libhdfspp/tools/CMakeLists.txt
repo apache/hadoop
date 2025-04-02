@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-find_package(Boost 1.72 COMPONENTS program_options REQUIRED)
+find_package(Boost 1.86 COMPONENTS program_options REQUIRED)
 
 # Default LIBHDFSPP_DIR to the default install location.  You can override
 #    it by add -DLIBHDFSPP_DIR=... to your cmake invocation
