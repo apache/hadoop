@@ -1595,6 +1595,14 @@ public class AzureBlobFileSystem extends FileSystem
     }
   }
 
+  /**
+   * Checks the exception thrown during access checks and throws an appropriate
+   * IOException if the access is denied.
+   *
+   * @param path The path that was being accessed.
+   * @param exception The exception that was thrown during the access check.
+   * @throws IOException If access is denied or another error occurs.
+   */
   private void checkCheckAccessException(final Path path,
       final AzureBlobFileSystemException exception) throws IOException {
     if (exception instanceof AbfsRestOperationException) {
