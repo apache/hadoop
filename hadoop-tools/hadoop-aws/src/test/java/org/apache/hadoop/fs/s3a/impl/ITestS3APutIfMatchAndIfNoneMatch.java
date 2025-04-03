@@ -280,7 +280,6 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
     describe("generate conflict on overwrites");
     FileSystem fs = getFileSystem();
     Path testFile = methodPath();
-    fs.mkdirs(testFile.getParent());
 
     // create a file over an empty path: all good
     createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, true, null);
@@ -302,6 +301,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
 
   @Test
   public void testIfNoneMatchConflictOnMultipartUpload() throws Throwable {
+    describe("generate conflict between two multipart uploads");
     FileSystem fs = getFileSystem();
     Path testFile = methodPath();
 
@@ -323,6 +323,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
 
   @Test
   public void testIfNoneMatchMultipartUploadWithRaceCondition() throws Throwable {
+    describe("generate conflict between a multipart upload and a PUT request");
     FileSystem fs = getFileSystem();
     Path testFile = methodPath();
 
@@ -371,9 +372,10 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
 
   @Test
   public void testIfNoneMatchOverwriteWithEmptyFile() throws Throwable {
+    describe("Overwriting a small file with an empty file with"
+        + " if-none-match set raises a RemoteFileChangedException");
     FileSystem fs = getFileSystem();
     Path testFile = methodPath();
-    fs.mkdirs(testFile.getParent());
 
     // create a non-empty file
     createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, true, null);
@@ -390,9 +392,10 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
 
   @Test
   public void testIfNoneMatchOverwriteEmptyFileWithFile() throws Throwable {
+    describe("Overwriting an empty file with non-empty file with"
+        + " if-none-match set raises a RemoteFileChangedException");
     FileSystem fs = getFileSystem();
     Path testFile = methodPath();
-    fs.mkdirs(testFile.getParent());
 
     // create an empty file (no write)
     FSDataOutputStream stream = getStreamWithFlags(fs, testFile, true, null);
@@ -407,9 +410,10 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
 
   @Test
   public void testIfNoneMatchOverwriteEmptyWithEmptyFile() throws Throwable {
+    describe("Overwriting an empty file with an empty file with"
+        + " if-none-match set raises a RemoteFileChangedException");
     FileSystem fs = getFileSystem();
     Path testFile = methodPath();
-    fs.mkdirs(testFile.getParent());
 
     // create an empty file (no write)
     FSDataOutputStream stream1 = getStreamWithFlags(fs, testFile, true, null);
@@ -428,7 +432,6 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
   public void testIfMatchOverwriteWithCorrectEtag() throws Throwable {
     FileSystem fs = getFileSystem();
     Path path = methodPath();
-    fs.mkdirs(path.getParent());
 
     // Create a file
     createFileWithFlags(fs, path, SMALL_FILE_BYTES, false, null);
@@ -456,7 +459,6 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
   public void testIfMatchOverwriteWithOutdatedEtag() throws Throwable {
     FileSystem fs = getFileSystem();
     Path path = methodPath();
-    fs.mkdirs(path.getParent());
 
     // Create a file
     createFileWithFlags(fs, path, SMALL_FILE_BYTES, true, null);
@@ -480,7 +482,6 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
   public void testIfMatchOverwriteDeletedFileWithEtag() throws Throwable {
     FileSystem fs = getFileSystem();
     Path path = methodPath();
-    fs.mkdirs(path.getParent());
 
     // Create a file
     createFileWithFlags(fs, path, SMALL_FILE_BYTES, false, null);
@@ -504,7 +505,6 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
   public void testIfMatchOverwriteFileWithEmptyEtag() throws Throwable {
     FileSystem fs = getFileSystem();
     Path path = methodPath();
-    fs.mkdirs(path.getParent());
 
     // Create a file
     createFileWithFlags(fs, path, SMALL_FILE_BYTES, false, null);
@@ -559,10 +559,10 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
 
     // write without an If-None-Match
     // conditional_write, conditional_write_statistics should remain 0
-    FSDataOutputStream stream = getStreamWithFlags(fs, testFile, false, null, false);
-    updateStatistics(stream);
-    stream.write(SMALL_FILE_BYTES);
-    stream.close();
+    try (FSDataOutputStream stream = getStreamWithFlags(fs, testFile, false, null, false)) {
+      updateStatistics(stream);
+      stream.write(SMALL_FILE_BYTES);
+    }
     verifyStatisticCounterValue(statistics.getIOStatistics(),
         Statistic.CONDITIONAL_CREATE.getSymbol(), 0);
     verifyStatisticCounterValue(statistics.getIOStatistics(),
@@ -647,7 +647,6 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
       throws Throwable {
     FileSystem fs = getFileSystem();
     Path testFile = methodPath();
-    fs.mkdirs(testFile.getParent());
 
     // Create a file
     createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, false, null);

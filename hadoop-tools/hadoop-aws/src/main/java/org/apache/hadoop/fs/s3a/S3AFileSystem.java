@@ -5474,7 +5474,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       // ask the store for what capabilities it offers
       // this includes, store configuration flags, IO capabilites...etc.
-      if (getStore().hasPathCapability(path, capability)) {
+      if (getStore() != null && getStore().hasPathCapability(path, capability)) {
         return true;
       }
 

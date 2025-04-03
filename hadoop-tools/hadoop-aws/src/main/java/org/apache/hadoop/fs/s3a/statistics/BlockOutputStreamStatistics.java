@@ -152,7 +152,6 @@ public interface BlockOutputStreamStatistics extends Closeable,
    * <p>
    * This method increments the appropriate counter based on whether
    * the conditional create operation was successful or failed.
-   * </p>
    * @param success {@code true} if the conditional create operation succeeded,
    *                {@code false} if it failed.
    */
