@@ -381,12 +381,12 @@ public class RequestFactoryImpl implements RequestFactory {
       if (options.isNoObjectOverwrite()) {
         LOG.debug("setting If-None-Match");
         putObjectRequestBuilder.overrideConfiguration(
-                override -> override.putHeader(IF_NONE_MATCH, IF_NONE_MATCH_STAR));
+            override -> override.putHeader(IF_NONE_MATCH, IF_NONE_MATCH_STAR));
       }
       if (options.hasFlag(WriteObjectFlags.ConditionalOverwriteEtag)) {
         LOG.debug("setting If-Match");
         putObjectRequestBuilder.overrideConfiguration(
-                override -> override.putHeader(IF_MATCH, options.getEtagOverwrite()));
+            override -> override.putHeader(IF_MATCH, options.getEtagOverwrite()));
       }
     }
 
@@ -577,18 +577,21 @@ public class RequestFactoryImpl implements RequestFactory {
     // a copy of the list is required, so that the AWS SDK doesn't
     // attempt to sort an unmodifiable list.
     CompleteMultipartUploadRequest.Builder requestBuilder;
-    requestBuilder = CompleteMultipartUploadRequest.builder().bucket(bucket).key(destKey).uploadId(uploadId)
-            .multipartUpload(CompletedMultipartUpload.builder().parts(partETags).build());
+    requestBuilder = CompleteMultipartUploadRequest.builder()
+        .bucket(bucket)
+        .key(destKey)
+        .uploadId(uploadId)
+        .multipartUpload(CompletedMultipartUpload.builder().parts(partETags).build());
 
     if (putOptions.isNoObjectOverwrite()) {
       LOG.debug("setting If-None-Match");
       requestBuilder.overrideConfiguration(
-              override -> override.putHeader(IF_NONE_MATCH, IF_NONE_MATCH_STAR));
+          override -> override.putHeader(IF_NONE_MATCH, IF_NONE_MATCH_STAR));
     }
     if (!isEmpty(putOptions.getEtagOverwrite())) {
       LOG.debug("setting if If-Match");
       requestBuilder.overrideConfiguration(
-              override -> override.putHeader(IF_MATCH, putOptions.getEtagOverwrite()));
+          override -> override.putHeader(IF_MATCH, putOptions.getEtagOverwrite()));
     }
 
     // Correct SSE-C request parameters are required for this request when

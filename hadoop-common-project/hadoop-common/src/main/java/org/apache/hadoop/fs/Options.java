@@ -720,7 +720,7 @@ public final class Options {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public interface CreateFileOptionKeys {
+  public final class CreateFileOptionKeys {
 
     /**
      * {@code createFile()} option to write a file in the close() operation iff
@@ -763,7 +763,7 @@ public final class Options {
      *     </li>
      * </ol>
      */
-    String FS_OPTION_CREATE_CONDITIONAL_OVERWRITE = "fs.option.create.conditional.overwrite";
+    public static final String FS_OPTION_CREATE_CONDITIONAL_OVERWRITE = "fs.option.create.conditional.overwrite";
 
     /**
      * Overwrite a file only if there is an Etag match. This option takes a string,
@@ -800,7 +800,7 @@ public final class Options {
      *       this behavior is implementation-specific.</li>
      * </ol>
      */
-    String FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG =
+    public static final String FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG =
         "fs.option.create.conditional.overwrite.etag";
 
     /**
@@ -811,13 +811,13 @@ public final class Options {
      *
      * Value {@value}.
      */
-    String FS_OPTION_CREATE_IN_CLOSE = "fs.option.create.in.close";
+    public static final String FS_OPTION_CREATE_IN_CLOSE = "fs.option.create.in.close";
 
     /**
      * String to define the content filetype.
      * Value {@value}.
      */
-    String FS_OPTION_CREATE_CONTENT_TYPE = "fs.option.create.content.type";
+    public static final String FS_OPTION_CREATE_CONTENT_TYPE = "fs.option.create.content.type";
 
   }
 }

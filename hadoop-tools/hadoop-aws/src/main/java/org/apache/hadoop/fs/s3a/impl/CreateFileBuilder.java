@@ -91,7 +91,7 @@ public class CreateFileBuilder extends
    */
   public static final CreateFileOptions OPTIONS_CREATE_FILE_PERFORMANCE =
       new CreateFileOptions(CREATE_OVERWRITE_FLAGS,
-          EnumSet.of(Performance,Recursive),
+          EnumSet.of(Performance, Recursive),
           null, null);
 
   /**

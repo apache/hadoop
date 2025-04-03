@@ -3263,7 +3263,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public PutObjectRequest.Builder newPutObjectRequestBuilder(String key,
       long length,
       boolean isDirectoryMarker) {
-    return requestFactory.newPutObjectRequestBuilder(key, PutObjectOptions.defaultOptions(), length, isDirectoryMarker);
+    return requestFactory.newPutObjectRequestBuilder(key,
+        PutObjectOptions.defaultOptions(),
+        length,
+        isDirectoryMarker);
   }
 
   /**
@@ -5372,7 +5375,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
     final Path p = makeQualified(path);
-    final S3AStore store = getStore();
     String cap = validatePathCapabilityArgs(p, capability);
     switch (cap) {
 
@@ -5472,7 +5474,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       // ask the store for what capabilities it offers
       // this includes, store configuration flags, IO capabilites...etc.
-      if (store.hasPathCapability(path, capability)) {
+      if (getStore().hasPathCapability(path, capability)) {
         return true;
       }
 

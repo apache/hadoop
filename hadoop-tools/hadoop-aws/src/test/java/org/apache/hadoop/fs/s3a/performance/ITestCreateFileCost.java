@@ -203,7 +203,7 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     } else {
       // will trigger conditional create and throw RemoteFileChangedException
       intercept(RemoteFileChangedException.class,
-              () -> buildFile(testFile, false, true, NO_HEAD_OR_LIST));
+          () -> buildFile(testFile, false, true, NO_HEAD_OR_LIST));
     }
   }
 

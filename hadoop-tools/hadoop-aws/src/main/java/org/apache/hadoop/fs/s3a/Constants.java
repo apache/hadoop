@@ -1528,7 +1528,8 @@ public final class Constants {
    * A configuration option and a path status probe.
    * Value {@value}.
    */
-  public static final String FS_S3A_CONDITIONAL_CREATE_ENABLED = "fs.s3a.conditional.create.enabled";
+  public static final String FS_S3A_CONDITIONAL_CREATE_ENABLED =
+      "fs.s3a.conditional.create.enabled";
 
   /**
    * Default value for {@link #FS_S3A_CONDITIONAL_CREATE_ENABLED}.

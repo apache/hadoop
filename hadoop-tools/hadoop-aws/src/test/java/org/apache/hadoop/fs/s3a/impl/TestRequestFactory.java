@@ -344,7 +344,8 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
             null);
 
     final CompleteMultipartUploadRequest request =
-        factory.newCompleteMultipartUploadRequestBuilder("path", "1", new ArrayList<>(), putObjectOptions)
+        factory.newCompleteMultipartUploadRequestBuilder("path", "1",
+                new ArrayList<>(), putObjectOptions)
             .build();
     Assertions.assertThat(request.sseCustomerAlgorithm())
         .isEqualTo(ServerSideEncryption.AES256.name());
