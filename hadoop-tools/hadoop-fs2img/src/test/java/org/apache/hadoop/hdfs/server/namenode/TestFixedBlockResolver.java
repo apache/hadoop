@@ -25,11 +25,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TestName;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Validate fixed-size block partitioning.
@@ -40,7 +40,7 @@ public class TestFixedBlockResolver {
 
   private final FixedBlockResolver blockId = new FixedBlockResolver();
 
-  @Before
+  @BeforeEach
   public void setup() {
     Configuration conf = new Configuration(false);
     conf.setLong(FixedBlockResolver.BLOCKSIZE, 512L * (1L << 20));

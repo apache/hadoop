@@ -26,11 +26,11 @@ import java.util.Set;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TestName;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Validate randomly generated hierarchies, including fork() support in
@@ -42,7 +42,7 @@ public class TestRandomTreeWalk {
 
   private Random r = new Random();
 
-  @Before
+  @BeforeEach
   public void setSeed() {
     long seed = r.nextLong();
     r.setSeed(seed);
