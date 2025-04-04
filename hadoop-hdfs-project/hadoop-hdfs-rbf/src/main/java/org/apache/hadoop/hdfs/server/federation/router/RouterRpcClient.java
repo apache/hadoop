@@ -128,7 +128,7 @@ public class RouterRpcClient {
   /** Connection pool to the Namenodes per user for performance. */
   private final ConnectionManager connectionManager;
   /** Service to run asynchronous calls. */
-  private final ThreadPoolExecutor executorService;
+  private ThreadPoolExecutor executorService;
   /** Retry policy for router -> NN communication. */
   private final RetryPolicy retryPolicy;
   /** Optional perf monitor. */
@@ -184,24 +184,7 @@ public class RouterRpcClient {
     this.connectionManager.start();
     this.routerRpcFairnessPolicyController =
         FederationUtil.newFairnessPolicyController(conf);
-
-    int numThreads = conf.getInt(
-        RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE,
-        RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE_DEFAULT);
-    ThreadFactory threadFactory = new ThreadFactoryBuilder()
-        .setNameFormat("RPC Router Client-%d")
-        .build();
-    BlockingQueue<Runnable> workQueue;
-    if (conf.getBoolean(
-        RBFConfigKeys.DFS_ROUTER_CLIENT_REJECT_OVERLOAD,
-        RBFConfigKeys.DFS_ROUTER_CLIENT_REJECT_OVERLOAD_DEFAULT)) {
-      workQueue = new ArrayBlockingQueue<>(numThreads);
-    } else {
-      workQueue = new LinkedBlockingQueue<>();
-    }
-    this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
-        0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
-
+    initConcurrentCallExecutorService(conf);
     this.rpcMonitor = monitor;
 
     int maxFailoverAttempts = conf.getInt(
@@ -245,6 +228,25 @@ public class RouterRpcClient {
     this.lastActiveNNRefreshTimes = new ConcurrentHashMap<>();
   }
 
+  protected void initConcurrentCallExecutorService(Configuration conf) {
+    int numThreads = conf.getInt(
+        RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE,
+        RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE_DEFAULT);
+    ThreadFactory threadFactory = new ThreadFactoryBuilder()
+        .setNameFormat("RPC Router Client-%d")
+        .build();
+    BlockingQueue<Runnable> workQueue;
+    if (conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_CLIENT_REJECT_OVERLOAD,
+        RBFConfigKeys.DFS_ROUTER_CLIENT_REJECT_OVERLOAD_DEFAULT)) {
+      workQueue = new ArrayBlockingQueue<>(numThreads);
+    } else {
+      workQueue = new LinkedBlockingQueue<>();
+    }
+    this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
+        0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
+  }
+
   /**
    * Get the configuration for the RPC client. It takes the Router
    * configuration and transforms it into regular RPC Client configuration.
@@ -276,6 +278,15 @@ public class RouterRpcClient {
    */
   public ActiveNamenodeResolver getNamenodeResolver() {
     return this.namenodeResolver;
+  }
+
+  /**
+   * Get the executor service used by invoking concurrent calls.
+   * @return the executor service.
+   */
+  @VisibleForTesting
+  public ThreadPoolExecutor getExecutorService() {
+    return executorService;
   }
 
   /**
@@ -364,9 +375,11 @@ public class RouterRpcClient {
    */
   public String getAsyncCallerPoolJson() {
     final Map<String, Integer> info = new LinkedHashMap<>();
-    info.put("active", executorService.getActiveCount());
-    info.put("total", executorService.getPoolSize());
-    info.put("max", executorService.getMaximumPoolSize());
+    if (executorService != null) {
+      info.put("active", executorService.getActiveCount());
+      info.put("total", executorService.getPoolSize());
+      info.put("max", executorService.getMaximumPoolSize());
+    }
     return JSON.toString(info);
   }
 
@@ -2026,7 +2039,6 @@ public class RouterRpcClient {
     }
     return isUnavailableException(ioe);
   }
-
 
   /**
    * The {@link  ExecutionStatus} class is a utility class used to track the status of

@@ -227,7 +227,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     try {
       this.abfsConfiguration = new AbfsConfiguration(abfsStoreBuilder.configuration,
-          accountName, getAbfsServiceTypeFromUrl());
+          accountName, fileSystemName, getAbfsServiceTypeFromUrl());
     } catch (IllegalAccessException exception) {
       throw new FileSystemOperationUnhandledException(exception);
     }

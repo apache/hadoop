@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.yarn.sls.scheduler;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -28,13 +28,13 @@ import java.util.concurrent.TimeUnit;
 public class TestTaskRunner {
   private TaskRunner runner;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     runner = new TaskRunner();
     runner.setQueueSize(5);
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws InterruptedException {
     runner.stop();
   }
@@ -50,7 +50,7 @@ public class TestTaskRunner {
     @Override
     public void firstStep() {
       if (first) {
-        Assert.fail();
+        Assertions.fail();
       }
       first = true;
       latch.countDown();
@@ -58,12 +58,12 @@ public class TestTaskRunner {
 
     @Override
     public void middleStep() {
-      Assert.fail();
+      Assertions.fail();
     }
 
     @Override
     public void lastStep() {
-      Assert.fail();
+      Assertions.fail();
     }
   }
 
@@ -72,7 +72,7 @@ public class TestTaskRunner {
     runner.start();
     runner.schedule(new SingleTask(0));
     SingleTask.latch.await(5000, TimeUnit.MILLISECONDS);
-    Assert.assertTrue(SingleTask.first);
+    Assertions.assertTrue(SingleTask.first);
   }
 
   public static class DualTask extends TaskRunner.Task {
@@ -87,20 +87,20 @@ public class TestTaskRunner {
     @Override
     public void firstStep() {
       if (first) {
-        Assert.fail();
+        Assertions.fail();
       }
       first = true;
     }
 
     @Override
     public void middleStep() {
-      Assert.fail();
+      Assertions.fail();
     }
 
     @Override
     public void lastStep() {
       if (last) {
-        Assert.fail();
+        Assertions.fail();
       }
       last = true;
       latch.countDown();
@@ -112,8 +112,8 @@ public class TestTaskRunner {
     runner.start();
     runner.schedule(new DualTask(0, 10, 10));
     DualTask.latch.await(5000, TimeUnit.MILLISECONDS);
-    Assert.assertTrue(DualTask.first);
-    Assert.assertTrue(DualTask.last);
+    Assertions.assertTrue(DualTask.first);
+    Assertions.assertTrue(DualTask.last);
   }
 
   public static class TriTask extends TaskRunner.Task {
@@ -129,7 +129,7 @@ public class TestTaskRunner {
     @Override
     public void firstStep() {
       if (first) {
-        Assert.fail();
+        Assertions.fail();
       }
       first = true;
     }
@@ -137,7 +137,7 @@ public class TestTaskRunner {
     @Override
     public void middleStep() {
       if (middle) {
-        Assert.fail();
+        Assertions.fail();
       }
       middle = true;
     }
@@ -145,7 +145,7 @@ public class TestTaskRunner {
     @Override
     public void lastStep() {
       if (last) {
-        Assert.fail();
+        Assertions.fail();
       }
       last = true;
       latch.countDown();
@@ -157,9 +157,9 @@ public class TestTaskRunner {
     runner.start();
     runner.schedule(new TriTask(0, 10, 5));
     TriTask.latch.await(5000, TimeUnit.MILLISECONDS);
-    Assert.assertTrue(TriTask.first);
-    Assert.assertTrue(TriTask.middle);
-    Assert.assertTrue(TriTask.last);
+    Assertions.assertTrue(TriTask.first);
+    Assertions.assertTrue(TriTask.middle);
+    Assertions.assertTrue(TriTask.last);
   }
 
   public static class MultiTask extends TaskRunner.Task {
@@ -175,7 +175,7 @@ public class TestTaskRunner {
     @Override
     public void firstStep() {
       if (first) {
-        Assert.fail();
+        Assertions.fail();
       }
       first = true;
     }
@@ -188,7 +188,7 @@ public class TestTaskRunner {
     @Override
     public void lastStep() {
       if (last) {
-        Assert.fail();
+        Assertions.fail();
       }
       last = true;
       latch.countDown();
@@ -200,9 +200,9 @@ public class TestTaskRunner {
     runner.start();
     runner.schedule(new MultiTask(0, 20, 5));
     MultiTask.latch.await(5000, TimeUnit.MILLISECONDS);
-    Assert.assertTrue(MultiTask.first);
-    Assert.assertEquals((20 - 0) / 5 - 2 + 1, MultiTask.middle);
-    Assert.assertTrue(MultiTask.last);
+    Assertions.assertTrue(MultiTask.first);
+    Assertions.assertEquals((20 - 0) / 5 - 2 + 1, MultiTask.middle);
+    Assertions.assertTrue(MultiTask.last);
   }
 
 
@@ -217,7 +217,7 @@ public class TestTaskRunner {
     @Override
     public void firstStep() {
       if (first) {
-        Assert.fail();
+        Assertions.fail();
       }
       first = true;
       latch.countDown();
@@ -240,8 +240,8 @@ public class TestTaskRunner {
     long startedAt = System.currentTimeMillis();
     PreStartTask.latch.await(5000, TimeUnit.MILLISECONDS);
     long runAt = System.currentTimeMillis();
-    Assert.assertTrue(PreStartTask.first);
-    Assert.assertTrue(runAt - startedAt >= 200);
+    Assertions.assertTrue(PreStartTask.first);
+    Assertions.assertTrue(runAt - startedAt >= 200);
   }
 
 }

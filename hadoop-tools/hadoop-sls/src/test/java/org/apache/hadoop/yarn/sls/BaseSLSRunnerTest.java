@@ -22,14 +22,11 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.invariants.MetricsInvariantChecker;
-import org.junit.After;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -42,37 +39,32 @@ import javax.script.ScriptEngineManager;
 /**
  * This is a base class to ease the implementation of SLS-based tests.
  */
-@RunWith(value = Parameterized.class)
 @NotThreadSafe
 @SuppressWarnings("VisibilityModifier")
 public abstract class BaseSLSRunnerTest {
 
-  @Parameter(value = 0)
   public String schedulerType;
 
-  @Parameter(value = 1)
   public String traceType;
 
-  @Parameter(value = 2)
   public String traceLocation;
 
-  @Parameter(value = 3)
   public String nodeFile;
 
   protected SLSRunner sls;
   protected String ongoingInvariantFile;
   protected String exitInvariantFile;
 
-  @BeforeClass
+  @BeforeAll
   public static void checkForJavaScript() {
     Assume.assumeNotNull("JavaScript engine not available (JEP 372)",
         new ScriptEngineManager().getEngineByName("JavaScript"));
   }
 
-  @Before
+  @BeforeEach
   public abstract void setup();
 
-  @After
+  @AfterEach
   public void tearDown() throws InterruptedException {
     if (sls != null) {
       sls.stop();
@@ -136,7 +128,7 @@ public abstract class BaseSLSRunnerTest {
 
       if (!exceptionList.isEmpty()) {
         sls.stop();
-        Assert.fail("TestSLSRunner caught exception from child thread "
+        Assertions.fail("TestSLSRunner caught exception from child thread "
             + "(TaskRunner.TaskDefinition): " + exceptionList);
         break;
       }
