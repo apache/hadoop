@@ -12,553 +12,1459 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# Hadoop Azure Support: Azure Blob Storage
+# Hadoop Azure Support: ABFS  - Azure Data Lake Storage Gen2
 
 <!-- MACRO{toc|fromDepth=1|toDepth=3} -->
 
-See also:
+## <a name="introduction"></a> Introduction
 
-* [WASB](./wasb.html)
-* [ABFS](./abfs.html)
-* [Namespace Disabled Accounts on ABFS](./fns_blob.html)
-* [Testing](./testing_azure.html)
+The `hadoop-azure` module provides support for the Azure Data Lake Storage Gen2
+storage layer through the "abfs" connector
 
-## Introduction
-
-The `hadoop-azure` module provides support for integration with
-[Azure Blob Storage](http://azure.microsoft.com/en-us/documentation/services/storage/).
-The built jar file, named `hadoop-azure.jar`, also declares transitive dependencies
-on the additional artifacts it requires, notably the
-[Azure Storage SDK for Java](https://github.com/Azure/azure-storage-java).
-
-To make it part of Apache Hadoop's default classpath, simply make sure that
-`HADOOP_OPTIONAL_TOOLS`in `hadoop-env.sh` has `'hadoop-azure` in the list.
-Example:
+To make it part of Apache Hadoop's default classpath, make sure that
+`HADOOP_OPTIONAL_TOOLS` environment variable has `hadoop-azure` in the list,
+*on every machine in the cluster*
 
 ```bash
-export HADOOP_OPTIONAL_TOOLS="hadoop-azure,hadoop-azure-datalake"
+export HADOOP_OPTIONAL_TOOLS=hadoop-azure
 ```
-## Features
 
-* Read and write data stored in an Azure Blob Storage account.
-* Present a hierarchical file system view by implementing the standard Hadoop
+You can set this locally in your `.profile`/`.bashrc`, but note it won't
+propagate to jobs running in-cluster.
+
+See also:
+* [FNS (non-HNS)](./fns_blob.html)
+* [Legacy-Deprecated-WASB](./wasb.html)
+* [Testing](./testing_azure.html)
+
+## <a name="features"></a> Features of the ABFS connector.
+
+* Supports reading and writing data stored in an Azure Blob Storage account.
+* *Fully Consistent* view of the storage across all clients.
+* Can read data written through the ` deprecated wasb:` connector.
+* Presents a hierarchical file system view by implementing the standard Hadoop
   [`FileSystem`](../api/org/apache/hadoop/fs/FileSystem.html) interface.
 * Supports configuration of multiple Azure Blob Storage accounts.
-* Supports both block blobs (suitable for most use cases, such as MapReduce) and
-  page blobs (suitable for continuous write use cases, such as an HBase
-  write-ahead log).
-* Reference file system paths using URLs using the `wasb` scheme.
-* Also reference file system paths using URLs with the `wasbs` scheme for SSL
-  encrypted access.
-* Can act as a source of data in a MapReduce job, or a sink.
-* Tested on both Linux and Windows.
-* Tested at scale.
+* Can act as a source or destination of data in Hadoop MapReduce, Apache Hive, Apache Spark.
+* Tested at scale on both Linux and Windows by Microsoft themselves.
+* Can be used as a replacement for HDFS on Hadoop clusters deployed in Azure infrastructure.
 
-## Limitations
+For details on ABFS, consult the following documents:
 
-* File owner and group are persisted, but the permissions model is not enforced.
-  Authorization occurs at the level of the entire Azure Blob Storage account.
-* File last access time is not tracked.
+* [A closer look at Azure Data Lake Storage Gen2](https://azure.microsoft.com/en-gb/blog/a-closer-look-at-azure-data-lake-storage-gen2/);
+MSDN Article from June 28, 2018.
+* [Storage Tiers](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-storage-tiers)
 
-## Usage
+## Getting started
 
 ### Concepts
 
-The Azure Blob Storage data model presents 3 core concepts:
+The Azure Storage data model presents 3 core concepts:
 
 * **Storage Account**: All access is done through a storage account.
 * **Container**: A container is a grouping of multiple blobs.  A storage account
   may have multiple containers.  In Hadoop, an entire file system hierarchy is
-  stored in a single container.  It is also possible to configure multiple
-  containers, effectively presenting multiple file systems that can be referenced
-  using distinct URLs.
-* **Blob**: A file of any type and size.  In Hadoop, files are stored in blobs.
+  stored in a single container.
+* **Blob**:  A file of any type and size. In Hadoop, files are stored in blobs.
   The internal implementation also uses blobs to persist the file system
   hierarchy and other metadata.
 
-### Configuring Credentials
+The ABFS connector connects to classic containers, or those created
+with Hierarchical Namespaces.
 
-Usage of Azure Blob Storage requires configuration of credentials.  Typically
-this is set in core-site.xml.  The configuration property name is of the form
-`fs.azure.account.key.<account name>.blob.core.windows.net` and the value is the
-access key.  **The access key is a secret that protects access to your storage
-account.  Do not share the access key (or the core-site.xml file) with an
-untrusted party.**
+## <a name="namespaces"></a> Hierarchical Namespaces (and WASB Compatibility)
 
-For example:
+A key aspect of ADLS Gen 2 is its support for
+[hierarchical namespaces](https://docs.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-namespace)
+These are effectively directories and offer high performance rename and delete operations
+— something which makes a significant improvement in performance in query engines
+writing data to, including MapReduce, Spark, Hive, as well as DistCp.
 
-```xml
-<property>
-  <name>fs.azure.account.key.youraccount.blob.core.windows.net</name>
-  <value>YOUR ACCESS KEY</value>
-</property>
-```
-In many Hadoop clusters, the core-site.xml file is world-readable. It is possible to
-protect the access key within a credential provider as well. This provides an encrypted
-file format along with protection with file permissions.
+This feature is only available if the container was created with "namespace"
+support.
 
-#### Protecting the Azure Credentials for WASB with Credential Providers
+You enable namespace support when creating a new Storage Account,
+by checking the "Hierarchical Namespace" option in the Portal UI, or, when
+creating through the command line, using the option `--hierarchical-namespace true`
 
-To protect these credentials from prying eyes, it is recommended that you use
-the credential provider framework to securely store them and access them
-through configuration. The following describes its use for Azure credentials
-in WASB FileSystem.
+_You cannot enable Hierarchical Namespaces on an existing storage account_
 
-For additional reading on the credential provider API see:
-[Credential Provider API](../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
+_**Containers in a storage account with Hierarchical Namespaces are
+not (currently) readable through the `deprecated wasb:` connector.**_
 
-##### End to End Steps for Distcp and WASB with Credential Providers
-
-###### provision
+Some of the `az storage` command line commands fail too, for example:
 
 ```bash
-% hadoop credential create fs.azure.account.key.youraccount.blob.core.windows.net -value 123
-    -provider localjceks://file/home/lmccay/wasb.jceks
+$ az storage container list --account-name abfswales1
+```
+Output:
+```
+Blob API is not yet supported for hierarchical namespace accounts. ErrorCode: BlobApiNotYetSupportedForHierarchicalNamespaceAccounts
 ```
 
-###### configure core-site.xml or command line system property
+### <a name="creating"></a> Creating an Azure Storage Account
 
-```xml
-<property>
-  <name>hadoop.security.credential.provider.path</name>
-  <value>localjceks://file/home/lmccay/wasb.jceks</value>
-  <description>Path to interrogate for protected credentials.</description>
-</property>
-```
+The best documentation on getting started with Azure Datalake Gen2 with the
+abfs connector is [Using Azure Data Lake Storage Gen2 with Azure HDInsight clusters](https://docs.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-use-hdi-cluster)
 
-###### distcp
+It includes instructions to create it from [the Azure command line tool](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest),
+which can be installed on Windows, MacOS (via Homebrew) and Linux (apt or yum).
 
+The [az storage](https://docs.microsoft.com/en-us/cli/azure/storage?view=azure-cli-latest) subcommand
+handles all storage commands, [az storage account create](https://docs.microsoft.com/en-us/cli/azure/storage/account?view=azure-cli-latest#az-storage-account-create)
+does the creation.
+
+Until the ADLS gen2 API support is finalized, you need to add an extension
+to the ADLS command.
 ```bash
-% hadoop distcp
-    [-D hadoop.security.credential.provider.path=localjceks://file/home/lmccay/wasb.jceks]
-    hdfs://hostname:9001/user/lmccay/007020615 wasb://yourcontainer@youraccount.blob.core.windows.net/testDir/
+az extension add --name storage-preview
 ```
 
-NOTE: You may optionally add the provider path property to the distcp command line instead of
-added job specific configuration to a generic core-site.xml. The square brackets above illustrate
-this capability.
-
-#### Protecting the Azure Credentials for WASB within an Encrypted File
-
-In addition to using the credential provider framework to protect your credentials, it's
-also possible to configure it in encrypted form.  An additional configuration property
-specifies an external program to be invoked by Hadoop processes to decrypt the
-key.  The encrypted key value is passed to this external program as a command
-line argument:
-
-```xml
-<property>
-  <name>fs.azure.account.keyprovider.youraccount</name>
-  <value>org.apache.hadoop.fs.azure.ShellDecryptionKeyProvider</value>
-</property>
-
-<property>
-  <name>fs.azure.account.key.youraccount.blob.core.windows.net</name>
-  <value>YOUR ENCRYPTED ACCESS KEY</value>
-</property>
-
-<property>
-  <name>fs.azure.shellkeyprovider.script</name>
-  <value>PATH TO DECRYPTION PROGRAM</value>
-</property>
-
-```
-
-### Block Blob with Compaction Support and Configuration
-
-Block blobs are the default kind of blob and are good for most big-data use
-cases. However, block blobs have strict limit of 50,000 blocks per blob.
-To prevent reaching the limit WASB, by default, does not upload new block to
-the service after every `hflush()` or `hsync()`.
-
-For most of the cases, combining data from multiple `write()` calls in
-blocks of 4Mb is a good optimization. But, in others cases, like HBase log files,
-every call to `hflush()` or `hsync()` must upload the data to the service.
-
-Block blobs with compaction upload the data to the cloud service after every
-`hflush()`/`hsync()`. To mitigate the limit of 50000 blocks, `hflush()
-`/`hsync()` runs once compaction process, if number of blocks in the blob
-is above 32,000.
-
-Block compaction search and replaces a sequence of small blocks with one big
-block. That means there is associated cost with block compaction: reading
-small blocks back to the client and writing it again as one big block.
-
-In order to have the files you create be block blobs with block compaction
-enabled, the client must set the configuration variable
-`fs.azure.block.blob.with.compaction.dir` to a comma-separated list of
-folder names.
-
-For example:
-
-```xml
-<property>
-  <name>fs.azure.block.blob.with.compaction.dir</name>
-  <value>/hbase/WALs,/data/myblobfiles</value>
-</property>
-```
-
-### Page Blob Support and Configuration
-
-The Azure Blob Storage interface for Hadoop supports two kinds of blobs,
-[block blobs and page blobs](http://msdn.microsoft.com/en-us/library/azure/ee691964.aspx).
-Block blobs are the default kind of blob and are good for most big-data use
-cases, like input data for Hive, Pig, analytical map-reduce jobs etc.  Page blob
-handling in hadoop-azure was introduced to support HBase log files.  Page blobs
-can be written any number of times, whereas block blobs can only be appended to
-50,000 times before you run out of blocks and your writes will fail.  That won't
-work for HBase logs, so page blob support was introduced to overcome this
-limitation.
-
-Page blobs can be up to 1TB in size, larger than the maximum 200GB size for block
-blobs.
-You should stick to block blobs for most usage, and page blobs are only tested in context of HBase write-ahead logs.
-
-In order to have the files you create be page blobs, you must set the
-configuration variable `fs.azure.page.blob.dir` to a comma-separated list of
-folder names.
-
-For example:
-
-```xml
-<property>
-  <name>fs.azure.page.blob.dir</name>
-  <value>/hbase/WALs,/hbase/oldWALs,/data/mypageblobfiles</value>
-</property>
-```
-
-You can set this to simply / to make all files page blobs.
-
-The configuration option `fs.azure.page.blob.size` is the default initial
-size for a page blob. It must be 128MB or greater, and no more than 1TB,
-specified as an integer number of bytes.
-
-The configuration option `fs.azure.page.blob.extension.size` is the page blob
-extension size.  This defines the amount to extend a page blob if it starts to
-get full.  It must be 128MB or greater, specified as an integer number of bytes.
-
-### Custom User-Agent
-WASB passes User-Agent header to the Azure back-end. The default value
-contains WASB version, Java Runtime version, Azure Client library version, and the
-value of the configuration option `fs.azure.user.agent.prefix`. Customized User-Agent
-header enables better troubleshooting and analysis by Azure service.
-
-```xml
-<property>
-    <name>fs.azure.user.agent.prefix</name>
-    <value>Identifier</value>
-</property>
-```
-
-### Atomic Folder Rename
-
-Azure storage stores files as a flat key/value store without formal support
-for folders.  The hadoop-azure file system layer simulates folders on top
-of Azure storage.  By default, folder rename in the hadoop-azure file system
-layer is not atomic.  That means that a failure during a folder rename
-could, for example, leave some folders in the original directory and
-some in the new one.
-
-HBase depends on atomic folder rename.  Hence, a configuration setting was
-introduced called `fs.azure.atomic.rename.dir` that allows you to specify a
-comma-separated list of directories to receive special treatment so that
-folder rename is made atomic.  The default value of this setting is just
-`/hbase`.  Redo will be applied to finish a folder rename that fails. A file
-`<folderName>-renamePending.json` may appear temporarily and is the record of
-the intention of the rename operation, to allow redo in event of a failure.
-
-For example:
-
-```xml
-<property>
-  <name>fs.azure.atomic.rename.dir</name>
-  <value>/hbase,/data</value>
-</property>
-```
-
-### Accessing wasb URLs
-
-After credentials are configured in core-site.xml, any Hadoop component may
-reference files in that Azure Blob Storage account by using URLs of the following
-format:
-
-    wasb[s]://<containername>@<accountname>.blob.core.windows.net/<path>
-
-The schemes `wasb` and `wasbs` identify a URL on a file system backed by Azure
-Blob Storage.  `wasb` utilizes unencrypted HTTP access for all interaction with
-the Azure Blob Storage API.  `wasbs` utilizes SSL encrypted HTTPS access.
-
-For example, the following
-[FileSystem Shell](../hadoop-project-dist/hadoop-common/FileSystemShell.html)
-commands demonstrate access to a storage account named `youraccount` and a
-container named `yourcontainer`.
-
+Check that all is well by verifying that the usage command includes `--hierarchical-namespace`:
 ```bash
-% hadoop fs -mkdir wasb://yourcontainer@youraccount.blob.core.windows.net/testDir
-
-% hadoop fs -put testFile wasb://yourcontainer@youraccount.blob.core.windows.net/testDir/testFile
-
-% hadoop fs -cat wasbs://yourcontainer@youraccount.blob.core.windows.net/testDir/testFile
-test file content
+$  az storage account
+```
+Output:
+```
+usage: az storage account create [-h] [--verbose] [--debug]
+     [--output {json,jsonc,table,tsv,yaml,none}]
+     [--query JMESPATH] --resource-group
+     RESOURCE_GROUP_NAME --name ACCOUNT_NAME
+     [--sku {Standard_LRS,Standard_GRS,Standard_RAGRS,Standard_ZRS,Premium_LRS,Premium_ZRS}]
+     [--location LOCATION]
+     [--kind {Storage,StorageV2,BlobStorage,FileStorage,BlockBlobStorage}]
+     [--tags [TAGS [TAGS ...]]]
+     [--custom-domain CUSTOM_DOMAIN]
+     [--encryption-services {blob,file,table,queue} [{blob,file,table,queue} ...]]
+     [--access-tier {Hot,Cool}]
+     [--https-only [{true,false}]]
+     [--file-aad [{true,false}]]
+     **[--hierarchical-namespace [{true,false}]]**
+     [--bypass {None,Logging,Metrics,AzureServices} [{None,Logging,Metrics,AzureServices} ...]]
+     [--default-action {Allow,Deny}]
+     [--assign-identity]
+     [--subscription _SUBSCRIPTION]
 ```
 
-It's also possible to configure `fs.defaultFS` to use a `wasb` or `wasbs` URL.
-This causes all bare paths, such as `/testDir/testFile` to resolve automatically
-to that file system.
+You can list locations from `az account list-locations`, which lists the
+name to refer to in the `--location` argument:
+```bash
+$ az account list-locations -o table
+```
+It would list locations in a table format.
 
-### Append API Support and Configuration
-
-The Azure Blob Storage interface for Hadoop has optional support for Append API for
-single writer by setting the configuration `fs.azure.enable.append.support` to true.
-
-For Example:
-
-```xml
-<property>
-  <name>fs.azure.enable.append.support</name>
-  <value>true</value>
-</property>
+Sample output:
+```
+DisplayName          Latitude    Longitude    Name
+-------------------  ----------  -----------  ------------------
+East Asia            22.267      114.188      eastasia
+Southeast Asia       1.283       103.833      southeastasia
+....                  ....        ......         .......
 ```
 
-It must be noted Append support in Azure Blob Storage interface DIFFERS FROM HDFS SEMANTICS. Append
-support does not enforce single writer internally but requires applications to guarantee this semantic.
-It becomes a responsibility of the application either to ensure single-threaded handling for a particular
-file path, or rely on some external locking mechanism of its own.  Failure to do so will result in
-unexpected behavior.
+Once a location has been chosen, create the account
+```bash
 
-### Multithread Support
-
-Rename and Delete blob operations on directories with large number of files and sub directories currently is very slow as these operations are done one blob at a time serially. These files and sub folders can be deleted or renamed parallel. Following configurations can be used to enable threads to do parallel processing
-
-To enable 10 threads for Delete operation. Set configuration value to 0 or 1 to disable threads. The default behavior is threads disabled.
-
-```xml
-<property>
-  <name>fs.azure.delete.threads</name>
-  <value>10</value>
-</property>
+az storage account create --verbose \
+    --name abfswales1 \
+    --resource-group devteam2 \
+    --kind StorageV2 \
+    --hierarchical-namespace true \
+    --location ukwest \
+    --sku Standard_LRS \
+    --https-only true \
+    --encryption-services blob \
+    --access-tier Hot \
+    --tags owner=engineering \
+    --assign-identity \
+    --output jsonc
 ```
 
-To enable 20 threads for Rename operation. Set configuration value to 0 or 1 to disable threads. The default behavior is threads disabled.
-
-```xml
-<property>
-  <name>fs.azure.rename.threads</name>
-  <value>20</value>
-</property>
-```
-
-### WASB Secure mode and configuration
-
-WASB can operate in secure mode where the Storage access keys required to communicate with Azure storage does not have to
-be in the same address space as the process using WASB. In this mode all interactions with Azure storage is performed using
-SAS uris. There are two sub modes within the Secure mode, one is remote SAS key mode where the SAS keys are generated from
-a remote process and local mode where SAS keys are generated within WASB. By default the SAS Key mode is expected to run in
-Romote mode, however for testing purposes the local mode can be enabled to generate SAS keys in the same process as WASB.
-
-To enable Secure mode following property needs to be set to true.
-
-```xml
-<property>
-  <name>fs.azure.secure.mode</name>
-  <value>true</value>
-</property>
-```
-
-To enable SAS key generation locally following property needs to be set to true.
-
-```xml
-<property>
-  <name>fs.azure.local.sas.key.mode</name>
-  <value>true</value>
-</property>
-```
-
-To use the remote SAS key generation mode, comma separated external REST services are expected to provided required SAS keys.
-Following property can used to provide the end point to use for remote SAS Key generation:
-
-```xml
-<property>
-  <name>fs.azure.cred.service.urls</name>
-  <value>{URL}</value>
-</property>
-```
-
-The remote service is expected to provide support for two REST calls ```{URL}/GET_CONTAINER_SAS``` and ```{URL}/GET_RELATIVE_BLOB_SAS```, for generating
-container and relative blob sas keys. An example requests
-
-```{URL}/GET_CONTAINER_SAS?storage_account=<account_name>&container=<container>&sas_expiry=<expiry period>&delegation_token=<delegation token>```
-```{URL}/GET_CONTAINER_SAS?storage_account=<account_name>&container=<container>&relative_path=<relative path>&sas_expiry=<expiry period>&delegation_token=<delegation token>```
-
-The service is expected to return a response in JSON format:
-
+The output of the command is a JSON file, whose `primaryEndpoints` command
+includes the name of the store endpoint:
 ```json
 {
-  "responseCode" : 0 or non-zero <int>,
-  "responseMessage" : relavant message on failure <String>,
-  "sasKey" : Requested SAS Key <String>
+  "primaryEndpoints": {
+    "blob": "https://abfswales1.blob.core.windows.net/",
+    "dfs": "https://abfswales1.dfs.core.windows.net/",
+    "file": "https://abfswales1.file.core.windows.net/",
+    "queue": "https://abfswales1.queue.core.windows.net/",
+    "table": "https://abfswales1.table.core.windows.net/",
+    "web": "https://abfswales1.z35.web.core.windows.net/"
+  }
 }
 ```
 
-### Authorization Support in WASB
+The `abfswales1.dfs.core.windows.net` account is the name by which the
+storage account will be referred to.
 
-Authorization support can be enabled in WASB using the following configuration:
-
-```xml
-<property>
-  <name>fs.azure.authorization</name>
-  <value>true</value>
-</property>
-```
-
-The current implementation of authorization relies on the presence of an external service that can enforce
-the authorization. The service is expected to be running on comma separated URLs provided by the following config.
-
-```xml
-<property>
-  <name>fs.azure.authorization.remote.service.urls</name>
-  <value>{URL}</value>
-</property>
-```
-
-The remote service is expected to provide support for the following REST call: ```{URL}/CHECK_AUTHORIZATION```
-An example request:
-  ```{URL}/CHECK_AUTHORIZATION?wasb_absolute_path=<absolute_path>&operation_type=<operation type>&delegation_token=<delegation token>```
-
-The service is expected to return a response in JSON format:
-
-```json
+Now ask for the connection string to the store, which contains the account key
+```bash
+az storage account  show-connection-string --name abfswales1
 {
-    "responseCode" : 0 or non-zero <int>,
-    "responseMessage" : relevant message on failure <String>,
-    "authorizationResult" : true/false <boolean>
+  "connectionString": "DefaultEndpointsProtocol=https;EndpointSuffix=core.windows.net;AccountName=abfswales1;AccountKey=ACCOUNT_KEY_VALUE"
 }
 ```
 
-### Delegation token support in WASB
+You then need to add the access key to your `core-site.xml`, JCEKs file or
+use your cluster management tool to set it the option `fs.azure.account.key.STORAGE-ACCOUNT`
+to this value.
+```XML
+<property>
+  <name>fs.azure.account.key.abfswales1.dfs.core.windows.net</name>
+  <value>ACCOUNT_KEY_VALUE</value>
+</property>
+```
 
-Delegation token support can be enabled in WASB using the following configuration:
+#### Creation through the Azure Portal
+
+Creation through the portal is covered in [Quickstart: Create an Azure Data Lake Storage Gen2 storage account](https://docs.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-quickstart-create-account)
+
+**Key Steps**
+
+1. Create a new Storage Account in a location which suits you.
+1. "Basics" Tab: select "StorageV2".
+1. "Advanced" Tab: enable "Hierarchical Namespace".
+
+You have now created your storage account. Next, get the key for "Shared Key" authentication (default authentication type).
+
+1. Go to the Azure Portal.
+1. Select "Storage Accounts"
+1. Select the newly created storage account.
+1. In the list of settings, locate "Access Keys" and select that.
+1. Copy one of the access keys to the clipboard, add to the XML option,
+set in cluster management tools, Hadoop JCEKS file or KMS store.
+
+### <a name="new_container"></a> Creating a new container
+
+An Azure storage account can have multiple containers, each with the container
+name as the userinfo field of the URI used to reference it.
+
+For example, the container "container1" in the storage account just created
+will have the URL `abfs://container1@abfswales1.dfs.core.windows.net/`
+
+
+You can create a new container through the ABFS connector, by setting the option
+ `fs.azure.createRemoteFileSystemDuringInitialization` to `true`. Though the
+  same is not supported when AuthType is SAS.
+
+If the container does not exist, an attempt to list it with `hadoop fs -ls`
+will fail
+
+```
+$ hadoop fs -ls abfs://container1@abfswales1.dfs.core.windows.net/
+
+ls: `abfs://container1@abfswales1.dfs.core.windows.net/': No such file or directory
+```
+
+Enable remote FS creation and the second attempt succeeds, creating the container as it does so:
+
+```
+$ hadoop fs -D fs.azure.createRemoteFileSystemDuringInitialization=true \
+ -ls abfs://container1@abfswales1.dfs.core.windows.net/
+```
+
+This is useful for creating accounts on the command line, especially before
+the `az storage` command supports hierarchical namespaces completely.
+
+
+### Listing and examining containers of a Storage Account.
+
+You can use the [Azure Storage Explorer](https://azure.microsoft.com/en-us/features/storage-explorer/)
+
+## <a name="configuring"></a> Configuring ABFS
+
+Any configuration can be specified generally (or as the default when accessing all accounts)
+or can be tied to a specific account.
+For example, an OAuth identity can be configured for use regardless of which
+account is accessed with the property `fs.azure.account.oauth2.client.id`
+or you can configure an identity to be used only for a specific storage account with
+`fs.azure.account.oauth2.client.id.<account_name>.dfs.core.windows.net`.
+
+This is shown in the Authentication section.
+
+## <a name="authentication"></a> Authentication
+
+Authentication for ABFS is ultimately granted by [Azure Active Directory](https://docs.microsoft.com/en-us/azure/active-directory/develop/authentication-scenarios).
+
+The concepts covered there are beyond the scope of this document to cover;
+developers are expected to have read and understood the concepts therein
+to take advantage of the different authentication mechanisms.
+
+What is covered here, briefly, is how to configure the ABFS client to authenticate
+in different deployment situations.
+
+The ABFS client can be deployed in different ways, with its authentication needs
+driven by them.
+
+1. With the storage account's authentication secret in the configuration: "Shared Key".
+2. Using OAuth 2.0 tokens of one form or another.
+3. Deployed in-Azure with the Azure VMs providing OAuth 2.0 tokens to the application, "Managed Instance".
+4. Using Shared Access Signature (SAS) tokens provided by a custom implementation of the SASTokenProvider interface.
+5. By directly configuring a fixed Shared Access Signature (SAS) token in the account configuration settings files.
+
+Note: SAS Based Authentication should be used only with HNS Enabled accounts.
+
+What can be changed is what secrets/credentials are used to authenticate the caller.
+
+The authentication mechanism is set in `fs.azure.account.auth.type` (or the
+account specific variant). The possible values are SharedKey, OAuth, Custom
+and SAS. For the various OAuth options use the config `fs.azure.account.oauth.provider.type`. Following are the implementations supported
+ClientCredsTokenProvider, UserPasswordTokenProvider, MsiTokenProvider,
+RefreshTokenBasedTokenProvider and WorkloadIdentityTokenProvider. An IllegalArgumentException is thrown if
+the specified provider type is not one of the supported.
+
+All secrets can be stored in JCEKS files. These are encrypted and password
+protected —use them or a compatible Hadoop Key Management Store wherever
+possible
+
+### <a name="aad-token-fetch-retry-logic"></a> AAD Token fetch retries
+
+The exponential retry policy used for the AAD token fetch retries can be tuned
+with the following configurations.
+* `fs.azure.oauth.token.fetch.retry.max.retries`: Sets the maximum number of
+ retries. Default value is 5.
+* `fs.azure.oauth.token.fetch.retry.min.backoff.interval`: Minimum back-off
+  interval. Added to the retry interval computed from delta backoff. By
+   default this is set as 0. Set the interval in milli seconds.
+* `fs.azure.oauth.token.fetch.retry.max.backoff.interval`: Maximum back-off
+interval. Default value is 60000 (sixty seconds). Set the interval in milli
+seconds.
+* `fs.azure.oauth.token.fetch.retry.delta.backoff`: Back-off interval between
+retries. Multiples of this timespan are used for subsequent retry attempts
+ . The default value is 2.
+
+### <a name="shared-key-auth"></a> Default: Shared Key
+
+This is the simplest authentication mechanism of account + password.
+
+The account name is inferred from the URL;
+the password, "key", retrieved from the XML/JCECKs configuration files.
 
 ```xml
 <property>
-  <name>fs.azure.enable.kerberos.support</name>
+  <name>fs.azure.account.auth.type.ACCOUNT_NAME.dfs.core.windows.net</name>
+  <value>SharedKey</value>
+  <description>
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.key.ACCOUNT_NAME.dfs.core.windows.net</name>
+  <value>ACCOUNT_KEY</value>
+  <description>
+  The secret password. Never share these.
+  </description>
+</property>
+```
+
+*Note*: The source of the account key can be changed through a custom key provider;
+one needs to execute a shell script to retrieve it.
+
+A custom key provider class can be provided with the config
+`fs.azure.account.keyprovider`. If a key provider class is specified the same
+will be used to get account key. Otherwise the Simple key provider will be used
+which will use the key specified for the config `fs.azure.account.key`.
+
+To retrieve using shell script, specify the path to the script for the config
+`fs.azure.shellkeyprovider.script`. ShellDecryptionKeyProvider class use the
+script specified to retrieve the key.
+
+### <a name="oauth-client-credentials"></a> OAuth 2.0 Client Credentials
+
+OAuth 2.0 credentials of (client id, client secret, endpoint) are provided in the configuration/JCEKS file.
+
+The specifics of this process is covered
+in [hadoop-azure-datalake](../hadoop-azure-datalake/index.html#Configuring_Credentials_and_FileSystem);
+the key names are slightly different here.
+
+```xml
+<property>
+  <name>fs.azure.account.auth.type</name>
+  <value>OAuth</value>
+  <description>
+  Use OAuth authentication
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth.provider.type</name>
+  <value>org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider</value>
+  <description>
+  Use client credentials
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.client.endpoint</name>
+  <value>TOKEN_ENDPOINT</value>
+  <description>
+  URL of OAuth endpoint
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.client.id</name>
+  <value>CLIENT_ID</value>
+  <description>
+  Client ID
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.client.secret</name>
+  <value>CLIENT_SECRET</value>
+  <description>
+  Secret
+  </description>
+</property>
+```
+
+### <a name="oauth-user-and-passwd"></a> OAuth 2.0: Username and Password
+
+An OAuth 2.0 endpoint, username and password are provided in the configuration/JCEKS file.
+
+```xml
+<property>
+  <name>fs.azure.account.auth.type</name>
+  <value>OAuth</value>
+  <description>
+  Use OAuth authentication
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth.provider.type</name>
+  <value>org.apache.hadoop.fs.azurebfs.oauth2.UserPasswordTokenProvider</value>
+  <description>
+  Use user and password
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.client.endpoint</name>
+  <value>TOKEN_ENDPOINT</value>
+  <description>
+  URL of OAuth 2.0 endpoint
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.user.name</name>
+  <value>USERNAME_VALUE</value>
+  <description>
+  username
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.user.password</name>
+  <value>USER_PASSWORD</value>
+  <description>
+  password for account
+  </description>
+</property>
+```
+
+### <a name="oauth-refresh-token"></a> OAuth 2.0: Refresh Token
+
+With an existing Oauth 2.0 token, make a request to the Active Directory endpoint
+`https://login.microsoftonline.com/Common/oauth2/token` for this token to be refreshed.
+
+```xml
+<property>
+  <name>fs.azure.account.auth.type</name>
+  <value>OAuth</value>
+  <description>
+  Use OAuth 2.0 authentication
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth.provider.type</name>
+  <value>org.apache.hadoop.fs.azurebfs.oauth2.RefreshTokenBasedTokenProvider</value>
+  <description>
+  Use the Refresh Token Provider
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.refresh.token</name>
+  <value>REFRESH_TOKEN</value>
+  <description>
+  Refresh token
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.refresh.endpoint</name>
+  <value>REFRESH_ENDPOINT</value>
+  <description>
+  Refresh token endpoint
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.client.id</name>
+  <value>CLIENT_ID</value>
+  <description>
+  Optional Client ID
+  </description>
+</property>
+```
+
+### <a name="managed-identity"></a> Azure Managed Identity
+
+[Azure Managed Identities](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview), formerly "Managed Service Identities".
+
+OAuth 2.0 tokens are issued by a special endpoint only accessible
+from the executing VM (`http://169.254.169.254/metadata/identity/oauth2/token`).
+The issued credentials can be used to authenticate.
+
+The Azure Portal/CLI is used to create the service identity.
+
+```xml
+<property>
+  <name>fs.azure.account.auth.type</name>
+  <value>OAuth</value>
+  <description>
+  Use OAuth authentication
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth.provider.type</name>
+  <value>org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider</value>
+  <description>
+  Use MSI for issuing OAuth tokens
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.msi.tenant</name>
+  <value>MSI_TENANT_VALUE</value>
+  <description>
+  Optional MSI Tenant ID
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.msi.endpoint</name>
+  <value>TOKEN_ENDPOINT</value>
+  <description>
+   MSI endpoint
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.client.id</name>
+  <value>CLIENT_ID</value>
+  <description>
+  Optional Client ID
+  </description>
+</property>
+```
+
+### <a name="workload-identity"></a> Azure Workload Identity
+
+[Azure Workload Identities](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview), formerly "Azure AD pod identity".
+
+OAuth 2.0 tokens are written to a file that is only accessible
+from the executing pod (`/var/run/secrets/azure/tokens/azure-identity-token`).
+The issued credentials can be used to authenticate.
+
+The Azure Portal/CLI is used to create the service identity.
+
+```xml
+<property>
+  <name>fs.azure.account.auth.type</name>
+  <value>OAuth</value>
+  <description>
+  Use OAuth authentication
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth.provider.type</name>
+  <value>org.apache.hadoop.fs.azurebfs.oauth2.WorkloadIdentityTokenProvider</value>
+  <description>
+  Use Workload Identity for issuing OAuth tokens
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.msi.tenant</name>
+  <value>${env.AZURE_TENANT_ID}</value>
+  <description>
+  Optional MSI Tenant ID
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.client.id</name>
+  <value>${env.AZURE_CLIENT_ID}</value>
+  <description>
+  Optional Client ID
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.token.file</name>
+  <value>${env.AZURE_FEDERATED_TOKEN_FILE}</value>
+  <description>
+  Token file path
+  </description>
+</property>
+```
+
+### Custom OAuth 2.0 Token Provider
+
+A Custom OAuth 2.0 token provider supplies the ABFS connector with an OAuth 2.0
+token when its `getAccessToken()` method is invoked.
+
+```xml
+<property>
+  <name>fs.azure.account.auth.type</name>
+  <value>Custom</value>
+  <description>
+  Custom Authentication
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth.provider.type</name>
+  <value>PROVIDER_TYPE</value>
+  <description>
+  classname of Custom Authentication Provider
+  </description>
+</property>
+```
+
+The declared class must implement `org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee`
+and optionally `org.apache.hadoop.fs.azurebfs.extensions.BoundDTExtension`.
+
+The declared class also holds responsibility to implement retry logic while fetching access tokens.
+
+### <a name="delegationtokensupportconfigoptions"></a> Delegation Token Provider
+
+A delegation token provider supplies the ABFS connector with delegation tokens,
+helps renew and cancel the tokens by implementing the
+CustomDelegationTokenManager interface.
+
+```xml
+<property>
+  <name>fs.azure.enable.delegation.token</name>
   <value>true</value>
-</property>
-```
-
-The current implementation of delegation token implementation relies on the presence of an external service instances that can generate and manage delegation tokens. The service is expected to be running on comma separated URLs provided by the following config.
-
-```xml
-<property>
-  <name>fs.azure.delegation.token.service.urls</name>
-  <value>{URL}</value>
-</property>
-```
-
-The remote service is expected to provide support for the following REST call: ```{URL}?op=GETDELEGATIONTOKEN```, ```{URL}?op=RENEWDELEGATIONTOKEN``` and ```{URL}?op=CANCELDELEGATIONTOKEN```
-An example request:
-  ```{URL}?op=GETDELEGATIONTOKEN&renewer=<renewer>```
-  ```{URL}?op=RENEWDELEGATIONTOKEN&token=<delegation token>```
-  ```{URL}?op=CANCELDELEGATIONTOKEN&token=<delegation token>```
-
-The service is expected to return a response in JSON format for GETDELEGATIONTOKEN request:
-
-```json
-{
-    "Token" : {
-        "urlString": URL string of delegation token.
-    }
-}
-```
-### chown behaviour when authorization is enabled in WASB
-
-When authorization is enabled, only the users listed in the following configuration
-are allowed to change the owning user of files/folders in WASB. The configuration
-value takes a comma separated list of user names who are allowed to perform chown.
-
-```xml
-<property>
-  <name>fs.azure.chown.allowed.userlist</name>
-  <value>user1,user2</value>
-</property>
-```
-### chmod behaviour when authorization is enabled in WASB
-
-When authorization is enabled, only the owner and the users listed in the
-following configurations are allowed to change the permissions of files/folders in WASB.
-The configuration value takes a comma separated list of user names who are allowed to perform chmod.
-
-```xml
-<property>
-  <name>fs.azure.daemon.userlist</name>
-  <value>user1,user2</value>
+  <description>Make this true to use delegation token provider</description>
 </property>
 <property>
-  <name>fs.azure.chmod.allowed.userlist</name>
-  <value>userA,userB</value>
+  <name>fs.azure.delegation.token.provider.type</name>
+  <value>{fully-qualified-class-name-for-implementation-of-CustomDelegationTokenManager-interface}</value>
 </property>
 ```
+In case delegation token is enabled, and the config `fs.azure.delegation.token
+.provider.type` is not provided then an IlleagalArgumentException is thrown.
 
-Caching of both SAS keys and Authorization responses can be enabled using the following setting:
-The cache settings are applicable only when fs.azure.authorization is enabled.
-The cache is maintained at a filesystem object level.
-```
-    <property>
-      <name>fs.azure.authorization.caching.enable</name>
-      <value>true</value>
-    </property>
+### Shared Access Signature (SAS) Token Provider
+
+A shared access signature (SAS) provides secure delegated access to resources in
+your storage account. With a SAS, you have granular control over how a client can access your data.
+To know more about how SAS Authentication works refer to
+[Grant limited access to Azure Storage resources using shared access signatures (SAS)](https://learn.microsoft.com/en-us/azure/storage/common/storage-sas-overview)
+
+There are three types of SAS supported by Azure Storage:
+- [User Delegation SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas): Recommended for use with ABFS Driver with HNS Enabled ADLS Gen2 accounts. It is Identity based SAS that works at blob/directory level)
+- [Service SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-service-sas): Global and works at container level.
+- [Account SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-account-sas): Global and works at account level.
+
+#### Known Issues With SAS
+- SAS Based Authentication works only with HNS Enabled ADLS Gen2 Accounts which
+is a recommended account type to be used with ABFS.
+- Certain root level operations are known to fail with SAS Based Authentication.
+
+#### Using User Delegation SAS with ABFS
+
+- **Description**: ABFS allows you to implement your custom SAS Token Provider
+that uses your identity to create a user delegation key which then can be used to
+create SAS instead of storage account key. The declared class must implement
+`org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider`.
+
+- **Configuration**: To use this method with ABFS Driver, specify the following properties in your `core-site.xml` file:
+    1. Authentication Type:
+        ```xml
+        <property>
+          <name>fs.azure.account.auth.type</name>
+          <value>SAS</value>
+        </property>
+        ```
+
+    1. Custom SAS Token Provider Class:
+        ```xml
+        <property>
+          <name>fs.azure.sas.token.provider.type</name>
+          <value>CUSTOM_SAS_TOKEN_PROVIDER_CLASS</value>
+        </property>
+        ```
+
+    Replace `CUSTOM_SAS_TOKEN_PROVIDER_CLASS` with fully qualified class name of
+your custom token provider implementation. Depending upon the implementation you
+might need to specify additional configurations that are required by your custom
+implementation.
+
+- **Example**: ABFS Hadoop Driver provides a [MockDelegationSASTokenProvider](https://github.com/apache/hadoop/blob/trunk/hadoop-tools/hadoop-azure/src/test/java/org/apache/hadoop/fs/azurebfs/extensions/MockDelegationSASTokenProvider.java)
+implementation that can be used as an example on how to implement your own custom
+SASTokenProvider. This requires the Application credentials to be specifed using
+the following configurations apart from above two:
+
+    1. App Service Principle Tenant Id:
+        ```xml
+        <property>
+          <name>fs.azure.test.app.service.principal.tenant.id</name>
+          <value>TENANT_ID</value>
+        </property>
+        ```
+    1. App Service Principle Object Id:
+        ```xml
+        <property>
+          <name>fs.azure.test.app.service.principal.object.id</name>
+          <value>OBJECT_ID</value>
+        </property>
+        ```
+    1. App Id:
+        ```xml
+        <property>
+          <name>fs.azure.test.app.id</name>
+          <value>APPLICATION_ID</value>
+        </property>
+        ```
+    1. App Secret:
+        ```xml
+        <property>
+          <name>fs.azure.test.app.secret</name>
+          <value>APPLICATION_SECRET</value>
+        </property>
+        ```
+
+- **Security**: More secure than Shared Key and allows granting limited access
+to data without exposing the access key. Recommended to be used only with HNS Enabled,
+ADLS Gen 2 storage accounts.
+
+#### Using Account/Service SAS with ABFS
+
+- **Description**: ABFS allows user to use Account/Service SAS for authenticating
+requests. User can specify them as fixed SAS Token to be used across all the requests.
+
+- **Configuration**: To use this method with ABFS Driver, specify the following properties in your `core-site.xml` file:
+
+    1. Authentication Type:
+        ```xml
+        <property>
+          <name>fs.azure.account.auth.type</name>
+          <value>SAS</value>
+        </property>
+        ```
+
+  2. Account SAS (Fixed SAS Token at Account Level):
+        ```xml
+        <property>
+          <name>fs.azure.sas.fixed.token.ACCOUNT_NAME</name>
+          <value>FIXED_ACCOUNT_SAS_TOKEN</value>
+        </property>
+        ```
+
+    - Replace `FIXED_ACCOUNT_SAS_TOKEN` with fixed Account/Service SAS. You can also
+      generate SAS from Azure portal. Account -> Security + Networking -> Shared Access Signature
+
+    3. Service  SAS (Fixed SAS Token at Container Level):
+        ```xml
+           <property>
+             <name>fs.azure.sas.fixed.token.CONTAINER_NAME.ACCOUNT_NAME</name>
+             <value>FIXED_SAS_TOKEN</value>
+           </property>
+           ```
+
+    - Replace `FIXED_SERVICE_SAS_TOKEN` with fixed Service SAS. You can also
+      generate SAS from Azure portal. Account -> Data storage -> Containers ->
+      right click on your container and select generate SAS ->
+      Give valid permissions and expiry time -> Click on generate SAS and copy
+      the SAS token.
+
+
+- **Security**: Account/Service SAS requires account keys to be used which makes
+  them less secure. There is no scope of having delegated access to different users.
+
+*Note:*
+- Preference order for SAS will be:
+    - fs.azure.sas.token.provider.type
+    - fs.azure.sas.fixed.token.CONTAINER_NAME.ACCOUNT_NAME
+    - fs.azure.sas.fixed.token.ACCOUNT_NAME
+    - fs.azure.sas.fixed.token
+
+## <a name="technical"></a> Technical notes
+
+### <a name="proxy"></a> Proxy setup
+
+The connector uses the JVM proxy settings to control its proxy setup.
+
+See The [Oracle Java documentation](https://docs.oracle.com/javase/8/docs/technotes/guides/net/proxies.html) for the options to set.
+
+As the connector uses HTTPS by default, the `https.proxyHost` and `https.proxyPort`
+options are those which must be configured.
+
+In MapReduce jobs, including distcp, the proxy options must be set in both the
+`mapreduce.map.java.opts` and `mapreduce.reduce.java.opts`.
+
+```bash
+# this variable is only here to avoid typing the same values twice.
+# It's name is not important.
+export DISTCP_PROXY_OPTS="-Dhttps.proxyHost=web-proxy.example.com -Dhttps.proxyPort=80"
+
+hadoop distcp \
+  -D mapreduce.map.java.opts="$DISTCP_PROXY_OPTS" \
+  -D mapreduce.reduce.java.opts="$DISTCP_PROXY_OPTS" \
+  -update -skipcrccheck -numListstatusThreads 40 \
+  hdfs://namenode:8020/users/alice abfs://backups@account.dfs.core.windows.net/users/alice
 ```
 
-The maximum number of entries that the cache can hold can be customized using the following setting:
-```
-    <property>
-      <name>fs.azure.authorization.caching.maxentries</name>
-      <value>512</value>
-    </property>
-```
+Without these settings, even though access to ADLS may work from the command line,
+`distcp` access can fail with network errors.
 
- The validity of an authorization cache-entry can be controlled using the following setting:
- Setting the value to zero disables authorization-caching.
- If the key is not specified, a default expiry duration of 5m takes effect.
- ```
-    <property>
-      <name>fs.azure.authorization.cacheentry.expiry.period</name>
-      <value>5m</value>
-    </property>
-```
+### <a name="security"></a> Security
 
- The validity of a SASKey cache-entry can be controlled using the following setting.
- Setting the value to zero disables SASKey-caching.
- If the key is not specified, the default expiry duration specified in the sas-key request takes effect.
- ```
-    <property>
-      <name>fs.azure.saskey.cacheentry.expiry.period</name>
-      <value>90d</value>
-    </property>
-```
+As with other object stores, login secrets are valuable pieces of information.
+Organizations should have a process for safely sharing them.
 
- Use container saskey for access to all blobs within the container.
- Blob-specific saskeys are not used when this setting is enabled.
- This setting provides better performance compared to blob-specific saskeys.
- ```
-    <property>
-      <name>fs.azure.saskey.usecontainersaskeyforallaccess</name>
-      <value>true</value>
-    </property>
-```
+### <a name="limitations"></a> Limitations of the ABFS connector
 
-### Performance optimization configurations
+* File last access time is not tracked.
+* Extended attributes are not supported.
+* File Checksums are not supported.
+* The `Syncable` interfaces `hsync()` and `hflush()` operations are supported if
+`fs.azure.enable.flush` is set to true (default=true). With the Wasb connector,
+this limited the number of times either call could be made to 50,000
+[HADOOP-15478](https://issues.apache.org/jira/browse/HADOOP-15478).
+If abfs has the a similar limit, then excessive use of sync/flush may
+cause problems.
 
-`fs.azure.block.blob.buffered.pread.disable`: By default the positional read API will do a
+### <a name="consistency"></a> Consistency and Concurrency
+
+As with all Azure storage services, the Azure Datalake Gen 2 store offers
+a fully consistent view of the store, with complete
+Create, Read, Update, and Delete consistency for data and metadata.
+
+### <a name="performance"></a> Performance and Scalability
+
+For containers with hierarchical namespaces,
+the scalability numbers are, in Big-O-notation, as follows:
+
+| Operation | Scalability |
+|-----------|-------------|
+| File Rename | `O(1)` |
+| File Delete | `O(1)` |
+| Directory Rename:| `O(1)` |
+| Directory Delete | `O(1)` |
+
+For non-namespace stores, the scalability becomes:
+
+| Operation | Scalability |
+|-----------|-------------|
+| File Rename | `O(1)` |
+| File Delete | `O(1)` |
+| Directory Rename:| `O(files)` |
+| Directory Delete | `O(files)` |
+
+That is: the more files there are, the slower directory operations get.
+
+
+Further reading: [Azure Storage Scalability Targets](https://docs.microsoft.com/en-us/azure/storage/common/storage-scalability-targets?toc=%2fazure%2fstorage%2fqueues%2ftoc.json)
+
+### <a name="extensibility"></a> Extensibility
+
+The ABFS connector supports a number of limited-private/unstable extension
+points for third-parties to integrate their authentication and authorization
+services into the ABFS client.
+
+* `CustomDelegationTokenManager` : adds ability to issue Hadoop Delegation Tokens.
+* `SASTokenProvider`: allows for custom provision of Azure Storage Shared Access Signature (SAS) tokens.
+* `CustomTokenProviderAdaptee`: allows for custom provision of
+Azure OAuth tokens.
+* `KeyProvider`.
+
+Consult the source in `org.apache.hadoop.fs.azurebfs.extensions`
+and all associated tests to see how to make use of these extension points.
+
+_Warning_ These extension points are unstable.
+
+### <a href="networking"></a>Networking Layer:
+
+ABFS Driver can use the following networking libraries:
+- ApacheHttpClient:
+  -  <a href = "https://hc.apache.org/httpcomponents-client-4.5.x/index.html">Library Documentation</a>.
+- JDK networking library:
+  - <a href="https://docs.oracle.com/javase/8/docs/api/java/net/HttpURLConnection.html">Library documentation</a>.
+  - Default networking library.
+
+The networking library can be configured using the configuration `fs.azure.networking.library`
+while initializing the filesystem.
+Following are the supported values:
+- `JDK_HTTP_URL_CONNECTION` : Use JDK networking library [Default]
+- `APACHE_HTTP_CLIENT` : Use Apache HttpClient
+
+#### <a href="ahc_networking_conf"></a>ApacheHttpClient networking layer configuration Options:
+
+Following are the configuration options for ApacheHttpClient networking layer that
+can be provided at the initialization of the filesystem:
+1. `fs.azure.apache.http.client.idle.connection.ttl`:
+   1. Maximum idle time in milliseconds for a connection to be kept alive in the connection pool.
+      If the connection is not reused within the time limit, the connection shall be closed.
+   2. Default value: 5000 milliseconds.
+2. `fs.azure.apache.http.client.max.cache.connection.size`:
+   1. Maximum number of connections that can be cached in the connection pool for
+      a filesystem instance. Total number of concurrent connections has no limit.
+   2. Default value: 5.
+3. `fs.azure.apache.http.client.max.io.exception.retries`:
+   1. Maximum number of times the client will retry on IOExceptions for a single request
+      with ApacheHttpClient networking-layer. Breach of this limit would turn off
+      the future uses of the ApacheHttpClient library in the current JVM instance.
+   2. Default value: 3.
+
+#### <a href="ahc_classpath"></a> ApacheHttpClient classpath requirements:
+
+ApacheHttpClient is a `compile` maven dependency in hadoop-azure and would be
+included in the hadoop-azure jar. For using hadoop-azure with ApacheHttpClient no
+additional information is required in the classpath.
+
+## <a href="options"></a> Other configuration options
+
+Consult the javadocs for `org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys`,
+`org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations` and
+`org.apache.hadoop.fs.azurebfs.AbfsConfiguration` for the full list
+of configuration options and their default values.
+
+### <a name="clientcorrelationoptions"></a> Client Correlation Options
+
+#### <a name="clientcorrelationid"></a> 1. Client CorrelationId Option
+
+Config `fs.azure.client.correlationid` provides an option to correlate client
+requests using this client-provided identifier. This Id will be visible in Azure
+Storage Analytics logs in the `request-id-header` field.
+Reference: [Storage Analytics log format](https://docs.microsoft.com/en-us/rest/api/storageservices/storage-analytics-log-format)
+
+This config accepts a string which can be maximum of 72 characters and should
+contain alphanumeric characters and/or hyphens only. Defaults to empty string if
+input is invalid.
+
+#### <a name="tracingcontextformat"></a> 1. Correlation IDs Display Options
+
+Config `fs.azure.tracingcontext.format` provides an option to select the format
+of IDs included in the `request-id-header`. This config accepts a String value
+corresponding to the following enum options.
+  `SINGLE_ID_FORMAT` : clientRequestId
+  `ALL_ID_FORMAT` : all IDs (default)
+  `TWO_ID_FORMAT` : clientCorrelationId:clientRequestId
+
+### <a name="flushconfigoptions"></a> Flush Options
+
+#### <a name="abfsflushconfigoptions"></a> 1. Azure Blob File System Flush Options
+Config `fs.azure.enable.flush` provides an option to render ABFS flush APIs -
+ HFlush() and HSync() to be no-op. By default, this
+config will be set to true.
+
+Both the APIs will ensure that data is persisted.
+
+#### <a name="outputstreamflushconfigoptions"></a> 2. OutputStream Flush Options
+Config `fs.azure.disable.outputstream.flush` provides an option to render
+OutputStream Flush() API to be a no-op in AbfsOutputStream. By default, this
+config will be set to true.
+
+Hflush() being the only documented API that can provide persistent data
+transfer, Flush() also attempting to persist buffered data will lead to
+performance issues.
+
+### <a name="100continueconfigoptions"></a> Hundred Continue Options
+
+`fs.azure.account.expect.header.enabled`: This configuration parameter is used
+to specify whether you wish to send a expect 100 continue header with each
+append request or not. It is configured to true by default. This flag configures
+the client to check with the Azure store before uploading a block of data from
+an output stream. This allows the client to throttle back gracefully -before
+actually attempting to upload the block. In experiments this provides
+significant throughput improvements under heavy load. For more information :
+- https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expect
+
+
+### <a name="accountlevelthrottlingoptions"></a> Account level throttling Options
+
+`fs.azure.account.operation.idle.timeout`: This value specifies the time after which the timer for the analyzer (read or
+write) should be paused until no new request is made again. The default value for the same is 60 seconds.
+
+### <a name="hnscheckconfigoptions"></a> HNS Check Options
+Config `fs.azure.account.hns.enabled` provides an option to specify whether
+ the storage account is HNS enabled or not. In case the config is not provided,
+  a server call is made to check the same.
+
+### <a name="flushconfigoptions"></a> Access Options
+Config `fs.azure.enable.check.access` needs to be set true to enable
+ the AzureBlobFileSystem.access().
+
+### <a name="idempotency"></a> Operation Idempotency
+
+Requests failing due to server timeouts and network failures will be retried.
+PUT/POST operations are idempotent and need no specific handling.
+
+Delete is considered to be idempotent by default if the target does not exist on
+retry.
+
+### <a name="featureconfigoptions"></a> Primary User Group Options
+The group name which is part of FileStatus and AclStatus will be set the same as
+the username if the following config is set to true
+`fs.azure.skipUserGroupMetadataDuringInitialization`.
+
+### <a name="ioconfigoptions"></a> IO Options
+The following configs are related to read and write operations.
+
+`fs.azure.io.retry.max.retries`: Sets the number of retries for IO operations.
+Currently this is used only for the server call retry logic. Used within
+`AbfsClient` class as part of the ExponentialRetryPolicy. The value should be
+greater than or equal to 0.
+
+`fs.azure.io.retry.min.backoff.interval`: Sets the minimum backoff interval for
+retries of IO operations. Currently this is used only for the server call retry
+logic. Used within `AbfsClient` class as part of the ExponentialRetryPolicy. This
+value indicates the smallest interval (in milliseconds) to wait before retrying
+an IO operation. The default value is 500 milliseconds.
+
+`fs.azure.io.retry.max.backoff.interval`: Sets the maximum backoff interval for
+retries of IO operations. Currently this is used only for the server call retry
+logic. Used within `AbfsClient` class as part of the ExponentialRetryPolicy. This
+value indicates the largest interval (in milliseconds) to wait before retrying
+an IO operation. The default value is 25000 (25 seconds).
+
+`fs.azure.io.retry.backoff.interval`: Sets the default backoff interval for
+retries of IO operations. Currently this is used only for the server call retry
+logic. Used within `AbfsClient` class as part of the ExponentialRetryPolicy. This
+value is used to compute a random delta between 80% and 120% of the specified
+value. This random delta is then multiplied by an exponent of the current IO
+retry number (i.e., the default is multiplied by `2^(retryNum - 1)`) and then
+contstrained within the range of [`fs.azure.io.retry.min.backoff.interval`,
+`fs.azure.io.retry.max.backoff.interval`] to determine the amount of time to
+wait before the next IO retry attempt. The default value is 500 milliseconds.
+
+`fs.azure.write.request.size`: To set the write buffer size. Specify the value
+in bytes. The value should be between 16384 to 104857600 both inclusive (16 KB
+to 100 MB). The default value will be 8388608 (8 MB).
+
+`fs.azure.read.request.size`: To set the read buffer size.Specify the value in
+bytes. The value should be between 16384 to 104857600 both inclusive (16 KB to
+100 MB). The default value will be 4194304 (4 MB).
+
+`fs.azure.read.alwaysReadBufferSize`: Read request size configured by
+`fs.azure.read.request.size` will be honoured only when the reads done are in
+sequential pattern. When the read pattern is detected to be random, read size
+will be same as the buffer length provided by the calling process.
+This config when set to true will force random reads to also read in same
+request sizes as sequential reads. This is a means to have same read patterns
+as of ADLS Gen1, as it does not differentiate read patterns and always reads by
+the configured read request size. The default value for this config will be
+false, where reads for the provided buffer length is done when random read
+pattern is detected.
+
+`fs.azure.readaheadqueue.depth`: Sets the readahead queue depth in
+AbfsInputStream. In case the set value is negative the read ahead queue depth
+will be set as Runtime.getRuntime().availableProcessors(). By default the value
+will be 2. To disable readaheads, set this value to 0. If your workload is
+ doing only random reads (non-sequential) or you are seeing throttling, you
+  may try setting this value to 0.
+
+`fs.azure.read.readahead.blocksize`: To set the read buffer size for the read
+aheads. Specify the value in bytes. The value should be between 16384 to
+104857600 both inclusive (16 KB to 100 MB). The default value will be
+4194304 (4 MB).
+
+`fs.azure.buffered.pread.disable`: By default the positional read API will do a
 seek and read on input stream. This read will fill the buffer cache in
-BlockBlobInputStream. If this configuration is true it will skip usage of buffer and do a
-lock free call for reading from blob. This optimization is very much helpful for HBase kind
-of short random read over a shared InputStream instance.
+AbfsInputStream and update the cursor positions. If this optimization is true
+it will skip usage of buffer and do a lock free REST call for reading from blob.
+This optimization is very much helpful for HBase kind of short random read over
+a shared AbfsInputStream instance.
 Note: This is not a config which can be set at cluster level. It can be used as
 an option on FutureDataInputStreamBuilder.
 See FileSystem#openFile(Path path)
 
-## Further Reading
+To run under limited memory situations configure the following. Especially
+when there are too many writes from the same process.
 
-* [Testing the Azure WASB client](testing_azure.html).
-* MSDN article, [Understanding Block Blobs, Append Blobs, and Page Blobs](https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs)
+`fs.azure.write.max.concurrent.requests`: To set the maximum concurrent
+ write requests from an AbfsOutputStream instance  to server at any point of
+ time. Effectively this will be the threadpool size within the
+ AbfsOutputStream instance. Set the value in between 1 to 8 both inclusive.
+
+`fs.azure.write.max.requests.to.queue`: To set the maximum write requests
+ that can be queued. Memory consumption of AbfsOutputStream instance can be
+ tuned with this config considering each queued request holds a buffer. Set
+ the value 3 or 4 times the value set for s.azure.write.max.concurrent.requests.
+
+`fs.azure.analysis.period`: The time after which sleep duration is recomputed after analyzing metrics. The default value
+for the same is 10 seconds.
+
+### <a name="securityconfigoptions"></a> Security Options
+`fs.azure.always.use.https`: Enforces to use HTTPS instead of HTTP when the flag
+is made true. Irrespective of the flag, `AbfsClient` will use HTTPS if the secure
+scheme (ABFSS) is used or OAuth is used for authentication. By default this will
+be set to true.
+
+`fs.azure.ssl.channel.mode`: Initializing DelegatingSSLSocketFactory with the
+specified SSL channel mode. Value should be of the enum
+DelegatingSSLSocketFactory.SSLChannelMode. The default value will be
+DelegatingSSLSocketFactory.SSLChannelMode.Default.
+
+### <a name="encryptionconfigoptions"></a> Encryption Options
+Only one of the following two options can be configured. If config values of
+both types are set, ABFS driver will throw an exception. If using the global
+key type, ensure both pre-computed values are provided.
+
+#### <a name="globalcpkconfigoptions"></a> Customer-Provided Global Key
+A global encryption key can be configured by providing the following
+pre-computed values. The key will be applied to any new files created post
+setting the configuration, and will be required in the requests to read ro
+modify the contents of the files.
+
+`fs.azure.encryption.encoded.client-provided-key`: The Base64 encoded version
+of the 256-bit encryption key.
+
+`fs.azure.encryption.encoded.client-provided-key-sha`: The Base64 encoded
+version of the SHA256 has of the 256-bit encryption key.
+
+#### <a name="encryptioncontextconfigoptions"></a> Encryption Context Provider
+
+ABFS driver supports an interface called `EncryptionContextProvider` that
+can be used as a plugin for clients to provide custom implementations for
+the encryption framework. This framework allows for an `encryptionContext`
+and an `encryptionKey` to be generated by the EncryptionContextProvider for
+a file to be created. The server keeps track of the encryptionContext for
+each file. To perform subsequent operations such as read on the encrypted file,
+ABFS driver will fetch the corresponding encryption key from the
+EncryptionContextProvider implementation by providing the encryptionContext
+string retrieved from a GetFileStatus request to the server.
+
+`fs.azure.encryption.context.provider.type`: The canonical name of the class
+implementing EncryptionContextProvider.
+
+### <a name="serverconfigoptions"></a> Server Options
+`fs.azure.io.read.tolerate.concurrent.append`: When the config is made true, the
+If-Match header sent to the server for read calls will be set as * otherwise the
+same will be set with ETag. This is basically a mechanism in place to handle the
+reads with optimistic concurrency.
+Please refer the following links for further information.
+1. https://docs.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read
+2. https://azure.microsoft.com/de-de/blog/managing-concurrency-in-microsoft-azure-storage-2/
+
+`fs.azure.list.max.results`: listStatus API fetches the FileStatus information
+from server in a page by page manner. The config is used to set the maxResults URI
+param which sets the page size(maximum results per call). The value should
+be >  0. By default, this will be 5000. Server has a maximum value for this
+parameter as 5000. So even if the config is above 5000 the response will only
+contain 5000 entries. Please refer the following link for further information.
+https://docs.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/list
+
+`fs.azure.enable.checksum.validation`: When the config is set to true, Content-MD5
+headers are sent to the server for read and append calls. This provides a way
+to verify the integrity of data during transport. This will have performance
+impact due to MD5 Hash re-computation on Client and Server side. Please refer
+to the Azure documentation for
+[Read](https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read)
+and [Append](https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update)
+APIs for more details
+
+### <a name="throttlingconfigoptions"></a> Throttling Options
+ABFS driver has the capability to throttle read and write operations to achieve
+maximum throughput by minimizing errors. The errors occur when the account
+ingress or egress limits are exceeded and, the server-side throttles requests.
+Server-side throttling causes the retry policy to be used, but the retry policy
+sleeps for long periods of time causing the total ingress or egress throughput
+to be as much as 35% lower than optimal. The retry policy is also after the
+fact, in that it applies after a request fails. On the other hand, the
+client-side throttling implemented here happens before requests are made and
+sleeps just enough to minimize errors, allowing optimal ingress and/or egress
+throughput. By default the throttling mechanism is enabled in the driver. The
+same can be disabled by setting the config `fs.azure.enable.autothrottling`
+to false.
+
+### <a name="renameconfigoptions"></a> Rename Options
+`fs.azure.atomic.rename.key`: Directories for atomic rename support can be
+specified comma separated in this config. The driver prints the following
+warning log if the source of the rename belongs to one of the configured
+directories. "The atomic rename feature is not supported by the ABFS scheme
+; however, rename, create and delete operations are atomic if Namespace is
+enabled for your Azure Storage account."
+The directories can be specified as comma separated values. By default the value
+is "/hbase"
+
+### <a name="infiniteleaseoptions"></a> Infinite Lease Options
+`fs.azure.infinite-lease.directories`: Directories for infinite lease support
+can be specified comma separated in this config. By default, multiple
+clients will be able to write to the same file simultaneously. When writing
+to files contained within the directories specified in this config, the
+client will obtain a lease on the file that will prevent any other clients
+from writing to the file. When the output stream is closed, the lease will be
+released. To revoke a client's write access for a file, the
+AzureBlobFilesystem breakLease method may be called. If the client dies
+before the file can be closed and the lease released, breakLease will need to
+be called before another client will be able to write to the file.
+
+`fs.azure.lease.threads`: This is the size of the thread pool that will be
+used for lease operations for infinite lease directories. By default the value
+is 0, so it must be set to at least 1 to support infinite lease directories.
+
+### <a name="perfoptions"></a> Perf Options
+
+#### <a name="abfstracklatencyoptions"></a> 1. HTTP Request Tracking Options
+If you set `fs.azure.abfs.latency.track` to `true`, the module starts tracking the
+performance metrics of ABFS HTTP traffic. To obtain these numbers on your machine
+or cluster, you will also need to enable debug logging for the `AbfsPerfTracker`
+class in your `log4j` config. A typical perf log line appears like:
+
+```
+h=KARMA t=2019-10-25T20:21:14.518Z a=abfstest01.dfs.core.windows.net
+c=abfs-testcontainer-84828169-6488-4a62-a875-1e674275a29f cr=delete ce=deletePath
+r=Succeeded l=32 ls=32 lc=1 s=200 e= ci=95121dae-70a8-4187-b067-614091034558
+ri=97effdcf-201f-0097-2d71-8bae00000000 ct=0 st=0 rt=0 bs=0 br=0 m=DELETE
+u=https%3A%2F%2Fabfstest01.dfs.core.windows.net%2Ftestcontainer%2Ftest%3Ftimeout%3D90%26recursive%3Dtrue
+```
+
+The fields have the following definitions:
+
+`h`: host name
+`t`: time when this request was logged
+`a`: Azure storage account name
+`c`: container name
+`cr`: name of the caller method
+`ce`: name of the callee method
+`r`: result (Succeeded/Failed)
+`l`: latency (time spent in callee)
+`ls`: latency sum (aggregate time spent in caller; logged when there are multiple
+callees; logged with the last callee)
+`lc`: latency count (number of callees; logged when there are multiple callees;
+logged with the last callee)
+`s`: HTTP Status code
+`e`: Error code
+`ci`: client request ID
+`ri`: server request ID
+`ct`: connection time in milliseconds
+`st`: sending time in milliseconds
+`rt`: receiving time in milliseconds
+`bs`: bytes sent
+`br`: bytes received
+`m`: HTTP method (GET, PUT etc)
+`u`: Encoded HTTP URL
+
+Note that these performance numbers are also sent back to the ADLS Gen 2 API endpoints
+in the `x-ms-abfs-client-latency` HTTP headers in subsequent requests. Azure uses these
+settings to track their end-to-end latency.
+
+### <a name="drivermetricoptions"></a> Driver Metric Options
+
+Config `fs.azure.metric.format` provides an option to select the format of IDs included in the `header` for metrics.
+This config accepts a String value corresponding to the following enum options.
+`INTERNAL_METRIC_FORMAT` : backoff + footer metrics
+`INTERNAL_BACKOFF_METRIC_FORMAT` : backoff metrics
+`INTERNAL_FOOTER_METRIC_FORMAT` : footer metrics
+`EMPTY` : default
+
+`fs.azure.metric.account.name`: This configuration parameter is used to specify the name of the account which will be
+used to push the metrics to the backend. We can configure a separate account to push metrics to the store or use the
+same for as the existing account on which other requests are made.
+
+```xml
+
+<property>
+    <name>fs.azure.metric.account.name</name>
+    <value>METRICACCOUNTNAME.dfs.core.windows.net</value>
+</property>
+```
+
+`fs.azure.metric.account.key`: This is the access key for the storage account used for pushing metrics to the store.
+
+```xml
+
+<property>
+    <name>fs.azure.metric.account.key</name>
+    <value>ACCOUNTKEY</value>
+</property>
+```
+
+`fs.azure.metric.uri`: This configuration provides the uri in the format of 'https://`<accountname>`
+.dfs.core.windows.net/`<containername>`'. This should be a part of the config in order to prevent extra calls to create
+the filesystem. We use an existing filsystem to push the metrics.
+
+```xml
+
+<property>
+    <name>fs.azure.metric.uri</name>
+    <value>https://METRICACCOUNTNAME.dfs.core.windows.net/CONTAINERNAME</value>
+</property>
+```
+
+## <a name="troubleshooting"></a> Troubleshooting
+
+The problems associated with the connector usually come down to, in order
+
+1. Classpath.
+1. Network setup (proxy etc.).
+1. Authentication and Authorization.
+1. Anything else.
+
+If you log `org.apache.hadoop.fs.azurebfs.services` at `DEBUG` then you will
+see more details about any request which is failing.
+
+One useful tool for debugging connectivity is the [cloudstore storediag utility](https://github.com/steveloughran/cloudstore/releases).
+
+This validates the classpath, the settings, then tries to work with the filesystem.
+
+```bash
+bin/hadoop jar cloudstore-0.1-SNAPSHOT.jar storediag abfs://container@account.dfs.core.windows.net/
+```
+
+1. If the `storediag` command cannot work with an abfs store, nothing else is likely to.
+1. If the `storediag` store does successfully work, that does not guarantee that the classpath
+or configuration on the rest of the cluster is also going to work, especially
+in distributed applications. But it is at least a start.
+
+### `ClassNotFoundException: org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem`
+
+The `hadoop-azure` JAR is not on the classpah.
+
+```
+java.lang.RuntimeException: java.lang.ClassNotFoundException:
+    Class org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem not found
+  at org.apache.hadoop.conf.Configuration.getClass(Configuration.java:2625)
+  at org.apache.hadoop.fs.FileSystem.getFileSystemClass(FileSystem.java:3290)
+  at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3322)
+  at org.apache.hadoop.fs.FileSystem.access$200(FileSystem.java:136)
+  at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:3373)
+  at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:3341)
+  at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:491)
+  at org.apache.hadoop.fs.Path.getFileSystem(Path.java:361)
+Caused by: java.lang.ClassNotFoundException:
+    Class org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem not found
+  at org.apache.hadoop.conf.Configuration.getClassByName(Configuration.java:2529)
+  at org.apache.hadoop.conf.Configuration.getClass(Configuration.java:2623)
+  ... 16 more
+```
+
+Tip: if this is happening on the command line, you can turn on debug logging
+of the hadoop scripts:
+
+```bash
+export HADOOP_SHELL_SCRIPT_DEBUG=true
+```
+
+If this is happening on an application running within the cluster, it means
+the cluster (somehow) needs to be configured so that the `hadoop-azure`
+module and dependencies are on the classpath of deployed applications.
+
+### `ClassNotFoundException: com.microsoft.azure.storage.StorageErrorCode`
+
+The `azure-storage` JAR is not on the classpath.
+
+### `Server failed to authenticate the request`
+
+The request wasn't authenticated while using the default shared-key
+authentication mechanism.
+
+```
+Operation failed: "Server failed to authenticate the request.
+ Make sure the value of Authorization header is formed correctly including the signature.",
+ 403, HEAD, https://account.dfs.core.windows.net/container2?resource=filesystem&timeout=90
+  at org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation.execute(AbfsRestOperation.java:135)
+  at org.apache.hadoop.fs.azurebfs.services.AbfsClient.getFilesystemProperties(AbfsClient.java:209)
+  at org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.getFilesystemProperties(AzureBlobFileSystemStore.java:259)
+  at org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem.fileSystemExists(AzureBlobFileSystem.java:859)
+  at org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem.initialize(AzureBlobFileSystem.java:110)
+```
+
+Causes include:
+
+* Your credentials are incorrect.
+* Your shared secret has expired. in Azure, this happens automatically
+* Your shared secret has been revoked.
+* host/VM clock drift means that your client's clock is out of sync with the
+Azure servers —the call is being rejected as it is either out of date (considered a replay)
+or from the future. Fix: Check your clocks, etc.
+
+### `Configuration property _something_.dfs.core.windows.net not found`
+
+There's no `fs.azure.account.key.` entry in your cluster configuration declaring the
+access key for the specific account, or you are using the wrong URL
+
+```
+$ hadoop fs -ls abfs://container@abfswales2.dfs.core.windows.net/
+
+ls: Configuration property abfswales2.dfs.core.windows.net not found.
+```
+
+* Make sure that the URL is correct
+* Add the missing account key.
+
+
+### `No such file or directory when trying to list a container`
+
+There is no container of the given name. Either it has been mistyped
+or the container needs to be created.
+
+```
+$ hadoop fs -ls abfs://container@abfswales1.dfs.core.windows.net/
+
+ls: `abfs://container@abfswales1.dfs.core.windows.net/': No such file or directory
+```
+
+* Make sure that the URL is correct
+* Create the container if needed
+
+### "HTTP connection to https://login.microsoftonline.com/_something_ failed for getting token from AzureAD. Http response: 200 OK"
+
++ it has a content-type `text/html`, `text/plain`, `application/xml`
+
+The OAuth authentication page didn't fail with an HTTP error code, but it didn't return JSON either
+
+```
+$ bin/hadoop fs -ls abfs://container@abfswales1.dfs.core.windows.net/
+
+ ...
+
+ls: HTTP Error 200;
+  url='https://login.microsoftonline.com/02a07549-0a5f-4c91-9d76-53d172a638a2/oauth2/authorize'
+  AADToken: HTTP connection to
+  https://login.microsoftonline.com/02a07549-0a5f-4c91-9d76-53d172a638a2/oauth2/authorize
+  failed for getting token from AzureAD.
+  Unexpected response.
+  Check configuration, URLs and proxy settings.
+  proxies=none;
+  requestId='dd9d526c-8b3d-4b3f-a193-0cf021938600';
+  contentType='text/html; charset=utf-8';
+```
+
+Likely causes are configuration and networking:
+
+1. Authentication is failing, the caller is being served up the Azure Active Directory
+signon page for humans, even though it is a machine calling.
+1. The URL is wrong —it is pointing at a web page unrelated to OAuth2.0
+1. There's a proxy server in the way trying to return helpful instructions.
+
+### `java.io.IOException: The ownership on the staging directory /tmp/hadoop-yarn/staging/user1/.staging is not as expected. It is owned by <principal_id>. The directory must be owned by the submitter user1 or user1`
+
+When using [Azure Managed Identities](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview), the files/directories in ADLS Gen2 by default will be owned by the service principal object id i.e. principal ID & submitting jobs as the local OS user 'user1' results in the above exception.
+
+The fix is to mimic the ownership to the local OS user, by adding the below properties to`core-site.xml`.
+
+```xml
+<property>
+  <name>fs.azure.identity.transformer.service.principal.id</name>
+  <value>service principal object id</value>
+  <description>
+  An Azure Active Directory object ID (oid) used as the replacement for names contained
+  in the list specified by “fs.azure.identity.transformer.service.principal.substitution.list”.
+  Notice that instead of setting oid, you can also set $superuser here.
+  </description>
+</property>
+<property>
+  <name>fs.azure.identity.transformer.service.principal.substitution.list</name>
+  <value>user1</value>
+  <description>
+  A comma separated list of names to be replaced with the service principal ID specified by
+  “fs.azure.identity.transformer.service.principal.id”.  This substitution occurs
+  when setOwner, setAcl, modifyAclEntries, or removeAclEntries are invoked with identities
+  contained in the substitution list. Notice that when in non-secure cluster, asterisk symbol *
+  can be used to match all user/group.
+  </description>
+</property>
+```
+
+Once the above properties are configured, `hdfs dfs -ls abfs://container1@abfswales1.dfs.core.windows.net/` shows the ADLS Gen2 files/directories are now owned by 'user1'.
+
+## <a name="KnownIssues"></a> Known Issues
+
+Following failures are known and expected to fail as of now.
+1. AzureBlobFileSystem.setXAttr() and AzureBlobFileSystem.getXAttr() will fail when attempted on root ("/") path with `Operation failed: "The request URI is invalid.", HTTP 400 Bad Request`
+
+## <a name="testing"></a> Testing ABFS
+
+See the relevant section in [Testing Azure](testing_azure.html).
