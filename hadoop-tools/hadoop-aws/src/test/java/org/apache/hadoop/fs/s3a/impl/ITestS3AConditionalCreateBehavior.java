@@ -194,6 +194,7 @@ public class ITestS3AConditionalCreateBehavior extends AbstractS3ATestBase {
     }
     // TODO: uncomment when statistics are getting initialised
     // verifyStatisticCounterValue(ioStatistics, Statistic.CONDITIONAL_CREATE.getSymbol(), 0);
-    // verifyStatisticCounterValue(ioStatistics, Statistic.CONDITIONAL_CREATE_FAILED.getSymbol(), 0);
+    // verifyStatisticCounterValue(ioStatistics,
+    //     Statistic.CONDITIONAL_CREATE_FAILED.getSymbol(), 0);
   }
 }

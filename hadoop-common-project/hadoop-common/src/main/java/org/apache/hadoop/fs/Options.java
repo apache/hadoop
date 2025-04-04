@@ -720,7 +720,10 @@ public final class Options {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public final class CreateFileOptionKeys {
+  public static final class CreateFileOptionKeys {
+
+    private CreateFileOptionKeys() {
+    }
 
     /**
      * {@code createFile()} option to write a file in the close() operation iff
@@ -763,7 +766,8 @@ public final class Options {
      *     </li>
      * </ol>
      */
-    public static final String FS_OPTION_CREATE_CONDITIONAL_OVERWRITE = "fs.option.create.conditional.overwrite";
+    public static final String FS_OPTION_CREATE_CONDITIONAL_OVERWRITE =
+        "fs.option.create.conditional.overwrite";
 
     /**
      * Overwrite a file only if there is an Etag match. This option takes a string,

@@ -98,7 +98,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
    * Verify ACLs are passed from the factory to the requests.
    */
   @Test
-  public  testRequestFactoryWithCannedACL() throws Throwable {
+  public void testRequestFactoryWithCannedACL() throws Throwable {
     String acl = "bucket-owner-full-control";
     RequestFactory factory = RequestFactoryImpl.builder()
         .withBucket("bucket")
