@@ -490,7 +490,7 @@ public class TestUnmanagedApplicationManager {
     public void work() {
       try {
         getUGIWithToken(attemptId).doAs((PrivilegedExceptionAction<Object>) () -> {
-          TestableAMRequestHandlerThread.super.run();
+          TestableAMRequestHandlerThread.super.work();
           return null;
         });
       } catch (Exception e) {

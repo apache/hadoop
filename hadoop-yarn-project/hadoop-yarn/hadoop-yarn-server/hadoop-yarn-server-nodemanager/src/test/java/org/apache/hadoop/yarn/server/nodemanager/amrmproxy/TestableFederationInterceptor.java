@@ -292,7 +292,7 @@ public class TestableFederationInterceptor extends FederationInterceptor {
       try {
         getUGIWithToken(getAttemptId())
             .doAs((PrivilegedExceptionAction<Object>) () -> {
-              TestableAMRequestHandlerThread.super.run();
+              TestableAMRequestHandlerThread.super.work();
               return null;
             });
       } catch (Exception e) {
