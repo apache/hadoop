@@ -582,6 +582,7 @@ function shadedclient_rebuild
 
   extra=(
     "-Dtest=NoUnitTests"
+    "-Dsurefire.failIfNoSpecifiedTests=false"
     "-Dmaven.javadoc.skip=true"
     "-Dcheckstyle.skip=true"
     "-Dspotbugs.skip=true"
