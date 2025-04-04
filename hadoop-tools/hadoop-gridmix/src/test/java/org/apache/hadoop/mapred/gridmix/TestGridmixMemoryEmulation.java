@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 
@@ -112,13 +112,13 @@ public class TestGridmixMemoryEmulation {
     long currentHeap = heapEmulator.getHeapUsageInMB();
     
     // check if the heap has increased by expected value
-    assertEquals("Default heap emulator failed to load 10mb", 
-                 previousHeap + testSizeInMB, currentHeap);
+    assertEquals(
+                 previousHeap + testSizeInMB, currentHeap, "Default heap emulator failed to load 10mb");
     
     // test reset
     heapEmulator.resetFake();
-    assertEquals("Default heap emulator failed to reset", 
-                 0, heapEmulator.getHeapUsageInMB());
+    assertEquals(
+                 0, heapEmulator.getHeapUsageInMB(), "Default heap emulator failed to reset");
   }
 
   /**
@@ -164,16 +164,16 @@ public class TestGridmixMemoryEmulation {
     long heapUsagePost = fakeCore.getHeapUsageInMB();
     
     //  test if no calls are made heap usage emulator core
-    assertEquals("Disabled heap usage emulation plugin works!", 
-                 numCallsPre, numCallsPost);
+    assertEquals(
+                 numCallsPre, numCallsPost, "Disabled heap usage emulation plugin works!");
     //  test if no calls are made heap usage emulator core
-    assertEquals("Disabled heap usage emulation plugin works!", 
-                 heapUsagePre, heapUsagePost);
+    assertEquals(
+                 heapUsagePre, heapUsagePost, "Disabled heap usage emulation plugin works!");
     
     // test with get progress
     float progress = heapPlugin.getProgress();
-    assertEquals("Invalid progress of disabled cumulative heap usage emulation "
-                 + "plugin!", 1.0f, progress, 0f);
+    assertEquals( 1.0f, progress, 0f, "Invalid progress of disabled cumulative heap usage emulation "
+            + "plugin!");
     
     // test with wrong/invalid configuration
     Boolean failed = null;
@@ -186,8 +186,8 @@ public class TestGridmixMemoryEmulation {
     } catch (Exception e) {
       failed = true;
     }
-    assertNotNull("Fail case failure!", failed);
-    assertTrue("Expected failure!", failed); 
+    assertNotNull(failed, "Fail case failure!");
+    assertTrue(failed, "Expected failure!"); 
     
     // test with valid resource usage value
     ResourceUsageMetrics metrics = 
@@ -282,11 +282,11 @@ public class TestGridmixMemoryEmulation {
     }
     
     // test if the resource plugin shows the expected usage
-    assertEquals("Cumulative heap usage emulator plugin failed (total usage)!", 
-                 expectedTotalHeapUsageInMB, fakeCore.getHeapUsageInMB(), 1L);
+    assertEquals(
+                 expectedTotalHeapUsageInMB, fakeCore.getHeapUsageInMB(), 1L, "Cumulative heap usage emulator plugin failed (total usage)!");
     // test if the resource plugin shows the expected num calls
-    assertEquals("Cumulative heap usage emulator plugin failed (num calls)!", 
-                 expectedTotalNumCalls, fakeCore.getNumCalls(), 0L);
+    assertEquals(
+                 expectedTotalNumCalls, fakeCore.getNumCalls(), 0L, "Cumulative heap usage emulator plugin failed (num calls)!");
   }
 
   // tests if the heap usage emulation plugin emulates only at the expected
@@ -298,11 +298,11 @@ public class TestGridmixMemoryEmulation {
     fakeProgress.setProgress(progress);
     heapPlugin.emulate();
     // test heap usage
-    assertEquals("Emulation interval test for heap usage failed " + info + "!", 
-                 expectedTotalHeapUsageInMB, fakeCore.getHeapUsageInMB(), 0L);
+    assertEquals(expectedTotalHeapUsageInMB, fakeCore.getHeapUsageInMB(), 0L,
+        "Emulation interval test for heap usage failed " + info + "!");
     // test num calls
-    assertEquals("Emulation interval test for heap usage failed " + info + "!", 
-                 expectedTotalNumCalls, fakeCore.getNumCalls(), 0L);
+    assertEquals(             expectedTotalNumCalls, fakeCore.getNumCalls(), 0L,
+        "Emulation interval test for heap usage failed " + info + "!");
   }
   
   /**
@@ -355,12 +355,12 @@ public class TestGridmixMemoryEmulation {
     // configure the task jvm's heap options
     GridmixJob.configureTaskJVMOptions(originalConf, simulatedConf);
     
-    assertEquals("Map heap options mismatch!", expectedMapOptions, 
-                 simulatedConf.get(MRJobConfig.MAP_JAVA_OPTS));
-    assertEquals("Reduce heap options mismatch!", expectedReduceOptions, 
-                 simulatedConf.get(MRJobConfig.REDUCE_JAVA_OPTS));
-    assertEquals("Task heap options mismatch!", expectedTaskOptions, 
-                 simulatedConf.get(JobConf.MAPRED_TASK_JAVA_OPTS));
+    assertEquals(expectedMapOptions, 
+                 simulatedConf.get(MRJobConfig.MAP_JAVA_OPTS), "Map heap options mismatch!");
+    assertEquals(expectedReduceOptions, 
+                 simulatedConf.get(MRJobConfig.REDUCE_JAVA_OPTS), "Reduce heap options mismatch!");
+    assertEquals(expectedTaskOptions, 
+                 simulatedConf.get(JobConf.MAPRED_TASK_JAVA_OPTS), "Task heap options mismatch!");
   }
   
   /**

@@ -22,10 +22,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +44,7 @@ public class TestFileQueue {
   static final long[] start = new long[NFILES];
   static final long[] len = new long[NFILES];
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     final Configuration conf = new Configuration();
     final FileSystem fs = FileSystem.getLocal(conf).getRaw();
@@ -67,7 +67,7 @@ public class TestFileQueue {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws IOException {
     final Configuration conf = new Configuration();
     final FileSystem fs = FileSystem.getLocal(conf).getRaw();
