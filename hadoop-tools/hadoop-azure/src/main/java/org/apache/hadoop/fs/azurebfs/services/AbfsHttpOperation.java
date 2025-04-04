@@ -235,6 +235,14 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public abstract Map<String, List<String>> getResponseHeaders();
 
+  /**
+   * Get response header value for the given headerKey ignoring case.
+   *
+   * @param httpHeader header key.
+   * @return header value.
+   */
+  public abstract String getResponseHeaderIgnoreCase(String httpHeader);
+
   // Returns a trace message for the request
   @Override
   public String toString() {
@@ -743,12 +751,18 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
     @Override
     public String getResponseHeader(final String httpHeader) {
-      return "";
+      return EMPTY_STRING;
     }
 
     @Override
     public Map<String, List<String>> getResponseHeaders() {
       return new HashMap<>();
+    }
+
+    /**{@inheritDoc}*/
+    @Override
+    public String getResponseHeaderIgnoreCase(final String headerName) {
+      return EMPTY_STRING;
     }
 
     @Override
@@ -785,6 +799,16 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     @Override
     public Map<String, List<String>> getResponseHeaders() {
       return new HashMap<>();
+    }
+
+    /**{@inheritDoc}*/
+    @Override
+    public String getResponseHeaderIgnoreCase(final String httpHeader) {
+      // Directories on FNS-Blob are identified by a special metadata header.
+      if (httpHeader.equalsIgnoreCase(X_MS_META_HDI_ISFOLDER)) {
+        return TRUE;
+      }
+      return EMPTY_STRING;
     }
 
     @Override
@@ -935,12 +959,18 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
     @Override
     public String getResponseHeader(final String httpHeader) {
-      return "";
+      return EMPTY_STRING;
     }
 
     @Override
     public Map<String, List<String>> getResponseHeaders() {
       return new HashMap<>();
+    }
+
+    /**{@inheritDoc}*/
+    @Override
+    public String getResponseHeaderIgnoreCase(final String headerName) {
+      return EMPTY_STRING;
     }
 
     @Override
