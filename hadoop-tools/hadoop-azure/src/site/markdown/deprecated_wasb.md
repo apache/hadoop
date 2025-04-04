@@ -32,7 +32,7 @@ on the additional artifacts it requires, notably the
 [Azure Storage SDK for Java](https://github.com/Azure/azure-storage-java).
 
 To make it part of Apache Hadoop's default classpath, simply make sure that
-`HADOOP_OPTIONAL_TOOLS`in `hadoop-env.sh` has `'hadoop-azure` in the list.
+`HADOOP_OPTIONAL_TOOLS` in `hadoop-env.sh` has `'hadoop-azure` in the list.
 Example:
 
 ```bash
@@ -41,8 +41,8 @@ export HADOOP_OPTIONAL_TOOLS="hadoop-azure,hadoop-azure-datalake"
 ## Features
 
 * Read and write data stored in an Azure Blob Storage account.
-* Present a hierarchical file system view by implementing the standard Hadoop
-  [`FileSystem`](../api/org/apache/hadoop/fs/FileSystem.html) interface.
+* Present a hierarchical file system view by implementing the standard [`Hadoop
+  FileSystem`](../api/org/apache/hadoop/fs/FileSystem.html) interface.
 * Supports configuration of multiple Azure Blob Storage accounts.
 * Supports both block blobs (suitable for most use cases, such as MapReduce) and
   page blobs (suitable for continuous write use cases, such as an HBase

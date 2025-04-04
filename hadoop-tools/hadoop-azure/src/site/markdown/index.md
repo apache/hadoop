@@ -65,7 +65,9 @@ The Azure Storage data model presents 3 core concepts:
 * **Container**: A container is a grouping of multiple blobs.  A storage account
   may have multiple containers.  In Hadoop, an entire file system hierarchy is
   stored in a single container.
-* **Blob**: A file of any type and size stored with the existing wasb connector
+* **Blob**:  A file of any type and size. In Hadoop, files are stored in blobs.
+  The internal implementation also uses blobs to persist the file system
+  hierarchy and other metadata.
 
 The ABFS connector connects to classic containers, or those created
 with Hierarchical Namespaces.
@@ -75,7 +77,7 @@ with Hierarchical Namespaces.
 A key aspect of ADLS Gen 2 is its support for
 [hierarchical namespaces](https://docs.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-namespace)
 These are effectively directories and offer high performance rename and delete operations
-—something which makes a significant improvement in performance in query engines
+— something which makes a significant improvement in performance in query engines
 writing data to, including MapReduce, Spark, Hive, as well as DistCp.
 
 This feature is only available if the container was created with "namespace"
@@ -94,6 +96,9 @@ Some of the `az storage` command line commands fail too, for example:
 
 ```bash
 $ az storage container list --account-name abfswales1
+```
+Output:
+```
 Blob API is not yet supported for hierarchical namespace accounts. ErrorCode: BlobApiNotYetSupportedForHierarchicalNamespaceAccounts
 ```
 
@@ -106,7 +111,7 @@ It includes instructions to create it from [the Azure command line tool](https:/
 which can be installed on Windows, MacOS (via Homebrew) and Linux (apt or yum).
 
 The [az storage](https://docs.microsoft.com/en-us/cli/azure/storage?view=azure-cli-latest) subcommand
-handles all storage commands, [`az storage account create`](https://docs.microsoft.com/en-us/cli/azure/storage/account?view=azure-cli-latest#az-storage-account-create)
+handles all storage commands, [az storage account create](https://docs.microsoft.com/en-us/cli/azure/storage/account?view=azure-cli-latest#az-storage-account-create)
 does the creation.
 
 Until the ADLS gen2 API support is finalized, you need to add an extension
@@ -116,8 +121,11 @@ az extension add --name storage-preview
 ```
 
 Check that all is well by verifying that the usage command includes `--hierarchical-namespace`:
-```
+```bash
 $  az storage account
+```
+Output:
+```
 usage: az storage account create [-h] [--verbose] [--debug]
      [--output {json,jsonc,table,tsv,yaml,none}]
      [--query JMESPATH] --resource-group
@@ -131,7 +139,7 @@ usage: az storage account create [-h] [--verbose] [--debug]
      [--access-tier {Hot,Cool}]
      [--https-only [{true,false}]]
      [--file-aad [{true,false}]]
-     [--hierarchical-namespace [{true,false}]]
+     **[--hierarchical-namespace [{true,false}]]**
      [--bypass {None,Logging,Metrics,AzureServices} [{None,Logging,Metrics,AzureServices} ...]]
      [--default-action {Allow,Deny}]
      [--assign-identity]
@@ -140,41 +148,18 @@ usage: az storage account create [-h] [--verbose] [--debug]
 
 You can list locations from `az account list-locations`, which lists the
 name to refer to in the `--location` argument:
-```
+```bash
 $ az account list-locations -o table
+```
+It would list locations in a table format.
 
+Sample output:
+```
 DisplayName          Latitude    Longitude    Name
 -------------------  ----------  -----------  ------------------
 East Asia            22.267      114.188      eastasia
 Southeast Asia       1.283       103.833      southeastasia
-Central US           41.5908     -93.6208     centralus
-East US              37.3719     -79.8164     eastus
-East US 2            36.6681     -78.3889     eastus2
-West US              37.783      -122.417     westus
-North Central US     41.8819     -87.6278     northcentralus
-South Central US     29.4167     -98.5        southcentralus
-North Europe         53.3478     -6.2597      northeurope
-West Europe          52.3667     4.9          westeurope
-Japan West           34.6939     135.5022     japanwest
-Japan East           35.68       139.77       japaneast
-Brazil South         -23.55      -46.633      brazilsouth
-Australia East       -33.86      151.2094     australiaeast
-Australia Southeast  -37.8136    144.9631     australiasoutheast
-South India          12.9822     80.1636      southindia
-Central India        18.5822     73.9197      centralindia
-West India           19.088      72.868       westindia
-Canada Central       43.653      -79.383      canadacentral
-Canada East          46.817      -71.217      canadaeast
-UK South             50.941      -0.799       uksouth
-UK West              53.427      -3.084       ukwest
-West Central US      40.890      -110.234     westcentralus
-West US 2            47.233      -119.852     westus2
-Korea Central        37.5665     126.9780     koreacentral
-Korea South          35.1796     129.0756     koreasouth
-France Central       46.3772     2.3730       francecentral
-France South         43.8345     2.1972       francesouth
-Australia Central    -35.3075    149.1244     australiacentral
-Australia Central 2  -35.3075    149.1244     australiacentral2
+....                  ....        ......         .......
 ```
 
 Once a location has been chosen, create the account
@@ -217,7 +202,7 @@ Now ask for the connection string to the store, which contains the account key
 ```bash
 az storage account  show-connection-string --name abfswales1
 {
-  "connectionString": "DefaultEndpointsProtocol=https;EndpointSuffix=core.windows.net;AccountName=abfswales1;AccountKey=ZGlkIHlvdSByZWFsbHkgdGhpbmsgSSB3YXMgZ29pbmcgdG8gcHV0IGEga2V5IGluIGhlcmU/IA=="
+  "connectionString": "DefaultEndpointsProtocol=https;EndpointSuffix=core.windows.net;AccountName=abfswales1;AccountKey=ACCOUNT_KEY_VALUE"
 }
 ```
 
@@ -227,7 +212,7 @@ to this value.
 ```XML
 <property>
   <name>fs.azure.account.key.abfswales1.dfs.core.windows.net</name>
-  <value>ZGlkIHlvdSByZWFsbHkgdGhpbmsgSSB3YXMgZ29pbmcgdG8gcHV0IGEga2V5IGluIGhlcmU/IA==</value>
+  <value>ACCOUNT_KEY_VALUE</value>
 </property>
 ```
 
@@ -235,14 +220,13 @@ to this value.
 
 Creation through the portal is covered in [Quickstart: Create an Azure Data Lake Storage Gen2 storage account](https://docs.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-quickstart-create-account)
 
-Key Steps
+**Key Steps**
 
 1. Create a new Storage Account in a location which suits you.
 1. "Basics" Tab: select "StorageV2".
 1. "Advanced" Tab: enable "Hierarchical Namespace".
 
-You have now created your storage account. Next, get the key for authentication
-for using the default "Shared Key" authentication.
+You have now created your storage account. Next, get the key for "Shared Key" authentication (default authentication type).
 
 1. Go to the Azure Portal.
 1. Select "Storage Accounts"
@@ -374,7 +358,7 @@ the password, "key", retrieved from the XML/JCECKs configuration files.
 ```
 
 *Note*: The source of the account key can be changed through a custom key provider;
-one exists to execute a shell script to retrieve it.
+one needs to execute a shell script to retrieve it.
 
 A custom key provider class can be provided with the config
 `fs.azure.account.keyprovider`. If a key provider class is specified the same
@@ -410,21 +394,21 @@ the key names are slightly different here.
 </property>
 <property>
   <name>fs.azure.account.oauth2.client.endpoint</name>
-  <value></value>
+  <value>TOKEN_ENDPOINT</value>
   <description>
   URL of OAuth endpoint
   </description>
 </property>
 <property>
   <name>fs.azure.account.oauth2.client.id</name>
-  <value></value>
+  <value>CLIENT_ID</value>
   <description>
   Client ID
   </description>
 </property>
 <property>
   <name>fs.azure.account.oauth2.client.secret</name>
-  <value></value>
+  <value>CLIENT_SECRET</value>
   <description>
   Secret
   </description>
@@ -452,21 +436,21 @@ An OAuth 2.0 endpoint, username and password are provided in the configuration/J
 </property>
 <property>
   <name>fs.azure.account.oauth2.client.endpoint</name>
-  <value></value>
+  <value>TOKEN_ENDPOINT</value>
   <description>
   URL of OAuth 2.0 endpoint
   </description>
 </property>
 <property>
   <name>fs.azure.account.oauth2.user.name</name>
-  <value></value>
+  <value>USERNAME_VALUE</value>
   <description>
   username
   </description>
 </property>
 <property>
   <name>fs.azure.account.oauth2.user.password</name>
-  <value></value>
+  <value>USER_PASSWORD</value>
   <description>
   password for account
   </description>
@@ -475,7 +459,7 @@ An OAuth 2.0 endpoint, username and password are provided in the configuration/J
 
 ### <a name="oauth-refresh-token"></a> OAuth 2.0: Refresh Token
 
-With an existing Oauth 2.0 token, make a request of the Active Directory endpoint
+With an existing Oauth 2.0 token, make a request to the Active Directory endpoint
 `https://login.microsoftonline.com/Common/oauth2/token` for this token to be refreshed.
 
 ```xml
@@ -495,21 +479,21 @@ With an existing Oauth 2.0 token, make a request of the Active Directory endpoin
 </property>
 <property>
   <name>fs.azure.account.oauth2.refresh.token</name>
-  <value></value>
+  <value>REFRESH_TOKEN</value>
   <description>
   Refresh token
   </description>
 </property>
 <property>
   <name>fs.azure.account.oauth2.refresh.endpoint</name>
-  <value></value>
+  <value>REFRESH_ENDPOINT</value>
   <description>
   Refresh token endpoint
   </description>
 </property>
 <property>
   <name>fs.azure.account.oauth2.client.id</name>
-  <value></value>
+  <value>CLIENT_ID</value>
   <description>
   Optional Client ID
   </description>
@@ -543,21 +527,21 @@ The Azure Portal/CLI is used to create the service identity.
 </property>
 <property>
   <name>fs.azure.account.oauth2.msi.tenant</name>
-  <value></value>
+  <value>MSI_TENANT_VALUE</value>
   <description>
   Optional MSI Tenant ID
   </description>
 </property>
 <property>
   <name>fs.azure.account.oauth2.msi.endpoint</name>
-  <value></value>
+  <value>TOKEN_ENDPOINT</value>
   <description>
    MSI endpoint
   </description>
 </property>
 <property>
   <name>fs.azure.account.oauth2.client.id</name>
-  <value></value>
+  <value>CLIENT_ID</value>
   <description>
   Optional Client ID
   </description>
@@ -627,7 +611,7 @@ token when its `getAccessToken()` method is invoked.
 </property>
 <property>
   <name>fs.azure.account.oauth.provider.type</name>
-  <value></value>
+  <value>PROVIDER_TYPE</value>
   <description>
   classname of Custom Authentication Provider
   </description>
@@ -1004,11 +988,7 @@ Config `fs.azure.enable.check.access` needs to be set true to enable
 ### <a name="idempotency"></a> Operation Idempotency
 
 Requests failing due to server timeouts and network failures will be retried.
-PUT/POST operations are idempotent and need no specific handling
-except for Rename and Delete operations.
-
-Rename idempotency checks are made by ensuring the LastModifiedTime on destination
-is recent if source path is found to be non-existent on retry.
+PUT/POST operations are idempotent and need no specific handling.
 
 Delete is considered to be idempotent by default if the target does not exist on
 retry.
