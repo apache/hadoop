@@ -83,7 +83,9 @@ public final class ECBlockGroupStats {
     return pendingDeletionBlocks;
   }
 
-  public boolean hasBadlyDistributedBlocks() { return getBadlyDistributedBlocks() != null; }
+  public boolean hasBadlyDistributedBlocks() {
+    return getBadlyDistributedBlocks() != null;
+  }
 
   public Long getBadlyDistributedBlocks() {
     return badlyDistributedBlocks;
