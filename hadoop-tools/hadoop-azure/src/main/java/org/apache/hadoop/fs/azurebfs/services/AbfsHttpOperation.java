@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -396,8 +398,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
       // consume the input stream to release resources
       int totalBytesRead = 0;
 
-      try {
-        InputStream stream = getContentInputStream();
+      try (InputStream stream = getContentInputStream()) {
         if (isNullInputStream(stream)) {
           return;
         }
@@ -409,7 +410,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
           if (url.toString().contains(QUERY_PARAM_COMP + EQUAL + BLOCKLIST)) {
             parseBlockListResponse(stream);
           } else {
-            listResultStream = stream;
+            parseListPathResponse(stream);
           }
         } else {
           if (buffer != null) {
@@ -498,6 +499,21 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
       return;
     }
     blockIdList = client.parseBlockListResponse(stream);
+  }
+
+  private void parseListPathResponse(final InputStream stream) throws IOException {
+    if (stream == null || blockIdList != null) {
+      return;
+    }
+    try (ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
+      byte[] tempBuffer = new byte[CLEAN_UP_BUFFER_SIZE];
+      int bytesRead;
+      while ((bytesRead = stream.read(tempBuffer, 0, CLEAN_UP_BUFFER_SIZE)) != -1) {
+        buffer.write(tempBuffer, 0, bytesRead);
+      }
+      byte[] responseData = buffer.toByteArray();
+      listResultStream = new ByteArrayInputStream(responseData);
+    }
   }
 
   public List<String> getBlockIdList() {
