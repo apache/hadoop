@@ -30,8 +30,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xml.sax.SAXException;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
@@ -439,6 +441,11 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
             method, getMaskedUrl(), ex.getMessage());
         log.debug("IO Error: ", ex);
         throw ex;
+      } catch (Exception ex) {
+        log.warn("Unexpected error: {} {}: {}",
+            method, getMaskedUrl(), ex.getMessage());
+        log.debug("Unexpected Error: ", ex);
+        throw new IOException(ex);
       } finally {
         this.recvResponseTimeMs += elapsedTimeMs(startTime);
         this.bytesReceived = totalBytesRead;

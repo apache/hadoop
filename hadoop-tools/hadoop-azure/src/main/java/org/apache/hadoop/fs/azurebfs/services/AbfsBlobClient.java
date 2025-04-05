@@ -1620,19 +1620,17 @@ public class AbfsBlobClient extends AbfsClient {
         LOG.debug("ListBlobs listed {} blobs with {} as continuation token",
             listResultSchema.paths().size(),
             listResultSchema.getNextMarker());
-      } catch (SAXException | IOException e) {
-        throw new AbfsDriverException(e);
+        return filterDuplicateEntriesAndRenamePendingFiles(listResultSchema, uri);
+      } catch (SAXException | IOException ex) {
+        throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, ex);
       }
-    } catch (IOException e) {
-      LOG.error("Unable to deserialize list results for uri {}", uri.toString(), e);
-      throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, e);
-    }
-
-    try {
-      return filterDuplicateEntriesAndRenamePendingFiles(listResultSchema, uri);
-    } catch (IOException e) {
-      LOG.error("Unable to filter list results for uri {}", uri.toString(), e);
-      throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, e);
+    } catch (AbfsDriverException ex) {
+      // Throw as it is to avoid multiple wrapping.
+      LOG.error("Unable to deserialize list results for Uri {}", uri != null ? uri.toString(): "NULL", ex);
+      throw ex;
+    } catch (IOException ex) {
+      LOG.error("Unable to get stream for list results for uri {}", uri != null ? uri.toString(): "NULL", ex);
+      throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, ex);
     }
   }
 

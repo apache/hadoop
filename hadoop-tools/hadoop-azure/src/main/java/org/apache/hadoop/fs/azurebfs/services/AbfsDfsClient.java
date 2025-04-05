@@ -38,9 +38,12 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.xml.sax.SAXException;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FileStatus;
@@ -1487,8 +1490,8 @@ public class AbfsDfsClient extends AbfsClient {
         LOG.debug("ListPath listed {} paths with {} as continuation token",
             listResultSchema.paths().size(),
             getContinuationFromResponse(result));
-      } catch (IOException ex) {
-        throw new AbfsDriverException(ex);
+      } catch (JsonParseException | JsonMappingException ex) {
+        throw new AbfsDriverException(ERR_DFS_LIST_PARSING, ex);
       }
 
       List<FileStatus> fileStatuses = new ArrayList<>();
@@ -1501,9 +1504,13 @@ public class AbfsDfsClient extends AbfsClient {
       listResponseData.setContinuationToken(
           getContinuationFromResponse(result));
       return listResponseData;
+    } catch (AbfsDriverException ex) {
+      // Throw as it is to avoid multiple wrapping.
+      LOG.error("Unable to deserialize list results for Uri {}", uri != null ? uri.toString(): "NULL", ex);
+      throw ex;
     } catch (IOException ex) {
-      LOG.error("Unable to deserialize list results for Uri {}", uri.toString(), ex);
-      throw new AbfsDriverException(ERR_DFS_LIST_PARSING, ex);
+      LOG.error("Unable to deserialize list results for Uri {}", uri != null ? uri.toString(): "NULL", ex);
+      throw new AbfsDriverException(ex);
     }
   }
 
