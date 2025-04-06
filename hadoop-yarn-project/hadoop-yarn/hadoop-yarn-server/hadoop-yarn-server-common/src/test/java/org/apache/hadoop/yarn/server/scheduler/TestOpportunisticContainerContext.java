@@ -32,7 +32,9 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.ArrayList;
 
-
+/**
+ * Test cases for OpportunisticContainerContext.
+ */
 public class TestOpportunisticContainerContext {
 
     @Spy
@@ -50,11 +52,11 @@ public class TestOpportunisticContainerContext {
         outstandingOpReqs = new TreeMap<>();
     }
 
-    /*
-     Resource Request - {
-        Location = ANY
-        No of container != 0
-     }
+    /**
+     *  Resource Request - {
+     *         Location = ANY
+     *         No of container != 0
+     *      }
      */
     @Test
     public void testAddToOutstandingReqsWithANYRequest() {
@@ -65,11 +67,11 @@ public class TestOpportunisticContainerContext {
         Assert.assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 1);
     }
 
-    /*
-     Resource Request - {
-        Location != ANY
-        No of Container = 0
-     }
+    /**
+     *  Resource Request - {
+     *         Location != ANY
+     *         No of container = 0
+     *      }
      */
     @Test
     public void testAddToOutstandingReqsWithZeroContainer() {
@@ -84,11 +86,11 @@ public class TestOpportunisticContainerContext {
                 getOutstandingOpReqs().size(), 1);
     }
 
-    /*
-     Resource Request - [
-        {Location != ANY, No of Container = 0}
-        {Location = ANY, No of Container = 0}
-     ]
+    /**
+     *  Resource Request - [
+     *         {Location != ANY, No of Container = 0}
+     *         {Location = ANY, No of Container = 0}
+     *      ]
      */
     @Test
     public void testAddToOutstandingReqsWithZeroContainerAndMultipleSchedulerKey() {
@@ -106,11 +108,11 @@ public class TestOpportunisticContainerContext {
                 getOutstandingOpReqs().size(), 1);
     }
 
-    /*
-     Resource Request - [
-        {Location != ANY, No of Container = 0}
-        {Location = ANY, No of Container != 0}
-     ]
+    /**
+     *  Resource Request - [
+     *         {Location != ANY, No of Container = 0}
+     *         {Location = ANY, No of Container != 0}
+     *      ]
      */
     @Test
     public void testAddToOutstandingReqsWithMultipleSchedulerKey() {
@@ -128,12 +130,12 @@ public class TestOpportunisticContainerContext {
                 getOutstandingOpReqs().size(), 1);
     }
 
-    /*
-     Resource Request - {
-        Location != ANY
-        No of container = 0
-        Capability = NULL
-     }
+    /**
+     *  Resource Request - {
+     *         Location != ANY
+     *         No of container = 0
+     *         Capability = NULL
+     *      }
      */
     @Test
     public void testAddToOutstandingReqsWithZeroContainerAndNullCapability() {
@@ -148,12 +150,12 @@ public class TestOpportunisticContainerContext {
                 getOutstandingOpReqs().size(), 1);
     }
 
-    /*
-     Resource Request - {
-        Location != ANY
-        No of container = 0
-        Req map is NULL
-     }
+    /**
+     *  Resource Request - {
+     *         Location != ANY
+     *         No of container = 0
+     *         Req map is NULL
+     *      }
      */
     @Test
     public void testAddToOutstandingReqsWithEmptyReqMap() {
