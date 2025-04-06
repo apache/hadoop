@@ -142,7 +142,7 @@ public class TestOpportunisticContainerContext {
     public void testAddToOutstandingReqsWithEmptyReqMap() {
         ResourceRequest request = getResourceRequest("resource", 0);
         Mockito.doReturn(new TreeMap<>())
-                .when(opportunisticContainerContext).getContainerIdGenerator();
+                .when(opportunisticContainerContext).getOutstandingOpReqs();
         List<ResourceRequest> resourceRequestList = new ArrayList<>();
         resourceRequestList.add(request);
         opportunisticContainerContext.addToOutstandingReqs(resourceRequestList);
