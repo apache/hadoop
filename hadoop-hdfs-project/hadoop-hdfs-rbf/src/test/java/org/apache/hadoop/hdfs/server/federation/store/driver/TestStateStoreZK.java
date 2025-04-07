@@ -18,9 +18,9 @@
 package org.apache.hadoop.hdfs.server.federation.store.driver;
 
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -42,10 +42,10 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.util.Time;
 import org.apache.zookeeper.CreateMode;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the ZooKeeper implementation of the State Store driver.
@@ -56,7 +56,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
   private static CuratorFramework curatorFramework;
   private static String baseZNode;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     curatorTestingServer = new TestingServer();
     curatorTestingServer.start();
@@ -81,7 +81,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     getStateStore(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownCluster() {
     curatorFramework.close();
     try {
@@ -90,7 +90,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     }
   }
 
-  @Before
+  @BeforeEach
   public void startup() throws IOException {
     removeAll(getStateStoreDriver());
     StateStoreZooKeeperImpl stateStoreZooKeeper = (StateStoreZooKeeperImpl) getStateStoreDriver();

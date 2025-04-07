@@ -30,12 +30,12 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.ipc.CallerContext;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -47,7 +47,7 @@ import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.DEFA
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_RESPONDER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestRouterAsyncQuota {
   private static Configuration routerConf;
@@ -63,7 +63,7 @@ public class TestRouterAsyncQuota {
 
   private final String testfilePath = "/testdir/testAsyncQuota.file";
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpCluster() throws Exception {
     cluster = new MiniRouterDFSCluster(true, 1, 2,
         DEFAULT_HEARTBEAT_INTERVAL_MS, 1000);
@@ -104,14 +104,14 @@ public class TestRouterAsyncQuota {
     ns0 = cluster.getNameservices().get(0);
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdownCluster() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     router = cluster.getRandomRouter();
     routerFs = router.getFileSystem();
@@ -136,7 +136,7 @@ public class TestRouterAsyncQuota {
     fsDataOutputStream.close();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     // clear client context
     CallerContext.setCurrent(null);
@@ -152,9 +152,9 @@ public class TestRouterAsyncQuota {
     asyncQuota.getQuotaUsage("/testdir");
     QuotaUsage quotaUsage = syncReturn(QuotaUsage.class);
     // 3-replication.
-    Assert.assertEquals(3 * 1024, quotaUsage.getSpaceConsumed());
+    Assertions.assertEquals(3 * 1024, quotaUsage.getSpaceConsumed());
     // We have one directory and one file.
-    Assert.assertEquals(2, quotaUsage.getFileAndDirectoryCount());
+    Assertions.assertEquals(2, quotaUsage.getFileAndDirectoryCount());
   }
 
   @Test
@@ -163,6 +163,6 @@ public class TestRouterAsyncQuota {
     syncReturn(void.class);
     asyncQuota.getQuotaUsage("/testdir");
     QuotaUsage quotaUsage = syncReturn(QuotaUsage.class);
-    Assert.assertEquals(8096, quotaUsage.getTypeQuota(StorageType.DISK));
+    Assertions.assertEquals(8096, quotaUsage.getTypeQuota(StorageType.DISK));
   }
 }

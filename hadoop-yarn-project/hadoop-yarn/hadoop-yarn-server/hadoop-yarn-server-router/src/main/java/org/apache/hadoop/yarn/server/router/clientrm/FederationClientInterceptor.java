@@ -140,8 +140,8 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.router.RouterAuditLogger;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
-import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.MonotonicClock;
+import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Records;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -667,9 +667,15 @@ public class FederationClientInterceptor
       // If kill home sub-cluster application is successful,
       // we will try to kill the same application in other sub-clusters.
       if (response != null) {
-        ClientMethod remoteMethod = new ClientMethod("forceKillApplication",
-            new Class[]{KillApplicationRequest.class}, new Object[]{request});
-        invokeConcurrent(remoteMethod, KillApplicationResponse.class, subClusterId);
+        try {
+          ClientMethod remoteMethod = new ClientMethod("forceKillApplication",
+              new Class[]{KillApplicationRequest.class}, new Object[]{request});
+          invokeConcurrent(remoteMethod, KillApplicationResponse.class, subClusterId);
+        } catch (YarnException e) {
+          // We cannot confirm whether the application exists in other sub-clusters,
+          // so this method may throw an error, which we should ignore.
+          LOG.warn("The execution of forceKillApplication failed in the sub-cluster.", e);
+        }
       }
     } catch (Exception e) {
       routerMetrics.incrAppsFailedKilled();

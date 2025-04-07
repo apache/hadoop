@@ -29,7 +29,7 @@ import javax.ws.rs.core.MediaType;
 
 import java.util.function.Consumer;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * This class hides the implementation details of how to verify the structure of
@@ -61,7 +61,7 @@ public class JsonCustomResourceTypeTestcase {
     String responseStr = response.getEntity(String.class);
     String exceptMessgae = String.format("HTTP status should be 200, " +
         "status info:{} response as string:{}", response.getStatusInfo(), responseStr);
-    assertEquals(exceptMessgae, 200, response.getStatus());
+    assertEquals(200, response.getStatus(), exceptMessgae);
   }
 
   public void verify(Consumer<JSONObject> verifier) {

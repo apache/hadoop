@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.auth.ProgressCounter;
+import org.apache.hadoop.fs.s3a.commit.files.UploadEtag;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
@@ -442,11 +443,11 @@ public class ITestCommitOperations extends AbstractCommitITest {
     Assertions.assertThat(persisted.getSaved())
         .describedAs("saved timestamp in %s", persisted)
         .isGreaterThan(0);
-    List<String> etags = persisted.getEtags();
-    Assertions.assertThat(etags)
+    List<UploadEtag> uploadEtags = persisted.getEtags();
+    Assertions.assertThat(uploadEtags)
         .describedAs("Etag list")
         .hasSize(1);
-    Assertions.assertThat(CommitOperations.toPartEtags(etags))
+    Assertions.assertThat(uploadEtags)
         .describedAs("Etags to parts")
         .hasSize(1);
     return pendingDataPath;

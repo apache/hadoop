@@ -118,4 +118,9 @@ public class MultipleDestinationMountTableResolver extends MountTableResolver {
   public void addResolver(DestinationOrder order, OrderedResolver resolver) {
     orderedResolvers.put(order, resolver);
   }
+
+  @VisibleForTesting
+  public OrderedResolver getOrderedResolver(DestinationOrder order) {
+    return orderedResolvers.get(order);
+  }
 }

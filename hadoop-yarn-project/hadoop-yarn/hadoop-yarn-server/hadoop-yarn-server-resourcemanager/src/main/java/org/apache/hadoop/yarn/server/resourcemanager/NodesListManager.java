@@ -60,8 +60,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeDecommissionin
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
-import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.util.SystemClock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 

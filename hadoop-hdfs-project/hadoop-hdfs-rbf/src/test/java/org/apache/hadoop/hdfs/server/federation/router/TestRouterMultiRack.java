@@ -25,14 +25,14 @@ import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterConte
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.resolver.MultipleDestinationMountTableResolver;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test class with clusters having multiple racks.
@@ -46,7 +46,7 @@ public class TestRouterMultiRack {
   private static DistributedFileSystem nnFs0;
   private static DistributedFileSystem nnFs1;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
 
     // Build and start a federated cluster
@@ -76,7 +76,7 @@ public class TestRouterMultiRack {
     nnFs1 = (DistributedFileSystem) nnContext1.getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (cluster != null) {
       cluster.stopRouter(routerContext);

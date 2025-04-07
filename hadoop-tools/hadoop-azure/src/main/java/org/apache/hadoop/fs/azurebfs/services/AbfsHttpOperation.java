@@ -75,6 +75,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   private String requestId = "";
   private String expectedAppendPos = "";
   private ListResultSchema listResultSchema = null;
+  private InputStream listResultStream = null;
   private List<String> blockIdList = null;
 
   // metrics
@@ -220,6 +221,10 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     return listResultSchema;
   }
 
+  public final InputStream getListResultStream() {
+    return listResultStream;
+  }
+
   /**
    * Get response header value for the given headerKey.
    *
@@ -229,6 +234,14 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   public abstract String getResponseHeader(String httpHeader);
 
   public abstract Map<String, List<String>> getResponseHeaders();
+
+  /**
+   * Get response header value for the given headerKey ignoring case.
+   *
+   * @param httpHeader header key.
+   * @return header value.
+   */
+  public abstract String getResponseHeaderIgnoreCase(String httpHeader);
 
   // Returns a trace message for the request
   @Override
@@ -383,7 +396,8 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
       // consume the input stream to release resources
       int totalBytesRead = 0;
 
-      try (InputStream stream = getContentInputStream()) {
+      try {
+        InputStream stream = getContentInputStream();
         if (isNullInputStream(stream)) {
           return;
         }
@@ -395,7 +409,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
           if (url.toString().contains(QUERY_PARAM_COMP + EQUAL + BLOCKLIST)) {
             parseBlockListResponse(stream);
           } else {
-            parseListFilesResponse(stream);
+            listResultStream = stream;
           }
         } else {
           if (buffer != null) {
@@ -478,19 +492,6 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
    * @throws IOException if the error stream could not be created from the response stream.
    */
   protected abstract InputStream getErrorStream() throws IOException;
-
-  /**
-   * Parse the list file response
-   *
-   * @param stream InputStream contains the list results.
-   * @throws IOException if the response cannot be deserialized.
-   */
-  private void parseListFilesResponse(final InputStream stream) throws IOException {
-    if (stream == null || listResultSchema != null) {
-      return;
-    }
-    listResultSchema = client.parseListPathResults(stream);
-  }
 
   private void parseBlockListResponse(final InputStream stream) throws IOException {
     if (stream == null || blockIdList != null) {
@@ -579,7 +580,6 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   public final long getRecvLatency() {
     return recvResponseTimeMs;
   }
-
   /**
    * Set response status code for the server call.
    *
@@ -668,6 +668,14 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     return connectionDisconnectedOnError;
   }
 
+  /**
+   * Sets the list result schema after parsing done on Client.
+   * @param listResultSchema ListResultSchema
+   */
+  protected void setListResultSchema(final ListResultSchema listResultSchema) {
+    this.listResultSchema = listResultSchema;
+  }
+
   public static class AbfsHttpOperationWithFixedResult extends AbfsHttpOperation {
     /**
      * Creates an instance to represent fixed results.
@@ -743,12 +751,18 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
     @Override
     public String getResponseHeader(final String httpHeader) {
-      return "";
+      return EMPTY_STRING;
     }
 
     @Override
     public Map<String, List<String>> getResponseHeaders() {
       return new HashMap<>();
+    }
+
+    /**{@inheritDoc}*/
+    @Override
+    public String getResponseHeaderIgnoreCase(final String headerName) {
+      return EMPTY_STRING;
     }
 
     @Override
@@ -785,6 +799,16 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     @Override
     public Map<String, List<String>> getResponseHeaders() {
       return new HashMap<>();
+    }
+
+    /**{@inheritDoc}*/
+    @Override
+    public String getResponseHeaderIgnoreCase(final String httpHeader) {
+      // Directories on FNS-Blob are identified by a special metadata header.
+      if (httpHeader.equalsIgnoreCase(X_MS_META_HDI_ISFOLDER)) {
+        return TRUE;
+      }
+      return EMPTY_STRING;
     }
 
     @Override
@@ -935,12 +959,18 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
     @Override
     public String getResponseHeader(final String httpHeader) {
-      return "";
+      return EMPTY_STRING;
     }
 
     @Override
     public Map<String, List<String>> getResponseHeaders() {
       return new HashMap<>();
+    }
+
+    /**{@inheritDoc}*/
+    @Override
+    public String getResponseHeaderIgnoreCase(final String headerName) {
+      return EMPTY_STRING;
     }
 
     @Override

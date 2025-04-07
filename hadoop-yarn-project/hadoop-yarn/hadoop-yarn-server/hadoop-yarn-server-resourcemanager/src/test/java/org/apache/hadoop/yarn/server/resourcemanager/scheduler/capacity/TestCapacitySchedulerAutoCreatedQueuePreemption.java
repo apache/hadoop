@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.TestCapacitySchedulerAutoCreatedQueueBase.C;
@@ -47,7 +48,7 @@ public class TestCapacitySchedulerAutoCreatedQueuePreemption
     extends TestCapacitySchedulerSurgicalPreemption {
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
   }
@@ -128,7 +129,8 @@ public class TestCapacitySchedulerAutoCreatedQueuePreemption
     return conf;
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testSimpleSurgicalPreemptionOnAutoCreatedLeafQueues()
       throws Exception {
     /**
@@ -162,7 +164,8 @@ public class TestCapacitySchedulerAutoCreatedQueuePreemption
     testSimpleSurgicalPreemption(USER1, USER2, USER1, USER2);
   }
 
-  @Test(timeout = 600000)
+  @Test
+  @Timeout(value = 600)
   public void
       testPreemptionFromHighestPriorityManagedParentQueueAndOldestContainer()
       throws Exception {

@@ -30,7 +30,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.util.Properties;
@@ -96,8 +96,8 @@ public final class SecurityConfUtil {
         UserGroupInformation.AuthenticationMethod.KERBEROS, conf);
 
     UserGroupInformation.setConfiguration(conf);
-    assertTrue("Expected configuration to enable security",
-        UserGroupInformation.isSecurityEnabled());
+    assertTrue(UserGroupInformation.isSecurityEnabled(),
+        "Expected configuration to enable security");
 
     // Setup the keytab
     File keytabFile = new File(baseDir, "test.keytab");

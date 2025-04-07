@@ -24,16 +24,17 @@ import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.router.RemoteMethod;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Used to test the async functionality of {@link RouterRpcServer}.
@@ -41,7 +42,7 @@ import static org.junit.Assert.assertNotNull;
 public class TestRouterAsyncRpcServer extends RouterAsyncProtocolTestBase {
   private RouterRpcServer asyncRouterRpcServer;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     asyncRouterRpcServer = getRouterAsyncRpcServer();
   }
@@ -91,6 +92,6 @@ public class TestRouterAsyncRpcServer extends RouterAsyncProtocolTestBase {
 
     asyncRouterRpcServer.getSlowDatanodeReportAsync(true, 0);
     DatanodeInfo[] slowDatanodeReport2 = syncReturn(DatanodeInfo[].class);
-    assertEquals(slowDatanodeReport1, slowDatanodeReport2);
+    assertArrayEquals(slowDatanodeReport1, slowDatanodeReport2);
   }
 }

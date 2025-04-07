@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.resourceestimator.solver.impl;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -32,9 +34,9 @@ import org.apache.hadoop.resourceestimator.skylinestore.exceptions.SkylineStoreE
 import org.apache.hadoop.resourceestimator.solver.api.Solver;
 import org.apache.hadoop.resourceestimator.solver.exceptions.InvalidInputException;
 import org.apache.hadoop.resourceestimator.solver.exceptions.SolverException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * This LPSolver class will make resource estimation using Linear Programming
@@ -45,28 +47,33 @@ public abstract class TestSolver {
 
   protected abstract Solver createSolver() throws ResourceEstimatorException;
 
-  @Before public void setup()
+  @BeforeEach
+  public void setup()
       throws SolverException, IOException, SkylineStoreException,
       ResourceEstimatorException {
     solver = createSolver();
   }
 
-  @Test(expected = InvalidInputException.class) public void testNullJobHistory()
+  @Test
+  public void testNullJobHistory()
       throws SolverException, SkylineStoreException {
+    assertThrows(InvalidInputException.class, () -> {
+        solver.solve(null);
+    });
     // try to solve with null jobHistory
-    solver.solve(null);
   }
 
-  @Test(expected = InvalidInputException.class)
-  public void testEmptyJobHistory()
-      throws SolverException, SkylineStoreException {
-    Map<RecurrenceId, List<ResourceSkyline>> jobHistoryInvalid =
-        new HashMap<RecurrenceId, List<ResourceSkyline>>();
-    // try to solve with emty jobHistory
-    solver.solve(jobHistoryInvalid);
+  @Test
+  public void testEmptyJobHistory() throws SolverException, SkylineStoreException {
+    // try to solve with empty jobHistory
+    assertThrows(InvalidInputException.class, () -> {
+        Map<RecurrenceId, List<ResourceSkyline>> jobHistoryInvalid = new HashMap<RecurrenceId, List<ResourceSkyline>>();
+        solver.solve(jobHistoryInvalid);
+    });
   }
 
-  @After public final void cleanUp() {
+  @AfterEach
+  public final void cleanUp() {
     solver.close();
     solver = null;
   }

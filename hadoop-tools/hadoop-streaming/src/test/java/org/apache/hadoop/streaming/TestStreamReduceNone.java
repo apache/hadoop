@@ -22,8 +22,8 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.fs.FileUtil;
 
-import static org.junit.Assert.*;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests hadoopStreaming in MapReduce local mode.

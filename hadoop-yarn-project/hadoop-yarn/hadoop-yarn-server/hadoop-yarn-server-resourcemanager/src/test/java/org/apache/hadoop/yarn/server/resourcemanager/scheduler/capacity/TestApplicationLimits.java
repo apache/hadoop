@@ -19,9 +19,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.setQueueHandler;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -75,10 +75,10 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentMatchers;
-import org.mockito.Mockito;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
@@ -100,7 +100,7 @@ public class TestApplicationLimits {
   private CapacitySchedulerContext csContext;
 
   
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     CapacitySchedulerConfiguration csConf = 
         new CapacitySchedulerConfiguration();
@@ -635,16 +635,16 @@ public class TestApplicationLimits {
     when(amResourceRequest.getCapability()).thenReturn(amResource);
     when(rmApp.getAMResourceRequests()).thenReturn(
         Collections.singletonList(amResourceRequest));
-    Mockito.doReturn(rmApp)
+    doReturn(rmApp)
         .when(spyApps).get(ArgumentMatchers.<ApplicationId>any());
     when(spyRMContext.getRMApps()).thenReturn(spyApps);
     RMAppAttempt rmAppAttempt = mock(RMAppAttempt.class);
     when(rmApp.getRMAppAttempt(any()))
         .thenReturn(rmAppAttempt);
     when(rmApp.getCurrentAppAttempt()).thenReturn(rmAppAttempt);
-    Mockito.doReturn(rmApp)
+    doReturn(rmApp)
         .when(spyApps).get(ArgumentMatchers.<ApplicationId>any());
-    Mockito.doReturn(true).when(spyApps)
+    doReturn(true).when(spyApps)
         .containsKey(ArgumentMatchers.<ApplicationId>any());
 
     Priority priority_1 = TestUtils.createMockPriority(1);
@@ -781,7 +781,8 @@ public class TestApplicationLimits {
     return set;
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testApplicationLimitSubmit() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -985,14 +986,14 @@ public class TestApplicationLimits {
     Resource expectedAmLimit = Resources.multiply(capacity,
         queueA.getMaxAMResourcePerQueuePercent());
     Resource amLimit = queueA.calculateAndGetAMResourceLimit();
-    assertTrue("AM memory limit is less than expected: Expected: " +
+    assertTrue(amLimit.getMemorySize() >= expectedAmLimit.getMemorySize(),
+        "AM memory limit is less than expected: Expected: " +
         expectedAmLimit.getMemorySize() + "; Computed: "
-        + amLimit.getMemorySize(),
-        amLimit.getMemorySize() >= expectedAmLimit.getMemorySize());
-    assertTrue("AM vCore limit is less than expected: Expected: " +
+        + amLimit.getMemorySize());
+    assertTrue(amLimit.getVirtualCores() >= expectedAmLimit.getVirtualCores(),
+        "AM vCore limit is less than expected: Expected: " +
         expectedAmLimit.getVirtualCores() + "; Computed: "
-        + amLimit.getVirtualCores(),
-        amLimit.getVirtualCores() >= expectedAmLimit.getVirtualCores());
+        + amLimit.getVirtualCores());
   }
 
   private CapacitySchedulerContext createCSContext(CapacitySchedulerConfiguration csConf,

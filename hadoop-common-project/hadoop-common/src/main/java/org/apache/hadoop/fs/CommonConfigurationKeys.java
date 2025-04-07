@@ -243,6 +243,11 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
       "hadoop.security.token.service.use_ip";
   public static final boolean HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT =
       true;
+  public static final String
+      HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS =
+      "hadoop.security.hostname.cache.expire-interval.seconds";
+  public static final int
+      HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS_DEFAULT = 0;
 
   /**
    * @see

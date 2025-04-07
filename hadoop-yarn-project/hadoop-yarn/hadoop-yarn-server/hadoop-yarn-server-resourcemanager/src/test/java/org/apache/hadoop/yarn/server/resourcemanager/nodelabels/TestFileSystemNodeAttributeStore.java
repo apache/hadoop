@@ -18,6 +18,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.nodelabels;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -32,10 +34,10 @@ import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.nodelabels.AttributeValue;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributeStore;
 import org.apache.hadoop.yarn.server.resourcemanager.NodeAttributeTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -68,7 +70,7 @@ public class TestFileSystemNodeAttributeStore {
     }
   }
 
-  @Before
+  @BeforeEach
   public void before() throws IOException {
     mgr = new MockNodeAttrbuteManager();
     conf = new Configuration();
@@ -79,7 +81,7 @@ public class TestFileSystemNodeAttributeStore {
     mgr.start();
   }
 
-  @After
+  @AfterEach
   public void after() throws IOException {
     FileSystemNodeAttributeStore fsStore =
         ((FileSystemNodeAttributeStore) mgr.store);
@@ -87,7 +89,8 @@ public class TestFileSystemNodeAttributeStore {
     mgr.stop();
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testEmptyRecoverSkipInternalUdpate() throws Exception {
     // Stop manager
     mgr.stop();
@@ -101,7 +104,8 @@ public class TestFileSystemNodeAttributeStore {
         .internalUpdateAttributesOnNodes(any(), any(), any(), any());
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testRecoverWithMirror() throws Exception {
 
     //------host0----
@@ -126,8 +130,7 @@ public class TestFileSystemNodeAttributeStore {
     // Add node attribute
     mgr.addNodeAttributes(toAddAttributes);
 
-    Assert.assertEquals("host0 size", 2,
-        mgr.getAttributesForNode("host0").size());
+    assertEquals(2, mgr.getAttributesForNode("host0").size(), "host0 size");
     // Add test to remove
     toAddAttributes.clear();
     toAddAttributes.put("host0", ImmutableSet.of(gpu));
@@ -150,10 +153,8 @@ public class TestFileSystemNodeAttributeStore {
     mgr.start();
 
     mgr.getAttributesForNode("host0");
-    Assert.assertEquals("host0 size", 1,
-        mgr.getAttributesForNode("host0").size());
-    Assert.assertEquals("host1 size", 1,
-        mgr.getAttributesForNode("host1").size());
+    assertEquals(1, mgr.getAttributesForNode("host0").size(), "host0 size");
+    assertEquals(1, mgr.getAttributesForNode("host1").size(), "host1 size");
     attrs = mgr.getAttributesForNode("host0");
     assertThat(attrs).hasSize(1);
     assertThat(attrs.keySet().toArray()[0]).isEqualTo(docker);
@@ -177,19 +178,18 @@ public class TestFileSystemNodeAttributeStore {
     mgr = new MockNodeAttrbuteManager();
     mgr.init(conf);
     mgr.start();
-    Assert.assertEquals("host0 size", 1,
-        mgr.getAttributesForNode("host0").size());
-    Assert.assertEquals("host1 size", 2,
-        mgr.getAttributesForNode("host1").size());
+    assertEquals(1, mgr.getAttributesForNode("host0").size(), "host0 size");
+    assertEquals(2, mgr.getAttributesForNode("host1").size(), "host1 size");
     attrs = mgr.getAttributesForNode("host0");
     assertThat(attrs).hasSize(1);
     assertThat(attrs.keySet().toArray()[0]).isEqualTo(gpu);
     attrs = mgr.getAttributesForNode("host1");
-    Assert.assertTrue(attrs.keySet().contains(docker));
-    Assert.assertTrue(attrs.keySet().contains(gpu));
+    assertTrue(attrs.keySet().contains(docker));
+    assertTrue(attrs.keySet().contains(gpu));
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testRecoverFromEditLog() throws Exception {
     NodeAttribute docker = NodeAttribute
         .newInstance(NodeAttribute.PREFIX_CENTRALIZED, "DOCKER",
@@ -208,8 +208,7 @@ public class TestFileSystemNodeAttributeStore {
     // Add node attribute
     mgr.addNodeAttributes(toAddAttributes);
 
-    Assert.assertEquals("host0 size", 2,
-        mgr.getAttributesForNode("host0").size());
+    assertEquals(2, mgr.getAttributesForNode("host0").size(), "host0 size");
 
     //  Increase editlog operation
     for (int i = 0; i < 5; i++) {
@@ -241,10 +240,8 @@ public class TestFileSystemNodeAttributeStore {
     mgr.init(conf);
     mgr.start();
 
-    Assert.assertEquals("host0 size", 1,
-        mgr.getAttributesForNode("host0").size());
-    Assert.assertEquals("host1 size", 2,
-        mgr.getAttributesForNode("host1").size());
+    assertEquals(1, mgr.getAttributesForNode("host0").size(), "host0 size");
+    assertEquals(2, mgr.getAttributesForNode("host1").size(), "host1 size");
 
     toAddAttributes.clear();
     NodeAttribute replaced =
@@ -262,19 +259,17 @@ public class TestFileSystemNodeAttributeStore {
     Map.Entry<NodeAttribute, AttributeValue> entry =
         valueMap.entrySet().iterator().next();
     NodeAttribute attribute = entry.getKey();
-    Assert.assertEquals("host0 size", 1,
-        mgr.getAttributesForNode("host0").size());
-    Assert.assertEquals("host1 size", 2,
-        mgr.getAttributesForNode("host1").size());
+    assertEquals(1, mgr.getAttributesForNode("host0").size(), "host0 size");
+    assertEquals(2, mgr.getAttributesForNode("host1").size(), "host1 size");
     checkNodeAttributeEqual(replaced, attribute);
   }
 
   public void checkNodeAttributeEqual(NodeAttribute atr1, NodeAttribute atr2) {
-    Assert.assertEquals(atr1.getAttributeType(), atr2.getAttributeType());
-    Assert.assertEquals(atr1.getAttributeKey().getAttributeName(),
+    assertEquals(atr1.getAttributeType(), atr2.getAttributeType());
+    assertEquals(atr1.getAttributeKey().getAttributeName(),
         atr2.getAttributeKey().getAttributeName());
-    Assert.assertEquals(atr1.getAttributeKey().getAttributePrefix(),
+    assertEquals(atr1.getAttributeKey().getAttributePrefix(),
         atr2.getAttributeKey().getAttributePrefix());
-    Assert.assertEquals(atr1.getAttributeValue(), atr2.getAttributeValue());
+    assertEquals(atr1.getAttributeValue(), atr2.getAttributeValue());
   }
 }

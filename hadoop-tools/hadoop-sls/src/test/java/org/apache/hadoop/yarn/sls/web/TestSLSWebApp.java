@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.sls.web;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.apache.commons.io.FileUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -60,13 +60,13 @@ public class TestSLSWebApp {
 
     String simulateInfo =
             MessageFormat.format(simulateInfoTemplate, info.toString());
-    Assert.assertTrue("The simulate info html page should not be empty",
-            simulateInfo.length() > 0);
+    Assertions.assertTrue(
+           simulateInfo.length() > 0, "The simulate info html page should not be empty");
     for (Map.Entry<String, Object> entry : simulateInfoMap.entrySet()) {
-      Assert.assertTrue("The simulate info html page should have information "
-              + "of " + entry.getKey(), simulateInfo.contains("<td class='td1'>"
+      Assertions.assertTrue(simulateInfo.contains("<td class='td1'>"
               + entry.getKey() + "</td><td class='td2'>"
-              + entry.getValue() + "</td>"));
+              + entry.getValue() + "</td>"), "The simulate info html page should have information "
+              + "of " + entry.getKey());
     }
   }
 
@@ -90,8 +90,8 @@ public class TestSLSWebApp {
     }
     String simulateInfo = MessageFormat.format(simulateTemplate,
             queueInfo, "s", 1000, 1000);
-    Assert.assertTrue("The simulate page html page should not be empty",
-            simulateInfo.length() > 0);
+    Assertions.assertTrue(
+           simulateInfo.length() > 0, "The simulate page html page should not be empty");
   }
 
   @Test
@@ -116,7 +116,7 @@ public class TestSLSWebApp {
     }
     String trackInfo = MessageFormat.format(trackTemplate, trackedQueueInfo,
             trackedAppInfo, "s", 1000, 1000);
-    Assert.assertTrue("The queue/app tracking html page should not be empty",
-            trackInfo.length() > 0);
+    Assertions.assertTrue(
+           trackInfo.length() > 0, "The queue/app tracking html page should not be empty");
   }
 }

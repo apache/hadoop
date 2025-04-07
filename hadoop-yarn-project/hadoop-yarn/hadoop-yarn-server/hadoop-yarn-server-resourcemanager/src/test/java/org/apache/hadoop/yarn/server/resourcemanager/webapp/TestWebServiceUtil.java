@@ -55,7 +55,6 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import org.glassfish.jersey.jettison.JettisonJaxbContext;
 import org.glassfish.jersey.jettison.JettisonMarshaller;
-import org.junit.Assert;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
@@ -70,7 +69,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public final class TestWebServiceUtil {
   private static final ObjectMapper MAPPER = new ObjectMapper()
@@ -288,7 +288,7 @@ public final class TestWebServiceUtil {
       }
     } catch (URISyntaxException | IOException e) {
       e.printStackTrace();
-      Assert.fail("overwrite should not fail " + e.getMessage());
+      fail("overwrite should not fail " + e.getMessage());
     }
   }
 

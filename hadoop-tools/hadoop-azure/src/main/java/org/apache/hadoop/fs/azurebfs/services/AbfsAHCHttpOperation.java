@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect10
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
@@ -48,7 +47,6 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.util.EntityUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APACHE_IMPL;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
@@ -194,26 +192,14 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   public void processResponse(final byte[] buffer,
       final int offset,
       final int length) throws IOException {
-    try {
-      if (!isPayloadRequest) {
-        prepareRequest();
-        LOG.debug("Sending request: {}", httpRequestBase);
-        httpResponse = executeRequest();
-        LOG.debug("Request sent: {}; response {}", httpRequestBase,
-            httpResponse);
-      }
-      parseResponseHeaderAndBody(buffer, offset, length);
-    } finally {
-      if (httpResponse != null) {
-        try {
-          EntityUtils.consume(httpResponse.getEntity());
-        } finally {
-          if (httpResponse instanceof CloseableHttpResponse) {
-            ((CloseableHttpResponse) httpResponse).close();
-          }
-        }
-      }
+    if (!isPayloadRequest) {
+      prepareRequest();
+      LOG.debug("Sending request: {}", httpRequestBase);
+      httpResponse = executeRequest();
+      LOG.debug("Request sent: {}; response {}", httpRequestBase,
+          httpResponse);
     }
+    parseResponseHeaderAndBody(buffer, offset, length);
   }
 
   /**
@@ -324,6 +310,22 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
           .add(header.getValue());
     }
     return headers;
+  }
+
+  /**{@inheritDoc}*/
+  @Override
+  public String getResponseHeaderIgnoreCase(final String headerName) {
+    Map<String, List<String>> responseHeaders = getResponseHeaders();
+    if (responseHeaders == null || responseHeaders.isEmpty()) {
+      return null;
+    }
+    // Search for the header value case-insensitively
+    return responseHeaders.entrySet().stream()
+        .filter(entry -> entry.getKey() != null
+            && entry.getKey().equalsIgnoreCase(headerName))
+        .flatMap(entry -> entry.getValue().stream())
+        .findFirst()
+        .orElse(null); // Return null if no match is found
   }
 
   /**{@inheritDoc}*/

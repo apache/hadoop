@@ -24,9 +24,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -34,7 +34,7 @@ import java.util.Map;
 
 import static org.apache.hadoop.yarn.util.resource.ResourceUtils.MAXIMUM_ALLOCATION;
 import static org.apache.hadoop.yarn.util.resource.ResourceUtils.UNITS;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -43,7 +43,7 @@ public class TestFairSchedulerWithMultiResourceTypes
 
   private static final String CUSTOM_RESOURCE = "custom-resource";
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     scheduler = new FairScheduler();
     conf = createConfiguration();
@@ -55,7 +55,7 @@ public class TestFairSchedulerWithMultiResourceTypes
     scheduler.setRMContext(rmContext);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (scheduler != null) {
       scheduler.stop();

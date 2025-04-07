@@ -15,9 +15,9 @@
 package org.apache.hadoop.hdfs.server.federation.security;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_HTTP_AUTHENTICATION_TYPE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -59,9 +59,9 @@ import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -111,7 +111,7 @@ public class TestRouterHttpDelegationToken {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     Configuration conf = SecurityConfUtil.initSecurity();
     conf.set(RBFConfigKeys.DFS_ROUTER_HTTP_ADDRESS_KEY, "0.0.0.0:0");
@@ -138,7 +138,7 @@ public class TestRouterHttpDelegationToken {
     fs = (WebHdfsFileSystem)FileSystem.get(webURI, conf);
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws Exception {
     if (router != null) {
       router.stop();
@@ -169,8 +169,7 @@ public class TestRouterHttpDelegationToken {
         getTokenIdentifier(token.getIdentifier());
 
     long t = renewDelegationToken(fs, token);
-    assertTrue(t + " should not be larger than " + tokenId.getMaxDate(),
-        t <= tokenId.getMaxDate());
+    assertTrue(t <= tokenId.getMaxDate(), t + " should not be larger than " + tokenId.getMaxDate());
   }
 
   @Test

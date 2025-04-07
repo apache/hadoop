@@ -44,8 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSec
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -53,6 +52,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -111,7 +111,7 @@ public class TestRMWebAppFairScheduler {
     try {
       fsViewInstance.render();
     } catch (Exception e) {
-      Assert.fail("Failed to render FairSchedulerPage: " +
+      fail("Failed to render FairSchedulerPage: " +
           StringUtils.stringifyException(e));
     }
     WebAppTests.flushOutput(injector);

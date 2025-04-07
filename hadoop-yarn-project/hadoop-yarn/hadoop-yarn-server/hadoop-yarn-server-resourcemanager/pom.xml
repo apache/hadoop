@@ -271,7 +271,11 @@
       <groupId>org.glassfish.jersey.media</groupId>
       <artifactId>jersey-media-json-jettison</artifactId>
     </dependency>
-
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>com.github.stefanbirkner</groupId>
       <artifactId>system-rules</artifactId>

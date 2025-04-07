@@ -26,7 +26,8 @@ import org.apache.hadoop.resourceestimator.skylinestore.api.SkylineStore;
  * Test {@link InMemoryStore} class.
  */
 public class TestInMemoryStore extends TestSkylineStore {
-  @Override public final SkylineStore createSkylineStore() {
+  @Override
+  public final SkylineStore createSkylineStore() {
     return new InMemoryStore();
   }
 }

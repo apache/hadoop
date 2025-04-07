@@ -780,7 +780,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
     for (int i = 0; i < tags.size(); i += 1) {
       assertEquals("Should commit the correct part tags",
-          tags.get(i), commit.getEtags().get(i));
+          tags.get(i), commit.getEtags().get(i).getEtag());
     }
   }
 
