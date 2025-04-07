@@ -37,17 +37,17 @@ public class TestStreamJob {
   @Test
   public void testCreateJobWithExtraArgs() throws IOException {
     assertThrows(IllegalArgumentException.class, () -> {
-        ArrayList<String> dummyArgs = new ArrayList<String>();
-        dummyArgs.add("-input");
-        dummyArgs.add("dummy");
-        dummyArgs.add("-output");
-        dummyArgs.add("dummy");
-        dummyArgs.add("-mapper");
-        dummyArgs.add("dummy");
-        dummyArgs.add("dummy");
-        dummyArgs.add("-reducer");
-        dummyArgs.add("dummy");
-        StreamJob.createJob(dummyArgs.toArray(new String[] {}));
+      ArrayList<String> dummyArgs = new ArrayList<String>();
+      dummyArgs.add("-input");
+      dummyArgs.add("dummy");
+      dummyArgs.add("-output");
+      dummyArgs.add("dummy");
+      dummyArgs.add("-mapper");
+      dummyArgs.add("dummy");
+      dummyArgs.add("dummy");
+      dummyArgs.add("-reducer");
+      dummyArgs.add("dummy");
+      StreamJob.createJob(dummyArgs.toArray(new String[] {}));
     });
   }
   
