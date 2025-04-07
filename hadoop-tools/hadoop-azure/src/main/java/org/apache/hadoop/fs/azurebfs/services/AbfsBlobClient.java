@@ -1626,7 +1626,7 @@ public class AbfsBlobClient extends AbfsClient {
       // Throw as it is to avoid multiple wrapping.
       LOG.error("Unable to deserialize list results for Uri {}", uri != null ? uri.toString(): "NULL", ex);
       throw ex;
-    } catch (IOException ex) {
+    } catch (Exception ex) {
       LOG.error("Unable to get stream for list results for uri {}", uri != null ? uri.toString(): "NULL", ex);
       throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, ex);
     }
@@ -1926,7 +1926,8 @@ public class AbfsBlobClient extends AbfsClient {
    * @param uri URI to be used for path conversion.
    * @return List of entries after removing duplicates.
    */
-  private ListResponseData filterDuplicateEntriesAndRenamePendingFiles(
+  @VisibleForTesting
+  public ListResponseData filterDuplicateEntriesAndRenamePendingFiles(
       BlobListResultSchema listResultSchema, URI uri) throws IOException {
     List<FileStatus> fileStatuses = new ArrayList<>();
     Map<Path, Integer> renamePendingJsonPaths = new HashMap<>();

@@ -1507,9 +1507,9 @@ public class AbfsDfsClient extends AbfsClient {
       // Throw as it is to avoid multiple wrapping.
       LOG.error("Unable to deserialize list results for Uri {}", uri != null ? uri.toString(): "NULL", ex);
       throw ex;
-    } catch (IOException ex) {
+    } catch (Exception ex) {
       LOG.error("Unable to deserialize list results for Uri {}", uri != null ? uri.toString(): "NULL", ex);
-      throw new AbfsDriverException(ex);
+      throw new AbfsDriverException(ERR_DFS_LIST_PARSING, ex);
     }
   }
 

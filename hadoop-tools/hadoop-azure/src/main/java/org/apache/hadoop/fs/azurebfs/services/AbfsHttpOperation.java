@@ -517,8 +517,13 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     blockIdList = client.parseBlockListResponse(stream);
   }
 
+  /**
+   * Parse the list path response from the network stream and save response into a buffer.
+   * @param stream Network InputStream.
+   * @throws IOException if an error occurs while reading the stream.
+   */
   private void parseListPathResponse(final InputStream stream) throws IOException {
-    if (stream == null || blockIdList != null) {
+    if (stream == null || listResultData != null) {
       return;
     }
     listResultData = readDataFromStream(stream);
