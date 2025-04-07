@@ -226,18 +226,6 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     return listResultData;
   }
 
-  @VisibleForTesting
-  public byte[] readDataFromStream(InputStream stream) throws IOException{
-    try (ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
-      byte[] tempBuffer = new byte[CLEAN_UP_BUFFER_SIZE];
-      int bytesRead;
-      while ((bytesRead = stream.read(tempBuffer, 0, CLEAN_UP_BUFFER_SIZE)) != -1) {
-        buffer.write(tempBuffer, 0, bytesRead);
-      }
-      return buffer.toByteArray();
-    }
-  }
-
   /**
    * Get response header value for the given headerKey.
    *
@@ -526,7 +514,14 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     if (stream == null || listResultData != null) {
       return;
     }
-    listResultData = readDataFromStream(stream);
+    try (ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
+      byte[] tempBuffer = new byte[CLEAN_UP_BUFFER_SIZE];
+      int bytesRead;
+      while ((bytesRead = stream.read(tempBuffer, 0, CLEAN_UP_BUFFER_SIZE)) != -1) {
+        buffer.write(tempBuffer, 0, bytesRead);
+      }
+      listResultData = buffer.toByteArray();
+    }
   }
 
   public List<String> getBlockIdList() {

@@ -1925,6 +1925,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param listResultSchema List of entries returned by Blob Endpoint.
    * @param uri URI to be used for path conversion.
    * @return List of entries after removing duplicates.
+   * @throws IOException if path conversion fails.
    */
   @VisibleForTesting
   public ListResponseData filterDuplicateEntriesAndRenamePendingFiles(
