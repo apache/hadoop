@@ -33,9 +33,8 @@ import org.apache.hadoop.tools.fedbalance.procedure.BalanceProcedure.RetryExcept
 import org.apache.hadoop.tools.fedbalance.procedure.BalanceProcedureScheduler;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -46,15 +45,14 @@ import java.io.DataInputStream;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.SCHEDULER_JOURNAL_URI;
 import static org.apache.hadoop.test.GenericTestUtils.getMethodName;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.CURRENT_SNAPSHOT_NAME;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.LAST_SNAPSHOT_NAME;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.TrashOption;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -63,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 /**
  * Test DistCpProcedure.
  */
+@Timeout(180)
 public class TestDistCpProcedure {
   private static MiniDFSCluster cluster;
   private static Configuration conf;
@@ -76,11 +75,6 @@ public class TestDistCpProcedure {
           new FileEntry(SRCDAT + "/b", true),
           new FileEntry(SRCDAT + "/b/c", false)};
   private static String nnUri;
-
-  @Rule
-  // There are multiple unit tests with different timeouts that fail multiple times because of
-  // DataStreamer#waitAndQueuePacket, so we set a larger global timeout.
-  public Timeout globalTimeout = new Timeout(180000, TimeUnit.MILLISECONDS);
 
   @BeforeAll
   public static void beforeClass() throws IOException {

@@ -30,7 +30,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
@@ -53,6 +52,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 /**
  * Test BalanceProcedureScheduler.
@@ -156,10 +159,10 @@ public class TestBalanceProcedureScheduler {
     scheduler.init(true);
     try {
       // Mock bad procedure.
-      BalanceProcedure badProcedure = Mockito.mock(BalanceProcedure.class);
-      Mockito.doThrow(new IOException("Job failed exception."))
+      BalanceProcedure badProcedure = mock(BalanceProcedure.class);
+      doThrow(new IOException("Job failed exception."))
           .when(badProcedure).execute();
-      Mockito.doReturn("bad-procedure").when(badProcedure).name();
+      doReturn("bad-procedure").when(badProcedure).name();
 
       BalanceJob.Builder builder = new BalanceJob.Builder<>();
       builder.nextProcedure(badProcedure);
@@ -390,9 +393,9 @@ public class TestBalanceProcedureScheduler {
     BalanceProcedureScheduler scheduler = new BalanceProcedureScheduler(CONF);
     scheduler.init(true);
 
-    BalanceJournal journal = Mockito.mock(BalanceJournal.class);
+    BalanceJournal journal = mock(BalanceJournal.class);
     AtomicInteger count = new AtomicInteger(0);
-    Mockito.doAnswer(invocation -> {
+    doAnswer(invocation -> {
       if (count.incrementAndGet() == 1) {
         throw new IOException("Mock clear failure");
       }
