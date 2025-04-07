@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import org.apache.hadoop.test.TestName;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -30,16 +31,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.util.SystemClock;
-import org.junit.After;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -51,7 +49,6 @@ import java.util.List;
 /**
  * Tests to verify fairshare and minshare preemption, using parameterization.
  */
-@RunWith(Parameterized.class)
 public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
   private static final File ALLOC_FILE = new File(TEST_DIR, "test-queues");
   private static final int GB = 1024;
@@ -64,8 +61,8 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
   // Node Capacity = NODE_CAPACITY_MULTIPLE * (1 GB or 1 vcore)
   private static final int NODE_CAPACITY_MULTIPLE = 4;
 
-  private final boolean fairsharePreemption;
-  private final boolean drf;
+  private boolean fairsharePreemption;
+  private boolean drf;
 
   // App that takes up the entire cluster
   private FSAppAttempt greedyApp;
@@ -73,10 +70,9 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
   // Starving app that is expected to instigate preemption
   private FSAppAttempt starvingApp;
 
-  @Rule
-  public TestName testName = new TestName();
+  @RegisterExtension
+  private TestName testName = new TestName();
 
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> getParameters() {
     return Arrays.asList(new Object[][] {
         {"MinSharePreemption", 0},
@@ -86,14 +82,14 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     });
   }
 
-  public TestFairSchedulerPreemption(String name, int mode)
+  private void initTestFairSchedulerPreemption(String name, int mode)
       throws IOException {
     fairsharePreemption = (mode > 1); // 2 and 3
     drf = (mode % 2 == 1); // 1 and 3
     writeAllocFile();
+    setup();
   }
 
-  @Before
   public void setup() throws IOException {
     createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE,
@@ -109,7 +105,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     setupCluster();
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     ALLOC_FILE.delete();
     conf = null;
@@ -190,8 +186,8 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     }
     allocationFileWriter.writeToFile(ALLOC_FILE.getAbsolutePath());
 
-    assertTrue("Allocation file does not exist, not running the test",
-        ALLOC_FILE.exists());
+    assertTrue(ALLOC_FILE.exists(),
+        "Allocation file does not exist, not running the test");
   }
 
   private void setupCluster() throws IOException {
@@ -298,30 +294,30 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     }
 
     // Post preemption, verify the greedyApp has the correct # of containers.
-    assertEquals("Incorrect # of containers on the greedy app",
-            numGreedyAppContainers, greedyApp.getLiveContainers().size());
+    assertEquals(numGreedyAppContainers, greedyApp.getLiveContainers().size(),
+        "Incorrect # of containers on the greedy app");
 
     // Verify the queue metrics are set appropriately. The greedyApp started
     // with 8 1GB, 1vcore containers.
-    assertEquals("Incorrect # of preempted containers in QueueMetrics",
-        8 - numGreedyAppContainers,
-        greedyApp.getQueue().getMetrics().getAggregatePreemptedContainers());
+    assertEquals(8 - numGreedyAppContainers,
+        greedyApp.getQueue().getMetrics().getAggregatePreemptedContainers(),
+        "Incorrect # of preempted containers in QueueMetrics");
 
     // Verify the node is reserved for the starvingApp
     for (RMNode rmNode : rmNodes) {
       FSSchedulerNode node = (FSSchedulerNode)
           scheduler.getNodeTracker().getNode(rmNode.getNodeID());
       if (node.getContainersForPreemption().size() > 0) {
-        assertTrue("node should be reserved for the starvingApp",
-            node.getPreemptionList().keySet().contains(starvingApp));
+        assertTrue(node.getPreemptionList().keySet().contains(starvingApp),
+            "node should be reserved for the starvingApp");
       }
     }
 
     sendEnoughNodeUpdatesToAssignFully();
 
     // Verify the preempted containers are assigned to starvingApp
-    assertEquals("Starved app is not assigned the right # of containers",
-        numStarvedAppContainers, starvingApp.getLiveContainers().size());
+    assertEquals(numStarvedAppContainers, starvingApp.getLiveContainers().size(),
+        "Starved app is not assigned the right # of containers");
 
     // Verify the node is not reserved for the starvingApp anymore
     for (RMNode rmNode : rmNodes) {
@@ -344,8 +340,10 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     assertEquals(8, greedyApp.getLiveContainers().size());
   }
 
-  @Test
-  public void testPreemptionWithinSameLeafQueue() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testPreemptionWithinSameLeafQueue(String name, int mode) throws Exception {
+    initTestFairSchedulerPreemption(name, mode);
     String queue = "root.preemptable.child-1";
     submitApps(queue, queue);
     if (fairsharePreemption) {
@@ -355,20 +353,26 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     }
   }
 
-  @Test
-  public void testPreemptionBetweenTwoSiblingLeafQueues() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testPreemptionBetweenTwoSiblingLeafQueues(String name, int mode) throws Exception {
+    initTestFairSchedulerPreemption(name, mode);
     submitApps("root.preemptable.child-1", "root.preemptable.child-2");
     verifyPreemption(2, 4);
   }
 
-  @Test
-  public void testPreemptionBetweenNonSiblingQueues() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testPreemptionBetweenNonSiblingQueues(String name, int mode) throws Exception {
+    initTestFairSchedulerPreemption(name, mode);
     submitApps("root.preemptable.child-1", "root.nonpreemptable.child-1");
     verifyPreemption(2, 4);
   }
 
-  @Test
-  public void testNoPreemptionFromDisallowedQueue() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testNoPreemptionFromDisallowedQueue(String name, int mode) throws Exception {
+    initTestFairSchedulerPreemption(name, mode);
     submitApps("root.nonpreemptable.child-1", "root.preemptable.child-1");
     verifyNoPreemption();
   }
@@ -392,8 +396,10 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     }
   }
 
-  @Test
-  public void testPreemptionSelectNonAMContainer() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testPreemptionSelectNonAMContainer(String name, int mode) throws Exception {
+    initTestFairSchedulerPreemption(name, mode);
     takeAllResources("root.preemptable.child-1");
     setNumAMContainersPerNode(2);
     preemptHalfResources("root.preemptable.child-2");
@@ -406,12 +412,14 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     String host1 = containers.get(1).getNodeId().getHost();
     // Each node provides two and only two non-AM containers to be preempted, so
     // the preemption happens on both nodes.
-    assertTrue("Preempted containers should come from two different "
-        + "nodes.", !host0.equals(host1));
+    assertTrue(!host0.equals(host1), "Preempted containers should come from two different "
+        + "nodes.");
   }
 
-  @Test
-  public void testAppNotPreemptedBelowFairShare() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testAppNotPreemptedBelowFairShare(String name, int mode) throws Exception {
+    initTestFairSchedulerPreemption(name, mode);
     takeAllResources("root.preemptable.child-1");
     tryPreemptMoreThanFairShare("root.preemptable.child-2");
   }
@@ -426,13 +434,18 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     verifyPreemption(1, 5);
   }
 
-  @Test
-  public void testDisableAMPreemption() {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testDisableAMPreemption(String name, int mode) throws IOException {
+    initTestFairSchedulerPreemption(name, mode);
     testDisableAMPreemption(false);
   }
 
-  @Test
-  public void testDisableAMPreemptionGlobally() {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testDisableAMPreemptionGlobally(String name, int mode)
+      throws IOException {
+    initTestFairSchedulerPreemption(name, mode);
     testDisableAMPreemption(true);
   }
 
@@ -449,9 +462,11 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     assertFalse(greedyApp.canContainerBePreempted(container, null));
   }
 
-  @Test
-  public void testPreemptionBetweenSiblingQueuesWithParentAtFairShare()
-      throws InterruptedException {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testPreemptionBetweenSiblingQueuesWithParentAtFairShare(
+      String name, int mode) throws InterruptedException, IOException {
+    initTestFairSchedulerPreemption(name, mode);
     // Run this test only for fairshare preemption
     if (!fairsharePreemption) {
       return;
@@ -472,9 +487,11 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
   /* It tests the case that there is less-AM-container solution in the
    * remaining nodes.
    */
-  @Test
-  public void testRelaxLocalityPreemptionWithLessAMInRemainingNodes()
-      throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testRelaxLocalityPreemptionWithLessAMInRemainingNodes(
+      String name, int mode) throws Exception {
+    initTestFairSchedulerPreemption(name, mode);
     takeAllResources("root.preemptable.child-1");
     RMNode node1 = rmNodes.get(0);
     setAllAMContainersOnNode(node1.getNodeID());
@@ -487,9 +504,11 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
   /* It tests the case that there is no less-AM-container solution in the
    * remaining nodes.
    */
-  @Test
-  public void testRelaxLocalityPreemptionWithNoLessAMInRemainingNodes()
-      throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testRelaxLocalityPreemptionWithNoLessAMInRemainingNodes(
+      String name, int mode) throws Exception {
+    initTestFairSchedulerPreemption(name, mode);
     takeAllResources("root.preemptable.child-1");
     RMNode node1 = rmNodes.get(0);
     setNumAMContainersOnNode(3, node1.getNodeID());

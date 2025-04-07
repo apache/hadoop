@@ -38,20 +38,20 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test a router end-to-end including the MountTable without default nameservice.
@@ -64,7 +64,7 @@ public class TestRouterMountTableWithoutDefaultNS {
   private static FileSystem nnFs0;
   private static FileSystem nnFs1;
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     // Build and start a federated cluster
     cluster = new StateStoreDFSCluster(false, 2);
@@ -89,7 +89,7 @@ public class TestRouterMountTableWithoutDefaultNS {
     mountTable = (MountTableResolver) router.getSubclusterResolver();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (cluster != null) {
       cluster.stopRouter(routerContext);
@@ -98,7 +98,7 @@ public class TestRouterMountTableWithoutDefaultNS {
     }
   }
 
-  @After
+  @AfterEach
   public void clearMountTable() throws IOException {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTableManager = client.getMountTableManager();

@@ -18,32 +18,30 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-@RunWith(Parameterized.class)
 public class TestResourceUsage {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestResourceUsage.class);
   private String suffix;
 
-  @Parameterized.Parameters
   public static Collection<String[]> getParameters() {
     return Arrays.asList(new String[][]{{"Pending"}, {"Used"}, {"Reserved"},
         {"AMUsed"}, {"AMLimit"}, {"CachedUsed"}, {"CachedPending"}});
   }
 
-  public TestResourceUsage(String suffix) {
-    this.suffix = suffix;
+  public void initTestResourceUsage(String pSuffix) {
+    this.suffix = pSuffix;
   }
 
   private static void dec(ResourceUsage obj, String suffix, Resource res,
@@ -136,12 +134,14 @@ public class TestResourceUsage {
   }
 
   void check(int mem, int cpu, Resource res) {
-    Assert.assertEquals(mem, res.getMemorySize());
-    Assert.assertEquals(cpu, res.getVirtualCores());
+    assertEquals(mem, res.getMemorySize());
+    assertEquals(cpu, res.getVirtualCores());
   }
 
-  @Test
-  public void testModifyAndRead() throws Exception {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testModifyAndRead(String pSuffix) throws Exception {
+    initTestResourceUsage(pSuffix);
     LOG.info("Test - " + suffix);
     internalTestModifyAndRead(null);
     internalTestModifyAndRead("label");

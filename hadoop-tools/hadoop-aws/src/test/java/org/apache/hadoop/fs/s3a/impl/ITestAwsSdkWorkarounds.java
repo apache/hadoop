@@ -32,12 +32,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import static org.apache.hadoop.test.GenericTestUtils.LogCapturer.captureLogs;
 
 /**
- * Verify that noisy transfer manager logs are turned off.
+ * Tests for any AWS SDK workaround code.
  * <p>
- * This is done by creating new FS instances and then
- * requesting an on-demand transfer manager from the store.
- * As this is only done once per FS instance, a new FS is
- * required per test case.
+ * These tests are inevitably brittle against SDK updates.
  */
 public class ITestAwsSdkWorkarounds extends AbstractS3ATestBase {
 
@@ -54,13 +51,6 @@ public class ITestAwsSdkWorkarounds extends AbstractS3ATestBase {
       LoggerFactory.getLogger(AwsSdkWorkarounds.TRANSFER_MANAGER);
 
   /**
-   * This is the string which keeps being printed.
-   * {@value}.
-   */
-  private static final String FORBIDDEN =
-      "The provided S3AsyncClient is an instance of MultipartS3AsyncClient";
-
-  /**
    * Marginal test run speedup by skipping needless test dir cleanup.
    * @throws IOException failure
    */
@@ -70,23 +60,7 @@ public class ITestAwsSdkWorkarounds extends AbstractS3ATestBase {
   }
 
   /**
-   * Test instantiation with logging disabled.
-   */
-  @Test
-  public void testQuietLogging() throws Throwable {
-    // simulate the base state of logging
-    noisyLogging();
-    // creating a new FS switches to quiet logging
-    try (S3AFileSystem newFs = newFileSystem()) {
-      String output = createAndLogTransferManager(newFs);
-      Assertions.assertThat(output)
-          .describedAs("LOG output")
-          .doesNotContain(FORBIDDEN);
-    }
-  }
-
-  /**
-   * Test instantiation with logging disabled.
+   * Test instantiation with logging enabled.
    */
   @Test
   public void testNoisyLogging() throws Throwable {
@@ -95,9 +69,8 @@ public class ITestAwsSdkWorkarounds extends AbstractS3ATestBase {
       noisyLogging();
       String output = createAndLogTransferManager(newFs);
       Assertions.assertThat(output)
-          .describedAs("LOG output does not contain the forbidden text."
-              + " Has the SDK been fixed?")
-          .contains(FORBIDDEN);
+          .describedAs("LOG output")
+          .isEmpty();
     }
   }
 

@@ -22,10 +22,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,7 +33,7 @@ public class TestFSParentQueue {
 
   private QueueManager queueManager;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     FairSchedulerConfiguration conf = new FairSchedulerConfiguration();
     RMContext rmContext = mock(RMContext.class);

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.URI;
@@ -48,9 +48,9 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.TestFileTruncate;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the use of the resolvers that write in all subclusters from the
@@ -81,7 +81,7 @@ public class TestRouterAllResolver {
   private static List<FileSystem> nsFss = new LinkedList<>();
 
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     // 2 nameservices with 1 namenode each (no HA needed for this test)
     cluster = new StateStoreDFSCluster(
@@ -121,7 +121,7 @@ public class TestRouterAllResolver {
     assertEquals(NUM_NAMESPACES, nsFss.size());
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     cluster.shutdown();
     cluster = null;
@@ -185,11 +185,9 @@ public class TestRouterAllResolver {
     String testFile = path + "/dir2/dir22/dir220/file-append.txt";
     createTestFile(routerFs, testFile);
     Path testFilePath = new Path(testFile);
-    assertTrue("Created file is too small",
-        routerFs.getFileStatus(testFilePath).getLen() > 50);
+    assertTrue(routerFs.getFileStatus(testFilePath).getLen() > 50, "Created file is too small");
     appendTestFile(routerFs, testFile);
-    assertTrue("Append file is too small",
-        routerFs.getFileStatus(testFilePath).getLen() > 110);
+    assertTrue(routerFs.getFileStatus(testFilePath).getLen() > 110, "Append file is too small");
     assertDirsEverywhere(path, 9);
     assertFilesDistributed(path, 15);
 
@@ -200,8 +198,7 @@ public class TestRouterAllResolver {
     routerFs.truncate(testTruncateFilePath, 10);
     TestFileTruncate.checkBlockRecovery(testTruncateFilePath,
         (DistributedFileSystem) routerFs);
-    assertEquals("Truncate file fails", 10,
-        routerFs.getFileStatus(testTruncateFilePath).getLen());
+    assertEquals(10, routerFs.getFileStatus(testTruncateFilePath).getLen(), "Truncate file fails");
     assertDirsEverywhere(path, 9);
     assertFilesDistributed(path, 16);
 
@@ -238,8 +235,7 @@ public class TestRouterAllResolver {
         Path checkPath = getRelativePath(dirPath);
         for (FileSystem nsFs : nsFss) {
           FileStatus fileStatus1 = nsFs.getFileStatus(checkPath);
-          assertTrue(file + " should be a directory",
-              fileStatus1.isDirectory());
+          assertTrue(fileStatus1.isDirectory(), file + " should be a directory");
         }
       }
     }
@@ -279,7 +275,7 @@ public class TestRouterAllResolver {
     assertEquals(numRouterFiles, sumNsFiles);
     if (expectedNumFiles > 0) {
       for (int numFiles : numNsFiles) {
-        assertTrue("Files not distributed: " + numNsFiles, numFiles > 0);
+        assertTrue(numFiles > 0, "Files not distributed: " + numNsFiles);
       }
     }
   }

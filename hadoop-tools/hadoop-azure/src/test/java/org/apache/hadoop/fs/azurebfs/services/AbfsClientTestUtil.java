@@ -44,8 +44,10 @@ import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
+import static org.apache.hadoop.fs.azurebfs.ITestAzureBlobFileSystemListStatus.TEST_CONTINUATION_TOKEN;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_XML;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCKLIST;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
@@ -75,7 +77,7 @@ public final class AbfsClientTestUtil {
 
   }
 
-  public static void setMockAbfsRestOperationForListPathOperation(
+  public static void setMockAbfsRestOperationForListOperation(
       final AbfsClient spiedClient,
       FunctionRaisingIOE<AbfsJdkHttpOperation, AbfsJdkHttpOperation> functionRaisingIOE)
       throws Exception {
@@ -91,12 +93,29 @@ public final class AbfsClientTestUtil {
         new ArrayList<>(),
         spiedClient.getAbfsConfiguration()
     ));
+    ListResponseData listResponseData1 = Mockito.spy(new ListResponseData());
+    listResponseData1.setRenamePendingJsonPaths(null);
+    listResponseData1.setOp(abfsRestOperation);
+    listResponseData1.setFileStatusList(new ArrayList<>());
+    listResponseData1.setContinuationToken(TEST_CONTINUATION_TOKEN);
+
+    ListResponseData listResponseData2 = Mockito.spy(new ListResponseData());
+    listResponseData2.setRenamePendingJsonPaths(null);
+    listResponseData2.setOp(abfsRestOperation);
+    listResponseData2.setFileStatusList(new ArrayList<>());
+    listResponseData2.setContinuationToken(EMPTY_STRING);
 
     Mockito.doReturn(abfsRestOperation).when(spiedClient).getAbfsRestOperation(
         eq(AbfsRestOperationType.ListPaths), any(), any(), any());
+    Mockito.doReturn(abfsRestOperation).when(spiedClient).getAbfsRestOperation(
+        eq(AbfsRestOperationType.ListBlobs), any(), any(), any());
 
-    addGeneralMockBehaviourToAbfsClient(spiedClient, exponentialRetryPolicy, staticRetryPolicy, intercept);
+    addGeneralMockBehaviourToAbfsClient(spiedClient, exponentialRetryPolicy, staticRetryPolicy, intercept, listResponseData1);
     addGeneralMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
+
+    Mockito.doReturn(listResponseData1).doReturn(listResponseData2)
+        .when(spiedClient)
+        .parseListPathResults(any(), any());
 
     functionRaisingIOE.apply(httpOperation);
   }
@@ -204,7 +223,8 @@ public final class AbfsClientTestUtil {
   public static void addGeneralMockBehaviourToAbfsClient(final AbfsClient abfsClient,
                                                          final ExponentialRetryPolicy exponentialRetryPolicy,
                                                          final StaticRetryPolicy staticRetryPolicy,
-                                                         final AbfsThrottlingIntercept intercept) throws IOException, URISyntaxException {
+                                                         final AbfsThrottlingIntercept intercept,
+      final ListResponseData listResponseData) throws IOException, URISyntaxException {
     Mockito.doReturn(OAuth).when(abfsClient).getAuthType();
     Mockito.doReturn("").when(abfsClient).getAccessToken();
     AbfsConfiguration abfsConfiguration = Mockito.mock(AbfsConfiguration.class);
@@ -217,6 +237,7 @@ public final class AbfsClientTestUtil {
         .when(intercept)
         .sendingRequest(any(), nullable(AbfsCounters.class));
     Mockito.doNothing().when(intercept).updateMetrics(any(), any());
+    Mockito.doReturn(listResponseData).when(abfsClient).parseListPathResults(any(), any());
 
     // Returning correct retry policy based on failure reason
     Mockito.doReturn(exponentialRetryPolicy).when(abfsClient).getExponentialRetryPolicy();

@@ -23,9 +23,12 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -36,11 +39,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
 
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ClusterNodeTracker;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSet;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimpleCandidateNodeSet;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -570,6 +580,106 @@ public class TestCapacitySchedulerMultiNodes {
     assertNotNull(cs.getNode(nm2.getNodeId()).getReservedContainer());
 
     rm1.close();
+  }
+
+  // In a scheduling scenario with 2000 candidate nodes and an unsatisfied
+  // request that reaches the headroom,
+  // currently the global scheduler checks the request for each node repeatedly,
+  // causing a scheduling cycle to exceed 200ms.
+  // With the improvement of YARN-11798, the global scheduler checks the request
+  // only once before evaluating all nodes, reducing the scheduling cycle to
+  // less than 2ms.
+  @Test
+  @Timeout(value = 30)
+  public void testCheckRequestOnceForUnsatisfiedRequest() throws Exception {
+    QueuePath defaultQueuePath =
+        new QueuePath(CapacitySchedulerConfiguration.ROOT, "default");
+    String resourceLimit = "[vcores=3,memory=3096]";
+    conf.setCapacity(defaultQueuePath, resourceLimit);
+    conf.setMaximumCapacityByLabel(defaultQueuePath, "", resourceLimit);
+    conf.setInt(YarnConfiguration.SCHEDULER_SKIP_NODE_MULTIPLIER, 1000);
+    MockRM rm = new MockRM(conf);
+    rm.start();
+    MockNM nm1 = rm.registerNode("test:1234", 10 * GB);
+    ResourceScheduler scheduler = rm.getRMContext().getScheduler();
+    waitforNMRegistered(scheduler, 1, 5);
+
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(2048, rm)
+            .withAppName("app-1")
+            .withUser("user1")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data1);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+    SchedulerNodeReport reportNm1 =
+        rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
+
+    // check node report
+    assertEquals(2 * GB, reportNm1.getUsedResource().getMemorySize());
+    assertEquals(8 * GB,
+        reportNm1.getAvailableResource().getMemorySize());
+
+    // mock node tracker with 2000 nodes
+    // to simulate the scenario where there are many nodes in the cluster
+    List<FiCaSchedulerNode> mockNodes = new ArrayList<>();
+    long ss = System.currentTimeMillis();
+    for (int i = 0; i < 2000; i++) {
+      FiCaSchedulerNode node =
+          TestUtils.getMockNode("host" + i + ":1234", "", 0, 10 * GB, 10);
+      mockNodes.add(node);
+    }
+    ClusterNodeTracker<FiCaSchedulerNode> mockNodeTracker =
+        new ClusterNodeTracker<FiCaSchedulerNode>() {
+      @Override
+      public List<FiCaSchedulerNode> getNodesPerPartition(String partition) {
+        return mockNodes;
+      }
+    };
+
+    // replace the scheduler with a spy scheduler with mocked node-tracker
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    final CapacityScheduler spyCs = Mockito.spy(cs);
+    when(spyCs.getNodeTracker()).thenReturn(mockNodeTracker);
+    RMContext rmContext = rm.getRMContext();
+    ((RMContextImpl) rmContext).setScheduler(spyCs);
+
+    MultiNodeSortingManager<SchedulerNode> mns =
+        rmContext.getMultiNodeSortingManager();
+    MultiNodeSorter<SchedulerNode> sorter =
+        mns.getMultiNodePolicy(POLICY_CLASS_NAME);
+    sorter.reSortClusterNodes();
+
+    // verify that the number of nodes is correct
+    Set<SchedulerNode> nodes =
+        sorter.getMultiNodeLookupPolicy().getNodesPerPartition("");
+    assertEquals(mockNodes.size(), nodes.size());
+
+    // create an unsatisfied request which will reach the headroom
+    am1.allocate("*", 2 * GB, 10, new ArrayList<>());
+
+    // verify that when headroom is reached for an unsatisfied request,
+    // scheduler should only check the request once before checking all nodes.
+    CandidateNodeSet<FiCaSchedulerNode> candidates =
+        new SimpleCandidateNodeSet<>(Collections.emptyMap(), "");
+    int numSchedulingCycles = 10;
+    long startTime = System.currentTimeMillis();
+    for (int i = 0; i < numSchedulingCycles; i++) {
+      spyCs.allocateContainersToNode(candidates, false);
+    }
+    long avgElapsedMs =
+        (System.currentTimeMillis() - startTime) / numSchedulingCycles;
+    LOG.info("Average elapsed time for a scheduling cycle: {} ms",
+        avgElapsedMs);
+    // verify that the scheduling cycle is less than 5ms,
+    // ideally the latency should be less than 2ms.
+    assertTrue(avgElapsedMs < 5,
+        String.format("%d ms elapsed in average for a scheduling cycle, " +
+            "expected to be less than 5ms.", avgElapsedMs));
+
+    rm.stop();
   }
 
   private static void moveReservation(CapacityScheduler cs,

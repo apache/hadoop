@@ -20,8 +20,8 @@ package org.apache.hadoop.tools.rumen;
 
 import java.util.ArrayList;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestPiecewiseLinearInterpolation {
 
@@ -115,9 +115,9 @@ public class TestPiecewiseLinearInterpolation {
 
     System.out.println("Cumulative error is " + RMSNormalizedError);
 
-    assertTrue("The RMS relative error per bucket, " + RMSNormalizedError
-        + ", exceeds our tolerance of " + maximumRelativeError,
-        RMSNormalizedError <= maximumRelativeError);
+    assertTrue(RMSNormalizedError <= maximumRelativeError,
+        "The RMS relative error per bucket, " + RMSNormalizedError
+        + ", exceeds our tolerance of " + maximumRelativeError);
 
   }
 }

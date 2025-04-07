@@ -123,12 +123,12 @@ public abstract class SecretManager<T extends TokenIdentifier> {
     String algorithm = conf.get(
       CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_KEY,
       CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_DEFAULT);
-    LOG.info("Selected hash algorithm: {}", algorithm);
+    LOG.debug("Selected hash algorithm: {}", algorithm);
     SELECTED_ALGORITHM = algorithm;
     int length = conf.getInt(
       CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_KEY,
       CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_DEFAULT);
-    LOG.info("Selected hash key length:{}", length);
+    LOG.debug("Selected hash key length:{}", length);
     SELECTED_LENGTH = length;
   }
 

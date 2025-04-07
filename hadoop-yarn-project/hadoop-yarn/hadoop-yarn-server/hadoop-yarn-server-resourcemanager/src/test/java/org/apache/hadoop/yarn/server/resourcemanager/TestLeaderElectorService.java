@@ -33,9 +33,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.slf4j.event.Level;
 import org.apache.zookeeper.ZooKeeper;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -54,7 +55,7 @@ public class TestLeaderElectorService {
   MockRM rm1;
   MockRM rm2;
   TestingCluster zkCluster;
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     GenericTestUtils.setRootLogLevel(Level.INFO);
     conf = new Configuration();
@@ -73,7 +74,7 @@ public class TestLeaderElectorService {
     zkCluster.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (rm1 != null) {
       rm1.stop();
@@ -87,7 +88,8 @@ public class TestLeaderElectorService {
   // 2. rm2 standby
   // 3. stop rm1
   // 4. rm2 become active
-  @Test (timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testRMShutDownCauseFailover() throws Exception {
     rm1 = startRM("rm1", HAServiceState.ACTIVE);
     rm2 = startRM("rm2", HAServiceState.STANDBY);

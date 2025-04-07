@@ -47,9 +47,9 @@ import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -82,9 +82,10 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTes
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfAllocationAttempts;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfAllocations;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyStateOfAllocations;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -163,13 +164,14 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     config.setMaximumApplicationMasterResourcePerQueuePercent(b, 100);
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
   }
 
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAssignContainer() throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
@@ -227,7 +229,8 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     }
   }
 
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testSchedulingWithoutPendingRequests()
       throws Exception {
     //Start RM so that it accepts app submissions
@@ -269,7 +272,8 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     }
   }
 
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppAssignContainer() throws Exception {
     rm.start();
 
@@ -334,7 +338,8 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     }
   }
 
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testInsufficientResourceDiagnostic() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -420,7 +425,8 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     }
   }
 
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppInsufficientResourceDiagnostic() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler)rm.getResourceScheduler();
@@ -499,7 +505,8 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     }
   }
 
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testGroupByDiagnostics() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -528,7 +535,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
        */
       params.add(RMWSConsts.GROUP_BY, "NON-EXIST-GROUP-BY");
       JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
-      Assert.assertTrue(json.getJSONObject(FN_SCHEDULER_ACT_ROOT)
+      assertTrue(json.getJSONObject(FN_SCHEDULER_ACT_ROOT)
           .getString(FN_ACT_DIAGNOSTIC).startsWith("Got invalid groupBy:"));
       params.remove(RMWSConsts.GROUP_BY);
 
@@ -575,7 +582,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
           assertEquals("1", reqChild.getString(FN_ACT_COUNT));
           assertNotNull(reqChild.getString(FN_ACT_NODE_IDS));
         } else {
-          Assert.fail("Allocation state should be "
+          fail("Allocation state should be "
               + AllocationState.SKIPPED.name() + " or "
               + AllocationState.RESERVED.name() + "!");
         }
@@ -585,7 +592,8 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     }
   }
 
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppGroupByDiagnostics() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler)rm.getResourceScheduler();
@@ -615,7 +623,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
        */
       params.add(RMWSConsts.GROUP_BY, "NON-EXIST-GROUP-BY");
       JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
-      Assert.assertTrue(json.getJSONObject(FN_APP_ACT_ROOT)
+      assertTrue(json.getJSONObject(FN_APP_ACT_ROOT)
           .getString(FN_ACT_DIAGNOSTIC)
           .startsWith("Got invalid groupBy:"));
       params.remove(RMWSConsts.GROUP_BY);
@@ -674,7 +682,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
           assertEquals("1", allocationAttemptObj.getString(FN_ACT_COUNT));
           assertNotNull(allocationAttemptObj.getString(FN_ACT_NODE_IDS));
         } else {
-          Assert.fail("Allocation state should be "
+          fail("Allocation state should be "
               + AllocationState.SKIPPED.name() + " or "
               + AllocationState.RESERVED.name() + "!");
         }

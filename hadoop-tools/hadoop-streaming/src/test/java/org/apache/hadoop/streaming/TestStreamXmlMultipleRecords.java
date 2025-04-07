@@ -26,8 +26,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests if StreamXmlRecordReader will read the next record, _after_ the
@@ -72,7 +72,7 @@ public class TestStreamXmlMultipleRecords extends TestStreaming
   }
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     super.setUp();
     // Without this closeAll() call, setting of FileSystem block size is

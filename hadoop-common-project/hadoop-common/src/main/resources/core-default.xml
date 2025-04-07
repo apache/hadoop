@@ -4480,4 +4480,14 @@ The switch to turn S3A auditing on or off.
       </description>
   </property>
 
+  <property>
+    <name>hadoop.security.hostname.cache.expire-interval.seconds</name>
+    <value>0</value>
+    <description>The expiration time in seconds for cached hostname resolutions.
+      This cache is used to avoid repeated resolution for hostname.
+      A shorter interval may provide more up-to-date resolutions,
+      while a longer interval reduces lookup overhead.
+      If the value is less than or equal to 0, the cache is disabled entirely.
+    </description>
+  </property>
 </configuration>

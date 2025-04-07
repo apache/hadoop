@@ -26,8 +26,9 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTes
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.getFirstSubNodeFromJson;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfAllocations;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createRM;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -77,12 +78,9 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -94,7 +92,6 @@ import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.TestProperties;
 
-@RunWith(Parameterized.class)
 public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   private static final String DEFAULT_PARTITION = "";
   private static final String CAPACITIES = "capacities";
@@ -119,9 +116,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   private MockRM rm;
   private CapacitySchedulerConfiguration csConf;
   private YarnConfiguration conf;
-  private final boolean legacyQueueMode;
+  private boolean legacyQueueMode;
 
-  @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
   public static Collection<Boolean> getParameters() {
     return Arrays.asList(true, false);
   }
@@ -157,7 +153,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
               rm.getRMContext().getNodeLabelManager();
           nodeLabelManager.addToCluserNodeLabels(labels);
         } catch (Exception e) {
-          Assert.fail();
+          fail();
         }
 
         rm.start();
@@ -259,25 +255,28 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     config.setMaximumCapacityByLabel(leafQueueC2Path, LABEL_LY, 75);
   }
 
-  @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (rm != null) {
       rm.stop();
     }
   }
 
-  public TestRMWebServicesForCSWithPartitions(boolean legacyQueueMode) {
-    this.legacyQueueMode = legacyQueueMode;
+  public void initTestRMWebServicesForCSWithPartitions(boolean pLegacyQueueMode)
+      throws Exception {
+    this.legacyQueueMode = pLegacyQueueMode;
+    setUp();
   }
 
-  @Test
-  public void testSchedulerPartitions() throws JSONException, Exception {
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testSchedulerPartitions(boolean pLegacyQueueMode) throws JSONException, Exception {
+    initTestRMWebServicesForCSWithPartitions(pLegacyQueueMode);
     WebTarget r = targetWithJsonObject();
     Response response =
         r.path("ws").path("v1").path("cluster").path("scheduler")
@@ -288,8 +287,11 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     verifySchedulerInfoJson(json);
   }
 
-  @Test
-  public void testSchedulerPartitionsSlash() throws JSONException, Exception {
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testSchedulerPartitionsSlash(boolean pLegacyQueueMode)
+      throws JSONException, Exception {
+    initTestRMWebServicesForCSWithPartitions(pLegacyQueueMode);
     WebTarget r = targetWithJsonObject();
     Response response =
         r.path("ws").path("v1").path("cluster").path("scheduler/")
@@ -301,8 +303,11 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
 
   }
 
-  @Test
-  public void testSchedulerPartitionsDefault() throws JSONException, Exception {
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testSchedulerPartitionsDefault(boolean pLegacyQueueMode)
+      throws JSONException, Exception {
+    initTestRMWebServicesForCSWithPartitions(pLegacyQueueMode);
     WebTarget r = targetWithJsonObject();
     Response response = r.path("ws").path("v1").path("cluster")
         .path("scheduler").request().get(Response.class);
@@ -312,8 +317,11 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     verifySchedulerInfoJson(json);
   }
 
-  @Test
-  public void testSchedulerPartitionsXML() throws JSONException, Exception {
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testSchedulerPartitionsXML(boolean pLegacyQueueMode)
+      throws JSONException, Exception {
+    initTestRMWebServicesForCSWithPartitions(pLegacyQueueMode);
     WebTarget r = target();
     Response response =
         r.path("ws").path("v1").path("cluster").path("scheduler")
@@ -329,8 +337,11 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     verifySchedulerInfoXML(dom);
   }
 
-  @Test
-  public void testPartitionInSchedulerActivities() throws Exception {
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testPartitionInSchedulerActivities(boolean pLegacyQueueMode)
+      throws Exception {
+    initTestRMWebServicesForCSWithPartitions(pLegacyQueueMode);
     RMApp app1 = MockRMAppSubmitter.submit(rm,
         MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
             .withAppName("app1")
@@ -402,9 +413,9 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
 
   private void verifySchedulerInfoXML(Document dom) throws Exception {
     NodeList scheduler = dom.getElementsByTagName("scheduler");
-    assertEquals("incorrect number of elements", 1, scheduler.getLength());
+    assertEquals(1, scheduler.getLength(), "incorrect number of elements");
     NodeList schedulerInfo = dom.getElementsByTagName("schedulerInfo");
-    assertEquals("incorrect number of elements", 1, schedulerInfo.getLength());
+    assertEquals(1, schedulerInfo.getLength(), "incorrect number of elements");
     for (int i = 0; i < schedulerInfo.getLength(); i++) {
       Element element = (Element) schedulerInfo.item(i);
       NodeList children = element.getChildNodes();
@@ -427,20 +438,19 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
               verifyQueueCInfoXML(qElem2);
               break;
             default:
-              Assert.fail("Unexpected queue" + queue);
+              fail("Unexpected queue" + queue);
             }
           }
         } else if (schedulerInfoElem.getTagName().equals(CAPACITIES)) {
           NodeList capacitiesListInfos = schedulerInfoElem.getChildNodes();
-          assertEquals("incorrect number of partitions", 3,
-              capacitiesListInfos.getLength());
+          assertEquals(3,
+              capacitiesListInfos.getLength(), "incorrect number of partitions");
           for (int k = 0; k < capacitiesListInfos.getLength(); k++) {
             Element partitionCapacitiesInfo =
                 (Element) capacitiesListInfos.item(k);
             String partitionName = WebServicesTestUtils
                 .getXmlString(partitionCapacitiesInfo, "partitionName");
-            assertTrue("invalid PartitionCapacityInfo",
-                CLUSTER_LABELS.contains(partitionName));
+            assertTrue(CLUSTER_LABELS.contains(partitionName), "invalid PartitionCapacityInfo");
             verifyPartitionCapacityInfoXML(partitionCapacitiesInfo, 100, 0, 100,
                 100, 0, 100);
           }
@@ -455,13 +465,12 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       Element queueChildElem = (Element) children.item(j);
       if (queueChildElem.getTagName().equals(CAPACITIES)) {
         NodeList capacitiesListInfos = queueChildElem.getChildNodes();
-        assertEquals("incorrect number of partitions", 1,
-            capacitiesListInfos.getLength());
+        assertEquals(1,
+            capacitiesListInfos.getLength(), "incorrect number of partitions");
         Element partitionCapacitiesInfo = (Element) capacitiesListInfos.item(0);
         String partitionName = WebServicesTestUtils
             .getXmlString(partitionCapacitiesInfo, "partitionName");
-        assertTrue("invalid PartitionCapacityInfo",
-            partitionName.isEmpty());
+        assertTrue(partitionName.isEmpty(), "invalid PartitionCapacityInfo");
         verifyPartitionCapacityInfoXML(partitionCapacitiesInfo, 30, 0, 50, 30,
             0, 50);
       } else if (queueChildElem.getTagName().equals("resources")) {
@@ -471,16 +480,16 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   }
 
   private void verifyQueueBInfoXML(Element queueElem) {
-    assertEquals("Invalid default Label expression", LABEL_LX,
+    assertEquals(LABEL_LX,
         WebServicesTestUtils.getXmlString(queueElem,
-            "defaultNodeLabelExpression"));
+        "defaultNodeLabelExpression"), "Invalid default Label expression");
     NodeList children = queueElem.getChildNodes();
     for (int j = 0; j < children.getLength(); j++) {
       Element queueChildElem = (Element) children.item(j);
       if (queueChildElem.getTagName().equals(CAPACITIES)) {
         NodeList capacitiesListInfos = queueChildElem.getChildNodes();
-        assertEquals("incorrect number of partitions", 2,
-            capacitiesListInfos.getLength());
+        assertEquals(2,
+            capacitiesListInfos.getLength(), "incorrect number of partitions");
         for (int k = 0; k < capacitiesListInfos.getLength(); k++) {
           Element partitionCapacitiesInfo =
               (Element) capacitiesListInfos.item(k);
@@ -496,13 +505,13 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
                 30, 0, 50);
             break;
           default:
-            Assert.fail("Unexpected partition" + partitionName);
+            fail("Unexpected partition" + partitionName);
           }
         }
       }
     }
-    assertEquals("Node Labels are not matching", LABEL_LX,
-        WebServicesTestUtils.getXmlString(queueElem, "nodeLabels"));
+    assertEquals(LABEL_LX, WebServicesTestUtils.getXmlString(queueElem, "nodeLabels"),
+        "Node Labels are not matching");
   }
 
   private void verifyQueueCInfoXML(Element queueElem) {
@@ -521,9 +530,9 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
           String queue = WebServicesTestUtils.getXmlString(qElem2, "queueName");
           switch (queue) {
           case LEAF_QUEUE_C1:
-            assertEquals("Invalid default Label expression", LABEL_LX,
+            assertEquals(LABEL_LX,
                 WebServicesTestUtils.getXmlString(qElem2,
-                    "defaultNodeLabelExpression"));
+                "defaultNodeLabelExpression"), "Invalid default Label expression");
             NodeList queuec1Children = qElem2.getChildNodes();
             for (int l = 0; l < queuec1Children.getLength(); l++) {
               Element queueC1ChildElem = (Element) queuec1Children.item(l);
@@ -534,9 +543,9 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
             }
             break;
           case LEAF_QUEUE_C2:
-            assertEquals("Invalid default Label expression", LABEL_LY,
+            assertEquals(LABEL_LY,
                 WebServicesTestUtils.getXmlString(qElem2,
-                    "defaultNodeLabelExpression"));
+                "defaultNodeLabelExpression"), "Invalid default Label expression");
             NodeList queuec2Children = qElem2.getChildNodes();
             for (int l = 0; l < queuec2Children.getLength(); l++) {
               Element queueC2ChildElem = (Element) queuec2Children.item(l);
@@ -547,7 +556,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
             }
             break;
           default:
-            Assert.fail("Unexpected queue" + queue);
+            fail("Unexpected queue" + queue);
           }
         }
       }
@@ -559,8 +568,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       float lyCaps, float lyMaxCaps, float lyAbsCaps, float lyAbsMaxCaps,
       float defCaps, float defMaxCaps, float defAbsCaps, float defAbsMaxCaps) {
     NodeList capacitiesListInfos = partitionCapacitiesElem.getChildNodes();
-    assertEquals("incorrect number of partitions", 3,
-        capacitiesListInfos.getLength());
+    assertEquals(3, capacitiesListInfos.getLength(), "incorrect number of partitions");
     for (int k = 0; k < capacitiesListInfos.getLength(); k++) {
       Element partitionCapacitiesInfo = (Element) capacitiesListInfos.item(k);
       String partitionName = WebServicesTestUtils
@@ -579,60 +587,58 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
             defMaxCaps, defAbsCaps, 0, defAbsMaxCaps);
         break;
       default:
-        Assert.fail("Unexpected partition" + partitionName);
+        fail("Unexpected partition" + partitionName);
       }
     }
   }
 
   private void verifyResourceUsageInfoXML(Element queueChildElem) {
     NodeList resourceUsageInfo = queueChildElem.getChildNodes();
-    assertEquals("incorrect number of partitions", 1,
-        resourceUsageInfo.getLength());
+    assertEquals(1, resourceUsageInfo.getLength(), "incorrect number of partitions");
     Element partitionResourceUsageInfo = (Element) resourceUsageInfo.item(0);
     String partitionName = WebServicesTestUtils
         .getXmlString(partitionResourceUsageInfo, "partitionName");
-    assertTrue("invalid PartitionCapacityInfo",
-        DEFAULT_PARTITION.equals(partitionName));
+    assertTrue(DEFAULT_PARTITION.equals(partitionName),
+        "invalid PartitionCapacityInfo");
   }
 
   private void verifyPartitionCapacityInfoXML(Element partitionInfo,
       float capacity, float usedCapacity, float maxCapacity,
       float absoluteCapacity, float absoluteUsedCapacity,
       float absoluteMaxCapacity) {
-    assertEquals("capacity doesn't match", capacity,
-        WebServicesTestUtils.getXmlFloat(partitionInfo, "capacity"), EPSILON);
-    assertEquals("capacity doesn't match", usedCapacity,
-        WebServicesTestUtils.getXmlFloat(partitionInfo, "usedCapacity"), EPSILON);
-    assertEquals("capacity doesn't match", maxCapacity,
-        WebServicesTestUtils.getXmlFloat(partitionInfo, "maxCapacity"), EPSILON);
-    assertEquals("capacity doesn't match", absoluteCapacity,
+    assertEquals(capacity, WebServicesTestUtils.getXmlFloat(partitionInfo, "capacity"),
+        EPSILON, "capacity doesn't match");
+    assertEquals(usedCapacity, WebServicesTestUtils.getXmlFloat(partitionInfo, "usedCapacity"),
+        EPSILON, "capacity doesn't match");
+    assertEquals(maxCapacity, WebServicesTestUtils.getXmlFloat(partitionInfo, "maxCapacity"),
+        EPSILON, "capacity doesn't match");
+    assertEquals(absoluteCapacity,
         WebServicesTestUtils.getXmlFloat(partitionInfo, "absoluteCapacity"),
-        EPSILON);
-    assertEquals("capacity doesn't match", absoluteUsedCapacity,
+        EPSILON, "capacity doesn't match");
+    assertEquals(absoluteUsedCapacity,
         WebServicesTestUtils.getXmlFloat(partitionInfo, "absoluteUsedCapacity"),
-        EPSILON);
-    assertEquals("capacity doesn't match", absoluteMaxCapacity,
+        EPSILON, "capacity doesn't match");
+    assertEquals(absoluteMaxCapacity,
         WebServicesTestUtils.getXmlFloat(partitionInfo, "absoluteMaxCapacity"),
-        EPSILON);
+        EPSILON, "capacity doesn't match");
   }
 
   private void verifySchedulerInfoJson(JSONObject json)
       throws JSONException, Exception {
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject info = json.getJSONObject("scheduler");
-    assertEquals("incorrect number of elements", 1, info.length());
+    assertEquals(1, info.length(), "incorrect number of elements");
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements", 25, info.length());
+    assertEquals(25, info.length(), "incorrect number of elements");
     JSONObject capacitiesJsonObject = info.getJSONObject(CAPACITIES);
     JSONArray partitionsCapsArray =
         capacitiesJsonObject.getJSONArray(QUEUE_CAPACITIES_BY_PARTITION);
-    assertEquals("incorrect number of elements", CLUSTER_LABELS.size(),
-        partitionsCapsArray.length());
+    assertEquals(CLUSTER_LABELS.size(),
+        partitionsCapsArray.length(), "incorrect number of elements");
     for (int i = 0; i < partitionsCapsArray.length(); i++) {
       JSONObject partitionInfo = partitionsCapsArray.getJSONObject(i);
       String partitionName = partitionInfo.getString("partitionName");
-      assertTrue("Unknown partition received",
-          CLUSTER_LABELS.contains(partitionName));
+      assertTrue(CLUSTER_LABELS.contains(partitionName), "Unknown partition received");
       verifyPartitionCapacityInfoJson(partitionInfo, 100, 0, 100, 100, 0, 100);
     }
     JSONObject jsonQueuesObject = info.getJSONObject("queues");
@@ -673,26 +679,24 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       String partitionName = null;
       switch (queue) {
       case QUEUE_A:
-        assertEquals("incorrect number of partitions", 1,
-            partitionsCapsArray.length());
+        assertEquals(1, partitionsCapsArray.length(), "incorrect number of partitions");
         partitionInfo = partitionsCapsArray.getJSONObject(0);
         partitionName = partitionInfo.getString("partitionName");
         verifyPartitionCapacityInfoJson(partitionInfo, 30, 0, 50, 30, 0, 50);
-        assertEquals("incorrect number of elements", 7,
-            partitionsResourcesArray.getJSONObject(0).length());
-        assertEquals("incorrect number of objects", 1,
-            resourceUsageByPartition.length());
+        assertEquals(7, partitionsResourcesArray.getJSONObject(0).length(),
+            "incorrect number of elements");
+        assertEquals(1, resourceUsageByPartition.length(), "incorrect number of objects");
         break;
       case QUEUE_B:
-        assertEquals("Invalid default Label expression", LABEL_LX,
-            queueJson.getString("defaultNodeLabelExpression"));
-        assertEquals("incorrect number of elements", 7,
-            partitionsResourcesArray.getJSONObject(0).length());
+        assertEquals(LABEL_LX, queueJson.getString("defaultNodeLabelExpression"),
+            "Invalid default Label expression");
+        assertEquals(7, partitionsResourcesArray.getJSONObject(0).length(),
+            "incorrect number of elements");
         verifyAccesibleNodeLabels(queueJson, ImmutableSet.of(LABEL_LX));
-        assertEquals("incorrect number of partitions", 2,
-            partitionsCapsArray.length());
-        assertEquals("incorrect number of objects", 2,
-            resourceUsageByPartition.length());
+        assertEquals(2, partitionsCapsArray.length(),
+            "incorrect number of partitions");
+        assertEquals(2, resourceUsageByPartition.length(),
+            "incorrect number of objects");
         for (int j = 0; j < partitionsCapsArray.length(); j++) {
           partitionInfo = partitionsCapsArray.getJSONObject(j);
           partitionName = partitionInfo.getString("partitionName");
@@ -706,21 +710,21 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
                 50);
             break;
           default:
-            Assert.fail("Unexpected partition" + partitionName);
+            fail("Unexpected partition" + partitionName);
           }
         }
         break;
       case QUEUE_C:
         verifyAccesibleNodeLabels(queueJson,
             ImmutableSet.of(LABEL_LX, LABEL_LY));
-        assertEquals("incorrect number of elements", 4,
-            partitionsResourcesArray.getJSONObject(0).length());
+        assertEquals(4, partitionsResourcesArray.getJSONObject(0).length(),
+            "incorrect number of elements");
         verifyQcPartitionsCapacityInfoJson(partitionsCapsArray, 70, 100, 70,
             100, 100, 100, 100, 100, 40, 50, 40, 50);
         verifySubQueuesOfQc(queueJson);
         break;
       default:
-        Assert.fail("Unexpected queue" + queue);
+        fail("Unexpected queue" + queue);
       }
     }
   }
@@ -734,11 +738,11 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     } else {
       nodeLabels.put(nodeLabelsObj);
     }
-    assertEquals("number of accessible Node Labels not matching",
-        accesibleNodeLabels.size(), nodeLabels.length());
+    assertEquals(accesibleNodeLabels.size(), nodeLabels.length(),
+        "number of accessible Node Labels not matching");
     for (int i = 0; i < nodeLabels.length(); i++) {
-      assertTrue("Invalid accessible node label : " + nodeLabels.getString(i),
-          accesibleNodeLabels.contains(nodeLabels.getString(i)));
+      assertTrue(accesibleNodeLabels.contains(nodeLabels.getString(i)),
+          "Invalid accessible node label : " + nodeLabels.getString(i));
     }
   }
 
@@ -756,21 +760,21 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       case LEAF_QUEUE_C1:
         verifyAccesibleNodeLabels(queueJson,
             ImmutableSet.of(LABEL_LX, LABEL_LY));
-        assertEquals("Invalid default Label expression", LABEL_LX,
-            queueJson.getString("defaultNodeLabelExpression"));
+        assertEquals(LABEL_LX, queueJson.getString("defaultNodeLabelExpression"),
+            "Invalid default Label expression");
         verifyQcPartitionsCapacityInfoJson(partitionsCapsArray, 40, 100, 28,
             100, 50, 75, 50, 75, 50, 60, 20, 30);
         break;
       case LEAF_QUEUE_C2:
         verifyAccesibleNodeLabels(queueJson,
             ImmutableSet.of(LABEL_LX, LABEL_LY));
-        assertEquals("Invalid default Label expression", LABEL_LY,
-            queueJson.getString("defaultNodeLabelExpression"));
+        assertEquals(LABEL_LY, queueJson.getString("defaultNodeLabelExpression"),
+            "Invalid default Label expression");
         verifyQcPartitionsCapacityInfoJson(partitionsCapsArray, 60, 100, 42,
             100, 50, 75, 50, 75, 50, 70, 20, 35);
         break;
       default:
-        Assert.fail("Unexpected queue" + queue);
+        fail("Unexpected queue" + queue);
       }
     }
   }
@@ -780,8 +784,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       float lyCaps, float lyMaxCaps, float lyAbsCaps, float lyAbsMaxCaps,
       float defCaps, float defMaxCaps, float defAbsCaps, float defAbsMaxCaps)
           throws JSONException {
-    assertEquals("incorrect number of partitions", CLUSTER_LABELS.size(),
-        partitionsCapsArray.length());
+    assertEquals(CLUSTER_LABELS.size(), partitionsCapsArray.length(),
+        "incorrect number of partitions");
     for (int j = 0; j < partitionsCapsArray.length(); j++) {
       JSONObject partitionInfo = partitionsCapsArray.getJSONObject(j);
       String partitionName = partitionInfo.getString("partitionName");
@@ -799,7 +803,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
             defAbsCaps, 0, defAbsMaxCaps);
         break;
       default:
-        Assert.fail("Unexpected partition" + partitionName);
+        fail("Unexpected partition" + partitionName);
       }
     }
   }
@@ -808,19 +812,19 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       JSONObject partitionCapacityInfoJson, float capacity, float usedCapacity,
       float maxCapacity, float absoluteCapacity, float absoluteUsedCapacity,
       float absoluteMaxCapacity) throws JSONException {
-    assertEquals("capacity doesn't match", capacity,
-        (float) partitionCapacityInfoJson.getDouble("capacity"), EPSILON);
-    assertEquals("capacity doesn't match", usedCapacity,
-        (float) partitionCapacityInfoJson.getDouble("usedCapacity"), EPSILON);
-    assertEquals("capacity doesn't match", maxCapacity,
-        (float) partitionCapacityInfoJson.getDouble("maxCapacity"), EPSILON);
-    assertEquals("capacity doesn't match", absoluteCapacity,
-        (float) partitionCapacityInfoJson.getDouble("absoluteCapacity"), EPSILON);
-    assertEquals("capacity doesn't match", absoluteUsedCapacity,
+    assertEquals(capacity, (float) partitionCapacityInfoJson.getDouble("capacity"),
+        EPSILON, "capacity doesn't match");
+    assertEquals(usedCapacity, (float) partitionCapacityInfoJson.getDouble("usedCapacity"),
+        EPSILON, "capacity doesn't match");
+    assertEquals(maxCapacity, (float) partitionCapacityInfoJson.getDouble("maxCapacity"),
+        EPSILON, "capacity doesn't match");
+    assertEquals(absoluteCapacity, (float) partitionCapacityInfoJson.getDouble("absoluteCapacity"),
+        EPSILON, "capacity doesn't match");
+    assertEquals(absoluteUsedCapacity,
         (float) partitionCapacityInfoJson.getDouble("absoluteUsedCapacity"),
-        1e-3f);
-    assertEquals("capacity doesn't match", absoluteMaxCapacity,
+        1e-3f, "capacity doesn't match");
+    assertEquals(absoluteMaxCapacity,
         (float) partitionCapacityInfoJson.getDouble("absoluteMaxCapacity"),
-        1e-3f);
+        1e-3f, "capacity doesn't match");
   }
 }

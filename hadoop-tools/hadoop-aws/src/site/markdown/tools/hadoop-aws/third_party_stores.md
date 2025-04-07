@@ -40,6 +40,7 @@ The features which may be unavailable include:
   This is now the default -do not change it.
 * List API to use (`fs.s3a.list.version = 1`)
 * Bucket lifecycle rules to clean up pending uploads.
+* Support for multipart uploads.
 
 ### Disabling Change Detection
 
@@ -409,7 +410,7 @@ which is a subset of the AWS API.
 To get a compatible access and secret key, follow the instructions of
 [Simple migration from Amazon S3 to Cloud Storage](https://cloud.google.com/storage/docs/aws-simple-migration#defaultproj).
 
-Here are the per-bucket setings for an example bucket "gcs-container"
+Here are the per-bucket settings for an example bucket "gcs-container"
 in Google Cloud Storage. Note the multiobject delete option must be disabled;
 this makes renaming and deleting significantly slower.
 
@@ -452,11 +453,21 @@ this makes renaming and deleting significantly slower.
     <value>true</value>
   </property>
 
+  <!-- any value is allowed here, using "gcs" is more informative -->
   <property>
     <name>fs.s3a.bucket.gcs-container.endpoint.region</name>
-    <value>dummy</value>
+    <value>gcs</value>
   </property>
 
+  <!-- multipart uploads trigger 400 response-->
+  <property>
+    <name>fs.s3a.multipart.uploads.enabled</name>
+    <value>false</value>
+  </property>
+    <property>
+    <name>fs.s3a.optimized.copy.from.local.enabled</name>
+    <value>false</value>
+  </property>
 </configuration>
 ```
 

@@ -25,8 +25,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -53,7 +54,8 @@ public class TestSymLink
   String cacheString = "This is just the cache string";
   StreamJob job;
 
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testSymLink() throws Exception
   {
     boolean mayExit = false;
