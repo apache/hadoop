@@ -38,25 +38,23 @@ import java.util.ArrayList;
 public class TestOpportunisticContainerContext {
 
     @Spy
-    OpportunisticContainerContext opportunisticContainerContext;
-
-    Map<Resource, OpportunisticContainerAllocator.EnrichedResourceRequest>
-            reqMap = new HashMap<>();
-
-    TreeMap<SchedulerRequestKey, Map<Resource, OpportunisticContainerAllocator.EnrichedResourceRequest>>
-            outstandingOpReqs;
+    private OpportunisticContainerContext opportunisticContainerContext;
+    private Map<Resource, OpportunisticContainerAllocator.EnrichedResourceRequest> reqMap =
+        new HashMap<>();
+    private TreeMap<SchedulerRequestKey, Map<Resource, OpportunisticContainerAllocator.EnrichedResourceRequest>>
+        outstandingOpReqs;
 
     @Before
-    public void SetUp() {
+    public void setUp() {
         opportunisticContainerContext = Mockito.spy(new OpportunisticContainerContext());
         outstandingOpReqs = new TreeMap<>();
     }
 
     /**
-     *  Resource Request - {
-     *         Location = ANY
-     *         No of container != 0
-     *      }
+     * Resource Request - {
+     * Location = ANY
+     * No of container != 0
+     * }
      */
     @Test
     public void testAddToOutstandingReqsWithANYRequest() {
@@ -68,29 +66,28 @@ public class TestOpportunisticContainerContext {
     }
 
     /**
-     *  Resource Request - {
-     *         Location != ANY
-     *         No of container = 0
-     *      }
+     * Resource Request - {
+     * Location != ANY
+     * No of container = 0
+     * }
      */
     @Test
     public void testAddToOutstandingReqsWithZeroContainer() {
         ResourceRequest request = getResourceRequest("resource", 0);
         createOutstandingOpReqs(request, getResource());
-        Mockito.doReturn(outstandingOpReqs)
-                .when(opportunisticContainerContext).getOutstandingOpReqs();
+        Mockito.doReturn(outstandingOpReqs).when(opportunisticContainerContext)
+            .getOutstandingOpReqs();
         List<ResourceRequest> resourceRequestList = new ArrayList<>();
         resourceRequestList.add(request);
         opportunisticContainerContext.addToOutstandingReqs(resourceRequestList);
-        Assert.assertEquals(opportunisticContainerContext.
-                getOutstandingOpReqs().size(), 1);
+        Assert.assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 1);
     }
 
     /**
-     *  Resource Request - [
-     *         {Location != ANY, No of Container = 0}
-     *         {Location = ANY, No of Container = 0}
-     *      ]
+     * Resource Request - [
+     * {Location != ANY, No of Container = 0}
+     * {Location = ANY, No of Container = 0}
+     * ]
      */
     @Test
     public void testAddToOutstandingReqsWithZeroContainerAndMultipleSchedulerKey() {
@@ -98,21 +95,20 @@ public class TestOpportunisticContainerContext {
         ResourceRequest req2 = getResourceRequest(ResourceRequest.ANY, 0);
         createOutstandingOpReqs(req1, getResource());
         createOutstandingOpReqs(req2, getResource());
-        Mockito.doReturn(outstandingOpReqs)
-                .when(opportunisticContainerContext).getOutstandingOpReqs();
+        Mockito.doReturn(outstandingOpReqs).when(opportunisticContainerContext)
+            .getOutstandingOpReqs();
         List<ResourceRequest> resourceRequestList = new ArrayList<>();
         resourceRequestList.add(req1);
         resourceRequestList.add(req2);
         opportunisticContainerContext.addToOutstandingReqs(resourceRequestList);
-        Assert.assertEquals(opportunisticContainerContext.
-                getOutstandingOpReqs().size(), 1);
+        Assert.assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 1);
     }
 
     /**
-     *  Resource Request - [
-     *         {Location != ANY, No of Container = 0}
-     *         {Location = ANY, No of Container != 0}
-     *      ]
+     * Resource Request - [
+     * {Location != ANY, No of Container = 0}
+     * {Location = ANY, No of Container != 0}
+     * ]
      */
     @Test
     public void testAddToOutstandingReqsWithMultipleSchedulerKey() {
@@ -120,79 +116,67 @@ public class TestOpportunisticContainerContext {
         ResourceRequest req2 = getResourceRequest(ResourceRequest.ANY, 1);
         createOutstandingOpReqs(req1, getResource());
         createOutstandingOpReqs(req2, getResource());
-        Mockito.doReturn(outstandingOpReqs)
-                .when(opportunisticContainerContext).getOutstandingOpReqs();
+        Mockito.doReturn(outstandingOpReqs).when(opportunisticContainerContext)
+            .getOutstandingOpReqs();
         List<ResourceRequest> resourceRequestList = new ArrayList<>();
         resourceRequestList.add(req1);
         resourceRequestList.add(req2);
         opportunisticContainerContext.addToOutstandingReqs(resourceRequestList);
-        Assert.assertEquals(opportunisticContainerContext.
-                getOutstandingOpReqs().size(), 1);
+        Assert.assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 1);
     }
 
     /**
-     *  Resource Request - {
-     *         Location != ANY
-     *         No of container = 0
-     *         Capability = NULL
-     *      }
+     * Resource Request - {
+     * Location != ANY
+     * No of container = 0
+     * Capability = NULL
+     * }
      */
     @Test
     public void testAddToOutstandingReqsWithZeroContainerAndNullCapability() {
         ResourceRequest request = getResourceRequestWithoutCapability();
         createOutstandingOpReqs(request, getResource());
-        Mockito.doReturn(outstandingOpReqs)
-                .when(opportunisticContainerContext).getOutstandingOpReqs();
+        Mockito.doReturn(outstandingOpReqs).when(opportunisticContainerContext)
+            .getOutstandingOpReqs();
         List<ResourceRequest> resourceRequestList = new ArrayList<>();
         resourceRequestList.add(request);
         opportunisticContainerContext.addToOutstandingReqs(resourceRequestList);
-        Assert.assertEquals(opportunisticContainerContext.
-                getOutstandingOpReqs().size(), 1);
+        Assert.assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 1);
     }
 
     /**
-     *  Resource Request - {
-     *         Location != ANY
-     *         No of container = 0
-     *         Req map is NULL
-     *      }
+     * Resource Request - {
+     * Location != ANY
+     * No of container = 0
+     * Req map is NULL
+     * }
      */
     @Test
     public void testAddToOutstandingReqsWithEmptyReqMap() {
         ResourceRequest request = getResourceRequest("resource", 0);
-        Mockito.doReturn(new TreeMap<>())
-                .when(opportunisticContainerContext).getOutstandingOpReqs();
+        Mockito.doReturn(new TreeMap<>()).when(opportunisticContainerContext)
+            .getOutstandingOpReqs();
         List<ResourceRequest> resourceRequestList = new ArrayList<>();
         resourceRequestList.add(request);
         opportunisticContainerContext.addToOutstandingReqs(resourceRequestList);
-        Assert.assertEquals(opportunisticContainerContext.
-                getOutstandingOpReqs().size(), 0);
+        Assert.assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 0);
     }
 
     private void createOutstandingOpReqs(ResourceRequest req, Resource resource) {
         SchedulerRequestKey schedulerRequestKey = SchedulerRequestKey.create(req);
-        reqMap.put(resource,
-                new OpportunisticContainerAllocator.EnrichedResourceRequest(req));
+        reqMap.put(resource, new OpportunisticContainerAllocator.EnrichedResourceRequest(req));
         outstandingOpReqs.put(schedulerRequestKey, reqMap);
     }
 
     private ResourceRequest getResourceRequest(String resourceName, int numContainer) {
-        return ResourceRequest.newBuilder()
-                .resourceName(resourceName)
-                .numContainers(numContainer)
-                .allocationRequestId(1)
-                .priority(Priority.newInstance(1))
-                .capability(getResource())
-                .build();
+        return ResourceRequest.newBuilder().resourceName(resourceName).numContainers(numContainer)
+            .allocationRequestId(1).priority(Priority.newInstance(1)).capability(getResource())
+            .build();
     }
 
     private ResourceRequest getResourceRequestWithoutCapability() {
-        return ResourceRequest.newBuilder()
-                .resourceName("resource")
-                .numContainers(0)
-                .allocationRequestId(1)
-                .priority(Priority.newInstance(1))
-                .build();
+        return ResourceRequest.newBuilder().resourceName("resource").numContainers(0)
+            .allocationRequestId(1).priority(Priority.newInstance(1)).build();
     }
 
     private Resource getResource() {
