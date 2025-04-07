@@ -1606,9 +1606,9 @@ public class AbfsBlobClient extends AbfsClient {
   @Override
   public ListResponseData parseListPathResults(AbfsHttpOperation result, URI uri)
       throws AzureBlobFileSystemException {
-    BlobListResultSchema listResultSchema;
     try (InputStream stream = new ByteArrayInputStream(result.getListResultData())) {
       try {
+        BlobListResultSchema listResultSchema;
         final SAXParser saxParser = saxParserThreadLocal.get();
         saxParser.reset();
         listResultSchema = new BlobListResultSchema();

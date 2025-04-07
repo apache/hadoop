@@ -1479,31 +1479,30 @@ public class AbfsDfsClient extends AbfsClient {
    * @throws AzureBlobFileSystemException if parsing fails.
    */
   @Override
-  public ListResponseData parseListPathResults(AbfsHttpOperation result, URI uri) throws AzureBlobFileSystemException {
-    try (InputStream listResultInputStream = new ByteArrayInputStream(result.getListResultData())) {
-      DfsListResultSchema listResultSchema;
+  public ListResponseData parseListPathResults(AbfsHttpOperation result, URI uri)
+      throws AzureBlobFileSystemException {
+    try (InputStream stream = new ByteArrayInputStream(result.getListResultData())) {
       try {
+        DfsListResultSchema listResultSchema;
         final ObjectMapper objectMapper = new ObjectMapper();
-        listResultSchema = objectMapper.readValue(listResultInputStream,
-            DfsListResultSchema.class);
+        listResultSchema = objectMapper.readValue(stream, DfsListResultSchema.class);
         result.setListResultSchema(listResultSchema);
         LOG.debug("ListPath listed {} paths with {} as continuation token",
             listResultSchema.paths().size(),
             getContinuationFromResponse(result));
+        List<FileStatus> fileStatuses = new ArrayList<>();
+        for (DfsListResultEntrySchema entry : listResultSchema.paths()) {
+          fileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
+        }
+        ListResponseData listResponseData = new ListResponseData();
+        listResponseData.setFileStatusList(fileStatuses);
+        listResponseData.setRenamePendingJsonPaths(null);
+        listResponseData.setContinuationToken(
+            getContinuationFromResponse(result));
+        return listResponseData;
       } catch (JsonParseException | JsonMappingException ex) {
         throw new AbfsDriverException(ERR_DFS_LIST_PARSING, ex);
       }
-
-      List<FileStatus> fileStatuses = new ArrayList<>();
-      for (DfsListResultEntrySchema entry : listResultSchema.paths()) {
-        fileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
-      }
-      ListResponseData listResponseData = new ListResponseData();
-      listResponseData.setFileStatusList(fileStatuses);
-      listResponseData.setRenamePendingJsonPaths(null);
-      listResponseData.setContinuationToken(
-          getContinuationFromResponse(result));
-      return listResponseData;
     } catch (AbfsDriverException ex) {
       // Throw as it is to avoid multiple wrapping.
       LOG.error("Unable to deserialize list results for Uri {}", uri != null ? uri.toString(): "NULL", ex);
