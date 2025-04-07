@@ -29,9 +29,12 @@ import org.mockito.Mockito;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.permission.FsPermission;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY;
+import static org.apache.hadoop.fs.azurebfs.ITestAzureBlobFileSystemListStatus.mockAbfsRestOperation;
+import static org.apache.hadoop.fs.azurebfs.ITestAzureBlobFileSystemListStatus.mockIngressClientHandler;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
@@ -283,5 +286,62 @@ public class ITestAzureBlobFileSystemFileStatus extends
   private void verifyFileNotFound(FileNotFoundException ex, String key) {
     Assertions.assertThat(ex).isNotNull();
     Assertions.assertThat(ex.getMessage()).contains(key);
+  }
+
+  /**
+   * Test directory status with different HDI folder configuration,
+   * verifying the correct header and directory state.
+   */
+  private void testIsDirectory(boolean expected, String... configName) throws Exception {
+    try (AzureBlobFileSystem fs = Mockito.spy(getFileSystem())) {
+      assumeBlobServiceType();
+      AbfsBlobClient abfsBlobClient = mockIngressClientHandler(fs);
+      // Mock the operation to modify the headers
+      mockAbfsRestOperation(abfsBlobClient, configName);
+
+      // Create the path and invoke mkdirs method
+      Path path = new Path("/testPath");
+      fs.mkdirs(path);
+
+      // Assert that the response header has the updated value
+      FileStatus fileStatus = fs.getFileStatus(path);
+
+      AbfsHttpOperation op = abfsBlobClient.getPathStatus(
+          path.toUri().getPath(),
+          true, getTestTracingContext(fs, true),
+          null).getResult();
+
+      Assertions.assertThat(abfsBlobClient.checkIsDir(op))
+          .describedAs("Directory should be marked as " + expected)
+          .isEqualTo(expected);
+
+      // Verify the header and directory state
+      Assertions.assertThat(fileStatus.isDirectory())
+          .describedAs("Expected directory state: " + expected)
+          .isEqualTo(expected);
+
+      fs.delete(path, true);
+    }
+  }
+
+  /**
+   * Test to verify the directory status with different HDI folder configurations.
+   * Verifying the correct header and directory state.
+   */
+  @Test
+  public void testIsDirectoryWithDifferentCases() throws Exception {
+    testIsDirectory(true,  "HDI_ISFOLDER");
+
+    testIsDirectory(true, "Hdi_ISFOLDER");
+
+    testIsDirectory(true, "Hdi_isfolder");
+
+    testIsDirectory(true, "hdi_isfolder");
+
+    testIsDirectory(false, "Hdi_isfolder1");
+
+    testIsDirectory(true, "HDI_ISFOLDER", "Hdi_ISFOLDER", "Hdi_isfolder");
+
+    testIsDirectory(true, "HDI_ISFOLDER", "Hdi_ISFOLDER1", "Test");
   }
 }

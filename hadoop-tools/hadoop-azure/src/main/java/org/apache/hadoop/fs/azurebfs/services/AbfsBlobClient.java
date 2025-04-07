@@ -1137,7 +1137,8 @@ public class AbfsBlobClient extends AbfsClient {
         this.createPathRestOp(path, false, false, false, null,
             contextEncryptionAdapter, tracingContext);
         // Make sure hdi_isFolder is added to the list of properties to be set.
-        boolean hdiIsFolderExists = properties.containsKey(XML_TAG_HDI_ISFOLDER);
+        boolean hdiIsFolderExists = properties.keySet()
+            .stream().anyMatch(XML_TAG_HDI_ISFOLDER::equalsIgnoreCase);
         if (!hdiIsFolderExists) {
           properties.put(XML_TAG_HDI_ISFOLDER, TRUE);
         }
@@ -1548,7 +1549,7 @@ public class AbfsBlobClient extends AbfsClient {
    */
   @Override
   public boolean checkIsDir(AbfsHttpOperation result) {
-    String resourceType = result.getResponseHeader(X_MS_META_HDI_ISFOLDER);
+    String resourceType = result.getResponseHeaderIgnoreCase(X_MS_META_HDI_ISFOLDER);
     return resourceType != null && resourceType.equals(TRUE);
   }
 

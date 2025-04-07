@@ -36,6 +36,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Testing the asynchronous RPC functionality of the router.
@@ -83,4 +84,9 @@ public class TestRouterAsyncRpc extends TestRouterRpc {
     assertArrayEquals(group, result);
   }
 
+  @Test
+  @Override
+  public void testConcurrentCallExecutorInitial() {
+    assertNull(rndRouter.getRouterRpcClient().getExecutorService());
+  }
 }

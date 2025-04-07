@@ -116,6 +116,11 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
     this.rpcMonitor = monitor;
   }
 
+  @Override
+  protected void initConcurrentCallExecutorService(Configuration conf) {
+    // No need to initialize the thread pool for concurrent call.
+  }
+
   /**
    * Invoke method in all locations and return success if any succeeds.
    *

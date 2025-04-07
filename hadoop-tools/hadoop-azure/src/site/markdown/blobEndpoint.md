@@ -15,7 +15,7 @@
 # Azure Blob Storage REST API (Blob Endpoint)
 
 ## Introduction
-The REST API for Blob Storage defines HTTP operations against the storage account, containers(filesystems), and blobs.(files)
+The REST API for Blob Storage defines HTTP operations against the storage account, containers(filesystems), and blobs(files).
 The API includes the operations listed in the following table.
 
 | Operation                                             | Resource Type | Description                                                                                 |
@@ -104,4 +104,4 @@ Rest API Documentation: [Copy Blob](https://docs.microsoft.com/en-us/rest/api/st
 
 ## Append Block
 The Append Block operation commits a new block of data to the end of an existing append blob.
-Rest API Documentaion: [Append Block](https://learn.microsoft.com/en-us/rest/api/storageservices/append-block)
+Rest API Documentation: [Append Block](https://learn.microsoft.com/en-us/rest/api/storageservices/append-block)

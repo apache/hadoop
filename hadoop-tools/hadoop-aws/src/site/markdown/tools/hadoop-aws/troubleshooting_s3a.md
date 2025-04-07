@@ -1381,6 +1381,47 @@ execchain.MainClientExec (MainClientExec.java:execute(284)) - Connection can be 
 
 ```
 
+To log the output of the AWS SDK metrics, set the log
+`org.apache.hadoop.fs.s3a.DefaultS3ClientFactory` to `TRACE`.
+This will then turn on logging of the internal SDK metrics.
+
+These will actually be logged at INFO in the log
+```
+software.amazon.awssdk.metrics.LoggingMetricPublisher
+```
+
+```text
+INFO  metrics.LoggingMetricPublisher (LoggerAdapter.java:info(165)) - Metrics published:
+MetricCollection(name=ApiCall, metrics=[
+MetricRecord(metric=MarshallingDuration, value=PT0.000092041S),
+MetricRecord(metric=RetryCount, value=0),
+MetricRecord(metric=ApiCallSuccessful, value=true),
+MetricRecord(metric=OperationName, value=DeleteObject),
+MetricRecord(metric=EndpointResolveDuration, value=PT0.000132792S),
+MetricRecord(metric=ApiCallDuration, value=PT0.064890875S),
+MetricRecord(metric=CredentialsFetchDuration, value=PT0.000017458S),
+MetricRecord(metric=ServiceEndpoint, value=https://buckets3.eu-west-2.amazonaws.com),
+MetricRecord(metric=ServiceId, value=S3)], children=[
+MetricCollection(name=ApiCallAttempt, metrics=[
+    MetricRecord(metric=TimeToFirstByte, value=PT0.06260225S),
+    MetricRecord(metric=SigningDuration, value=PT0.000293083S),
+    MetricRecord(metric=ReadThroughput, value=0.0),
+    MetricRecord(metric=ServiceCallDuration, value=PT0.06260225S),
+    MetricRecord(metric=HttpStatusCode, value=204),
+    MetricRecord(metric=BackoffDelayDuration, value=PT0S),
+    MetricRecord(metric=TimeToLastByte, value=PT0.064313667S),
+    MetricRecord(metric=AwsRequestId, value=RKZD44SE5DW91K1G)], children=[
+        MetricCollection(name=HttpClient, metrics=[
+        MetricRecord(metric=AvailableConcurrency, value=1),
+        MetricRecord(metric=LeasedConcurrency, value=0),
+        MetricRecord(metric=ConcurrencyAcquireDuration, value=PT0S),
+        MetricRecord(metric=PendingConcurrencyAcquires, value=0),
+        MetricRecord(metric=MaxConcurrency, value=512),
+        MetricRecord(metric=HttpClientName, value=Apache)], children=[])
+    ])
+  ])
+```
+
 ### <a name="audit-logging"></a> Enable S3 Server-side Logging
 
 The [Auditing](auditing) feature of the S3A connector can be used to generate

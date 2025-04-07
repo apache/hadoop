@@ -23,26 +23,22 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.*;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.security.Security;
 import java.util.*;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * This test performs simple runs of the SLS with different trace types and
  * schedulers.
  */
-@RunWith(value = Parameterized.class)
 @NotThreadSafe
 public class TestSLSRunner extends BaseSLSRunnerTest {
 
-  @Parameters(name = "Testing with: {1}, {0}, (nodeFile {3})")
   public static Collection<Object[]> data() {
 
     String capScheduler = CapacityScheduler.class.getCanonicalName();
@@ -76,15 +72,27 @@ public class TestSLSRunner extends BaseSLSRunnerTest {
     });
   }
 
-  @Before
   public void setup() {
     ongoingInvariantFile = "src/test/resources/ongoing-invariants.txt";
     exitInvariantFile = "src/test/resources/exit-invariants.txt";
   }
 
-  @Test(timeout = 90000)
+  public void initTestSLSRunner(String pSchedulerType,
+      String pTraceType, String pTraceLocation, String pNodeFile) {
+    this.schedulerType = pSchedulerType;
+    this.traceType = pTraceType;
+    this.traceLocation = pTraceLocation;
+    this.nodeFile = pNodeFile;
+    setup();
+  }
+
+  @ParameterizedTest(name = "Testing with: {1}, {0}, (nodeFile {3})")
+  @Timeout(value = 90)
+  @MethodSource("data")
   @SuppressWarnings("all")
-  public void testSimulatorRunning() throws Exception {
+  public void testSimulatorRunning(String pSchedulerType,
+    String pTraceType, String pTraceLocation, String pNodeFile) throws Exception {
+    initTestSLSRunner(pSchedulerType, pTraceType, pTraceLocation, pNodeFile);
     Configuration conf = new Configuration(false);
     long timeTillShutdownInsec = 20L;
     runSLS(conf, timeTillShutdownInsec);
@@ -93,8 +101,11 @@ public class TestSLSRunner extends BaseSLSRunnerTest {
   /**
    * Test to check whether caching is enabled based on config.
    */
-  @Test
-  public void testEnableCaching() {
+  @ParameterizedTest(name = "Testing with: {1}, {0}, (nodeFile {3})")
+  @MethodSource("data")
+  public void testEnableCaching(String pSchedulerType,
+    String pTraceType, String pTraceLocation, String pNodeFile) {
+    initTestSLSRunner(pSchedulerType, pTraceType, pTraceLocation, pNodeFile);
     String networkCacheDefault = Security.getProperty(
         SLSRunner.NETWORK_CACHE_TTL);
     String networkNegativeCacheDefault =
