@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -77,7 +76,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   private String requestId = "";
   private String expectedAppendPos = "";
   private ListResultSchema listResultSchema = null;
-  private InputStream listResultStream = null;
+  private byte[] listResultData = null;
   private List<String> blockIdList = null;
 
   // metrics
@@ -223,8 +222,8 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     return listResultSchema;
   }
 
-  public final InputStream getListResultStream() {
-    return listResultStream;
+  public final byte[] getListResultData() {
+    return listResultData;
   }
 
   /**
@@ -516,8 +515,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
       while ((bytesRead = stream.read(tempBuffer, 0, CLEAN_UP_BUFFER_SIZE)) != -1) {
         buffer.write(tempBuffer, 0, bytesRead);
       }
-      byte[] responseData = buffer.toByteArray();
-      listResultStream = new ByteArrayInputStream(responseData);
+      listResultData = buffer.toByteArray();
     }
   }
 

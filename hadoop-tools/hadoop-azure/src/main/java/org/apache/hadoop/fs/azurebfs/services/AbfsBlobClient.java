@@ -22,6 +22,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
+import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -1606,10 +1607,7 @@ public class AbfsBlobClient extends AbfsClient {
   public ListResponseData parseListPathResults(AbfsHttpOperation result, URI uri)
       throws AzureBlobFileSystemException {
     BlobListResultSchema listResultSchema;
-    try (InputStream stream = result.getListResultStream()) {
-      if (stream == null) {
-        return null;
-      }
+    try (InputStream stream = new ByteArrayInputStream(result.getListResultData())) {
       try {
         final SAXParser saxParser = saxParserThreadLocal.get();
         saxParser.reset();
