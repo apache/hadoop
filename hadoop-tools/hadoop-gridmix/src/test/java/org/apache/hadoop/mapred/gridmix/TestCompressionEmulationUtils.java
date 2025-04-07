@@ -47,7 +47,9 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.lib.input.CombineFileSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -380,10 +382,10 @@ public class TestCompressionEmulationUtils {
     GridmixRecord recordRead = new GridmixRecord();
     recordRead.readFields(new DataInputStream(in));
     
-    assertEquals(
-                dataSize, recordRead.getSize(), "Record size mismatch in a compressible GridmixRecord");
-    assertTrue(
-              recordRead.getSize() > compressedFileSize, "Failed to generate a compressible GridmixRecord");
+    assertEquals(dataSize, recordRead.getSize(),
+        "Record size mismatch in a compressible GridmixRecord");
+    assertTrue(recordRead.getSize() > compressedFileSize,
+        "Failed to generate a compressible GridmixRecord");
     
     // check if the record can generate data with the desired compression ratio
     float seenRatio = ((float)compressedFileSize)/dataSize;

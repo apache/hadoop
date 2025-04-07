@@ -157,8 +157,8 @@ public class CommonJobTest {
         final String originalJobName = spec.getName();
         System.out.println("originalJobName=" + originalJobName
                 + ";GridmixJobName=" + jobName + ";originalJobID=" + originalJobId);
-        assertTrue(
-               originalJobName.equals(configuration.get(Gridmix.ORIGINAL_JOB_NAME)), "Original job name is wrong.");
+        assertTrue(originalJobName.equals(configuration.get(Gridmix.ORIGINAL_JOB_NAME)),
+            "Original job name is wrong.");
 
         // Gridmix job seqNum contains 6 digits
         int seqNumLength = 6;
@@ -169,12 +169,11 @@ public class CommonJobTest {
         assertTrue(originalJobName.substring(
                 originalJobName.length() - seqNumLength).equals(jobSeqNum));
 
-        assertTrue(
-               jobName.equals(GridmixJob.JOB_NAME_PREFIX + jobSeqNum), "Gridmix job name is not in the expected format.");
+        assertTrue(jobName.equals(GridmixJob.JOB_NAME_PREFIX + jobSeqNum),
+            "Gridmix job name is not in the expected format.");
         final FileStatus stat = GridmixTestUtils.dfs.getFileStatus(new Path(
                 GridmixTestUtils.DEST, "" + Integer.parseInt(jobSeqNum)));
-        assertEquals(spec.getUser()
-,                 stat.getOwner(), "Wrong owner for " + jobName);
+        assertEquals(spec.getUser(), stat.getOwner(), "Wrong owner for " + jobName);
         final int nMaps = spec.getNumberMaps();
         final int nReds = spec.getNumberReduces();
 
@@ -273,43 +272,37 @@ public class CommonJobTest {
       Arrays.sort(specInputBytes);
       Arrays.sort(runInputBytes);
       for (int i = 0; i < runTasks.length; ++i) {
-        assertTrue(
-               eqPlusMinus(runInputBytes[i], specInputBytes[i], extraInputBytes), "Mismatched " + type + " input bytes " + specInputBytes[i]
-                + "/" + runInputBytes[i]);
+        assertTrue(eqPlusMinus(runInputBytes[i], specInputBytes[i], extraInputBytes),
+            "Mismatched " + type + " input bytes " + specInputBytes[i]
+            + "/" + runInputBytes[i]);
       }
 
       // Check input records
       Arrays.sort(specInputRecords);
       Arrays.sort(runInputRecords);
       for (int i = 0; i < runTasks.length; ++i) {
-        assertTrue(
-        
-               eqPlusMinus(runInputRecords[i], specInputRecords[i],
-                        extraInputRecords), "Mismatched " + type + " input records " + specInputRecords[i]
-                        + "/" + runInputRecords[i]);
+        assertTrue(eqPlusMinus(runInputRecords[i], specInputRecords[i],
+            extraInputRecords), "Mismatched " + type + " input records " + specInputRecords[i]
+            + "/" + runInputRecords[i]);
       }
 
       // Check output bytes
       Arrays.sort(specOutputBytes);
       Arrays.sort(runOutputBytes);
       for (int i = 0; i < runTasks.length; ++i) {
-        assertTrue(
-        
-               eqPlusMinus(runOutputBytes[i], specOutputBytes[i], extraOutputBytes), "Mismatched " + type + " output bytes " + specOutputBytes[i] + "/"
-                        + runOutputBytes[i]);
+        assertTrue(eqPlusMinus(runOutputBytes[i], specOutputBytes[i], extraOutputBytes),
+            "Mismatched " + type + " output bytes " + specOutputBytes[i] + "/"
+            + runOutputBytes[i]);
       }
 
       // Check output records
       Arrays.sort(specOutputRecords);
       Arrays.sort(runOutputRecords);
       for (int i = 0; i < runTasks.length; ++i) {
-        assertTrue(
-        
-               eqPlusMinus(runOutputRecords[i], specOutputRecords[i],
-                        extraOutputRecords), "Mismatched " + type + " output records " + specOutputRecords[i]
-                        + "/" + runOutputRecords[i]);
+        assertTrue(eqPlusMinus(runOutputRecords[i], specOutputRecords[i],
+            extraOutputRecords), "Mismatched " + type + " output records " + specOutputRecords[i]
+            + "/" + runOutputRecords[i]);
       }
-
     }
 
     private static boolean eqPlusMinus(long a, long b, long x) {

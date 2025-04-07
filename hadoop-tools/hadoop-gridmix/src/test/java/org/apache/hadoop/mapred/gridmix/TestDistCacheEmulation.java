@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -94,13 +96,12 @@ public class TestDistCacheEmulation {
     // Validate the existence of Distributed Cache files list file directly
     // under distributed cache directory
     Path listFile = new Path(filesListFile);
-    assertTrue(
-       distCachePath.equals(listFile.getParent().makeQualified(fs.getUri(), fs.getWorkingDirectory())), "Path of Distributed Cache files list file is wrong.");
+    assertTrue(distCachePath.equals(listFile.getParent().makeQualified(fs.getUri(), fs.getWorkingDirectory())),
+        "Path of Distributed Cache files list file is wrong.");
 
     // Delete the dist cache files list file
-    assertTrue(
-    
-       fs.delete(listFile,true), "Failed to delete distributed Cache files list file " + listFile);
+    assertTrue(fs.delete(listFile,true),
+        "Failed to delete distributed Cache files list file " + listFile);
 
     List<Long> fileSizes = new ArrayList<Long>();
     for (long size : sortedFileSizes) {
@@ -125,17 +126,16 @@ public class TestDistCacheEmulation {
     // RemoteIterator<LocatedFileStatus> iter =
     FileStatus[] statuses = GridmixTestUtils.dfs.listStatus(distCacheDir);
     int numFiles = filesSizesExpected.size();
-    assertEquals(
-       numFiles, statuses.length, "Number of files under distributed cache dir is wrong.");
+    assertEquals(numFiles, statuses.length,
+        "Number of files under distributed cache dir is wrong.");
     for (int i = 0; i < numFiles; i++) {
       FileStatus stat = statuses[i];
-      assertTrue(
-         filesSizesExpected.remove(stat.getLen()), "File size of distributed cache file "
+      assertTrue(filesSizesExpected.remove(stat.getLen()), "File size of distributed cache file "
           + stat.getPath().toUri().getPath() + " is wrong.");
 
       FsPermission perm = stat.getPermission();
-      assertEquals(new FsPermission(
-          GenerateDistCacheData.GRIDMIX_DISTCACHE_FILE_PERM), perm, "Wrong permissions for distributed cache file "
+      assertEquals(new FsPermission(GenerateDistCacheData.GRIDMIX_DISTCACHE_FILE_PERM), perm,
+          "Wrong permissions for distributed cache file "
           + stat.getPath().toUri().getPath());
     }
   }
@@ -215,8 +215,7 @@ public class TestDistCacheEmulation {
     int exitCode = dce.setupGenerateDistCacheData(jobProducer);
     int expectedExitCode = generate ? 0
         : Gridmix.MISSING_DIST_CACHE_FILES_ERROR;
-    assertEquals(expectedExitCode
-,         exitCode, "setupGenerateDistCacheData failed.");
+    assertEquals(expectedExitCode, exitCode, "setupGenerateDistCacheData failed.");
 
     // reset back
     resetDistCacheConfigProperties(jobConf);
@@ -255,10 +254,9 @@ public class TestDistCacheEmulation {
     Configuration jobConf = runSetupGenerateDistCacheData(true, sortedFileSizes);
     GridmixJob gridmixJob = new GenerateDistCacheData(jobConf);
     Job job = gridmixJob.call();
-    assertEquals(
-       0, job.getNumReduceTasks(), "Number of reduce tasks in GenerateDistCacheData is not 0.");
-    assertTrue(
-       job.waitForCompletion(false), "GenerateDistCacheData job failed.");
+    assertEquals(0, job.getNumReduceTasks(),
+        "Number of reduce tasks in GenerateDistCacheData is not 0.");
+    assertTrue(job.waitForCompletion(false), "GenerateDistCacheData job failed.");
     validateDistCacheData(jobConf, sortedFileSizes);
   }
 
@@ -277,16 +275,17 @@ public class TestDistCacheEmulation {
     }
 
     FileSystem fs = FileSystem.get(jobConf);
-    assertEquals(
-       sortedFileSizes.length
-,         jobConf.getInt(GenerateDistCacheData.GRIDMIX_DISTCACHE_FILE_COUNT, -1), "Number of distributed cache files to be generated is wrong.");
-    assertEquals(
-       sumOfFileSizes
-,         jobConf.getLong(GenerateDistCacheData.GRIDMIX_DISTCACHE_BYTE_COUNT, -1), "Total size of dist cache files to be generated is wrong.");
+    assertEquals(sortedFileSizes.length,
+        jobConf.getInt(GenerateDistCacheData.GRIDMIX_DISTCACHE_FILE_COUNT, -1),
+        "Number of distributed cache files to be generated is wrong.");
+    assertEquals(sumOfFileSizes,
+        jobConf.getLong(GenerateDistCacheData.GRIDMIX_DISTCACHE_BYTE_COUNT, -1),
+        "Total size of dist cache files to be generated is wrong.");
     Path filesListFile = new Path(
         jobConf.get(GenerateDistCacheData.GRIDMIX_DISTCACHE_FILE_LIST));
     FileStatus stat = fs.getFileStatus(filesListFile);
-    assertEquals(new FsPermission((short) 0644), stat.getPermission(), "Wrong permissions of dist Cache files list file "
+    assertEquals(new FsPermission((short) 0644), stat.getPermission(),
+        "Wrong permissions of dist Cache files list file "
         + filesListFile);
 
     InputSplit split = new FileSplit(filesListFile, 0, stat.getLen(),
@@ -315,18 +314,16 @@ public class TestDistCacheEmulation {
 
     // Validate permissions of dist cache directory
     Path distCacheDir = dce.getDistributedCacheDir();
-    assertEquals(
-    
-       fs.getFileStatus(distCacheDir).getPermission().getOtherAction()
-            .and(FsAction.EXECUTE), FsAction.EXECUTE, "Wrong permissions for distributed cache dir " + distCacheDir);
+    assertEquals(fs.getFileStatus(distCacheDir).getPermission().getOtherAction()
+        .and(FsAction.EXECUTE), FsAction.EXECUTE,
+        "Wrong permissions for distributed cache dir " + distCacheDir);
 
     // Validate the content of the sequence file generated by
     // dce.setupGenerateDistCacheData().
     LongWritable key = new LongWritable();
     BytesWritable val = new BytesWritable();
     for (int i = 0; i < sortedFileSizes.length; i++) {
-      assertTrue(
-         reader.nextKeyValue(), "Number of files written to the sequence file by "
+      assertTrue(reader.nextKeyValue(), "Number of files written to the sequence file by "
           + "setupGenerateDistCacheData is less than the expected.");
       key = reader.getCurrentKey();
       val = reader.getCurrentValue();
@@ -334,16 +331,15 @@ public class TestDistCacheEmulation {
       String file = new String(val.getBytes(), 0, val.getLength());
 
       // Dist Cache files should be sorted based on file size.
-      assertEquals(sortedFileSizes[i]
-,           fileSize, "Dist cache file size is wrong.");
+      assertEquals(sortedFileSizes[i], fileSize, "Dist cache file size is wrong.");
 
       // Validate dist cache file path.
 
       // parent dir of dist cache file
       Path parent = new Path(file).getParent().makeQualified(fs.getUri(),fs.getWorkingDirectory());
       // should exist in dist cache dir
-      assertTrue(
-         distCacheDir.equals(parent), "Public dist cache file path is wrong.");
+      assertTrue(distCacheDir.equals(parent),
+          "Public dist cache file path is wrong.");
     }
   }
 
