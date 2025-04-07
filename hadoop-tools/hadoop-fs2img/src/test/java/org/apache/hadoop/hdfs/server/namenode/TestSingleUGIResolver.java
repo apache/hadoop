@@ -129,35 +129,35 @@ public class TestSingleUGIResolver {
 
   @Test
   public void testInvalidUid() {
-      assertThrows(IllegalArgumentException.class, () -> {
-          Configuration conf = ugi.getConf();
-          conf.setInt(SingleUGIResolver.UID, (1 << 24) + 1);
-          ugi.setConf(conf);
-          ugi.resolve(file(TESTUSER, TESTGROUP, new FsPermission((short)0777)));
-      });
+    assertThrows(IllegalArgumentException.class, () -> {
+      Configuration conf = ugi.getConf();
+      conf.setInt(SingleUGIResolver.UID, (1 << 24) + 1);
+      ugi.setConf(conf);
+      ugi.resolve(file(TESTUSER, TESTGROUP, new FsPermission((short) 0777)));
+    });
   }
 
   @Test
   public void testInvalidGid() {
-      assertThrows(IllegalArgumentException.class, () -> {
-          Configuration conf = ugi.getConf();
-          conf.setInt(SingleUGIResolver.GID, (1 << 24) + 1);
-          ugi.setConf(conf);
-          ugi.resolve(file(TESTUSER, TESTGROUP, new FsPermission((short)0777)));
-      });
+    assertThrows(IllegalArgumentException.class, () -> {
+      Configuration conf = ugi.getConf();
+      conf.setInt(SingleUGIResolver.GID, (1 << 24) + 1);
+      ugi.setConf(conf);
+      ugi.resolve(file(TESTUSER, TESTGROUP, new FsPermission((short) 0777)));
+    });
   }
 
   @Test
   public void testDuplicateIds() {
-      assertThrows(IllegalStateException.class, () -> {
-          Configuration conf = new Configuration(false);
-          conf.setInt(SingleUGIResolver.UID, 4344);
-          conf.setInt(SingleUGIResolver.GID, 4344);
-          conf.set(SingleUGIResolver.USER, TESTUSER);
-          conf.set(SingleUGIResolver.GROUP, TESTGROUP);
-          ugi.setConf(conf);
-          ugi.ugiMap();
-      });
+    assertThrows(IllegalStateException.class, () -> {
+      Configuration conf = new Configuration(false);
+      conf.setInt(SingleUGIResolver.UID, 4344);
+      conf.setInt(SingleUGIResolver.GID, 4344);
+      conf.set(SingleUGIResolver.USER, TESTUSER);
+      conf.set(SingleUGIResolver.GROUP, TESTGROUP);
+      ugi.setConf(conf);
+      ugi.ugiMap();
+    });
   }
 
   static void match(long encoded, FsPermission p) {
@@ -184,5 +184,4 @@ public class TestSingleUGIResolver {
           group,                   /* String group,            */
           p);                      /* Path path                */
   }
-
 }

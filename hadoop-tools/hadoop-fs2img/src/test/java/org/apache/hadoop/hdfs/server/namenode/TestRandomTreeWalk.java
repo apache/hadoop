@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestRandomTreeWalk {
 
   @RegisterExtension
-  public TestName name = new TestName();
+  private TestName name = new TestName();
 
   private Random r = new Random();
 

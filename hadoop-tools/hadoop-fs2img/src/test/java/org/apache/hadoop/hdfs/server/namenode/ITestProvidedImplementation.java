@@ -578,8 +578,8 @@ public class ITestProvidedImplementation {
   private void checkUniqueness(DatanodeInfo[] locations) {
     Set<String> set = new HashSet<>();
     for (DatanodeInfo info: locations) {
-      assertFalse(
-         set.contains(info.getDatanodeUuid()), "All locations should be unique");
+      assertFalse(set.contains(info.getDatanodeUuid()),
+          "All locations should be unique");
       set.add(info.getDatanodeUuid());
     }
   }
