@@ -24,7 +24,7 @@ if [ ! -f "$FILE" ]; then
     exit 1
 fi
 
-if [[ "$1" != *.xml ]]; then
+if [[ "$FILE" != *.xml ]]; then
     echo "The file provided is not an XML file. Exiting...."
     exit 1
 fi
@@ -63,7 +63,7 @@ do
 done
 
 # Mapping for renaming configurations
-declare -A rename_configs_map=(
+declare -A renameConfigsMap=(
     ["autothrottling.enable"]="enable.autothrottling" #fs.azure.autothrottling.enable  to fs.azure.enable.autothrottling
     ["rename.dir"]="rename.key" # fs.azure.atomic.rename.dir to fs.azure.atomic.rename.key
     ["block.blob.buffered.pread.disable"]="buffered.pread.disable" #fs.azure.block.blob.buffered.pread.disable to fs.azure.buffered.pread.disable
@@ -72,14 +72,14 @@ declare -A rename_configs_map=(
 )
 
 # Configs not supported in ABFS
-unsupported_configs_list=(
+unsupportedConfigsList=(
     "fs.azure.page.blob.dir"
     "fs.azure.block.blob.with.compaction.dir"
     "fs.azure.store.blob.md5"
 )
 
 # Configurations not required in ABFS Driver and can be removed
-obsolete_configs_list=(
+obseleteConfigsList=(
     "azure.authorization" #fs.azure.authorization, fs.azure.authorization.caching.enable , fs.azure.authorization.caching.maxentries, fs.azure.authorization.cacheentry.expiry.period, fs.azure.authorization.remote.service.urls
     "azure.selfthrottling" #fs.azure.selfthrottling.enable, fs.azure.selfthrottling.read.factor, fs.azure.selfthrottling.write.factor
     "azure.saskey" #fs.azure.saskey.cacheentry.expiry.period , fs.azure.saskey.usecontainersaskeyforallaccess
@@ -107,7 +107,7 @@ obsolete_configs_list=(
 )
 
 # Stop the script if any unsupported config is found
-for key in "${unsupported_configs_list[@]}"; do
+for key in "${unsupportedConfigsList[@]}"; do
     if grep -q "$key" "$OUTPUT_FILE"; then
         echo "Remove the following configuration from file and rerun: '$key'"
         failure=true
@@ -122,14 +122,14 @@ if [ "$failure" = true ]; then
 fi
 
 # Renaming the configs
-for old in "${!rename_configs_map[@]}"; do
-    new="${rename_configs_map[$old]}"
+for old in "${!renameConfigsMap[@]}"; do
+    new="${renameConfigsMap[$old]}"
     xmlstarlet ed -L -u "//property/name[contains(., '$old')]" -x "concat(substring-before(., '$old'),
      '$new', substring-after(., '$old'))" "$OUTPUT_FILE"
 done
 
 # Remove the obsolete configs
-for key in "${obsolete_configs_list[@]}"; do
+for key in "${obseleteConfigsList[@]}"; do
     xmlstarlet ed -L -d "//property[name[contains(text(), '$key')]]" "$OUTPUT_FILE"
 done
 

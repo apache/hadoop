@@ -12,7 +12,7 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# WASB to ABFS Configuration Conversion Script
+# WASB to ABFS Driver Configuration Conversion Script
 
 To support customer onboard for migration from WASB to ABFS driver, we've
 introduced a script to help with the configuration changes required
@@ -22,9 +22,10 @@ for the same.
 
 ABFS driver has now built support for
 FNS accounts (over BlobEndpoint that WASB Driver uses) using the ABFS scheme.
+Refer to: [ABFS Driver for Namespace Disabled Accounts](./fns_blob.html) for more details.
 
 The legacy WASB driver has been **deprecated** and is no longer recommended for
-use.
+use. Refer to: [WASB Deprecation](./wasb.html) for more details.
 It's highly recommended for current WASB Driver users to migrate to ABFS driver,
 the only Microsoft driver for Azure Storage.
 
@@ -72,7 +73,7 @@ with the ABFS driver.
 Example to run the script:
 
 ```shell
-./config_support.sh <path-to-xml-file>
+./configsupport.sh <path-to-xml-file>
 ```
 
 For any queries or support, kindly reach out to us at 'askabfs@microsoft.com'
