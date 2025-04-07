@@ -57,6 +57,7 @@ public class TestAbfsClient {
     public void testTimerInitializationWithoutMetricCollection() throws Exception {
         final Configuration configuration = new Configuration();
         AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, ACCOUNT_NAME);
+        abfsConfiguration.unset(FS_AZURE_METRIC_FORMAT);
 
         AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
         AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters).build();
