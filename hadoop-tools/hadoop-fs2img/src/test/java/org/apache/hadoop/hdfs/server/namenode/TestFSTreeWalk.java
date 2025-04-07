@@ -28,13 +28,10 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import org.junit.jupiter.api.Assertions;
 
 /**
  * Validate FSTreeWalk specific behavior.
@@ -87,7 +84,7 @@ public class TestFSTreeWalk {
    */
   @Test
   public void testACLNotSupported() throws Exception {
-      Assertions.assertThrows(UnsupportedOperationException.class, () -> {
+      assertThrows(UnsupportedOperationException.class, () -> {
           Configuration conf = new Configuration();
           conf.setBoolean(DFSConfigKeys.DFS_PROVIDED_ACLS_IMPORT_ENABLED, true);
           FileSystem fs = mock(FileSystem.class);
@@ -109,7 +106,7 @@ public class TestFSTreeWalk {
    */
   @Test
   public void testToINodeACLNotSupported() throws Exception {
-      Assertions.assertThrows(UnsupportedOperationException.class, () -> {
+      assertThrows(UnsupportedOperationException.class, () -> {
           BlockResolver blockResolver = new FixedBlockResolver();
           Path root = new Path("/");
           FileStatus rootFileStatus = new FileStatus(0, false, 0, 0, 1, root);
