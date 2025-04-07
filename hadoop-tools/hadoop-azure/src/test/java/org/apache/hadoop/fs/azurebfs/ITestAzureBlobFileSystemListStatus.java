@@ -32,7 +32,6 @@ import java.util.concurrent.Future;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
 
@@ -42,7 +41,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
@@ -67,10 +65,10 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PAT
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LIST_MAX_RESULTS;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_METADATA_PREFIX;
-import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.COPY_BLOB_ABORTED;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_BLOB_LIST_PARSING;
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicity.SUFFIX;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_MESSAGE;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_JDK_MESSAGE;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
@@ -137,7 +135,9 @@ public class ITestAzureBlobFileSystemListStatus extends
 
   /**
    * Test to verify that each paginated call to ListBlobs uses a new tracing context.
-   * @throws Exception
+   * Test also verifies that the retry policy is called when a SocketTimeoutException
+   * Test also verifies that empty list with valid continuation token is handled.
+   * @throws Exception if there is an error or test assertions fails.
    */
   @Test
   public void testListPathTracingContext() throws Exception {
@@ -166,6 +166,10 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     List<FileStatus> fileStatuses = new ArrayList<>();
     spiedStore.listStatus(new Path("/"), "", fileStatuses, true, null, spiedTracingContext);
+
+    // Assert that there were retries due to SocketTimeoutException
+    Mockito.verify(spiedClient, Mockito.times(1))
+        .getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
 
     // Assert that there were 2 paginated ListPath calls were made 1 and 2.
     // 1. Without continuation token
