@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -172,22 +175,20 @@ public class TestGridmixSummary {
     Configuration conf = new Configuration();
     
     ExecutionSummarizer es = new ExecutionSummarizer();
-    assertEquals("ExecutionSummarizer init failed", 
-                 Summarizer.NA, es.getCommandLineArgsString());
+    assertEquals(Summarizer.NA, es.getCommandLineArgsString(),
+        "ExecutionSummarizer init failed");
     
     long startTime = System.currentTimeMillis();
     // test configuration parameters
     String[] initArgs = new String[] {"-Xmx20m", "-Dtest.args='test'"};
     es = new ExecutionSummarizer(initArgs);
     
-    assertEquals("ExecutionSummarizer init failed", 
-                 "-Xmx20m -Dtest.args='test'", 
-                 es.getCommandLineArgsString());
+    assertEquals("-Xmx20m -Dtest.args='test'",
+        es.getCommandLineArgsString(), "ExecutionSummarizer init failed");
     
     // test start time
     assertTrue(es.getStartTime() >= startTime, "Start time mismatch");
-    assertTrue(
-               es.getStartTime() <= System.currentTimeMillis(), "Start time mismatch");
+    assertTrue(es.getStartTime() <= System.currentTimeMillis(), "Start time mismatch");
     
     // test start() of ExecutionSummarizer
     es.update(null);
@@ -197,10 +198,10 @@ public class TestGridmixSummary {
     
     long simStartTime = System.currentTimeMillis();
     es.start(null);
-    assertTrue(
-               es.getSimulationStartTime() >= simStartTime, "Simulation start time mismatch");
-    assertTrue(
-               es.getSimulationStartTime() <= System.currentTimeMillis(), "Simulation start time mismatch");
+    assertTrue(es.getSimulationStartTime() >= simStartTime,
+        "Simulation start time mismatch");
+    assertTrue(es.getSimulationStartTime() <= System.currentTimeMillis(),
+        "Simulation start time mismatch");
     
     // test with job stats
     JobStats stats = generateFakeJobStats(1, 10, true, false);
@@ -249,30 +250,25 @@ public class TestGridmixSummary {
     // test trace signature
     String tid = 
       ExecutionSummarizer.getTraceSignature(testTraceFile.toString());
-    assertEquals(
-                 tid, es.getInputTraceSignature(), "Mismatch in trace signature");
+    assertEquals(tid, es.getInputTraceSignature(), "Mismatch in trace signature");
     // test trace location
     Path qPath = fs.makeQualified(testTraceFile);
-    assertEquals("Mismatch in trace filename", 
-                 qPath.toString(), es.getInputTraceLocation());
+    assertEquals(qPath.toString(), es.getInputTraceLocation(), "Mismatch in trace filename");
     // test expected data size
-    assertEquals("Mismatch in expected data size", 
-                 "1 K", es.getExpectedDataSize());
+    assertEquals("1 K", es.getExpectedDataSize(), "Mismatch in expected data size");
     // test input data statistics
-    assertEquals("Mismatch in input data statistics", 
-                 ExecutionSummarizer.stringifyDataStatistics(dataStats), 
-                 es.getInputDataStatistics());
+    assertEquals(ExecutionSummarizer.stringifyDataStatistics(dataStats),
+        es.getInputDataStatistics(), "Mismatch in input data statistics");
     // test user resolver
-    assertEquals(
-                 resolver.getClass().getName(), es.getUserResolver(), "Mismatch in user resolver");
+    assertEquals(resolver.getClass().getName(), es.getUserResolver(),
+        "Mismatch in user resolver");
     // test policy
     assertEquals(policy, es.getJobSubmissionPolicy(), "Mismatch in policy");
     
     // test data stringification using large data
     es.finalize(factory, testTraceFile.toString(), 1024*1024*1024*10L, resolver,
                 dataStats, conf);
-    assertEquals("Mismatch in expected data size", 
-                 "10 G", es.getExpectedDataSize());
+    assertEquals("10 G", es.getExpectedDataSize(), "Mismatch in expected data size");
     
     // test trace signature uniqueness
     //  touch the trace file
@@ -285,52 +281,50 @@ public class TestGridmixSummary {
     es.finalize(factory, testTraceFile.toString(), 0L, resolver, dataStats, 
                 conf);
     // test missing expected data size
-    assertEquals(
-                 Summarizer.NA, es.getExpectedDataSize(), "Mismatch in trace data size");
-    assertFalse(
-                tid.equals(es.getInputTraceSignature()), "Mismatch in trace signature");
+    assertEquals(Summarizer.NA, es.getExpectedDataSize(),
+        "Mismatch in trace data size");
+    assertFalse(tid.equals(es.getInputTraceSignature()),
+        "Mismatch in trace signature");
     // get the new identifier
     tid = ExecutionSummarizer.getTraceSignature(testTraceFile.toString());
-    assertEquals(
-                 tid, es.getInputTraceSignature(), "Mismatch in trace signature");
+    assertEquals(tid, es.getInputTraceSignature(), "Mismatch in trace signature");
     
     testTraceFile = new Path(testDir, "test-trace2.json");
     fs.create(testTraceFile).close();
     es.finalize(factory, testTraceFile.toString(), 0L, resolver, dataStats, 
                 conf);
-    assertFalse(
-                tid.equals(es.getInputTraceSignature()), "Mismatch in trace signature");
+    assertFalse(tid.equals(es.getInputTraceSignature()),
+        "Mismatch in trace signature");
     // get the new identifier
     tid = ExecutionSummarizer.getTraceSignature(testTraceFile.toString());
-    assertEquals(
-                 tid, es.getInputTraceSignature(), "Mismatch in trace signature");
+    assertEquals(tid, es.getInputTraceSignature(), "Mismatch in trace signature");
     
     // finalize trace identifier '-' input
     es.finalize(factory, "-", 0L, resolver, dataStats, conf);
-    assertEquals(
-                Summarizer.NA, es.getInputTraceSignature(), "Mismatch in trace signature");
-    assertEquals(
-                 Summarizer.NA, es.getInputTraceLocation(), "Mismatch in trace file location");
+    assertEquals(Summarizer.NA, es.getInputTraceSignature(),
+        "Mismatch in trace signature");
+    assertEquals(Summarizer.NA, es.getInputTraceLocation(),
+        "Mismatch in trace file location");
   }
   
   // test the ExecutionSummarizer
   private static void testExecutionSummarizer(int numMaps, int numReds,
       int totalJobsInTrace, int totalJobSubmitted, int numSuccessfulJob, 
       int numFailedJobs, int numLostJobs, ExecutionSummarizer es) {
-    assertEquals(
-                 numMaps, es.getNumMapTasksLaunched(), "ExecutionSummarizer test failed [num-maps]");
-    assertEquals(
-                 numReds, es.getNumReduceTasksLaunched(), "ExecutionSummarizer test failed [num-reducers]");
-    assertEquals(
-                 totalJobsInTrace, es.getNumJobsInTrace(), "ExecutionSummarizer test failed [num-jobs-in-trace]");
-    assertEquals(
-                 totalJobSubmitted, es.getNumSubmittedJobs(), "ExecutionSummarizer test failed [num-submitted jobs]");
-    assertEquals(
-                 numSuccessfulJob, es.getNumSuccessfulJobs(), "ExecutionSummarizer test failed [num-successful-jobs]");
-    assertEquals(
-                 numFailedJobs, es.getNumFailedJobs(), "ExecutionSummarizer test failed [num-failed jobs]");
-    assertEquals(
-                 numLostJobs, es.getNumLostJobs(), "ExecutionSummarizer test failed [num-lost jobs]");
+    assertEquals(numMaps, es.getNumMapTasksLaunched(),
+        "ExecutionSummarizer test failed [num-maps]");
+    assertEquals(numReds, es.getNumReduceTasksLaunched(),
+        "ExecutionSummarizer test failed [num-reducers]");
+    assertEquals(totalJobsInTrace, es.getNumJobsInTrace(),
+        "ExecutionSummarizer test failed [num-jobs-in-trace]");
+    assertEquals(totalJobSubmitted, es.getNumSubmittedJobs(),
+        "ExecutionSummarizer test failed [num-submitted jobs]");
+    assertEquals(numSuccessfulJob, es.getNumSuccessfulJobs(),
+        "ExecutionSummarizer test failed [num-successful-jobs]");
+    assertEquals(numFailedJobs, es.getNumFailedJobs(),
+        "ExecutionSummarizer test failed [num-failed jobs]");
+    assertEquals(numLostJobs, es.getNumLostJobs(),
+        "ExecutionSummarizer test failed [num-lost jobs]");
   }
   
   // generate fake job stats
@@ -385,7 +379,6 @@ public class TestGridmixSummary {
     assertEquals(1, cs.getMaxMapTasks(), "Cluster summary test failed!");
     assertEquals(1, cs.getMaxReduceTasks(), "Cluster summary test failed!");
     assertEquals(1, cs.getNumActiveTrackers(), "Cluster summary test failed!");
-    assertEquals(0, 
-                 cs.getNumBlacklistedTrackers(), "Cluster summary test failed!");
+    assertEquals(0, cs.getNumBlacklistedTrackers(), "Cluster summary test failed!");
   }
 }

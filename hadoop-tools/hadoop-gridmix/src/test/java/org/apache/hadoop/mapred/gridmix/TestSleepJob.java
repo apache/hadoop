@@ -33,7 +33,7 @@ import org.slf4j.event.Level;
 import java.io.IOException;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.slf4j.LoggerFactory.getLogger;
 
 public class TestSleepJob extends CommonJobTest {

@@ -18,7 +18,9 @@
 package org.apache.hadoop.mapred.gridmix;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -112,13 +114,13 @@ public class TestGridmixMemoryEmulation {
     long currentHeap = heapEmulator.getHeapUsageInMB();
     
     // check if the heap has increased by expected value
-    assertEquals(
-                 previousHeap + testSizeInMB, currentHeap, "Default heap emulator failed to load 10mb");
+    assertEquals(previousHeap + testSizeInMB, currentHeap,
+        "Default heap emulator failed to load 10mb");
     
     // test reset
     heapEmulator.resetFake();
-    assertEquals(
-                 0, heapEmulator.getHeapUsageInMB(), "Default heap emulator failed to reset");
+    assertEquals(0, heapEmulator.getHeapUsageInMB(),
+        "Default heap emulator failed to reset");
   }
 
   /**
@@ -164,16 +166,17 @@ public class TestGridmixMemoryEmulation {
     long heapUsagePost = fakeCore.getHeapUsageInMB();
     
     //  test if no calls are made heap usage emulator core
-    assertEquals(
-                 numCallsPre, numCallsPost, "Disabled heap usage emulation plugin works!");
+    assertEquals(numCallsPre, numCallsPost,
+        "Disabled heap usage emulation plugin works!");
     //  test if no calls are made heap usage emulator core
-    assertEquals(
-                 heapUsagePre, heapUsagePost, "Disabled heap usage emulation plugin works!");
+    assertEquals(heapUsagePre, heapUsagePost,
+        "Disabled heap usage emulation plugin works!");
     
     // test with get progress
     float progress = heapPlugin.getProgress();
-    assertEquals( 1.0f, progress, 0f, "Invalid progress of disabled cumulative heap usage emulation "
-            + "plugin!");
+    assertEquals(1.0f, progress, 0f,
+        "Invalid progress of disabled cumulative heap usage emulation "
+        + "plugin!");
     
     // test with wrong/invalid configuration
     Boolean failed = null;
@@ -282,11 +285,11 @@ public class TestGridmixMemoryEmulation {
     }
     
     // test if the resource plugin shows the expected usage
-    assertEquals(
-                 expectedTotalHeapUsageInMB, fakeCore.getHeapUsageInMB(), 1L, "Cumulative heap usage emulator plugin failed (total usage)!");
+    assertEquals(expectedTotalHeapUsageInMB, fakeCore.getHeapUsageInMB(), 1L,
+        "Cumulative heap usage emulator plugin failed (total usage)!");
     // test if the resource plugin shows the expected num calls
-    assertEquals(
-                 expectedTotalNumCalls, fakeCore.getNumCalls(), 0L, "Cumulative heap usage emulator plugin failed (num calls)!");
+    assertEquals(expectedTotalNumCalls, fakeCore.getNumCalls(), 0L,
+        "Cumulative heap usage emulator plugin failed (num calls)!");
   }
 
   // tests if the heap usage emulation plugin emulates only at the expected
@@ -301,7 +304,7 @@ public class TestGridmixMemoryEmulation {
     assertEquals(expectedTotalHeapUsageInMB, fakeCore.getHeapUsageInMB(), 0L,
         "Emulation interval test for heap usage failed " + info + "!");
     // test num calls
-    assertEquals(             expectedTotalNumCalls, fakeCore.getNumCalls(), 0L,
+    assertEquals(expectedTotalNumCalls, fakeCore.getNumCalls(), 0L,
         "Emulation interval test for heap usage failed " + info + "!");
   }
   
@@ -355,12 +358,12 @@ public class TestGridmixMemoryEmulation {
     // configure the task jvm's heap options
     GridmixJob.configureTaskJVMOptions(originalConf, simulatedConf);
     
-    assertEquals(expectedMapOptions, 
-                 simulatedConf.get(MRJobConfig.MAP_JAVA_OPTS), "Map heap options mismatch!");
-    assertEquals(expectedReduceOptions, 
-                 simulatedConf.get(MRJobConfig.REDUCE_JAVA_OPTS), "Reduce heap options mismatch!");
-    assertEquals(expectedTaskOptions, 
-                 simulatedConf.get(JobConf.MAPRED_TASK_JAVA_OPTS), "Task heap options mismatch!");
+    assertEquals(expectedMapOptions, simulatedConf.get(MRJobConfig.MAP_JAVA_OPTS),
+        "Map heap options mismatch!");
+    assertEquals(expectedReduceOptions, simulatedConf.get(MRJobConfig.REDUCE_JAVA_OPTS),
+        "Reduce heap options mismatch!");
+    assertEquals(expectedTaskOptions, simulatedConf.get(JobConf.MAPRED_TASK_JAVA_OPTS),
+        "Task heap options mismatch!");
   }
   
   /**
@@ -447,11 +450,11 @@ public class TestGridmixMemoryEmulation {
     Job simulatedJob = job.getJob();
     Configuration simulatedConf = simulatedJob.getConfiguration();
     
-    assertEquals("Map heap options works when disabled!", "-Xmx1m", 
-                 simulatedConf.get(MRJobConfig.MAP_JAVA_OPTS));
-    assertEquals("Reduce heap options works when disabled!", "-Xmx2m", 
-                 simulatedConf.get(MRJobConfig.REDUCE_JAVA_OPTS));
-    assertEquals("Task heap options works when disabled!", "-Xmx3m", 
-                 simulatedConf.get(JobConf.MAPRED_TASK_JAVA_OPTS));
+    assertEquals("-Xmx1m", simulatedConf.get(MRJobConfig.MAP_JAVA_OPTS),
+        "Map heap options works when disabled!");
+    assertEquals("-Xmx2m", simulatedConf.get(MRJobConfig.REDUCE_JAVA_OPTS),
+        "Reduce heap options works when disabled!");
+    assertEquals("-Xmx3m", simulatedConf.get(JobConf.MAPRED_TASK_JAVA_OPTS),
+        "Task heap options works when disabled!");
   }
 }

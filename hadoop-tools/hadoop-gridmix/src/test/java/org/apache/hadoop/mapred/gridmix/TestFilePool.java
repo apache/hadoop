@@ -137,8 +137,8 @@ public class TestFilePool {
     // match random within 12k
     files.clear();
     final long rand = r.nextInt(expectedPoolSize);
-    assertTrue(
-       (NFILES / 2) * 1024 > rand - pool.getInputFiles(rand, files), "Missed: " + rand);
+    assertTrue((NFILES / 2) * 1024 > rand - pool.getInputFiles(rand, files),
+        "Missed: " + rand);
 
     // all files
     conf.setLong(FilePool.GRIDMIX_MIN_FILE, 0);

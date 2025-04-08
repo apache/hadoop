@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -146,7 +148,7 @@ public class TestHighRamJob {
     }
     assertNotNull(failed);
     assertTrue(failed, "Exception expected for exceeding map memory limit "
-               + "(deprecation)!");
+         + "(deprecation)!");
     
     // test : check with high ram enabled and reduce memory scaling mismatch 
     //        (deprecated)
@@ -162,7 +164,7 @@ public class TestHighRamJob {
     }
     assertNotNull(failed);
     assertTrue(failed, "Exception expected for exceeding reduce memory limit "
-               + "(deprecation)!");
+        + "(deprecation)!");
     
     // test : check with high ram enabled and scaling mismatch on map limits
     gridmixConf = new Configuration();

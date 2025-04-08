@@ -77,13 +77,15 @@ import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
 import org.apache.hadoop.tools.rumen.ZombieJobProducer;
 import org.apache.hadoop.util.Progress;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import static org.mockito.Mockito.*;
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestGridMixClasses {
   private static final Logger LOG = LoggerFactory.getLogger(TestGridMixClasses.class);
@@ -798,7 +800,7 @@ public class TestGridMixClasses {
     FakeJobSubmitter submitter = new FakeJobSubmitter();
     File ws = new File("target" + File.separator + this.getClass().getName());
     if (!ws.exists()) {
-      Assertions.assertTrue(ws.mkdirs());
+      assertTrue(ws.mkdirs());
     }
 
     SerialJobFactory jobFactory = new SerialJobFactory(submitter, jobProducer,

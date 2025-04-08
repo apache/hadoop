@@ -323,7 +323,8 @@ public class TestDistCacheEmulation {
     LongWritable key = new LongWritable();
     BytesWritable val = new BytesWritable();
     for (int i = 0; i < sortedFileSizes.length; i++) {
-      assertTrue(reader.nextKeyValue(), "Number of files written to the sequence file by "
+      assertTrue(reader.nextKeyValue(),
+          "Number of files written to the sequence file by "
           + "setupGenerateDistCacheData is less than the expected.");
       key = reader.getCurrentKey();
       val = reader.getCurrentValue();
@@ -399,7 +400,8 @@ public class TestDistCacheEmulation {
     jobConf.setBoolean(
         DistributedCacheEmulator.GRIDMIX_EMULATE_DISTRIBUTEDCACHE, false);
     dce = createDistributedCacheEmulator(jobConf, ioPath, false);
-    assertFalse(dce.shouldEmulateDistCacheLoad(), "Disabling of emulation of distributed cache load by setting "
+    assertFalse(dce.shouldEmulateDistCacheLoad(),
+        "Disabling of emulation of distributed cache load by setting "
         + DistributedCacheEmulator.GRIDMIX_EMULATE_DISTRIBUTEDCACHE
         + " to false is not working.");
   }
