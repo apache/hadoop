@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.scheduler;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
