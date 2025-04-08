@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -76,7 +77,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   private String requestId = "";
   private String expectedAppendPos = "";
   private ListResultSchema listResultSchema = null;
-  private byte[] listResultData = null;
+  private InputStream listResultStream = null;
   private List<String> blockIdList = null;
 
   // metrics
@@ -222,8 +223,8 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     return listResultSchema;
   }
 
-  public final byte[] getListResultData() {
-    return listResultData;
+  public InputStream getListResultStream() {
+    return listResultStream;
   }
 
   /**
@@ -511,7 +512,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
    * @throws IOException if an error occurs while reading the stream.
    */
   private void parseListPathResponse(final InputStream stream) throws IOException {
-    if (stream == null || listResultData != null) {
+    if (stream == null || listResultStream != null) {
       return;
     }
     try (ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
@@ -520,7 +521,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
       while ((bytesRead = stream.read(tempBuffer, 0, CLEAN_UP_BUFFER_SIZE)) != -1) {
         buffer.write(tempBuffer, 0, bytesRead);
       }
-      listResultData = buffer.toByteArray();
+      listResultStream = new ByteArrayInputStream(buffer.toByteArray());
     }
   }
 

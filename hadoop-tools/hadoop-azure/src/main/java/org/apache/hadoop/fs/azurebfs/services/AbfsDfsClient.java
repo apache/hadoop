@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -1481,7 +1480,7 @@ public class AbfsDfsClient extends AbfsClient {
   @Override
   public ListResponseData parseListPathResults(AbfsHttpOperation result, URI uri)
       throws AzureBlobFileSystemException {
-    try (InputStream stream = new ByteArrayInputStream(result.getListResultData())) {
+    try (InputStream stream = result.getListResultStream()) {
       try {
         DfsListResultSchema listResultSchema;
         final ObjectMapper objectMapper = new ObjectMapper();
