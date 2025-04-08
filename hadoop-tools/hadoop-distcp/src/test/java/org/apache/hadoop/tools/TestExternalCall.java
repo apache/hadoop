@@ -66,8 +66,8 @@ public class TestExternalCall {
   @BeforeEach
   public void setup() {
 
-    securityManager = System.getSecurityManager();
     try {
+      securityManager = System.getSecurityManager();
       System.setSecurityManager(new NoExitSecurityManager());
     } catch (UnsupportedOperationException e) {
       assumeTrue(false, "Test is skipped because SecurityManager cannot be set (JEP 411)");
