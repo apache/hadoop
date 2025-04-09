@@ -26,6 +26,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -52,6 +53,7 @@ import org.apache.hadoop.fs.ClosedIOException;
 import org.apache.hadoop.fs.s3a.impl.ProgressListener;
 import org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
+import org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags;
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
@@ -225,6 +227,11 @@ class S3ABlockOutputStream extends OutputStream implements
   private final boolean isMultipartUploadEnabled;
 
   /**
+   * Object write option flags.
+   */
+  private final EnumSet<WriteObjectFlags> writeObjectFlags;
+
+  /**
    * An S3A output stream which uploads partitions in a separate pool of
    * threads; different {@link S3ADataBlocks.BlockFactory}
    * instances can control where data is buffered.
@@ -249,6 +256,7 @@ class S3ABlockOutputStream extends OutputStream implements
     this.iostatistics = statistics.getIOStatistics();
     this.writeOperationHelper = builder.writeOperations;
     this.putTracker = builder.putTracker;
+    this.writeObjectFlags = builder.putOptions.getWriteObjectFlags();
     this.executorService = MoreExecutors.listeningDecorator(
         builder.executorService);
     this.multiPartUpload = null;
@@ -266,8 +274,18 @@ class S3ABlockOutputStream extends OutputStream implements
         ? builder.blockSize
         : -1;
 
+    // if required to be multipart by the committer put tracker or
+    // write flags (i.e createFile() options, initiate multipart uploads.
+    // this will fail fast if the store doesn't support multipart uploads
     if (putTracker.initialize()) {
       LOG.debug("Put tracker requests multipart upload");
+      initMultipartUpload();
+    } else if (writeObjectFlags.contains(WriteObjectFlags.CreateMultipart)) {
+      // this not merged simply to avoid confusion
+      // to what to do it both are set, so as to guarantee
+      // the put tracker initialization always takes priority
+      // over any file flag.
+      LOG.debug("Multipart initiated from createFile() options");
       initMultipartUpload();
     }
     this.isCSEEnabled = builder.isCSEEnabled;
@@ -772,7 +790,8 @@ class S3ABlockOutputStream extends OutputStream implements
   @SuppressWarnings("deprecation")
   @Override
   public boolean hasCapability(String capability) {
-    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    final String cap = capability.toLowerCase(Locale.ENGLISH);
+    switch (cap) {
 
       // does the output stream have delayed visibility
     case CommitConstants.STREAM_CAPABILITY_MAGIC_OUTPUT:
@@ -797,6 +816,12 @@ class S3ABlockOutputStream extends OutputStream implements
       return true;
 
     default:
+      // scan flags for the capability
+      for (WriteObjectFlags flag : writeObjectFlags) {
+        if (flag.hasKey(cap)) {
+          return true;
+        }
+      }
       return false;
     }
   }

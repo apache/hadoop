@@ -41,6 +41,7 @@ The features which may be unavailable include:
 * List API to use (`fs.s3a.list.version = 1`)
 * Bucket lifecycle rules to clean up pending uploads.
 * Support for multipart uploads.
+* Conditional file creation. (`fs.s3a.create.conditional.enabled = false`)
 
 ### Disabling Change Detection
 
@@ -64,7 +65,10 @@ path style access must also be enabled in `fs.s3a.path.style.access`.
 
 The v4 signing algorithm requires a region to be set in `fs.s3a.endpoint.region`.
 A non-empty value is generally sufficient, though some deployments may require
-a specific value.
+a specific value. 
+
+*Important:* do not use `auto` or `sdk` as these may be used
+in the future for specific region binding algorithms.
 
 Finally, assuming the credential source is the normal access/secret key
 then these must be set, either in XML or (preferred) in a JCEKS file.
@@ -149,6 +153,26 @@ If there are any, they are aborted (sequentially).
 * There is no age checking: all uploads will be aborted.
 * If any other process is writing to the same directory tree, their operations
 will be cancelled.
+
+#### Conditional File Creation.
+
+The S3A connector supports conditional file creation, in which applications specifically
+written to use the `openFile()` API to create a file with will fail if there is a object
+found at the time the actual write is committed -or only permit the write to succeed
+if an object exists with a specified etag.
+
+These can both be used for S3-specific commit protocols -protocols which are unsafe
+to use on stores without support for the conditional create feature.
+
+In such a situation, the option `fs.s3a.create.conditional.enabled` should be set to
+false to disable use of these features.
+
+```xml
+  <property>
+    <name>fs.s3a.create.conditional.enabled</name>
+    <value>false</value>
+  </property>
+```
 
 
 # Troubleshooting
@@ -464,10 +488,18 @@ this makes renaming and deleting significantly slower.
     <name>fs.s3a.multipart.uploads.enabled</name>
     <value>false</value>
   </property>
-    <property>
+  
+   <property>
     <name>fs.s3a.optimized.copy.from.local.enabled</name>
     <value>false</value>
   </property>
+  
+  <!-- No support for conditional file creation -->
+  <property>
+    <name>fs.s3a.create.conditional.enabled</name>
+    <value>false</value>
+  </property>
+  
 </configuration>
 ```
 
@@ -497,6 +529,5 @@ It is also a way to regression test foundational S3A third-party store compatibi
 </configuration>
 ```
 
-_Note_ If anyone is set up to test this reguarly, please let the hadoop developer team know if regressions do surface,
+_Note_ If anyone is set up to test this regularly, please let the hadoop developer team know if regressions do surface,
 as it is not a common test configuration.
-[]

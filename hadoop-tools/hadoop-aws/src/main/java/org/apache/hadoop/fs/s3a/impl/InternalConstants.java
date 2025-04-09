@@ -35,10 +35,15 @@ import static org.apache.hadoop.fs.CommonPathCapabilities.DIRECTORY_LISTING_INCO
 import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_AVAILABLE;
 import static org.apache.hadoop.fs.CommonPathCapabilities.FS_CHECKSUMS;
 import static org.apache.hadoop.fs.CommonPathCapabilities.FS_MULTIPART_UPLOADER;
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG;
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONTENT_TYPE;
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_IN_CLOSE;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_OPERATIONS_PURGE_UPLOADS;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_MULTIPART;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_AWS_V2;
@@ -259,7 +264,14 @@ public final class InternalConstants {
    */
   public static final Set<String> CREATE_FILE_KEYS =
       Collections.unmodifiableSet(
-          new HashSet<>(Arrays.asList(FS_S3A_CREATE_PERFORMANCE)));
+          new HashSet<>(Arrays.asList(
+              FS_OPTION_CREATE_CONDITIONAL_OVERWRITE,
+              FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG,
+              FS_OPTION_CREATE_IN_CLOSE,
+              FS_OPTION_CREATE_CONTENT_TYPE,
+              FS_S3A_CREATE_PERFORMANCE,
+              FS_S3A_CREATE_MULTIPART
+              )));
 
   /**
    * Dynamic Path capabilities to be evaluated

@@ -1505,6 +1505,29 @@ public final class Constants {
    */
   public static final String FS_S3A_PERFORMANCE_FLAGS =
       "fs.s3a.performance.flags";
+
+  /**
+   * Is the create overwrite feature enabled or not?
+   * A configuration option and a path status probe.
+   * Value {@value}.
+   */
+  public static final String FS_S3A_CONDITIONAL_CREATE_ENABLED =
+      "fs.s3a.create.conditional.enabled";
+
+  /**
+   * Default value for {@link #FS_S3A_CONDITIONAL_CREATE_ENABLED}.
+   * Value {@value}.
+   */
+  public static final boolean DEFAULT_FS_S3A_CONDITIONAL_CREATE_ENABLED = true;
+
+  /**
+   * createFile() boolean option toreate a multipart file, always: {@value}.
+   * <p>
+   * This is inefficient and will not work on a store which doesn't support that feature,
+   * so is primarily for testing.
+   */
+  public static final String FS_S3A_CREATE_MULTIPART = "fs.s3a.create.multipart";
+
   /**
    * Prefix for adding a header to the object when created.
    * The actual value must have a "." suffix and then the actual header.
@@ -1811,4 +1834,11 @@ public final class Constants {
   public static final String ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX =
           "fs.s3a.analytics.accelerator";
 
+  /**
+   * Value for the {@code If-None-Match} HTTP header in S3 requests.
+   * Value: {@value}.
+   * More information: <a href="https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html">
+   *      AWS S3 PutObject API Documentation</a>
+   */
+  public static final String IF_NONE_MATCH_STAR = "*";
 }

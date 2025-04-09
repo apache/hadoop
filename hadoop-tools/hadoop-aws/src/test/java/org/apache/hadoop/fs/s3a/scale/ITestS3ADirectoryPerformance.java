@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
-import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.util.functional.RemoteIterators;
@@ -60,6 +59,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
+import static org.apache.hadoop.fs.s3a.impl.PutObjectOptions.defaultOptions;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
@@ -257,10 +257,10 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
         originalListOfFiles.add(file.toString());
         PutObjectRequest.Builder putObjectRequestBuilder = requestFactory
             .newPutObjectRequestBuilder(fs.pathToKey(file),
-                null, 0, false);
+                defaultOptions(), 0, false);
         futures.add(submit(executorService,
             () -> writeOperationHelper.putObject(putObjectRequestBuilder.build(),
-                PutObjectOptions.keepingDirs(),
+                defaultOptions(),
                 new S3ADataBlocks.BlockUploadData(new byte[0], null), null)));
       }
       LOG.info("Waiting for PUTs to complete");

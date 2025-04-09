@@ -69,6 +69,7 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.FutureIO;
 
 import org.assertj.core.api.Assertions;
+import org.assertj.core.api.Assumptions;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.AssumptionViolatedException;
@@ -1175,6 +1176,14 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Skip if conditional creation is not enabled.
+   */
+  public static void assumeConditionalCreateEnabled(Configuration conf) {
+    skipIfNotEnabled(conf, FS_S3A_CONDITIONAL_CREATE_ENABLED,
+        "conditional create is disabled");
+  }
+
+  /**
    * Modify the config by setting the performance flags and return the modified config.
    *
    * @param conf The configuration object.
@@ -1474,7 +1483,9 @@ public final class S3ATestUtils {
     if (!condition) {
       LOG.warn(message);
     }
-    Assume.assumeTrue(message, condition);
+    Assumptions.assumeThat(condition).
+        describedAs(message)
+        .isTrue();
   }
 
   /**

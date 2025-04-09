@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
@@ -55,6 +56,7 @@ import static org.apache.hadoop.fs.s3a.performance.OperationCost.GET_FILE_STATUS
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.HEAD_OPERATION;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.LIST_OPERATION;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.NO_HEAD_OR_LIST;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Assert cost of createFile operations, especially
@@ -201,7 +203,9 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
           () -> buildFile(testFile, false, true,
               GET_FILE_STATUS_ON_FILE));
     } else {
-      buildFile(testFile, false, true, NO_HEAD_OR_LIST);
+      // will trigger conditional create and throw RemoteFileChangedException
+      intercept(RemoteFileChangedException.class,
+              () -> buildFile(testFile, false, true, NO_HEAD_OR_LIST));
     }
   }
 
