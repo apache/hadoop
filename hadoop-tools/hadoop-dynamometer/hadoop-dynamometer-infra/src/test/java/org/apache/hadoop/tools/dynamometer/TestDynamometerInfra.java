@@ -72,6 +72,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.junit.jupiter.api.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -187,8 +188,7 @@ public class TestDynamometerInfra {
     // Set up the Hadoop binary to be used as the system-level Hadoop install
     hadoopUnpackedDir = new File(testBaseDir,
         HADOOP_BIN_UNPACKED_DIR_PREFIX + UUID.randomUUID());
-    assertTrue(
-       hadoopUnpackedDir.mkdirs(), "Failed to make temporary directory");
+    assertTrue(hadoopUnpackedDir.mkdirs(), "Failed to make temporary directory");
     Shell.ShellCommandExecutor shexec = new Shell.ShellCommandExecutor(
         new String[] {"tar", "xzf", hadoopTarballPath.getAbsolutePath(), "-C",
             hadoopUnpackedDir.getAbsolutePath()});
