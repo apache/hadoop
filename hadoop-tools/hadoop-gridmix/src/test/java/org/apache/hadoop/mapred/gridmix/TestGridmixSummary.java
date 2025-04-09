@@ -192,8 +192,8 @@ public class TestGridmixSummary {
     
     // test start() of ExecutionSummarizer
     es.update(null);
-    assertEquals(0, 
-                 es.getSimulationStartTime(), "ExecutionSummarizer init failed");
+    assertEquals(0, es.getSimulationStartTime(),
+        "ExecutionSummarizer init failed");
     testExecutionSummarizer(0, 0, 0, 0, 0, 0, 0, es);
     
     long simStartTime = System.currentTimeMillis();

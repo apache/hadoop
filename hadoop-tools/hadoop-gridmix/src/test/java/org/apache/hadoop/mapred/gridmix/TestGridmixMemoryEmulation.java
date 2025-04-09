@@ -190,7 +190,7 @@ public class TestGridmixMemoryEmulation {
       failed = true;
     }
     assertNotNull(failed, "Fail case failure!");
-    assertTrue(failed, "Expected failure!"); 
+    assertTrue(failed, "Expected failure!");
     
     // test with valid resource usage value
     ResourceUsageMetrics metrics = 

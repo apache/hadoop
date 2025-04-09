@@ -96,11 +96,12 @@ public class TestDistCacheEmulation {
     // Validate the existence of Distributed Cache files list file directly
     // under distributed cache directory
     Path listFile = new Path(filesListFile);
-    assertTrue(distCachePath.equals(listFile.getParent().makeQualified(fs.getUri(), fs.getWorkingDirectory())),
+    assertTrue(distCachePath.equals(
+        listFile.getParent().makeQualified(fs.getUri(), fs.getWorkingDirectory())),
         "Path of Distributed Cache files list file is wrong.");
 
     // Delete the dist cache files list file
-    assertTrue(fs.delete(listFile,true),
+    assertTrue(fs.delete(listFile, true),
         "Failed to delete distributed Cache files list file " + listFile);
 
     List<Long> fileSizes = new ArrayList<Long>();
