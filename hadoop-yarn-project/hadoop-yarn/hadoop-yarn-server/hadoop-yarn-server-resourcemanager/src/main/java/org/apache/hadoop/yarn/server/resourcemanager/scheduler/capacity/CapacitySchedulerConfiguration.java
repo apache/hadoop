@@ -76,6 +76,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes.getAutoCreatedQueueObjectTemplateConfPrefix;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes.getNodeLabelPrefix;
@@ -3035,5 +3036,132 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       throw new YarnRuntimeException(
           "Could not instantiate " + "NodesSortingPolicy: " + policyName, e);
     }
+  }
+
+  /**
+   * Configuration keys for enabling backoff mechanism for a queue.
+   * When enabled, applications in the queue will be temporarily skipped
+   * if they fail to schedule tasks after a certain number of opportunities.
+   */
+  @Private
+  public static final String BACKOFF_ENABLED = "app-backoff.enabled";
+
+  /**
+   * Default value for enabling backoff mechanism.
+   */
+  @Private
+  public static final boolean DEFAULT_BACKOFF_ENABLED = false;
+
+  /**
+   * Configuration key indicating the duration for which an application
+   * in backoff state will be skipped during the scheduling process.
+   */
+  @Private
+  public static final String APP_BACKOFF_INTERVAL_MS = "app-backoff.interval-ms";
+
+  /**
+   * Default value for the backoff duration in milliseconds.
+   */
+  @Private
+  public static final long DEFAULT_APP_BACKOFF_INTERVAL_MS = 3000L;
+
+  /**
+   * Configuration key for the threshold of missed scheduling opportunities
+   * before an application is put into backoff state.
+   */
+  @Private
+  public static final String APP_BACKOFF_MISSED_THRESHOLD =
+      "app-backoff.missed-threshold";
+
+  /**
+   * Default value for missed opportunities' threshold.
+   */
+  @Private
+  public static final long DEFAULT_APP_BACKOFF_MISSED_THRESHOLD = 3L;
+
+  /**
+   * Get the global default value for backoff enabled setting.
+   * @return true if backoff is enabled, false otherwise
+   */
+  public boolean getGlobalAppBackoffEnabled() {
+    return getBoolean(PREFIX + BACKOFF_ENABLED, DEFAULT_BACKOFF_ENABLED);
+  }
+
+  /**
+   * Get the global default value for backoff interval in milliseconds.
+   * @return the backoff interval in milliseconds
+   */
+  public long getGlobalAppBackoffIntervalMs() {
+    return getTimeDuration(PREFIX + APP_BACKOFF_INTERVAL_MS,
+        DEFAULT_APP_BACKOFF_INTERVAL_MS, TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Get the global default value for missed opportunities' threshold.
+   * @return the missed opportunities threshold
+   */
+  public long getGlobalAppBackoffMissedThreshold() {
+    return getLong(PREFIX + APP_BACKOFF_MISSED_THRESHOLD,
+        DEFAULT_APP_BACKOFF_MISSED_THRESHOLD);
+  }
+
+  /**
+   * Check if app-backoff is enabled for a specific queue.
+   * @param queue the queue path
+   * @return true if app-backoff is enabled for the queue, false otherwise
+   */
+  public boolean isAppBackoffEnabled(QueuePath queue) {
+    return getBoolean(getQueuePrefix(queue) + BACKOFF_ENABLED,
+        getGlobalAppBackoffEnabled());
+  }
+
+  /**
+   * Get the app-backoff interval in milliseconds for a specific queue.
+   * @param queue the queue path
+   * @return the app-backoff interval in milliseconds
+   */
+  public long getAppBackoffIntervalMs(QueuePath queue) {
+    return getTimeDuration(getQueuePrefix(queue) + APP_BACKOFF_INTERVAL_MS,
+        getGlobalAppBackoffIntervalMs(), TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Get the missed opportunities threshold for a specific queue.
+   * @param queue the queue path
+   * @return the missed opportunities threshold
+   */
+  public long getAppBackoffMissedThreshold(QueuePath queue) {
+    return getLong(getQueuePrefix(queue) + APP_BACKOFF_MISSED_THRESHOLD,
+        getGlobalAppBackoffMissedThreshold());
+  }
+
+  /**
+   * Set the app-backoff enabled flag for a specific queue (for testing).
+   * @param queue the queue path
+   * @param enabled the backoff enabled flag
+   */
+  @VisibleForTesting
+  public void setAppBackoffEnabled(QueuePath queue, boolean enabled) {
+    setBoolean(getQueuePrefix(queue) + BACKOFF_ENABLED, enabled);
+  }
+
+  /**
+   * Set the app-backoff interval in milliseconds for a specific queue (for testing).
+   * @param queue the queue path
+   * @param intervalMs the backoff interval in milliseconds
+   */
+  @VisibleForTesting
+  public void setAppBackoffIntervalMs(QueuePath queue, long intervalMs) {
+    setLong(getQueuePrefix(queue) + APP_BACKOFF_INTERVAL_MS, intervalMs);
+  }
+
+  /**
+   * Set the app-backoff missed opportunities threshold for a specific queue (for testing).
+   * @param queue the queue path
+   * @param threshold the missed opportunities threshold
+   */
+  @VisibleForTesting
+  public void setAppBackoffMissedThreshold(QueuePath queue, long threshold) {
+    setLong(getQueuePrefix(queue) + APP_BACKOFF_MISSED_THRESHOLD, threshold);
   }
 }

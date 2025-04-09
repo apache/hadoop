@@ -184,7 +184,16 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   private ConcurrentHashMultiset<SchedulerRequestKey>
       missedNonPartitionedReqSchedulingOpportunity =
       ConcurrentHashMultiset.create();
-  
+
+  /**
+   * Tracks the total number of times the application has missed scheduling
+   * opportunities, which will be incremented when the scheduler cannot allocate
+   * resources for the application, and reset to 0 when the scheduler
+   * successfully allocates resources for the application or transitions
+   * the application to the backoff state.
+   */
+  private final AtomicLong appMissedSchedulingOpportunities = new AtomicLong();
+
   // Time of the last container scheduled at the current allowed level
   protected Map<SchedulerRequestKey, Long> lastScheduledContainer =
       new ConcurrentHashMap<>();
@@ -1104,6 +1113,18 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   @VisibleForTesting
   void setSchedulingOpportunities(SchedulerRequestKey schedulerKey, int count) {
     schedulingOpportunities.setCount(schedulerKey, count);
+  }
+
+  public void addAppMissedSchedulingOpportunities() {
+    appMissedSchedulingOpportunities.incrementAndGet();
+  }
+
+  public void resetAppMissedSchedulingOpportunities() {
+    appMissedSchedulingOpportunities.set(0);
+  }
+
+  public long getAppMissedSchedulingOpportunities() {
+    return appMissedSchedulingOpportunities.get();
   }
 
   private AggregateAppResourceUsage getRunningAggregateAppResourceUsage() {

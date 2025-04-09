@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
@@ -39,6 +40,8 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -154,6 +157,13 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   private final List<FiCaSchedulerApp> runnableApps = new ArrayList<>();
   private final List<FiCaSchedulerApp> nonRunnableApps = new ArrayList<>();
 
+  // Backoff related variables
+  private final boolean appBackoffEnabled;
+  private long appBackoffIntervalMs = 0L;
+  private long appBackoffMissedThreshold = 0L;
+  // Cache of applications that are in backoff state
+  private Cache<ApplicationId, Boolean> appsInBackoffState = null;
+
   public AbstractLeafQueue(CapacitySchedulerQueueContext queueContext,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
     this(queueContext, queueName, parent, old, false);
@@ -170,6 +180,26 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
     // One time initialization is enough since it is static ordering policy
     this.pendingOrderingPolicy = new FifoOrderingPolicyForPendingApps<>();
+
+    // Initialize the backoff configurations
+    CapacitySchedulerConfiguration conf = queueContext.getConfiguration();
+    appBackoffEnabled = conf.isAppBackoffEnabled(queuePath);
+    if (appBackoffEnabled) {
+      appBackoffIntervalMs = conf.getAppBackoffIntervalMs(queuePath);
+      if (appBackoffIntervalMs <= 0) {
+        throw new IOException(
+            "Backoff interval must be greater than 0 for queue: " + queuePath);
+      }
+      appBackoffMissedThreshold =
+          conf.getAppBackoffMissedThreshold(queuePath);
+      if (appBackoffMissedThreshold <= 0) {
+        throw new IOException(
+            "Backoff app missed threshold must be greater than 0 for queue: "
+                + queuePath);
+      }
+      appsInBackoffState = CacheBuilder.newBuilder().expireAfterWrite(
+          appBackoffIntervalMs, TimeUnit.MILLISECONDS).build();
+    }
   }
 
   @SuppressWarnings("checkstyle:nowhitespaceafter")
@@ -314,7 +344,10 @@ public class AbstractLeafQueue extends AbstractCSQueue {
               + defaultAppPriorityPerQueue + "\npriority = " + priority
               + "\nmaxLifetime = " + getMaximumApplicationLifetime()
               + " seconds" + "\ndefaultLifetime = "
-              + getDefaultApplicationLifetime() + " seconds");
+              + getDefaultApplicationLifetime() + " seconds"
+              + "\nbackoffEnabled = " + appBackoffEnabled
+              + "\nbackoffIntervalMs = " + appBackoffIntervalMs
+              + "\nbackoffAppMissedThreshold = " + appBackoffMissedThreshold);
     } finally {
       writeLock.unlock();
     }
@@ -1212,6 +1245,33 @@ public class AbstractLeafQueue extends AbstractCSQueue {
          assignmentIterator.hasNext();) {
       FiCaSchedulerApp application = assignmentIterator.next();
 
+      // Check for backoff state
+      if (isAppInBackoffState(application.getApplicationId())) {
+        // Skip if this app is still in backoff state
+        ActivitiesLogger.APP.recordRejectedAppActivityFromLeafQueue(
+            activitiesManager, node, application, application.getPriority(),
+            ActivityDiagnosticConstant.APPLICATION_IN_BACKOFF_STATE);
+        continue;
+      }
+
+      // Check for missed scheduling opportunities
+      if (isAppShouldEnterBackoffState(application)) {
+        // Don't assign containers to this app when the missed opportunities reached the threshold.
+        LOG.info("Skip scheduling for application {} as it has reached the "
+            + "missed scheduling threshold {}, the backoff interval is {} ms.",
+            application.getApplicationId(), appBackoffMissedThreshold,
+            appBackoffIntervalMs);
+        ActivitiesLogger.APP.recordRejectedAppActivityFromLeafQueue(
+            activitiesManager, node, application, application.getPriority(),
+            ActivityDiagnosticConstant.APPLICATION_IN_BACKOFF_STATE);
+        // Add the app to the backoff state, to prevent further scheduling
+        // attempts during the backoff period.
+        appsInBackoffState.put(application.getApplicationId(), true);
+        // Reset missed scheduling opportunities
+        application.resetAppMissedSchedulingOpportunities();
+        continue;
+      }
+
       ActivitiesLogger.APP.startAppAllocationRecording(activitiesManager,
           node, SystemClock.getInstance().getTime(), application);
 
@@ -1302,6 +1362,9 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
             parent.getQueuePath(), getQueuePath(),
             ActivityState.ACCEPTED, ActivityDiagnosticConstant.EMPTY);
+        // Reset missed scheduling opportunities after successfully allocating
+        // resources for the application.
+        application.resetAppMissedSchedulingOpportunities();
         return assignment;
       } else if (assignment.getSkippedType()
           == CSAssignment.SkippedType.OTHER) {
@@ -1309,6 +1372,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
             activitiesManager, application.getApplicationId(),
             ActivityState.SKIPPED, ActivityDiagnosticConstant.EMPTY);
         application.updateNodeInfoForAMDiagnostics(node);
+        // Add missed scheduling opportunities for the application
+        application.addAppMissedSchedulingOpportunities();
       } else if (assignment.getSkippedType()
           == CSAssignment.SkippedType.QUEUE_LIMIT) {
         ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
@@ -1333,6 +1398,15 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         ActivityDiagnosticConstant.EMPTY);
 
     return CSAssignment.NULL_ASSIGNMENT;
+  }
+
+  public boolean isAppInBackoffState(ApplicationId appId) {
+    return appBackoffEnabled && appsInBackoffState.getIfPresent(appId) != null;
+  }
+
+  public boolean isAppShouldEnterBackoffState(FiCaSchedulerApp application) {
+    return appBackoffEnabled &&
+        application.getAppMissedSchedulingOpportunities() >= appBackoffMissedThreshold;
   }
 
   @Override

@@ -70,6 +70,9 @@ public class ActivityDiagnosticConstant {
   public final static String APPLICATION_DO_NOT_NEED_RESOURCE =
       "Application does not need more resource";
 
+  public static final String APPLICATION_IN_BACKOFF_STATE =
+      "Application is in backoff state due to reaching missed scheduling threshold";
+
   /*
    * Request level diagnostics
    */
