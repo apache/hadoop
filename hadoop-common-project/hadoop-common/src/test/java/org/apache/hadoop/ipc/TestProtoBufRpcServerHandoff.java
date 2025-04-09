@@ -159,7 +159,8 @@ public class TestProtoBufRpcServerHandoff {
     Future<ClientInvocationCallable> future1 = completionService.take();
     ClientInvocationCallable callable1 = future1.get();
 
-    double deferredProcessingTime = server.getRpcMetrics().getDeferredRpcProcessingTime().lastStat().max();
+    double deferredProcessingTime = server.getRpcMetrics().getDeferredRpcProcessingTime()
+        .lastStat().max();
     double processingTime = server.getRpcMetrics().getRpcProcessingTime().lastStat().max();
     assertEquals(deferredProcessingTime, processingTime);
   }
