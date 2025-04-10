@@ -1711,7 +1711,8 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Skip a test if encryption algorithm is not empty, or if it is set to anything other than AES256.
+   * Skip a test if encryption algorithm is not empty, or if it is set to
+   * anything other than AES256.
    *
    * @param configuration configuration
    */
@@ -1721,7 +1722,8 @@ public final class S3ATestUtils {
       final EncryptionSecrets secrets = buildEncryptionSecrets(bucket, configuration);
       S3AEncryptionMethods s3AEncryptionMethods = secrets.getEncryptionMethod();
 
-      if (s3AEncryptionMethods.getMethod().equals(SSE_S3.getMethod()) || s3AEncryptionMethods.getMethod().isEmpty()) {
+      if (s3AEncryptionMethods.getMethod().equals(SSE_S3.getMethod())
+              || s3AEncryptionMethods.getMethod().isEmpty()) {
         return;
       }
 
