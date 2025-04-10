@@ -1714,18 +1714,22 @@ public final class S3ATestUtils {
    * Skip a test if encryption algorithm is not empty, or if it is set to anything other than AES256.
    *
    * @param configuration configuration
-   * @throws IOException  if the secret lookup fails.
    */
-  public static void skipIfEncryptionSet(Configuration configuration) throws IOException {
+  public static void skipForAnyEncryptionExceptSSES3(Configuration configuration) {
     String bucket = getTestBucketName(configuration);
-    final EncryptionSecrets secrets = buildEncryptionSecrets(bucket, configuration);
-    S3AEncryptionMethods s3AEncryptionMethods = secrets.getEncryptionMethod();
+    try {
+      final EncryptionSecrets secrets = buildEncryptionSecrets(bucket, configuration);
+      S3AEncryptionMethods s3AEncryptionMethods = secrets.getEncryptionMethod();
 
-    if (s3AEncryptionMethods.getMethod().equals(SSE_S3.getMethod()) || s3AEncryptionMethods.getMethod().isEmpty()) {
-      return;
+      if (s3AEncryptionMethods.getMethod().equals(SSE_S3.getMethod()) || s3AEncryptionMethods.getMethod().isEmpty()) {
+        return;
+      }
+
+      skip("Encryption method is set to " + s3AEncryptionMethods.getMethod());
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
 
-    skip("Encryption method is set to " + s3AEncryptionMethods.getMethod());
   }
 
   /**
