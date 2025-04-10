@@ -122,15 +122,5 @@
       <artifactId>hadoop-azure-datalake</artifactId>
       <scope>compile</scope>
     </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-cos</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-huaweicloud</artifactId>
-      <scope>compile</scope>
-    </dependency>
   </dependencies>
 </project>
