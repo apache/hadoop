@@ -42,8 +42,8 @@ public class TestOpportunisticContainerContext {
   private OpportunisticContainerContext opportunisticContainerContext;
   private Map<Resource, OpportunisticContainerAllocator.EnrichedResourceRequest> reqMap =
           new HashMap<>();
-  private TreeMap<SchedulerRequestKey, Map<Resource, OpportunisticContainerAllocator.EnrichedResourceRequest>>
-          outstandingOpReqs;
+  private TreeMap<SchedulerRequestKey,
+          Map<Resource, OpportunisticContainerAllocator.EnrichedResourceRequest>> outstandingOpReqs;
 
   @Before
   public void setUp() {
@@ -55,7 +55,7 @@ public class TestOpportunisticContainerContext {
    * Resource Request - {
    * Location = ANY
    * No of container != 0
-   * }
+   * }.
    */
   @Test
   public void testAddToOutstandingReqsWithANYRequest() {
@@ -70,7 +70,7 @@ public class TestOpportunisticContainerContext {
    * Resource Request - {
    * Location != ANY
    * No of container = 0
-   * }
+   * }.
    */
   @Test
   public void testAddToOutstandingReqsWithZeroContainer() {
@@ -88,7 +88,7 @@ public class TestOpportunisticContainerContext {
    * Resource Request - [
    * {Location != ANY, No of Container = 0}
    * {Location = ANY, No of Container = 0}
-   * ]
+   * ].
    */
   @Test
   public void testAddToOutstandingReqsWithZeroContainerAndMultipleSchedulerKey() {
@@ -109,7 +109,7 @@ public class TestOpportunisticContainerContext {
    * Resource Request - [
    * {Location != ANY, No of Container = 0}
    * {Location = ANY, No of Container != 0}
-   * ]
+   * ].
    */
   @Test
   public void testAddToOutstandingReqsWithMultipleSchedulerKey() {
@@ -131,7 +131,7 @@ public class TestOpportunisticContainerContext {
    * Location != ANY
    * No of container = 0
    * Capability = NULL
-   * }
+   * }.
    */
   @Test
   public void testAddToOutstandingReqsWithZeroContainerAndNullCapability() {
@@ -150,7 +150,7 @@ public class TestOpportunisticContainerContext {
    * Location != ANY
    * No of container = 0
    * Req map is NULL
-   * }
+   * }.
    */
   @Test
   public void testAddToOutstandingReqsWithEmptyReqMap() {
