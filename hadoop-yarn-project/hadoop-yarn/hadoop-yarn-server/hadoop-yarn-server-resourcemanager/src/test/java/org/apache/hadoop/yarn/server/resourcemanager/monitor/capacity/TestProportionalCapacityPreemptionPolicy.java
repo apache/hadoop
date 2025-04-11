@@ -1083,46 +1083,67 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testLeafQueueNameExtraction() throws Exception {
-    ProportionalCapacityPreemptionPolicy policy =
-        buildPolicy(Q_DATA_FOR_IGNORE);
+  public void testLeafQueueNameExtractionWithFlexibleAQC() throws Exception {
+    runLeafQueueNameExtractionTest(true);
+  }
+
+  @Test
+  public void testLeafQueueNameExtractionWithLegacyAQC() throws Exception {
+    runLeafQueueNameExtractionTest(false);
+  }
+
+  private void runLeafQueueNameExtractionTest(boolean isFlexible) throws Exception {
+    ProportionalCapacityPreemptionPolicy policy = buildPolicy(Q_DATA_FOR_IGNORE);
     ParentQueue root = (ParentQueue) mCS.getRootQueue();
-    root.addDynamicParentQueue("childlessFlexible");
+
+    String queueName = isFlexible ? "childlessFlexible" : "childlessLegacy";
+    String dynamicQueuePath = isFlexible ? "root.dynamicParent" : "root.dynamicLegacyParent";
+
+    root.addDynamicParentQueue(queueName);
     List<CSQueue> queues = root.getChildQueues();
     ArrayList<CSQueue> extendedQueues = new ArrayList<>();
     LinkedList<ParentQueue> pqs = new LinkedList<>();
-    ParentQueue dynamicParent = mockParentQueue(
-        null, 0, pqs);
-    when(dynamicParent.getQueuePath()).thenReturn("root.dynamicParent");
-    when(dynamicParent.getQueueCapacities()).thenReturn(
-        new QueueCapacities(false));
-    QueueResourceQuotas dynamicParentQr = new QueueResourceQuotas();
-    dynamicParentQr.setEffectiveMaxResource(Resource.newInstance(1, 1));
-    dynamicParentQr.setEffectiveMinResource(Resources.createResource(1));
-    dynamicParentQr.setEffectiveMaxResource(RMNodeLabelsManager.NO_LABEL,
-        Resource.newInstance(1, 1));
-    dynamicParentQr.setEffectiveMinResource(RMNodeLabelsManager.NO_LABEL,
-        Resources.createResource(1));
-    when(dynamicParent.getQueueResourceQuotas()).thenReturn(dynamicParentQr);
-    when(dynamicParent.getEffectiveCapacity(RMNodeLabelsManager.NO_LABEL))
-        .thenReturn(Resources.createResource(1));
-    when(dynamicParent.getEffectiveMaxCapacity(RMNodeLabelsManager.NO_LABEL))
-        .thenReturn(Resource.newInstance(1, 1));
-    ResourceUsage resUsage = new ResourceUsage();
-    resUsage.setUsed(Resources.createResource(1024));
-    resUsage.setReserved(Resources.createResource(1024));
-    when(dynamicParent.getQueueResourceUsage()).thenReturn(resUsage);
-    when(dynamicParent.isEligibleForAutoQueueCreation()).thenReturn(true);
+
+    ParentQueue dynamicParent = mockParentQueue(null, 0, pqs);
+    mockQueueFields(dynamicParent, dynamicQueuePath);
+
+    if (isFlexible) {
+      when(dynamicParent.isEligibleForAutoQueueCreation()).thenReturn(true);
+    } else {
+      when(dynamicParent.isEligibleForLegacyAutoQueueCreation()).thenReturn(true);
+    }
+
     extendedQueues.add(dynamicParent);
     extendedQueues.addAll(queues);
     when(root.getChildQueues()).thenReturn(extendedQueues);
 
     policy.editSchedule();
 
-    assertFalse(policy.getLeafQueueNames().contains("root.dynamicParent"),
+    assertFalse(policy.getLeafQueueNames().contains(dynamicQueuePath),
         "dynamicParent should not be a LeafQueue candidate");
   }
 
+  private void mockQueueFields(ParentQueue queue, String queuePath) {
+    when(queue.getQueuePath()).thenReturn(queuePath);
+    when(queue.getQueueCapacities()).thenReturn(new QueueCapacities(false));
+
+    QueueResourceQuotas qrq = new QueueResourceQuotas();
+    qrq.setEffectiveMaxResource(Resource.newInstance(1, 1));
+    qrq.setEffectiveMinResource(Resources.createResource(1));
+    qrq.setEffectiveMaxResource(RMNodeLabelsManager.NO_LABEL, Resource.newInstance(1, 1));
+    qrq.setEffectiveMinResource(RMNodeLabelsManager.NO_LABEL, Resources.createResource(1));
+
+    when(queue.getQueueResourceQuotas()).thenReturn(qrq);
+    when(queue.getEffectiveCapacity(RMNodeLabelsManager.NO_LABEL))
+        .thenReturn(Resources.createResource(1));
+    when(queue.getEffectiveMaxCapacity(RMNodeLabelsManager.NO_LABEL))
+        .thenReturn(Resource.newInstance(1, 1));
+
+    ResourceUsage usage = new ResourceUsage();
+    usage.setUsed(Resources.createResource(1024));
+    usage.setReserved(Resources.createResource(1024));
+    when(queue.getQueueResourceUsage()).thenReturn(usage);
+  }
   static class IsPreemptionRequestFor
       implements ArgumentMatcher<ContainerPreemptEvent> {
     private final ApplicationAttemptId appAttId;
@@ -1369,6 +1390,10 @@ public class TestProportionalCapacityPreemptionPolicy {
       Resource[] used, Resource[] pending, Resource[] reserved, int[] apps,
       Resource[] gran) {
     LeafQueue lq = mock(LeafQueue.class);
+
+    String queuePath = p.getQueuePath() + ".queue" + (char)('A' + i - 1);
+    when(mCS.getQueue(queuePath)).thenReturn(lq);
+
     ResourceCalculator rc = mCS.getResourceCalculator();
     List<ApplicationAttemptId> appAttemptIdList = 
         new ArrayList<ApplicationAttemptId>();

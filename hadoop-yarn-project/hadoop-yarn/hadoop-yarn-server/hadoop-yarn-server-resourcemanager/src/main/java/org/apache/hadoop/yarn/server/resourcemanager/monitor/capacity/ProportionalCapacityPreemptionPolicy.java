@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -430,15 +431,28 @@ public class ProportionalCapacityPreemptionPolicy
   }
 
   private Set<String> getLeafQueueNames(TempQueuePerPartition q) {
-    // Also exclude ParentQueues, which might be without children
-    if (CollectionUtils.isEmpty(q.children)
-        && !(q.parentQueue instanceof ManagedParentQueue)
-        && (q.parentQueue == null
-        || !q.parentQueue.isEligibleForAutoQueueCreation())) {
-      return ImmutableSet.of(q.queueName);
+    Set<String> leafQueueNames = new HashSet<>();
+
+    boolean isAutoQueueEligible = q.parentQueue != null &&
+        (q.parentQueue.isEligibleForAutoQueueCreation() ||
+         q.parentQueue.isEligibleForLegacyAutoQueueCreation());
+    boolean isManagedParent = q.parentQueue instanceof ManagedParentQueue;
+
+    if (isAutoQueueEligible || isManagedParent) {
+        return leafQueueNames;
     }
 
-    Set<String> leafQueueNames = new HashSet<>();
+    // Only consider this a leaf queue if:
+    // It has no children AND
+    // It is a concrete leaf queue (not a childless parent)
+    if (CollectionUtils.isEmpty(q.children)) {
+      CSQueue queue = scheduler.getQueue(q.queueName);
+      if (queue instanceof LeafQueue) {
+          leafQueueNames.add(q.queueName);
+      }
+      return leafQueueNames;
+    }
+
     for (TempQueuePerPartition child : q.children) {
       leafQueueNames.addAll(getLeafQueueNames(child));
     }

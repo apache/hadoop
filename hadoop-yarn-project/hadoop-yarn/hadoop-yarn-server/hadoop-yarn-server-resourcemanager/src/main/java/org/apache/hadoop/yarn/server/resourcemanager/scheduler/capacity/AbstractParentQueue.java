@@ -553,6 +553,11 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
         isAutoQueueCreationV2Enabled(getQueuePathObject());
   }
 
+  public boolean isEligibleForLegacyAutoQueueCreation() {
+    return isDynamicQueue() || queueContext.getConfiguration().
+        isAutoCreateChildQueueEnabled(getQueuePathObject());
+  }
+
   @Override
   public void reinitialize(CSQueue newlyParsedQueue,
         Resource clusterResource) throws IOException {
