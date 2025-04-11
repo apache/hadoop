@@ -23,12 +23,15 @@ import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.enableAnalyticsAccelerator;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipForAnyEncryptionExceptSSES3;
 
 /**
- * S3A contract tests for vectored reads with the Analytics stream. The analytics stream does
- * not explicitly implement the vectoredRead() method, or currently do and vectored-read specific
- * optimisations (such as range coalescing). However, this test ensures that the base implementation
- * of readVectored {@link org.apache.hadoop.fs.PositionedReadable} still works.
+ * S3A contract tests for vectored reads with the Analytics stream.
+ * The analytics stream does not explicitly implement the vectoredRead() method,
+ * or currently do and vectored-read specific optimisations
+ * (such as range coalescing). However, this test ensures that the base
+ * implementation of readVectored {@link org.apache.hadoop.fs.PositionedReadable}
+ * still works.
  */
 public class ITestS3AContractAnalyticsStreamVectoredRead extends AbstractContractVectoredReadTest {
 
@@ -44,6 +47,16 @@ public class ITestS3AContractAnalyticsStreamVectoredRead extends AbstractContrac
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     enableAnalyticsAccelerator(conf);
+    // If encryption is set, some AAL tests will fail.
+    // This is because AAL caches the head request response, and uses
+    // the eTag when making a GET request. When using encryption, the eTag is
+    // no longer a hash of the object content, and is not always the same when
+    // the same object is created multiple times. This test creates the file
+    // vectored_file.txt before running each test, which will have a
+    // different eTag when using encryption, leading to preconditioned failures.
+    // This issue is tracked in:
+    // https://github.com/awslabs/analytics-accelerator-s3/issues/218
+    skipForAnyEncryptionExceptSSES3(conf);
     conf.set("fs.contract.vector-io-early-eof-check", "false");
     return conf;
   }

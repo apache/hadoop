@@ -72,6 +72,7 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
   @Before
   public void setUp() throws Exception {
     super.setup();
+    skipIfClientSideEncryption();
     externalTestFile = getExternalData(getConfiguration());
   }
 
