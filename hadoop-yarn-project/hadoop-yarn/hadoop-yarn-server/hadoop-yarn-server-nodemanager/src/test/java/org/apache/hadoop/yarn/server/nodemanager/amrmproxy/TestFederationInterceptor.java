@@ -33,6 +33,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.registry.client.api.RegistryOperations;
@@ -102,6 +103,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * class. The tests for AMRMProxyService has been written cleverly so that it
  * can be reused to validate different request interceptor chains.
  */
+@Timeout(value=10, unit = TimeUnit.MINUTES)
 public class TestFederationInterceptor extends BaseAMRMProxyTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFederationInterceptor.class);
