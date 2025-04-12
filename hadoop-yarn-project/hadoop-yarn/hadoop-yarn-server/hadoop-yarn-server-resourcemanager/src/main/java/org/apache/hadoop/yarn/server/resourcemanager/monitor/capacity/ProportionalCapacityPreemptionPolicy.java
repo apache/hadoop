@@ -431,28 +431,26 @@ public class ProportionalCapacityPreemptionPolicy
   }
 
   private Set<String> getLeafQueueNames(TempQueuePerPartition q) {
-    Set<String> leafQueueNames = new HashSet<>();
-
     boolean isAutoQueueEligible = q.parentQueue != null &&
         (q.parentQueue.isEligibleForAutoQueueCreation() ||
          q.parentQueue.isEligibleForLegacyAutoQueueCreation());
     boolean isManagedParent = q.parentQueue instanceof ManagedParentQueue;
 
-    if (isAutoQueueEligible || isManagedParent) {
-        return leafQueueNames;
+    if ((isAutoQueueEligible || isManagedParent)) {
+      return Collections.emptySet();
     }
 
     // Only consider this a leaf queue if:
-    // It has no children AND
+    // It has no children and
     // It is a concrete leaf queue (not a childless parent)
     if (CollectionUtils.isEmpty(q.children)) {
       CSQueue queue = scheduler.getQueue(q.queueName);
       if (queue instanceof LeafQueue) {
-          leafQueueNames.add(q.queueName);
+        return ImmutableSet.of(q.queueName);
       }
-      return leafQueueNames;
+      return Collections.emptySet();
     }
-
+    Set<String> leafQueueNames = new HashSet<>();
     for (TempQueuePerPartition child : q.children) {
       leafQueueNames.addAll(getLeafQueueNames(child));
     }
