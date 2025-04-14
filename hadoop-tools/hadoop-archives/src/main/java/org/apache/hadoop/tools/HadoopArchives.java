@@ -469,8 +469,8 @@ public class HadoopArchives implements Tool {
     int numFiles = 0;
     long totalSize = 0;
     FileSystem fs = parentPath.getFileSystem(conf);
-    this.blockSize = conf.getLong(HAR_BLOCKSIZE_LABEL, blockSize);
-    this.partSize = conf.getLong(HAR_PARTSIZE_LABEL, partSize);
+    this.blockSize = conf.getLongBytes(HAR_BLOCKSIZE_LABEL, blockSize);
+    this.partSize = conf.getLongBytes(HAR_PARTSIZE_LABEL, partSize);
     conf.setLong(HAR_BLOCKSIZE_LABEL, blockSize);
     conf.setLong(HAR_PARTSIZE_LABEL, partSize);
     conf.set(DST_HAR_LABEL, archiveName);
