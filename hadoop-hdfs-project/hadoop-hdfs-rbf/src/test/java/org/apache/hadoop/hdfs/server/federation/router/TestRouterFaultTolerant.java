@@ -23,6 +23,8 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getAd
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getFileSystem;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.refreshRoutersCaches;
 import static org.apache.hadoop.hdfs.server.federation.MockNamenode.registerSubclusters;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.ASYNC_MODE;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.SYNC_MODE;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -34,6 +36,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Method;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -76,9 +79,13 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,16 +105,14 @@ public class TestRouterFaultTolerant {
 
 
   /** Namenodes for the test per name service id (subcluster). */
-  private Map<String, MockNamenode> namenodes = new HashMap<>();
+  private static Map<String, MockNamenode> namenodes = new HashMap<>();
   /** Routers for the test. */
-  private List<Router> routers = new ArrayList<>();
+  private static List<Router> routers = new ArrayList<>();
 
   /** Run test tasks in parallel. */
-  private ExecutorService service;
+  private static ExecutorService service;
 
-
-  @BeforeEach
-  public void setup() throws Exception {
+  public static void setup(String rpcMode) throws Exception {
     LOG.info("Start the Namenodes");
     Configuration nnConf = new HdfsConfiguration();
     nnConf.setInt(DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_KEY, 10);
@@ -141,6 +146,9 @@ public class TestRouterFaultTolerant {
         MultipleDestinationMountTableResolver.class,
         FileSubclusterResolver.class);
     routerConf.addResource(stateStoreConf);
+    if (rpcMode.equals(ASYNC_MODE)) {
+      routerConf.setBoolean(RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_KEY, true);
+    }
 
     for (int i = 0; i < NUM_ROUTERS; i++) {
       // router0 doesn't allow partial listing
@@ -160,8 +168,7 @@ public class TestRouterFaultTolerant {
     service = Executors.newFixedThreadPool(10);
   }
 
-  @AfterEach
-  public void cleanup() throws Exception {
+  public static void cleanup() throws Exception {
     LOG.info("Stopping the cluster");
     for (final MockNamenode nn : namenodes.values()) {
       nn.stop();
@@ -202,12 +209,43 @@ public class TestRouterFaultTolerant {
     refreshRoutersCaches(routers);
   }
 
+  @Nested
+  @ExtendWith(RouterServerHelperInTestRouterFaultTolerant.class)
+  class TestWithSyncRouterRpc {
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testWriteWithFailedSubclusterSync() throws Exception {
+      testWriteWithFailedSubcluster();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testReadWithFailedSubclusterSync() throws Exception {
+      testReadWithFailedSubcluster();
+    }
+  }
+
+  @Nested
+  @ExtendWith(RouterServerHelperInTestRouterFaultTolerant.class)
+  class TestWithAsyncRouterRpc {
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testWriteWithFailedSubclusterAsync() throws Exception {
+      testWriteWithFailedSubcluster();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testReadWithFailedSubclusterAsync() throws Exception {
+      testReadWithFailedSubcluster();
+    }
+  }
+  
   /**
    * Test the behavior of the Router when one of the subclusters in a mount
    * point fails. In particular, it checks if it can write files or not.
    * Related to {@link TestRouterRpcMultiDestination#testSubclusterDown()}.
    */
-  @Test
   public void testWriteWithFailedSubcluster() throws Exception {
 
     LOG.info("Stop ns1 to simulate an unavailable subcluster");
@@ -614,7 +652,6 @@ public class TestRouterFaultTolerant {
         (PrivilegedExceptionAction<FileSystem>) () -> getFileSystem(router));
   }
 
-  @Test
   public void testReadWithFailedSubcluster() throws Exception {
 
     DestinationOrder order = DestinationOrder.HASH_ALL;
@@ -671,5 +708,32 @@ public class TestRouterFaultTolerant {
       assertTrue(RouterRpcClient.isUnavailableException(ioe),
           "Expected an unavailable exception for:" + ioe.getClass());
     }
+  }
+}
+
+class RouterServerHelperInTestRouterFaultTolerant implements
+    BeforeEachCallback, AfterEachCallback {
+  public static final ThreadLocal<RouterServerHelperInTestRouterFaultTolerant>
+      TEST_ROUTER_SERVER_TL = new InheritableThreadLocal<>();
+
+  @Override
+  public void afterEach(ExtensionContext context) throws Exception {
+    TestRouterFaultTolerant.cleanup();
+    TEST_ROUTER_SERVER_TL.remove();
+  }
+
+  @Override
+  public void beforeEach(ExtensionContext context) throws Exception {
+    Method testMethod = context.getRequiredTestMethod();
+    ValueSource enumAnnotation = testMethod.getAnnotation(ValueSource.class);
+    if (enumAnnotation != null) {
+      String[] strings = enumAnnotation.strings();
+      for (String rpcMode : strings) {
+        if (TEST_ROUTER_SERVER_TL.get() == null) {
+          TestRouterFaultTolerant.setup(rpcMode);
+        }
+      }
+    }
+    TEST_ROUTER_SERVER_TL.set(RouterServerHelperInTestRouterFaultTolerant.this);
   }
 }
