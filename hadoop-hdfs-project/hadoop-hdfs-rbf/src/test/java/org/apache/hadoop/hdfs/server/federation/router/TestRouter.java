@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.ASYNC_MODE;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.SYNC_MODE;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 
@@ -41,8 +44,13 @@ import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.service.Service.STATE;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * The safe mode for the {@link Router} controlled by
@@ -52,8 +60,7 @@ public class TestRouter {
 
   private static Configuration conf;
 
-  @BeforeAll
-  public static void create() throws IOException {
+  public static void create(String rpcMode) throws IOException {
     // Basic configuration without the state store
     conf = new Configuration();
     // 1 sec cache refresh
@@ -82,6 +89,10 @@ public class TestRouter {
             "127.0.0.1:" + 0);
     conf.set(DFSConfigKeys.DFS_NAMENODE_RPC_BIND_HOST_KEY + "." + "ns0",
             "0.0.0.0");
+    
+    if (rpcMode.equals(ASYNC_MODE)) {
+      conf.setBoolean(RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_KEY, true);
+    }
   }
 
   private static void testRouterStartup(Configuration routerConfig)
@@ -113,7 +124,98 @@ public class TestRouter {
     router.close();
   }
 
-  @Test
+  @Nested
+  @ExtendWith(RouterServerHelperInTestRouter.class)
+  class TestWithAsyncRouterRpc {
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testRouterServiceAsync() throws InterruptedException, IOException {
+      testRouterService();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testRouterRestartRpcServiceAsync() throws IOException {
+      testRouterRestartRpcService();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testRouterRpcWithNoSubclustersAsync() throws IOException {
+      testRouterRpcWithNoSubclusters();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testRouterIDInRouterRpcClientAsync() throws Exception {
+      testRouterIDInRouterRpcClient();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testRouterMetricsWhenDisabledAsync() throws Exception {
+      testRouterMetricsWhenDisabled();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testSwitchRouterAsync() throws IOException {
+      testSwitchRouter();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testNamenodeHeartBeatEnableDefaultAsync() throws IOException {
+      testNamenodeHeartBeatEnableDefault();
+    }
+  }
+
+  @Nested
+  @ExtendWith(RouterServerHelperInTestRouter.class)
+  class TestWithSyncRouterRpc {
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testRouterServiceSync() throws InterruptedException, IOException {
+      testRouterService();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testRouterRestartRpcServiceSync() throws IOException {
+      testRouterRestartRpcService();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testRouterRpcWithNoSubclustersSync() throws IOException {
+      testRouterRpcWithNoSubclusters();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testRouterIDInRouterRpcClientSync() throws Exception {
+      testRouterIDInRouterRpcClient();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testRouterMetricsWhenDisabledSync() throws Exception {
+      testRouterMetricsWhenDisabled();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testSwitchRouterSync() throws IOException {
+      testSwitchRouter();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testNamenodeHeartBeatEnableDefaultSync() throws IOException {
+      testNamenodeHeartBeatEnableDefault();
+    }
+  }
+
   public void testRouterService() throws InterruptedException, IOException {
 
     // Admin only
@@ -141,7 +243,6 @@ public class TestRouter {
     testRouterStartup(new RouterConfigBuilder(conf).all().build());
   }
 
-  @Test
   public void testRouterRestartRpcService() throws IOException {
 
     // Start
@@ -162,7 +263,6 @@ public class TestRouter {
     router.close();
   }
 
-  @Test
   public void testRouterRpcWithNoSubclusters() throws IOException {
 
     Router router = new Router();
@@ -191,7 +291,6 @@ public class TestRouter {
     router.close();
   }
 
-  @Test
   public void testRouterIDInRouterRpcClient() throws Exception {
 
     Router router = new Router();
@@ -207,7 +306,6 @@ public class TestRouter {
     router.close();
   }
 
-  @Test
   public void testRouterMetricsWhenDisabled() throws Exception {
 
     Router router = new Router();
@@ -221,7 +319,6 @@ public class TestRouter {
     router.close();
   }
 
-  @Test
   public void testSwitchRouter() throws IOException {
     assertRouterHeartbeater(true, true, true);
     assertRouterHeartbeater(true, true, false);
@@ -269,7 +366,6 @@ public class TestRouter {
     router.close();
   }
 
-  @Test
   public void testNamenodeHeartBeatEnableDefault() throws IOException {
     checkNamenodeHeartBeatEnableDefault(true);
     checkNamenodeHeartBeatEnableDefault(false);
@@ -302,5 +398,30 @@ public class TestRouter {
         assertNull(router.getNamenodeHeartbeatServices());
       }
     }
+  }
+}
+
+class RouterServerHelperInTestRouter implements AfterAllCallback, BeforeEachCallback {
+  public static final ThreadLocal<RouterServerHelperInTestRouter>
+      TEST_ROUTER_SERVER_TL = new InheritableThreadLocal<>();
+
+  @Override
+  public void afterAll(ExtensionContext context) throws Exception {
+    TEST_ROUTER_SERVER_TL.remove();
+  }
+
+  @Override
+  public void beforeEach(ExtensionContext context) throws Exception {
+    Method testMethod = context.getRequiredTestMethod();
+    ValueSource enumAnnotation = testMethod.getAnnotation(ValueSource.class);
+    if (enumAnnotation != null) {
+      String[] strings = enumAnnotation.strings();
+      for (String rpcMode : strings) {
+        if (TEST_ROUTER_SERVER_TL.get() == null) {
+          TestRouter.create(rpcMode);
+        }
+      }
+    }
+    TEST_ROUTER_SERVER_TL.set(RouterServerHelperInTestRouter.this);
   }
 }
