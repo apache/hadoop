@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
@@ -26,7 +28,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.junit.jupiter.api.Assertions;
 
 public class TestQueueCapacities {
   private static final Logger LOG =
@@ -105,11 +106,11 @@ public class TestQueueCapacities {
 
     // Set to 1, and check
     set(qc, suffix, label, 1f);
-    Assertions.assertEquals(1f, get(qc, suffix, label), 1e-8);
+    assertEquals(1f, get(qc, suffix, label), 1e-8);
 
     // Set to 2, and check
     set(qc, suffix, label, 2f);
-    Assertions.assertEquals(2f, get(qc, suffix, label), 1e-8);
+    assertEquals(2f, get(qc, suffix, label), 1e-8);
   }
 
   @MethodSource("getParameters")
@@ -126,9 +127,9 @@ public class TestQueueCapacities {
   public void testDefaultValues(String pSuffix) {
     initTestQueueCapacities(pSuffix);
     QueueCapacities qc = new QueueCapacities(false);
-    Assertions.assertEquals(-1, qc.getWeight(""), 1e-6);
-    Assertions.assertEquals(-1, qc.getWeight("x"), 1e-6);
-    Assertions.assertEquals(0, qc.getCapacity(""), 1e-6);
-    Assertions.assertEquals(0, qc.getCapacity("x"), 1e-6);
+    assertEquals(-1, qc.getWeight(""), 1e-6);
+    assertEquals(-1, qc.getWeight("x"), 1e-6);
+    assertEquals(0, qc.getCapacity(""), 1e-6);
+    assertEquals(0, qc.getCapacity("x"), 1e-6);
   }
 }

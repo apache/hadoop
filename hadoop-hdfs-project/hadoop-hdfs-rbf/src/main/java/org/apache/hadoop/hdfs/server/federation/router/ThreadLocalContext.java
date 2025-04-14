@@ -78,6 +78,7 @@ public class ThreadLocalContext {
     if (call != null) {
       Server.getCurCall().set(call);
     }
+    CallerContext.setCurrent(null);
     if (context != null) {
       CallerContext.setCurrent(context);
     }

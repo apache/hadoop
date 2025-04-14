@@ -28,11 +28,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.streaming.DumpTypedBytes;
 import org.apache.hadoop.typedbytes.TypedBytesInput;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDumpTypedBytes {
 
@@ -65,7 +65,7 @@ public class TestDumpTypedBytes {
       String[] args = new String[1];
       args[0] = "/typedbytestest";
       int ret = dumptb.run(args);
-      assertEquals("Return value != 0.", 0, ret);
+      assertEquals(0, ret, "Return value != 0.");
 
       ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
       TypedBytesInput tbinput = new TypedBytesInput(new DataInputStream(in));
@@ -75,12 +75,11 @@ public class TestDumpTypedBytes {
         assertEquals(Long.class, key.getClass()); // offset
         Object value = tbinput.read();
         assertEquals(String.class, value.getClass());
-        assertTrue("Invalid output.",
-          Integer.parseInt(value.toString()) % 10 == 0);
+        assertTrue(Integer.parseInt(value.toString()) % 10 == 0, "Invalid output.");
         counter++;
         key = tbinput.read();
       }
-      assertEquals("Wrong number of outputs.", 100, counter);
+      assertEquals(100, counter, "Wrong number of outputs.");
     } finally {
       try {
         fs.close();

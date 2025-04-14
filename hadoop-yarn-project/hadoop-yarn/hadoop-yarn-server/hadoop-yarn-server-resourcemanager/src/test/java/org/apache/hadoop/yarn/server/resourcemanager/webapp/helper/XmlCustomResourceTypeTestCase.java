@@ -37,7 +37,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.function.Consumer;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * This class hides the implementation details of how to verify the structure of
@@ -65,9 +65,9 @@ public class XmlCustomResourceTypeTestCase {
 
   private void verifyStatus(BufferedClientResponse response) {
     String responseStr = response.getEntity(String.class);
-    assertEquals("HTTP status should be 200, " +
-        "status info: " + response.getStatusInfo() + " response as string: " + responseStr,
-        200, response.getStatus());
+    assertEquals(200, response.getStatus(), "HTTP status should be 200, " +
+        "status info: " + response.getStatusInfo() +
+        " response as string: " + responseStr);
   }
 
   public void verify(Consumer<Document> verifier) {

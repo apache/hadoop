@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -27,7 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the basic functionality of PseudoLocalFs
@@ -55,7 +58,7 @@ public class TestPseudoLocalFs {
       ++totalSize;
     }
     in.close();
-    assertEquals("File size mismatch with read().", fileSize, totalSize);
+    assertEquals(fileSize, totalSize, "File size mismatch with read().");
 
     // Read data from PseudoLocalFs-based file into buffer to
     // validate read(byte[]) and file size.
@@ -67,7 +70,7 @@ public class TestPseudoLocalFs {
       totalSize += bytesRead;
       bytesRead = in.read(b);
     }
-    assertEquals("File size mismatch with read(byte[]).", fileSize, totalSize);
+    assertEquals(fileSize, totalSize, "File size mismatch with read(byte[]).");
   }
 
   /**
@@ -89,17 +92,18 @@ public class TestPseudoLocalFs {
       expectedExceptionSeen = true;
     }
     if (shouldSucceed) {
-      assertFalse("getFileStatus() has thrown Exception for valid file name "
-                  + path, expectedExceptionSeen);
-      assertNotNull("Missing file status for a valid file.", stat);
+      assertFalse(expectedExceptionSeen,
+          "getFileStatus() has thrown Exception for valid file name " + path);
+      assertNotNull(stat, "Missing file status for a valid file.");
 
       // validate fileSize
       String[] parts = path.toUri().getPath().split("\\.");
       long expectedFileSize = Long.parseLong(parts[parts.length - 1]);
-      assertEquals("Invalid file size.", expectedFileSize, stat.getLen());
+      assertEquals(expectedFileSize, stat.getLen(), "Invalid file size.");
     } else {
-      assertTrue("getFileStatus() did not throw Exception for invalid file "
-                 + " name " + path, expectedExceptionSeen);
+      assertTrue(expectedExceptionSeen,
+          "getFileStatus() did not throw Exception for invalid file "
+          + " name " + path);
     }
   }
 
@@ -121,11 +125,13 @@ public class TestPseudoLocalFs {
       expectedExceptionSeen = true;
     }
     if (shouldSucceed) {
-      assertFalse("create() has thrown Exception for valid file name "
-                  + path, expectedExceptionSeen);
+      assertFalse(expectedExceptionSeen,
+          "create() has thrown Exception for valid file name "
+          + path);
     } else {
-      assertTrue("create() did not throw Exception for invalid file name "
-                 + path, expectedExceptionSeen);
+      assertTrue(expectedExceptionSeen,
+          "create() did not throw Exception for invalid file name "
+          + path);
     }
   }
 
@@ -147,11 +153,13 @@ public class TestPseudoLocalFs {
       expectedExceptionSeen = true;
     }
     if (shouldSucceed) {
-      assertFalse("open() has thrown Exception for valid file name "
-                  + path, expectedExceptionSeen);
+      assertFalse(expectedExceptionSeen,
+          "open() has thrown Exception for valid file name "
+          + path);
     } else {
-      assertTrue("open() did not throw Exception for invalid file name "
-                 + path, expectedExceptionSeen);
+      assertTrue(expectedExceptionSeen,
+          "open() did not throw Exception for invalid file name "
+          + path);
     }
   }
 
@@ -168,9 +176,9 @@ public class TestPseudoLocalFs {
       boolean shouldSucceed) throws IOException {
     boolean ret = pfs.exists(path);
     if (shouldSucceed) {
-      assertTrue("exists() returned false for valid file name " + path, ret);
+      assertTrue(ret, "exists() returned false for valid file name " + path);
     } else {
-      assertFalse("exists() returned true for invalid file name " + path, ret);
+      assertFalse(ret, "exists() returned true for invalid file name " + path);
     }
   }
 
@@ -187,8 +195,8 @@ public class TestPseudoLocalFs {
 
     Path path = new Path("pseudo:///myPsedoFile.1234");
     FileSystem testFs = path.getFileSystem(conf);
-    assertEquals("Failed to obtain a pseudo local file system object from path",
-                 pfs.getUri().getScheme(), testFs.getUri().getScheme());
+    assertEquals(pfs.getUri().getScheme(), testFs.getUri().getScheme(),
+        "Failed to obtain a pseudo local file system object from path");
 
     // Validate PseudoLocalFS operations on URI of some other file system
     path = new Path("file:///myPsedoFile.12345");
@@ -214,8 +222,7 @@ public class TestPseudoLocalFs {
     long fileSize = 231456;
     path = PseudoLocalFs.generateFilePath("my.Psedo.File", fileSize);
     // Validate the above generateFilePath()
-    assertEquals("generateFilePath() failed.", fileSize,
-                 pfs.validateFileNameFormat(path));
+    assertEquals(fileSize, pfs.validateFileNameFormat(path), "generateFilePath() failed.");
 
     validateGetFileStatus(pfs, path, true);
     validateCreate(pfs, path, true);

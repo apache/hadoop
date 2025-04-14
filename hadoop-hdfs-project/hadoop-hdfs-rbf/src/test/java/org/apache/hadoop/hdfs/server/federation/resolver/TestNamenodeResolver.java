@@ -26,11 +26,11 @@ import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStor
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.newStateStore;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.waitStateStore;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -43,10 +43,10 @@ import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUnavailableException;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the basic {@link ActiveNamenodeResolver} functionality.
@@ -56,7 +56,7 @@ public class TestNamenodeResolver {
   private static StateStoreService stateStore;
   private static ActiveNamenodeResolver namenodeResolver;
 
-  @BeforeClass
+  @BeforeAll
   public static void create() throws Exception {
 
     Configuration conf = getStateStoreConfiguration();
@@ -73,13 +73,13 @@ public class TestNamenodeResolver {
     namenodeResolver.setRouterId(ROUTERS[0]);
   }
 
-  @AfterClass
+  @AfterAll
   public static void destroy() throws Exception {
     stateStore.stop();
     stateStore.close();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException, InterruptedException {
     // Wait for state store to connect
     stateStore.loadDriver();
@@ -395,8 +395,8 @@ public class TestNamenodeResolver {
     namenodeResolver.updateActiveNamenode(NAMESERVICES[0], inetAddr);
     FederationNamenodeContext namenode1 = namenodeResolver
         .getNamenodesForNameserviceId(NAMESERVICES[0], false).get(0);
-    assertEquals("The namenode state should be ACTIVE post update.",
-        FederationNamenodeServiceState.ACTIVE, namenode1.getState());
+    assertEquals(FederationNamenodeServiceState.ACTIVE, namenode1.getState(),
+        "The namenode state should be ACTIVE post update.");
   }
 
   @Test
@@ -412,8 +412,8 @@ public class TestNamenodeResolver {
     namenodeResolver.updateActiveNamenode(NAMESERVICES[0], inetAddr);
     FederationNamenodeContext namenode = namenodeResolver
         .getNamenodesForNameserviceId(NAMESERVICES[0], false).get(0);
-    assertEquals("The namenode state should be ACTIVE post update.",
-        FederationNamenodeServiceState.ACTIVE, namenode.getState());
+    assertEquals(FederationNamenodeServiceState.ACTIVE, namenode.getState(),
+        "The namenode state should be ACTIVE post update.");
   }
 
   /**

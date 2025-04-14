@@ -430,8 +430,10 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
         properties = new Hashtable<>();
     properties.put("FileSystemProperties", "true");
     TracingContext tracingContext = getTestTracingContext(fs, true);
-    assertThrows(IOException.class, ()-> fs.getAbfsStore().setFilesystemProperties(properties, tracingContext));
-    assertThrows(IOException.class, ()-> fs.getAbfsStore().getFilesystemProperties(tracingContext));
+    assertThrows(IOException.class, () -> fs.getAbfsStore()
+        .setFilesystemProperties(properties, tracingContext));
+    assertThrows(IOException.class,
+        () -> fs.getAbfsStore().getFilesystemProperties(tracingContext));
   }
 
   @Test
@@ -451,7 +453,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
 
     AbfsRestOperation op = client.listPath(
         implicitDir.toString(), false, 2, null,
-        getTestTracingContext(getFileSystem(), true));
+        getTestTracingContext(getFileSystem(), false), null, false).getOp();
     List<? extends ListResultEntrySchema> list = op.getResult()
         .getListResultSchema()
         .paths();
@@ -490,7 +492,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
    *
    * @param op the AbfsRestOperation
    */
-  private void checkSignatureMaskAssertions(AbfsRestOperation op){
+  private void checkSignatureMaskAssertions(AbfsRestOperation op) {
     AbfsHttpOperation result = op.getResult();
     String url = result.getMaskedUrl();
     String encodedUrl = result.getMaskedEncodedUrl();
@@ -515,13 +517,13 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     fs.create(new Path(src)).close();
 
     Mockito.doAnswer(answer -> {
-      Path srcCopy = answer.getArgument(0);
-      Path dstCopy = answer.getArgument(1);
-      String leaseId = answer.getArgument(2);
-      TracingContext tracingContext = answer.getArgument(3);
-      AbfsRestOperation op
-          = ((AbfsBlobClient) getFileSystem().getAbfsClient()).copyBlob(srcCopy,
-          dstCopy, leaseId, tracingContext);
+          Path srcCopy = answer.getArgument(0);
+          Path dstCopy = answer.getArgument(1);
+          String leaseId = answer.getArgument(2);
+          TracingContext tracingContext = answer.getArgument(3);
+          AbfsRestOperation op
+              = ((AbfsBlobClient) getFileSystem().getAbfsClient()).copyBlob(srcCopy,
+              dstCopy, leaseId, tracingContext);
           checkSignatureMaskAssertions(op);
           return answer.callRealMethod();
         })
@@ -529,14 +531,15 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
         .copyBlob(Mockito.any(Path.class), Mockito.any(Path.class),
             Mockito.any(String.class), Mockito.any(TracingContext.class));
 
-   Mockito.doAnswer(answer -> {
+    Mockito.doAnswer(answer -> {
           Path blobPath = answer.getArgument(0);
           String leaseId = answer.getArgument(1);
           TracingContext tracingContext = answer.getArgument(2);
           AbfsRestOperation op
-              = ((AbfsBlobClient) getFileSystem().getAbfsClient()).deleteBlobPath(blobPath,
+              = ((AbfsBlobClient) getFileSystem().getAbfsClient()).deleteBlobPath(
+              blobPath,
               leaseId, tracingContext);
-         checkSignatureMaskAssertions(op);
+          checkSignatureMaskAssertions(op);
           return answer.callRealMethod();
         })
         .when(client)

@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -46,9 +48,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.Keys;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -69,7 +70,7 @@ public class TestRMAuditLogger {
   private static final byte[] CALLER_SIGNATURE = "signature".getBytes();
   private static final String PARTITION = "label1";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     when(APPID.toString()).thenReturn("app_1");
     when(ATTEMPTID.toString()).thenReturn("app_attempt_1");
@@ -242,7 +243,7 @@ public class TestRMAuditLogger {
     } catch (UnknownHostException uhe) {
       // should not happen as long as IP address format
       // stays the same
-      Assert.fail("Check ip address being constructed");
+      fail("Check ip address being constructed");
     }
     testSuccessLogFormatHelperWithIP(checkIP, appId, attemptId, containerId,
         addr);
@@ -404,8 +405,8 @@ public class TestRMAuditLogger {
         throws ServiceException {
       // Ensure clientId is received
       byte[] clientId = Server.getClientId();
-      Assert.assertNotNull(clientId);
-      Assert.assertEquals(ClientId.BYTE_LENGTH, clientId.length);
+      assertNotNull(clientId);
+      assertEquals(ClientId.BYTE_LENGTH, clientId.length);
       // test with ip set
       testSuccessLogFormat(true);
       testFailureLogFormat(true);

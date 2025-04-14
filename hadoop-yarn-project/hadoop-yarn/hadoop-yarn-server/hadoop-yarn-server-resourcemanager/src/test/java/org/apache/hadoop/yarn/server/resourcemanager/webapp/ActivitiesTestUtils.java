@@ -47,7 +47,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Some Utils for activities tests.
@@ -148,11 +148,11 @@ public final class ActivitiesTestUtils {
   public static void verifyNumberOfNodes(JSONObject allocation, int expectValue)
       throws Exception {
     if (allocation.isNull(FN_SCHEDULER_ACT_ALLOCATIONS_ROOT)) {
-      assertEquals("State of allocation is wrong", expectValue, 0);
+      assertEquals(expectValue, 0, "State of allocation is wrong");
     } else {
-      assertEquals("State of allocation is wrong", expectValue,
-          1 + getNumberOfNodes(
-              allocation.getJSONObject(FN_SCHEDULER_ACT_ALLOCATIONS_ROOT)));
+      assertEquals(expectValue, 1 + getNumberOfNodes(
+          allocation.getJSONObject(FN_SCHEDULER_ACT_ALLOCATIONS_ROOT)),
+          "State of allocation is wrong");
     }
   }
 
@@ -176,8 +176,7 @@ public final class ActivitiesTestUtils {
 
   public static void verifyStateOfAllocations(JSONObject allocation,
       String nameToCheck, String expectState) throws Exception {
-    assertEquals("State of allocation is wrong", expectState,
-        allocation.get(nameToCheck));
+    assertEquals(expectState, allocation.get(nameToCheck), "State of allocation is wrong");
   }
 
   public static void verifyNumberOfAllocations(JSONObject json, int expectValue)
@@ -191,14 +190,14 @@ public final class ActivitiesTestUtils {
       throw new IllegalArgumentException("Can't parse allocations!");
     }
     if (activitiesJson.isNull(FN_ACT_ALLOCATIONS)) {
-      assertEquals("Number of allocations is wrong", expectValue, 0);
+      assertEquals(expectValue, 0, "Number of allocations is wrong");
     } else {
       Object object = activitiesJson.get(FN_ACT_ALLOCATIONS);
       if (object.getClass() == JSONObject.class) {
-        assertEquals("Number of allocations is wrong", expectValue, 1);
+        assertEquals(expectValue, 1, "Number of allocations is wrong");
       } else if (object.getClass() == JSONArray.class) {
-        assertEquals("Number of allocations is wrong in: " + object,
-            expectValue, ((JSONArray) object).length());
+        assertEquals(expectValue, ((JSONArray) object).length(),
+            "Number of allocations is wrong in: " + object);
       }
     }
   }
@@ -210,8 +209,8 @@ public final class ActivitiesTestUtils {
       JSONObject root = json.getJSONObject(FN_SCHEDULER_ACT_ALLOCATIONS_ROOT);
       order = root.getString(FN_SCHEDULER_ACT_NAME) + "-" + getQueueOrder(root);
     }
-    assertEquals("Order of queue is wrong", expectOrder,
-        order.substring(0, order.length() - 1));
+    assertEquals(expectOrder, order.substring(0, order.length() - 1),
+        "Order of queue is wrong");
   }
 
   public static String getQueueOrder(JSONObject node) throws Exception {
@@ -282,14 +281,14 @@ public final class ActivitiesTestUtils {
   public static void verifyNumberOfAllocationAttempts(JSONObject allocation,
       int expectValue) throws Exception {
     if (allocation.isNull(FN_APP_ACT_CHILDREN)) {
-      assertEquals("Number of allocation attempts is wrong", expectValue, 0);
+      assertEquals(expectValue, 0, "Number of allocation attempts is wrong");
     } else {
       Object object = allocation.get(FN_APP_ACT_CHILDREN);
       if (object.getClass() == JSONObject.class) {
-        assertEquals("Number of allocations attempts is wrong", expectValue, 1);
+        assertEquals(expectValue, 1, "Number of allocations attempts is wrong");
       } else if (object.getClass() == JSONArray.class) {
-        assertEquals("Number of allocations attempts is wrong", expectValue,
-            ((JSONArray) object).length());
+        assertEquals(expectValue, ((JSONArray) object).length(),
+            "Number of allocations attempts is wrong");
       }
     }
   }

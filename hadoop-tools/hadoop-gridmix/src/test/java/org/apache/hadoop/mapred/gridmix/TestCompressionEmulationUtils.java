@@ -47,8 +47,10 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.lib.input.CombineFileSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-import static org.junit.Assert.*;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test {@link CompressionEmulationUtil}
@@ -169,7 +171,7 @@ public class TestCompressionEmulationUtils {
     job.submit();
     int ret = job.waitForCompletion(true) ? 0 : 1;
 
-    assertEquals("Job Failed", 0, ret);
+    assertEquals(0, ret, "Job Failed");
   }
   
   /**
@@ -260,7 +262,7 @@ public class TestCompressionEmulationUtils {
     } catch (RuntimeException re) {
       failed = true;
     }
-    assertTrue("Compression ratio min value (0.07) check failed!", failed);
+    assertTrue(failed, "Compression ratio min value (0.07) check failed!");
     
     // test with a compression ratio of 0.01 which less than the max supported
     // value of 0.68
@@ -270,7 +272,7 @@ public class TestCompressionEmulationUtils {
     } catch (RuntimeException re) {
       failed = true;
     }
-    assertTrue("Compression ratio max value (0.68) check failed!", failed);
+    assertTrue(failed, "Compression ratio max value (0.68) check failed!");
   }
   
   /**
@@ -380,10 +382,10 @@ public class TestCompressionEmulationUtils {
     GridmixRecord recordRead = new GridmixRecord();
     recordRead.readFields(new DataInputStream(in));
     
-    assertEquals("Record size mismatch in a compressible GridmixRecord",
-                 dataSize, recordRead.getSize());
-    assertTrue("Failed to generate a compressible GridmixRecord",
-               recordRead.getSize() > compressedFileSize);
+    assertEquals(dataSize, recordRead.getSize(),
+        "Record size mismatch in a compressible GridmixRecord");
+    assertTrue(recordRead.getSize() > compressedFileSize,
+        "Failed to generate a compressible GridmixRecord");
     
     // check if the record can generate data with the desired compression ratio
     float seenRatio = ((float)compressedFileSize)/dataSize;
@@ -456,7 +458,7 @@ public class TestCompressionEmulationUtils {
         .getPossiblyDecompressedInputStream(compressedFile, conf, 0);
     BufferedReader reader = new BufferedReader(new InputStreamReader(in));
     String readLine = reader.readLine();
-    assertEquals("Compression/Decompression error", inputLine, readLine);
+    assertEquals(inputLine, readLine, "Compression/Decompression error");
     reader.close();
   }
   
@@ -555,7 +557,7 @@ public class TestCompressionEmulationUtils {
     queue.read(bytes);
     queue.close();
     String readLine = new String(bytes);
-    assertEquals("Compression/Decompression error", inputLine, readLine);
+    assertEquals(inputLine, readLine, "Compression/Decompression error");
   }
 
   /**

@@ -23,10 +23,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,10 +57,10 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * End-to-end tests for fsck via DFSRouter.
@@ -77,7 +77,7 @@ public class TestRouterFsck {
   private static InetSocketAddress webAddress;
   private static List<MembershipState> memberships;
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     // Build and start a federated cluster
     cluster = new StateStoreDFSCluster(false, 2);
@@ -111,7 +111,7 @@ public class TestRouterFsck {
     Collections.sort(memberships);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (cluster != null) {
       cluster.stopRouter(routerContext);
@@ -120,7 +120,7 @@ public class TestRouterFsck {
     }
   }
 
-  @After
+  @AfterEach
   public void clearMountTable() throws IOException {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTableManager = client.getMountTableManager();

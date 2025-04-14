@@ -20,9 +20,11 @@ package org.apache.hadoop.mapred.gridmix;
 import java.io.IOException;
 import java.net.URI;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -36,7 +38,7 @@ public class TestUserResolve {
   private static Configuration conf = null;
   private static FileSystem fs = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void createRootDir() throws IOException {
     conf = new Configuration();
     fs = FileSystem.getLocal(conf);
@@ -81,11 +83,11 @@ public class TestUserResolve {
     try {
       rslv.setTargetUsers(userRsrc, conf);
     } catch (IOException e) {
-      assertTrue("Exception message from RoundRobinUserResolver is wrong",
-          e.getMessage().equals(expectedErrorMsg));
+      assertTrue(e.getMessage().equals(expectedErrorMsg),
+          "Exception message from RoundRobinUserResolver is wrong");
       fail = true;
     }
-    assertTrue("User list required for RoundRobinUserResolver", fail);
+    assertTrue(fail, "User list required for RoundRobinUserResolver");
   }
 
   /**

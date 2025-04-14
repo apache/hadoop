@@ -23,15 +23,17 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilter;
 import org.apache.hadoop.yarn.server.security.http
     .RMAuthenticationFilterInitializer;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Test RM Auth filter.
@@ -47,8 +49,8 @@ public class TestRMAuthenticationFilter {
 
     conf.set(HttpServer2.BIND_ADDRESS, "barhost");
 
-    FilterContainer container = Mockito.mock(FilterContainer.class);
-    Mockito.doAnswer(new Answer() {
+    FilterContainer container = mock(FilterContainer.class);
+    doAnswer(new Answer() {
       @Override
       public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
         Object[] args = invocationOnMock.getArguments();
@@ -72,7 +74,7 @@ public class TestRMAuthenticationFilter {
 
         return null;
       }
-    }).when(container).addFilter(Mockito.any(), Mockito.any(), Mockito.any());
+    }).when(container).addFilter(any(), any(), any());
 
     new RMAuthenticationFilterInitializer().initFilter(container, conf);
   }

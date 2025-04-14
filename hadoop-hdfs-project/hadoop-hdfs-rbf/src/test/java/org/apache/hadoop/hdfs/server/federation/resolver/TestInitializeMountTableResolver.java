@@ -18,14 +18,14 @@
 package org.apache.hadoop.hdfs.server.federation.resolver;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Test {@link MountTableResolver} initialization.
@@ -45,8 +45,8 @@ public class TestInitializeMountTableResolver {
     conf.set(DFS_ROUTER_DEFAULT_NAMESERVICE, "");
     MountTableResolver mountTable = new MountTableResolver(conf);
     assertEquals("", mountTable.getDefaultNamespace());
-    assertFalse("Default NS should be disabled if default NS is set empty",
-        mountTable.isDefaultNSEnable());
+    assertFalse(mountTable.isDefaultNSEnable(),
+        "Default NS should be disabled if default NS is set empty");
   }
 
   @Test

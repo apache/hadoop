@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.NodeList;
 
 import javax.servlet.http.HttpServletRequest;
@@ -53,7 +53,7 @@ import java.util.ArrayList;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCustomResourceTypesCommons.verifyAppInfoJson;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCustomResourceTypesCommons.verifyAppsXML;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -137,7 +137,7 @@ public class TestRMWebServicesAppCustomResourceTypes extends JerseyTestBase {
     testCase.verify(document -> {
       NodeList appArray = document
               .getElementsByTagName("app");
-      assertEquals("incorrect number of app elements", 1, appArray.getLength());
+      assertEquals(1, appArray.getLength(), "incorrect number of app elements");
 
       verifyAppsXML(appArray, app1, rm);
     });
@@ -168,7 +168,7 @@ public class TestRMWebServicesAppCustomResourceTypes extends JerseyTestBase {
             new BufferedClientResponse(response));
     testCase.verify(json -> {
       try {
-        assertEquals("incorrect number of app elements", 1, json.length());
+        assertEquals(1, json.length(), "incorrect number of app elements");
         JSONObject app = json.getJSONObject("app");
         verifyAppInfoJson(app, app1, rm);
       } catch (JSONException e) {

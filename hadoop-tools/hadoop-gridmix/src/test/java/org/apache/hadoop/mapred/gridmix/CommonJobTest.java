@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -114,10 +114,10 @@ public class CommonJobTest {
     }
 
     public void verify(ArrayList<JobStory> submitted) throws Exception {
-      assertEquals("Bad job count", expected, retiredJobs.size());
+      assertEquals(expected, retiredJobs.size(), "Bad job count");
 
       final ArrayList<Job> succeeded = new ArrayList<Job>();
-      assertEquals("Bad job count", expected, retiredJobs.drainTo(succeeded));
+      assertEquals(expected, retiredJobs.drainTo(succeeded), "Bad job count");
       final HashMap<String, JobStory> sub = new HashMap<String, JobStory>();
       for (JobStory spec : submitted) {
         sub.put(spec.getJobID().toString(), spec);
@@ -152,13 +152,13 @@ public class CommonJobTest {
 
         final String originalJobId = configuration.get(Gridmix.ORIGINAL_JOB_ID);
         final JobStory spec = sub.get(originalJobId);
-        assertNotNull("No spec for " + jobName, spec);
-        assertNotNull("No counters for " + jobName, job.getCounters());
+        assertNotNull(spec, "No spec for " + jobName);
+        assertNotNull(job.getCounters(), "No counters for " + jobName);
         final String originalJobName = spec.getName();
         System.out.println("originalJobName=" + originalJobName
                 + ";GridmixJobName=" + jobName + ";originalJobID=" + originalJobId);
-        assertTrue("Original job name is wrong.",
-                originalJobName.equals(configuration.get(Gridmix.ORIGINAL_JOB_NAME)));
+        assertTrue(originalJobName.equals(configuration.get(Gridmix.ORIGINAL_JOB_NAME)),
+            "Original job name is wrong.");
 
         // Gridmix job seqNum contains 6 digits
         int seqNumLength = 6;
@@ -169,12 +169,11 @@ public class CommonJobTest {
         assertTrue(originalJobName.substring(
                 originalJobName.length() - seqNumLength).equals(jobSeqNum));
 
-        assertTrue("Gridmix job name is not in the expected format.",
-                jobName.equals(GridmixJob.JOB_NAME_PREFIX + jobSeqNum));
+        assertTrue(jobName.equals(GridmixJob.JOB_NAME_PREFIX + jobSeqNum),
+            "Gridmix job name is not in the expected format.");
         final FileStatus stat = GridmixTestUtils.dfs.getFileStatus(new Path(
                 GridmixTestUtils.DEST, "" + Integer.parseInt(jobSeqNum)));
-        assertEquals("Wrong owner for " + jobName, spec.getUser(),
-                stat.getOwner());
+        assertEquals(spec.getUser(), stat.getOwner(), "Wrong owner for " + jobName);
         final int nMaps = spec.getNumberMaps();
         final int nReds = spec.getNumberReduces();
 
@@ -182,12 +181,12 @@ public class CommonJobTest {
                 GridmixTestUtils.mrvl.getConfig());
         final TaskReport[] mReports = client.getMapTaskReports(JobID
                 .downgrade(job.getJobID()));
-        assertEquals("Mismatched map count", nMaps, mReports.length);
+        assertEquals(nMaps, mReports.length, "Mismatched map count");
         check(TaskType.MAP, spec, mReports, 0, 0, SLOPBYTES, nReds);
 
         final TaskReport[] rReports = client.getReduceTaskReports(JobID
                 .downgrade(job.getJobID()));
-        assertEquals("Mismatched reduce count", nReds, rReports.length);
+        assertEquals(nReds, rReports.length, "Mismatched reduce count");
         check(TaskType.REDUCE, spec, rReports, nMaps * SLOPBYTES, 2 * nMaps, 0,
                 0);
 
@@ -273,43 +272,37 @@ public class CommonJobTest {
       Arrays.sort(specInputBytes);
       Arrays.sort(runInputBytes);
       for (int i = 0; i < runTasks.length; ++i) {
-        assertTrue("Mismatched " + type + " input bytes " + specInputBytes[i]
-                + "/" + runInputBytes[i],
-                eqPlusMinus(runInputBytes[i], specInputBytes[i], extraInputBytes));
+        assertTrue(eqPlusMinus(runInputBytes[i], specInputBytes[i], extraInputBytes),
+            "Mismatched " + type + " input bytes " + specInputBytes[i]
+            + "/" + runInputBytes[i]);
       }
 
       // Check input records
       Arrays.sort(specInputRecords);
       Arrays.sort(runInputRecords);
       for (int i = 0; i < runTasks.length; ++i) {
-        assertTrue(
-                "Mismatched " + type + " input records " + specInputRecords[i]
-                        + "/" + runInputRecords[i],
-                eqPlusMinus(runInputRecords[i], specInputRecords[i],
-                        extraInputRecords));
+        assertTrue(eqPlusMinus(runInputRecords[i], specInputRecords[i],
+            extraInputRecords), "Mismatched " + type + " input records " + specInputRecords[i]
+            + "/" + runInputRecords[i]);
       }
 
       // Check output bytes
       Arrays.sort(specOutputBytes);
       Arrays.sort(runOutputBytes);
       for (int i = 0; i < runTasks.length; ++i) {
-        assertTrue(
-                "Mismatched " + type + " output bytes " + specOutputBytes[i] + "/"
-                        + runOutputBytes[i],
-                eqPlusMinus(runOutputBytes[i], specOutputBytes[i], extraOutputBytes));
+        assertTrue(eqPlusMinus(runOutputBytes[i], specOutputBytes[i], extraOutputBytes),
+            "Mismatched " + type + " output bytes " + specOutputBytes[i] + "/"
+            + runOutputBytes[i]);
       }
 
       // Check output records
       Arrays.sort(specOutputRecords);
       Arrays.sort(runOutputRecords);
       for (int i = 0; i < runTasks.length; ++i) {
-        assertTrue(
-                "Mismatched " + type + " output records " + specOutputRecords[i]
-                        + "/" + runOutputRecords[i],
-                eqPlusMinus(runOutputRecords[i], specOutputRecords[i],
-                        extraOutputRecords));
+        assertTrue(eqPlusMinus(runOutputRecords[i], specOutputRecords[i],
+            extraOutputRecords), "Mismatched " + type + " output records " + specOutputRecords[i]
+            + "/" + runOutputRecords[i]);
       }
-
     }
 
     private static boolean eqPlusMinus(long a, long b, long x) {
@@ -372,7 +365,7 @@ public class CommonJobTest {
       GridmixTestUtils.dfs.setPermission(root, new FsPermission((short) 777));
 
       int res = ToolRunner.run(conf, client, argv);
-      assertEquals("Client exited with nonzero status", 0, res);
+      assertEquals(0, res, "Client exited with nonzero status");
       client.checkMonitor();
     } catch (Exception e) {
       e.printStackTrace();

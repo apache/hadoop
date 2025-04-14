@@ -128,7 +128,7 @@ public class RouterRpcClient {
   /** Connection pool to the Namenodes per user for performance. */
   private final ConnectionManager connectionManager;
   /** Service to run asynchronous calls. */
-  private final ThreadPoolExecutor executorService;
+  private ThreadPoolExecutor executorService;
   /** Retry policy for router -> NN communication. */
   private final RetryPolicy retryPolicy;
   /** Optional perf monitor. */
@@ -184,24 +184,7 @@ public class RouterRpcClient {
     this.connectionManager.start();
     this.routerRpcFairnessPolicyController =
         FederationUtil.newFairnessPolicyController(conf);
-
-    int numThreads = conf.getInt(
-        RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE,
-        RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE_DEFAULT);
-    ThreadFactory threadFactory = new ThreadFactoryBuilder()
-        .setNameFormat("RPC Router Client-%d")
-        .build();
-    BlockingQueue<Runnable> workQueue;
-    if (conf.getBoolean(
-        RBFConfigKeys.DFS_ROUTER_CLIENT_REJECT_OVERLOAD,
-        RBFConfigKeys.DFS_ROUTER_CLIENT_REJECT_OVERLOAD_DEFAULT)) {
-      workQueue = new ArrayBlockingQueue<>(numThreads);
-    } else {
-      workQueue = new LinkedBlockingQueue<>();
-    }
-    this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
-        0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
-
+    initConcurrentCallExecutorService(conf);
     this.rpcMonitor = monitor;
 
     int maxFailoverAttempts = conf.getInt(
@@ -245,6 +228,25 @@ public class RouterRpcClient {
     this.lastActiveNNRefreshTimes = new ConcurrentHashMap<>();
   }
 
+  protected void initConcurrentCallExecutorService(Configuration conf) {
+    int numThreads = conf.getInt(
+        RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE,
+        RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE_DEFAULT);
+    ThreadFactory threadFactory = new ThreadFactoryBuilder()
+        .setNameFormat("RPC Router Client-%d")
+        .build();
+    BlockingQueue<Runnable> workQueue;
+    if (conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_CLIENT_REJECT_OVERLOAD,
+        RBFConfigKeys.DFS_ROUTER_CLIENT_REJECT_OVERLOAD_DEFAULT)) {
+      workQueue = new ArrayBlockingQueue<>(numThreads);
+    } else {
+      workQueue = new LinkedBlockingQueue<>();
+    }
+    this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
+        0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
+  }
+
   /**
    * Get the configuration for the RPC client. It takes the Router
    * configuration and transforms it into regular RPC Client configuration.
@@ -276,6 +278,15 @@ public class RouterRpcClient {
    */
   public ActiveNamenodeResolver getNamenodeResolver() {
     return this.namenodeResolver;
+  }
+
+  /**
+   * Get the executor service used by invoking concurrent calls.
+   * @return the executor service.
+   */
+  @VisibleForTesting
+  public ThreadPoolExecutor getExecutorService() {
+    return executorService;
   }
 
   /**
@@ -364,9 +375,11 @@ public class RouterRpcClient {
    */
   public String getAsyncCallerPoolJson() {
     final Map<String, Integer> info = new LinkedHashMap<>();
-    info.put("active", executorService.getActiveCount());
-    info.put("total", executorService.getPoolSize());
-    info.put("max", executorService.getMaximumPoolSize());
+    if (executorService != null) {
+      info.put("active", executorService.getActiveCount());
+      info.put("total", executorService.getPoolSize());
+      info.put("max", executorService.getMaximumPoolSize());
+    }
     return JSON.toString(info);
   }
 
@@ -1024,7 +1037,7 @@ public class RouterRpcClient {
       throws IOException {
     UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
     RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
-    acquirePermit(nsId, ugi, method, controller);
+    acquirePermit(nsId, ugi, method.getMethodName(), controller);
     try {
       boolean isObserverRead = isObserverReadEligible(nsId, method.getMethod());
       List<? extends FederationNamenodeContext> nns = getOrderedNamenodes(nsId, isObserverRead);
@@ -1199,7 +1212,7 @@ public class RouterRpcClient {
       boolean isObserverRead = isObserverReadEligible(ns, m);
       List<? extends FederationNamenodeContext> namenodes =
           getOrderedNamenodes(ns, isObserverRead);
-      acquirePermit(ns, ugi, remoteMethod, controller);
+      acquirePermit(ns, ugi, remoteMethod.getMethodName(), controller);
       try {
         Class<?> proto = remoteMethod.getProtocol();
         Object[] params = remoteMethod.getParams(loc);
@@ -1579,7 +1592,7 @@ public class RouterRpcClient {
       return invokeSingle(locations.iterator().next(), method);
     }
     RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
-    acquirePermit(CONCURRENT_NS, ugi, method, controller);
+    acquirePermit(CONCURRENT_NS, ugi, method.getMethodName(), controller);
 
     List<T> orderedLocations = new ArrayList<>();
     List<Callable<Object>> callables = new ArrayList<>();
@@ -1758,7 +1771,7 @@ public class RouterRpcClient {
     final List<? extends FederationNamenodeContext> namenodes =
         getOrderedNamenodes(ns, isObserverRead);
     RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
-    acquirePermit(ns, ugi, method, controller);
+    acquirePermit(ns, ugi, method.getMethodName(), controller);
     try {
       Class<?> proto = method.getProtocol();
       Object[] paramList = method.getParams(location);
@@ -1829,12 +1842,12 @@ public class RouterRpcClient {
    *
    * @param nsId Identifier of the block pool.
    * @param ugi UserGroupIdentifier associated with the user.
-   * @param m Remote method that needs to be invoked.
+   * @param methodName The name of remote method that needs to be invoked.
    * @param controller fairness policy controller to acquire permit from
    * @throws IOException If permit could not be acquired for the nsId.
    */
   protected void acquirePermit(final String nsId, final UserGroupInformation ugi,
-      final RemoteMethod m, RouterRpcFairnessPolicyController controller)
+      final String methodName, RouterRpcFairnessPolicyController controller)
       throws IOException {
     if (controller != null) {
       if (!controller.acquirePermit(nsId)) {
@@ -1845,7 +1858,7 @@ public class RouterRpcClient {
         }
         incrRejectedPermitForNs(nsId);
         LOG.debug("Permit denied for ugi: {} for method: {}",
-            ugi, m.getMethodName());
+            ugi, methodName);
         String msg =
             "Router " + router.getRouterId() +
                 " is overloaded for NS: " + nsId;
@@ -1880,7 +1893,7 @@ public class RouterRpcClient {
     return routerRpcFairnessPolicyController;
   }
 
-  private void incrRejectedPermitForNs(String ns) {
+  protected void incrRejectedPermitForNs(String ns) {
     rejectedPermitsPerNs.computeIfAbsent(ns, k -> new LongAdder()).increment();
   }
 
@@ -1889,7 +1902,7 @@ public class RouterRpcClient {
         rejectedPermitsPerNs.get(ns).longValue() : 0L;
   }
 
-  private void incrAcceptedPermitForNs(String ns) {
+  protected void incrAcceptedPermitForNs(String ns) {
     acceptedPermitsPerNs.computeIfAbsent(ns, k -> new LongAdder()).increment();
   }
 
@@ -2026,7 +2039,6 @@ public class RouterRpcClient {
     }
     return isUnavailableException(ioe);
   }
-
 
   /**
    * The {@link  ExecutionStatus} class is a utility class used to track the status of

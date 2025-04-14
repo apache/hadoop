@@ -53,6 +53,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -311,6 +312,13 @@ public class TestLinuxContainerExecutorWithMocks {
           .build());
 
       List<String> result=readMockParams();
+
+      if (Shell.isJavaVersionAtLeast(17)) {
+        // Added by ContainerLocalizer for JDK17+ (MAPREDUCE-7456)
+        assertTrue(result.remove("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
+        assertTrue(result.remove("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
+      }
+
       assertThat(result).hasSize(26);
       assertThat(result.get(0)).isEqualTo(YarnConfiguration.
           DEFAULT_NM_NONSECURE_MODE_LOCAL_USER);

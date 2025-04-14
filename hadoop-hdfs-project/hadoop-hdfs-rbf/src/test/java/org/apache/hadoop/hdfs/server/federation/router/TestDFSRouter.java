@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -29,7 +29,7 @@ import org.apache.hadoop.tools.fedbalance.FedBalanceConfigs;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createNamenodeReport;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestDFSRouter {
 
@@ -40,8 +40,8 @@ public class TestDFSRouter {
         configuration.get(FedBalanceConfigs.SCHEDULER_JOURNAL_URI);
     int workerThreads =
         configuration.getInt(FedBalanceConfigs.WORK_THREAD_NUM, -1);
-    Assert.assertEquals("hdfs://localhost:8020/tmp/procedure", journalUri);
-    Assert.assertEquals(10, workerThreads);
+    Assertions.assertEquals("hdfs://localhost:8020/tmp/procedure", journalUri);
+    Assertions.assertEquals(10, workerThreads);
   }
 
   @Test

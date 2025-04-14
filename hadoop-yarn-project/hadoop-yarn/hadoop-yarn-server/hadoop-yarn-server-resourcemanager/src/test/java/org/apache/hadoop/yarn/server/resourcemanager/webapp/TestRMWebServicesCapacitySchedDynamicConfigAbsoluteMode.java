@@ -31,10 +31,9 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.AfterClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -62,23 +61,28 @@ import static org.mockito.Mockito.when;
  *     root.test_1.test_1_2      2/16      [memory=2048,  vcores=2]       6.25%
  *     root.test_1.test_1_3     12/16      [memory=12288, vcores=12]      37.5%
  */
-@RunWith(Parameterized.class)
 public class TestRMWebServicesCapacitySchedDynamicConfigAbsoluteMode extends JerseyTestBase {
 
-  private final boolean legacyQueueMode;
+  private boolean legacyQueueMode;
 
   private MockRM rm;
 
-  @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
   public static Collection<Boolean> getParameters() {
     return Arrays.asList(true, false);
   }
 
   private static final String EXPECTED_FILE_TMPL = "webapp/dynamic-%s-%s.json";
 
-  public TestRMWebServicesCapacitySchedDynamicConfigAbsoluteMode(boolean legacyQueueMode) {
-    this.legacyQueueMode = legacyQueueMode;
+  @Override
+  public void setUp() throws Exception {
+    super.setUp();
+  }
+
+  public void initTestRMWebServicesCapacitySchedDynamicConfigAbsoluteMode(
+      boolean pLegacyQueueMode) throws Exception {
+    this.legacyQueueMode = pLegacyQueueMode;
     backupSchedulerConfigFileInTarget();
+    setUp();
   }
 
   @Override
@@ -128,13 +132,15 @@ public class TestRMWebServicesCapacitySchedDynamicConfigAbsoluteMode extends Jer
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() {
     restoreSchedulerConfigFileInTarget();
   }
 
-  @Test
-  public void testAbsoluteMode() throws Exception {
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testAbsoluteMode(boolean pLegacyQueueMode) throws Exception {
+    initTestRMWebServicesCapacitySchedDynamicConfigAbsoluteMode(pLegacyQueueMode);
     runTest(EXPECTED_FILE_TMPL, "testAbsoluteMode", rm, target());
   }
 }

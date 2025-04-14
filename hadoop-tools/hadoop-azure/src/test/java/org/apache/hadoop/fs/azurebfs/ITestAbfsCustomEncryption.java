@@ -54,6 +54,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
 import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.azurebfs.services.VersionedFileStatus;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
@@ -301,10 +302,10 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
            */
           FileStatus status = fs.listStatus(testPath)[0];
           Assertions.assertThat(status)
-              .isInstanceOf(AzureBlobFileSystemStore.VersionedFileStatus.class);
+              .isInstanceOf(VersionedFileStatus.class);
 
           Assertions.assertThat(
-                  ((AzureBlobFileSystemStore.VersionedFileStatus) status).getEncryptionContext())
+                  ((VersionedFileStatus) status).getEncryptionContext())
               .isNotNull();
 
           try (FSDataInputStream in = fs.openFileWithOptions(testPath,
@@ -343,7 +344,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
           getTestTracingContext(fs, false));
       case LISTSTATUS:
         return client.listPath(path, false, 5, null,
-          getTestTracingContext(fs, true));
+          getTestTracingContext(fs, true), null).getOp();
       case RENAME:
         TracingContext tc = getTestTracingContext(fs, true);
         return client.renamePath(path, new Path(path + "_2").toString(),

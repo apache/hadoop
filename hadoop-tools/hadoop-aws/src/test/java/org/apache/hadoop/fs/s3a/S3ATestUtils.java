@@ -69,6 +69,7 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.FutureIO;
 
 import org.assertj.core.api.Assertions;
+import org.assertj.core.api.Assumptions;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.AssumptionViolatedException;
@@ -1162,8 +1163,16 @@ public final class S3ATestUtils {
    */
   public static void assumeStoreAwsHosted(final FileSystem fs) {
     assume("store is not AWS S3",
-        !NetworkBinding.isAwsEndpoint(fs.getConf()
+        NetworkBinding.isAwsEndpoint(fs.getConf()
             .getTrimmed(ENDPOINT, DEFAULT_ENDPOINT)));
+  }
+
+  /**
+   * Skip if conditional creation is not enabled.
+   */
+  public static void assumeConditionalCreateEnabled(Configuration conf) {
+    skipIfNotEnabled(conf, FS_S3A_CONDITIONAL_CREATE_ENABLED,
+        "conditional create is disabled");
   }
 
   /**
@@ -1466,7 +1475,9 @@ public final class S3ATestUtils {
     if (!condition) {
       LOG.warn(message);
     }
-    Assume.assumeTrue(message, condition);
+    Assumptions.assumeThat(condition).
+        describedAs(message)
+        .isTrue();
   }
 
   /**

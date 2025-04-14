@@ -19,9 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -63,18 +63,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_PROXY_USER_PREFIX;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-@RunWith(Parameterized.class)
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
 public class TestRMWebServicesDelegationTokenAuthentication {
 
   private static final File testRootDir = new File("target",
@@ -102,7 +100,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
   final static String NewDelegationTokenHeader =
       DelegationTokenAuthenticator.DELEGATION_TOKEN_HEADER;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() {
     try {
       // Disabling kerberos replay cache to avoid "Request is a replay" errors
@@ -114,11 +112,11 @@ public class TestRMWebServicesDelegationTokenAuthentication {
       setupKDC();
 
     } catch (Exception e) {
-      assertTrue("Couldn't create MiniKDC", false);
+      assertTrue(false, "Couldn't create MiniKDC");
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (testMiniKDC != null) {
       testMiniKDC.stop();
@@ -131,25 +129,24 @@ public class TestRMWebServicesDelegationTokenAuthentication {
     }
   }
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     setupAndStartRM();
   }
 
-  @After
+  @AfterEach
   public void after() {
     if (rm != null) {
       rm.stop();
     }
   }
 
-  @Parameterized.Parameters
   public static Collection<Object[]> headers() {
     return Arrays.asList(new Object[][] { {OldDelegationTokenHeader}, {NewDelegationTokenHeader}});
   }
 
-  public TestRMWebServicesDelegationTokenAuthentication(String header) throws Exception {
-    super();
+  public void initTestRMWebServicesDelegationTokenAuthentication(String header)
+      throws Exception {
     this.delegationTokenHeader = header;
   }
 
@@ -218,8 +215,10 @@ public class TestRMWebServicesDelegationTokenAuthentication {
   // - confirm owner of the app is the user whose
   // delegation-token we used
 
-  @Test
-  public void testDelegationTokenAuth() throws Exception {
+  @MethodSource("headers")
+  @ParameterizedTest
+  public void testDelegationTokenAuth(String header) throws Exception {
+    initTestRMWebServicesDelegationTokenAuthentication(header);
     final String token = getDelegationToken("test");
 
     ApplicationSubmissionContextInfo app =
@@ -275,8 +274,10 @@ public class TestRMWebServicesDelegationTokenAuthentication {
 
   // Test to make sure that cancelled delegation tokens
   // are rejected
-  @Test
-  public void testCancelledDelegationToken() throws Exception {
+  @MethodSource("headers")
+  @ParameterizedTest
+  public void testCancelledDelegationToken(String header) throws Exception {
+    initTestRMWebServicesDelegationTokenAuthentication(header);
     String token = getDelegationToken("client");
     cancelDelegationToken(token);
     ApplicationSubmissionContextInfo app =
@@ -302,8 +303,10 @@ public class TestRMWebServicesDelegationTokenAuthentication {
 
   // Test to make sure that we can't do delegation token
   // functions using just delegation token auth
-  @Test
-  public void testDelegationTokenOps() throws Exception {
+  @MethodSource("headers")
+  @ParameterizedTest
+  public void testDelegationTokenOps(String header) throws Exception {
+    initTestRMWebServicesDelegationTokenAuthentication(header);
     String token = getDelegationToken("client");
     DelegationToken createRequestToken = new DelegationToken();
     createRequestToken.setRenewer("test");
@@ -347,8 +350,10 @@ public class TestRMWebServicesDelegationTokenAuthentication {
   // Superuser "client" should be able to get a delegation token
   // for user "client2" when authenticated using Kerberos
   // The request shouldn't work when authenticated using DelegationTokens
-  @Test
-  public void testDoAs() throws Exception {
+  @MethodSource("headers")
+  @ParameterizedTest
+  public void testDoAs(String header) throws Exception {
+    initTestRMWebServicesDelegationTokenAuthentication(header);
 
     KerberosTestUtils.doAsClient(new Callable<Void>() {
       @Override
@@ -381,10 +386,10 @@ public class TestRMWebServicesDelegationTokenAuthentication {
           IOUtils.closeStream(reader);
           IOUtils.closeStream(response);
         }
-        Assert.assertEquals("client2", owner);
+        assertEquals("client2", owner);
         Token<RMDelegationTokenIdentifier> realToken = new Token<>();
         realToken.decodeFromUrlString(token);
-        Assert.assertEquals("client2", realToken.decodeIdentifier().getOwner().toString());
+        assertEquals("client2", realToken.decodeIdentifier().getOwner().toString());
         return null;
       }
     });
