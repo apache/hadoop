@@ -53,7 +53,7 @@ RUN powershell git clone https://github.com/microsoft/vcpkg.git \
     && git checkout 2025.03.19 \
     && .\bootstrap-vcpkg.bat
 
-ADD vcpkg.json .
+ADD vcpkg/vcpkg.json .
 
 RUN powershell .\vcpkg\vcpkg.exe install --x-install-root .\vcpkg\installed
 
