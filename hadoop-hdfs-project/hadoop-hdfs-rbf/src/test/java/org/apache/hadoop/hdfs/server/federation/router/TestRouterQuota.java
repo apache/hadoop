@@ -72,8 +72,9 @@ import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -88,8 +89,8 @@ public class TestRouterQuota {
 
   private static final int BLOCK_SIZE = 512;
 
-  @BeforeEach
-  public void setUp() throws Exception {
+  @BeforeAll
+  public static void setUp() throws Exception {
 
     // Build and start a federated cluster
     cluster = new StateStoreDFSCluster(false, 2);
@@ -119,12 +120,28 @@ public class TestRouterQuota {
     resolver = (MountTableResolver) router.getSubclusterResolver();
   }
 
-  @AfterEach
-  public void tearDown() {
+  @AfterAll
+  public static void tearDown() {
     if (cluster != null) {
       cluster.stopRouter(routerContext);
       cluster.shutdown();
       cluster = null;
+    }
+  }
+  
+  @AfterEach
+  public void cleanUp() throws IOException {
+    cluster.deleteAllFiles();
+    RouterClient client = routerContext.getAdminClient();
+    MountTableManager mountTableManager = client.getMountTableManager();
+    GetMountTableEntriesRequest req1 =
+        GetMountTableEntriesRequest.newInstance("/");
+    GetMountTableEntriesResponse response =
+        mountTableManager.getMountTableEntries(req1);
+    for (MountTable entry : response.getEntries()) {
+      RemoveMountTableEntryRequest req2 =
+          RemoveMountTableEntryRequest.newInstance(entry.getSourcePath());
+      mountTableManager.removeMountTableEntry(req2);
     }
   }
 
