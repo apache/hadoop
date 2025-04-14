@@ -199,12 +199,9 @@ public final class AbfsHttpConstants {
     }
 
     public static ApiVersion getCurrentVersion() {
-      return DEC_12_2019;
+      return NOV_04_2024;
     }
   }
-
-  @Deprecated
-  public static final String DECEMBER_2019_API_VERSION = ApiVersion.DEC_12_2019.toString();
 
   /**
    * List of Constants Used by Blob Endpoint Rest APIs.

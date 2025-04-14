@@ -2673,12 +2673,13 @@ public class ITestAzureBlobFileSystemRename extends
       final String[] clientTransactionId = new String[1];
       mockAddClientTransactionIdToHeader(abfsDfsClient, clientTransactionId);
       mockRetriedRequest(abfsDfsClient, new ArrayList<>());
-      boolean[] flag = new boolean[1];
+      int[] flag = new int[1];
       Mockito.doAnswer(getPathStatus -> {
-        if (!flag[0]) {
-          flag[0] = true;
+        if (flag[0] == 1) {
+          flag[0] += 1;
           throw new AbfsRestOperationException(HTTP_CLIENT_TIMEOUT, "", "", new Exception());
         }
+        flag[0] += 1;
         return getPathStatus.callRealMethod();
       }).when(abfsDfsClient).getPathStatus(
           Mockito.nullable(String.class), Mockito.nullable(Boolean.class),
@@ -2737,6 +2738,6 @@ public class ITestAzureBlobFileSystemRename extends
                    SOURCE_PATH_NOT_FOUND.getErrorCode(), EMPTY_STRING, null, op);
              }
            }
-         });
+         }, 1);
    }
 }
