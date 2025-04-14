@@ -1085,7 +1085,7 @@ public class MiniRouterDFSCluster {
         }
       }
     } catch (Throwable e) {
-      LOG.error("Cannot transition to active", e);
+      LOG.error("Cannot transition to observer", e);
     }
   }
 

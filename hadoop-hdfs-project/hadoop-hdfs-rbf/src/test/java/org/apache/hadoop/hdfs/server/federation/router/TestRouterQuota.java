@@ -128,7 +128,7 @@ public class TestRouterQuota {
       cluster = null;
     }
   }
-  
+
   @AfterEach
   public void cleanUp() throws IOException {
     cluster.deleteAllFiles();

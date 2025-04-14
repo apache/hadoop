@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -60,37 +61,78 @@ import org.apache.hadoop.hdfs.server.namenode.ha.RouterObserverReadConfiguredFai
 import org.apache.hadoop.hdfs.server.namenode.ha.RouterObserverReadProxyProvider;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.api.TestInfo;
 
-
 public class TestObserverWithRouter {
   private static final int NUM_NAMESERVICES = 2;
+  private static final int NUM_OBSERVERS = 2;
   private static final String SKIP_BEFORE_EACH_CLUSTER_STARTUP = "SkipBeforeEachClusterStartup";
-  private MiniRouterDFSCluster cluster;
-  private RouterContext routerContext;
-  private FileSystem fileSystem;
+  private static MiniRouterDFSCluster cluster;
+  private static RouterContext routerContext;
+  private static FileSystem fileSystem;
 
   private static final String ROUTER_NS_ID = "router-service";
   private static final String AUTO_MSYNC_PERIOD_KEY_PREFIX =
       "dfs.client.failover.observer.auto-msync-period";
 
-  @BeforeEach
-  void init(TestInfo info) throws Exception {
+  @BeforeAll
+  static void init(TestInfo info) throws Exception {
     if (info.getTags().contains(SKIP_BEFORE_EACH_CLUSTER_STARTUP)) {
       return;
     }
-    startUpCluster(2, null);
+    startUpCluster(NUM_OBSERVERS, null);
+  }
+  
+  @BeforeEach
+  public void setup(TestInfo info) throws Exception {
+    if (info.getTags().contains(SKIP_BEFORE_EACH_CLUSTER_STARTUP)) {
+      System.out.println("BZL#Test. SKIP_BEFORE_EACH_CLUSTER_STARTUP.");
+      if (cluster != null) {
+        cluster.shutdown();
+        cluster = null;
+      }
+
+      routerContext = null;
+
+      if (fileSystem != null) {
+        fileSystem.close();
+        fileSystem = null;
+      }
+      return;
+    }
+    
+    if (cluster != null) {
+      System.out.println("BZL#Test. cluster != null.");
+      // Making one Namenode active per nameservice.
+      if (cluster.isHighAvailability()) {
+        for (String ns : cluster.getNameservices()) {
+          cluster.switchToActive(ns, NAMENODES[0]);
+          cluster.switchToStandby(ns, NAMENODES[1]);
+          for (int i = 2; i < 2 + NUM_OBSERVERS; i++) {
+            cluster.switchToObserver(ns, NAMENODES[i]);
+            System.out.println("BZL#Test. switch onn successfully.");
+          }
+        }
+      }
+      cluster.waitNamenodeRegistration();
+      cluster.waitActiveNamespaces();
+      
+    } else {
+      startUpCluster(NUM_OBSERVERS, null);
+    }
   }
 
-  @AfterEach
-  public void teardown() throws IOException {
+  @AfterAll
+  public static void teardown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
       cluster = null;
@@ -104,7 +146,49 @@ public class TestObserverWithRouter {
     }
   }
 
-  public void startUpCluster(int numberOfObserver, Configuration confOverrides) throws Exception {
+  @AfterEach
+  public void cleanup(TestInfo info) throws IOException {
+    try {
+      if (cluster != null) {
+        cluster.deleteAllFiles();
+      }
+    } catch (IOException e) {
+      // Ignore exception.
+    }
+    
+    if (info.getTags().contains(SKIP_BEFORE_EACH_CLUSTER_STARTUP)) {
+      System.out.println("BZL#Test. cleanup#SKIP_BEFORE_EACH_CLUSTER_STARTUP.");
+      if (cluster != null) {
+        cluster.shutdown();
+        cluster = null;
+      }
+      routerContext = null;
+    }
+
+    if (fileSystem != null) {
+      // Clear cache.
+      fileSystem.close();
+      fileSystem = null;
+    }
+  }
+  
+//  @AfterEach
+//  public void clearMountTable() throws IOException {
+//    RouterClient client = routerContext.getAdminClient();
+//    MountTableManager mountTableManager = client.getMountTableManager();
+//    GetMountTableEntriesRequest req1 =
+//        GetMountTableEntriesRequest.newInstance("/");
+//    GetMountTableEntriesResponse response =
+//        mountTableManager.getMountTableEntries(req1);
+//    for (MountTable entry : response.getEntries()) {
+//      RemoveMountTableEntryRequest req2 =
+//          RemoveMountTableEntryRequest.newInstance(entry.getSourcePath());
+//      mountTableManager.removeMountTableEntry(req2);
+//    }
+//  }
+
+  public static void startUpCluster(int numberOfObserver, Configuration confOverrides)
+      throws Exception {
     int numberOfNamenode = 2 + numberOfObserver;
     Configuration conf = new Configuration(false);
     setConfDefaults(conf);
@@ -150,11 +234,12 @@ public class TestObserverWithRouter {
     routerContext  = cluster.getRandomRouter();
   }
 
-  private void setConfDefaults(Configuration conf) {
-    conf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
+  private static void setConfDefaults(Configuration conf) {
+    conf.setBoolean(DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
     conf.set(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, "0ms");
     conf.setBoolean(DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, true);
+    conf.set(DFS_ROUTER_OBSERVER_READ_OVERRIDES, "");
   }
 
   public enum ConfigSetting {
@@ -217,6 +302,10 @@ public class TestObserverWithRouter {
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
     assertEquals(namenodes.get(0).getState(), FederationNamenodeServiceState.OBSERVER,
         "First namenode should be observer");
+    long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    long rpcCountForObserverBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
     Path path = new Path("/testFile");
     // Send create call
     fileSystem.create(path).close();
@@ -227,12 +316,14 @@ public class TestObserverWithRouter {
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // Create and complete calls should be sent to active
-    assertEquals(2, rpcCountForActive, "Two calls should be sent to active");
+    assertEquals(rpcCountForActiveBefore + 2, rpcCountForActive,
+        "Two calls should be sent to active");
 
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
     // getBlockLocations should be sent to observer
-    assertEquals(1, rpcCountForObserver, "One call should be sent to observer");
+    assertEquals(rpcCountForObserverBefore + 1, rpcCountForObserver,
+        "One call should be sent to observer");
   }
 
   @EnumSource(ConfigSetting.class)
@@ -241,7 +332,7 @@ public class TestObserverWithRouter {
   public void testObserverReadWithoutFederatedStatePropagation(ConfigSetting configSetting)
       throws Exception {
     Configuration confOverrides = new Configuration(false);
-    confOverrides.setInt(RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE, 0);
+    confOverrides.setInt(DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE, 0);
     startUpCluster(2, confOverrides);
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     List<? extends FederationNamenodeContext> namenodes = routerContext
@@ -273,9 +364,14 @@ public class TestObserverWithRouter {
       throws Exception {
     // Disable observer reads using per-nameservice override
     Configuration confOverrides = new Configuration(false);
-    confOverrides.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES, "ns0");
+    confOverrides.set(DFS_ROUTER_OBSERVER_READ_OVERRIDES, "ns0");
     startUpCluster(2, confOverrides);
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
+
+    long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    long rpcCountForObserverBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
 
     Path path = new Path("/testFile");
     fileSystem.create(path).close();
@@ -284,16 +380,22 @@ public class TestObserverWithRouter {
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // Create, complete and read calls should be sent to active
-    assertEquals(3, rpcCountForActive, "Three calls should be sent to active");
+    assertEquals(rpcCountForActiveBefore + 3, rpcCountForActive,
+        "Three calls should be sent to active");
 
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
-    assertEquals(0, rpcCountForObserver, "Zero calls should be sent to observer");
+    assertEquals(rpcCountForObserverBefore, rpcCountForObserver,
+        "Zero calls should be sent to observer");
   }
 
   @EnumSource(ConfigSetting.class)
   @ParameterizedTest
   public void testReadWhenObserverIsDown(ConfigSetting configSetting) throws Exception {
+    long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    long rpcCountForObserverBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     Path path = new Path("/testFile1");
     // Send Create call to active
@@ -311,18 +413,26 @@ public class TestObserverWithRouter {
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // Create, complete and getBlockLocation calls should be sent to active
-    assertEquals(3, rpcCountForActive, "Three calls should be sent to active");
+    assertEquals(rpcCountForActiveBefore + 3, rpcCountForActive,
+        "Three calls should be sent to active");
 
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
-    assertEquals(0, rpcCountForObserver, "No call should send to observer");
+    assertEquals(rpcCountForObserverBefore, rpcCountForObserver, "No call should send to observer");
   }
 
   @EnumSource(ConfigSetting.class)
   @ParameterizedTest
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
   public void testMultipleObserver(ConfigSetting configSetting) throws Exception {
+    startUpCluster(NUM_OBSERVERS, null);
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     Path path = new Path("/testFile1");
+    long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    long rpcCountForObserverBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
+
     // Send Create call to active
     fileSystem.create(path).close();
 
@@ -339,12 +449,13 @@ public class TestObserverWithRouter {
     long expectedObserverRpc = 1;
 
     // Create and complete calls should be sent to active
-    assertEquals(expectedActiveRpc, rpcCountForActive, "Two calls should be sent to active");
+    assertEquals(rpcCountForActiveBefore + expectedActiveRpc, rpcCountForActive,
+        "Two calls should be sent to active");
 
     long rpcCountForObserver = routerContext.getRouter()
         .getRpcServer().getRPCMetrics().getObserverProxyOps();
     // getBlockLocation call should send to observer
-    assertEquals(expectedObserverRpc, rpcCountForObserver,
+    assertEquals(rpcCountForObserverBefore + expectedObserverRpc, rpcCountForObserver,
         "Read should be success with another observer");
 
     // Stop one observer NN
@@ -358,11 +469,13 @@ public class TestObserverWithRouter {
 
     // getBlockLocation call should be sent to active
     expectedActiveRpc += 1;
-    assertEquals(expectedActiveRpc, rpcCountForActive, "One call should be sent to active");
+    assertEquals(rpcCountForActiveBefore + expectedActiveRpc, rpcCountForActive,
+        "One call should be sent to active");
     expectedObserverRpc += 0;
     rpcCountForObserver = routerContext.getRouter()
         .getRpcServer().getRPCMetrics().getObserverProxyOps();
-    assertEquals(expectedObserverRpc, rpcCountForObserver, "No call should send to observer");
+    assertEquals(rpcCountForObserverBefore + expectedObserverRpc, rpcCountForObserver,
+        "No call should send to observer");
   }
 
   private int stopObserver(int num) {
@@ -413,8 +526,8 @@ public class TestObserverWithRouter {
       }
       sb.append(suffix);
     }
-    routerConf.set(RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE, sb.toString());
-    routerConf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
+    routerConf.set(DFS_ROUTER_MONITOR_NAMENODE, sb.toString());
+    routerConf.setBoolean(DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
     routerConf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
     routerConf.set(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, "0ms");
 
@@ -461,6 +574,8 @@ public class TestObserverWithRouter {
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     stopObserver(2);
 
+    long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
     Path path = new Path("/testFile");
     // Send Create call to active
     fileSystem.create(path).close();
@@ -473,7 +588,8 @@ public class TestObserverWithRouter {
 
     // Create, complete and getBlockLocations
     // calls should be sent to active.
-    assertEquals(3, rpcCountForActive, "Three calls should be send to active");
+    assertEquals(rpcCountForActiveBefore + 3, rpcCountForActive,
+        "Three calls should be send to active");
 
 
     boolean hasUnavailable = false;
@@ -494,6 +610,8 @@ public class TestObserverWithRouter {
   @EnumSource(ConfigSetting.class)
   @ParameterizedTest
   public void testRouterMsync(ConfigSetting configSetting) throws Exception {
+    long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     Path path = new Path("/testFile");
 
@@ -502,14 +620,16 @@ public class TestObserverWithRouter {
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // Create and complete calls should be sent to active
-    assertEquals(2, rpcCountForActive, "Two calls should be sent to active");
+    assertEquals(rpcCountForActiveBefore + 2, rpcCountForActive,
+        "Two calls should be sent to active");
 
     // Send msync
     fileSystem.msync();
     rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // 2 msync calls should be sent. One to each active namenode in the two namespaces.
-    assertEquals(4, rpcCountForActive, "Four calls should be sent to active");
+    assertEquals(rpcCountForActiveBefore + 4, rpcCountForActive,
+        "Four calls should be sent to active");
   }
 
   @EnumSource(ConfigSetting.class)
@@ -522,23 +642,27 @@ public class TestObserverWithRouter {
     assertEquals(namenodes.get(0).getState(), FederationNamenodeServiceState.OBSERVER,
         "First namenode should be observer");
     Path path = new Path("/");
-
-    long rpcCountForActive;
-    long rpcCountForObserver;
+    
+    long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    long rpcCountForObserverBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
 
     // Send read request
     fileSystem.listFiles(path, false);
     fileSystem.close();
 
-    rpcCountForActive = routerContext.getRouter().getRpcServer()
+    long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // getListingCall sent to active.
-    assertEquals(1, rpcCountForActive, "Only one call should be sent to active");
+    assertEquals(rpcCountForActiveBefore + 1, rpcCountForActive,
+        "Only one call should be sent to active");
 
-    rpcCountForObserver = routerContext.getRouter().getRpcServer()
+    long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
     // getList call should be sent to observer
-    assertEquals(0, rpcCountForObserver, "No calls should be sent to observer");
+    assertEquals(rpcCountForObserverBefore, rpcCountForObserver,
+        "No calls should be sent to observer");
   }
 
   @Test
@@ -570,7 +694,6 @@ public class TestObserverWithRouter {
   }
 
   @Test
-  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
   public void testClientReceiveResponseState() {
     ClientGSIContext clientGSIContext = new ClientGSIContext();
 
@@ -604,12 +727,11 @@ public class TestObserverWithRouter {
   }
 
   @Test
-  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
   public void testRouterResponseHeaderState() {
     // This conf makes ns1 that is not eligible for observer reads.
     Configuration conf = new Configuration();
-    conf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
-    conf.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES, "ns1");
+    conf.setBoolean(DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
+    conf.set(DFS_ROUTER_OBSERVER_READ_OVERRIDES, "ns1");
 
     RouterStateIdContext routerStateIdContext = new RouterStateIdContext(conf);
 
@@ -631,14 +753,16 @@ public class TestObserverWithRouter {
     // Only ns0 will be in latestFederateState
     Assertions.assertEquals(1, latestFederateState.size());
     Assertions.assertEquals(10L, latestFederateState.get("ns0"));
+
+    // Revert the conf.
+    conf.set(DFS_ROUTER_OBSERVER_READ_OVERRIDES, "");
   }
 
   @Test
-  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
   public void testRouterResponseHeaderStateMaxSizeLimit() {
     Configuration conf = new Configuration();
-    conf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
-    conf.setInt(RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE, 1);
+    conf.setBoolean(DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
+    conf.setInt(DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE, 1);
 
     RouterStateIdContext routerStateIdContext = new RouterStateIdContext(conf);
 
@@ -675,12 +799,15 @@ public class TestObserverWithRouter {
 
   @EnumSource(ConfigSetting.class)
   @ParameterizedTest
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
   public void testStateIdProgressionInRouter(ConfigSetting configSetting) throws Exception {
+    startUpCluster(NUM_OBSERVERS, null);
     Path rootPath = new Path("/");
     fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     RouterStateIdContext routerStateIdContext = routerContext
         .getRouterRpcServer()
         .getRouterStateIdContext();
+
     for (int i = 0; i < 10; i++) {
       fileSystem.create(new Path(rootPath, "file" + i)).close();
     }
@@ -698,8 +825,8 @@ public class TestObserverWithRouter {
     long cleanupPeriodMs = 1000;
 
     Configuration conf = new Configuration(false);
-    conf.setLong(RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_POOL_CLEAN, cleanupPeriodMs);
-    conf.setLong(RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_CLEAN_MS, cleanupPeriodMs / 10);
+    conf.setLong(DFS_ROUTER_NAMENODE_CONNECTION_POOL_CLEAN, cleanupPeriodMs);
+    conf.setLong(DFS_ROUTER_NAMENODE_CONNECTION_CLEAN_MS, cleanupPeriodMs / 10);
     startUpCluster(1, conf);
     fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     RouterStateIdContext routerStateIdContext = routerContext.getRouterRpcServer()
@@ -745,7 +872,7 @@ public class TestObserverWithRouter {
     long recordExpiry = TimeUnit.SECONDS.toMillis(1);
 
     Configuration confOverride = new Configuration(false);
-    confOverride.setLong(RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS, recordExpiry);
+    confOverride.setLong(FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS, recordExpiry);
 
     startUpCluster(1, confOverride);
     fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
@@ -775,7 +902,7 @@ public class TestObserverWithRouter {
     Path rootPath = new Path("/");
 
     Configuration confOverride = new Configuration(false);
-    confOverride.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_KEY, "500ms");
+    confOverride.set(DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_KEY, "500ms");
     confOverride.set(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, "3s");
     startUpCluster(1, confOverride);
 
@@ -817,15 +944,17 @@ public class TestObserverWithRouter {
     clientConfiguration.setLong(AUTO_MSYNC_PERIOD_KEY_PREFIX + "." + configKeySuffix, 0);
     fileSystem = routerContext.getFileSystem(clientConfiguration);
 
+    long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    long rpcCountForObserverBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
+
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
     assertEquals(namenodes.get(0).getState(), FederationNamenodeServiceState.OBSERVER,
         "First namenode should be observer");
     Path path = new Path("/");
-
-    long rpcCountForActive;
-    long rpcCountForObserver;
 
     // Send read requests
     int numListings = 15;
@@ -834,27 +963,30 @@ public class TestObserverWithRouter {
     }
     fileSystem.close();
 
-    rpcCountForActive = routerContext.getRouter().getRpcServer()
+    long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
 
-    rpcCountForObserver = routerContext.getRouter().getRpcServer()
+    long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
 
     switch (configSetting) {
     case USE_NAMENODE_PROXY_FLAG:
       // First read goes to active.
-      assertEquals(1, rpcCountForActive, "Calls sent to the active");
+      assertEquals(rpcCountForActiveBefore + 1, rpcCountForActive,
+          "Calls sent to the active");
       // The rest of the reads are sent to the observer.
-      assertEquals(numListings - 1, rpcCountForObserver, "Reads sent to observer");
+      assertEquals(rpcCountForObserverBefore + numListings - 1, rpcCountForObserver,
+          "Reads sent to observer");
       break;
     case USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER:
     case USE_ROUTER_OBSERVER_READ_CONFIGURED_FAILOVER_PROXY_PROVIDER:
       // An msync is sent to each active namenode for each read.
       // Total msyncs will be (numListings * num_of_nameservices).
-      assertEquals(NUM_NAMESERVICES * numListings, rpcCountForActive,
-          "Msyncs sent to the active namenodes");
+      assertEquals(rpcCountForActiveBefore + NUM_NAMESERVICES * numListings,
+          rpcCountForActive, "Msyncs sent to the active namenodes");
       // All reads should be sent of the observer.
-      assertEquals(numListings, rpcCountForObserver, "Reads sent to observer");
+      assertEquals(rpcCountForObserverBefore + numListings, rpcCountForObserver,
+          "Reads sent to observer");
       break;
     default:
       Assertions.fail("Unknown config setting: " + configSetting);
@@ -871,6 +1003,11 @@ public class TestObserverWithRouter {
     clientConfiguration.setLong(AUTO_MSYNC_PERIOD_KEY_PREFIX + "." + configKeySuffix, 3000);
     fileSystem = routerContext.getFileSystem(clientConfiguration);
 
+    long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    long rpcCountForObserverBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
+
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
@@ -878,35 +1015,34 @@ public class TestObserverWithRouter {
         "First namenode should be observer");
     Path path = new Path("/");
 
-    long rpcCountForActive;
-    long rpcCountForObserver;
-
     fileSystem.listFiles(path, false);
     fileSystem.listFiles(path, false);
     Thread.sleep(5000);
     fileSystem.listFiles(path, false);
     fileSystem.close();
 
-    rpcCountForActive = routerContext.getRouter().getRpcServer()
+    long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
 
-    rpcCountForObserver = routerContext.getRouter().getRpcServer()
+    long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
 
     switch (configSetting) {
     case USE_NAMENODE_PROXY_FLAG:
       // First read goes to active.
-      assertEquals(1, rpcCountForActive, "Calls sent to the active");
+      assertEquals(rpcCountForActiveBefore + 1, rpcCountForActive, "Calls sent to the active");
       // The rest of the reads are sent to the observer.
-      assertEquals(2, rpcCountForObserver, "Reads sent to observer");
+      assertEquals(rpcCountForObserverBefore + 2, rpcCountForObserver, "Reads sent to observer");
       break;
     case USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER:
     case USE_ROUTER_OBSERVER_READ_CONFIGURED_FAILOVER_PROXY_PROVIDER:
       // 4 msyncs expected. 2 for the first read, and 2 for the third read
       // after the auto-msync period has elapsed during the sleep.
-      assertEquals(4, rpcCountForActive, "Msyncs sent to the active namenodes");
+      assertEquals(rpcCountForActiveBefore + 4, rpcCountForActive,
+          "Msyncs sent to the active namenodes");
       // All three reads should be sent of the observer.
-      assertEquals(3, rpcCountForObserver, "Reads sent to observer");
+      assertEquals(rpcCountForObserverBefore + 3, rpcCountForObserver,
+          "Reads sent to observer");
       break;
     default:
       Assertions.fail("Unknown config setting: " + configSetting);
@@ -916,6 +1052,10 @@ public class TestObserverWithRouter {
   @EnumSource(ConfigSetting.class)
   @ParameterizedTest
   public void testThatWriteDoesntBypassNeedForMsync(ConfigSetting configSetting) throws Exception {
+    long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    long rpcCountForObserverBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
     Configuration clientConfiguration = getConfToEnableObserverReads(configSetting);
     String configKeySuffix =
         configSetting == ConfigSetting.USE_ROUTER_OBSERVER_READ_CONFIGURED_FAILOVER_PROXY_PROVIDER ?
@@ -930,36 +1070,37 @@ public class TestObserverWithRouter {
         "First namenode should be observer");
     Path path = new Path("/");
 
-    long rpcCountForActive;
-    long rpcCountForObserver;
-
     fileSystem.listFiles(path, false);
     Thread.sleep(5000);
     fileSystem.mkdirs(new Path(path, "mkdirLocation"));
     fileSystem.listFiles(path, false);
     fileSystem.close();
 
-    rpcCountForActive = routerContext.getRouter().getRpcServer()
+    long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
 
-    rpcCountForObserver = routerContext.getRouter().getRpcServer()
+    long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
 
     switch (configSetting) {
     case USE_NAMENODE_PROXY_FLAG:
       // First listing and mkdir go to the active.
-      assertEquals(2, rpcCountForActive, "Calls sent to the active namenodes");
+      assertEquals(rpcCountForActiveBefore + 2, rpcCountForActive,
+          "Calls sent to the active namenodes");
       // Second listing goes to the observer.
-      assertEquals(1, rpcCountForObserver, "Read sent to observer");
+      assertEquals(rpcCountForObserverBefore + 1, rpcCountForObserver,
+          "Read sent to observer");
       break;
     case USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER:
     case USE_ROUTER_OBSERVER_READ_CONFIGURED_FAILOVER_PROXY_PROVIDER:
       // 5 calls to the active namenodes expected. 4 msync and a mkdir.
       // Each of the 2 reads results in an msync to 2 nameservices.
       // The mkdir also goes to the active.
-      assertEquals(5, rpcCountForActive, "Calls sent to the active namenodes");
+      assertEquals(rpcCountForActiveBefore + 5, rpcCountForActive,
+          "Calls sent to the active namenodes");
       // Both reads should be sent of the observer.
-      assertEquals(2, rpcCountForObserver, "Reads sent to observer");
+      assertEquals(rpcCountForObserverBefore + 2, rpcCountForObserver,
+          "Reads sent to observer");
       break;
     default:
       Assertions.fail("Unknown config setting: " + configSetting);
@@ -973,10 +1114,12 @@ public class TestObserverWithRouter {
     Configuration confOverride = new Configuration(false);
     String namespaceWithObserverReadsDisabled = "ns0";
     // Disable observer reads for ns0
-    confOverride.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES,
+    confOverride.set(DFS_ROUTER_OBSERVER_READ_OVERRIDES,
         namespaceWithObserverReadsDisabled);
     startUpCluster(1, confOverride);
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
+    long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
 
     // Send msync request
     fileSystem.msync();
@@ -984,7 +1127,8 @@ public class TestObserverWithRouter {
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // There should only be one call to the namespace that has an observer.
-    assertEquals(1, rpcCountForActive, "Only one call to the namespace with an observer");
+    assertEquals(rpcCountForActiveBefore + 1, rpcCountForActive,
+        "Only one call to the namespace with an observer");
   }
 
   @EnumSource(ConfigSetting.class)
@@ -994,17 +1138,19 @@ public class TestObserverWithRouter {
       throws Exception {
     Configuration confOverride = new Configuration(false);
     // Disable observer reads for all namespaces.
-    confOverride.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, false);
+    confOverride.setBoolean(DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, false);
     startUpCluster(1, confOverride);
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
 
+    long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
     // Send msync request.
     fileSystem.msync();
 
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // There should no calls to any namespace.
-    assertEquals(0, rpcCountForActive, "No calls to any namespace");
+    assertEquals(rpcCountForActiveBefore + 0, rpcCountForActive, "No calls to any namespace");
   }
 
   @EnumSource(ConfigSetting.class)
@@ -1012,6 +1158,10 @@ public class TestObserverWithRouter {
   public void testRestartingNamenodeWithStateIDContextDisabled(ConfigSetting configSetting)
       throws Exception {
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
+    long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    long rpcCountForObserverBefore = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
     Path path = new Path("/testFile1");
     // Send Create call to active
     fileSystem.create(path).close();
