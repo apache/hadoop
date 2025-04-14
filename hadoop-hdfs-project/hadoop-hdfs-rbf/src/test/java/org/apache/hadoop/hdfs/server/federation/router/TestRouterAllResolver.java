@@ -48,8 +48,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.TestFileTruncate;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -80,9 +80,8 @@ public class TestRouterAllResolver {
   /** Filesystem for each namespace. */
   private static List<FileSystem> nsFss = new LinkedList<>();
 
-
-  @BeforeEach
-  public void setup() throws Exception {
+  @BeforeAll
+  public static void globalSetUp() throws Exception {
     // 2 nameservices with 1 namenode each (no HA needed for this test)
     cluster = new StateStoreDFSCluster(
         false, NUM_NAMESPACES, MultipleDestinationMountTableResolver.class);
@@ -121,8 +120,8 @@ public class TestRouterAllResolver {
     assertEquals(NUM_NAMESPACES, nsFss.size());
   }
 
-  @AfterEach
-  public void cleanup() {
+  @AfterAll
+  public static void globalTearDown() {
     cluster.shutdown();
     cluster = null;
     routerContext = null;
@@ -385,7 +384,7 @@ public class TestRouterAllResolver {
    * @param order Order of the mount table entry.
    * @throws Exception If the entry could not be created.
    */
-  private void createMountTableEntry(
+  private static void createMountTableEntry(
       final String mountPoint, final DestinationOrder order) throws Exception {
 
     RouterClient admin = routerContext.getAdminClient();
