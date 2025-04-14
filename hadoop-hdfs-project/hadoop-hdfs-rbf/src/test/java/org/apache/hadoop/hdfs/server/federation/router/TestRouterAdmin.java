@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createNamenodeReport;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.ASYNC_MODE;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.SYNC_MODE;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.synchronizeRecords;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -26,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,6 +46,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
+import org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.impl.DisabledNameserviceStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.impl.MountTableStoreImpl;
@@ -64,10 +68,13 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 
 /**
@@ -85,8 +92,23 @@ public class TestRouterAdmin {
   protected static StateStoreService stateStore;
   protected static RouterRpcClient mockRpcClient;
 
-  @BeforeAll
-  public static void globalSetUp() throws Exception {
+  public static StateStoreDFSCluster getCluster() {
+    return cluster;
+  }
+
+  public static void setCluster(StateStoreDFSCluster cluster) {
+    TestRouterAdmin.cluster = cluster;
+  }
+
+  public static RouterContext getRouterContext() {
+    return routerContext;
+  }
+
+  public static void setRouterContext(RouterContext routerContext) {
+    TestRouterAdmin.routerContext = routerContext;
+  }
+
+  public static void globalSetUp(String rpcMode) throws Exception {
     cluster = new StateStoreDFSCluster(false, 1);
     // Build and start a router with State Store + admin + RPC.
     Configuration conf = new RouterConfigBuilder()
@@ -95,6 +117,9 @@ public class TestRouterAdmin {
         .rpc()
         .build();
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_ADMIN_MOUNT_CHECK_ENABLE, true);
+    if (rpcMode.equals(ASYNC_MODE)) {
+      conf.setBoolean(RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_KEY, true);
+    }
     cluster.addRouterOverrides(conf);
     cluster.startRouters();
     routerContext = cluster.getRandomRouter();
@@ -110,7 +135,7 @@ public class TestRouterAdmin {
         createNamenodeReport("ns1", "nn1", HAServiceState.ACTIVE));
     stateStore.refreshCaches(true);
 
-    setUpMocks();
+    setUpMocks(rpcMode);
   }
 
   /**
@@ -126,7 +151,7 @@ public class TestRouterAdmin {
     field.set(target, value);
   }
 
-  private static void setUpMocks()
+  private static void setUpMocks(String rpcMode)
       throws IOException, NoSuchFieldException, IllegalAccessException {
     RouterRpcServer spyRpcServer =
         Mockito.spy(routerContext.getRouter().createRpcServer());
@@ -146,38 +171,207 @@ public class TestRouterAdmin {
     final Map<RemoteLocation, HdfsFileStatus> mockResponse1 = new HashMap<>();
     mockResponse0.put(remoteLocation0,
         new HdfsFileStatus.Builder().build());
-    Mockito.doReturn(mockResponse0).when(mockRpcClient).invokeConcurrent(
-        Mockito.eq(Lists.newArrayList(remoteLocation0)),
-        Mockito.any(RemoteMethod.class),
-        Mockito.eq(false),
-        Mockito.eq(false),
-        Mockito.eq(HdfsFileStatus.class)
-    );
     mockResponse1.put(remoteLocation1,
         new HdfsFileStatus.Builder().build());
-    Mockito.doReturn(mockResponse1).when(mockRpcClient).invokeConcurrent(
-        Mockito.eq(Lists.newArrayList(remoteLocation1)),
-        Mockito.any(RemoteMethod.class),
-        Mockito.eq(false),
-        Mockito.eq(false),
-        Mockito.eq(HdfsFileStatus.class)
-    );
+    if (rpcMode.equals(ASYNC_MODE)) {
+      Mockito.doAnswer(invocationOnMock -> {
+        AsyncUtil.asyncComplete(mockResponse0);
+        return null;
+      }).when(mockRpcClient).invokeConcurrent(
+          Mockito.eq(Lists.newArrayList(remoteLocation0)),
+          Mockito.any(RemoteMethod.class),
+          Mockito.eq(false),
+          Mockito.eq(false),
+          Mockito.eq(HdfsFileStatus.class)
+      );
+      Mockito.doAnswer(invocationOnMock -> {
+        AsyncUtil.asyncComplete(mockResponse1);
+        return null;
+      }).when(mockRpcClient).invokeConcurrent(
+          Mockito.eq(Lists.newArrayList(remoteLocation1)),
+          Mockito.any(RemoteMethod.class),
+          Mockito.eq(false),
+          Mockito.eq(false),
+          Mockito.eq(HdfsFileStatus.class)
+      );
+    } else {
+      Mockito.doReturn(mockResponse0).when(mockRpcClient).invokeConcurrent(
+          Mockito.eq(Lists.newArrayList(remoteLocation0)),
+          Mockito.any(RemoteMethod.class),
+          Mockito.eq(false),
+          Mockito.eq(false),
+          Mockito.eq(HdfsFileStatus.class)
+      );
+      Mockito.doReturn(mockResponse1).when(mockRpcClient).invokeConcurrent(
+          Mockito.eq(Lists.newArrayList(remoteLocation1)),
+          Mockito.any(RemoteMethod.class),
+          Mockito.eq(false),
+          Mockito.eq(false),
+          Mockito.eq(HdfsFileStatus.class)
+      );
+    }
   }
 
-  @AfterAll
-  public static void tearDown() {
-    cluster.stopRouter(routerContext);
-  }
-
-  @BeforeEach
-  public void testSetup() throws Exception {
+  public static void testSetup() throws Exception {
     assertTrue(
         synchronizeRecords(stateStore, mockMountTable, MountTable.class));
     // Avoid running with random users.
     routerContext.resetAdminClient();
   }
 
-  @Test
+  @Nested
+  @ExtendWith(RouterServerHelperInTestRouterAdmin.class)
+  class TestWithAsyncRouterRpc {
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testAddMountTableAsync() throws IOException {
+      testAddMountTable();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testAddDuplicateMountTableAsync() throws IOException {
+      testAddDuplicateMountTable();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testAddReadOnlyMountTableAsync() throws IOException {
+      testAddReadOnlyMountTable();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testAddOrderMountTableAsync() throws IOException {
+      testAddOrderMountTable();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testRemoveMountTableAsync() throws IOException {
+      testRemoveMountTable();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testEditMountTableAsync() throws IOException {
+      testEditMountTable();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testGetMountTableAsync() throws IOException {
+      testGetMountTable();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testGetSingleMountTableEntryAsync() throws IOException {
+      testGetSingleMountTableEntry();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testVerifyFileInDestinationsAsync() throws IOException {
+      testVerifyFileInDestinations();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testNameserviceManagerAsync() throws IOException {
+      testNameserviceManager();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testNameserviceManagerUnauthorizedAsync() throws Exception{
+      testNameserviceManagerUnauthorized();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testNameserviceManagerWithRulesAsync() throws Exception {
+      testNameserviceManagerWithRules();
+    }
+  }
+
+  @Nested
+  @ExtendWith(RouterServerHelperInTestRouterAdmin.class)
+  class TestWithSyncRouterRpc {
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testAddMountTableSync() throws IOException {
+      testAddMountTable();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testAddDuplicateMountTableSync() throws IOException {
+      testAddDuplicateMountTable();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testAddReadOnlyMountTableSync() throws IOException {
+      testAddReadOnlyMountTable();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testAddOrderMountTableSync() throws IOException {
+      testAddOrderMountTable();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testRemoveMountTableSync() throws IOException {
+      testRemoveMountTable();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testEditMountTableSync() throws IOException {
+      testEditMountTable();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testGetMountTableSync() throws IOException {
+      testGetMountTable();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testGetSingleMountTableEntrySync() throws IOException {
+      testGetSingleMountTableEntry();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testVerifyFileInDestinationsSync() throws IOException {
+      testVerifyFileInDestinations();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testNameserviceManagerSync() throws IOException {
+      testNameserviceManager();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testNameserviceManagerUnauthorizedSync() throws Exception{
+      testNameserviceManagerUnauthorized();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testNameserviceManagerWithRulesSync() throws Exception {
+      testNameserviceManagerWithRules();
+    }
+  }
+
+
   public void testAddMountTable() throws IOException {
     MountTable newEntry = MountTable.newInstance(
         "/testpath", Collections.singletonMap("ns0", "/testdir"),
@@ -202,7 +396,6 @@ public class TestRouterAdmin {
     assertEquals(records2.size(), mockMountTable.size() + 1);
   }
 
-  @Test
   public void testAddDuplicateMountTable() throws IOException {
     MountTable newEntry = MountTable.newInstance("/testpath",
         Collections.singletonMap("ns0", "/testdir"), Time.now(), Time.now());
@@ -231,7 +424,6 @@ public class TestRouterAdmin {
     assertFalse(addResponse2.getStatus());
   }
 
-  @Test
   public void testAddReadOnlyMountTable() throws IOException {
     MountTable newEntry = MountTable.newInstance(
         "/readonly", Collections.singletonMap("ns0", "/testdir"),
@@ -269,7 +461,6 @@ public class TestRouterAdmin {
     assertTrue(removeResponse.getStatus());
   }
 
-  @Test
   public void testAddOrderMountTable() throws IOException {
     testAddOrderMountTable(DestinationOrder.HASH);
     testAddOrderMountTable(DestinationOrder.LOCAL);
@@ -308,7 +499,6 @@ public class TestRouterAdmin {
     assertTrue(removeResponse.getStatus());
   }
 
-  @Test
   public void testRemoveMountTable() throws IOException {
 
     RouterClient client = routerContext.getAdminClient();
@@ -328,7 +518,6 @@ public class TestRouterAdmin {
     assertEquals(entries2.size(), mockMountTable.size() - 1);
   }
 
-  @Test
   public void testEditMountTable() throws IOException {
 
     RouterClient client = routerContext.getAdminClient();
@@ -354,7 +543,6 @@ public class TestRouterAdmin {
         entry.getDestinations());
   }
 
-  @Test
   public void testGetMountTable() throws IOException {
 
     RouterClient client = routerContext.getAdminClient();
@@ -379,14 +567,12 @@ public class TestRouterAdmin {
     assertEquals(matches, mockMountTable.size());
   }
 
-  @Test
   public void testGetSingleMountTableEntry() throws IOException {
     MountTable entry = getMountTableEntry("/ns0");
     assertNotNull(entry);
     assertEquals(entry.getSourcePath(), "/ns0");
   }
 
-  @Test
   public void testVerifyFileInDestinations() throws IOException {
     // This entry has been created in the mock setup.
     MountTable newEntry = MountTable.newInstance(
@@ -444,7 +630,6 @@ public class TestRouterAdmin {
     return response.getEntries();
   }
 
-  @Test
   public void testNameserviceManager() throws IOException {
 
     RouterClient client = routerContext.getAdminClient();
@@ -494,16 +679,14 @@ public class TestRouterAdmin {
         });
   }
 
-  @Test
-  public void testNameserviceManagerUnauthorized() throws Exception{
+  public void testNameserviceManagerUnauthorized() throws Exception {
     String username = "baduser";
     LambdaTestUtils.intercept(IOException.class,
         username + " is not a super user",
         () -> testNameserviceManagerUser(username));
   }
 
-  @Test
-  public void testNameserviceManagerWithRules() throws Exception{
+  public void testNameserviceManagerWithRules() throws Exception {
     // Try to disable a name service with a kerberos principal name.
     String username = RouterAdminServer.getSuperUser() + "@Example.com";
     DisableNameserviceResponse disableResp =
@@ -519,5 +702,34 @@ public class TestRouterAdmin {
     GetDisabledNameservicesResponse response =
         nsManager.getDisabledNameservices(getReq);
     return response.getNameservices();
+  }
+}
+
+class RouterServerHelperInTestRouterAdmin implements
+    AfterAllCallback, BeforeEachCallback {
+  public static final ThreadLocal<RouterServerHelperInTestRouterAdmin>
+      TEST_ROUTER_SERVER_TL = new InheritableThreadLocal<>();
+
+  public void afterAll(ExtensionContext context) {
+    if (TestRouterAdmin.getCluster() != null) {
+      TestRouterAdmin.getCluster().stopRouter(
+          TestRouterAdmin.getRouterContext());
+    }
+    TEST_ROUTER_SERVER_TL.remove();
+  }
+
+  public void beforeEach(ExtensionContext context) throws Exception {
+    Method testMethod = context.getRequiredTestMethod();
+    ValueSource enumAnnotation = testMethod.getAnnotation(ValueSource.class);
+    if (enumAnnotation != null) {
+      String[] strings = enumAnnotation.strings();
+      for (String rpcMode : strings) {
+        if (TEST_ROUTER_SERVER_TL.get() == null) {
+          TestRouterAdmin.globalSetUp(rpcMode);
+        }
+      }
+    }
+    TestRouterAdmin.testSetup();
+    TEST_ROUTER_SERVER_TL.set(RouterServerHelperInTestRouterAdmin.this);
   }
 }
