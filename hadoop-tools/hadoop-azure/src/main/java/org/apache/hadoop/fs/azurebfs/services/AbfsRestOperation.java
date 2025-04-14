@@ -139,10 +139,6 @@ public class AbfsRestOperation {
     return result;
   }
 
-  public void setMask() {
-    result.setMaskForSAS();
-  }
-
   public void hardSetResult(int httpStatus) {
     result = AbfsHttpOperation.getAbfsHttpOperationWithFixedResult(this.url,
         this.method, httpStatus);

@@ -821,7 +821,6 @@ public class AbfsBlobClient extends AbfsClient {
         final AbfsRestOperation successOp = getSuccessOp(
             AbfsRestOperationType.RenamePath, HTTP_METHOD_PUT,
             url, requestHeaders);
-        successOp.setMask();
         return new AbfsClientRenameResult(successOp, true, false);
       } else {
         throw new AbfsRestOperationException(HTTP_INTERNAL_ERROR,

@@ -70,7 +70,7 @@ public class DelegationSASGenerator extends SASGenerator {
       case SASTokenProvider.DELETE_RECURSIVE_OPERATION:
         sp = "d";
         sr = "d";
-        sdd = Integer.toString(StringUtils.countMatches(path, "/"));
+        sdd = path.equals("/")? "0": Integer.toString(StringUtils.countMatches(path, "/"));
         break;
       case SASTokenProvider.CHECK_ACCESS_OPERATION:
       case SASTokenProvider.GET_ACL_OPERATION:
@@ -79,10 +79,12 @@ public class DelegationSASGenerator extends SASGenerator {
         break;
       case SASTokenProvider.LIST_OPERATION_BLOB:
         sp = "l";
-        sr="c";
+        sr = "c";
         break;
       case SASTokenProvider.LIST_OPERATION:
         sp = "l";
+        sr = "d";
+        sdd = path.equals("/")? "0": Integer.toString(StringUtils.countMatches(path, "/"));
         break;
       case SASTokenProvider.GET_PROPERTIES_OPERATION:
       case SASTokenProvider.READ_OPERATION:
