@@ -825,7 +825,7 @@ public class TestHadoopArchives {
         fs.listFiles(new Path(archivePath.toString() + "/" + harName), false);
     while (listFiles.hasNext()) {
       LocatedFileStatus next = listFiles.next();
-      if (next.getPath().toString().startsWith("part-")) {
+      if (next.getPath().toString().matches(".*/part-\\d+$")) {
         // compare blockSize
         Assert.assertEquals(1 * 1024 * 1024, next.getBlockSize());
       }
@@ -858,7 +858,7 @@ public class TestHadoopArchives {
     int i = 0;
     while (listFiles.hasNext()) {
       LocatedFileStatus next = listFiles.next();
-      if (next.getPath().toString().startsWith("part-")) {
+      if (next.getPath().toString().matches(".*/part-\\d+$")) {
         // compare partfileSize
         assertEquals(2 * 1024 * 1024, next.getLen());
         i++;
