@@ -91,7 +91,7 @@ public class TestObserverWithRouter {
     }
     startUpCluster(NUM_OBSERVERS, null);
   }
-  
+
   @BeforeEach
   public void setup(TestInfo info) throws Exception {
     if (info.getTags().contains(SKIP_BEFORE_EACH_CLUSTER_STARTUP)) {
@@ -109,7 +109,7 @@ public class TestObserverWithRouter {
       }
       return;
     }
-    
+
     if (cluster != null) {
       System.out.println("BZL#Test. cluster != null.");
       // Making one Namenode active per nameservice.
@@ -125,7 +125,7 @@ public class TestObserverWithRouter {
       }
       cluster.waitNamenodeRegistration();
       cluster.waitActiveNamespaces();
-      
+
     } else {
       startUpCluster(NUM_OBSERVERS, null);
     }
@@ -155,7 +155,7 @@ public class TestObserverWithRouter {
     } catch (IOException e) {
       // Ignore exception.
     }
-    
+
     if (info.getTags().contains(SKIP_BEFORE_EACH_CLUSTER_STARTUP)) {
       System.out.println("BZL#Test. cleanup#SKIP_BEFORE_EACH_CLUSTER_STARTUP.");
       if (cluster != null) {
@@ -171,21 +171,6 @@ public class TestObserverWithRouter {
       fileSystem = null;
     }
   }
-  
-//  @AfterEach
-//  public void clearMountTable() throws IOException {
-//    RouterClient client = routerContext.getAdminClient();
-//    MountTableManager mountTableManager = client.getMountTableManager();
-//    GetMountTableEntriesRequest req1 =
-//        GetMountTableEntriesRequest.newInstance("/");
-//    GetMountTableEntriesResponse response =
-//        mountTableManager.getMountTableEntries(req1);
-//    for (MountTable entry : response.getEntries()) {
-//      RemoveMountTableEntryRequest req2 =
-//          RemoveMountTableEntryRequest.newInstance(entry.getSourcePath());
-//      mountTableManager.removeMountTableEntry(req2);
-//    }
-//  }
 
   public static void startUpCluster(int numberOfObserver, Configuration confOverrides)
       throws Exception {
@@ -642,7 +627,7 @@ public class TestObserverWithRouter {
     assertEquals(namenodes.get(0).getState(), FederationNamenodeServiceState.OBSERVER,
         "First namenode should be observer");
     Path path = new Path("/");
-    
+
     long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     long rpcCountForObserverBefore = routerContext.getRouter().getRpcServer()
