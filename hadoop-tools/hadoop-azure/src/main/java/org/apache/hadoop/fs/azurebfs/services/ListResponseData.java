@@ -21,12 +21,11 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
 /**
  * This class is used to hold the response data for list operations.
- * It contains a list of FileStatus objects, a map of rename pending JSON paths,
+ * It contains a list of VersionedFileStatus objects, a map of rename pending JSON paths,
  * continuation token and the executed REST operation.
  */
 public class ListResponseData {
@@ -37,16 +36,16 @@ public class ListResponseData {
   private String continuationToken;
 
   /**
-   * Returns the list of FileStatus objects.
-   * @return the list of FileStatus objects
+   * Returns the list of VersionedFileStatus objects.
+   * @return the list of VersionedFileStatus objects
    */
   public List<VersionedFileStatus> getFileStatusList() {
     return fileStatusList;
   }
 
   /**
-   * Sets the list of FileStatus objects.
-   * @param fileStatusList the list of FileStatus objects
+   * Sets the list of VersionedFileStatus objects.
+   * @param fileStatusList the list of VersionedFileStatus objects
    */
   public void setFileStatusList(final List<VersionedFileStatus> fileStatusList) {
     this.fileStatusList = fileStatusList;

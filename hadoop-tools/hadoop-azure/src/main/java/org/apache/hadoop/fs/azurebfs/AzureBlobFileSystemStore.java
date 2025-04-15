@@ -1330,14 +1330,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         // In both cases, we will add this.
         nameToEntryMap.put(entryName, fileStatus);
         fileStatuses.add(fileStatus);
-      } else {
+      } else if (!nameToEntryMap.containsKey(entryName)) {
         // This is a BlobPrefix entry.
         // It is a directory with file inside
         // This might have already been added as a marker blob.
-        if (!nameToEntryMap.containsKey(entryName)) {
-          nameToEntryMap.put(entryName, fileStatus);
-          fileStatuses.add(fileStatus);
-        }
+        nameToEntryMap.put(entryName, fileStatus);
+        fileStatuses.add(fileStatus);
       }
     }
   }
