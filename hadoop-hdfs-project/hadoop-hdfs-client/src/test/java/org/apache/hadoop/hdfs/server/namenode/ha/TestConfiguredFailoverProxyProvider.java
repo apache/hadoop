@@ -28,6 +28,7 @@ import org.apache.hadoop.util.Time;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.event.Level;
@@ -38,6 +39,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -46,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Timeout.ThreadMode.SEPARATE_THREAD;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -344,6 +347,8 @@ public class TestConfiguredFailoverProxyProvider {
     assertTrue(nn2Count.get() > 0, "nn2 should have been selected: " + nn2Count.get());
   }
 
+  // FIXME Sometimes java.net.Inet4AddressImpl.lookupAllHostAddr() hangs. Why ?
+  @Timeout(value=1, unit = TimeUnit.MINUTES, threadMode = SEPARATE_THREAD)
   @Test
   public void testResolveDomainNameUsingDNS() throws Exception {
     // test resolving to IP
