@@ -22,11 +22,9 @@ import net.jcip.annotations.NotThreadSafe;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -34,11 +32,9 @@ import java.util.Collection;
 /**
  * This test performs simple runs of the SLS with the generic syn json format.
  */
-@RunWith(value = Parameterized.class)
 @NotThreadSafe
 public class TestSLSStreamAMSynth extends BaseSLSRunnerTest {
 
-  @Parameters(name = "Testing with: {1}, {0}, (nodeFile {3})")
   public static Collection<Object[]> data() {
 
     String capScheduler = CapacityScheduler.class.getCanonicalName();
@@ -47,28 +43,40 @@ public class TestSLSStreamAMSynth extends BaseSLSRunnerTest {
     String nodeFile = "src/test/resources/nodes.json";
 
     // Test with both schedulers
-    return Arrays.asList(new Object[][] {
+    return Arrays.asList(new Object[][]{
 
-        // covering the no nodeFile case
-        {capScheduler, "SYNTH", synthTraceFile, null },
+      // covering the no nodeFile case
+      {capScheduler, "SYNTH", synthTraceFile, null},
 
-        // covering new commandline and CapacityScheduler
-        {capScheduler, "SYNTH", synthTraceFile, nodeFile },
+      // covering new commandline and CapacityScheduler
+      {capScheduler, "SYNTH", synthTraceFile, nodeFile},
 
-        // covering FairScheduler
-        {fairScheduler, "SYNTH", synthTraceFile, nodeFile },
+      // covering FairScheduler
+      {fairScheduler, "SYNTH", synthTraceFile, nodeFile},
     });
   }
 
-  @Before
   public void setup() {
     ongoingInvariantFile = "src/test/resources/ongoing-invariants.txt";
     exitInvariantFile = "src/test/resources/exit-invariants.txt";
   }
 
-  @Test(timeout = 90000)
+  public void initTestSLSStreamAMSynth(String pSchedulerType,
+      String pTraceType, String pTraceLocation, String pNodeFile) {
+    this.schedulerType = pSchedulerType;
+    this.traceType = pTraceType;
+    this.traceLocation = pTraceLocation;
+    this.nodeFile = pNodeFile;
+    setup();
+  }
+
+  @ParameterizedTest(name = "Testing with: {1}, {0}, (nodeFile {3})")
+  @MethodSource("data")
+  @Timeout(value = 90)
   @SuppressWarnings("all")
-  public void testSimulatorRunning() throws Exception {
+  public void testSimulatorRunning(String pSchedulerType,
+      String pTraceType, String pTraceLocation, String pNodeFile) throws Exception {
+    initTestSLSStreamAMSynth(pSchedulerType, pTraceType, pTraceLocation, pNodeFile);
     Configuration conf = new Configuration(false);
     long timeTillShutdownInsec = 20L;
     runSLS(conf, timeTillShutdownInsec);

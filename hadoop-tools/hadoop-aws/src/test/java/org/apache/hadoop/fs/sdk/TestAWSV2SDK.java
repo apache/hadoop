@@ -57,7 +57,7 @@ public class TestAWSV2SDK extends AbstractHadoopTestBase {
     assertThat(v2ClassPath)
             .as("AWS V2 SDK should be present on the classpath").isNotNull();
     List<String> listOfV2SdkClasses = getClassNamesFromJarFile(v2ClassPath);
-    String awsSdkPrefix = "software/amazon/awssdk";
+    String awsSdkPrefix = "software/amazon/";
     List<String> unshadedClasses = new ArrayList<>();
     for (String awsSdkClass : listOfV2SdkClasses) {
       if (!awsSdkClass.startsWith(awsSdkPrefix)) {

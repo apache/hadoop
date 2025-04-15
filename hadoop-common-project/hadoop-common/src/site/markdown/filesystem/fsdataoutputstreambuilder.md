@@ -192,6 +192,7 @@ Here are the custom options which the S3A Connector supports.
 |-----------------------------|-----------|----------------------------------------|
 | `fs.s3a.create.performance` | `boolean` | create a file with maximum performance |
 | `fs.s3a.create.header`      | `string`  | prefix for user supplied headers       |
+| `fs.s3a.create.multipart`   | `boolean` | create a multipart file                |
 
 ### `fs.s3a.create.performance`
 
@@ -200,7 +201,8 @@ Prioritize file creation performance over safety checks for filesystem consisten
 This:
 1. Skips the `LIST` call which makes sure a file is being created over a directory.
    Risk: a file is created over a directory.
-2. Ignores the overwrite flag.
+2. If the overwrite flag is false and filesystem flag`fs.s3a.create.conditional.enabled` is true, 
+   uses conditional creation to prevent the overwrite of any object at the destination.
 3. Never issues a `DELETE` call to delete parent directory markers.
 
 It is possible to probe an S3A Filesystem instance for this capability through
@@ -243,3 +245,17 @@ When an object is renamed, the metadata is propagated the copy created.
 
 It is possible to probe an S3A Filesystem instance for this capability through
 the `hasPathCapability(path, "fs.s3a.create.header")` check.
+
+### `fs.s3a.create.multipart` Create a multipart file
+
+Initiate a multipart upload when a file is created, rather
+than only when the amount of data buffered reaches the threshold
+set in `fs.s3a.multipart.size`.
+
+This is only relevant during testing, as it allows for multipart
+operation to be initiated without writing any data, so
+reducing test time.
+
+It is not recommended for production use, because as well as adding
+more network IO, it is not compatible with third-party stores which
+do not supprt multipart uploads.

@@ -25,10 +25,11 @@ import java.io.File;
 import org.apache.hadoop.mapred.MiniMRClientCluster;
 import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -101,7 +102,7 @@ public class TestStreamingStatus {
    *
    * @throws IOException
    */
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = new JobConf();
     conf.setBoolean(JTConfig.JT_RETIREJOBS, false);
@@ -119,7 +120,7 @@ public class TestStreamingStatus {
   /**
    * Kill the cluster after the test is done.
    */
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (fs != null) {
       clean(fs);

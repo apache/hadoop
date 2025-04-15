@@ -218,7 +218,6 @@ public abstract class AbfsClient implements Closeable {
       this.encryptionContextProvider = encryptionContextProvider;
       // Version update needed to support x-ms-encryption-context header
       // @link https://learn.microsoft.com/en-us/rest/api/storageservices/put-block?tabs=microsoft-entra-id}
-      xMsVersion = ApiVersion.AUG_03_2023; // will be default once server change deployed
       encryptionType = EncryptionType.ENCRYPTION_CONTEXT;
     } else if (abfsConfiguration.getEncodedClientProvidedEncryptionKey() != null) {
       clientProvidedEncryptionKey =
@@ -226,11 +225,6 @@ public abstract class AbfsClient implements Closeable {
       this.clientProvidedEncryptionKeySHA =
           abfsConfiguration.getEncodedClientProvidedEncryptionKeySHA();
       encryptionType = EncryptionType.GLOBAL_KEY;
-    }
-
-    // Version update needed to support x-ms-client-transaction-id header
-    if (abfsConfiguration.getIsClientTransactionIdEnabled()) {
-      xMsVersion = ApiVersion.NOV_04_2024;
     }
 
     String sslProviderName = null;
@@ -1626,7 +1620,8 @@ public abstract class AbfsClient implements Closeable {
    * @param requestHeaders  The list of HTTP headers for the request.
    * @return An AbfsRestOperation instance.
    */
-  AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType operationType,
+  @VisibleForTesting
+  public AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType operationType,
       final String httpMethod,
       final URL url,
       final List<AbfsHttpHeader> requestHeaders) {

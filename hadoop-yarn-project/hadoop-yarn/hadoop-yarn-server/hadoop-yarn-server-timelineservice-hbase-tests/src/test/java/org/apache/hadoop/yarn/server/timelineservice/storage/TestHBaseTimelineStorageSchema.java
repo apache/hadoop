@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTableRW;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTableRW;
@@ -50,7 +51,16 @@ public class TestHBaseTimelineStorageSchema {
     util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
     conf.setInt("hfile.format.version", 3);
-    util.startMiniCluster();
+    try {
+      util.startMiniCluster();
+    } catch (Exception e) {
+      // TODO catch InaccessibleObjectException directly once Java 8 support is dropped
+      if (e.getClass().getSimpleName().equals("InaccessibleObjectException")) {
+        assumeTrue(false, "Could not start HBase because of HBASE-29234");
+      } else {
+        throw e;
+      }
+    }
   }
 
   @Test
@@ -142,7 +152,11 @@ public class TestHBaseTimelineStorageSchema {
   @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (util != null) {
-      util.shutdownMiniCluster();
+      try {
+        util.shutdownMiniCluster();
+      } catch (Exception e) {
+        //May not work if we failed initializing
+      }
     }
   }
 }

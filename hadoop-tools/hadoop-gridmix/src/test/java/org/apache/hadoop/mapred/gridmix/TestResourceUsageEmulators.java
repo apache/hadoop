@@ -19,8 +19,9 @@ package org.apache.hadoop.mapred.gridmix;
 
 import java.io.IOException;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -188,11 +189,13 @@ public class TestResourceUsageEmulators {
     String id = TestResourceUsageEmulatorPlugin.DEFAULT_IDENTIFIER;
     long result = 
       TestResourceUsageEmulatorPlugin.testInitialization(id, conf);
-    assertTrue("Resource usage matcher failed to initialize the configured"
-               + " plugin", result > currentTime);
+    assertTrue(result > currentTime,
+        "Resource usage matcher failed to initialize the configured"
+        + " plugin");
     result = TestResourceUsageEmulatorPlugin.testEmulation(id, conf);
-    assertTrue("Resource usage matcher failed to load and emulate the"
-               + " configured plugin", result > currentTime);
+    assertTrue(result > currentTime,
+        "Resource usage matcher failed to load and emulate the"
+        + " configured plugin");
     
     // test plugin order to first emulate cpu and then others
     conf.setStrings(ResourceUsageMatcher.RESOURCE_USAGE_EMULATION_PLUGINS, 
@@ -206,8 +209,9 @@ public class TestResourceUsageEmulators {
     long time2 = 
            TestResourceUsageEmulatorPlugin.testInitialization(TestOthers.ID, 
                                                               conf);
-    assertTrue("Resource usage matcher failed to initialize the configured"
-               + " plugins in order", time1 < time2);
+    assertTrue(time1 < time2,
+        "Resource usage matcher failed to initialize the configured"
+        + " plugins in order");
     
     matcher.matchResourceUsage();
 
@@ -218,8 +222,8 @@ public class TestResourceUsageEmulators {
     time2 = 
       TestResourceUsageEmulatorPlugin.testInitialization(TestOthers.ID, 
                                                          conf);
-    assertTrue("Resource usage matcher failed to load the configured plugins", 
-               time1 < time2);
+    assertTrue(time1 < time2,
+        "Resource usage matcher failed to load the configured plugins");
   }
   
   /**
@@ -344,12 +348,13 @@ public class TestResourceUsageEmulators {
     String identifier = TestResourceUsageEmulatorPlugin.DEFAULT_IDENTIFIER;
     long initTime = 
       TestResourceUsageEmulatorPlugin.testInitialization(identifier, conf);
-    assertTrue("ResourceUsageMatcherRunner failed to initialize the"
-               + " configured plugin", initTime > currentTime);
+    assertTrue(initTime > currentTime,
+        "ResourceUsageMatcherRunner failed to initialize the"
+        + " configured plugin");
     
     // check the progress
-    assertEquals("Progress mismatch in ResourceUsageMatcherRunner", 
-                 0, progress.getProgress(), 0D);
+    assertEquals(0, progress.getProgress(), 0D,
+        "Progress mismatch in ResourceUsageMatcherRunner");
     
     // call match() and check progress
     progress.setProgress(0.01f);
@@ -357,8 +362,9 @@ public class TestResourceUsageEmulators {
     matcher.test();
     long emulateTime = 
       TestResourceUsageEmulatorPlugin.testEmulation(identifier, conf);
-    assertTrue("ProgressBasedResourceUsageMatcher failed to load and emulate"
-               + " the configured plugin", emulateTime > currentTime);
+    assertTrue(emulateTime > currentTime,
+        "ProgressBasedResourceUsageMatcher failed to load and emulate"
+        + " the configured plugin");
   }
   
   /**
@@ -379,14 +385,11 @@ public class TestResourceUsageEmulators {
     fakeCpuEmulator.calibrate(fakeMonitor, target);
     
     // by default, CpuUsageEmulator.calibrate() will consume 100ms of CPU usage
-    assertEquals("Fake calibration failed", 
-                 100, fakeMonitor.getCumulativeCpuTime());
-    assertEquals("Fake calibration failed", 
-                 100, fakeCpuEmulator.getCpuUsage());
+    assertEquals(100, fakeMonitor.getCumulativeCpuTime(), "Fake calibration failed");
+    assertEquals(100, fakeCpuEmulator.getCpuUsage(), "Fake calibration failed");
     // by default, CpuUsageEmulator.performUnitComputation() will be called 
     // twice
-    assertEquals("Fake calibration failed", 
-                 2, fakeCpuEmulator.getNumCalls());
+    assertEquals(2, fakeCpuEmulator.getNumCalls(), "Fake calibration failed");
   }
   
   /**
@@ -465,17 +468,18 @@ public class TestResourceUsageEmulators {
     long cpuUsagePost = fakeCore.getCpuUsage();
     
     //  test if no calls are made cpu usage emulator core
-    assertEquals("Disabled cumulative CPU usage emulation plugin works!", 
-                 numCallsPre, numCallsPost);
+    assertEquals(numCallsPre, numCallsPost,
+        "Disabled cumulative CPU usage emulation plugin works!");
     
     //  test if no calls are made cpu usage emulator core
-    assertEquals("Disabled cumulative CPU usage emulation plugin works!", 
-                 cpuUsagePre, cpuUsagePost);
+    assertEquals(cpuUsagePre, cpuUsagePost,
+        "Disabled cumulative CPU usage emulation plugin works!");
     
     // test with get progress
     float progress = cpuPlugin.getProgress();
-    assertEquals("Invalid progress of disabled cumulative CPU usage emulation " 
-                 + "plugin!", 1.0f, progress, 0f);
+    assertEquals(1.0f, progress, 0f,
+        "Invalid progress of disabled cumulative CPU usage emulation "
+        + "plugin!");
     
     // test with valid resource usage value
     ResourceUsageMetrics metrics = createMetrics(targetCpuUsage);
@@ -590,11 +594,11 @@ public class TestResourceUsageEmulators {
     }
     
     // test if the resource plugin shows the expected invocations
-    assertEquals("Cumulative cpu usage emulator plugin failed (num calls)!", 
-                 expectedTotalNumCalls, fakeCore.getNumCalls(), 0L);
+    assertEquals(expectedTotalNumCalls, fakeCore.getNumCalls(), 0L,
+        "Cumulative cpu usage emulator plugin failed (num calls)!");
     // test if the resource plugin shows the expected usage
-    assertEquals("Cumulative cpu usage emulator plugin failed (total usage)!", 
-                 expectedTotalCpuUsage, fakeCore.getCpuUsage(), 0L);
+    assertEquals(expectedTotalCpuUsage, fakeCore.getCpuUsage(), 0L,
+        "Cumulative cpu usage emulator plugin failed (total usage)!");
   }
   
   // tests if the CPU usage emulation plugin emulates only at the expected
@@ -606,9 +610,9 @@ public class TestResourceUsageEmulators {
     fakeProgress.setProgress(progress);
     cpuPlugin.emulate();
     
-    assertEquals("Emulation interval test for cpu usage failed " + info + "!", 
-                 expectedTotalCpuUsage, fakeCore.getCpuUsage(), 0L);
-    assertEquals("Emulation interval test for num calls failed " + info + "!", 
-                 expectedTotalNumCalls, fakeCore.getNumCalls(), 0L);
+    assertEquals(expectedTotalCpuUsage, fakeCore.getCpuUsage(), 0L,
+        "Emulation interval test for cpu usage failed " + info + "!");
+    assertEquals(expectedTotalNumCalls, fakeCore.getNumCalls(), 0L,
+        "Emulation interval test for num calls failed " + info + "!");
   }
 }

@@ -77,12 +77,15 @@ import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
 import org.apache.hadoop.tools.rumen.ZombieJobProducer;
 import org.apache.hadoop.util.Progress;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.mockito.Mockito.*;
-
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestGridMixClasses {
   private static final Logger LOG = LoggerFactory.getLogger(TestGridMixClasses.class);
@@ -90,7 +93,8 @@ public class TestGridMixClasses {
   /*
    * simple test LoadSplit (getters,copy, write, read...)
    */
-  @Test (timeout=1000)
+  @Test
+  @Timeout(value = 1)
   public void testLoadSplit() throws Exception {
 
     LoadSplit test = getLoadSplit();
@@ -121,7 +125,8 @@ public class TestGridMixClasses {
   /*
    * simple test GridmixSplit (copy, getters, write, read..)
    */
-  @Test (timeout=1000)
+  @Test
+  @Timeout(value = 1)
   public void testGridmixSplit() throws Exception {
     Path[] files = {new Path("one"), new Path("two")};
     long[] start = {1, 2};
@@ -164,7 +169,8 @@ public class TestGridMixClasses {
    * test LoadMapper loadMapper should write to writer record for each reduce
    */
   @SuppressWarnings({"rawtypes", "unchecked"})
-  @Test (timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testLoadMapper() throws Exception {
 
     Configuration conf = new Configuration();
@@ -376,7 +382,8 @@ public class TestGridMixClasses {
   /*
    * test LoadSortComparator
    */
-  @Test (timeout=3000)
+  @Test
+  @Timeout(value = 3)
   public void testLoadJobLoadSortComparator() throws Exception {
     LoadJob.LoadSortComparator test = new LoadJob.LoadSortComparator();
 
@@ -409,7 +416,8 @@ public class TestGridMixClasses {
   /*
    * test SpecGroupingComparator
    */
-  @Test (timeout=3000)
+  @Test
+  @Timeout(value = 3)
   public void testGridmixJobSpecGroupingComparator() throws Exception {
     GridmixJob.SpecGroupingComparator test = new GridmixJob.SpecGroupingComparator();
 
@@ -452,7 +460,8 @@ public class TestGridMixClasses {
   /*
    * test CompareGridmixJob only equals and compare
    */
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testCompareGridmixJob() throws Exception {
     Configuration conf = new Configuration();
     Path outRoot = new Path("target");
@@ -478,7 +487,8 @@ public class TestGridMixClasses {
   /*
    * test ReadRecordFactory. should read all data from inputstream
    */
-  @Test (timeout=3000)
+  @Test
+  @Timeout(value = 3)
   public void testReadRecordFactory() throws Exception {
 
     // RecordFactory factory, InputStream src, Configuration conf
@@ -589,7 +599,8 @@ public class TestGridMixClasses {
   /*
    * test LoadRecordReader. It class reads data from some files.
    */
-  @Test (timeout=6100)
+  @Test
+  @Timeout(value = 6)
   public void testLoadJobLoadRecordReader() throws Exception {
     LoadJob.LoadRecordReader test = new LoadJob.LoadRecordReader();
     Configuration conf = new Configuration();
@@ -652,7 +663,8 @@ public class TestGridMixClasses {
    * test LoadReducer
    */
 
-  @Test (timeout=3000)
+  @Test
+  @Timeout(value = 3)
   public void testLoadJobLoadReducer() throws Exception {
     LoadJob.LoadReducer test = new LoadJob.LoadReducer();
 
@@ -772,7 +784,8 @@ public class TestGridMixClasses {
   /*
    * test SerialJobFactory
    */
-  @Test (timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testSerialReaderThread() throws Exception {
 
     Configuration conf = new Configuration();
@@ -787,7 +800,7 @@ public class TestGridMixClasses {
     FakeJobSubmitter submitter = new FakeJobSubmitter();
     File ws = new File("target" + File.separator + this.getClass().getName());
     if (!ws.exists()) {
-      Assert.assertTrue(ws.mkdirs());
+      assertTrue(ws.mkdirs());
     }
 
     SerialJobFactory jobFactory = new SerialJobFactory(submitter, jobProducer,
@@ -833,7 +846,8 @@ public class TestGridMixClasses {
    * test SleepMapper
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testSleepMapper() throws Exception {
     SleepJob.SleepMapper test = new SleepJob.SleepMapper();
 
@@ -878,7 +892,8 @@ public class TestGridMixClasses {
   /*
    * test SleepReducer
    */
-  @Test (timeout=3000)
+  @Test
+  @Timeout(value = 3)
   public void testSleepReducer() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(JobContext.NUM_REDUCES, 2);

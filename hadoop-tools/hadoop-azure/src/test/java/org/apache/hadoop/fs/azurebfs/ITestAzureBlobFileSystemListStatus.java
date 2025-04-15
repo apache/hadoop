@@ -20,7 +20,9 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -40,7 +42,14 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
 import org.apache.hadoop.fs.azurebfs.services.ListResponseData;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
@@ -51,9 +60,15 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LIST_MAX_RESULTS;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_METADATA_PREFIX;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_BLOB_LIST_PARSING;
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicity.SUFFIX;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_MESSAGE;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_JDK_MESSAGE;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
@@ -62,6 +77,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.rename;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
@@ -118,7 +135,9 @@ public class ITestAzureBlobFileSystemListStatus extends
 
   /**
    * Test to verify that each paginated call to ListBlobs uses a new tracing context.
-   * @throws Exception
+   * Test also verifies that the retry policy is called when a SocketTimeoutException
+   * Test also verifies that empty list with valid continuation token is handled.
+   * @throws Exception if there is an error or test assertions fails.
    */
   @Test
   public void testListPathTracingContext() throws Exception {
@@ -148,6 +167,10 @@ public class ITestAzureBlobFileSystemListStatus extends
     List<FileStatus> fileStatuses = new ArrayList<>();
     spiedStore.listStatus(new Path("/"), "", fileStatuses, true, null, spiedTracingContext);
 
+    // Assert that there were retries due to SocketTimeoutException
+    Mockito.verify(spiedClient, Mockito.times(1))
+        .getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
+
     // Assert that there were 2 paginated ListPath calls were made 1 and 2.
     // 1. Without continuation token
     Mockito.verify(spiedClient, times(1)).listPath(
@@ -162,6 +185,31 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     // Assert that none of the API calls used the same tracing header.
     Mockito.verify(spiedTracingContext, times(0)).constructHeader(any(), any(), any());
+  }
+
+  @Test
+  public void testListPathParsingFailure() throws Exception {
+    assumeBlobServiceType();
+    AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
+    AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
+    AbfsBlobClient spiedClient = Mockito.spy(spiedStore.getClientHandler()
+        .getBlobClient());
+    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
+    Mockito.doReturn(spiedClient).when(spiedStore).getClient();
+
+    Mockito.doThrow(new SocketException(CONNECTION_RESET_MESSAGE)).when(spiedClient).filterDuplicateEntriesAndRenamePendingFiles(any(), any());
+    List<FileStatus> fileStatuses = new ArrayList<>();
+    AbfsDriverException ex = intercept(AbfsDriverException.class,
+      () -> {
+        spiedStore.listStatus(new Path("/"), "", fileStatuses,
+            true, null, getTestTracingContext(spiedFs, true));
+      });
+    Assertions.assertThat(ex.getStatusCode())
+        .describedAs("Expecting Network Error status code")
+        .isEqualTo(-1);
+    Assertions.assertThat(ex.getErrorMessage())
+        .describedAs("Expecting COPY_ABORTED error code")
+        .contains(ERR_BLOB_LIST_PARSING);
   }
 
   /**
@@ -523,5 +571,107 @@ public class ITestAzureBlobFileSystemListStatus extends
         .describedAs("Expecting a Directory Path").isEqualTo(false);
     Assertions.assertThat(fileStatus.getLen())
         .describedAs("Content Length Not as Expected").isEqualTo(0);
+  }
+
+  /**
+   * Helper method to mock the AbfsRestOperation and modify the request headers.
+   *
+   * @param abfsBlobClient the mocked AbfsBlobClient
+   * @param newHeader the header to add in place of the old one
+   */
+  public static void mockAbfsRestOperation(AbfsBlobClient abfsBlobClient, String... newHeader) {
+    Mockito.doAnswer(invocation -> {
+      List<AbfsHttpHeader> requestHeaders = invocation.getArgument(3);
+
+      // Remove the actual HDI config header and add the new one
+      requestHeaders.removeIf(header ->
+          HttpHeaderConfigurations.X_MS_META_HDI_ISFOLDER.equals(header.getName()));
+      for (String header : newHeader) {
+        requestHeaders.add(new AbfsHttpHeader(X_MS_METADATA_PREFIX + header, TRUE));
+      }
+
+      // Call the real method
+      return invocation.callRealMethod();
+    }).when(abfsBlobClient).getAbfsRestOperation(eq(AbfsRestOperationType.PutBlob),
+        eq(HTTP_METHOD_PUT), any(URL.class), anyList());
+  }
+
+  /**
+   * Helper method to mock the AbfsBlobClient and set up the client handler.
+   *
+   * @param fs the AzureBlobFileSystem instance
+   * @return the mocked AbfsBlobClient
+   */
+  public static AbfsBlobClient mockIngressClientHandler(AzureBlobFileSystem fs) {
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
+    AbfsBlobClient abfsBlobClient = (AbfsBlobClient) Mockito.spy(
+        clientHandler.getClient());
+    fs.getAbfsStore().setClient(abfsBlobClient);
+    fs.getAbfsStore().setClientHandler(clientHandler);
+    Mockito.doReturn(abfsBlobClient).when(clientHandler).getIngressClient();
+    return abfsBlobClient;
+  }
+
+  /**
+   * Test directory status with different HDI folder configuration,
+   * verifying the correct header and directory state.
+   */
+  private void testIsDirectory(boolean expected, String... configName) throws Exception {
+    try (AzureBlobFileSystem fs = Mockito.spy(getFileSystem())) {
+      assumeBlobServiceType();
+      AbfsBlobClient abfsBlobClient = mockIngressClientHandler(fs);
+      // Mock the operation to modify the headers
+      mockAbfsRestOperation(abfsBlobClient, configName);
+
+      // Create the path and invoke mkdirs method
+      Path path = new Path("/testPath");
+      fs.mkdirs(path);
+
+      // Assert that the response header has the updated value
+      FileStatus[] fileStatus = fs.listStatus(path.getParent());
+
+      AbfsHttpOperation op = abfsBlobClient.getPathStatus(
+          path.toUri().getPath(),
+          true, getTestTracingContext(fs, true),
+          null).getResult();
+
+      Assertions.assertThat(abfsBlobClient.checkIsDir(op))
+          .describedAs("Directory should be marked as " + expected)
+          .isEqualTo(expected);
+
+      // Verify the header and directory state
+      Assertions.assertThat(fileStatus.length)
+          .describedAs("Expected directory state: " + expected)
+          .isEqualTo(1);
+
+      // Verify the header and directory state
+      Assertions.assertThat(fileStatus[0].isDirectory())
+          .describedAs("Expected directory state: " + expected)
+          .isEqualTo(expected);
+
+      fs.delete(path, true);
+    }
+  }
+
+  /**
+   * Test to verify the directory status with different HDI folder configurations.
+   * Verifying the correct header and directory state.
+   */
+  @Test
+  public void testIsDirectoryWithDifferentCases() throws Exception {
+    testIsDirectory(true,  "HDI_ISFOLDER");
+
+    testIsDirectory(true, "Hdi_ISFOLDER");
+
+    testIsDirectory(true, "Hdi_isfolder");
+
+    testIsDirectory(true, "hdi_isfolder");
+
+    testIsDirectory(false, "Hdi_isfolder1");
+
+    testIsDirectory(true, "HDI_ISFOLDER", "Hdi_ISFOLDER", "Hdi_isfolder");
+
+    testIsDirectory(true, "HDI_ISFOLDER", "Hdi_ISFOLDER1", "Test");
   }
 }

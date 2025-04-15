@@ -23,9 +23,8 @@ import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -37,7 +36,12 @@ import java.lang.management.ThreadMXBean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestLeaseRenewer {
   private final String FAKE_AUTHORITY="hdfs://nn1/";
@@ -54,7 +58,7 @@ public class TestLeaseRenewer {
   /** Cause renewals often so test runs quickly. */
   private static final long FAST_GRACE_PERIOD = 100L;
 
-  @Before
+  @BeforeEach
   public void setupMocksAndRenewer() throws IOException {
     MOCK_DFSCLIENT = createMockClient();
 
@@ -82,19 +86,19 @@ public class TestLeaseRenewer {
         FAKE_AUTHORITY, FAKE_UGI_A, MOCK_DFSCLIENT);
     LeaseRenewer lr2 = LeaseRenewer.getInstance(
         FAKE_AUTHORITY, FAKE_UGI_A, MOCK_DFSCLIENT);
-    Assert.assertSame(lr, lr2);
+    assertSame(lr, lr2);
 
     // But a different UGI should return a different instance
     LeaseRenewer lr3 = LeaseRenewer.getInstance(
         FAKE_AUTHORITY, FAKE_UGI_B, MOCK_DFSCLIENT);
-    Assert.assertNotSame(lr, lr3);
+    assertNotSame(lr, lr3);
 
     // A different authority with same UGI should also be a different
     // instance.
     LeaseRenewer lr4 = LeaseRenewer.getInstance(
         "someOtherAuthority", FAKE_UGI_B, MOCK_DFSCLIENT);
-    Assert.assertNotSame(lr, lr4);
-    Assert.assertNotSame(lr3, lr4);
+    assertNotSame(lr, lr4);
+    assertNotSame(lr3, lr4);
   }
 
   @Test
@@ -122,7 +126,7 @@ public class TestLeaseRenewer {
       Thread.sleep(50);
     }
     if (leaseRenewalCount.get() == 0) {
-      Assert.fail("Did not renew lease at all!");
+      fail("Did not renew lease at all!");
     }
 
     renewer.closeClient(MOCK_DFSCLIENT);
@@ -176,23 +180,21 @@ public class TestLeaseRenewer {
 
     // Make sure renewer is not running due to expiration.
     Thread.sleep(FAST_GRACE_PERIOD * 2);
-    Assert.assertTrue(!renewer.isRunning());
+    assertTrue(!renewer.isRunning());
   }
 
   @Test
   public void testThreadName() throws Exception {
-    Assert.assertFalse("Renewer not initially running",
-        renewer.isRunning());
+    assertFalse(renewer.isRunning(), "Renewer not initially running");
 
     // Pretend to open a file
     renewer.put(MOCK_DFSCLIENT);
 
-    Assert.assertTrue("Renewer should have started running",
-        renewer.isRunning());
+    assertTrue(renewer.isRunning(), "Renewer should have started running");
 
     // Check the thread name is reasonable
     String threadName = renewer.getDaemonName();
-    Assert.assertEquals("LeaseRenewer:myuser@hdfs://nn1/", threadName);
+    assertEquals("LeaseRenewer:myuser@hdfs://nn1/", threadName);
 
     // Pretend to close the file
     renewer.closeClient(MOCK_DFSCLIENT);
@@ -203,7 +205,7 @@ public class TestLeaseRenewer {
     while (renewer.isRunning() && Time.monotonicNow() < failTime) {
       Thread.sleep(50);
     }
-    Assert.assertFalse(renewer.isRunning());
+    assertFalse(renewer.isRunning());
   }
 
   /**
@@ -213,24 +215,23 @@ public class TestLeaseRenewer {
    */
   @Test
   public void testDaemonThreadLeak() throws Exception {
-    Assert.assertFalse("Renewer not initially running", renewer.isRunning());
+    assertFalse(renewer.isRunning(), "Renewer not initially running");
 
     // Pretend to create a file#1, daemon#1 starts
     renewer.put(MOCK_DFSCLIENT);
-    Assert.assertTrue("Renewer should have started running",
-        renewer.isRunning());
+    assertTrue(renewer.isRunning(), "Renewer should have started running");
     Pattern daemonThreadNamePattern = Pattern.compile("LeaseRenewer:\\S+");
-    Assert.assertEquals(1, countThreadMatching(daemonThreadNamePattern));
+    assertEquals(1, countThreadMatching(daemonThreadNamePattern));
 
     // Pretend to create file#2, daemon#2 starts due to expiration
     LeaseRenewer lastRenewer = renewer;
     renewer =
         LeaseRenewer.getInstance(FAKE_AUTHORITY, FAKE_UGI_A, MOCK_DFSCLIENT);
-    Assert.assertEquals(lastRenewer, renewer);
+    assertEquals(lastRenewer, renewer);
 
     // Pretend to close file#1
     renewer.closeClient(MOCK_DFSCLIENT);
-    Assert.assertEquals(1, countThreadMatching(daemonThreadNamePattern));
+    assertEquals(1, countThreadMatching(daemonThreadNamePattern));
 
     // Pretend to be expired
     renewer.setEmptyTime(0);
@@ -249,7 +250,7 @@ public class TestLeaseRenewer {
 
     int threadCount = countThreadMatching(daemonThreadNamePattern);
     //Sometimes old LR#Daemon gets closed and lead to count 1 (rare scenario)
-    Assert.assertTrue(1 == threadCount || 2 == threadCount);
+    assertTrue(1 == threadCount || 2 == threadCount);
 
     // After grace period, both daemon#1 and renewer#1 will be removed due to
     // expiration, then daemon#2 will leak before HDFS-14575.
@@ -259,14 +260,14 @@ public class TestLeaseRenewer {
     lastRenewer = renewer;
     renewer =
         LeaseRenewer.getInstance(FAKE_AUTHORITY, FAKE_UGI_A, MOCK_DFSCLIENT);
-    Assert.assertEquals(lastRenewer, renewer);
+    assertEquals(lastRenewer, renewer);
     renewer.setGraceSleepPeriod(FAST_GRACE_PERIOD);
     renewer.closeClient(MOCK_DFSCLIENT);
     renewer.setEmptyTime(0);
     // Make sure LeaseRenewer#daemon threads will terminate after grace period
     Thread.sleep(FAST_GRACE_PERIOD * 2);
-    Assert.assertEquals("LeaseRenewer#daemon thread leaks", 0,
-        countThreadMatching(daemonThreadNamePattern));
+    assertEquals(0, countThreadMatching(daemonThreadNamePattern),
+        "LeaseRenewer#daemon thread leaks");
   }
 
   private static int countThreadMatching(Pattern pattern) {

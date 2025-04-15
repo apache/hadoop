@@ -40,6 +40,7 @@ import static org.apache.hadoop.yarn.server.timelineservice.storage.HBaseStorage
 import static org.apache.hadoop.yarn.server.timelineservice.storage.HBaseStorageMonitor.MONITOR_FILTERS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestTimelineReaderHBaseDown {
 
@@ -58,6 +59,13 @@ public class TestTimelineReaderHBaseDown {
       HBaseTimelineReaderImpl htr = getHBaseTimelineReaderImpl(server);
       server.start();
       checkQuery(htr);
+    } catch (Exception e) {
+      // TODO catch InaccessibleObjectException directly once Java 8 support is dropped
+      if (e.getClass().getSimpleName().equals("InaccessibleObjectException")) {
+        assumeTrue(false, "Could not start HBase because of HBASE-29234");
+      } else {
+        throw e;
+      }
     } finally {
       util.shutdownMiniCluster();
     }
@@ -101,6 +109,13 @@ public class TestTimelineReaderHBaseDown {
       // start server and check that it detects hbase is down
       server.start();
       waitForHBaseDown(htr);
+    } catch (Exception e) {
+      // TODO catch InaccessibleObjectException directly once Java 8 support is dropped
+      if (e.getClass().getSimpleName().equals("InaccessibleObjectException")) {
+        assumeTrue(false, "Could not start HBase because of HBASE-29234");
+      } else {
+        throw e;
+      }
     } finally {
       util.shutdownMiniCluster();
     }
@@ -129,6 +144,13 @@ public class TestTimelineReaderHBaseDown {
       // start server and check that it detects hbase is down
       server.start();
       waitForHBaseDown(htr);
+    } catch (Exception e) {
+      // TODO catch InaccessibleObjectException directly once Java 8 support is dropped
+      if (e.getClass().getSimpleName().equals("InaccessibleObjectException")) {
+        assumeTrue(false, "Could not start HBase because of HBASE-29234");
+      } else {
+        throw e;
+      }
     } finally {
       util.shutdownMiniCluster();
     }
@@ -167,6 +189,13 @@ public class TestTimelineReaderHBaseDown {
           return false;
         }
       }, 1000, 150000);
+    } catch (Exception e) {
+      // TODO catch InaccessibleObjectException directly once Java 8 support is dropped
+      if (e.getClass().getSimpleName().equals("InaccessibleObjectException")) {
+        assumeTrue(false, "Could not start HBase because of HBASE-29234");
+      } else {
+        throw e;
+      }
     } finally {
       util.shutdownMiniCluster();
     }

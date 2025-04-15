@@ -22,6 +22,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
+
 /**
  * Responsible to keep all the Azure Blob File System configurations keys in Hadoop configuration file.
  */
@@ -319,7 +321,11 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION = "fs.azure.enable.checksum.validation";
 
   public static String accountProperty(String property, String account) {
-    return property + "." + account;
+    return property + DOT + account;
+  }
+
+  public static String containerProperty(String property, String fsName, String account) {
+    return property + DOT + fsName + DOT + account;
   }
 
   public static final String FS_AZURE_ENABLE_DELEGATION_TOKEN = "fs.azure.enable.delegation.token";

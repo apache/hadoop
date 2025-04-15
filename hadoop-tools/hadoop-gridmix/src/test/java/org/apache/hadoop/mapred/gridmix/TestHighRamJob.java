@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -32,7 +34,7 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test if Gridmix correctly configures the simulated job's configuration for
@@ -145,8 +147,8 @@ public class TestHighRamJob {
       failed = true;
     }
     assertNotNull(failed);
-    assertTrue("Exception expected for exceeding map memory limit "
-               + "(deprecation)!", failed);
+    assertTrue(failed, "Exception expected for exceeding map memory limit "
+         + "(deprecation)!");
     
     // test : check with high ram enabled and reduce memory scaling mismatch 
     //        (deprecated)
@@ -161,8 +163,8 @@ public class TestHighRamJob {
       failed = true;
     }
     assertNotNull(failed);
-    assertTrue("Exception expected for exceeding reduce memory limit "
-               + "(deprecation)!", failed);
+    assertTrue(failed, "Exception expected for exceeding reduce memory limit "
+        + "(deprecation)!");
     
     // test : check with high ram enabled and scaling mismatch on map limits
     gridmixConf = new Configuration();
@@ -175,7 +177,7 @@ public class TestHighRamJob {
       failed = true;
     }
     assertNotNull(failed);
-    assertTrue("Exception expected for exceeding map memory limit!", failed);
+    assertTrue(failed, "Exception expected for exceeding map memory limit!");
     
     // test : check with high ram enabled and scaling mismatch on reduce 
     //        limits
@@ -189,6 +191,6 @@ public class TestHighRamJob {
       failed = true;
     }
     assertNotNull(failed);
-    assertTrue("Exception expected for exceeding reduce memory limit!", failed);
+    assertTrue(failed, "Exception expected for exceeding reduce memory limit!");
   }
 }

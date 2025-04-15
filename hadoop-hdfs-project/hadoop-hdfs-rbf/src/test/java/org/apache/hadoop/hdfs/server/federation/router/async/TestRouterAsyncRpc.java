@@ -32,9 +32,11 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Testing the asynchronous RPC functionality of the router.
@@ -59,6 +61,7 @@ public class TestRouterAsyncRpc extends TestRouterRpc {
     routerConf.setClass(DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS,
         RouterAsyncRpcFairnessPolicyController.class,
         RouterRpcFairnessPolicyController.class);
+    routerConf.setInt(DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY, 2);
     setUp(routerConf);
   }
 
@@ -79,5 +82,11 @@ public class TestRouterAsyncRpc extends TestRouterRpc {
     rndRouter.getRouter().getRpcServer().getGroupsForUser("user");
     String[] result = syncReturn(String[].class);
     assertArrayEquals(group, result);
+  }
+
+  @Test
+  @Override
+  public void testConcurrentCallExecutorInitial() {
+    assertNull(rndRouter.getRouterRpcClient().getExecutorService());
   }
 }

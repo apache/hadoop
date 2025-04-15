@@ -25,11 +25,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Time;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.event.Level;
@@ -43,10 +41,11 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -85,15 +84,12 @@ public class TestConfiguredFailoverProxyProvider {
   private String ns4nn1Hostname = "localhost";
   private String ns4nn2Hostname = "127.0.0.1";
 
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
-
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     GenericTestUtils.setLogLevel(RequestHedgingProxyProvider.LOG, Level.TRACE);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws URISyntaxException {
     ns1 = "mycluster-1-" + Time.monotonicNow();
     ns1Uri = new URI("hdfs://" + ns1);
@@ -329,32 +325,23 @@ public class TestConfiguredFailoverProxyProvider {
     assertEquals(2, proxyResults.size());
     if (Shell.isJavaVersionAtLeast(14) && useFQDN) {
       // JDK-8225499. The string format of unresolved address has been changed.
-      assertTrue(
-          "nn1 wasn't returned: " + proxyResults,
-          proxyResults.containsKey(resolvedHost1 + "/<unresolved>:8020"));
-      assertTrue(
-          "nn2 wasn't returned: " + proxyResults,
-          proxyResults.containsKey(resolvedHost2 + "/<unresolved>:8020"));
+      assertTrue(proxyResults.containsKey(resolvedHost1 + "/<unresolved>:8020"),
+          "nn1 wasn't returned: " + proxyResults);
+      assertTrue(proxyResults.containsKey(resolvedHost2 + "/<unresolved>:8020"),
+          "nn2 wasn't returned: " + proxyResults);
     } else {
-      assertTrue(
-          "nn1 wasn't returned: " + proxyResults,
-          proxyResults.containsKey(resolvedHost1 + ":8020"));
-      assertTrue(
-          "nn2 wasn't returned: " + proxyResults,
-          proxyResults.containsKey(resolvedHost2 + ":8020"));
+      assertTrue(proxyResults.containsKey(resolvedHost1 + ":8020"),
+          "nn1 wasn't returned: " + proxyResults);
+      assertTrue(proxyResults.containsKey(resolvedHost2 + ":8020"),
+          "nn2 wasn't returned: " + proxyResults);
     }
 
     // Check that the Namenodes were invoked
     assertEquals(NUM_ITERATIONS, nn1Count.get() + nn2Count.get());
-    assertTrue("nn1 was selected too much:" + nn1Count.get(),
-        nn1Count.get() < NUM_ITERATIONS);
-    assertTrue("nn1 should have been selected: " + nn1Count.get(),
-        nn1Count.get() > 0);
-    assertTrue("nn2 was selected too much:" + nn2Count.get(),
-        nn2Count.get() < NUM_ITERATIONS);
-    assertTrue(
-        "nn2 should have been selected: " + nn2Count.get(),
-        nn2Count.get() > 0);
+    assertTrue(nn1Count.get() < NUM_ITERATIONS, "nn1 was selected too much:" + nn1Count.get());
+    assertTrue(nn1Count.get() > 0, "nn1 should have been selected: " + nn1Count.get());
+    assertTrue(nn2Count.get() < NUM_ITERATIONS, "nn2 was selected too much:" + nn2Count.get());
+    assertTrue(nn2Count.get() > 0, "nn2 should have been selected: " + nn2Count.get());
   }
 
   @Test
@@ -416,13 +403,13 @@ public class TestConfiguredFailoverProxyProvider {
     addDNSSettings(dnsConf, false, false);
 
     Map<InetSocketAddress, ClientProtocol> proxyMap = new HashMap<>();
-    exception.expect(RuntimeException.class);
-    ConfiguredFailoverProxyProvider<ClientProtocol> provider =
-        new ConfiguredFailoverProxyProvider<>(
-            dnsConf, ns3Uri, ClientProtocol.class, createFactory(proxyMap));
+    assertThrows(RuntimeException.class, () -> {
+      ConfiguredFailoverProxyProvider<ClientProtocol> provider =
+          new ConfiguredFailoverProxyProvider<>(
+              dnsConf, ns3Uri, ClientProtocol.class, createFactory(proxyMap));
 
-    assertNull("failover proxy cannot be created due to unknownhost",
-        provider);
+      assertNull(provider, "failover proxy cannot be created due to unknownhost");
+    });
   }
 
   /**

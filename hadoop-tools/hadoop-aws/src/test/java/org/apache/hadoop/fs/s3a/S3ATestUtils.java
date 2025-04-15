@@ -69,6 +69,7 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.FutureIO;
 
 import org.assertj.core.api.Assertions;
+import org.assertj.core.api.Assumptions;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.AssumptionViolatedException;
@@ -105,6 +106,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.impl.FlagSet.createFlagSet;
+import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_S3;
 import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Analytics;
 import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Prefetch;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
@@ -1162,8 +1164,16 @@ public final class S3ATestUtils {
    */
   public static void assumeStoreAwsHosted(final FileSystem fs) {
     assume("store is not AWS S3",
-        !NetworkBinding.isAwsEndpoint(fs.getConf()
+        NetworkBinding.isAwsEndpoint(fs.getConf()
             .getTrimmed(ENDPOINT, DEFAULT_ENDPOINT)));
+  }
+
+  /**
+   * Skip if conditional creation is not enabled.
+   */
+  public static void assumeConditionalCreateEnabled(Configuration conf) {
+    skipIfNotEnabled(conf, FS_S3A_CONDITIONAL_CREATE_ENABLED,
+        "conditional create is disabled");
   }
 
   /**
@@ -1466,7 +1476,9 @@ public final class S3ATestUtils {
     if (!condition) {
       LOG.warn(message);
     }
-    Assume.assumeTrue(message, condition);
+    Assumptions.assumeThat(condition).
+        describedAs(message)
+        .isTrue();
   }
 
   /**
@@ -1707,6 +1719,30 @@ public final class S3ATestUtils {
           + Arrays.stream(s3AEncryptionMethods).map(S3AEncryptionMethods::getMethod)
           .collect(Collectors.toList()) + " in " + secrets);
     }
+  }
+
+  /**
+   * Skip a test if encryption algorithm is not empty, or if it is set to
+   * anything other than AES256.
+   *
+   * @param configuration configuration
+   */
+  public static void skipForAnyEncryptionExceptSSES3(Configuration configuration) {
+    String bucket = getTestBucketName(configuration);
+    try {
+      final EncryptionSecrets secrets = buildEncryptionSecrets(bucket, configuration);
+      S3AEncryptionMethods s3AEncryptionMethods = secrets.getEncryptionMethod();
+
+      if (s3AEncryptionMethods.getMethod().equals(SSE_S3.getMethod())
+              || s3AEncryptionMethods.getMethod().isEmpty()) {
+        return;
+      }
+
+      skip("Encryption method is set to " + s3AEncryptionMethods.getMethod());
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+
   }
 
   /**
