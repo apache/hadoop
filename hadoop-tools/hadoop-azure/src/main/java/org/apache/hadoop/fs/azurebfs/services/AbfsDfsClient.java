@@ -1353,7 +1353,7 @@ public class AbfsDfsClient extends AbfsClient {
         LOG.debug("ListPath listed {} paths with {} as continuation token",
             listResultSchema.paths().size(),
             getContinuationFromResponse(result));
-        List<FileStatus> fileStatuses = new ArrayList<>();
+        List<VersionedFileStatus> fileStatuses = new ArrayList<>();
         for (DfsListResultEntrySchema entry : listResultSchema.paths()) {
           fileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
         }

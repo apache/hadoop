@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.Path;
  */
 public class ListResponseData {
 
-  private List<FileStatus> fileStatusList;
+  private List<VersionedFileStatus> fileStatusList;
   private Map<Path, Integer> renamePendingJsonPaths;
   private AbfsRestOperation executedRestOperation;
   private String continuationToken;
@@ -40,7 +40,7 @@ public class ListResponseData {
    * Returns the list of FileStatus objects.
    * @return the list of FileStatus objects
    */
-  public List<FileStatus> getFileStatusList() {
+  public List<VersionedFileStatus> getFileStatusList() {
     return fileStatusList;
   }
 
@@ -48,7 +48,7 @@ public class ListResponseData {
    * Sets the list of FileStatus objects.
    * @param fileStatusList the list of FileStatus objects
    */
-  public void setFileStatusList(final List<FileStatus> fileStatusList) {
+  public void setFileStatusList(final List<VersionedFileStatus> fileStatusList) {
     this.fileStatusList = fileStatusList;
   }
 

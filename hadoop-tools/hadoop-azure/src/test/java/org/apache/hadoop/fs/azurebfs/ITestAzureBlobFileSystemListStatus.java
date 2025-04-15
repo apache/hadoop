@@ -197,7 +197,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
     Mockito.doReturn(spiedClient).when(spiedStore).getClient();
 
-    Mockito.doThrow(new SocketException(CONNECTION_RESET_MESSAGE)).when(spiedClient).filterDuplicateEntriesAndRenamePendingFiles(any(), any());
+    Mockito.doThrow(new SocketException(CONNECTION_RESET_MESSAGE)).when(spiedClient).filterRenamePendingFiles(any(), any());
     List<FileStatus> fileStatuses = new ArrayList<>();
     AbfsDriverException ex = intercept(AbfsDriverException.class,
       () -> {
@@ -530,6 +530,28 @@ public class ITestAzureBlobFileSystemListStatus extends
         .describedAs("Continuation Token Should Not be null").isNotNull();
     Assertions.assertThat(listResponseData.getFileStatusList())
         .describedAs("Listing Size Not as expected").hasSize(1);
+  }
+
+  @Test
+  public void testDuplicateEntriesAcrossListBlobIterations() throws Exception {
+    AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    store.getAbfsConfiguration().setListMaxResults(1);
+    AbfsClient client = Mockito.spy(store.getClient());
+
+    Mockito.doReturn(store).when(fs).getAbfsStore();
+    Mockito.doReturn(client).when(store).getClient();
+
+    // Create a non-empty explicit directory under root
+    Path dir = new Path("/a");
+    Path fileInsideDir = new Path("/a/file");
+    createAzCopyFolder(dir);
+    fs.create(fileInsideDir);
+
+    FileStatus[] fileStatuses = fs.listStatus(new Path(ROOT_PATH));
+    Assertions.assertThat(fileStatuses.length)
+        .describedAs("List size is not expected").isEqualTo(1);
+    assertExplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(dir));
   }
 
   private void assertFilePathFileStatus(final FileStatus fileStatus,

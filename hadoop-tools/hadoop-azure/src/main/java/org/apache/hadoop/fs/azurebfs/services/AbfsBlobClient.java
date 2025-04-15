@@ -402,7 +402,7 @@ public class AbfsBlobClient extends AbfsClient {
       AbfsRestOperation pathStatus = this.getPathStatus(relativePath, tracingContext, null, false);
       BlobListResultSchema listResultSchema = getListResultSchemaFromPathStatus(relativePath, pathStatus);
       LOG.debug("ListBlob attempted on a file path. Returning file status.");
-      List<FileStatus> fileStatusList = new ArrayList<>();
+      List<VersionedFileStatus> fileStatusList = new ArrayList<>();
       for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
         fileStatusList.add(getVersionedFileStatusFromEntry(entry, uri));
       }
@@ -1617,7 +1617,7 @@ public class AbfsBlobClient extends AbfsClient {
         LOG.debug("ListBlobs listed {} blobs with {} as continuation token",
             listResultSchema.paths().size(),
             listResultSchema.getNextMarker());
-        return filterDuplicateEntriesAndRenamePendingFiles(listResultSchema, uri);
+        return filterRenamePendingFiles(listResultSchema, uri);
       } catch (SAXException | IOException ex) {
         throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, ex);
       }
@@ -1927,29 +1927,16 @@ public class AbfsBlobClient extends AbfsClient {
    * @throws IOException if path conversion fails.
    */
   @VisibleForTesting
-  public ListResponseData filterDuplicateEntriesAndRenamePendingFiles(
+  public ListResponseData filterRenamePendingFiles(
       BlobListResultSchema listResultSchema, URI uri) throws IOException {
-    List<FileStatus> fileStatuses = new ArrayList<>();
+    List<VersionedFileStatus> fileStatuses = new ArrayList<>();
     Map<Path, Integer> renamePendingJsonPaths = new HashMap<>();
-    TreeMap<String, BlobListResultEntrySchema> nameToEntryMap = new TreeMap<>();
 
     for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
-      if (StringUtils.isNotEmpty(entry.eTag())) {
-        // This is a blob entry. It is either a file or a marker blob.
-        // In both cases we will add this.
-        if (isRenamePendingJsonPathEntry(entry)) {
-          renamePendingJsonPaths.put(entry.path(), entry.contentLength().intValue());
-        } else {
-          nameToEntryMap.put(entry.name(), entry);
-          fileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
-        }
+      if (isRenamePendingJsonPathEntry(entry)) {
+        renamePendingJsonPaths.put(entry.path(), entry.contentLength().intValue());
       } else {
-        // This is a BlobPrefix entry. It is a directory with file inside
-        // This might have already been added as a marker blob.
-        if (!nameToEntryMap.containsKey(entry.name())) {
-          nameToEntryMap.put(entry.name(), entry);
-          fileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
-        }
+        fileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
       }
     }
 

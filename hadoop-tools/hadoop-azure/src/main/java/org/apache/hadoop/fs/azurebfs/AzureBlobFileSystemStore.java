@@ -45,6 +45,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -76,6 +77,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriAuthorityExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultEntrySchema;
+import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.ListResponseData;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
@@ -1273,6 +1276,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
     }
 
+    TreeMap<String, VersionedFileStatus> nameToEntryMap = new TreeMap<>();
     do {
       try (AbfsPerfInfo perfInfo = startTracking("listStatus", "listPath")) {
         ListResponseData listResponseData = listingClient.listPath(relativePath,
@@ -1281,9 +1285,17 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         AbfsRestOperation op = listResponseData.getOp();
         perfInfo.registerResult(op.getResult());
         continuation = listResponseData.getContinuationToken();
-        List<FileStatus> fileStatusListInCurrItr = listResponseData.getFileStatusList();
+        List<VersionedFileStatus> fileStatusListInCurrItr = listResponseData.getFileStatusList();
         if (fileStatusListInCurrItr != null && !fileStatusListInCurrItr.isEmpty()) {
-          fileStatuses.addAll(fileStatusListInCurrItr);
+          if (listingClient instanceof AbfsBlobClient) {
+            /* Blob Endpoint can return duplicate entries for non-empty explicit
+             * directories. Such entries can come across multiple iterations of
+             * list call and hence need to be filtered here.
+             */
+            filterDuplicateEntriesForBlobClient(nameToEntryMap, fileStatusListInCurrItr, fileStatuses);
+          } else {
+            fileStatuses.addAll(fileStatusListInCurrItr);
+          }
         }
         perfInfo.registerSuccess(true);
         countAggregate++;
@@ -1297,6 +1309,29 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     } while (shouldContinue);
 
     return continuation;
+  }
+
+  private void filterDuplicateEntriesForBlobClient(
+      TreeMap<String, VersionedFileStatus> nameToEntryMap,
+      List<VersionedFileStatus> fileStatusListInCurrItr,
+      List<FileStatus> fileStatuses) {
+    for (VersionedFileStatus fileStatus : fileStatusListInCurrItr) {
+      String entryName = fileStatus.getPath().getName();
+      if (StringUtils.isNotEmpty(fileStatus.getEtag())) {
+        // This is a blob entry. It is either a file or a marker blob.
+        // In both cases we will add this.
+        nameToEntryMap.put(entryName, fileStatus);
+        fileStatuses.add(fileStatus);
+      } else {
+        // This is a BlobPrefix entry.
+        // It is a directory with file inside
+        // This might have already been added as a marker blob.
+        if (!nameToEntryMap.containsKey(entryName)) {
+          nameToEntryMap.put(entryName, fileStatus);
+          fileStatuses.add(fileStatus);
+        }
+      }
+    }
   }
 
   // generate continuation token for xns account
