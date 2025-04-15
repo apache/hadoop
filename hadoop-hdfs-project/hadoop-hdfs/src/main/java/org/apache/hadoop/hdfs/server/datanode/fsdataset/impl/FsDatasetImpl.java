@@ -68,7 +68,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataSetLockManager;
 import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.LocalReplica;
-import org.apache.hadoop.hdfs.server.datanode.LocalReplicaInPipeline;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -3875,7 +3874,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         DatanodeUtil.getMetaName(dstBlock.getBlockName(), dstBlock.getGenerationStamp()));
     File dstBlockFile = new File(dstTmpDir, dstBlock.getBlockName());
 
-    File files[] = hardLinkBlockFiles(srcReplicaInfo, dstMeta, dstBlockFile);
+    File[] files = hardLinkBlockFiles(srcReplicaInfo, dstMeta, dstBlockFile);
 
     ReplicaInfo dstReplicaInfo = new ReplicaBuilder(ReplicaState.TEMPORARY)
         .setBlockId(dstBlock.getBlockId())

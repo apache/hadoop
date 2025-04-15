@@ -139,7 +139,7 @@ public class BlockPoolSlice {
   private volatile GetSpaceUsed dfsUsage;
 
   /**
-   * Create a blook pool slice
+   * Create a blook pool slice.
    * @param bpid Block pool Id
    * @param volume {@link FsVolumeImpl} to which this BlockPool belongs to
    * @param bpDir directory corresponding to the BlockPool

@@ -264,6 +264,8 @@ import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.tracing.Tracer;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.eclipse.jetty.util.ajax.JSON;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -2835,6 +2837,7 @@ public class DataNode extends ReconfigurableBase
     LOG.warn(msg);
   }
 
+  @SuppressFBWarnings()
   @VisibleForTesting
   void transferBlock(ExtendedBlock block, DatanodeInfo[] xferTargets,
       StorageType[] xferTargetStorageTypes, String[] xferTargetStorageIDs)
