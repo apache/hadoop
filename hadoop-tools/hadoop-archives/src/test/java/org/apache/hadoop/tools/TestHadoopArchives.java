@@ -841,12 +841,12 @@ public class TestHadoopArchives {
     for (int i = 0; i < 10; i++) {
       createFile(sub1, fs, new byte[1 * 1024 * 1024], sub1.getName(), "file" + i);
     }
-    final String inputPathStr = sub1.toUri().getPath();
+    final String inputPathStr = inputPath.toUri().getPath();
     System.out.println("inputPathStr = " + inputPathStr);
 
     final String harName = "foo.har";
     final String[] args =
-        { "-archiveName", harName, "-p", inputPathStr, "*",
+        { "-archiveName", harName, "-p", inputPathStr, "dir1",
             archivePath.toString() };
     System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH,
         HADOOP_ARCHIVES_JAR);
