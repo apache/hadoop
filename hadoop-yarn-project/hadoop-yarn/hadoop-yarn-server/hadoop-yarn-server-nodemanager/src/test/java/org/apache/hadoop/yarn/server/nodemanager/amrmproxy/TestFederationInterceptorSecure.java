@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.Server;
@@ -85,7 +84,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@Timeout(value=10, unit = TimeUnit.MINUTES)
 public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFederationInterceptor.class);

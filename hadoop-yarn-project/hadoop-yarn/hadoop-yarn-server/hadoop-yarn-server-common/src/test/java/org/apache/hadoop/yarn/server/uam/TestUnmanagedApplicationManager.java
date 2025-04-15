@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -68,7 +67,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 /**
  * Unit test for UnmanagedApplicationManager.
  */
-@Timeout(value=10, unit = TimeUnit.MINUTES)
 public class TestUnmanagedApplicationManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestUnmanagedApplicationManager.class);

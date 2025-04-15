@@ -223,9 +223,9 @@
     <sshd.version>2.11.0</sshd.version>
     <hbase.version>2.6.1-hadoop3</hbase.version>
     <junit.version>4.13.2</junit.version>
-    <junit.jupiter.version>5.8.2</junit.jupiter.version>
-    <junit.vintage.version>5.8.2</junit.vintage.version>
-    <junit.platform.version>1.8.2</junit.platform.version>
+    <junit.jupiter.version>5.12.2</junit.jupiter.version>
+    <junit.vintage.version>5.12.2</junit.vintage.version>
+    <junit.platform.version>1.12.2</junit.platform.version>
     <assertj.version>3.12.2</assertj.version>
     <jline.version>3.9.0</jline.version>
     <powermock.version>2.0.9</powermock.version>

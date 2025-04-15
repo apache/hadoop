@@ -76,8 +76,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Timeout.ThreadMode.SEPARATE_THREAD;
 
-@Timeout(value=10, unit = TimeUnit.MINUTES)
+@Timeout(value=1, unit = TimeUnit.MINUTES, threadMode = SEPARATE_THREAD)
 public class TestPipeApplication {
   private static File workSpace = new File("target",
           TestPipeApplication.class.getName() + "-workSpace");
