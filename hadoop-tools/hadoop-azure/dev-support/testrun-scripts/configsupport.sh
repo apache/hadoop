@@ -18,49 +18,45 @@ set -eo pipefail
 # limitations under the License.
 
 FILE=$1
+OUTPUT_FILE=""
 
-if [ ! -f "$FILE" ]; then
-    echo "Error: File '$FILE' not found. Exiting...."
-    exit 1
-fi
+# ------------------------------------------------------------------------------
+# Initialization and Dependency Checks
+# ------------------------------------------------------------------------------
 
-if [[ "$FILE" != *.xml ]]; then
-    echo "The file provided is not an XML file. Exiting...."
-    exit 1
-fi
+checkDependency() {
+    if ! command -v xmlstarlet &> /dev/null; then
+        echo "ERROR: 'xmlstarlet' is not installed. Please install it to run this script."
+        echo "Exiting..."
+        exit 1
+    fi
+}
 
-OUTPUT_FILE="abfs-converted-config.xml"
-cp "$FILE" "$OUTPUT_FILE"
+validateInputFile() {
+    if [ ! -f "$FILE" ]; then
+        echo "Error: File '$FILE' not found. Exiting...."
+        exit 1
+    fi
+
+    if [[ "$FILE" != *.xml ]]; then
+        echo "The file provided is not an XML file. Exiting...."
+        exit 1
+    fi
+}
+
+init() {
+    checkDependency
+    validateInputFile
+    OUTPUT_FILE="abfs-converted-config.xml"
+    cp "$FILE" "$OUTPUT_FILE"
+}
+
+# ------------------------------------------------------------------------------
+# Global Variables & Config Mappings
+# ------------------------------------------------------------------------------
 
 contactTeamMsg="For any queries or support, kindly reach out to us at 'askabfs@microsoft.com'."
 endpoint=".dfs."
-printf "Select 'HNS' if you're migrating to ABFS driver for Hierarchical Namespace enabled account,
-          or 'Non-HNS' if you're migrating to ABFS driver for Non-Hierarchical Namespace (FNS) account. \n"
-printf "WARNING: Please ensure the correct option is chosen as it will affect the configuration changes made to the file. \n"
-printf "If you are unsure, follow the instructions below to check from Azure Portal: \n"
-printf "* Go to the Azure Portal and navigate to your storage account. \n"
-printf "* In the left-hand menu, select 'Overview' section and look for 'Properties'. \n"
-printf "* Under 'Blob service', check if 'Hierarchical namespace' is enabled or disabled. \n"
-echo "$contactTeamMsg"
-select namespaceType in "HNS" "NonHNS"
-do
-    case $namespaceType in
-        HNS)
-            xmlstarlet ed -L -i '//configuration/property[1]' -t elem -n property -v '' \
-              -s '//configuration/property[1]' -t elem -n name -v 'fs.azure.account.hns.enabled' \
-              -s '//configuration/property[1]' -t elem -n value -v 'true' "$OUTPUT_FILE"
-            break;
-            ;;
-        NonHNS)
-            endpoint=".blob."
-            break;
-            ;;
-          *)
-            echo "Invalid selection. Please try again. Exiting..."
-            exit 1;
-            ;;
-    esac
-done
 
 # Mapping for renaming configurations
 declare -A renameConfigsMap=(
@@ -79,7 +75,7 @@ unsupportedConfigsList=(
 )
 
 # Configurations not required in ABFS Driver and can be removed
-obseleteConfigsList=(
+obsoleteConfigsList=(
     "azure.authorization" #fs.azure.authorization, fs.azure.authorization.caching.enable , fs.azure.authorization.caching.maxentries, fs.azure.authorization.cacheentry.expiry.period, fs.azure.authorization.remote.service.urls
     "azure.selfthrottling" #fs.azure.selfthrottling.enable, fs.azure.selfthrottling.read.factor, fs.azure.selfthrottling.write.factor
     "azure.saskey" #fs.azure.saskey.cacheentry.expiry.period , fs.azure.saskey.usecontainersaskeyforallaccess
@@ -106,52 +102,112 @@ obseleteConfigsList=(
     "enable.append.support" #fs.azure.enable.append.support
 )
 
-# Stop the script if any unsupported config is found
-for key in "${unsupportedConfigsList[@]}"; do
-    if grep -q "$key" "$OUTPUT_FILE"; then
-        echo "Remove the following configuration from file and rerun: '$key'"
-        failure=true
-    fi
-done
+# ------------------------------------------------------------------------------
+# User Interaction
+# ------------------------------------------------------------------------------
 
-if [ "$failure" = true ]; then
-     echo "FAILURE: Unsupported Config Found"
+promptNamespaceType() {
+    printf "Select 'HNS' if you're migrating to ABFS driver for Hierarchical Namespace enabled account,
+            or 'Non-HNS' if you're migrating to ABFS driver for Non-Hierarchical Namespace (FNS) account. \n"
+    printf "WARNING: Please ensure the correct option is chosen as it will affect the configuration changes made to the file. \n"
+    printf "If you are unsure, follow the instructions below to check from Azure Portal: \n"
+    printf "* Go to the Azure Portal and navigate to your storage account. \n"
+    printf "* In the left-hand menu, select 'Overview' section and look for 'Properties'. \n"
+    printf "* Under 'Blob service', check if 'Hierarchical namespace' is enabled or disabled. \n"
     echo "$contactTeamMsg"
-    echo "Exiting..."
-    exit 1
-fi
+    select namespaceType in "HNS" "NonHNS"
+    do
+        case $namespaceType in
+            HNS)
+                xmlstarlet ed -L -i '//configuration/property[1]' -t elem -n property -v '' \
+                    -s '//configuration/property[1]' -t elem -n name -v 'fs.azure.account.hns.enabled' \
+                    -s '//configuration/property[1]' -t elem -n value -v 'true' "$OUTPUT_FILE"
+                break
+                ;;
+            NonHNS)
+                endpoint=".blob."
+                break
+                ;;
+            *)
+                echo "Invalid selection. Please try again. Exiting..."
+                exit 1
+                ;;
+        esac
+    done
+}
 
-# Renaming the configs
-for old in "${!renameConfigsMap[@]}"; do
-    new="${renameConfigsMap[$old]}"
-    xmlstarlet ed -L -u "//property/name[contains(., '$old')]" -x "concat(substring-before(., '$old'),
-     '$new', substring-after(., '$old'))" "$OUTPUT_FILE"
-done
+# ------------------------------------------------------------------------------
+# Config File Transformations
+# ------------------------------------------------------------------------------
 
-# Remove the obsolete configs
-for key in "${obseleteConfigsList[@]}"; do
-    xmlstarlet ed -L -d "//property[name[contains(text(), '$key')]]" "$OUTPUT_FILE"
-done
+# Stop the script if any unsupported config is found
+unsupportedConfigCheck() {
+    for key in "${unsupportedConfigsList[@]}"; do
+        if grep -q "$key" "$OUTPUT_FILE"; then
+            echo "Remove the following configuration from file and rerun: '$key'"
+            failure=true
+        fi
+    done
 
-# Change the endpoints to DFS if migrating to HNS
-if [ "$endpoint" = ".dfs." ]; then
-    xmlstarlet ed -L -u "//property/name[contains(., '.blob.')]" -x "concat(substring-before(., '.blob.'),
-     '$endpoint', substring-after(., '.blob.'))" "$OUTPUT_FILE"
-fi
-
-# Change the value of fs.defaultFS
-if xmlstarlet sel -t -v "//property[name='fs.defaultFS']/value" "$OUTPUT_FILE" | grep -q "."; then
-    if xmlstarlet sel -t -v "//property[name='fs.defaultFS']/value" "$OUTPUT_FILE" | grep -q ".blob."; then
-        xmlstarlet ed -L -u "//property[name='fs.defaultFS']/value" -x "concat('abfs', substring-before(substring-after(., 'wasb'), '@'),
-         '@', substring-before(substring-after(., '@'), '.blob.'), '$endpoint', 'core.windows.net')" "$OUTPUT_FILE"
-    else
-        echo "ERROR: 'fs.defaultFS' does not have 'Blob' as endpoint. Exiting..."
+    if [ "$failure" = true ]; then
+        echo "FAILURE: Unsupported Config Found"
         echo "$contactTeamMsg"
+        echo "Exiting..."
         exit 1
     fi
-fi
+}
 
-# Remove the property block if any name tag is empty
+# Renaming the configs
+renameConfigs() {
+    for old in "${!renameConfigsMap[@]}"; do
+        new="${renameConfigsMap[$old]}"
+        xmlstarlet ed -L -u "//property/name[contains(., '$old')]" -x "concat(substring-before(., '$old'),
+         '$new', substring-after(., '$old'))" "$OUTPUT_FILE"
+    done
+}
+
+# Remove the obsolete configs
+removeObsoleteConfigs() {
+    for key in "${obsoleteConfigsList[@]}"; do
+        xmlstarlet ed -L -d "//property[name[contains(text(), '$key')]]" "$OUTPUT_FILE"
+    done
+}
+
+# Change the endpoints to DFS if migrating to HNS
+changeEndpointForHNS() {
+    if [ "$endpoint" = ".dfs." ]; then
+        xmlstarlet ed -L -u "//property/name[contains(., '.blob.')]" -x "concat(substring-before(., '.blob.'),
+         '$endpoint', substring-after(., '.blob.'))" "$OUTPUT_FILE"
+    fi
+}
+
+# Change the value of fs.defaultFS
+handleDefaultFSValue() {
+    if xmlstarlet sel -t -v "//property[name='fs.defaultFS']/value" "$OUTPUT_FILE" | grep -q "."; then
+        if xmlstarlet sel -t -v "//property[name='fs.defaultFS']/value" "$OUTPUT_FILE" | grep -q ".blob."; then
+            xmlstarlet ed -L -u "//property[name='fs.defaultFS']/value" -x "concat('abfs', substring-before(substring-after(., 'wasb'), '@'),
+             '@', substring-before(substring-after(., '@'), '.blob.'), '$endpoint', 'core.windows.net')" "$OUTPUT_FILE"
+        else
+            echo "ERROR: 'fs.defaultFS' does not have 'Blob' as endpoint. Exiting..."
+            echo "$contactTeamMsg"
+            exit 1
+        fi
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# Script Execution
+# ------------------------------------------------------------------------------
+
+init
+promptNamespaceType
+unsupportedConfigCheck
+removeObsoleteConfigs
+renameConfigs
+changeEndpointForHNS
+handleDefaultFSValue
+
+# Clean up any <property> blocks with empty <name> tags
 xmlstarlet ed -L -d "//property[not(name) or name='']" "$OUTPUT_FILE"
 
 echo "Updated file: $OUTPUT_FILE"
