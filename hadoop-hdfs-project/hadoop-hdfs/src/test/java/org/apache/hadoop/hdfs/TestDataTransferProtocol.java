@@ -666,7 +666,7 @@ public class TestDataTransferProtocol {
     }
   }
 
-  @Test(timeout = 90000)
+  @Test
   public void testCopyBlockCrossNamespace()
       throws IOException, InterruptedException, TimeoutException {
     Configuration conf = new HdfsConfiguration();

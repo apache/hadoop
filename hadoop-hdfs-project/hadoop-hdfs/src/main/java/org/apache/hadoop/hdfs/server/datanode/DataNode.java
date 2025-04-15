@@ -146,6 +146,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
@@ -2895,7 +2896,7 @@ public class DataNode extends ReconfigurableBase
           xferTargetStorageTypes, xferTargetStorageIDs, block,
           BlockConstructionStage.PIPELINE_SETUP_CREATE, "");
 
-      this.xferService.execute(dataTransferTask);
+      this.xferService.submit(dataTransferTask);
     }
   }
 
@@ -3006,7 +3007,7 @@ public class DataNode extends ReconfigurableBase
    * Used for transferring a block of data.  This class
    * sends a piece of data to another DataNode.
    */
-  private class DataTransfer implements Runnable {
+  private class DataTransfer implements Callable<Void> {
     final DatanodeInfo[] targets;
     final StorageType[] targetStorageTypes;
     final private String[] targetStorageIds;
@@ -3064,9 +3065,11 @@ public class DataNode extends ReconfigurableBase
 
     /**
      * Do the deed, write the bytes
+     *
+     * @return
      */
     @Override
-    public void run() {
+    public Void call() throws IOException {
       incrementXmitsInProgress();
       Socket sock = null;
       DataOutputStream out = null;
@@ -3146,7 +3149,7 @@ public class DataNode extends ReconfigurableBase
         }
       } catch (IOException ie) {
         if (copyBlockCrossNamespace) {
-          throw new RuntimeException(ie);
+          throw ie;
         }
         handleBadBlock(source, ie, false);
         LOG.warn("{}:Failed to transfer {} to {}  got",
@@ -3154,7 +3157,7 @@ public class DataNode extends ReconfigurableBase
       } catch (Throwable t) {
         LOG.error("Failed to transfer block {}", source, t);
         if (copyBlockCrossNamespace) {
-          throw new RuntimeException(t);
+          throw t;
         }
       } finally {
         decrementXmitsInProgress();
@@ -3163,6 +3166,7 @@ public class DataNode extends ReconfigurableBase
         IOUtils.closeStream(in);
         IOUtils.closeSocket(sock);
       }
+      return null;
     }
 
     @Override
@@ -4444,7 +4448,7 @@ public class DataNode extends ReconfigurableBase
     }
     try {
       result.get(getDnConf().getCopyBlockCrossNamespaceSocketTimeout(), TimeUnit.MILLISECONDS);
-    } catch (Exception e) {
+    } catch (ExecutionException | InterruptedException | TimeoutException e) {
       LOG.error(e.getMessage());
       throw new IOException(e);
     }
