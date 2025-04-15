@@ -23,6 +23,7 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -41,8 +42,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
-    .ManagedParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptableQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
@@ -431,25 +430,16 @@ public class ProportionalCapacityPreemptionPolicy
   }
 
   private Set<String> getLeafQueueNames(TempQueuePerPartition q) {
-    boolean isAutoQueueEligible = q.parentQueue != null &&
-        (q.parentQueue.isEligibleForAutoQueueCreation() ||
-         q.parentQueue.isEligibleForLegacyAutoQueueCreation());
-    boolean isManagedParent = q.parentQueue instanceof ManagedParentQueue;
-
-    if ((isAutoQueueEligible || isManagedParent)) {
-      return Collections.emptySet();
-    }
-
     // Only consider this a leaf queue if:
-    // It has no children and
     // It is a concrete leaf queue (not a childless parent)
     if (CollectionUtils.isEmpty(q.children)) {
       CSQueue queue = scheduler.getQueue(q.queueName);
-      if (queue instanceof LeafQueue) {
+      if (queue instanceof LeafQueue || queue instanceof AutoCreatedLeafQueue) {
         return ImmutableSet.of(q.queueName);
       }
       return Collections.emptySet();
     }
+
     Set<String> leafQueueNames = new HashSet<>();
     for (TempQueuePerPartition child : q.children) {
       leafQueueNames.addAll(getLeafQueueNames(child));
