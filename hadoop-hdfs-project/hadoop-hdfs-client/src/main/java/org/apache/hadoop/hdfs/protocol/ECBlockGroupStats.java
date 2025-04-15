@@ -38,22 +38,21 @@ public final class ECBlockGroupStats {
   private final long missingBlockGroups;
   private final long bytesInFutureBlockGroups;
   private final long pendingDeletionBlocks;
-  private final long badlyDistributedBlocks;
+  private final Long badlyDistributedBlocks;
   private final Long highestPriorityLowRedundancyBlocks;
 
   public ECBlockGroupStats(long lowRedundancyBlockGroups,
       long corruptBlockGroups, long missingBlockGroups,
-      long bytesInFutureBlockGroups, long pendingDeletionBlocks,
-      long badlyDistributedBlocks) {
+      long bytesInFutureBlockGroups, long pendingDeletionBlocks) {
     this(lowRedundancyBlockGroups, corruptBlockGroups, missingBlockGroups,
         bytesInFutureBlockGroups, pendingDeletionBlocks,
-        badlyDistributedBlocks, null);
+        null, null);
   }
 
   public ECBlockGroupStats(long lowRedundancyBlockGroups,
       long corruptBlockGroups, long missingBlockGroups,
       long bytesInFutureBlockGroups, long pendingDeletionBlocks,
-      long badlyDistributedBlocks, Long highestPriorityLowRedundancyBlocks) {
+      Long badlyDistributedBlocks, Long highestPriorityLowRedundancyBlocks) {
     this.lowRedundancyBlockGroups = lowRedundancyBlockGroups;
     this.corruptBlockGroups = corruptBlockGroups;
     this.missingBlockGroups = missingBlockGroups;
@@ -84,7 +83,11 @@ public final class ECBlockGroupStats {
     return pendingDeletionBlocks;
   }
 
-  public long getBadlyDistributedBlocks() {
+  public boolean hasBadlyDistributedBlocks() {
+    return getBadlyDistributedBlocks() != null;
+  }
+
+  public Long getBadlyDistributedBlocks() {
     return badlyDistributedBlocks;
   }
 
@@ -107,8 +110,11 @@ public final class ECBlockGroupStats {
         .append(", BytesInFutureBlockGroups=").append(
             getBytesInFutureBlockGroups())
         .append(", PendingDeletionBlocks=").append(
-            getPendingDeletionBlocks())
-        .append(" , BadlyDistributedBlocks=").append(getBadlyDistributedBlocks());
+            getPendingDeletionBlocks());
+    if(hasBadlyDistributedBlocks()) {
+      statsBuilder.append(", BadlyDistributedBlocks=")
+          .append(getBadlyDistributedBlocks());
+    }
     if (hasHighestPriorityLowRedundancyBlocks()) {
       statsBuilder.append(", HighestPriorityLowRedundancyBlocks=")
           .append(getHighestPriorityLowRedundancyBlocks());
@@ -163,6 +169,7 @@ public final class ECBlockGroupStats {
     long bytesInFutureBlockGroups = 0;
     long pendingDeletionBlocks = 0;
     long badlyDistributedBlocks = 0;
+    boolean hasBadlyDistributedBlocks = false;
     long highestPriorityLowRedundancyBlocks = 0;
     boolean hasHighestPriorityLowRedundancyBlocks = false;
 
@@ -172,20 +179,22 @@ public final class ECBlockGroupStats {
       missingBlockGroups += stat.getMissingBlockGroups();
       bytesInFutureBlockGroups += stat.getBytesInFutureBlockGroups();
       pendingDeletionBlocks += stat.getPendingDeletionBlocks();
-      badlyDistributedBlocks += stat.getBadlyDistributedBlocks();
+      if (stat.hasBadlyDistributedBlocks()) {
+        hasBadlyDistributedBlocks = true;
+        badlyDistributedBlocks += stat.getBadlyDistributedBlocks();
+      }
       if (stat.hasHighestPriorityLowRedundancyBlocks()) {
         hasHighestPriorityLowRedundancyBlocks = true;
         highestPriorityLowRedundancyBlocks +=
             stat.getHighestPriorityLowRedundancyBlocks();
       }
     }
-    if (hasHighestPriorityLowRedundancyBlocks) {
+    if (hasBadlyDistributedBlocks && hasHighestPriorityLowRedundancyBlocks) {
       return new ECBlockGroupStats(lowRedundancyBlockGroups, corruptBlockGroups,
           missingBlockGroups, bytesInFutureBlockGroups, pendingDeletionBlocks,
           badlyDistributedBlocks, highestPriorityLowRedundancyBlocks);
     }
     return new ECBlockGroupStats(lowRedundancyBlockGroups, corruptBlockGroups,
-        missingBlockGroups, bytesInFutureBlockGroups, pendingDeletionBlocks,
-        badlyDistributedBlocks);
+        missingBlockGroups, bytesInFutureBlockGroups, pendingDeletionBlocks);
   }
 }
