@@ -77,7 +77,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriAuthorityExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
-import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.ListResponseData;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
@@ -1311,6 +1310,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return continuation;
   }
 
+  /**
+   * This is to handle duplicate listing entries returned by Blob Endpoint for
+   * implicit paths that also has a marker file created for them.
+   * This will retain the entry corresponding to the marker file
+   * and remove the BlobPrefix entry corresponding to implicit directory.
+   * @param nameToEntryMap to keep track of paths already added to the list.
+   * @param fileStatusListInCurrItr the list of file statuses returned in the current iteration.
+   * @param fileStatuses the final list of file statuses to be returned.
+   */
   private void filterDuplicateEntriesForBlobClient(
       TreeMap<String, VersionedFileStatus> nameToEntryMap,
       List<VersionedFileStatus> fileStatusListInCurrItr,
@@ -1319,7 +1327,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       String entryName = fileStatus.getPath().getName();
       if (StringUtils.isNotEmpty(fileStatus.getEtag())) {
         // This is a blob entry. It is either a file or a marker blob.
-        // In both cases we will add this.
+        // In both cases, we will add this.
         nameToEntryMap.put(entryName, fileStatus);
         fileStatuses.add(fileStatus);
       } else {

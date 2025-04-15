@@ -1917,10 +1917,7 @@ public class AbfsBlobClient extends AbfsClient {
   });
 
   /**
-   * This is to handle duplicate listing entries returned by Blob Endpoint for
-   * implicit paths that also has a marker file created for them.
-   * This will retain entry corresponding to marker file and remove the BlobPrefix entry.
-   * This will also filter out all the rename pending json files in listing output.
+   * This will filter out all the rename pending json files in listing output.
    * @param listResultSchema List of entries returned by Blob Endpoint.
    * @param uri URI to be used for path conversion.
    * @return List of entries after removing duplicates.
