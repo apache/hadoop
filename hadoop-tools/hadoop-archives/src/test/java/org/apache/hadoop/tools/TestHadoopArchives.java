@@ -47,14 +47,15 @@ import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.slf4j.LoggerFactory.getLogger;
-import static org.assertj.core.api.Assertions.assertThat;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * test {@link HadoopArchives}
@@ -155,7 +156,7 @@ public class TestHadoopArchives {
 
     // compare results:
     final List<String> harPaths = lsr(shell, fullHarPathStr);
-    Assertions.assertEquals(originalPaths, harPaths);
+    assertEquals(originalPaths, harPaths);
   }
 
   @Test
@@ -173,7 +174,7 @@ public class TestHadoopArchives {
 
     // compare results:
     final List<String> harPaths = lsr(shell, fullHarPathStr);
-    Assertions.assertEquals(originalPaths, harPaths);
+    assertEquals(originalPaths, harPaths);
   }
 
   @Test
@@ -194,10 +195,10 @@ public class TestHadoopArchives {
     createFile(archivePath, fs, harName);
     final String[] args = { "-archiveName", harName, "-p", inputPathStr, "*",
         archivePath.toString() };
-    Assertions.assertEquals(-1, ToolRunner.run(har, args));
+    assertEquals(-1, ToolRunner.run(har, args));
     String output = byteStream.toString();
     final Path outputPath = new Path(archivePath, harName);
-    Assertions.assertTrue(output.indexOf("Archive path: " + outputPath.toString()
+    assertTrue(output.indexOf("Archive path: " + outputPath.toString()
         + " already exists") != -1);
 
     byteStream.reset();
@@ -207,9 +208,9 @@ public class TestHadoopArchives {
     final Path archivePath2 = new Path(archivePath, "sub1");
     final String[] args2 = { "-archiveName", harName, "-p", inputPathStr, "*",
         archivePath2.toString() };
-    Assertions.assertEquals(-1, ToolRunner.run(har, args2));
+    assertEquals(-1, ToolRunner.run(har, args2));
     output = byteStream.toString();
-    Assertions.assertTrue(output.indexOf("Destination " + archivePath2.toString()
+    assertTrue(output.indexOf("Destination " + archivePath2.toString()
         + " should be a directory but is a file") != -1);
 
     System.setErr(stderr);
@@ -239,7 +240,7 @@ public class TestHadoopArchives {
 
     // compare results
     final List<String> harPaths = lsr(shell, fullHarPathStr);
-    Assertions.assertEquals(originalPaths, harPaths);
+    assertEquals(originalPaths, harPaths);
   }
 
   @Test
@@ -258,7 +259,7 @@ public class TestHadoopArchives {
 
     // compare results:
     final List<String> harPaths = lsr(shell, fullHarPathStr);
-    Assertions.assertEquals(originalPaths, harPaths);
+    assertEquals(originalPaths, harPaths);
   }
 
   @Test
@@ -283,7 +284,7 @@ public class TestHadoopArchives {
     // compare results:
     final List<String> harPaths = lsr(shell, fullHarPathStr,
         fullHarPathStr + "/" + glob);
-    Assertions.assertEquals(originalPaths, harPaths);
+    assertEquals(originalPaths, harPaths);
   }
 
   private static List<String> lsr(final FsShell shell, String rootDir) throws Exception {
@@ -302,7 +303,7 @@ public class TestHadoopArchives {
     System.setErr(out);
     final String results;
     try {
-      Assertions.assertEquals(0, shell.run(new String[] { "-lsr", dir }));
+      assertEquals(0, shell.run(new String[] { "-lsr", dir }));
       results = bytes.toString();
     } finally {
       IOUtils.closeStream(out);
