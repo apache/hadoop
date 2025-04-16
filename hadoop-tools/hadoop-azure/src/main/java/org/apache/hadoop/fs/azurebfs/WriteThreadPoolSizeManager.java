@@ -42,14 +42,36 @@ public class WriteThreadPoolSizeManager implements Closeable {
    */
   private WriteThreadPoolSizeManager(String filesystemName, AbfsConfiguration abfsConfiguration) {
     this.filesystemName = filesystemName;
+    // Get total available memory in GB
+    long totalMemoryInBytes = getTotalMemoryInBytes(); // Get total system memory in bytes
+    long totalMemoryInGB = totalMemoryInBytes / (1024 * 1024 * 1024); // Convert bytes to GB
+
+    int calculatedMaxPoolSize = Math.max(1, (int) (totalMemoryInGB * 4));
+    LOG.debug("Using 4");
     int maxPoolSize = Math.max(1, abfsConfiguration.getWriteMaxConcurrentRequestCount());
-    this.maxThreadPoolSize = Math.max(maxPoolSize, abfsConfiguration.getWriteMaxThreadPoolSize());
+    // Adjust maxThreadPoolSize based on calculated value
+    this.maxThreadPoolSize = Math.max(calculatedMaxPoolSize, maxPoolSize);
+    //this.maxThreadPoolSize = Math.max(maxPoolSize, abfsConfiguration.getWriteMaxThreadPoolSize());
     boundedThreadPool = Executors.newFixedThreadPool(maxPoolSize);
     ((ThreadPoolExecutor) boundedThreadPool).setKeepAliveTime(
         abfsConfiguration.getWriteThreadPoolKeepAliveTime(), TimeUnit.SECONDS);
     ((ThreadPoolExecutor) boundedThreadPool).allowCoreThreadTimeOut(TRUE);
     cpuMonitorExecutor = Executors.newScheduledThreadPool(
         abfsConfiguration.getWriteCorePoolSize());
+  }
+
+  /**
+   * Get total system memory in bytes using OperatingSystemMXBean
+   *
+   * @return Total memory in bytes
+   */
+  private long getTotalMemoryInBytes() {
+    OperatingSystemMXBean osBean = ManagementFactory.getOperatingSystemMXBean();
+    if (osBean instanceof com.sun.management.OperatingSystemMXBean) {
+      com.sun.management.OperatingSystemMXBean sunOsBean = (com.sun.management.OperatingSystemMXBean) osBean;
+      return sunOsBean.getTotalPhysicalMemorySize();  // This returns total memory in bytes
+    }
+    return 0;
   }
 
   /**

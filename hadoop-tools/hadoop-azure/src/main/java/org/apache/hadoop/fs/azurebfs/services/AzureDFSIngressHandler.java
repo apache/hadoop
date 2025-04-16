@@ -115,6 +115,7 @@ public class AzureDFSIngressHandler extends AzureIngressHandler {
       DataBlocks.BlockUploadData uploadData,
       AppendRequestParameters reqParams,
       TracingContext tracingContext) throws IOException {
+    LOG.debug("Inside write method");
     TracingContext tracingContextAppend = new TracingContext(tracingContext);
     String threadIdStr = String.valueOf(Thread.currentThread().getId());
     if (tracingContextAppend.getIngressHandler().equals(EMPTY_STRING)) {

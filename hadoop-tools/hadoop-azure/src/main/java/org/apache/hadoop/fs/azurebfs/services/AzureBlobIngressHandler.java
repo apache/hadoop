@@ -118,6 +118,7 @@ public class AzureBlobIngressHandler extends AzureIngressHandler {
       AppendRequestParameters reqParams,
       TracingContext tracingContext)
       throws IOException {
+    LOG.debug("Inside blob write method");
     BlobAppendRequestParameters blobParams = new BlobAppendRequestParameters(blockToUpload.getBlockId(), getETag());
     reqParams.setBlobParams(blobParams);
     AbfsRestOperation op;
