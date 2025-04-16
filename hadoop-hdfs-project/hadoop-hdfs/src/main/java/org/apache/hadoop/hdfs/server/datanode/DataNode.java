@@ -3101,8 +3101,7 @@ public class DataNode extends ReconfigurableBase
             HdfsConstants.WRITE_TIMEOUT_EXTENSION * (targets.length - 1);
         OutputStream unbufOut = NetUtils.getOutputStream(sock, writeTimeout);
         InputStream unbufIn = NetUtils.getInputStream(sock);
-        DataEncryptionKeyFactory keyFactory =
-          getDataEncryptionKeyFactoryForBlock(source);
+        DataEncryptionKeyFactory keyFactory = getDataEncryptionKeyFactoryForBlock(source);
         IOStreamPair saslStreams = saslClient.socketSend(sock, unbufOut,
           unbufIn, keyFactory, accessToken, bpReg);
         unbufOut = saslStreams.out;
