@@ -519,6 +519,31 @@ public class TestObserverNode {
   }
 
   /**
+   * Test that, when the server stateId is too far behind the
+   * client stateId, the request should be retried directly to
+   * Active NameNode, instead of constantly trying again.
+   */
+  @Test
+  public void testObserverRetryActiveExceptionWhenStateIdTooStale() throws Exception {
+    dfs.mkdir(testPath, FsPermission.getDefault());
+    assertSentTo(0);
+
+    // Set large stateId on the client，the server stateId is too far behind
+    // the client stateId and will retry to active.
+    long realStateId = HATestUtil.setACStateId(dfs, 1000000);
+    FileStatus fileStatus = dfs.getFileStatus(testPath);
+    assertNotNull(fileStatus);
+    assertSentTo(0);
+
+    // StateId restored to normal, request processed by observer.
+    HATestUtil.setACStateId(dfs, realStateId);
+    FileStatus fileStatus2= dfs.getFileStatus(testPath);
+    assertNotNull(fileStatus2);
+    assertSentTo(2);
+
+  }
+
+  /**
    * Test that for open call, if access time update is required,
    * the open call should go to active, instead of observer.
    *

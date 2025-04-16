@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.ha.ReadOnly;
 import org.apache.hadoop.ipc.AlignmentContext;
+import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
@@ -156,9 +157,9 @@ class GlobalStateIdContext implements AlignmentContext {
         ESTIMATED_TRANSACTIONS_PER_SECOND
             * TimeUnit.MILLISECONDS.toSeconds(clientWaitTime)
             * ESTIMATED_SERVER_TIME_MULTIPLIER) {
-      throw new RetriableException(
-          "Observer Node is too far behind: serverStateId = "
-              + serverStateId + " clientStateId = " + clientStateId);
+      throw new ObserverRetryOnActiveException("Retrying to Active NameNode, Observer Node is too"
+          + " far behind: serverStateId = " + serverStateId
+          + " clientStateId = " + clientStateId);
     }
     return clientStateId;
   }
