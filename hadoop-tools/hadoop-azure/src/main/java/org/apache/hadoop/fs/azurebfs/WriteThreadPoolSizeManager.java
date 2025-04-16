@@ -43,6 +43,7 @@ public class WriteThreadPoolSizeManager implements Closeable {
   private WriteThreadPoolSizeManager(String filesystemName, AbfsConfiguration abfsConfiguration) {
     this.filesystemName = filesystemName;
     int processors = Runtime.getRuntime().availableProcessors();
+    LOG.warn("The no of processors is: {}", processors);
     long totalMemoryInBytes = getTotalMemoryInBytes(); // or available memory if preferred
     long totalMemoryInGB = totalMemoryInBytes / (1024L * 1024 * 1024);
 
@@ -68,6 +69,7 @@ public class WriteThreadPoolSizeManager implements Closeable {
     this.maxThreadPoolSize = Math.max(calculatedMaxPoolSize, maxPoolSize);
     boundedThreadPool = Executors.newFixedThreadPool(maxThreadPoolSize);
     LOG.warn("The max pool size is : {}", maxThreadPoolSize);
+    LOG.warn("The bounded pool size is: {}", ((ThreadPoolExecutor) boundedThreadPool).getMaximumPoolSize());
     ((ThreadPoolExecutor) boundedThreadPool).setKeepAliveTime(
         abfsConfiguration.getWriteThreadPoolKeepAliveTime(), TimeUnit.SECONDS);
     ((ThreadPoolExecutor) boundedThreadPool).allowCoreThreadTimeOut(TRUE);
