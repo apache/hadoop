@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.fs.compat.common;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.fs.compat.cases.HdfsCompatBasics;
 import org.apache.hadoop.fs.FileSystem;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Disabled;
 
@@ -35,7 +35,7 @@ public class TestHdfsCompatInterfaceCoverage {
     Set<String> publicMethods = getPublicInterfaces(FileSystem.class);
     Set<String> targets = getTargets(HdfsCompatBasics.class);
     for (String publicMethod : publicMethods) {
-      Assertions.assertTrue(
+      assertTrue(
          targets.contains(publicMethod), "Method not tested: " + publicMethod);
     }
   }

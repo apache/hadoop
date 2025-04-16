@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.compat.common;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.compat.HdfsCompatTool;
@@ -25,7 +26,6 @@ import org.apache.hadoop.fs.compat.hdfs.HdfsCompatTestCommand;
 import org.apache.hadoop.fs.compat.hdfs.HdfsCompatTestShellScope;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -55,8 +55,8 @@ public class TestHdfsCompatShellCommand {
     HdfsCompatCommand cmd = new TestCommand(uri, conf);
     cmd.initialize();
     HdfsCompatReport report = cmd.apply();
-    Assertions.assertEquals(3, report.getPassedCase().size());
-    Assertions.assertEquals(0, report.getFailedCase().size());
+    assertEquals(3, report.getPassedCase().size());
+    assertEquals(0, report.getFailedCase().size());
     show(conf, report);
   }
 
@@ -67,8 +67,8 @@ public class TestHdfsCompatShellCommand {
     HdfsCompatCommand cmd = new TestSkipCommand(uri, conf);
     cmd.initialize();
     HdfsCompatReport report = cmd.apply();
-    Assertions.assertEquals(2, report.getPassedCase().size());
-    Assertions.assertEquals(0, report.getFailedCase().size());
+    assertEquals(2, report.getPassedCase().size());
+    assertEquals(0, report.getFailedCase().size());
     show(conf, report);
   }
 
