@@ -42,17 +42,32 @@ public class WriteThreadPoolSizeManager implements Closeable {
    */
   private WriteThreadPoolSizeManager(String filesystemName, AbfsConfiguration abfsConfiguration) {
     this.filesystemName = filesystemName;
-    // Get total available memory in GB
-    long totalMemoryInBytes = getTotalMemoryInBytes(); // Get total system memory in bytes
-    long totalMemoryInGB = totalMemoryInBytes / (1024 * 1024 * 1024); // Convert bytes to GB
+    int processors = Runtime.getRuntime().availableProcessors();
+    long totalMemoryInBytes = getTotalMemoryInBytes(); // or available memory if preferred
+    long totalMemoryInGB = totalMemoryInBytes / (1024L * 1024 * 1024);
 
-    int calculatedMaxPoolSize = Math.max(1, (int) (totalMemoryInGB * 4));
-    LOG.debug("Using 4");
+    // Memory per core (rounded)
+    long memoryPerCore = totalMemoryInGB / processors;
+
+    // Adjust multiplier based on memory/core ratio
+    int multiplier;
+    if (memoryPerCore <= 2) {
+      multiplier = 10; // low memory per core
+    } else if (memoryPerCore <= 4) {
+      multiplier = 25;
+    } else if (memoryPerCore <= 8) {
+      multiplier = 40;
+    } else {
+      multiplier = 50; // very high memory per core
+    }
+
+    // Final max threads cap
+    int calculatedMaxPoolSize = processors * multiplier;
     int maxPoolSize = Math.max(1, abfsConfiguration.getWriteMaxConcurrentRequestCount());
     // Adjust maxThreadPoolSize based on calculated value
     this.maxThreadPoolSize = Math.max(calculatedMaxPoolSize, maxPoolSize);
-    //this.maxThreadPoolSize = Math.max(maxPoolSize, abfsConfiguration.getWriteMaxThreadPoolSize());
-    boundedThreadPool = Executors.newFixedThreadPool(maxPoolSize);
+    boundedThreadPool = Executors.newFixedThreadPool(maxThreadPoolSize);
+    LOG.warn("The max pool size is : {}", maxThreadPoolSize);
     ((ThreadPoolExecutor) boundedThreadPool).setKeepAliveTime(
         abfsConfiguration.getWriteThreadPoolKeepAliveTime(), TimeUnit.SECONDS);
     ((ThreadPoolExecutor) boundedThreadPool).allowCoreThreadTimeOut(TRUE);
