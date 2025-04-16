@@ -40,6 +40,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -1274,8 +1275,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             : generateContinuationTokenForNonXns(relativePath, startFrom);
       }
     }
-
-    TreeMap<String, VersionedFileStatus> nameToEntryMap = new TreeMap<>();
+    List<FileStatus> fileStatusList = new ArrayList<>();
     do {
       try (AbfsPerfInfo perfInfo = startTracking("listStatus", "listPath")) {
         ListResponseData listResponseData = listingClient.listPath(relativePath,
@@ -1286,15 +1286,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         continuation = listResponseData.getContinuationToken();
         List<VersionedFileStatus> fileStatusListInCurrItr = listResponseData.getFileStatusList();
         if (fileStatusListInCurrItr != null && !fileStatusListInCurrItr.isEmpty()) {
-          if (listingClient instanceof AbfsBlobClient) {
-            /* Blob Endpoint can return duplicate entries for non-empty explicit
-             * directories. Such entries can come across multiple iterations of
-             * list call and hence need to be filtered here.
-             */
-            filterDuplicateEntriesForBlobClient(nameToEntryMap, fileStatusListInCurrItr, fileStatuses);
-          } else {
-            fileStatuses.addAll(fileStatusListInCurrItr);
-          }
+          fileStatusList.addAll(fileStatusListInCurrItr);
         }
         perfInfo.registerSuccess(true);
         countAggregate++;
@@ -1307,6 +1299,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
     } while (shouldContinue);
 
+    if (listingClient instanceof AbfsBlobClient) {
+      fileStatuses.addAll(removeDuplicates(fileStatusList));
+    } else {
+      fileStatuses.addAll(fileStatusList);
+    }
+
     return continuation;
   }
 
@@ -1315,29 +1313,40 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * implicit paths that also has a marker file created for them.
    * This will retain the entry corresponding to the marker file
    * and remove the BlobPrefix entry corresponding to implicit directory.
-   * @param nameToEntryMap to keep track of paths already added to the list.
-   * @param fileStatusListInCurrItr the list of file statuses returned in the current iteration.
-   * @param fileStatuses the final list of file statuses to be returned.
+   * @param fileStatusList the list of file statuses to be rectified.
    */
-  private void filterDuplicateEntriesForBlobClient(
-      TreeMap<String, VersionedFileStatus> nameToEntryMap,
-      List<VersionedFileStatus> fileStatusListInCurrItr,
-      List<FileStatus> fileStatuses) {
-    for (VersionedFileStatus fileStatus : fileStatusListInCurrItr) {
-      String entryName = fileStatus.getPath().getName();
-      if (StringUtils.isNotEmpty(fileStatus.getEtag())) {
-        // This is a blob entry. It is either a file or a marker blob.
-        // In both cases, we will add this.
-        nameToEntryMap.put(entryName, fileStatus);
-        fileStatuses.add(fileStatus);
-      } else if (!nameToEntryMap.containsKey(entryName)) {
-        // This is a BlobPrefix entry.
-        // It is a directory with file inside
-        // This might have already been added as a marker blob.
-        nameToEntryMap.put(entryName, fileStatus);
-        fileStatuses.add(fileStatus);
+  private List<FileStatus> removeDuplicates(List<FileStatus> fileStatusList) {
+    if (fileStatusList.isEmpty()) {
+      return fileStatusList;
+    }
+    List<FileStatus> rectifiedFileStatusList = new ArrayList<>();
+    Iterator<FileStatus> iterator = fileStatusList.iterator();
+    FileStatus curr = iterator.next();
+    TreeMap<String, FileStatus> nameToEntryMap = new TreeMap<>();
+    String prefix = curr.getPath().getName();
+    nameToEntryMap.put(prefix, curr);
+    rectifiedFileStatusList.add(curr);
+    while (iterator.hasNext()) {
+      FileStatus next = iterator.next();
+      if (next.getPath().getName().startsWith(prefix)) {
+        /*
+         * This is either a duplicate entry or a duplicate entry might follow.
+         * Keep adding unique entries to map and final list
+         */
+        if (!nameToEntryMap.containsKey(next.getPath().getName())) {
+          nameToEntryMap.put(next.getPath().getName(), next);
+          rectifiedFileStatusList.add(next);
+        }
+      } else {
+        // The prefix pattern breaks here.
+        prefix = next.getPath().getName();
+        nameToEntryMap = new TreeMap<>();
+        nameToEntryMap.put(prefix, next);
+        rectifiedFileStatusList.add(next);
       }
     }
+
+    return rectifiedFileStatusList;
   }
 
   // generate continuation token for xns account

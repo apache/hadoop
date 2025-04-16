@@ -549,37 +549,53 @@ public class ITestAzureBlobFileSystemListStatus extends
     Mockito.doReturn(store).when(fs).getAbfsStore();
     Mockito.doReturn(client).when(store).getClient();
 
-    // Path 1: Create a non-empty explicit directory under root.
-    Path dir = new Path("/a");
-    Path fileInsideDir = new Path("/a/file");
-    createAzCopyFolder(dir);
-    fs.create(fileInsideDir);
+    /*
+     * Following entries will be created inside the root path.
+     * 1. /a - marker file for explicit directory
+     * 2. /a/file1 - normal file inside explicit directory
+     * 3. /b - normal file inside root
+     * 4. /c - marker file for explicit directory
+     * 5. /c.bak - marker file for explicit directory
+     * 6. /c.bak/file2 - normal file inside explicit directory
+     * 7. /c/file3 - normal file inside explicit directory
+     * 8. /d - implicit directory
+     * 9. /e - marker file for explicit directory
+     * 10. /e/file4 - normal file inside explicit directory
+     */
 
-    // Path 2: Create an empty explicit directory under root.
-    Path emptyDir = new Path("/b");
-    fs.mkdirs(emptyDir);
+    // Create Path 1 and 2.
+    fs.create(new Path("/a/file1"));
 
-    // Path 3: Create a file under root.
-    Path file1 = new Path("/c");
-    fs.create(file1);
+    // Create Path 3
+    fs.create(new Path("/b"));
 
-    // Path 4: Create an implicit directory under root.
-    Path implicitDir = new Path("/d");
-    createAzCopyFolder(implicitDir);
+    // Create Path 4 and 7
+    fs.create(new Path("/c/file3"));
+
+    // Create Path 5 and 6
+    fs.create(new Path("/c.bak/file2"));
+
+    // Create Path 8
+    createAzCopyFolder(new Path("/d"));
+
+    // Create Path 9 and 10
+    fs.create(new Path("/e/file4"));
 
     FileStatus[] fileStatuses = fs.listStatus(new Path(ROOT_PATH));
 
     // Assert that client.listPath was called 5 times for each entry.
-    Mockito.verify(client, Mockito.times(5))
+    Mockito.verify(client, Mockito.times(10))
         .listPath(eq(ROOT_PATH), eq(false), eq(1), any(), any(), any());
 
     // Assert that after duplicate removal, 4 entries are returned.
     Assertions.assertThat(fileStatuses.length)
-        .describedAs("List size is not expected").isEqualTo(4);
-    assertExplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(dir));
-    assertExplicitDirectoryFileStatus(fileStatuses[1], fs.makeQualified(emptyDir));
-    assertFilePathFileStatus(fileStatuses[2], fs.makeQualified(file1));
-    assertImplicitDirectoryFileStatus(fileStatuses[3], fs.makeQualified(implicitDir));
+        .describedAs("List size is not expected").isEqualTo(6);
+    assertExplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(new Path("/a")));
+    assertFilePathFileStatus(fileStatuses[1], fs.makeQualified(new Path("/b")));
+    assertExplicitDirectoryFileStatus(fileStatuses[2], fs.makeQualified(new Path("/c")));
+    assertExplicitDirectoryFileStatus(fileStatuses[3], fs.makeQualified(new Path("/c.bak")));
+    assertImplicitDirectoryFileStatus(fileStatuses[4], fs.makeQualified(new Path("/d")));
+    assertExplicitDirectoryFileStatus(fileStatuses[5], fs.makeQualified(new Path("/e")));
 
     // Assert that there are no duplicates in the returned file statuses.
     for (int i = 0; i < fileStatuses.length; i++) {
