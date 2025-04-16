@@ -494,7 +494,9 @@ public class WebAppUtils {
             getPassword(sslConf, WEB_APP_TRUSTSTORE_PASSWORD_KEY),
             sslConf.get("ssl.server.truststore.type", "jks"))
         .excludeCiphers(
-            sslConf.get("ssl.server.exclude.cipher.list"));
+            sslConf.get("ssl.server.exclude.cipher.list"))
+        .includeCiphers(
+            sslConf.get("ssl.server.include.cipher.list"));
   }
 
   /**
