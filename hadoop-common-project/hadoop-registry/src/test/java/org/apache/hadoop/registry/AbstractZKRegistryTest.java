@@ -26,9 +26,9 @@ import org.apache.hadoop.registry.conf.RegistryConfiguration;
 import org.apache.hadoop.registry.server.services.AddingCompositeService;
 import org.apache.hadoop.registry.server.services.MicroZookeeperService;
 import org.apache.hadoop.registry.server.services.MicroZookeeperServiceKeys;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
@@ -61,7 +61,7 @@ public class AbstractZKRegistryTest extends RegistryTestHelper {
     servicesToTeardown.addService(svc);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownServices() throws IOException {
     describe(LOG, "teardown of static services");
     servicesToTeardown.close();
@@ -70,7 +70,7 @@ public class AbstractZKRegistryTest extends RegistryTestHelper {
   protected static MicroZookeeperService zookeeper;
 
 
-  @BeforeClass
+  @BeforeAll
   public static void createZKServer() throws Exception {
     File zkDir = new File("target/zookeeper");
     FileUtils.deleteDirectory(zkDir);
@@ -86,7 +86,7 @@ public class AbstractZKRegistryTest extends RegistryTestHelper {
   /**
    * give our thread a name
    */
-  @Before
+  @BeforeEach
   public void nameThread() {
     Thread.currentThread().setName("JUnit");
   }

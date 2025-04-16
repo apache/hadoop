@@ -32,10 +32,10 @@ import org.apache.hadoop.registry.server.services.AddingCompositeService;
 import org.apache.hadoop.registry.server.services.MicroZookeeperService;
 import org.apache.hadoop.registry.server.services.MicroZookeeperServiceKeys;
 import org.apache.hadoop.util.Shell;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
@@ -127,7 +127,7 @@ public class AbstractSecureRegistryTest extends RegistryTestHelper {
    * All class initialization for this test class
    * @throws Exception
    */
-  @BeforeClass
+  @BeforeAll
   public static void beforeSecureRegistryTestClass() throws Exception {
     registrySecurity = new RegistrySecurity("registrySecurity");
     registrySecurity.init(CONF);
@@ -137,7 +137,7 @@ public class AbstractSecureRegistryTest extends RegistryTestHelper {
     initHadoopSecurity();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterSecureRegistryTestClass() throws
       Exception {
     describe(LOG, "teardown of class");
@@ -148,7 +148,7 @@ public class AbstractSecureRegistryTest extends RegistryTestHelper {
   /**
    * give our thread a name
    */
-  @Before
+  @BeforeEach
   public void nameThread() {
     Thread.currentThread().setName("JUnit");
   }
@@ -158,12 +158,12 @@ public class AbstractSecureRegistryTest extends RegistryTestHelper {
    * not being picked up. This method addresses that by setting them
    * before every test case
    */
-  @Before
+  @BeforeEach
   public void beforeSecureRegistryTest() {
 
   }
 
-  @After
+  @AfterEach
   public void afterSecureRegistryTest() throws IOException {
     describe(LOG, "teardown of instance");
     teardown.close();
@@ -303,7 +303,7 @@ public class AbstractSecureRegistryTest extends RegistryTestHelper {
       String filename) throws Exception {
     assertNotEmpty("empty principal", principal);
     assertNotEmpty("empty host", filename);
-    assertNotNull("Null KDC", kdc);
+    assertNotNull(kdc, "Null KDC");
     File keytab = new File(kdcWorkDir, filename);
     kdc.createPrincipal(keytab,
         principal,
@@ -357,7 +357,7 @@ public class AbstractSecureRegistryTest extends RegistryTestHelper {
    * @throws Exception on any failure
    */
   protected synchronized void startSecureZK() throws Exception {
-    assertNull("Zookeeper is already running", secureZK);
+    assertNull(secureZK, "Zookeeper is already running");
 
     zookeeperLogin = login(zkServerPrincipal,
         ZOOKEEPER_SERVER_CONTEXT,
