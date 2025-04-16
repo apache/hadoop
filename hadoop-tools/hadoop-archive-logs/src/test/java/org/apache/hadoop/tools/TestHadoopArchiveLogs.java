@@ -37,8 +37,9 @@ import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,7 +56,8 @@ public class TestHadoopArchiveLogs {
     new Random().nextBytes(DUMMY_DATA);
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCheckFilesAndSeedApps() throws Exception {
     Configuration conf = new Configuration();
     HadoopArchiveLogs hal = new HadoopArchiveLogs(conf);
@@ -64,7 +66,7 @@ public class TestHadoopArchiveLogs {
     String suffix = "logs";
     Path logDir = new Path(rootLogDir, new Path(USER, suffix));
     fs.delete(logDir, true);
-    Assert.assertFalse(fs.exists(logDir));
+    Assertions.assertFalse(fs.exists(logDir));
     fs.mkdirs(logDir);
 
     // no files found
@@ -96,15 +98,16 @@ public class TestHadoopArchiveLogs {
     createFile(fs, new Path(app5Path, "file1"), 2);
     createFile(fs, new Path(app5Path, "file2"), 3);
 
-    Assert.assertEquals(0, hal.eligibleApplications.size());
+    Assertions.assertEquals(0, hal.eligibleApplications.size());
     hal.checkFilesAndSeedApps(fs, rootLogDir, suffix, new Path(rootLogDir,
         "archive-logs-work"));
-    Assert.assertEquals(1, hal.eligibleApplications.size());
-    Assert.assertEquals(appId5.toString(),
+    Assertions.assertEquals(1, hal.eligibleApplications.size());
+    Assertions.assertEquals(appId5.toString(),
         hal.eligibleApplications.iterator().next().getAppId());
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCheckMaxEligible() throws Exception {
     Configuration conf = new Configuration();
     HadoopArchiveLogs.AppInfo app1 = new HadoopArchiveLogs.AppInfo(
@@ -129,7 +132,7 @@ public class TestHadoopArchiveLogs {
         ApplicationId.newInstance(CLUSTER_TIMESTAMP, 7).toString(), USER);
     app7.setFinishTime(CLUSTER_TIMESTAMP);
     HadoopArchiveLogs hal = new HadoopArchiveLogs(conf);
-    Assert.assertEquals(0, hal.eligibleApplications.size());
+    Assertions.assertEquals(0, hal.eligibleApplications.size());
     hal.eligibleApplications.add(app1);
     hal.eligibleApplications.add(app2);
     hal.eligibleApplications.add(app3);
@@ -137,38 +140,39 @@ public class TestHadoopArchiveLogs {
     hal.eligibleApplications.add(app5);
     hal.eligibleApplications.add(app6);
     hal.eligibleApplications.add(app7);
-    Assert.assertEquals(7, hal.eligibleApplications.size());
+    Assertions.assertEquals(7, hal.eligibleApplications.size());
     hal.maxEligible = -1;
     hal.checkMaxEligible();
-    Assert.assertEquals(7, hal.eligibleApplications.size());
+    Assertions.assertEquals(7, hal.eligibleApplications.size());
     hal.maxEligible = 6;
     hal.checkMaxEligible();
-    Assert.assertEquals(6, hal.eligibleApplications.size());
-    Assert.assertFalse(hal.eligibleApplications.contains(app5));
+    Assertions.assertEquals(6, hal.eligibleApplications.size());
+    Assertions.assertFalse(hal.eligibleApplications.contains(app5));
     hal.maxEligible = 5;
     hal.checkMaxEligible();
-    Assert.assertEquals(5, hal.eligibleApplications.size());
-    Assert.assertFalse(hal.eligibleApplications.contains(app4));
+    Assertions.assertEquals(5, hal.eligibleApplications.size());
+    Assertions.assertFalse(hal.eligibleApplications.contains(app4));
     hal.maxEligible = 4;
     hal.checkMaxEligible();
-    Assert.assertEquals(4, hal.eligibleApplications.size());
-    Assert.assertFalse(hal.eligibleApplications.contains(app7));
+    Assertions.assertEquals(4, hal.eligibleApplications.size());
+    Assertions.assertFalse(hal.eligibleApplications.contains(app7));
     hal.maxEligible = 3;
     hal.checkMaxEligible();
-    Assert.assertEquals(3, hal.eligibleApplications.size());
-    Assert.assertFalse(hal.eligibleApplications.contains(app1));
+    Assertions.assertEquals(3, hal.eligibleApplications.size());
+    Assertions.assertFalse(hal.eligibleApplications.contains(app1));
     hal.maxEligible = 2;
     hal.checkMaxEligible();
-    Assert.assertEquals(2, hal.eligibleApplications.size());
-    Assert.assertFalse(hal.eligibleApplications.contains(app2));
+    Assertions.assertEquals(2, hal.eligibleApplications.size());
+    Assertions.assertFalse(hal.eligibleApplications.contains(app2));
     hal.maxEligible = 1;
     hal.checkMaxEligible();
-    Assert.assertEquals(1, hal.eligibleApplications.size());
-    Assert.assertFalse(hal.eligibleApplications.contains(app6));
-    Assert.assertTrue(hal.eligibleApplications.contains(app3));
+    Assertions.assertEquals(1, hal.eligibleApplications.size());
+    Assertions.assertFalse(hal.eligibleApplications.contains(app6));
+    Assertions.assertTrue(hal.eligibleApplications.contains(app3));
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testFilterAppsByAggregatedStatus() throws Exception {
     try (MiniYARNCluster yarnCluster =
         new MiniYARNCluster(TestHadoopArchiveLogs.class.getSimpleName(),
@@ -206,7 +210,7 @@ public class TestHadoopArchiveLogs {
       // appImpl8 is not in the RM
 
       HadoopArchiveLogs hal = new HadoopArchiveLogs(conf);
-      Assert.assertEquals(0, hal.eligibleApplications.size());
+      Assertions.assertEquals(0, hal.eligibleApplications.size());
       hal.eligibleApplications.add(
           new HadoopArchiveLogs.AppInfo(appImpl1.getApplicationId().toString(),
               USER));
@@ -234,16 +238,17 @@ public class TestHadoopArchiveLogs {
           new HadoopArchiveLogs.AppInfo(appImpl8.getApplicationId().toString(),
               USER);
       hal.eligibleApplications.add(app8);
-      Assert.assertEquals(8, hal.eligibleApplications.size());
+      Assertions.assertEquals(8, hal.eligibleApplications.size());
       hal.filterAppsByAggregatedStatus();
-      Assert.assertEquals(3, hal.eligibleApplications.size());
-      Assert.assertTrue(hal.eligibleApplications.contains(app4));
-      Assert.assertTrue(hal.eligibleApplications.contains(app7));
-      Assert.assertTrue(hal.eligibleApplications.contains(app8));
+      Assertions.assertEquals(3, hal.eligibleApplications.size());
+      Assertions.assertTrue(hal.eligibleApplications.contains(app4));
+      Assertions.assertTrue(hal.eligibleApplications.contains(app7));
+      Assertions.assertTrue(hal.eligibleApplications.contains(app8));
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testGenerateScript() throws Exception {
     _testGenerateScript(false);
     _testGenerateScript(true);
@@ -276,59 +281,59 @@ public class TestHadoopArchiveLogs {
 
     File localScript = new File("target", "script.sh");
     localScript.delete();
-    Assert.assertFalse(localScript.exists());
+    Assertions.assertFalse(localScript.exists());
     hal.generateScript(localScript);
-    Assert.assertTrue(localScript.exists());
+    Assertions.assertTrue(localScript.exists());
     String script = IOUtils.toString(localScript.toURI(), StandardCharsets.UTF_8);
     String[] lines = script.split("\n");
-    Assert.assertEquals(22, lines.length);
-    Assert.assertEquals("#!/bin/bash", lines[0]);
-    Assert.assertEquals("set -e", lines[1]);
-    Assert.assertEquals("set -x", lines[2]);
-    Assert.assertEquals("if [ \"$YARN_SHELL_ID\" == \"1\" ]; then", lines[3]);
+    Assertions.assertEquals(22, lines.length);
+    Assertions.assertEquals("#!/bin/bash", lines[0]);
+    Assertions.assertEquals("set -e", lines[1]);
+    Assertions.assertEquals("set -x", lines[2]);
+    Assertions.assertEquals("if [ \"$YARN_SHELL_ID\" == \"1\" ]; then", lines[3]);
     boolean oneBefore = true;
     if (lines[4].contains(app1.toString())) {
-      Assert.assertEquals("\tappId=\"" + app1.toString() + "\"", lines[4]);
-      Assert.assertEquals("\tappId=\"" + app2.toString() + "\"", lines[10]);
+      Assertions.assertEquals("\tappId=\"" + app1.toString() + "\"", lines[4]);
+      Assertions.assertEquals("\tappId=\"" + app2.toString() + "\"", lines[10]);
     } else {
       oneBefore = false;
-      Assert.assertEquals("\tappId=\"" + app2.toString() + "\"", lines[4]);
-      Assert.assertEquals("\tappId=\"" + app1.toString() + "\"", lines[10]);
+      Assertions.assertEquals("\tappId=\"" + app2.toString() + "\"", lines[4]);
+      Assertions.assertEquals("\tappId=\"" + app1.toString() + "\"", lines[10]);
     }
-    Assert.assertEquals("\tuser=\"" + USER + "\"", lines[5]);
-    Assert.assertEquals("\tworkingDir=\"" + (oneBefore ? workingDir.toString()
+    Assertions.assertEquals("\tuser=\"" + USER + "\"", lines[5]);
+    Assertions.assertEquals("\tworkingDir=\"" + (oneBefore ? workingDir.toString()
         : workingDir2.toString()) + "\"", lines[6]);
-    Assert.assertEquals("\tremoteRootLogDir=\"" + (oneBefore
+    Assertions.assertEquals("\tremoteRootLogDir=\"" + (oneBefore
         ? remoteRootLogDir.toString() : remoteRootLogDir2.toString())
         + "\"", lines[7]);
-    Assert.assertEquals("\tsuffix=\"" + (oneBefore ? suffix : suffix2)
+    Assertions.assertEquals("\tsuffix=\"" + (oneBefore ? suffix : suffix2)
         + "\"", lines[8]);
-    Assert.assertEquals("elif [ \"$YARN_SHELL_ID\" == \"2\" ]; then",
+    Assertions.assertEquals("elif [ \"$YARN_SHELL_ID\" == \"2\" ]; then",
         lines[9]);
-    Assert.assertEquals("\tuser=\"" + USER + "\"", lines[11]);
-    Assert.assertEquals("\tworkingDir=\"" + (oneBefore
+    Assertions.assertEquals("\tuser=\"" + USER + "\"", lines[11]);
+    Assertions.assertEquals("\tworkingDir=\"" + (oneBefore
         ? workingDir2.toString() : workingDir.toString()) + "\"",
         lines[12]);
-    Assert.assertEquals("\tremoteRootLogDir=\"" + (oneBefore
+    Assertions.assertEquals("\tremoteRootLogDir=\"" + (oneBefore
         ? remoteRootLogDir2.toString() : remoteRootLogDir.toString())
         + "\"", lines[13]);
-    Assert.assertEquals("\tsuffix=\"" + (oneBefore ? suffix2 : suffix)
+    Assertions.assertEquals("\tsuffix=\"" + (oneBefore ? suffix2 : suffix)
         + "\"", lines[14]);
-    Assert.assertEquals("else", lines[15]);
-    Assert.assertEquals("\techo \"Unknown Mapping!\"", lines[16]);
-    Assert.assertEquals("\texit 1", lines[17]);
-    Assert.assertEquals("fi", lines[18]);
-    Assert.assertEquals("export HADOOP_CLIENT_OPTS=\"-Xmx1024m\"", lines[19]);
-    Assert.assertTrue(lines[20].startsWith("export HADOOP_CLASSPATH="));
+    Assertions.assertEquals("else", lines[15]);
+    Assertions.assertEquals("\techo \"Unknown Mapping!\"", lines[16]);
+    Assertions.assertEquals("\texit 1", lines[17]);
+    Assertions.assertEquals("fi", lines[18]);
+    Assertions.assertEquals("export HADOOP_CLIENT_OPTS=\"-Xmx1024m\"", lines[19]);
+    Assertions.assertTrue(lines[20].startsWith("export HADOOP_CLASSPATH="));
     if (proxy) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "\"$HADOOP_HOME\"/bin/hadoop org.apache.hadoop.tools." +
               "HadoopArchiveLogsRunner -appId \"$appId\" -user \"$user\" " +
               "-workingDir \"$workingDir\" -remoteRootLogDir " +
               "\"$remoteRootLogDir\" -suffix \"$suffix\"",
           lines[21]);
     } else {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "\"$HADOOP_HOME\"/bin/hadoop org.apache.hadoop.tools." +
               "HadoopArchiveLogsRunner -appId \"$appId\" -user \"$user\" " +
               "-workingDir \"$workingDir\" -remoteRootLogDir " +
@@ -343,7 +348,8 @@ public class TestHadoopArchiveLogs {
    * are updated as well, if necessary.
    * @throws Exception
    */
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testStatuses() throws Exception {
     LogAggregationStatus[] statuses = new LogAggregationStatus[7];
     statuses[0] = LogAggregationStatus.DISABLED;
@@ -353,37 +359,38 @@ public class TestHadoopArchiveLogs {
     statuses[4] = LogAggregationStatus.SUCCEEDED;
     statuses[5] = LogAggregationStatus.FAILED;
     statuses[6] = LogAggregationStatus.TIME_OUT;
-    Assert.assertArrayEquals(statuses, LogAggregationStatus.values());
+    Assertions.assertArrayEquals(statuses, LogAggregationStatus.values());
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testPrepareWorkingDir() throws Exception {
     Configuration conf = new Configuration();
     HadoopArchiveLogs hal = new HadoopArchiveLogs(conf);
     FileSystem fs = FileSystem.getLocal(conf);
     Path workingDir = new Path("target", "testPrepareWorkingDir");
     fs.delete(workingDir, true);
-    Assert.assertFalse(fs.exists(workingDir));
+    Assertions.assertFalse(fs.exists(workingDir));
     // -force is false and the dir doesn't exist so it will create one
     hal.force = false;
     boolean dirPrepared = hal.prepareWorkingDir(fs, workingDir);
-    Assert.assertTrue(dirPrepared);
-    Assert.assertTrue(fs.exists(workingDir));
-    Assert.assertEquals(
+    Assertions.assertTrue(dirPrepared);
+    Assertions.assertTrue(fs.exists(workingDir));
+    Assertions.assertEquals(
         new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL,
             !Shell.WINDOWS),
         fs.getFileStatus(workingDir).getPermission());
     // Throw a file in the dir
     Path dummyFile = new Path(workingDir, "dummy.txt");
     fs.createNewFile(dummyFile);
-    Assert.assertTrue(fs.exists(dummyFile));
+    Assertions.assertTrue(fs.exists(dummyFile));
     // -force is false and the dir exists, so nothing will happen and the dummy
     // still exists
     dirPrepared = hal.prepareWorkingDir(fs, workingDir);
-    Assert.assertFalse(dirPrepared);
-    Assert.assertTrue(fs.exists(workingDir));
-    Assert.assertTrue(fs.exists(dummyFile));
-    Assert.assertEquals(
+    Assertions.assertFalse(dirPrepared);
+    Assertions.assertTrue(fs.exists(workingDir));
+    Assertions.assertTrue(fs.exists(dummyFile));
+    Assertions.assertEquals(
         new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL,
             !Shell.WINDOWS),
         fs.getFileStatus(workingDir).getPermission());
@@ -391,13 +398,13 @@ public class TestHadoopArchiveLogs {
     // won't exist anymore
     hal.force = true;
     dirPrepared = hal.prepareWorkingDir(fs, workingDir);
-    Assert.assertTrue(dirPrepared);
-    Assert.assertTrue(fs.exists(workingDir));
-    Assert.assertEquals(
+    Assertions.assertTrue(dirPrepared);
+    Assertions.assertTrue(fs.exists(workingDir));
+    Assertions.assertEquals(
         new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL,
             !Shell.WINDOWS),
         fs.getFileStatus(workingDir).getPermission());
-    Assert.assertFalse(fs.exists(dummyFile));
+    Assertions.assertFalse(fs.exists(dummyFile));
   }
 
   private static void createFile(FileSystem fs, Path p, long sizeMultiple)
@@ -413,7 +420,7 @@ public class TestHadoopArchiveLogs {
         out.close();
       }
     }
-    Assert.assertTrue(fs.exists(p));
+    Assertions.assertTrue(fs.exists(p));
   }
 
   private static RMApp createRMApp(int id, Configuration conf, RMContext rmContext,
