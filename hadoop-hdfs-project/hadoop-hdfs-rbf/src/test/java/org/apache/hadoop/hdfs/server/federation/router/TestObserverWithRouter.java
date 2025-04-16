@@ -102,7 +102,6 @@ public class TestObserverWithRouter {
   @BeforeEach
   public void setup(TestInfo info) throws Exception {
     if (info.getTags().contains(SKIP_BEFORE_EACH_CLUSTER_STARTUP)) {
-      System.out.println("BZL#Test. SKIP_BEFORE_EACH_CLUSTER_STARTUP.");
       if (cluster != null) {
         cluster.shutdown();
         cluster = null;
@@ -118,7 +117,6 @@ public class TestObserverWithRouter {
     }
 
     if (cluster != null) {
-      System.out.println("BZL#Test. cluster != null.");
       // Making one Namenode active per nameservice.
       if (cluster.isHighAvailability()) {
         for (String ns : cluster.getNameservices()) {
@@ -126,7 +124,6 @@ public class TestObserverWithRouter {
           cluster.switchToStandby(ns, NAMENODES[1]);
           for (int i = 2; i < 2 + NUM_OBSERVERS; i++) {
             cluster.switchToObserver(ns, NAMENODES[i]);
-            System.out.println("BZL#Test. switch onn successfully.");
           }
         }
       }
@@ -164,7 +161,6 @@ public class TestObserverWithRouter {
     }
 
     if (info.getTags().contains(SKIP_BEFORE_EACH_CLUSTER_STARTUP)) {
-      System.out.println("BZL#Test. cleanup#SKIP_BEFORE_EACH_CLUSTER_STARTUP.");
       if (cluster != null) {
         cluster.shutdown();
         cluster = null;
@@ -173,7 +169,7 @@ public class TestObserverWithRouter {
     }
 
     if (fileSystem != null) {
-      // Clear cache.
+      // Clear FileSystem object cache.
       fileSystem.close();
       fileSystem = null;
     }
@@ -191,10 +187,10 @@ public class TestObserverWithRouter {
     }
     cluster = new MiniRouterDFSCluster(true, NUM_NAMESERVICES, numberOfNamenode);
     cluster.addNamenodeOverrides(conf);
-    // Start NNs and DNs and wait until ready
+    // Start NNs and DNs and wait until ready.
     cluster.startCluster();
 
-    // Making one Namenode active per nameservice
+    // Making one Namenode active per nameservice.
     if (cluster.isHighAvailability()) {
       for (String ns : cluster.getNameservices()) {
         cluster.switchToActive(ns, NAMENODES[0]);
@@ -213,13 +209,13 @@ public class TestObserverWithRouter {
     cluster.addRouterOverrides(conf);
     cluster.addRouterOverrides(routerConf);
 
-    // Start routers with only an RPC service
+    // Start routers with only an RPC service.
     cluster.startRouters();
 
-    // Register and verify all NNs with all routers
+    // Register and verify all NNs with all routers.
     cluster.registerNamenodes();
     cluster.waitNamenodeRegistration();
-    // Setup the mount table
+    // Setup the mount table.
     cluster.installMockLocations();
 
     cluster.waitActiveNamespaces();
@@ -254,7 +250,7 @@ public class TestObserverWithRouter {
               .getHostName(), RouterObserverReadProxyProvider.class.getName());
       break;
     case USE_ROUTER_OBSERVER_READ_CONFIGURED_FAILOVER_PROXY_PROVIDER:
-      // HA configs
+      // HA configs.
       conf.set(DFS_NAMESERVICES, ROUTER_NS_ID);
       conf.set(DFS_HA_NAMENODES_KEY_PREFIX + "." + ROUTER_NS_ID, "router1");
       conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY+ "." + ROUTER_NS_ID + ".router1",
@@ -299,21 +295,21 @@ public class TestObserverWithRouter {
     long rpcCountForObserverBefore = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
     Path path = new Path("/testFile");
-    // Send create call
+    // Send create call.
     fileSystem.create(path).close();
 
-    // Send read request
+    // Send read request.
     fileSystem.open(path).close();
 
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
-    // Create and complete calls should be sent to active
+    // Create and complete calls should be sent to active.
     assertEquals(rpcCountForActiveBefore + 2, rpcCountForActive,
         "Two calls should be sent to active");
 
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
-    // getBlockLocations should be sent to observer
+    // RPC getBlockLocations should be sent to observer.
     assertEquals(rpcCountForObserverBefore + 1, rpcCountForObserver,
         "One call should be sent to observer");
   }
@@ -333,7 +329,7 @@ public class TestObserverWithRouter {
     assertEquals(namenodes.get(0).getState(), FederationNamenodeServiceState.OBSERVER,
         "First namenode should be observer");
     Path path = new Path("/testFile");
-    // Send Create call to active
+    // Send Create call to active.
     fileSystem.create(path).close();
 
     // Send read request to observer. The router will msync to the active namenode.
@@ -341,7 +337,7 @@ public class TestObserverWithRouter {
 
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
-    // Create, complete and getBlockLocations calls should be sent to active
+    // Create, complete and getBlockLocations calls should be sent to active.
     assertEquals(3, rpcCountForActive, "Three calls should be sent to active");
 
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
@@ -354,7 +350,7 @@ public class TestObserverWithRouter {
   @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
   public void testDisablingObserverReadUsingNameserviceOverride(ConfigSetting configSetting)
       throws Exception {
-    // Disable observer reads using per-nameservice override
+    // Disable observer reads using per-nameservice override.
     Configuration confOverrides = new Configuration(false);
     confOverrides.set(DFS_ROUTER_OBSERVER_READ_OVERRIDES, "ns0");
     startUpCluster(2, confOverrides);
@@ -371,7 +367,7 @@ public class TestObserverWithRouter {
 
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
-    // Create, complete and read calls should be sent to active
+    // Create, complete and read calls should be sent to active.
     assertEquals(rpcCountForActiveBefore + 3, rpcCountForActive,
         "Three calls should be sent to active");
 
@@ -390,21 +386,21 @@ public class TestObserverWithRouter {
         .getRPCMetrics().getObserverProxyOps();
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     Path path = new Path("/testFile1");
-    // Send Create call to active
+    // Send Create call to active.
     fileSystem.create(path).close();
 
-    // Stop observer NN
+    // Stop observer NN.
     int nnIndex = stopObserver(1);
     assertNotEquals(3, nnIndex, "No observer found");
     nnIndex = stopObserver(1);
     assertNotEquals(4, nnIndex, "No observer found");
 
-    // Send read request
+    // Send read request.
     fileSystem.open(path).close();
 
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
-    // Create, complete and getBlockLocation calls should be sent to active
+    // Create, complete and getBlockLocation calls should be sent to active.
     assertEquals(rpcCountForActiveBefore + 3, rpcCountForActive,
         "Three calls should be sent to active");
 
@@ -425,13 +421,13 @@ public class TestObserverWithRouter {
     long rpcCountForObserverBefore = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
 
-    // Send Create call to active
+    // Send Create call to active.
     fileSystem.create(path).close();
 
-    // Stop one observer NN
+    // Stop one observer NN.
     stopObserver(1);
 
-    // Send read request
+    // Send read request.
     fileSystem.open(path).close();
 
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
@@ -440,26 +436,26 @@ public class TestObserverWithRouter {
     long expectedActiveRpc = 2;
     long expectedObserverRpc = 1;
 
-    // Create and complete calls should be sent to active
+    // Create and complete calls should be sent to active.
     assertEquals(rpcCountForActiveBefore + expectedActiveRpc, rpcCountForActive,
         "Two calls should be sent to active");
 
     long rpcCountForObserver = routerContext.getRouter()
         .getRpcServer().getRPCMetrics().getObserverProxyOps();
-    // getBlockLocation call should send to observer
+    // RPC getBlockLocation call should send to observer.
     assertEquals(rpcCountForObserverBefore + expectedObserverRpc, rpcCountForObserver,
         "Read should be success with another observer");
 
-    // Stop one observer NN
+    // Stop one observer NN.
     stopObserver(1);
 
-    // Send read request
+    // Send read request.
     fileSystem.open(path).close();
 
     rpcCountForActive = routerContext.getRouter()
         .getRpcServer().getRPCMetrics().getActiveProxyOps();
 
-    // getBlockLocation call should be sent to active
+    // RPC getBlockLocation call should be sent to active.
     expectedActiveRpc += 1;
     assertEquals(rpcCountForActiveBefore + expectedActiveRpc, rpcCountForActive,
         "One call should be sent to active");
@@ -485,8 +481,8 @@ public class TestObserverWithRouter {
     return nnIndex;
   }
 
-  // test router observer with multiple to know which observer NN received
-  // requests
+  // Test router observer with multiple to know which observer NN received
+  // requests.
   @Test
   @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
   public void testMultipleObserverRouter() throws Exception {
@@ -495,7 +491,7 @@ public class TestObserverWithRouter {
 
     String ns0;
     String ns1;
-    //create 4NN, One Active One Standby and Two Observers
+    // Create 4NN, One Active One Standby and Two Observers.
     innerCluster = new StateStoreDFSCluster(true, 4, 4, TimeUnit.SECONDS.toMillis(5),
         TimeUnit.SECONDS.toMillis(5));
     Configuration routerConf =
@@ -509,7 +505,7 @@ public class TestObserverWithRouter {
     routerConf.set(DFS_NAMESERVICE_ID, ns0);
     routerConf.set(DFS_HA_NAMENODE_ID_KEY, context.getNamenodeId());
 
-    // Specify namenodes (ns1.nn0,ns1.nn1) to monitor
+    // Specify namenodes (ns1.nn0,ns1.nn1) to monitor.
     ns1 = innerCluster.getNameservices().get(1);
     for (MiniRouterDFSCluster.NamenodeContext ctx : innerCluster.getNamenodes(ns1)) {
       String suffix = ctx.getConfSuffix();
@@ -569,7 +565,7 @@ public class TestObserverWithRouter {
     long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     Path path = new Path("/testFile");
-    // Send Create call to active
+    // Send Create call to active.
     fileSystem.create(path).close();
 
     // Send read request.
@@ -607,15 +603,15 @@ public class TestObserverWithRouter {
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     Path path = new Path("/testFile");
 
-    // Send Create call to active
+    // Send Create call to active.
     fileSystem.create(path).close();
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
-    // Create and complete calls should be sent to active
+    // Create and complete calls should be sent to active.
     assertEquals(rpcCountForActiveBefore + 2, rpcCountForActive,
         "Two calls should be sent to active");
 
-    // Send msync
+    // Send msync.
     fileSystem.msync();
     rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
@@ -640,19 +636,19 @@ public class TestObserverWithRouter {
     long rpcCountForObserverBefore = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
 
-    // Send read request
+    // Send read request.
     fileSystem.listFiles(path, false);
     fileSystem.close();
 
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
-    // getListingCall sent to active.
+    // RPC getListingCall sent to active.
     assertEquals(rpcCountForActiveBefore + 1, rpcCountForActive,
         "Only one call should be sent to active");
 
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
-    // getList call should be sent to observer
+    // RPC getList call should be sent to observer.
     assertEquals(rpcCountForObserverBefore, rpcCountForObserver,
         "No calls should be sent to observer");
   }
@@ -670,7 +666,7 @@ public class TestObserverWithRouter {
     long rpcCountForActive;
     long rpcCountForObserver;
 
-    // Send read request
+    // Send read request.
     fileSystem.listFiles(path, false);
     fileSystem.close();
 
@@ -681,7 +677,7 @@ public class TestObserverWithRouter {
 
     rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
-    // getList call should be sent to observer
+    // RPC getList call should be sent to observer.
     assertEquals(1, rpcCountForObserver, "One call should be sent to observer");
   }
 
@@ -742,7 +738,7 @@ public class TestObserverWithRouter {
 
     Map<String, Long> latestFederateState = RouterStateIdContext.getRouterFederatedStateMap(
         responseHeaderBuilder.build().getRouterFederatedState());
-    // Only ns0 will be in latestFederateState
+    // Only ns0 will be in latestFederateState.
     Assertions.assertEquals(1, latestFederateState.size());
     Assertions.assertEquals(10L, latestFederateState.get("ns0"));
 
@@ -772,11 +768,11 @@ public class TestObserverWithRouter {
 
     Map<String, Long> latestFederateState = RouterStateIdContext.getRouterFederatedStateMap(
         responseHeaderBuilder.build().getRouterFederatedState());
-    // Validate that ns0 is still part of the header
+    // Validate that ns0 is still part of the header.
     Assertions.assertEquals(1, latestFederateState.size());
 
     namespaceIdMap.put("ns2", new LongAccumulator(Math::max, 20));
-    // Rebuild header
+    // Rebuild header.
     responseHeaderBuilder =
         RpcHeaderProtos.RpcResponseHeaderProto
             .newBuilder()
@@ -785,7 +781,7 @@ public class TestObserverWithRouter {
     routerStateIdContext.updateResponseState(responseHeaderBuilder);
     latestFederateState = RouterStateIdContext.getRouterFederatedStateMap(
         responseHeaderBuilder.build().getRouterFederatedState());
-    // Validate that ns0 is still part of the header
+    // Validate that ns0 is still part of the header.
     Assertions.assertEquals(0, latestFederateState.size());
   }
 
@@ -804,7 +800,7 @@ public class TestObserverWithRouter {
       fileSystem.create(new Path(rootPath, "file" + i)).close();
     }
 
-    // Get object storing state of the namespace in the shared RouterStateIdContext
+    // Get object storing state of the namespace in the shared RouterStateIdContext.
     LongAccumulator namespaceStateId  = routerStateIdContext.getNamespaceStateId("ns0");
     assertEquals(21, namespaceStateId.get(), "Router's shared should have progressed.");
   }
@@ -824,11 +820,11 @@ public class TestObserverWithRouter {
     RouterStateIdContext routerStateIdContext = routerContext.getRouterRpcServer()
         .getRouterStateIdContext();
 
-    // First read goes to active and creates connection pool for this user to active
+    // First read goes to active and creates connection pool for this user to active.
     fileSystem.listStatus(rootPath);
-    // Second read goes to observer and creates connection pool for this user to observer
+    // Second read goes to observer and creates connection pool for this user to observer.
     fileSystem.listStatus(rootPath);
-    // Get object storing state of the namespace in the shared RouterStateIdContext
+    // Get object storing state of the namespace in the shared RouterStateIdContext.
     LongAccumulator namespaceStateId1  = routerStateIdContext.getNamespaceStateId("ns0");
 
     // Wait for connection pools to expire and be cleaned up.
@@ -838,7 +834,7 @@ public class TestObserverWithRouter {
     // New connection pool to observer is created since existing one expired.
     fileSystem.listStatus(rootPath);
     fileSystem.close();
-    // Get object storing state of the namespace in the shared RouterStateIdContext
+    // Get object storing state of the namespace in the shared RouterStateIdContext.
     LongAccumulator namespaceStateId2  = routerStateIdContext.getNamespaceStateId("ns0");
 
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
@@ -846,7 +842,7 @@ public class TestObserverWithRouter {
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
 
-    // First list status goes to active
+    // First list status goes to active.
     assertEquals(1, rpcCountForActive, "One call should be sent to active");
     // Last two listStatuses  go to observer.
     assertEquals(2, rpcCountForObserver, "Two calls should be sent to observer");
@@ -948,7 +944,7 @@ public class TestObserverWithRouter {
         "First namenode should be observer");
     Path path = new Path("/");
 
-    // Send read requests
+    // Send read requests.
     int numListings = 15;
     for (int i = 0; i < numListings; i++) {
       fileSystem.listFiles(path, false);
@@ -1105,7 +1101,7 @@ public class TestObserverWithRouter {
   public void testMsyncOnlyToNamespaceWithObserver(ConfigSetting configSetting) throws Exception {
     Configuration confOverride = new Configuration(false);
     String namespaceWithObserverReadsDisabled = "ns0";
-    // Disable observer reads for ns0
+    // Disable observer reads for ns0.
     confOverride.set(DFS_ROUTER_OBSERVER_READ_OVERRIDES,
         namespaceWithObserverReadsDisabled);
     startUpCluster(1, confOverride);
@@ -1113,7 +1109,7 @@ public class TestObserverWithRouter {
     long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
 
-    // Send msync request
+    // Send msync request.
     fileSystem.msync();
 
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
@@ -1150,15 +1146,11 @@ public class TestObserverWithRouter {
   public void testRestartingNamenodeWithStateIDContextDisabled(ConfigSetting configSetting)
       throws Exception {
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
-    long rpcCountForActiveBefore = routerContext.getRouter().getRpcServer()
-        .getRPCMetrics().getActiveProxyOps();
-    long rpcCountForObserverBefore = routerContext.getRouter().getRpcServer()
-        .getRPCMetrics().getObserverProxyOps();
     Path path = new Path("/testFile1");
-    // Send Create call to active
+    // Send Create call to active.
     fileSystem.create(path).close();
 
-    // Send read request
+    // Send read request.
     fileSystem.open(path).close();
 
     long observerCount1 = routerContext.getRouter().getRpcServer()
