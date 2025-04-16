@@ -24,10 +24,10 @@ import org.apache.hadoop.fs.compat.hdfs.HdfsCompatMiniCluster;
 import org.apache.hadoop.fs.compat.hdfs.HdfsCompatTestCommand;
 import org.apache.hadoop.fs.compat.hdfs.HdfsCompatTestShellScope;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,13 +36,13 @@ import java.nio.file.Files;
 public class TestHdfsCompatShellCommand {
   private HdfsCompatMiniCluster cluster;
 
-  @Before
+  @BeforeEach
   public void runCluster() throws IOException {
     this.cluster = new HdfsCompatMiniCluster();
     this.cluster.start();
   }
 
-  @After
+  @AfterEach
   public void shutdownCluster() {
     this.cluster.shutdown();
     this.cluster = null;
@@ -55,8 +55,8 @@ public class TestHdfsCompatShellCommand {
     HdfsCompatCommand cmd = new TestCommand(uri, conf);
     cmd.initialize();
     HdfsCompatReport report = cmd.apply();
-    Assert.assertEquals(3, report.getPassedCase().size());
-    Assert.assertEquals(0, report.getFailedCase().size());
+    Assertions.assertEquals(3, report.getPassedCase().size());
+    Assertions.assertEquals(0, report.getFailedCase().size());
     show(conf, report);
   }
 
@@ -67,8 +67,8 @@ public class TestHdfsCompatShellCommand {
     HdfsCompatCommand cmd = new TestSkipCommand(uri, conf);
     cmd.initialize();
     HdfsCompatReport report = cmd.apply();
-    Assert.assertEquals(2, report.getPassedCase().size());
-    Assert.assertEquals(0, report.getFailedCase().size());
+    Assertions.assertEquals(2, report.getPassedCase().size());
+    Assertions.assertEquals(0, report.getFailedCase().size());
     show(conf, report);
   }
 
