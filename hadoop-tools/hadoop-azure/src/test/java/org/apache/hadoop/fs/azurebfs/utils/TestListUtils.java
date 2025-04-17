@@ -27,8 +27,14 @@ import org.junit.Test;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
+/**
+ * Test class for ListUtils.
+ */
 public class TestListUtils {
 
+  /**
+   * Test method to check the removal of duplicates from a list of FileStatus.
+   */
   @Test
   public void testRemoveDuplicates() {
     List<FileStatus> originalList = new ArrayList<>();
@@ -79,6 +85,11 @@ public class TestListUtils {
     validateList(originalList, 2);
   }
 
+  /**
+   * Validate the size of the list after removing duplicates.
+   * @param originalList list having duplicates
+   * @param expectedSize number of unique entries expected
+   */
   private void validateList(List<FileStatus> originalList, int expectedSize) {
     List<FileStatus> uniqueList = ListUtils.getUniqueListResult(originalList);
     Assertions.assertThat(uniqueList)
@@ -86,6 +97,11 @@ public class TestListUtils {
         .hasSize(expectedSize);
   }
 
+  /**
+   * Create a FileStatus object with the given path.
+   * @param path path to be set in the FileStatus object
+   * @return FileStatus object with the given path
+   */
   private FileStatus getFileStatusObject(Path path) {
     FileStatus status = new FileStatus();
     status.setPath(path);
