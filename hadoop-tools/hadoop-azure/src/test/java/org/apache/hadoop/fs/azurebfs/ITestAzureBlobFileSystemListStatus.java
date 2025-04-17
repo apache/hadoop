@@ -613,7 +613,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     Set<Path> uniquePaths = new HashSet<>();
     for (FileStatus fileStatus : fileStatuses) {
       Assertions.assertThat(uniquePaths.add(fileStatus.getPath()))
-          .describedAs("Duplicate entries found")
+          .describedAs("Duplicate Entries found")
           .isTrue();
     }
   }
