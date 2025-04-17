@@ -2067,7 +2067,6 @@ public class ITestAzureBlobFileSystemRename extends
    * failed rename operations and recovery in HBase. This method performs the necessary setup
    * (creating directories and files) and then triggers the `crashRenameAndRecover` method
    * with a provided recovery action.
-   *
    * This method is used by different tests that require different recovery actions, such as
    * performing `listStatus` or checking the existence of a path after a failed rename.
    *
