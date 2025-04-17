@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.FileStatus;
 /**
  * Utility class for List operations.
  */
-public class ListUtils {
+public final class ListUtils {
 
   private ListUtils() {
     // Private constructor to prevent instantiation
