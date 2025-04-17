@@ -29,6 +29,10 @@ import org.apache.hadoop.fs.FileStatus;
  */
 public class ListUtils {
 
+  private ListUtils() {
+    // Private constructor to prevent instantiation
+  }
+
   /**
    * Utility method to remove duplicates from a list of FileStatus.
    * ListBlob API of blob endpoint can return duplicate entries.

@@ -586,16 +586,19 @@ public class ITestAzureBlobFileSystemListStatus extends
     // Create Path 9 and 10
     fs.create(new Path("/e/file4"));
 
+    int totalNoOfPaths = 11;
+    int noOfUniquePaths = 7;
+
     FileStatus[] fileStatuses = fs.listStatus(new Path(ROOT_PATH));
 
     // Assert that client.listPath was called 11 times.
     // This will assert server returned 11 entries in total.
-    Mockito.verify(client, Mockito.times(11))
+    Mockito.verify(client, Mockito.times(totalNoOfPaths))
         .listPath(eq(ROOT_PATH), eq(false), eq(1), any(), any(), any());
 
     // Assert that after duplicate removal, only 7 unique entries are returned.
     Assertions.assertThat(fileStatuses.length)
-        .describedAs("List size is not expected").isEqualTo(7);
+        .describedAs("List size is not expected").isEqualTo(noOfUniquePaths);
 
     // Assert that for duplicates, entry corresponding to marker blob is returned.
     assertImplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(new Path("/A")));
