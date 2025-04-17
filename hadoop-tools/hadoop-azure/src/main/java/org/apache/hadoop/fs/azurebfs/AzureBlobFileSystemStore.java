@@ -40,13 +40,11 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -120,6 +118,7 @@ import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.CRC64;
 import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
+import org.apache.hadoop.fs.azurebfs.utils.ListUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.impl.BackReference;
@@ -1300,53 +1299,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     } while (shouldContinue);
 
     if (listingClient instanceof AbfsBlobClient) {
-      fileStatuses.addAll(removeDuplicates(fileStatusList));
+      fileStatuses.addAll(ListUtils.getUniqueListResult(fileStatusList));
     } else {
       fileStatuses.addAll(fileStatusList);
     }
 
     return continuation;
-  }
-
-  /**
-   * This is to handle duplicate listing entries returned by Blob Endpoint for
-   * implicit paths that also has a marker file created for them.
-   * This will retain the entry corresponding to the marker file
-   * and remove the BlobPrefix entry corresponding to implicit directory.
-   * @param fileStatusList the list of file statuses to be rectified.
-   */
-  private List<FileStatus> removeDuplicates(List<FileStatus> fileStatusList) {
-    if (fileStatusList.isEmpty()) {
-      return fileStatusList;
-    }
-    List<FileStatus> rectifiedFileStatusList = new ArrayList<>();
-    Iterator<FileStatus> iterator = fileStatusList.iterator();
-    FileStatus curr = iterator.next();
-    TreeMap<String, FileStatus> nameToEntryMap = new TreeMap<>();
-    String prefix = curr.getPath().getName();
-    nameToEntryMap.put(prefix, curr);
-    rectifiedFileStatusList.add(curr);
-    while (iterator.hasNext()) {
-      FileStatus next = iterator.next();
-      if (next.getPath().getName().startsWith(prefix)) {
-        /*
-         * This is either a duplicate entry or a duplicate entry might follow.
-         * Keep adding unique entries to map and final list
-         */
-        if (!nameToEntryMap.containsKey(next.getPath().getName())) {
-          nameToEntryMap.put(next.getPath().getName(), next);
-          rectifiedFileStatusList.add(next);
-        }
-      } else {
-        // The prefix pattern breaks here.
-        prefix = next.getPath().getName();
-        nameToEntryMap = new TreeMap<>();
-        nameToEntryMap.put(prefix, next);
-        rectifiedFileStatusList.add(next);
-      }
-    }
-
-    return rectifiedFileStatusList;
   }
 
   // generate continuation token for xns account

@@ -551,6 +551,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     /*
      * Following entries will be created inside the root path.
+     * 0. /A - implicit directory without any marker blob
      * 1. /a - marker file for explicit directory
      * 2. /a/file1 - normal file inside explicit directory
      * 3. /b - normal file inside root
@@ -562,6 +563,8 @@ public class ITestAzureBlobFileSystemListStatus extends
      * 9. /e - marker file for explicit directory
      * 10. /e/file4 - normal file inside explicit directory
      */
+    // Create Path 0
+    createAzCopyFolder(new Path("/A"));
 
     // Create Path 1 and 2.
     fs.create(new Path("/a/file1"));
@@ -583,19 +586,23 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     FileStatus[] fileStatuses = fs.listStatus(new Path(ROOT_PATH));
 
-    // Assert that client.listPath was called 5 times for each entry.
-    Mockito.verify(client, Mockito.times(10))
+    // Assert that client.listPath was called 11 times.
+    // This will assert server returned 11 entries in total.
+    Mockito.verify(client, Mockito.times(11))
         .listPath(eq(ROOT_PATH), eq(false), eq(1), any(), any(), any());
 
-    // Assert that after duplicate removal, 4 entries are returned.
+    // Assert that after duplicate removal, only 7 unique entries are returned.
     Assertions.assertThat(fileStatuses.length)
-        .describedAs("List size is not expected").isEqualTo(6);
-    assertExplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(new Path("/a")));
-    assertFilePathFileStatus(fileStatuses[1], fs.makeQualified(new Path("/b")));
-    assertExplicitDirectoryFileStatus(fileStatuses[2], fs.makeQualified(new Path("/c")));
-    assertExplicitDirectoryFileStatus(fileStatuses[3], fs.makeQualified(new Path("/c.bak")));
-    assertImplicitDirectoryFileStatus(fileStatuses[4], fs.makeQualified(new Path("/d")));
-    assertExplicitDirectoryFileStatus(fileStatuses[5], fs.makeQualified(new Path("/e")));
+        .describedAs("List size is not expected").isEqualTo(7);
+
+    // Assert that for duplicates, entry corresponding to marker blob is returned.
+    assertImplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(new Path("/A")));
+    assertExplicitDirectoryFileStatus(fileStatuses[1], fs.makeQualified(new Path("/a")));
+    assertFilePathFileStatus(fileStatuses[2], fs.makeQualified(new Path("/b")));
+    assertExplicitDirectoryFileStatus(fileStatuses[3], fs.makeQualified(new Path("/c")));
+    assertExplicitDirectoryFileStatus(fileStatuses[4], fs.makeQualified(new Path("/c.bak")));
+    assertImplicitDirectoryFileStatus(fileStatuses[5], fs.makeQualified(new Path("/d")));
+    assertExplicitDirectoryFileStatus(fileStatuses[6], fs.makeQualified(new Path("/e")));
 
     // Assert that there are no duplicates in the returned file statuses.
     for (int i = 0; i < fileStatuses.length; i++) {
