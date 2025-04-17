@@ -23,9 +23,6 @@ import org.junit.jupiter.api.Timeout;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * test Clock class
- */
 public class TestClock {
 
   @Test
