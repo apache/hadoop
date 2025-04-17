@@ -449,8 +449,8 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
     FileStatus[] fileStatuses = fs.listStatus(new Path("/hbase/A1"));
 
     Assertions.assertThat(fileStatuses.length)
-        .describedAs("List should return 1 file")
-        .isEqualTo(1);
+        .describedAs("List should return 0 file")
+        .isEqualTo(0);
     assertPendingJsonFile(fs, renameJson, fileStatuses);
   }
 
@@ -475,8 +475,15 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
     FileStatus[] fileStatuses = fs.listStatus(new Path("/hbase/A1"));
 
     Assertions.assertThat(fileStatuses.length)
-        .describedAs("List should return 3 files")
-        .isEqualTo(3);
+        .describedAs("List should return 2 files")
+        .isEqualTo(2);
+    Assertions.assertThat(
+            Arrays.stream(fileStatuses)
+                .anyMatch(status ->
+                    path.toUri().getPath()
+                        .equals(status.getPath().toUri().getPath())))
+        .describedAs("Source path should not exist.")
+        .isFalse();
     assertPendingJsonFile(fs, renameJson, fileStatuses);
   }
 
@@ -622,16 +629,24 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
     FileStatus[] fileStatuses = fs.listStatus(path.getParent());
 
     Assertions.assertThat(fileStatuses.length)
-        .describedAs("List should return 2 paths")
-        .isEqualTo(2);
+        .describedAs("List should return 0 paths")
+        .isEqualTo(0);
 
     Assertions.assertThat(redoRenameCall.get())
         .describedAs("2 redo rename calls should be made")
         .isEqualTo(2);
-
-    Assertions.assertThat(fs.exists(renameJson))
-        .describedAs("Rename Pending Json file should not exist.")
-        .isFalse();
+    assertPathStatus(fs, path, false,
+        "Source directory should not exist.");
+    assertPathStatus(fs, new Path("/hbase/test4/file.txt"), true,
+        "File in destination directory should exist.");
+    assertPathStatus(fs, path2, false,
+        "Source directory should not exist");
+    assertPathStatus(fs, new Path("/hbase/test4/file2.txt"), true,
+        "File in destination directory should exist.");
+    assertPathStatus(fs, renameJson, false,
+        "Rename Pending Json file should not exist.");
+    assertPathStatus(fs, renameJson2, false,
+        "Rename Pending Json file should not exist.");
   }
 
   /**

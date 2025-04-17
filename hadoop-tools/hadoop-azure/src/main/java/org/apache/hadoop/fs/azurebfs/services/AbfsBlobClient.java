@@ -387,8 +387,20 @@ public class AbfsBlobClient extends AbfsClient {
     if (tracingContext.getOpType() == FSOperationType.LISTSTATUS
         && op.getResult() != null
         && op.getResult().getStatusCode() == HTTP_OK) {
-      retryRenameOnAtomicEntriesInListResults(tracingContext,
+      boolean isRenameRecovered = retryRenameOnAtomicEntriesInListResults(tracingContext,
           listResponseData.getRenamePendingJsonPaths());
+      if (isRenameRecovered) {
+        LOG.debug("Retrying list operation after rename recovery.");
+        // Retry the list operation to get the updated list of paths after rename recovery.
+        AbfsRestOperation retryListOp = getAbfsRestOperation(
+            AbfsRestOperationType.ListBlobs,
+            HTTP_METHOD_GET,
+            url,
+            requestHeaders);
+        retryListOp.execute(tracingContext);
+        listResponseData = parseListPathResults(retryListOp.getResult(), uri);
+        listResponseData.setOp(retryListOp);
+      }
     }
 
     if (isEmptyListResults(listResponseData) && is404CheckRequired) {
@@ -427,15 +439,16 @@ public class AbfsBlobClient extends AbfsClient {
    * @param tracingContext tracing context
    * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
    */
-  private void retryRenameOnAtomicEntriesInListResults(TracingContext tracingContext,
+  private boolean retryRenameOnAtomicEntriesInListResults(TracingContext tracingContext,
       Map<Path, Integer> renamePendingJsonPaths) throws AzureBlobFileSystemException {
     if (renamePendingJsonPaths == null || renamePendingJsonPaths.isEmpty()) {
-      return;
+      return false;
     }
 
     for (Map.Entry<Path, Integer> entry : renamePendingJsonPaths.entrySet()) {
       retryRenameOnAtomicKeyPath(entry.getKey(), entry.getValue(), tracingContext);
     }
+    return true;
   }
 
   /**{@inheritDoc}*/
