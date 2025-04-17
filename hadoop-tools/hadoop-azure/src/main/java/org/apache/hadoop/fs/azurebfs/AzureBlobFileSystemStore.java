@@ -1300,6 +1300,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     if (listingClient instanceof AbfsBlobClient) {
       fileStatuses.addAll(ListUtils.getUniqueListResult(fileStatusList));
+      LOG.debug("ListBlob API returned a total of {} elements including duplicates."
+          + "Number of unique Elements are {}", fileStatusList.size(), fileStatuses.size());
     } else {
       fileStatuses.addAll(fileStatusList);
     }

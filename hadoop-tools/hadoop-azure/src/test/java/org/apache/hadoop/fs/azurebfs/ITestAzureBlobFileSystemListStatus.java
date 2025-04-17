@@ -24,7 +24,9 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -605,12 +607,11 @@ public class ITestAzureBlobFileSystemListStatus extends
     assertExplicitDirectoryFileStatus(fileStatuses[6], fs.makeQualified(new Path("/e")));
 
     // Assert that there are no duplicates in the returned file statuses.
-    for (int i = 0; i < fileStatuses.length; i++) {
-      for (int j = i + 1; j < fileStatuses.length; j++) {
-        Assertions.assertThat(fileStatuses[i].getPath())
-            .describedAs("Duplicate entries found")
-            .isNotEqualTo(fileStatuses[j].getPath());
-      }
+    Set<Path> uniquePaths = new HashSet<>();
+    for (FileStatus fileStatus : fileStatuses) {
+      Assertions.assertThat(uniquePaths.add(fileStatus.getPath()))
+          .describedAs("Duplicate entries found")
+          .isTrue();
     }
   }
 

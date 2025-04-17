@@ -18,11 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
-import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -44,7 +41,7 @@ public class TestListUtils {
     originalList = new ArrayList<>();
     originalList.add(getFileStatusObject(new Path("/A")));
     originalList.add(getFileStatusObject(new Path("/A")));
-    validateList( originalList, 1);
+    validateList(originalList, 1);
 
     originalList = new ArrayList<>();
     originalList.add(getFileStatusObject(new Path("/a")));
@@ -56,7 +53,7 @@ public class TestListUtils {
     originalList.add(getFileStatusObject(new Path("/abc")));
     originalList.add(getFileStatusObject(new Path("/abc.bak1")));
     originalList.add(getFileStatusObject(new Path("/abc")));
-    validateList( originalList, 5);
+    validateList(originalList, 5);
 
     originalList = new ArrayList<>();
     originalList.add(getFileStatusObject(new Path("/a")));
@@ -68,7 +65,18 @@ public class TestListUtils {
     originalList.add(getFileStatusObject(new Path("/abc")));
     originalList.add(getFileStatusObject(new Path("/abc")));
     originalList.add(getFileStatusObject(new Path("/abc_bak1")));
-    validateList( originalList, 5);
+    validateList(originalList, 5);
+
+    originalList = new ArrayList<>();
+    originalList.add(getFileStatusObject(new Path("/a")));
+    originalList.add(getFileStatusObject(new Path("/b")));
+    validateList(originalList, 2);
+
+    originalList = new ArrayList<>();
+    originalList.add(getFileStatusObject(new Path("/a")));
+    originalList.add(getFileStatusObject(new Path("/b")));
+    originalList.add(getFileStatusObject(new Path("/b")));
+    validateList(originalList, 2);
   }
 
   private void validateList(List<FileStatus> originalList, int expectedSize) {

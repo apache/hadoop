@@ -19,51 +19,47 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.TreeMap;
 
 import org.apache.hadoop.fs.FileStatus;
 
+/**
+ * Utility class for List operations.
+ */
 public class ListUtils {
 
+  /**
+   * Utility method to remove duplicates from a list of FileStatus.
+   * ListBlob API of blob endpoint can return duplicate entries.
+   * @param originalList prone to have duplicates
+   * @return rectified list with no duplicates.
+   */
   public static List<FileStatus> getUniqueListResult(List<FileStatus> originalList) {
     if (originalList == null || originalList.isEmpty()) {
       return originalList;
     }
+
     TreeMap<String, FileStatus> nameToEntryMap = new TreeMap<>();
-    String prefix;
-    Iterator<FileStatus> iterator = originalList.iterator();
+    String prefix = null;
     List<FileStatus> rectifiedFileStatusList = new ArrayList<>();
 
-    FileStatus curr = iterator.next();
-    prefix = curr.getPath().getName();
-    addToUniqueResult(nameToEntryMap, rectifiedFileStatusList, curr);
+    for (FileStatus current : originalList) {
+      String fileName = current.getPath().getName();
 
-    while (iterator.hasNext()) {
-      FileStatus next = iterator.next();
-      if (next.getPath().getName().startsWith(prefix)) {
-        /*
-         * This is either a duplicate entry or a duplicate entry might follow.
-         * Keep adding unique entries to map and final list
-         */
-        if (!nameToEntryMap.containsKey(next.getPath().getName())) {
-          addToUniqueResult(nameToEntryMap, rectifiedFileStatusList, next);
-        }
-      } else {
-        // The prefix pattern breaks here.
-        prefix = next.getPath().getName();
-        nameToEntryMap = new TreeMap<>();
-        addToUniqueResult(nameToEntryMap, rectifiedFileStatusList, next);
+      if (prefix == null || !fileName.startsWith(prefix)) {
+        // Prefix pattern breaks here. Reset Map and prefix.
+        prefix = fileName;
+        nameToEntryMap.clear();
+      }
+
+      // Add the current entry if it is not already added.
+      if (!nameToEntryMap.containsKey(fileName)) {
+        nameToEntryMap.put(fileName, current);
+        rectifiedFileStatusList.add(current);
       }
     }
 
     return rectifiedFileStatusList;
-  }
-
-  private static void addToUniqueResult(TreeMap<String, FileStatus> nameToEntryMap,
-      List<FileStatus> rectifiedFileStatusList, FileStatus fileStatus) {
-    nameToEntryMap.put(fileStatus.getPath().getName(), fileStatus);
-    rectifiedFileStatusList.add(fileStatus);
   }
 }
