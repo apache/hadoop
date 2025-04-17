@@ -26,7 +26,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.any;
@@ -123,6 +125,8 @@ public class TestAuxServices {
       .getSimpleName());
   private File manifest = new File(rootDir, "manifest.txt");
   private ObjectMapper mapper = new ObjectMapper();
+  private static final FsPermission WRITABLE_BY_OWNER = FsPermission.createImmutable((short) 0755);
+  private static final FsPermission WRITABLE_BY_GROUP = FsPermission.createImmutable((short) 0775);
 
   @Parameterized.Parameters
   public static Collection<Boolean> getParams() {
@@ -268,6 +272,24 @@ public class TestAuxServices {
     mapper.writeValue(manifest, services);
   }
 
+  /**
+   * Creates a spy object of AuxServices for test cases which assume that we have proper
+   * file system permissions by default.
+   *
+   * Permission checking iterates through the parents of the manifest file until it
+   * reaches the system root, so without mocking this the success of the initialization
+   * would heavily depend on the environment where the test is running.
+   *
+   * @return a spy object of AuxServices
+   */
+  private AuxServices getSpyAuxServices(AuxiliaryLocalPathHandler auxiliaryLocalPathHandler,
+      Context nmContext, DeletionService deletionService) throws IOException {
+    AuxServices auxServices = spy(new AuxServices(auxiliaryLocalPathHandler,
+        nmContext, deletionService));
+    doReturn(true).when(auxServices).checkManifestPermissions(any(FileStatus.class));
+    return auxServices;
+  }
+
   @SuppressWarnings("resource")
   @Test
   public void testRemoteAuxServiceClassPath() throws Exception {
@@ -317,7 +339,7 @@ public class TestAuxServices {
               YarnConfiguration.NM_AUX_SERVICE_REMOTE_CLASSPATH, "ServiceC"),
               testJar.getAbsolutePath());
         }
-        aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+        aux = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
             mockContext2, mockDelService2);
         aux.init(conf);
         Assert.fail("The permission of the jar is wrong."
@@ -339,7 +361,7 @@ public class TestAuxServices {
             YarnConfiguration.NM_AUX_SERVICE_REMOTE_CLASSPATH, "ServiceC"),
             testJar.getAbsolutePath());
       }
-      aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+      aux = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
           mockContext2, mockDelService2);
       aux.init(conf);
       aux.start();
@@ -356,7 +378,7 @@ public class TestAuxServices {
 
       // initialize the same auxservice again, and make sure that we did not
       // re-download the jar from remote directory.
-      aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+      aux = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
           mockContext2, mockDelService2);
       aux.init(conf);
       aux.start();
@@ -377,7 +399,7 @@ public class TestAuxServices {
       FileTime fileTime = FileTime.fromMillis(time);
       Files.setLastModifiedTime(Paths.get(testJar.getAbsolutePath()),
           fileTime);
-      aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+      aux = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
           mockContext2, mockDelService2);
       aux.init(conf);
       aux.start();
@@ -416,7 +438,7 @@ public class TestAuxServices {
           "ServiceC"), ServiceC.class, Service.class);
     }
     @SuppressWarnings("resource")
-    AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+    AuxServices aux = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
         MOCK_CONTEXT, MOCK_DEL_SERVICE);
     aux.init(conf);
     aux.start();
@@ -469,7 +491,7 @@ public class TestAuxServices {
       when(mockDirsHandler.getLocalPathForWrite(anyString())).thenReturn(
           rootAuxServiceDirPath);
       when(mockContext2.getLocalDirsHandler()).thenReturn(mockDirsHandler);
-      aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+      aux = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
           mockContext2, MOCK_DEL_SERVICE);
       aux.init(conf);
       aux.start();
@@ -645,7 +667,7 @@ public class TestAuxServices {
   @Test
   public void testAuxServices() throws IOException {
     Configuration conf = getABConf();
-    final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+    final AuxServices aux = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
         MOCK_CONTEXT, MOCK_DEL_SERVICE);
     aux.init(conf);
 
@@ -673,7 +695,7 @@ public class TestAuxServices {
   @Test
   public void testAuxServicesMeta() throws IOException {
     Configuration conf = getABConf();
-    final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+    final AuxServices aux = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
         MOCK_CONTEXT, MOCK_DEL_SERVICE);
     aux.init(conf);
 
@@ -705,7 +727,7 @@ public class TestAuxServices {
   public void testAuxUnexpectedStop() throws IOException {
     // AuxServices no longer expected to stop when services stop
     Configuration conf = getABConf();
-    final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+    final AuxServices aux = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
         MOCK_CONTEXT, MOCK_DEL_SERVICE);
     aux.init(conf);
     aux.start();
@@ -721,7 +743,7 @@ public class TestAuxServices {
   public void testValidAuxServiceName() throws IOException {
     Configuration conf = getABConf("Asrv1", "Bsrv_2", ServiceA.class,
         ServiceB.class);
-    final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+    final AuxServices aux = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
         MOCK_CONTEXT, MOCK_DEL_SERVICE);
     try {
       aux.init(conf);
@@ -730,7 +752,7 @@ public class TestAuxServices {
     }
 
     //Test bad auxService Name
-    final AuxServices aux1 = new AuxServices(MOCK_AUX_PATH_HANDLER,
+    final AuxServices aux1 = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
         MOCK_CONTEXT, MOCK_DEL_SERVICE);
     if (useManifest) {
       AuxServiceRecord serviceA =
@@ -760,7 +782,7 @@ public class TestAuxServices {
     conf.setBoolean(YarnConfiguration.NM_RECOVERY_ENABLED, true);
     conf.set(YarnConfiguration.NM_RECOVERY_DIR, TEST_DIR.toString());
     try {
-      final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+      final AuxServices aux = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
           MOCK_CONTEXT, MOCK_DEL_SERVICE);
       aux.init(conf);
       Assert.assertEquals(2, aux.getServices().size());
@@ -888,59 +910,114 @@ public class TestAuxServices {
   }
 
   @Test
-  public void testAuxServicesManifestPermissions() throws IOException {
+  public void testAuxServicesInitWithManifestOwnerAndPermissionCheck() throws IOException {
     Assume.assumeTrue(useManifest);
     Configuration conf = getABConf();
-    FileSystem fs = FileSystem.get(conf);
-    fs.setPermission(new Path(manifest.getAbsolutePath()), FsPermission
-        .createImmutable((short) 0777));
-    AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
-        MOCK_CONTEXT, MOCK_DEL_SERVICE);
+    AuxServices aux = spy(new AuxServices(MOCK_AUX_PATH_HANDLER,
+        MOCK_CONTEXT, MOCK_DEL_SERVICE));
+    doReturn(false).when(aux).checkManifestPermissions(any(FileStatus.class));
     aux.init(conf);
     assertEquals(0, aux.getServices().size());
 
-    fs.setPermission(new Path(manifest.getAbsolutePath()), FsPermission
-        .createImmutable((short) 0775));
-    aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
-        MOCK_CONTEXT, MOCK_DEL_SERVICE);
-    aux.init(conf);
-    assertEquals(0, aux.getServices().size());
-
-    fs.setPermission(new Path(manifest.getAbsolutePath()), FsPermission
-        .createImmutable((short) 0755));
-    fs.setPermission(new Path(rootDir.getAbsolutePath()), FsPermission
-        .createImmutable((short) 0775));
-    aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
-        MOCK_CONTEXT, MOCK_DEL_SERVICE);
-    aux.init(conf);
-    assertEquals(0, aux.getServices().size());
-
-    fs.setPermission(new Path(rootDir.getAbsolutePath()), FsPermission
-        .createImmutable((short) 0755));
-    aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+    aux = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
         MOCK_CONTEXT, MOCK_DEL_SERVICE);
     aux.init(conf);
     assertEquals(2, aux.getServices().size());
 
     conf.set(YarnConfiguration.YARN_ADMIN_ACL, "");
-    aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+    aux = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
         MOCK_CONTEXT, MOCK_DEL_SERVICE);
     aux.init(conf);
     assertEquals(0, aux.getServices().size());
 
     conf.set(YarnConfiguration.YARN_ADMIN_ACL, UserGroupInformation
         .getCurrentUser().getShortUserName());
-    aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+    aux = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
         MOCK_CONTEXT, MOCK_DEL_SERVICE);
     aux.init(conf);
     assertEquals(2, aux.getServices().size());
   }
 
   @Test
+  public void testCheckManifestPermissionsWhenFileIsOnlyWritableByOwner() throws IOException {
+    Assume.assumeTrue(useManifest);
+    final AuxServices aux = spy(new AuxServices(MOCK_AUX_PATH_HANDLER,
+        MOCK_CONTEXT, MOCK_DEL_SERVICE));
+    FileStatus manifestFileStatus = mock(FileStatus.class);
+    Path manifestPath = mock(Path.class);
+
+    when(manifestFileStatus.getPermission()).thenReturn(WRITABLE_BY_OWNER);
+    when(manifestFileStatus.getPath()).thenReturn(manifestPath);
+
+    assertTrue(aux.checkManifestPermissions(manifestFileStatus));
+  }
+
+  @Test
+  public void testCheckManifestPermissionsWhenFileIsWritableByGroup() throws IOException {
+    Assume.assumeTrue(useManifest);
+    final AuxServices aux = spy(new AuxServices(MOCK_AUX_PATH_HANDLER,
+        MOCK_CONTEXT, MOCK_DEL_SERVICE));
+    FileStatus manifestFileStatus = mock(FileStatus.class);
+    Path manifestPath = mock(Path.class);
+
+    when(manifestFileStatus.getPermission()).thenReturn(WRITABLE_BY_GROUP);
+    when(manifestFileStatus.getPath()).thenReturn(manifestPath);
+
+    assertFalse(aux.checkManifestPermissions(manifestFileStatus));
+  }
+
+  @Test
+  public void testCheckManifestPermissionsWhenParentIsWritableByGroup() throws IOException {
+    Assume.assumeTrue(useManifest);
+    final AuxServices aux = spy(new AuxServices(MOCK_AUX_PATH_HANDLER,
+        MOCK_CONTEXT, MOCK_DEL_SERVICE));
+
+    FileStatus manifestFileStatus = mock(FileStatus.class);
+    FileStatus parentFolderStatus = mock(FileStatus.class);
+    when(manifestFileStatus.getPermission()).thenReturn(WRITABLE_BY_OWNER);
+    when(parentFolderStatus.getPermission()).thenReturn(WRITABLE_BY_GROUP);
+
+    Path manifestPath = mock(Path.class);
+    Path parentPath = mock(Path.class);
+    when(manifestFileStatus.getPath()).thenReturn(manifestPath);
+    when(manifestPath.getParent()).thenReturn(parentPath);
+
+    FileSystem manifestFs = mock(FileSystem.class);
+    when(manifestFs.getFileStatus(parentPath)).thenReturn(parentFolderStatus);
+    doReturn(manifestFs).when(aux).getManifestFS();
+
+    assertFalse(aux.checkManifestPermissions(manifestFileStatus));
+  }
+
+  @Test
+  public void testCheckManifestPermissionsWhenParentAndFileIsWritableByOwner() throws IOException {
+    Assume.assumeTrue(useManifest);
+    final AuxServices aux = spy(new AuxServices(MOCK_AUX_PATH_HANDLER,
+        MOCK_CONTEXT, MOCK_DEL_SERVICE));
+
+    FileStatus manifestFileStatus = mock(FileStatus.class);
+    FileStatus parentFolderStatus = mock(FileStatus.class);
+    when(manifestFileStatus.getPermission()).thenReturn(WRITABLE_BY_OWNER);
+    when(parentFolderStatus.getPermission()).thenReturn(WRITABLE_BY_OWNER);
+
+    Path manifestPath = mock(Path.class);
+    Path parentPath = mock(Path.class);
+    when(manifestFileStatus.getPath()).thenReturn(manifestPath);
+    when(parentFolderStatus.getPath()).thenReturn(parentPath);
+    when(manifestPath.getParent()).thenReturn(parentPath);
+
+    FileSystem manifestFs = mock(FileSystem.class);
+    when(manifestFs.getFileStatus(parentPath)).thenReturn(parentFolderStatus);
+    doReturn(manifestFs).when(aux).getManifestFS();
+
+    assertTrue(aux.checkManifestPermissions(manifestFileStatus));
+  }
+
+  @Test
   public void testRemoveManifest() throws IOException {
     Assume.assumeTrue(useManifest);
     Configuration conf = getABConf();
-    final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+    final AuxServices aux = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
         MOCK_CONTEXT, MOCK_DEL_SERVICE);
     aux.init(conf);
     assertEquals(2, aux.getServices().size());
@@ -953,7 +1030,7 @@ public class TestAuxServices {
   public void testManualReload() throws IOException {
     Assume.assumeTrue(useManifest);
     Configuration conf = getABConf();
-    final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+    final AuxServices aux = getSpyAuxServices(MOCK_AUX_PATH_HANDLER,
         MOCK_CONTEXT, MOCK_DEL_SERVICE);
     aux.init(conf);
     try {
