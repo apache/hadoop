@@ -18,7 +18,6 @@
 package org.apache.hadoop.net;
 
 import static org.junit.Assert.*;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -846,6 +845,6 @@ public class TestNetUtils {
   }
 
   private void assertNullCause(Exception e) {
-    assertNull(e.getCause(), "Expected exception to have null cause");
+    assertNull("Expected exception to have null cause", e.getCause());
   }
 }
