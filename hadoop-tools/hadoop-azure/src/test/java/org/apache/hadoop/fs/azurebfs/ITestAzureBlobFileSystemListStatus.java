@@ -92,6 +92,8 @@ public class ITestAzureBlobFileSystemListStatus extends
     AbstractAbfsIntegrationTest {
   private static final int TEST_FILES_NUMBER = 6000;
   public static final String TEST_CONTINUATION_TOKEN = "continuation";
+  private static final int TOTAL_NUMBER_OF_PATHS = 11;
+  private static final int NUMBER_OF_UNIQUE_PATHS = 7;
 
   public ITestAzureBlobFileSystemListStatus() throws Exception {
     super();
@@ -585,9 +587,6 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     // Create Path 9 and 10
     fs.create(new Path("/e/file4"));
-
-    final int TOTAL_NUMBER_OF_PATHS = 11;
-    final int NUMBER_OF_UNIQUE_PATHS = 7;
 
     FileStatus[] fileStatuses = fs.listStatus(new Path(ROOT_PATH));
 
