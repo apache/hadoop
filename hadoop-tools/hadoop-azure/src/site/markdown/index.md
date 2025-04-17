@@ -652,8 +652,9 @@ To know more about how SAS Authentication works refer to
 
 There are three types of SAS supported by Azure Storage:
 - [User Delegation SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas):
-  Recommended for use with ABFS Driver with HNS Enabled ADLS Gen2 accounts. It
-  is Identity based SAS that works at blob/directory level)
+  SAS-based authentication works with HNS-enabled ADLS Gen2 accounts
+  (recommended for use with ABFS) and is also supported with non-HNS (FNS) Blob
+  accounts. However, it is **NOT SUPPORTED** with FNS-DFS accounts.
 - [Service SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-service-sas): Global and works at container level.
 - [Account SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-account-sas): Global and works at account level.
 

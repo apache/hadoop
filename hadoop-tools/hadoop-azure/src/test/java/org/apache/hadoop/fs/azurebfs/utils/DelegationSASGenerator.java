@@ -24,6 +24,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AbfsUriQueryBuilder;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 
 /**
  * Test Delegation SAS generator.
@@ -70,7 +71,7 @@ public class DelegationSASGenerator extends SASGenerator {
       case SASTokenProvider.DELETE_RECURSIVE_OPERATION:
         sp = "d";
         sr = "d";
-        sdd = path.equals("/")? "0": Integer.toString(StringUtils.countMatches(path, "/"));
+        sdd = path.equals(ROOT_PATH)? "0": Integer.toString(StringUtils.countMatches(path, "/"));
         break;
       case SASTokenProvider.CHECK_ACCESS_OPERATION:
       case SASTokenProvider.GET_ACL_OPERATION:
@@ -84,7 +85,7 @@ public class DelegationSASGenerator extends SASGenerator {
       case SASTokenProvider.LIST_OPERATION:
         sp = "l";
         sr = "d";
-        sdd = path.equals("/")? "0": Integer.toString(StringUtils.countMatches(path, "/"));
+        sdd = path.equals(ROOT_PATH)? "0": Integer.toString(StringUtils.countMatches(path, "/"));
         break;
       case SASTokenProvider.GET_PROPERTIES_OPERATION:
       case SASTokenProvider.READ_OPERATION:

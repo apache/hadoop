@@ -97,7 +97,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   public void setup() throws Exception {
     isHNSEnabled = this.getConfiguration().getBoolean(
         TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
-    if(!isHNSEnabled){
+    if (!isHNSEnabled) {
       assumeBlobServiceType();
     }
     createFilesystemForSASTests();
@@ -308,12 +308,18 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = getFileSystem();
     Path dirPath = new Path(UUID.randomUUID().toString());
     Path filePath = new Path(dirPath, UUID.randomUUID().toString());
+    Path filePath2 = new Path(dirPath, UUID.randomUUID().toString());
 
     fs.mkdirs(dirPath);
 
     // create file with content "hello"
     try (FSDataOutputStream stream = fs.create(filePath)) {
       stream.writeBytes("hello");
+    }
+
+    // create file with content "bye"
+    try (FSDataOutputStream stream = fs.create(filePath2)) {
+      stream.writeBytes("bye");
     }
 
     fs.listStatus(filePath);
