@@ -14,6 +14,7 @@
 package org.apache.hadoop.security.authentication.server;
 
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -29,18 +30,19 @@ import org.apache.directory.server.core.annotations.ContextEntry;
 import org.apache.directory.server.core.annotations.CreateDS;
 import org.apache.directory.server.core.annotations.CreatePartition;
 import org.apache.directory.server.core.integ.AbstractLdapTestUnit;
-import org.apache.directory.server.core.integ.FrameworkRunner;
+import org.apache.directory.server.core.integ.ApacheDSTestExtension;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 
 /**
  * This unit test verifies the functionality of LDAP authentication handler.
  */
-@RunWith(FrameworkRunner.class)
+@ExtendWith(ApacheDSTestExtension.class)
 @CreateLdapServer(
     transports =
       {
@@ -65,7 +67,7 @@ import org.mockito.Mockito;
 public class TestLdapAuthenticationHandler extends AbstractLdapTestUnit {
   private LdapAuthenticationHandler handler;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     handler = new LdapAuthenticationHandler();
     try {
@@ -84,17 +86,19 @@ public class TestLdapAuthenticationHandler extends AbstractLdapTestUnit {
     return p;
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60, unit = TimeUnit.SECONDS)
   public void testRequestWithoutAuthorization() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
-    Assert.assertNull(handler.authenticate(request, response));
+    Assertions.assertNull(handler.authenticate(request, response));
     Mockito.verify(response).setHeader(WWW_AUTHENTICATE, HttpConstants.BASIC);
     Mockito.verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60, unit = TimeUnit.SECONDS)
   public void testRequestWithInvalidAuthorization() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
@@ -103,22 +107,24 @@ public class TestLdapAuthenticationHandler extends AbstractLdapTestUnit {
     String credentials = "bjones:invalidpassword";
     Mockito.when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
         .thenReturn(base64.encodeToString(credentials.getBytes()));
-    Assert.assertNull(handler.authenticate(request, response));
+    Assertions.assertNull(handler.authenticate(request, response));
     Mockito.verify(response).setHeader(WWW_AUTHENTICATE, HttpConstants.BASIC);
     Mockito.verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60, unit = TimeUnit.SECONDS)
   public void testRequestWithIncompleteAuthorization() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
     Mockito.when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
         .thenReturn(HttpConstants.BASIC);
-    Assert.assertNull(handler.authenticate(request, response));
+    Assertions.assertNull(handler.authenticate(request, response));
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60, unit = TimeUnit.SECONDS)
   public void testRequestWithAuthorization() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
@@ -129,14 +135,15 @@ public class TestLdapAuthenticationHandler extends AbstractLdapTestUnit {
     Mockito.when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
         .thenReturn(authHeader);
     AuthenticationToken token = handler.authenticate(request, response);
-    Assert.assertNotNull(token);
+    Assertions.assertNotNull(token);
     Mockito.verify(response).setStatus(HttpServletResponse.SC_OK);
-    Assert.assertEquals(TYPE, token.getType());
-    Assert.assertEquals("bjones", token.getUserName());
-    Assert.assertEquals("bjones", token.getName());
+    Assertions.assertEquals(token.getType(), TYPE);
+    Assertions.assertEquals(token.getUserName(), "bjones");
+    Assertions.assertEquals(token.getName(), "bjones");
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60, unit = TimeUnit.SECONDS)
   public void testRequestWithWrongCredentials() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
@@ -149,11 +156,11 @@ public class TestLdapAuthenticationHandler extends AbstractLdapTestUnit {
 
     try {
       handler.authenticate(request, response);
-      Assert.fail();
+      Assertions.fail();
     } catch (AuthenticationException ex) {
       // Expected
     } catch (Exception ex) {
-      Assert.fail();
+      Assertions.fail();
     }
   }
 }
