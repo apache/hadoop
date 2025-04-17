@@ -616,16 +616,16 @@ public final class HttpServer2 implements FilterContainer {
         }
       }
 
-      if (null != excludeCiphers && !excludeCiphers.isEmpty()) {
+      if (StringUtils.hasLength(excludeCiphers)) {
         sslContextFactory.setExcludeCipherSuites(
             StringUtils.getTrimmedStrings(excludeCiphers));
-        LOG.info("Excluded Cipher List:" + excludeCiphers);
+        LOG.info("Excluded Cipher List:{}", excludeCiphers);
       }
 
-      if (null != includeCiphers && !includeCiphers.isEmpty()) {
+      if (StringUtils.hasLength(includeCiphers)) {
         sslContextFactory.setIncludeCipherSuites(
           StringUtils.getTrimmedStrings(includeCiphers));
-        LOG.info("Include Cipher List:" + includeCiphers);
+        LOG.info("Included Cipher List:{}", includeCiphers);
       }
 
       setEnabledProtocols(sslContextFactory);
