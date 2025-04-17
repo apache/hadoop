@@ -2837,7 +2837,7 @@ public class DataNode extends ReconfigurableBase
     LOG.warn(msg);
   }
 
-  @SuppressFBWarnings()
+  @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_BAD_PRACTICE")
   @VisibleForTesting
   void transferBlock(ExtendedBlock block, DatanodeInfo[] xferTargets,
       StorageType[] xferTargetStorageTypes, String[] xferTargetStorageIDs)
