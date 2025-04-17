@@ -19,13 +19,7 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.assertj.core.api.Assertions;
@@ -56,6 +50,7 @@ import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceError
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.BLOB_PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicity.SUFFIX;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.createFiles;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -67,8 +62,6 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
   private static final int FAILED_CALL = 15;
 
   private static final int TOTAL_FILES = 25;
-
-  private static final int TOTAL_THREADS_IN_POOL = 5;
 
   public ITestAzureBlobFileSystemRenameRecovery() throws Exception {
     super();
@@ -103,12 +96,16 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
    * when the copyBlob method is called. This is used to test the behavior of
    * the rename recovery operation when a blob already exists at the destination.
    *
+   * @param fs The AzureBlobFileSystem instance.
+   * @param src The source path to rename.
+   * @param dst The destination path for the rename operation.
    * @param client The AbfsBlobClient instance.
    * @param copyCall The AtomicInteger to track the number of copy calls.
    * @throws AzureBlobFileSystemException If an error occurs during the operation.
    */
-  private void renameCrashInBetween(AbfsBlobClient client, AtomicInteger copyCall)
-      throws AzureBlobFileSystemException {
+  private void renameCrashInBetween(AzureBlobFileSystem fs, Path src, Path dst,
+      AbfsBlobClient client, AtomicInteger copyCall)
+      throws Exception {
     Mockito.doAnswer(copyRequest -> {
       if (copyCall.get() == FAILED_CALL) {
         throw new AbfsRestOperationException(
@@ -122,6 +119,7 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
     }).when(client).copyBlob(Mockito.any(Path.class),
         Mockito.any(Path.class), Mockito.nullable(String.class),
         Mockito.any(TracingContext.class));
+    renameOperationWithRecovery(fs, src, dst, copyCall);
   }
 
   /**
@@ -208,30 +206,6 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
   }
 
   /**
-   * Helper method to create files in the given directory.
-   *
-   * @param fs The AzureBlobFileSystem instance to use for file creation.
-   * @param src The source path (directory).
-   * @param numFiles The number of files to create.
-   * @throws ExecutionException, InterruptedException If an error occurs during file creation.
-   */
-  public static void createFiles(AzureBlobFileSystem fs, Path src, int numFiles)
-      throws ExecutionException, InterruptedException {
-    ExecutorService executorService = Executors.newFixedThreadPool(TOTAL_THREADS_IN_POOL);
-    List<Future> futures = new ArrayList<>();
-    for (int i = 0; i < numFiles; i++) {
-      final int iter = i;
-      Future future = executorService.submit(() ->
-          fs.create(new Path(src, "file" + iter + ".txt")));
-      futures.add(future);
-    }
-    for (Future future : futures) {
-      future.get();
-    }
-    executorService.shutdown();
-  }
-
-  /**
    * Helper method to create a json file.
    * @param path parent path
    * @param renameJson rename json path
@@ -266,6 +240,41 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
   }
 
   /**
+   * Helper method to perform the rename operation and validate the results.
+   *
+   * @param fs The AzureBlobFileSystem instance to use for the rename operation.
+   * @param src The source path (directory).
+   * @param dst The destination path (directory).
+   * @param countCall The AtomicInteger to track the number of operations.
+   * @throws Exception If an error occurs during the rename operation.
+   */
+  private void renameOperationWithRecovery(AzureBlobFileSystem fs, Path src,
+      Path dst, AtomicInteger countCall) throws Exception {
+    Assertions.assertThat(fs.rename(src, dst))
+        .describedAs("Rename should crash in between.")
+        .isFalse();
+
+    // Validate copy operation count
+    Assertions.assertThat(countCall.get())
+        .describedAs("Operation count should be less than 10.")
+        .isLessThan(TOTAL_FILES);
+
+    // Assertions to validate renamed destination and source
+    validateRename(fs, src, dst, true, true, true);
+
+    // Validate that rename redo operation was triggered
+    countCall.set(0);
+    triggerRenameRecovery(fs, src);
+
+    Assertions.assertThat(countCall.get())
+        .describedAs("Operation count should be greater than 0.")
+        .isGreaterThan(0);
+
+    // Validate final state of destination and source
+    validateRename(fs, src, dst, false, true, false);
+  }
+
+  /**
    * Tests renaming a directory with a failure during the copy operation.
    * Simulates an error when copying on the 6th call.
    */
@@ -283,29 +292,7 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
 
       // Track the number of copy operations
       AtomicInteger copyCall = new AtomicInteger(0);
-      renameCrashInBetween(client, copyCall);
-      Assertions.assertThat(fs.rename(src, dst))
-          .describedAs("Rename should crash in between.")
-          .isFalse();
-
-      // Validate copy operation count
-      Assertions.assertThat(copyCall.get())
-          .describedAs("Copy operation count should be less than 10.")
-          .isLessThan(TOTAL_FILES);
-
-      // Assertions to validate renamed destination and source
-      validateRename(fs, src, dst, true, true, true);
-
-      // Validate that rename redo operation was triggered
-      copyCall.set(0);
-      triggerRenameRecovery(fs, src);
-
-      Assertions.assertThat(copyCall.get())
-          .describedAs("Copy operation count should be greater than 0.")
-          .isGreaterThan(0);
-
-      // Validate final state of destination and source
-      validateRename(fs, src, dst, false, true, false);
+      renameCrashInBetween(fs, src, dst, client, copyCall);
     }
   }
 
@@ -340,29 +327,7 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
       }).when(client).deleteBlobPath(Mockito.any(Path.class),
           Mockito.anyString(), Mockito.any(TracingContext.class));
 
-      Assertions.assertThat(fs.rename(src, dst))
-          .describedAs("Rename should crash in between.")
-          .isFalse();
-
-      // Validate delete operation count
-      Assertions.assertThat(deleteCall.get())
-          .describedAs("Delete operation count should be less than 10.")
-          .isLessThan(TOTAL_FILES);
-
-      // Assertions to validate renamed destination and source
-      validateRename(fs, src, dst, true, true, true);
-
-      // Validate that rename redo operation was triggered
-      deleteCall.set(0);
-      triggerRenameRecovery(fs, src);
-
-      Assertions.assertThat(deleteCall.get())
-          .describedAs("Delete operation count should be greater than 0.")
-          .isGreaterThan(0);
-
-      // Validate final state of destination and source
-      // Validate that delete redo operation was triggered
-      validateRename(fs, src, dst, false, true, false);
+      renameOperationWithRecovery(fs, src, dst, deleteCall);
     }
   }
 
@@ -389,29 +354,9 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
 
       // Track the number of copy operations
       AtomicInteger copyCall = new AtomicInteger(0);
-      renameCrashInBetween(client, copyCall);
-      Assertions.assertThat(fs.rename(src, dst))
-          .describedAs("Rename should crash in between.")
-          .isFalse();
-
-      // Validate copy operation count
-      Assertions.assertThat(copyCall.get())
-          .describedAs("Copy operation count should be less than 10.")
-          .isLessThan(TOTAL_FILES);
-
-      // Assertions to validate renamed destination and source
-      validateRename(fs, src, dst, true, true, true);
-
-      copyCall.set(0);
-      // List Status on src, this will internally do rename recovery
-      triggerRenameRecovery(fs, src);
-
-      Assertions.assertThat(copyCall.get())
-          .describedAs("Copy operation count should be greater than 0.")
-          .isGreaterThan(0);
-
-      // Validate final state of destination and source
-      validateRename(fs, src, dst, false, true, false);
+      // Assertions to validate source and dest status before rename
+      validateRename(fs, src, dst, true, true, false);
+      renameCrashInBetween(fs, src, dst, client, copyCall);
     }
   }
 
@@ -436,29 +381,7 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
 
       // Track the number of copy operations
       AtomicInteger copyCall = new AtomicInteger(0);
-      renameCrashInBetween(client, copyCall);
-      Assertions.assertThat(fs.rename(src, dst))
-          .describedAs("Rename should crash in between.")
-          .isFalse();
-
-      // Validate copy operation count
-      Assertions.assertThat(copyCall.get())
-          .describedAs("Copy operation count should be less than 10.")
-          .isLessThan(TOTAL_FILES);
-
-      // This will create marker file in the destination
-      fs.exists(dst);
-
-      copyCall.set(0);
-      // List Status on src, this will internally do rename recovery
-      triggerRenameRecovery(fs, src);
-
-      Assertions.assertThat(copyCall.get())
-          .describedAs("Copy operation count should be greater than 0.")
-          .isGreaterThan(0);
-
-      // Validate final state of destination and source
-      validateRename(fs, src, dst, false, true, false);
+      renameCrashInBetween(fs, src, dst, client, copyCall);
     }
   }
 
@@ -481,31 +404,31 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
 
       // Track the number of copy operations
       AtomicInteger copyCall = new AtomicInteger(0);
-      renameCrashInBetween(client, copyCall);
-      Assertions.assertThat(fs.rename(src, dst))
-          .describedAs("Rename should crash in between.")
-          .isFalse();
-
-      // Validate copy operation count
-      Assertions.assertThat(copyCall.get())
-          .describedAs("Copy operation count should be less than 10.")
-          .isLessThan(TOTAL_FILES);
-
-      // Validate final state of destination and source
-      validateRename(fs, src, dst, true, true, true);
-
-      copyCall.set(0);
-      Assertions.assertThat(fs.rename(src, dst))
-          .describedAs("Rename should succeed.")
-          .isTrue();
-
-      Assertions.assertThat(copyCall.get())
-          .describedAs("Copy operation count should be greater than 0.")
-          .isGreaterThan(0);
-
-      // Validate final state of destination and source
-      validateRename(fs, src, dst, false, true, false);
+      renameCrashInBetween(fs, src, dst, client, copyCall);
     }
+  }
+
+  /**
+   * Helper method to assert that the pending JSON file does not exist
+   * and that the list of file statuses does not contain the rename pending JSON file.
+   *
+   * @param fs The AzureBlobFileSystem instance.
+   * @param renameJson The path of the rename pending JSON file.
+   * @param fileStatuses The array of FileStatus objects to check.
+   * @throws Exception If an error occurs during the assertion.
+   */
+  private void assertPendingJsonFile(AzureBlobFileSystem fs,
+      Path renameJson, FileStatus[] fileStatuses) throws Exception {
+    Assertions.assertThat(fs.exists(renameJson))
+        .describedAs("Rename Pending Json file should not exist.")
+        .isFalse();
+    Assertions.assertThat(
+            Arrays.stream(fileStatuses)
+                .anyMatch(status ->
+                    renameJson.toUri().getPath()
+                        .equals(status.getPath().toUri().getPath())))
+        .describedAs("Directory with suffix -RenamePending.json should exist.")
+        .isFalse();
   }
 
   /**
@@ -513,28 +436,22 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
    *
    * This test simulates a scenario where a pending rename JSON file exists for a single child folder
    * under the parent directory. It ensures that when listing the files in the parent directory,
-   * only the child folder (with the pending rename JSON file) is returned, and no additional files are listed.
+   * only the child folder is returned, and no additional files are listed.
    *
    * @throws Exception if any error occurs during the test execution
    */
   @Test
   public void testListCrashRecoveryWithSingleChildFolder() throws Exception {
-    AzureBlobFileSystem fs = null;
-    try {
-      Path path = new Path("/hbase/A1/A2");
-      Path renameJson = new Path(path.getParent(), path.getName() + SUFFIX);
-      fs = createJsonFile(path, renameJson);
+    Path path = new Path("/hbase/A1/A2");
+    Path renameJson = new Path(path.getParent(), path.getName() + SUFFIX);
+    AzureBlobFileSystem fs = createJsonFile(path, renameJson);
 
-      FileStatus[] fileStatuses = fs.listStatus(new Path("/hbase/A1"));
+    FileStatus[] fileStatuses = fs.listStatus(new Path("/hbase/A1"));
 
-      Assertions.assertThat(fileStatuses.length)
-          .describedAs("List should return 1 file")
-          .isEqualTo(1);
-    } finally {
-      if (fs != null) {
-        fs.close();
-      }
-    }
+    Assertions.assertThat(fileStatuses.length)
+        .describedAs("List should return 1 file")
+        .isEqualTo(1);
+    assertPendingJsonFile(fs, renameJson, fileStatuses);
   }
 
   /**
@@ -542,31 +459,25 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
    *
    * This test simulates a scenario where a pending rename JSON file exists, and multiple files are
    * created in the parent directory. It ensures that when listing the files in the parent directory,
-   * the correct number of files is returned, including the pending rename JSON file.
+   * the correct number of files is returned.
    *
    * @throws Exception if any error occurs during the test execution
    */
   @Test
   public void testListCrashRecoveryWithMultipleChildFolder() throws Exception {
-    AzureBlobFileSystem fs = null;
-    try {
-      Path path = new Path("/hbase/A1/A2");
-      Path renameJson = new Path(path.getParent(), path.getName() + SUFFIX);
-      fs = createJsonFile(path, renameJson);
+    Path path = new Path("/hbase/A1/A2");
+    Path renameJson = new Path(path.getParent(), path.getName() + SUFFIX);
+    AzureBlobFileSystem fs = createJsonFile(path, renameJson);
 
-      fs.create(new Path("/hbase/A1/file1.txt"));
-      fs.create(new Path("/hbase/A1/file2.txt"));
+    fs.create(new Path("/hbase/A1/file1.txt"));
+    fs.create(new Path("/hbase/A1/file2.txt"));
 
-      FileStatus[] fileStatuses = fs.listStatus(new Path("/hbase/A1"));
+    FileStatus[] fileStatuses = fs.listStatus(new Path("/hbase/A1"));
 
-      Assertions.assertThat(fileStatuses.length)
-          .describedAs("List should return 3 files")
-          .isEqualTo(3);
-    } finally {
-      if (fs != null) {
-        fs.close();
-      }
-    }
+    Assertions.assertThat(fileStatuses.length)
+        .describedAs("List should return 3 files")
+        .isEqualTo(3);
+    assertPendingJsonFile(fs, renameJson, fileStatuses);
   }
 
   /**
@@ -574,65 +485,52 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
    *
    * This test simulates a scenario where a pending rename JSON file exists in the parent directory,
    * and it ensures that after the deletion of the target directory and creation of new files,
-   * the listing operation correctly returns the remaining files without considering the pending rename.
+   * the listing operation correctly returns the remaining files.
    *
    * @throws Exception if any error occurs during the test execution
    */
   @Test
   public void testListCrashRecoveryWithPendingJsonFile() throws Exception {
-    AzureBlobFileSystem fs = null;
-    try {
-      Path path = new Path("/hbase/A1/A2");
-      Path renameJson = new Path(path.getParent(), path.getName() + SUFFIX);
-      fs = createJsonFile(path, renameJson);
+    Path path = new Path("/hbase/A1/A2");
+    Path renameJson = new Path(path.getParent(), path.getName() + SUFFIX);
+    AzureBlobFileSystem fs = createJsonFile(path, renameJson);
 
-      fs.delete(path, true);
-      fs.create(new Path("/hbase/A1/file1.txt"));
-      fs.create(new Path("/hbase/A1/file2.txt"));
+    fs.delete(path, true);
+    fs.create(new Path("/hbase/A1/file1.txt"));
+    fs.create(new Path("/hbase/A1/file2.txt"));
 
-      FileStatus[] fileStatuses = fs.listStatus(path.getParent());
+    FileStatus[] fileStatuses = fs.listStatus(path.getParent());
 
-      Assertions.assertThat(fileStatuses.length)
-          .describedAs("List should return 2 files")
-          .isEqualTo(2);
-    } finally {
-      if (fs != null) {
-        fs.close();
-      }
-    }
+    Assertions.assertThat(fileStatuses.length)
+        .describedAs("List should return 2 files")
+        .isEqualTo(2);
+    assertPendingJsonFile(fs, renameJson, fileStatuses);
   }
 
   /**
    * Test case to verify crash recovery when no pending rename JSON file exists.
    *
    * This test simulates a scenario where there is no pending rename JSON file in the directory.
-   * It ensures that the listing operation correctly returns all files in the parent directory, including
-   * those created after the rename JSON file is deleted.
+   * It ensures that the listing operation correctly returns all files in the parent directory.
    *
    * @throws Exception if any error occurs during the test execution
    */
   @Test
   public void testListCrashRecoveryWithoutAnyPendingJsonFile() throws Exception {
-    AzureBlobFileSystem fs = null;
-    try {
-      Path path = new Path("/hbase/A1/A2");
-      Path renameJson = new Path(path.getParent(), path.getName() + SUFFIX);
-      fs = createJsonFile(path, renameJson);
+    Path path = new Path("/hbase/A1/A2");
+    Path renameJson = new Path(path.getParent(), path.getName() + SUFFIX);
+    AzureBlobFileSystem fs = createJsonFile(path, renameJson);
 
-      fs.delete(renameJson, true);
-      fs.create(new Path("/hbase/A1/file1.txt"));
-      fs.create(new Path("/hbase/A1/file2.txt"));
+    fs.delete(renameJson, true);
+    fs.create(new Path("/hbase/A1/file1.txt"));
+    fs.create(new Path("/hbase/A1/file2.txt"));
 
-      FileStatus[] fileStatuses = fs.listStatus(path.getParent());
+    FileStatus[] fileStatuses = fs.listStatus(path.getParent());
 
-      Assertions.assertThat(fileStatuses.length)
-          .describedAs("List should return 3 files")
-          .isEqualTo(3);
-    } finally {
-      if (fs != null) {
-        fs.close();
-      }
-    }
+    Assertions.assertThat(fileStatuses.length)
+        .describedAs("List should return 3 files")
+        .isEqualTo(3);
+    assertPendingJsonFile(fs, renameJson, fileStatuses);
   }
 
   /**
@@ -693,50 +591,47 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
    */
   @Test
   public void testListCrashRecoveryWithMultipleJsonFile() throws Exception {
-    AzureBlobFileSystem fs = null;
-    try {
-      Path path = new Path("/hbase/A1/A2");
+    Path path = new Path("/hbase/A1/A2");
 
-      // 1st Json file
-      Path renameJson = new Path(path.getParent(), path.getName() + SUFFIX);
-      fs = createJsonFile(path, renameJson);
-      AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
+    // 1st Json file
+    Path renameJson = new Path(path.getParent(), path.getName() + SUFFIX);
+    AzureBlobFileSystem fs = createJsonFile(path, renameJson);
+    AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
 
-      // 2nd Json file
-      Path path2 = new Path("/hbase/A1/A3");
-      fs.create(new Path(path2, "file3.txt"));
+    // 2nd Json file
+    Path path2 = new Path("/hbase/A1/A3");
+    fs.create(new Path(path2, "file3.txt"));
 
-      Path renameJson2 = new Path(path2.getParent(), path2.getName() + SUFFIX);
-      VersionedFileStatus fileStatus
-          = (VersionedFileStatus) fs.getFileStatus(path2);
+    Path renameJson2 = new Path(path2.getParent(), path2.getName() + SUFFIX);
+    VersionedFileStatus fileStatus
+        = (VersionedFileStatus) fs.getFileStatus(path2);
 
-      new RenameAtomicity(path2, new Path("/hbase/test4"),
-          renameJson2, getTestTracingContext(fs, true),
-          fileStatus.getEtag(), client).preRename();
+    new RenameAtomicity(path2, new Path("/hbase/test4"),
+        renameJson2, getTestTracingContext(fs, true),
+        fileStatus.getEtag(), client).preRename();
 
-      fs.create(new Path(path, "file2.txt"));
+    fs.create(new Path(path, "file2.txt"));
 
-      AtomicInteger redoRenameCall = new AtomicInteger(0);
-      Mockito.doAnswer(answer -> {
-        redoRenameCall.incrementAndGet();
-        return answer.callRealMethod();
-      }).when(client).getRedoRenameAtomicity(Mockito.any(Path.class),
-          Mockito.anyInt(), Mockito.any(TracingContext.class));
+    AtomicInteger redoRenameCall = new AtomicInteger(0);
+    Mockito.doAnswer(answer -> {
+      redoRenameCall.incrementAndGet();
+      return answer.callRealMethod();
+    }).when(client).getRedoRenameAtomicity(Mockito.any(Path.class),
+        Mockito.anyInt(), Mockito.any(TracingContext.class));
 
-      FileStatus[] fileStatuses = fs.listStatus(path.getParent());
+    FileStatus[] fileStatuses = fs.listStatus(path.getParent());
 
-      Assertions.assertThat(fileStatuses.length)
-          .describedAs("List should return 2 paths")
-          .isEqualTo(2);
+    Assertions.assertThat(fileStatuses.length)
+        .describedAs("List should return 2 paths")
+        .isEqualTo(2);
 
-      Assertions.assertThat(redoRenameCall.get())
-          .describedAs("2 redo rename calls should be made")
-          .isEqualTo(2);
-    } finally {
-      if (fs != null) {
-        fs.close();
-      }
-    }
+    Assertions.assertThat(redoRenameCall.get())
+        .describedAs("2 redo rename calls should be made")
+        .isEqualTo(2);
+
+    Assertions.assertThat(fs.exists(renameJson))
+        .describedAs("Rename Pending Json file should not exist.")
+        .isFalse();
   }
 
   /**
@@ -750,47 +645,44 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
    */
   @Test
   public void testGetPathStatusWithPendingJsonFile() throws Exception {
-    AzureBlobFileSystem fs = null;
-    try {
-      Path path = new Path("/hbase/A1/A2");
-      Path renameJson = new Path(path.getParent(), path.getName() + SUFFIX);
-      fs = createJsonFile(path, renameJson);
+    Path path = new Path("/hbase/A1/A2");
+    Path renameJson = new Path(path.getParent(), path.getName() + SUFFIX);
+    AzureBlobFileSystem fs = createJsonFile(path, renameJson);
 
-      AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
+    AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
 
-      fs.create(new Path("/hbase/A1/file1.txt"));
-      fs.create(new Path("/hbase/A1/file2.txt"));
+    fs.create(new Path("/hbase/A1/file1.txt"));
+    fs.create(new Path("/hbase/A1/file2.txt"));
 
-      AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
+    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
 
-      AtomicInteger redoRenameCall = new AtomicInteger(0);
-      Mockito.doAnswer(answer -> {
-        redoRenameCall.incrementAndGet();
-        return answer.callRealMethod();
-      }).when(client).getRedoRenameAtomicity(Mockito.any(Path.class),
-          Mockito.anyInt(), Mockito.any(TracingContext.class));
+    AtomicInteger redoRenameCall = new AtomicInteger(0);
+    Mockito.doAnswer(answer -> {
+      redoRenameCall.incrementAndGet();
+      return answer.callRealMethod();
+    }).when(client).getRedoRenameAtomicity(Mockito.any(Path.class),
+        Mockito.anyInt(), Mockito.any(TracingContext.class));
 
-      TracingContext tracingContext = new TracingContext(
-          conf.getClientCorrelationId(), fs.getFileSystemId(),
-          FSOperationType.GET_FILESTATUS, TracingHeaderFormat.ALL_ID_FORMAT, null);
+    TracingContext tracingContext = new TracingContext(
+        conf.getClientCorrelationId(), fs.getFileSystemId(),
+        FSOperationType.GET_FILESTATUS, TracingHeaderFormat.ALL_ID_FORMAT, null);
 
-      AzureServiceErrorCode azureServiceErrorCode = intercept(
-          AbfsRestOperationException.class, () -> client.getPathStatus(
-              path.toUri().getPath(), true,
-              tracingContext, null)).getErrorCode();
+    AzureServiceErrorCode azureServiceErrorCode = intercept(
+        AbfsRestOperationException.class, () -> client.getPathStatus(
+            path.toUri().getPath(), true,
+            tracingContext, null)).getErrorCode();
 
-      Assertions.assertThat(azureServiceErrorCode.getErrorCode())
-          .describedAs("Path had to be recovered from atomic rename operation.")
-          .isEqualTo(PATH_NOT_FOUND.getErrorCode());
+    Assertions.assertThat(azureServiceErrorCode.getErrorCode())
+        .describedAs("Path had to be recovered from atomic rename operation.")
+        .isEqualTo(PATH_NOT_FOUND.getErrorCode());
 
-      Assertions.assertThat(redoRenameCall.get())
-          .describedAs("There should be one redo rename call")
-          .isEqualTo(1);
-    } finally {
-      if (fs != null) {
-        fs.close();
-      }
-    }
+    Assertions.assertThat(redoRenameCall.get())
+        .describedAs("There should be one redo rename call")
+        .isEqualTo(1);
+
+    Assertions.assertThat(fs.exists(renameJson))
+        .describedAs("Rename Pending Json file should not exist.")
+        .isFalse();
   }
 
   /**
@@ -810,51 +702,47 @@ public class ITestAzureBlobFileSystemRenameRecovery extends
    */
   @Test
   public void testETagChangedDuringRename() throws Exception {
-    AzureBlobFileSystem fs = null;
-    try {
-      assumeBlobServiceType();
-      Path path = new Path("/hbase/A1/A2");
-      Path renameJson = new Path(path.getParent(), path.getName() + SUFFIX);
-      // Create rename pending json file with old etag
-      fs = createJsonFile(path, renameJson);
-      AbfsBlobClient abfsBlobClient = (AbfsBlobClient) addSpyHooksOnClient(fs);
-      fs.getAbfsStore().setClient(abfsBlobClient);
+    assumeBlobServiceType();
+    Path path = new Path("/hbase/A1/A2");
+    Path renameJson = new Path(path.getParent(), path.getName() + SUFFIX);
+    // Create rename pending json file with old etag
+    AzureBlobFileSystem fs = createJsonFile(path, renameJson);
+    AbfsBlobClient abfsBlobClient = (AbfsBlobClient) addSpyHooksOnClient(fs);
+    fs.getAbfsStore().setClient(abfsBlobClient);
 
-      // Delete the directory to change etag
-      fs.delete(path, true);
+    // Delete the directory to change etag
+    fs.delete(path, true);
 
-      fs.create(new Path(path, "file1.txt"));
-      fs.create(new Path(path, "file2.txt"));
-      AtomicInteger numberOfCopyBlobCalls = new AtomicInteger(0);
-      Mockito.doAnswer(copyBlob -> {
-            numberOfCopyBlobCalls.incrementAndGet();
-            return copyBlob.callRealMethod();
-          })
-          .when(abfsBlobClient)
-          .copyBlob(Mockito.any(Path.class), Mockito.any(Path.class),
-              Mockito.nullable(String.class),
-              Mockito.any(TracingContext.class));
+    fs.create(new Path(path, "file1.txt"));
+    fs.create(new Path(path, "file2.txt"));
+    AtomicInteger numberOfCopyBlobCalls = new AtomicInteger(0);
+    Mockito.doAnswer(copyBlob -> {
+          numberOfCopyBlobCalls.incrementAndGet();
+          return copyBlob.callRealMethod();
+        })
+        .when(abfsBlobClient)
+        .copyBlob(Mockito.any(Path.class), Mockito.any(Path.class),
+            Mockito.nullable(String.class),
+            Mockito.any(TracingContext.class));
 
-      AtomicInteger numberOfRedoRenameAtomicityCalls = new AtomicInteger(0);
-      Mockito.doAnswer(redoRenameAtomicity -> {
-            numberOfRedoRenameAtomicityCalls.incrementAndGet();
-            return redoRenameAtomicity.callRealMethod();
-          })
-          .when(abfsBlobClient)
-          .getRedoRenameAtomicity(Mockito.any(Path.class), Mockito.anyInt(),
-              Mockito.any(TracingContext.class));
-      // Call list status to trigger rename redo
-      fs.listStatus(path.getParent());
-      Assertions.assertThat(numberOfRedoRenameAtomicityCalls.get())
-          .describedAs("There should be one call to getRedoRenameAtomicity")
-          .isEqualTo(1);
-      Assertions.assertThat(numberOfCopyBlobCalls.get())
-          .describedAs("There should be no copy blob call")
-          .isEqualTo(0);
-    } finally {
-      if (fs != null) {
-        fs.close();
-      }
-    }
+    AtomicInteger numberOfRedoRenameAtomicityCalls = new AtomicInteger(0);
+    Mockito.doAnswer(redoRenameAtomicity -> {
+          numberOfRedoRenameAtomicityCalls.incrementAndGet();
+          return redoRenameAtomicity.callRealMethod();
+        })
+        .when(abfsBlobClient)
+        .getRedoRenameAtomicity(Mockito.any(Path.class), Mockito.anyInt(),
+            Mockito.any(TracingContext.class));
+    // Call list status to trigger rename redo
+    fs.listStatus(path.getParent());
+    Assertions.assertThat(numberOfRedoRenameAtomicityCalls.get())
+        .describedAs("There should be one call to getRedoRenameAtomicity")
+        .isEqualTo(1);
+    Assertions.assertThat(numberOfCopyBlobCalls.get())
+        .describedAs("There should be no copy blob call")
+        .isEqualTo(0);
+    Assertions.assertThat(fs.exists(renameJson))
+        .describedAs("Rename Pending Json file should not exist.")
+        .isFalse();
   }
 }

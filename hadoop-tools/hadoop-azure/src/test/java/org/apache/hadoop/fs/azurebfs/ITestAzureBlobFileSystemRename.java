@@ -99,6 +99,7 @@ import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceError
 import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.mockAddClientTransactionIdToHeader;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_RENAME_RECOVERY;
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicity.SUFFIX;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.createFiles;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
@@ -1760,7 +1761,7 @@ public class ITestAzureBlobFileSystemRename extends
       Path dst = new Path("/hbase/A1/A3");
 
       // Create sample files in the source directory
-      ITestAzureBlobFileSystemRenameRecovery.createFiles(currentFs, src, TOTAL_FILES);
+     createFiles(currentFs, src, TOTAL_FILES);
 
       // Test renaming with different configurations
       renameDir(currentFs, "10", "5", "2", src, dst);
@@ -2030,7 +2031,7 @@ public class ITestAzureBlobFileSystemRename extends
       Path destFilePath = new Path(sourceDir, "file2");
 
       final List<AbfsHttpHeader> headers = new ArrayList<>();
-      mockRetriedRequest(abfsClient, headers);
+      mockRetriedRequest(abfsClient, headers, 0);
 
       AbfsRestOperation getPathRestOp = Mockito.mock(AbfsRestOperation.class);
       AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
@@ -2054,7 +2055,9 @@ public class ITestAzureBlobFileSystemRename extends
           Mockito.nullable(String.class), Mockito.nullable(Boolean.class),
           Mockito.nullable(TracingContext.class),
           Mockito.nullable(ContextEncryptionAdapter.class));
-      fs.rename(sourceFilePath, destFilePath);
+      Assertions.assertThat(fs.rename(sourceFilePath, destFilePath))
+          .describedAs("Rename should succeed.")
+          .isTrue();
     }
   }
 
@@ -2114,7 +2117,7 @@ public class ITestAzureBlobFileSystemRename extends
       fs.getAbfsStore().setClient(abfsDfsClient);
       final String[] clientTransactionId = new String[1];
       mockAddClientTransactionIdToHeader(abfsDfsClient, clientTransactionId);
-      mockRetriedRequest(abfsDfsClient, new ArrayList<>());
+      mockRetriedRequest(abfsDfsClient, new ArrayList<>(), 1);
       int[] flag = new int[1];
       Mockito.doAnswer(getPathStatus -> {
         if (flag[0] == 1) {
@@ -2241,7 +2244,7 @@ public class ITestAzureBlobFileSystemRename extends
    * @throws Exception If an error occurs during mock creation or operation execution.
    */
    private void mockRetriedRequest(AbfsDfsClient abfsDfsClient,
-       final List<AbfsHttpHeader> headers) throws Exception {
+       final List<AbfsHttpHeader> headers, int failedCall) throws Exception {
      TestAbfsClient.mockAbfsOperationCreation(abfsDfsClient,
          new MockIntercept<AbfsRestOperation>() {
            private int count = 0;
@@ -2265,6 +2268,97 @@ public class ITestAzureBlobFileSystemRename extends
                    SOURCE_PATH_NOT_FOUND.getErrorCode(), EMPTY_STRING, null, op);
              }
            }
-         }, 1);
+         }, failedCall);
    }
+
+  /**
+   * Tests the rename operation with multiple directories in the source path.
+   * This test verifies that the rename operation correctly handles
+   * multiple directories and files, ensuring that the source directory
+   * is renamed to the destination path.
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
+  @Test
+  public void testRenameWithMultipleDirsInSource() throws Exception {
+    try (AzureBlobFileSystem fs = this.getFileSystem()) {
+      assumeBlobServiceType();
+      fs.mkdirs(new Path("/testDir/dir1"));
+      for (int i = 0; i < 10; i++) {
+        fs.create(new Path("/testDir/dir1/file" + i));
+      }
+      fs.mkdirs(new Path("/testDir/dir2"));
+      fs.create(new Path("/testDir/dir2/file2"));
+      createAzCopyFolder(new Path("/testDir/dir3"));
+      Assertions.assertThat(fs.rename(new Path("/testDir"),
+              new Path("/testDir2")))
+          .describedAs("Rename should succeed.")
+          .isTrue();
+      Assertions.assertThat(fs.exists(new Path("/testDir")))
+          .describedAs("Old directory should not exist.")
+          .isFalse();
+      Assertions.assertThat(fs.exists(new Path("/testDir2")))
+          .describedAs("New directory should exist.")
+          .isTrue();
+    }
+  }
+
+  /**
+   * Tests the rename operation with multiple implicit directories in the source path.
+   * This test verifies that the rename operation correctly handles
+   * multiple directories and files, ensuring that the source directory
+   * is renamed to the destination path.
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
+  @Test
+  public void testRenameWithMultipleImplicitDirsInSource() throws Exception {
+    try (AzureBlobFileSystem fs = this.getFileSystem()) {
+      assumeBlobServiceType();
+      createAzCopyFolder(new Path("/testDir/dir1"));
+      for (int i = 0; i < 10; i++) {
+        createAzCopyFile(new Path("/testDir/dir1/file" + i));
+      }
+      createAzCopyFolder(new Path("/testDir/dir2"));
+      createAzCopyFile(new Path("/testDir/dir2/file2"));
+      createAzCopyFolder(new Path("/testDir/dir3"));
+      Assertions.assertThat(fs.rename(new Path("/testDir"),
+              new Path("/testDir2")))
+          .describedAs("Rename should succeed.")
+          .isTrue();
+      Assertions.assertThat(fs.exists(new Path("/testDir")))
+          .describedAs("Old directory should not exist.")
+          .isFalse();
+      Assertions.assertThat(fs.exists(new Path("/testDir2")))
+          .describedAs("New directory should exist.")
+          .isTrue();
+    }
+  }
+
+  /**
+   * Tests renaming a directory with an explicit directory in the source path.
+   * This test verifies that the rename operation correctly handles
+   * the explicit directory and files, ensuring that the source directory
+   * is renamed to the destination path.
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
+  @Test
+  public void testRenameWithExplicitDirInSource() throws Exception {
+    try (AzureBlobFileSystem fs = this.getFileSystem()) {
+      assumeBlobServiceType();
+      fs.create(new Path("/testDir/dir3/file2"));
+      fs.create(new Path("/testDir/dir3/file1"));
+      Assertions.assertThat(fs.rename(new Path("/testDir"),
+              new Path("/testDir2")))
+          .describedAs("Rename should succeed.")
+          .isTrue();
+      Assertions.assertThat(fs.exists(new Path("/testDir")))
+          .describedAs("Old directory should not exist.")
+          .isFalse();
+      Assertions.assertThat(fs.exists(new Path("/testDir2")))
+          .describedAs("New directory should exist.")
+          .isTrue();
+    }
+  }
 }
