@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.fs;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Test permissions for localFs using FileContext API.
@@ -27,13 +27,13 @@ public class TestFcLocalFsPermission extends
   FileContextPermissionBase {
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
   }
 
   @Override
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     super.tearDown();
   }
