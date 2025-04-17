@@ -182,6 +182,7 @@
       --add-opens=java.base/java.util.zip=ALL-UNNAMED
       --add-opens=java.base/sun.security.util=ALL-UNNAMED
       --add-opens=java.base/sun.security.x509=ALL-UNNAMED
+      --enable-native-access=ALL-UNNAMED
     </extraJavaTestArgs>
     <!-- Plugin versions and config -->
     <maven-surefire-plugin.argLine>-Xmx2048m -Xss2m -XX:+HeapDumpOnOutOfMemoryError ${extraJavaTestArgs}</maven-surefire-plugin.argLine>
