@@ -68,6 +68,9 @@
     <!-- jersey version -->
     <jersey2.version>2.46</jersey2.version>
 
+    <!-- jaxb version -->
+    <jaxb.version>2.3.1</jaxb.version>
+
     <!-- jackson versions -->
     <jackson2.version>2.18.3</jackson2.version>
     <jackson2.databind.version>2.18.3</jackson2.databind.version>
@@ -1282,11 +1285,22 @@
         <groupId>com.fasterxml.jackson.module</groupId>
         <artifactId>jackson-module-jaxb-annotations</artifactId>
         <version>${jackson2.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.dataformat</groupId>
         <artifactId>jackson-dataformat-cbor</artifactId>
         <version>${jackson2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.xml.bind</groupId>
+        <artifactId>jaxb-api</artifactId>
+        <version>${jaxb.version}</version>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
