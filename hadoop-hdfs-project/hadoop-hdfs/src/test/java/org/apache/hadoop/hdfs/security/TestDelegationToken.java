@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.security;
 
 
-
 import static org.apache.hadoop.security.authentication.util.KerberosName.setRules;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -76,7 +75,7 @@ public class TestDelegationToken {
   private Configuration config;
   private static final Logger LOG =
       LoggerFactory.getLogger(TestDelegationToken.class);
-  
+
   @BeforeEach
   public void setUp() throws Exception {
     config = new HdfsConfiguration();
@@ -94,7 +93,7 @@ public class TestDelegationToken {
 
   @AfterEach
   public void tearDown() throws Exception {
-    if(cluster!=null) {
+    if (cluster != null) {
       cluster.shutdown();
       cluster = null;
     }
@@ -106,7 +105,7 @@ public class TestDelegationToken {
         owner), new Text(renewer), null);
     return new Token<DelegationTokenIdentifier>(dtId, dtSecretManager);
   }
-  
+
   @Test
   public void testDelegationTokenSecretManager() throws Exception {
     Token<DelegationTokenIdentifier> token = generateDelegationToken(
@@ -122,30 +121,30 @@ public class TestDelegationToken {
     DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
     byte[] tokenId = token.getIdentifier();
     identifier.readFields(new DataInputStream(
-             new ByteArrayInputStream(tokenId)));
+        new ByteArrayInputStream(tokenId)));
     assertTrue(null != dtSecretManager.retrievePassword(identifier));
     LOG.info("Sleep to expire the token");
-	  Thread.sleep(6000);
-	  //Token should be expired
-	  try {
-	    dtSecretManager.retrievePassword(identifier);
+    Thread.sleep(6000);
+    //Token should be expired
+    try {
+      dtSecretManager.retrievePassword(identifier);
       //Should not come here
       fail("Token should have expired");
-	  } catch (InvalidToken e) {
-	    //Success
-	  }
-	  dtSecretManager.renewToken(token, "JobTracker");
-	  LOG.info("Sleep beyond the max lifetime");
-	  Thread.sleep(5000);
-	  try {
+    } catch (InvalidToken e) {
+      //Success
+    }
+    dtSecretManager.renewToken(token, "JobTracker");
+    LOG.info("Sleep beyond the max lifetime");
+    Thread.sleep(5000);
+    try {
       dtSecretManager.renewToken(token, "JobTracker");
       fail("should have been expired");
-	  } catch (InvalidToken it) {
-	    // PASS
-	  }
+    } catch (InvalidToken it) {
+      // PASS
+    }
   }
-  
-  @Test 
+
+  @Test
   public void testCancelDelegationToken() throws Exception {
     Token<DelegationTokenIdentifier> token = generateDelegationToken(
         "SomeUser", "JobTracker");
@@ -199,7 +198,7 @@ public class TestDelegationToken {
     assertEquals(0, tokens2.length); // already have token
     assertEquals(1, creds.numberOfTokens());
   }
-  
+
   @Test
   public void testDelegationTokenWebHdfsApi() throws Exception {
     GenericTestUtils.setLogLevel(NamenodeWebHdfsMethods.LOG, Level.TRACE);
@@ -210,11 +209,11 @@ public class TestDelegationToken {
         "JobTracker", new String[]{"user"});
     final WebHdfsFileSystem webhdfs = ugi.doAs(
         new PrivilegedExceptionAction<WebHdfsFileSystem>() {
-      @Override
-      public WebHdfsFileSystem run() throws Exception {
-        return (WebHdfsFileSystem)FileSystem.get(new URI(uri), config);
-      }
-    });
+          @Override
+          public WebHdfsFileSystem run() throws Exception {
+            return (WebHdfsFileSystem) FileSystem.get(new URI(uri), config);
+          }
+        });
 
     { //test addDelegationTokens(..)
       Credentials creds = new Credentials();
@@ -234,8 +233,7 @@ public class TestDelegationToken {
     final Credentials creds = new Credentials();
     final Token<?> tokens[] = dfs.addDelegationTokens("JobTracker", creds);
     assertEquals(1, tokens.length);
-    @SuppressWarnings("unchecked")
-    final Token<DelegationTokenIdentifier> token =
+    @SuppressWarnings("unchecked") final Token<DelegationTokenIdentifier> token =
         (Token<DelegationTokenIdentifier>) tokens[0];
     final UserGroupInformation longUgi = UserGroupInformation
         .createRemoteUser("JobTracker/foo.com@FOO.COM");
@@ -247,7 +245,7 @@ public class TestDelegationToken {
         try {
           token.renew(config);
         } catch (Exception e) {
-          fail("Could not renew delegation token for user "+longUgi);
+          fail("Could not renew delegation token for user " + longUgi);
         }
         return null;
       }
@@ -265,7 +263,7 @@ public class TestDelegationToken {
         try {
           token.cancel(config);
         } catch (Exception e) {
-          fail("Could not cancel delegation token for user "+longUgi);
+          fail("Could not cancel delegation token for user " + longUgi);
         }
         return null;
       }
@@ -284,9 +282,9 @@ public class TestDelegationToken {
 
     // get 2 new instances (clones) of the identifier, query their ugi
     // twice each, all ugi instances should be equivalent
-    for (int i=0; i<2; i++) {
+    for (int i = 0; i < 2; i++) {
       DelegationTokenIdentifier identClone =
-          (DelegationTokenIdentifier)token1.decodeIdentifier();
+          (DelegationTokenIdentifier) token1.decodeIdentifier();
       assertEquals(ident, identClone);
       assertNotSame(ident, identClone);
       assertSame(expectedUgi, identClone.getUser());
@@ -312,10 +310,10 @@ public class TestDelegationToken {
     cluster.startDataNodes(config, 1, true, StartupOption.REGULAR, null);
     FileSystem fs = cluster.getFileSystem();
     for (int i = 0; i < 5; i++) {
-      DFSTestUtil.createFile(fs, new Path("/test-" + i), 100, (short)1, 1L);
+      DFSTestUtil.createFile(fs, new Path("/test-" + i), 100, (short) 1, 1L);
     }
     cluster.getConfiguration(0).setInt(
-        DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_KEY, 500); 
+        DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_KEY, 500);
     cluster.getConfiguration(0).setInt(
         DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 30000);
     cluster.setWaitSafeMode(false);
@@ -323,18 +321,18 @@ public class TestDelegationToken {
     NameNode nn = cluster.getNameNode();
     assertTrue(nn.isInSafeMode());
     DelegationTokenSecretManager sm =
-      NameNodeAdapter.getDtSecretManager(nn.getNamesystem());
+        NameNodeAdapter.getDtSecretManager(nn.getNamesystem());
     assertFalse(sm.isRunning(), "Secret manager should not run in safe mode");
-    
+
     NameNodeAdapter.leaveSafeMode(nn);
     assertTrue(sm.isRunning(), "Secret manager should start when safe mode is exited");
-    
+
     LOG.info("========= entering safemode again");
-    
+
     NameNodeAdapter.enterSafeMode(nn, false);
     assertFalse(sm.isRunning(), "Secret manager should stop again when safe mode " +
         "is manually entered");
-    
+
     // Set the cluster to leave safemode quickly on its own.
     cluster.getConfiguration(0).setInt(
         DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
@@ -346,7 +344,7 @@ public class TestDelegationToken {
     assertFalse(nn.isInSafeMode());
     assertTrue(sm.isRunning());
   }
-  
+
   @SuppressWarnings("unchecked")
   private void checkTokenIdentifier(UserGroupInformation ugi, final Token<?> token)
       throws Exception {
@@ -381,7 +379,7 @@ public class TestDelegationToken {
     DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(new Text(
         "SomeUser"), new Text("JobTracker"), null);
     assertEquals("HDFS_DELEGATION_TOKEN token 0" +
-        " for SomeUser with renewer JobTracker",
+            " for SomeUser with renewer JobTracker",
         dtId.toStringStable());
   }
 
@@ -404,6 +402,7 @@ public class TestDelegationToken {
       public DelegationTokenIdentifier createIdentifier() {
         return null;
       }
+
       public void logExpireTokens(Collection<DelegationTokenIdentifier> expiredTokens)
           throws IOException {
         super.logExpireTokens(expiredTokens);
