@@ -83,6 +83,7 @@ import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
@@ -1540,8 +1541,11 @@ public abstract class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
 
-    final URL url = createRequestUrl(new URL(abfsMetricUrl), EMPTY_STRING, abfsUriQueryBuilder.toString());
-
+    // Construct the URL for the metric call
+    // In case of blob storage, the URL is changed to DFS URL
+    final URL url = UriUtils.changeUrlFromBlobToDfs(
+        createRequestUrl(new URL(abfsMetricUrl),
+            EMPTY_STRING, abfsUriQueryBuilder.toString()));
     final AbfsRestOperation op = getAbfsRestOperation(
             AbfsRestOperationType.GetFileSystemProperties,
             HTTP_METHOD_HEAD,
