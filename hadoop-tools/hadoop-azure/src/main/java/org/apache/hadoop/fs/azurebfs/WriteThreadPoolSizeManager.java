@@ -46,6 +46,7 @@ public class WriteThreadPoolSizeManager implements Closeable {
     LOG.warn("The no of processors is: {}", processors);
     long totalMemoryInBytes = getTotalMemoryInBytes(); // or available memory if preferred
     long totalMemoryInGB = totalMemoryInBytes / (1024L * 1024 * 1024);
+    LOG.warn("The total memory is: {}", totalMemoryInGB);
 
     // Memory per core (rounded)
     long memoryPerCore = totalMemoryInGB / processors;
@@ -64,10 +65,10 @@ public class WriteThreadPoolSizeManager implements Closeable {
 
     // Final max threads cap
     int calculatedMaxPoolSize = processors * multiplier;
-    int maxPoolSize = Math.max(1, abfsConfiguration.getWriteMaxConcurrentRequestCount());
+    int initialPoolSize = Math.max(1, abfsConfiguration.getWriteMaxConcurrentRequestCount());
     // Adjust maxThreadPoolSize based on calculated value
-    this.maxThreadPoolSize = Math.max(calculatedMaxPoolSize, maxPoolSize);
-    boundedThreadPool = Executors.newFixedThreadPool(maxThreadPoolSize);
+    this.maxThreadPoolSize = Math.max(calculatedMaxPoolSize, initialPoolSize);
+    boundedThreadPool = Executors.newFixedThreadPool(initialPoolSize);
     LOG.warn("The max pool size is : {}", maxThreadPoolSize);
     LOG.warn("The bounded pool size is: {}", ((ThreadPoolExecutor) boundedThreadPool).getMaximumPoolSize());
     ((ThreadPoolExecutor) boundedThreadPool).setKeepAliveTime(
