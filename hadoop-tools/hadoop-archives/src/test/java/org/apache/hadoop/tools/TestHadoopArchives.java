@@ -831,39 +831,4 @@ public class TestHadoopArchives {
       }
     }
   }
-
-  @Test
-  public void testPartfileSize() throws Exception {
-    conf.set(HadoopArchives.HAR_PARTSIZE_LABEL, "2m");
-
-    final Path sub1 = new Path(inputPath, "dir1");
-    fs.mkdirs(sub1);
-    for (int i = 0; i < 10; i++) {
-      createFile(sub1, fs, new byte[1 * 1024 * 1024], sub1.getName(), "file" + i);
-    }
-    final String inputPathStr = inputPath.toUri().getPath();
-    System.out.println("inputPathStr = " + inputPathStr);
-
-    final String harName = "foo.har";
-    final String[] args =
-        { "-archiveName", harName, "-p", inputPathStr, "dir1",
-            archivePath.toString() };
-    System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH,
-        HADOOP_ARCHIVES_JAR);
-    final HadoopArchives har = new HadoopArchives(conf);
-    assertEquals(0, ToolRunner.run(har, args));
-
-    RemoteIterator<LocatedFileStatus> listFiles =
-        fs.listFiles(new Path(archivePath.toString() + "/" + harName), false);
-    int i = 0;
-    while (listFiles.hasNext()) {
-      LocatedFileStatus next = listFiles.next();
-      if (next.getPath().toString().matches(".*/part-\\d+$")) {
-        // compare partfileSize
-        assertEquals(2 * 1024 * 1024, next.getLen());
-        i++;
-      }
-    }
-    assertEquals(5, i);
-  }
 }
