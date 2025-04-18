@@ -228,7 +228,6 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   public void checkExceptionForRenameOverwrites() throws Exception {
     assumeHnsEnabled();
     final AzureBlobFileSystem fs = getFileSystem();
-
     Path src = new Path("a/b/f1.txt");
     Path dest = new Path("a/b/f2.txt");
     touch(src);

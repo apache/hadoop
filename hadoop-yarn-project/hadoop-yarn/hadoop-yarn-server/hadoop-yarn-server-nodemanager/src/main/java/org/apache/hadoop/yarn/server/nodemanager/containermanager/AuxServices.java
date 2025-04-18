@@ -516,7 +516,8 @@ public class AuxServices extends AbstractService
     loadServices(services, getConfig(), true);
   }
 
-  private boolean checkManifestPermissions(FileStatus status) throws
+  @VisibleForTesting
+  boolean checkManifestPermissions(FileStatus status) throws
       IOException {
     if ((status.getPermission().toShort() & 0022) != 0) {
       LOG.error("Manifest file and parents must not be writable by group or " +
@@ -528,7 +529,7 @@ public class AuxServices extends AbstractService
     if (parent == null) {
       return true;
     }
-    return checkManifestPermissions(manifestFS.getFileStatus(parent));
+    return checkManifestPermissions(getManifestFS().getFileStatus(parent));
   }
 
   private boolean checkManifestOwnerAndPermissions(FileStatus status) throws
@@ -962,6 +963,10 @@ public class AuxServices extends AbstractService
   protected static void setSystemClasses(AuxServiceRecord service, String
       systemClasses) {
     service.getConfiguration().setProperty(SYSTEM_CLASSES, systemClasses);
+  }
+
+  protected FileSystem getManifestFS() {
+    return manifestFS;
   }
 
   /**

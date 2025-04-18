@@ -106,6 +106,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.impl.FlagSet.createFlagSet;
+import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_S3;
 import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Analytics;
 import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Prefetch;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
@@ -1718,6 +1719,30 @@ public final class S3ATestUtils {
           + Arrays.stream(s3AEncryptionMethods).map(S3AEncryptionMethods::getMethod)
           .collect(Collectors.toList()) + " in " + secrets);
     }
+  }
+
+  /**
+   * Skip a test if encryption algorithm is not empty, or if it is set to
+   * anything other than AES256.
+   *
+   * @param configuration configuration
+   */
+  public static void skipForAnyEncryptionExceptSSES3(Configuration configuration) {
+    String bucket = getTestBucketName(configuration);
+    try {
+      final EncryptionSecrets secrets = buildEncryptionSecrets(bucket, configuration);
+      S3AEncryptionMethods s3AEncryptionMethods = secrets.getEncryptionMethod();
+
+      if (s3AEncryptionMethods.getMethod().equals(SSE_S3.getMethod())
+              || s3AEncryptionMethods.getMethod().isEmpty()) {
+        return;
+      }
+
+      skip("Encryption method is set to " + s3AEncryptionMethods.getMethod());
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+
   }
 
   /**

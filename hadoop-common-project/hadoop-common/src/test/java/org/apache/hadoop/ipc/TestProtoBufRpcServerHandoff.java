@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestProtoBufRpcServerHandoff {
@@ -142,6 +143,26 @@ public class TestProtoBufRpcServerHandoff {
     MetricsRecordBuilder rb = getMetrics(server.rpcMetrics.name());
     assertCounterGt("DeferredRpcProcessingTimeNumOps", 1L, rb);
     assertCounter("RpcProcessingTimeNumOps", 2L, rb);
+  }
+
+  @Test
+  public void testUpdateDeferredMetrics() throws Exception {
+    final TestProtoBufRpcServerHandoffProtocol client = RPC.getProxy(
+        TestProtoBufRpcServerHandoffProtocol.class, 1, address, conf);
+
+    ExecutorService executorService = Executors.newFixedThreadPool(1);
+    CompletionService<ClientInvocationCallable> completionService =
+        new ExecutorCompletionService<ClientInvocationCallable>(
+            executorService);
+
+    completionService.submit(new ClientInvocationCallable(client, 2000L));
+    Future<ClientInvocationCallable> future1 = completionService.take();
+    ClientInvocationCallable callable1 = future1.get();
+
+    double deferredProcessingTime = server.getRpcMetrics().getDeferredRpcProcessingTime()
+        .lastStat().max();
+    double processingTime = server.getRpcMetrics().getRpcProcessingTime().lastStat().max();
+    assertEquals(deferredProcessingTime, processingTime);
   }
 
   private static class ClientInvocationCallable

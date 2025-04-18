@@ -32,12 +32,10 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -45,9 +43,12 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Random;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+@Timeout(50)
 public class TestHadoopArchiveLogsRunner {
 
   private static final int FILE_SIZE_INCREMENT = 4096;
@@ -68,10 +69,7 @@ public class TestHadoopArchiveLogsRunner {
   private Path remoteRootLogDir;
   private String suffix;
 
-  @Rule
-  public Timeout globalTimeout = new Timeout(50000);
-
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     yarnCluster = new MiniYARNCluster(
         TestHadoopArchiveLogsRunner.class.getSimpleName(), 1, 2, 1, 1);
@@ -100,10 +98,10 @@ public class TestHadoopArchiveLogsRunner {
       createFile(fs, new Path(app1Path, "log" + (i + 1)), FILE_SIZES[i]);
     }
     FileStatus[] app1Files = fs.listStatus(app1Path);
-    Assert.assertEquals(FILE_COUNT, app1Files.length);
+    assertEquals(FILE_COUNT, app1Files.length);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException {
     if (fs != null) {
       fs.close();
@@ -124,12 +122,12 @@ public class TestHadoopArchiveLogsRunner {
 
     fs = FileSystem.get(conf);
     FileStatus[] app1Files = fs.listStatus(app1Path);
-    Assert.assertEquals(1, app1Files.length);
+    assertEquals(1, app1Files.length);
     FileStatus harFile = app1Files[0];
-    Assert.assertEquals(app1.toString() + ".har", harFile.getPath().getName());
+    assertEquals(app1.toString() + ".har", harFile.getPath().getName());
     Path harPath = new Path("har:///" + harFile.getPath().toUri().getRawPath());
     FileStatus[] harLogs = HarFs.get(harPath.toUri(), conf).listStatus(harPath);
-    Assert.assertEquals(FILE_COUNT, harLogs.length);
+    assertEquals(FILE_COUNT, harLogs.length);
     Arrays.sort(harLogs, new Comparator<FileStatus>() {
       @Override
       public int compare(FileStatus o1, FileStatus o2) {
@@ -138,15 +136,15 @@ public class TestHadoopArchiveLogsRunner {
     });
     for (int i = 0; i < FILE_COUNT; i++) {
       FileStatus harLog = harLogs[i];
-      Assert.assertEquals("log" + (i + 1), harLog.getPath().getName());
-      Assert.assertEquals(FILE_SIZES[i] * FILE_SIZE_INCREMENT, harLog.getLen());
-      Assert.assertEquals(
+      assertEquals("log" + (i + 1), harLog.getPath().getName());
+      assertEquals(FILE_SIZES[i] * FILE_SIZE_INCREMENT, harLog.getLen());
+      assertEquals(
           new FsPermission(FsAction.READ_WRITE, FsAction.READ, FsAction.NONE),
           harLog.getPermission());
-      Assert.assertEquals(System.getProperty("user.name"),
+      assertEquals(System.getProperty("user.name"),
           harLog.getOwner());
     }
-    Assert.assertEquals(0, fs.listStatus(workingDir).length);
+    assertEquals(0, fs.listStatus(workingDir).length);
   }
 
   @Test
@@ -162,7 +160,7 @@ public class TestHadoopArchiveLogsRunner {
     FileStatus[] app1Files = fs.listStatus(app1Path);
     assertEquals(FILE_COUNT, app1Files.length);
     for (int i = 0; i < FILE_COUNT; i++) {
-      Assert.assertEquals(FILE_SIZES[i] * FILE_SIZE_INCREMENT,
+      assertEquals(FILE_SIZES[i] * FILE_SIZE_INCREMENT,
           app1Files[i].getLen());
     }
   }

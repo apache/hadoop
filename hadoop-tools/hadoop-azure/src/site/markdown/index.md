@@ -36,6 +36,7 @@ See also:
 * [FNS (non-HNS)](./fns_blob.html)
 * [Legacy-Deprecated-WASB](./wasb.html)
 * [Testing](./testing_azure.html)
+* [WASB Migration Config Support](./wasbToAbfsMigration.html)
 
 ## <a name="features"></a> Features of the ABFS connector.
 

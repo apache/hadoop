@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -44,6 +45,7 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.ZipException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -801,9 +803,57 @@ public class TestNetUtils {
         .bindToLocalAddress(NetUtils.getLocalInetAddress("127.0.0.1"), true));
   }
 
+  public static class WrappedIOException extends IOException {
+    public WrappedIOException(String msg, Throwable cause) {
+      super(msg, cause);
+    }
+  }
+
+  private static class PrivateIOException extends IOException {
+    PrivateIOException(String msg, Throwable cause) {
+      super(msg, cause);
+    }
+  }
+
+  @Test
+  public void testAddNodeNameToIOException() {
+    IOException e0 = new IOException("test123");
+    assertNullCause(e0);
+    IOException new0 = NetUtils.addNodeNameToIOException(e0, "node123");
+    assertNullCause(new0);
+    assertEquals("node123: test123", new0.getMessage());
+
+    IOException e1 = new IOException("test456", new IllegalStateException("deliberate"));
+    IOException new1 = NetUtils.addNodeNameToIOException(e1, "node456");
+    assertSame(e1.getCause(), new1.getCause());
+    assertEquals("node456: test456", new1.getMessage());
+
+    ZipException e2 = new ZipException("test789");
+    assertNullCause(e2);
+    IOException new2 = NetUtils.addNodeNameToIOException(e2, "node789");
+    assertNullCause(new2);
+    assertEquals("node789: test789", new2.getMessage());
+
+    WrappedIOException e3 = new WrappedIOException("test987",
+        new IllegalStateException("deliberate"));
+    IOException new3 = NetUtils.addNodeNameToIOException(e3, "node987");
+    assertSame(e3.getCause(), new3.getCause());
+    assertEquals("node987: test987", new3.getMessage());
+
+    // addNodeNameToIOException will return the original exception if the class is not accessible
+    PrivateIOException e4 = new PrivateIOException("test654",
+        new IllegalStateException("deliberate"));
+    IOException new4 = NetUtils.addNodeNameToIOException(e4, "node654");
+    assertSame(e4, new4);
+  }
+
   private <T> void assertBetterArrayEquals(T[] expect, T[]got) {
     String expectStr = StringUtils.join(expect, ", ");
     String gotStr = StringUtils.join(got, ", ");
     assertEquals(expectStr, gotStr);
+  }
+
+  private void assertNullCause(Exception e) {
+    assertNull(e.getCause(), "Expected exception to have null cause");
   }
 }
