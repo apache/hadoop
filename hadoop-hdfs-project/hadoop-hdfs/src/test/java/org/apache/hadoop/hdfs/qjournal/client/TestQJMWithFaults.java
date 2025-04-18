@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.JID;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeSegment;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -52,9 +53,7 @@ import org.apache.hadoop.hdfs.util.Holder;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -82,7 +81,7 @@ public class TestQJMWithFaults {
   static {
     // Don't retry connections - it just slows down the tests.
     conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
-    
+
     // Make tests run faster by avoiding fsync()
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
   }
@@ -127,9 +126,6 @@ public class TestQJMWithFaults {
     }
     return ret;
   }
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   /**
    * Sets up two of the nodes to each drop a single RPC, at all
@@ -196,9 +192,10 @@ public class TestQJMWithFaults {
    */
   @Test
   public void testUnresolvableHostName() throws Exception {
-    expectedException.expect(UnknownHostException.class);
-    new QuorumJournalManager(conf,
-        new URI("qjournal://" + "bogus.invalid:12345" + "/" + JID), FAKE_NSINFO);
+    assertThrows(UnknownHostException.class, () -> {
+      new QuorumJournalManager(conf,
+          new URI("qjournal://" + "bogus.invalid:12345" + "/" + JID), FAKE_NSINFO);
+    });
   }
 
   /**

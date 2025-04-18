@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.qjournal;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,9 +33,10 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 
 public class TestNNWithQJM {
@@ -44,18 +45,18 @@ public class TestNNWithQJM {
   private final Path TEST_PATH = new Path("/test-dir");
   private final Path TEST_PATH_2 = new Path("/test-dir-2");
 
-  @Before
+  @BeforeEach
   public void resetSystemExit() {
     ExitUtil.resetFirstExitException();
   }
   
-  @Before
+  @BeforeEach
   public void startJNs() throws Exception {
     mjc = new MiniJournalCluster.Builder(conf).build();
     mjc.waitActive();
   }
   
-  @After
+  @AfterEach
   public void stopJNs() throws Exception {
     if (mjc != null) {
       mjc.shutdown();
@@ -63,7 +64,8 @@ public class TestNNWithQJM {
     }
   }
   
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testLogAndRestart() throws IOException {
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
         MiniDFSCluster.getBaseDirectory() + "/TestNNWithQJM/image");
@@ -93,7 +95,8 @@ public class TestNNWithQJM {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testNewNamenodeTakesOverWriter() throws Exception {
     File nn1Dir = new File(
         MiniDFSCluster.getBaseDirectory() + "/TestNNWithQJM/image-nn1");
@@ -167,7 +170,8 @@ public class TestNNWithQJM {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMismatchedNNIsRejected() throws Exception {
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
         MiniDFSCluster.getBaseDirectory() + "/TestNNWithQJM/image");
