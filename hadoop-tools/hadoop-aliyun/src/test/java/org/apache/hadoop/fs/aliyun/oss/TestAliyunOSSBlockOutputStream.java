@@ -234,8 +234,8 @@ public class TestAliyunOSSBlockOutputStream {
         OSSDataBlocks.ByteBufferBlockFactory
             blockFactory = (OSSDataBlocks.ByteBufferBlockFactory)
                 ((AliyunOSSFileSystem)fs).getBlockFactory();
-        assertEquals(
-           0, blockFactory.getOutstandingBufferCount(), "outstanding buffers in " + blockFactory);
+        assertEquals(0, blockFactory.getOutstandingBufferCount(),
+            "outstanding buffers in " + blockFactory);
       }
     }
     BlockOutputStreamStatistics statistics =
@@ -287,8 +287,8 @@ public class TestAliyunOSSBlockOutputStream {
     tmp1.delete();
     File tmp2 = AliyunOSSUtils.createTmpFileForWrite("out-", 1024, conf);
     tmp2.delete();
-    assertNotEquals(
-       tmp1.getParent(), tmp2.getParent(), "round robin not working");
+    assertNotEquals(tmp1.getParent(), tmp2.getParent(),
+        "round robin not working");
   }
 
   @Test
@@ -298,18 +298,17 @@ public class TestAliyunOSSBlockOutputStream {
       int limit = 128;
       OSSDataBlocks.ByteBufferBlockFactory.ByteBufferBlock block
           = factory.create(1, limit, null);
-      assertEquals(
-         1, factory.getOutstandingBufferCount(), "outstanding buffers in " + factory);
+      assertEquals(1, factory.getOutstandingBufferCount(),
+          "outstanding buffers in " + factory);
 
       byte[] buffer = ContractTestUtils.toAsciiByteArray("test data");
       int bufferLen = buffer.length;
       block.write(buffer, 0, bufferLen);
       assertEquals(bufferLen, block.dataSize());
-      assertEquals(
-         limit - bufferLen, block.remainingCapacity(), "capacity in " + block);
+      assertEquals(limit - bufferLen, block.remainingCapacity(),
+          "capacity in " + block);
       assertTrue(block.hasCapacity(64), "hasCapacity(64) in " + block);
-      assertTrue(
-         block.hasCapacity(limit - bufferLen), "No capacity in " + block);
+      assertTrue(block.hasCapacity(limit - bufferLen), "No capacity in " + block);
 
       // now start the write
       OSSDataBlocks.BlockUploadData blockUploadData = block.startUpload();
@@ -321,14 +320,14 @@ public class TestAliyunOSSBlockOutputStream {
       assertTrue(stream.hasRemaining(), "!hasRemaining() in " + stream);
 
       int expected = bufferLen;
-      assertEquals(
-         expected, stream.available(), "wrong available() in " + stream);
+      assertEquals(expected, stream.available(),
+          "wrong available() in " + stream);
 
       assertEquals('t', stream.read());
       stream.mark(limit);
       expected--;
-      assertEquals(
-         expected, stream.available(), "wrong available() in " + stream);
+      assertEquals(expected, stream.available(),
+          "wrong available() in " + stream);
 
       // read into a byte array with an offset
       int offset = 5;
@@ -337,8 +336,8 @@ public class TestAliyunOSSBlockOutputStream {
       assertEquals('e', in[offset]);
       assertEquals('s', in[offset + 1]);
       expected -= 2;
-      assertEquals(
-         expected, stream.available(), "wrong available() in " + stream);
+      assertEquals(expected, stream.available(),
+          "wrong available() in " + stream);
 
       // read to end
       byte[] remainder = new byte[limit];
@@ -350,8 +349,7 @@ public class TestAliyunOSSBlockOutputStream {
       assertEquals(expected, index);
       assertEquals('a', remainder[--index]);
 
-      assertEquals(
-         0, stream.available(), "wrong available() in " + stream);
+      assertEquals(0, stream.available(), "wrong available() in " + stream);
       assertTrue(!stream.hasRemaining(), "hasRemaining() in " + stream);
 
       // go the mark point
@@ -360,14 +358,14 @@ public class TestAliyunOSSBlockOutputStream {
 
       // when the stream is closed, the data should be returned
       stream.close();
-      assertEquals(
-         1, factory.getOutstandingBufferCount(), "outstanding buffers in " + factory);
+      assertEquals(1, factory.getOutstandingBufferCount(),
+          "outstanding buffers in " + factory);
       block.close();
-      assertEquals(
-         0, factory.getOutstandingBufferCount(), "outstanding buffers in " + factory);
+      assertEquals(0, factory.getOutstandingBufferCount(),
+          "outstanding buffers in " + factory);
       stream.close();
-      assertEquals(
-         0, factory.getOutstandingBufferCount(), "outstanding buffers in " + factory);
+      assertEquals(0, factory.getOutstandingBufferCount(),
+          "outstanding buffers in " + factory);
     }
   }
 

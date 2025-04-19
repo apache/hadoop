@@ -33,8 +33,9 @@ import static org.apache.hadoop.fs.aliyun.oss.Constants.REGION_KEY;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.SIGNATURE_VERSION_KEY;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Tests Aliyun OSS system.
@@ -59,7 +60,7 @@ public class ITAliyunOSSSignatureV4 {
     conf.set(REGION_KEY, "cn-hongkong");
     AliyunOSSFileSystem fs = new AliyunOSSFileSystem();
     fs.initialize(testURI, conf);
-    assumeNotNull(fs);
+    assumeTrue(fs != null);
 
     createFile(fs, testFile, true, dataset(256, 0, 255));
     FileStatus status = fs.getFileStatus(testFile);
@@ -71,7 +72,7 @@ public class ITAliyunOSSSignatureV4 {
   public void testDefaultSignatureVersion() throws IOException {
     AliyunOSSFileSystem fs = new AliyunOSSFileSystem();
     fs.initialize(testURI, conf);
-    assumeNotNull(fs);
+    assumeTrue(fs != null);
 
     Path testFile2 = new Path("/test/atestr");
     createFile(fs, testFile2, true, dataset(256, 0, 255));

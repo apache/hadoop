@@ -46,7 +46,7 @@ import static org.apache.hadoop.fs.aliyun.oss.Constants.MAX_PAGING_KEYS_DEFAULT;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test the bridging logic between Hadoop's abstract filesystem and
@@ -78,9 +78,9 @@ public class TestAliyunOSSFileSystemStore {
   @BeforeAll
   public static void checkSettings() throws Exception {
     Configuration conf = new Configuration();
-    assumeNotNull(conf.get(Constants.ACCESS_KEY_ID));
-    assumeNotNull(conf.get(Constants.ACCESS_KEY_SECRET));
-    assumeNotNull(conf.get("test.fs.oss.name"));
+    assumeTrue(conf.get(Constants.ACCESS_KEY_ID) != null);
+    assumeTrue(conf.get(Constants.ACCESS_KEY_SECRET) != null);
+    assumeTrue(conf.get("test.fs.oss.name") != null);
   }
 
   protected void writeRenameReadCompare(Path path, long len)
