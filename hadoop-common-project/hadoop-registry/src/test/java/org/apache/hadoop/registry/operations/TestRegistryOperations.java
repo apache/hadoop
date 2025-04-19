@@ -38,7 +38,6 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.Assertions;
 
 public class TestRegistryOperations extends AbstractRegistryTest {
   protected static final Logger LOG =
@@ -111,23 +110,23 @@ public class TestRegistryOperations extends AbstractRegistryTest {
 
   @Test
   public void testStatEmptyPath() throws Throwable {
-      Assertions.assertThrows(PathNotFoundException.class, () -> {
-          operations.stat(ENTRY_PATH);
-      });
+    assertThrows(PathNotFoundException.class, () -> {
+      operations.stat(ENTRY_PATH);
+    });
   }
 
   @Test
   public void testLsEmptyPath() throws Throwable {
-      Assertions.assertThrows(PathNotFoundException.class, () -> {
-          operations.list(PARENT_PATH);
-      });
+    assertThrows(PathNotFoundException.class, () -> {
+      operations.list(PARENT_PATH);
+    });
   }
 
   @Test
   public void testResolveEmptyPath() throws Throwable {
-      Assertions.assertThrows(PathNotFoundException.class, () -> {
-          operations.resolve(ENTRY_PATH);
-      });
+    assertThrows(PathNotFoundException.class, () -> {
+      operations.resolve(ENTRY_PATH);
+    });
   }
 
   @Test
@@ -180,12 +179,12 @@ public class TestRegistryOperations extends AbstractRegistryTest {
 
   @Test
   public void testPutNoParent2() throws Throwable {
-      Assertions.assertThrows(PathNotFoundException.class, () -> {
-          ServiceRecord record = new ServiceRecord();
-          record.set(YarnRegistryAttributes.YARN_ID, "testPutNoParent");
-          String path = "/path/without/parent";
-          operations.bind(path, record, 0);
-      });
+    assertThrows(PathNotFoundException.class, () -> {
+      ServiceRecord record = new ServiceRecord();
+      record.set(YarnRegistryAttributes.YARN_ID, "testPutNoParent");
+      String path = "/path/without/parent";
+      operations.bind(path, record, 0);
+    });
   }
 
   @Test
@@ -299,9 +298,9 @@ public class TestRegistryOperations extends AbstractRegistryTest {
       entries += child + " ";
     }
     assertTrue(
-       names.containsKey("r1"), "No 'r1' in " + entries);
+        names.containsKey("r1"), "No 'r1' in " + entries);
     assertTrue(
-       names.containsKey("r2"), "No 'r2' in " + entries);
+        names.containsKey("r2"), "No 'r2' in " + entries);
 
     Map<String, RegistryPathStatus> stats =
         RegistryUtils.statChildren(operations, path);

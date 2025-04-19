@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.registry.client.impl;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -33,9 +37,9 @@ import org.apache.hadoop.registry.client.exceptions.InvalidPathnameException;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * FSRegistryOperationsService test, using the local filesystem.
@@ -47,7 +51,7 @@ public class TestFSRegistryOperationsService {
 
   @BeforeAll
   public static void initRegistry() throws IOException {
-    Assertions.assertNotNull(registry);
+    assertNotNull(registry);
     registry.init(new Configuration());
     fs = registry.getFs();
     fs.delete(new Path("test"), true);
@@ -69,17 +73,17 @@ public class TestFSRegistryOperationsService {
     boolean result = false;
     System.out.println("Make node with parent already made, nonrecursive");
     result = registry.mknode("test/registryTestNode", false);
-    Assertions.assertTrue(result);
-    Assertions.assertTrue(fs.exists(new Path("test/registryTestNode")));
+    assertTrue(result);
+    assertTrue(fs.exists(new Path("test/registryTestNode")));
 
     // Expected to fail
     try {
       System.out.println("Try to make node with no parent, nonrecursive");
       registry.mknode("test/parent/registryTestNode", false);
-      Assertions.fail("Should not have created node");
+      fail("Should not have created node");
     } catch (IOException e) {
     }
-    Assertions.assertFalse(fs.exists(new Path("test/parent/registryTestNode")));
+    assertFalse(fs.exists(new Path("test/parent/registryTestNode")));
   }
 
   @Test
@@ -87,14 +91,14 @@ public class TestFSRegistryOperationsService {
     boolean result = false;
     System.out.println("Make node with parent already made, recursive");
     result = registry.mknode("test/registryTestNode", true);
-    Assertions.assertTrue(result);
-    Assertions.assertTrue(fs.exists(new Path("test/registryTestNode")));
+    assertTrue(result);
+    assertTrue(fs.exists(new Path("test/registryTestNode")));
 
     result = false;
     System.out.println("Try to make node with no parent, recursive");
     result = registry.mknode("test/parent/registryTestNode", true);
-    Assertions.assertTrue(result);
-    Assertions.assertTrue(fs.exists(new Path("test/parent/registryTestNode")));
+    assertTrue(result);
+    assertTrue(fs.exists(new Path("test/parent/registryTestNode")));
 
   }
 
@@ -105,8 +109,8 @@ public class TestFSRegistryOperationsService {
 
     System.out.println(
         "Try to mknode existing path -- should be noop and return false");
-    Assertions.assertFalse(registry.mknode("test/registryTestNode", true));
-    Assertions.assertFalse(registry.mknode("test/registryTestNode", false));
+    assertFalse(registry.mknode("test/registryTestNode", true));
+    assertFalse(registry.mknode("test/registryTestNode", false));
   }
 
   @Test
@@ -118,12 +122,12 @@ public class TestFSRegistryOperationsService {
     fs.mkdirs(new Path("test/parent1/registryTestNode"));
 
     registry.bind("test/parent1/registryTestNode", record, 1);
-    Assertions.assertTrue(
+    assertTrue(
         fs.exists(new Path("test/parent1/registryTestNode/_record")));
 
     // Test without pre-creating path
     registry.bind("test/parent2/registryTestNode", record, 1);
-    Assertions.assertTrue(fs.exists(new Path("test/parent2/registryTestNode")));
+    assertTrue(fs.exists(new Path("test/parent2/registryTestNode")));
 
   }
 
@@ -134,43 +138,43 @@ public class TestFSRegistryOperationsService {
 
     System.out.println("Bind record1");
     registry.bind("test/registryTestNode", record1, 1);
-    Assertions.assertTrue(fs.exists(new Path("test/registryTestNode/_record")));
+    assertTrue(fs.exists(new Path("test/registryTestNode/_record")));
 
     System.out.println("Bind record2, overwrite = 1");
     registry.bind("test/registryTestNode", record2, 1);
-    Assertions.assertTrue(fs.exists(new Path("test/registryTestNode/_record")));
+    assertTrue(fs.exists(new Path("test/registryTestNode/_record")));
 
     // The record should have been overwritten
     ServiceRecord readRecord = registry.resolve("test/registryTestNode");
-    Assertions.assertTrue(readRecord.equals(record2));
+    assertTrue(readRecord.equals(record2));
 
     System.out.println("Bind record3, overwrite = 0");
     try {
       registry.bind("test/registryTestNode", record1, 0);
-      Assertions.fail("Should not overwrite record");
+      fail("Should not overwrite record");
     } catch (IOException e) {
     }
 
     // The record should not be overwritten
     readRecord = registry.resolve("test/registryTestNode");
-    Assertions.assertTrue(readRecord.equals(record2));
+    assertTrue(readRecord.equals(record2));
   }
 
   @Test
   public void testResolve() throws IOException {
     ServiceRecord record = createRecord("0");
     registry.bind("test/registryTestNode", record, 1);
-    Assertions.assertTrue(fs.exists(new Path("test/registryTestNode/_record")));
+    assertTrue(fs.exists(new Path("test/registryTestNode/_record")));
 
     System.out.println("Read record that exists");
     ServiceRecord readRecord = registry.resolve("test/registryTestNode");
-    Assertions.assertNotNull(readRecord);
-    Assertions.assertTrue(record.equals(readRecord));
+    assertNotNull(readRecord);
+    assertTrue(record.equals(readRecord));
 
     System.out.println("Try to read record that does not exist");
     try {
       readRecord = registry.resolve("test/nonExistentNode");
-      Assertions.fail("Should throw an error, record does not exist");
+      fail("Should throw an error, record does not exist");
     } catch (IOException e) {
     }
   }
@@ -182,11 +186,11 @@ public class TestFSRegistryOperationsService {
 
     System.out.println("Check for existing node");
     boolean exists = registry.exists("test/registryTestNode");
-    Assertions.assertTrue(exists);
+    assertTrue(exists);
 
     System.out.println("Check for  non-existing node");
     exists = registry.exists("test/nonExistentNode");
-    Assertions.assertFalse(exists);
+    assertFalse(exists);
   }
 
   @Test
@@ -198,24 +202,24 @@ public class TestFSRegistryOperationsService {
 
     try {
       registry.delete("test/registryTestNode", false);
-      Assertions.fail("Deleted dir wich children, nonrecursive flag set");
+      fail("Deleted dir wich children, nonrecursive flag set");
     } catch (IOException e) {
     }
     // Make sure nothing was deleted
-    Assertions.assertTrue(fs.exists(new Path("test/registryTestNode")));
-    Assertions.assertTrue(fs.exists(new Path("test/registryTestNode/child1")));
-    Assertions.assertTrue(fs.exists(new Path("test/registryTestNode/child2")));
+    assertTrue(fs.exists(new Path("test/registryTestNode")));
+    assertTrue(fs.exists(new Path("test/registryTestNode/child1")));
+    assertTrue(fs.exists(new Path("test/registryTestNode/child2")));
 
     System.out.println("Delete leaf path 'test/registryTestNode/child2'");
     registry.delete("test/registryTestNode/child2", false);
-    Assertions.assertTrue(fs.exists(new Path("test/registryTestNode")));
-    Assertions.assertTrue(fs.exists(new Path("test/registryTestNode/child1")));
-    Assertions.assertFalse(fs.exists(new Path("test/registryTestNode/child2")));
+    assertTrue(fs.exists(new Path("test/registryTestNode")));
+    assertTrue(fs.exists(new Path("test/registryTestNode/child1")));
+    assertFalse(fs.exists(new Path("test/registryTestNode/child2")));
 
     System.out
         .println("Recursively delete non-leaf path 'test/registryTestNode'");
     registry.delete("test/registryTestNode", true);
-    Assertions.assertFalse(fs.exists(new Path("test/registryTestNode")));
+    assertFalse(fs.exists(new Path("test/registryTestNode")));
   }
 
   @Test
@@ -233,27 +237,27 @@ public class TestFSRegistryOperationsService {
     System.out.println("Delete dir with child nodes and record file");
     try {
       registry.delete("test/registryTestNode", false);
-      Assertions.fail("Nonrecursive delete of non-empty dir");
+      fail("Nonrecursive delete of non-empty dir");
     } catch (PathIsNotEmptyDirectoryException e) {
     }
 
-    Assertions.assertTrue(fs.exists(new Path("test/registryTestNode/_record")));
-    Assertions.assertTrue(
+    assertTrue(fs.exists(new Path("test/registryTestNode/_record")));
+    assertTrue(
         fs.exists(new Path("test/registryTestNode/child1/_record")));
-    Assertions.assertTrue(fs.exists(new Path("test/registryTestNode/child2")));
+    assertTrue(fs.exists(new Path("test/registryTestNode/child2")));
 
     System.out.println("Delete dir with record file and no child dirs");
     registry.delete("test/registryTestNode/child1", false);
-    Assertions.assertFalse(fs.exists(new Path("test/registryTestNode/child1")));
-    Assertions.assertTrue(fs.exists(new Path("test/registryTestNode/child2")));
+    assertFalse(fs.exists(new Path("test/registryTestNode/child1")));
+    assertTrue(fs.exists(new Path("test/registryTestNode/child2")));
 
     System.out.println("Delete dir with child dir and no record file");
     try {
       registry.delete("test/registryTestNode", false);
-      Assertions.fail("Nonrecursive delete of non-empty dir");
+      fail("Nonrecursive delete of non-empty dir");
     } catch (PathIsNotEmptyDirectoryException e) {
     }
-    Assertions.assertTrue(fs.exists(new Path("test/registryTestNode/child2")));
+    assertTrue(fs.exists(new Path("test/registryTestNode/child2")));
   }
 
   @Test
@@ -271,20 +275,20 @@ public class TestFSRegistryOperationsService {
     List<String> ls = null;
 
     ls = registry.list("test/registryTestNode");
-    Assertions.assertNotNull(ls);
-    Assertions.assertEquals(2, ls.size());
+    assertNotNull(ls);
+    assertEquals(2, ls.size());
     System.out.println(ls);
-    Assertions.assertTrue(ls.contains("child1"));
-    Assertions.assertTrue(ls.contains("child2"));
+    assertTrue(ls.contains("child1"));
+    assertTrue(ls.contains("child2"));
 
     ls = null;
     ls = registry.list("test/registryTestNode/child1");
-    Assertions.assertNotNull(ls);
-    Assertions.assertTrue(ls.isEmpty());
+    assertNotNull(ls);
+    assertTrue(ls.isEmpty());
     ls = null;
     ls = registry.list("test/registryTestNode/child2");
-    Assertions.assertNotNull(ls);
-    Assertions.assertTrue(ls.isEmpty());
+    assertNotNull(ls);
+    assertTrue(ls.isEmpty());
   }
 
   private ServiceRecord createRecord(String id) {

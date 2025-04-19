@@ -191,8 +191,8 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
 
   @Test
   public void testKerberosRulesValid() throws Throwable {
-    assertTrue(
-       KerberosName.hasRulesBeenSet(), "!KerberosName.hasRulesBeenSet()");
+    assertTrue(KerberosName.hasRulesBeenSet(),
+        "!KerberosName.hasRulesBeenSet()");
     String rules = KerberosName.getRules();
     assertEquals(kerberosRule, rules);
     LOG.info(rules);
@@ -218,10 +218,9 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
     RegistrySecurity.UgiInfo ugiInfo =
         new RegistrySecurity.UgiInfo(ugi);
     LOG.info("logged in as: {}", ugiInfo);
-    assertTrue(
-       UserGroupInformation.isSecurityEnabled(), "security is not enabled: " + ugiInfo);
-    assertTrue(
-       ugi.isFromKeytab(), "login is keytab based: " + ugiInfo);
+    assertTrue(UserGroupInformation.isSecurityEnabled(),
+        "security is not enabled: " + ugiInfo);
+    assertTrue(ugi.isFromKeytab(), "login is keytab based: " + ugiInfo);
 
     // now we are here, build a SASL ACL
     ACL acl = ugi.doAs(new PrivilegedExceptionAction<ACL>() {

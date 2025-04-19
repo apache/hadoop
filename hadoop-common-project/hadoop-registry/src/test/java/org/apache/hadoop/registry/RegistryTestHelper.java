@@ -150,8 +150,8 @@ public class RegistryTestHelper extends Assertions {
     assertTrue(addr.contains(":8020"));
 
     Endpoint nnipc = findEndpoint(record, NNIPC, false, 1,2);
-    assertEquals(ProtocolTypes.PROTOCOL_THRIFT
-,         nnipc.protocolType, "wrong protocol in " + nnipc);
+    assertEquals(ProtocolTypes.PROTOCOL_THRIFT,
+        nnipc.protocolType, "wrong protocol in " + nnipc);
 
     Endpoint ipc2 = findEndpoint(record, IPC2, false, 1,2);
     assertNotNull(ipc2);
@@ -192,18 +192,17 @@ public class RegistryTestHelper extends Assertions {
     Map<String, String> resolvedAttrs = resolved.attributes();
     String sourceAsString = source.toString();
     String resolvedAsString = resolved.toString();
-    assertEquals(
-       srcAttrs.size()
-,         resolvedAttrs.size(), "Wrong count of attrs in \n" + sourceAsString
-                 + "\nfrom\n" + resolvedAsString);
+    assertEquals(srcAttrs.size(),
+        resolvedAttrs.size(), "Wrong count of attrs in \n" + sourceAsString
+        + "\nfrom\n" + resolvedAsString);
     for (Map.Entry<String, String> entry : srcAttrs.entrySet()) {
       String attr = entry.getKey();
       assertEquals(entry.getValue(), resolved.get(attr), "attribute "+ attr);
     }
-    assertEquals(
-       source.external.size(), resolved.external.size(), "wrong external endpoint count");
-    assertEquals(
-       source.internal.size(), resolved.internal.size(), "wrong external endpoint count");
+    assertEquals(source.external.size(), resolved.external.size(),
+        "wrong external endpoint count");
+    assertEquals(source.internal.size(), resolved.internal.size(),
+        "wrong external endpoint count");
   }
 
   /**
@@ -220,10 +219,10 @@ public class RegistryTestHelper extends Assertions {
     Endpoint epr = external ? record.getExternalEndpoint(api)
                             : record.getInternalEndpoint(api);
     if (epr != null) {
-      assertEquals(
-         addressElements, epr.addresses.size(), "wrong # of addresses");
-      assertEquals(
-         addressTupleSize, epr.addresses.get(0).size(), "wrong # of elements in an address tuple");
+      assertEquals(addressElements, epr.addresses.size(),
+          "wrong # of addresses");
+      assertEquals(addressTupleSize, epr.addresses.get(0).size(),
+          "wrong # of elements in an address tuple");
       return epr;
     }
     List<Endpoint> endpoints = external ? record.external : record.internal;

@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
-import org.junit.jupiter.api.Assertions;
 
 /**
  * Test the curator service
@@ -80,9 +79,9 @@ public class TestCuratorService extends AbstractZKRegistryTest {
 
   @Test
   public void testLsNotFound() throws Throwable {
-      Assertions.assertThrows(PathNotFoundException.class, () -> {
-          List<String> ls = curatorService.zkList(MISSING);
-      });
+    assertThrows(PathNotFoundException.class, () -> {
+      List<String> ls = curatorService.zkList(MISSING);
+    });
   }
 
   @Test
@@ -102,9 +101,9 @@ public class TestCuratorService extends AbstractZKRegistryTest {
 
   @Test
   public void testVerifyExistsMissing() throws Throwable {
-      Assertions.assertThrows(PathNotFoundException.class, () -> {
-          pathMustExist("/file-not-found");
-      });
+    assertThrows(PathNotFoundException.class, () -> {
+      pathMustExist("/file-not-found");
+    });
   }
 
   @Test
@@ -126,9 +125,9 @@ public class TestCuratorService extends AbstractZKRegistryTest {
 
   @Test
   public void testMkdirChild() throws Throwable {
-      Assertions.assertThrows(PathNotFoundException.class, () -> {
-          mkPath("/testMkdirChild/child", CreateMode.PERSISTENT);
-      });
+    assertThrows(PathNotFoundException.class, () -> {
+      mkPath("/testMkdirChild/child", CreateMode.PERSISTENT);
+    });
   }
 
   @Test
@@ -218,9 +217,9 @@ public class TestCuratorService extends AbstractZKRegistryTest {
 
   @Test
   public void testUpdateMissing() throws Throwable {
-      Assertions.assertThrows(PathNotFoundException.class, () -> {
-          curatorService.zkUpdate("/testupdatemissing", getTestBuffer());
-      });
+    assertThrows(PathNotFoundException.class, () -> {
+      curatorService.zkUpdate("/testupdatemissing", getTestBuffer());
+    });
   }
 
   @Test

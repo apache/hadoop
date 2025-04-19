@@ -131,16 +131,15 @@ public class TestRegistrySecurityHelper extends Assertions {
 
   @Test
   public void testBuildAclsNullRealm() throws Throwable {
-      Assertions.assertThrows(IllegalArgumentException.class, () -> {
-          registrySecurity.buildACLs(
+    assertThrows(IllegalArgumentException.class, () -> {
+      registrySecurity.buildACLs(
         SASL_YARN_SHORT +
         ", " +
         SASL_MAPRED_SHORT,
         "", ZooDefs.Perms.ALL);
-          fail("");
-      });
-  
-}
+      fail("");
+    });
+  }
 
   @Test
   public void testACLDefaultRealmOnlySASL() throws Throwable {
@@ -203,9 +202,8 @@ public class TestRegistrySecurityHelper extends Assertions {
     try {
       security.init(conf);
     } catch (Exception e) {
-      assertTrue(
-      
-         e.toString().contains(RegistrySecurity.E_NO_KERBEROS), "did not find "+ RegistrySecurity.E_NO_KERBEROS + " in " + e);
+      assertTrue(e.toString().contains(RegistrySecurity.E_NO_KERBEROS),
+          "did not find "+ RegistrySecurity.E_NO_KERBEROS + " in " + e);
     }
   }
 

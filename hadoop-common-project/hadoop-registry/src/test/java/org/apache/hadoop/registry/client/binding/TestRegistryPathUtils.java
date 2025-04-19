@@ -59,7 +59,7 @@ public class TestRegistryPathUtils extends Assertions {
 
   protected void assertConverted(String expected, String in) {
     String out = RegistryPathUtils.encodeForRegistry(in);
-    assertEquals("Conversion of " + in, expected, out);
+    assertEquals(expected, out, "Conversion of " + in);
   }
 
   @Test

@@ -29,15 +29,14 @@ import org.apache.hadoop.registry.server.services.MicroZookeeperServiceKeys;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.Rule;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 
+@Timeout(10)
 public class AbstractZKRegistryTest extends RegistryTestHelper {
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractZKRegistryTest.class);
@@ -50,12 +49,6 @@ public class AbstractZKRegistryTest extends RegistryTestHelper {
     servicesToTeardown.init(new Configuration());
     servicesToTeardown.start();
   }
-
-  @Rule
-  public final Timeout testTimeout = new Timeout(10000);
-
-  @Rule
-  public TestName methodName = new TestName();
 
   protected static void addToTeardown(Service svc) {
     servicesToTeardown.addService(svc);

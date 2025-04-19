@@ -31,14 +31,14 @@ import org.apache.hadoop.registry.client.impl.zk.ZookeeperConfigOptions;
 import org.apache.hadoop.registry.server.services.AddingCompositeService;
 import org.apache.hadoop.registry.server.services.MicroZookeeperService;
 import org.apache.hadoop.registry.server.services.MicroZookeeperServiceKeys;
+import org.apache.hadoop.test.TestName;
 import org.apache.hadoop.util.Shell;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.Rule;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,6 +59,7 @@ import java.util.Set;
  * Add kerberos tests. This is based on the (JUnit3) KerberosSecurityTestcase
  * and its test case, <code>TestMiniKdc</code>
  */
+@Timeout(900)
 public class AbstractSecureRegistryTest extends RegistryTestHelper {
   public static final String REALM = "EXAMPLE.COM";
   public static final String ZOOKEEPER = "zookeeper";
@@ -67,7 +68,7 @@ public class AbstractSecureRegistryTest extends RegistryTestHelper {
   public static final String ZOOKEEPER_REALM = "zookeeper@" + REALM;
   public static final String ZOOKEEPER_CLIENT_CONTEXT = ZOOKEEPER;
   public static final String ZOOKEEPER_SERVER_CONTEXT = "ZOOKEEPER_SERVER";
-  ;
+
   public static final String ZOOKEEPER_LOCALHOST_REALM =
       ZOOKEEPER_LOCALHOST + "@" + REALM;
   public static final String ALICE = "alice";
@@ -113,11 +114,8 @@ public class AbstractSecureRegistryTest extends RegistryTestHelper {
   protected static Properties kdcConf;
   protected static RegistrySecurity registrySecurity;
 
-  @Rule
-  public final Timeout testTimeout = new Timeout(900000);
-
-  @Rule
-  public TestName methodName = new TestName();
+  @RegisterExtension
+  private TestName methodName = new TestName();
   protected MicroZookeeperService secureZK;
   protected static File jaasFile;
   private LoginContext zookeeperLogin;
