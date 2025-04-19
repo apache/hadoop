@@ -35,8 +35,8 @@ public class TestHdfsCompatInterfaceCoverage {
     Set<String> publicMethods = getPublicInterfaces(FileSystem.class);
     Set<String> targets = getTargets(HdfsCompatBasics.class);
     for (String publicMethod : publicMethods) {
-      assertTrue(
-         targets.contains(publicMethod), "Method not tested: " + publicMethod);
+      assertTrue(targets.contains(publicMethod),
+          "Method not tested: " + publicMethod);
     }
   }
 
