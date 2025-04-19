@@ -30,7 +30,9 @@ import org.mockito.Mockito;
 
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 
 public class TestPacketReceiver {
 

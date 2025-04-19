@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.qjournal.client;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -30,6 +28,7 @@ import org.mockito.Mockito;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 import static org.apache.hadoop.hdfs.qjournal.client.SegmentRecoveryComparator.INSTANCE;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestSegmentRecoveryComparator {
   
