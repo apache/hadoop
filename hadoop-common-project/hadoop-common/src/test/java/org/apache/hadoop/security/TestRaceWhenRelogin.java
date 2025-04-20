@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.security;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,8 +37,8 @@ import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SaslRpcServer.QualityOfProtection;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Testcase for HADOOP-13433 that confirms that tgt will always be the first
@@ -68,7 +68,7 @@ public class TestRaceWhenRelogin extends KerberosSecurityTestcase {
 
   private UserGroupInformation ugi;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     keytabFile = new File(getWorkDir(), "keytab");
     serverProtocols = new String[numThreads];
@@ -157,6 +157,6 @@ public class TestRaceWhenRelogin extends KerberosSecurityTestcase {
     for (Thread getServiceTicketThread : getServiceTicketThreads) {
       getServiceTicketThread.join();
     }
-    assertTrue("tgt is not the first ticket after relogin", pass.get());
+    assertTrue(pass.get(), "tgt is not the first ticket after relogin");
   }
 }

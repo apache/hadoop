@@ -21,6 +21,7 @@ import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.junit.jupiter.api.Timeout;
 
 public class TestAltKerberosAuthenticationHandler
     extends TestKerberosAuthenticationHandler {
@@ -47,7 +48,8 @@ public class TestAltKerberosAuthenticationHandler
     return AltKerberosAuthenticationHandler.TYPE;
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testAlternateAuthenticationAsBrowser() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
@@ -62,7 +64,8 @@ public class TestAltKerberosAuthenticationHandler
     Assert.assertEquals(getExpectedType(), token.getType());
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testNonDefaultNonBrowserUserAgentAsBrowser() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
@@ -90,7 +93,8 @@ public class TestAltKerberosAuthenticationHandler
     Assert.assertEquals(getExpectedType(), token.getType());
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testNonDefaultNonBrowserUserAgentAsNonBrowser() throws Exception {
     if (handler != null) {
       handler.destroy();
