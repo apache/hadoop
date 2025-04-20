@@ -13,8 +13,11 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
-import org.junit.Assert;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
+import org.junit.jupiter.api.Test;
 
 public class TestRolloverSignerSecretProvider {
 
@@ -32,26 +35,26 @@ public class TestRolloverSignerSecretProvider {
 
       byte[] currentSecret = secretProvider.getCurrentSecret();
       byte[][] allSecrets = secretProvider.getAllSecrets();
-      Assert.assertArrayEquals(secret1, currentSecret);
-      Assert.assertEquals(2, allSecrets.length);
-      Assert.assertArrayEquals(secret1, allSecrets[0]);
-      Assert.assertNull(allSecrets[1]);
+      assertArrayEquals(secret1, currentSecret);
+      assertEquals(2, allSecrets.length);
+      assertArrayEquals(secret1, allSecrets[0]);
+      assertNull(allSecrets[1]);
       Thread.sleep(rolloverFrequency + 2000);
 
       currentSecret = secretProvider.getCurrentSecret();
       allSecrets = secretProvider.getAllSecrets();
-      Assert.assertArrayEquals(secret2, currentSecret);
-      Assert.assertEquals(2, allSecrets.length);
-      Assert.assertArrayEquals(secret2, allSecrets[0]);
-      Assert.assertArrayEquals(secret1, allSecrets[1]);
+      assertArrayEquals(secret2, currentSecret);
+      assertEquals(2, allSecrets.length);
+      assertArrayEquals(secret2, allSecrets[0]);
+      assertArrayEquals(secret1, allSecrets[1]);
       Thread.sleep(rolloverFrequency + 2000);
 
       currentSecret = secretProvider.getCurrentSecret();
       allSecrets = secretProvider.getAllSecrets();
-      Assert.assertArrayEquals(secret3, currentSecret);
-      Assert.assertEquals(2, allSecrets.length);
-      Assert.assertArrayEquals(secret3, allSecrets[0]);
-      Assert.assertArrayEquals(secret2, allSecrets[1]);
+      assertArrayEquals(secret3, currentSecret);
+      assertEquals(2, allSecrets.length);
+      assertArrayEquals(secret3, allSecrets[0]);
+      assertArrayEquals(secret2, allSecrets[1]);
       Thread.sleep(rolloverFrequency + 2000);
     } finally {
       secretProvider.destroy();
