@@ -25,8 +25,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.util.ZKSignerSecretProvider;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.net.HttpURLConnection;
@@ -97,7 +97,7 @@ public class TestKMSWithZK {
         @Override
         public Object run() throws Exception {
           HttpURLConnection conn = aUrl.openConnection(url1, token);
-          Assert.assertEquals(HttpURLConnection.HTTP_OK,
+          Assertions.assertEquals(HttpURLConnection.HTTP_OK,
               conn.getResponseCode());
           return null;
         }
@@ -107,7 +107,7 @@ public class TestKMSWithZK {
         @Override
         public Object run() throws Exception {
           HttpURLConnection conn = aUrl.openConnection(url2, token);
-          Assert.assertEquals(HttpURLConnection.HTTP_OK,
+          Assertions.assertEquals(HttpURLConnection.HTTP_OK,
               conn.getResponseCode());
           return null;
         }
@@ -119,7 +119,7 @@ public class TestKMSWithZK {
           final DelegationTokenAuthenticatedURL.Token emptyToken =
               new DelegationTokenAuthenticatedURL.Token();
           HttpURLConnection conn = aUrl.openConnection(url2, emptyToken);
-          Assert.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+          Assertions.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
               conn.getResponseCode());
           return null;
         }
