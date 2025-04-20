@@ -203,8 +203,7 @@ public class TestRegistryDNS extends Assertions {
     recs = assertDNSQuery("management-api.test1.root.dev.test.", 2);
     assertEquals("test1.root.dev.test.",
         ((CNAMERecord) recs.get(0)).getTarget().toString(), "wrong target name");
-    assertTrue(
-       recs.get(isSecure() ? 2 : 1) instanceof ARecord, "not an ARecord");
+    assertTrue(recs.get(isSecure() ? 2 : 1) instanceof ARecord, "not an ARecord");
 
     recs = assertDNSQuery("appmaster-ipc-api.test1.root.dev.test.",
         Type.SRV, 1);
@@ -214,8 +213,7 @@ public class TestRegistryDNS extends Assertions {
     recs = assertDNSQuery("appmaster-ipc-api.test1.root.dev.test.", 2);
     assertEquals("test1.root.dev.test.",
         ((CNAMERecord) recs.get(0)).getTarget().toString(), "wrong target name");
-    assertTrue(
-       recs.get(isSecure() ? 2 : 1) instanceof ARecord, "not an ARecord");
+    assertTrue(recs.get(isSecure() ? 2 : 1) instanceof ARecord, "not an ARecord");
 
     recs = assertDNSQuery("http-api.test1.root.dev.test.", 2);
     assertEquals("test1.root.dev.test.",
@@ -583,7 +581,7 @@ public class TestRegistryDNS extends Assertions {
     recs = assertDNSQuery("19.0.17.172.in-addr.arpa.", Type.PTR, 1);
     assertEquals(
         "httpd-1.test1.root.dev.test.",
-        ((PTRRecord) recs.get(0)).getTarget().toString(),"wrong result");
+        ((PTRRecord) recs.get(0)).getTarget().toString(), "wrong result");
 
     // now lookup static reverse records
     Name name = Name.fromString("5.0.17.172.in-addr.arpa.");

@@ -57,7 +57,7 @@ public class TestReverseZoneUtils {
   public void testThrowUnknownHostExceptionIfIpIsInvalid() throws Exception {
     assertThrows(UnknownHostException.class, () -> {
       ReverseZoneUtils.getReverseZoneNetworkAddress(
-        "213124.21231.14123.13", RANGE, INDEX);
+          "213124.21231.14123.13", RANGE, INDEX);
     });
   }
 

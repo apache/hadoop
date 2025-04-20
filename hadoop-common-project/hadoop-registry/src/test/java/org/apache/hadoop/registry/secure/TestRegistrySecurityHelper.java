@@ -133,10 +133,10 @@ public class TestRegistrySecurityHelper extends Assertions {
   public void testBuildAclsNullRealm() throws Throwable {
     assertThrows(IllegalArgumentException.class, () -> {
       registrySecurity.buildACLs(
-        SASL_YARN_SHORT +
-        ", " +
-        SASL_MAPRED_SHORT,
-        "", ZooDefs.Perms.ALL);
+          SASL_YARN_SHORT +
+          ", " +
+          SASL_MAPRED_SHORT,
+          "", ZooDefs.Perms.ALL);
       fail("");
     });
   }

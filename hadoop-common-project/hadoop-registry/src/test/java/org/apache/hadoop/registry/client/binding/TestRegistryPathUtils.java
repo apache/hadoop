@@ -103,8 +103,8 @@ public class TestRegistryPathUtils extends Assertions {
   private static void assertCreatedPathEquals(String expected, String base,
       String path) throws IOException {
     String fullPath = createFullPath(base, path);
-    assertEquals(
-       expected, fullPath, "\"" + base + "\" + \"" + path + "\" =\"" + fullPath + "\"");
+    assertEquals(expected, fullPath,
+        "\"" + base + "\" + \"" + path + "\" =\"" + fullPath + "\"");
   }
 
   @Test
@@ -148,9 +148,9 @@ public class TestRegistryPathUtils extends Assertions {
 
   @Test
   public void testParentOfRoot() throws Throwable {
-      Assertions.assertThrows(PathNotFoundException.class, () -> {
-          parentOf("/");
-      });
+    assertThrows(PathNotFoundException.class, () -> {
+      parentOf("/");
+    });
   }
 
   @Test

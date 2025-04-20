@@ -70,9 +70,9 @@ public class TestMarshalling extends RegistryTestHelper {
   public void testUnmarshallNotEnoughData() throws Throwable {
     // this is nominally JSON -but without the service record header
     assertThrows(NoRecordException.class, () -> {
-      marshal.fromBytes("src", new byte[]{'{','}'}, ServiceRecord.RECORD_TYPE);
+      marshal.fromBytes("src", new byte[]{'{', '}'}, ServiceRecord.RECORD_TYPE);
     });
-}
+  }
 
   @Test
   public void testUnmarshallNoBody() throws Throwable {
@@ -98,7 +98,7 @@ public class TestMarshalling extends RegistryTestHelper {
       record.type = "ThisRecordHasALongButNonMatchingType";
       byte[] bytes = marshal.toBytes(record);
       ServiceRecord serviceRecord = marshal.fromBytes("marshalling",
-        bytes, ServiceRecord.RECORD_TYPE);
+          bytes, ServiceRecord.RECORD_TYPE);
     });
   }
 
@@ -109,7 +109,7 @@ public class TestMarshalling extends RegistryTestHelper {
       record.type = "NoRecord";
       byte[] bytes = marshal.toBytes(record);
       ServiceRecord serviceRecord = marshal.fromBytes("marshalling",
-        bytes, ServiceRecord.RECORD_TYPE);
+          bytes, ServiceRecord.RECORD_TYPE);
     });
   }
 
