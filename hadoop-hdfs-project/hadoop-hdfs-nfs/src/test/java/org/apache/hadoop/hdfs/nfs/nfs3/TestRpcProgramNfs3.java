@@ -21,6 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.EOFException;
 import java.io.File;
@@ -95,13 +98,10 @@ import org.apache.hadoop.security.IdMappingConstant;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mockito.Mockito;
-
 
 /**
  * Tests for {@link RpcProgramNfs3}
@@ -161,12 +161,12 @@ public class TestRpcProgramNfs3 {
     DFSTestUtil.createKey(TEST_KEY, cluster, config);
 
     // Mock SecurityHandler which returns system user.name
-    securityHandler = Mockito.mock(SecurityHandler.class);
-    Mockito.when(securityHandler.getUser()).thenReturn(currentUser);
+    securityHandler = mock(SecurityHandler.class);
+    when(securityHandler.getUser()).thenReturn(currentUser);
 
     // Mock SecurityHandler which returns a dummy username "harry"
-    securityHandlerUnpriviledged = Mockito.mock(SecurityHandler.class);
-    Mockito.when(securityHandlerUnpriviledged.getUser()).thenReturn("harry");
+    securityHandlerUnpriviledged = mock(SecurityHandler.class);
+    when(securityHandlerUnpriviledged.getUser()).thenReturn("harry");
   }
 
   @AfterAll
@@ -428,7 +428,7 @@ public class TestRpcProgramNfs3 {
     in.readFully(ret);
     try {
       in.readByte();
-      Assertions.fail("expected end of file");
+      fail("expected end of file");
     } catch (EOFException e) {
       // expected. Unfortunately there is no associated message to check
     }
@@ -445,7 +445,7 @@ public class TestRpcProgramNfs3 {
     final COMMIT3Request req = new COMMIT3Request(handle, 0, len);
     req.serialize(xdr_req);
 
-    Channel ch = Mockito.mock(Channel.class);
+    Channel ch = mock(Channel.class);
 
     COMMIT3Response response2 = nfsd.commit(xdr_req.asReadOnlyWrap(),
         ch, 1, securityHandler,
@@ -777,7 +777,7 @@ public class TestRpcProgramNfs3 {
     COMMIT3Request req = new COMMIT3Request(handle, 0, 5);
     req.serialize(xdr_req);
 
-    Channel ch = Mockito.mock(Channel.class);
+    Channel ch = mock(Channel.class);
 
     // Attempt by an unpriviledged user should fail.
     COMMIT3Response response1 = nfsd.commit(xdr_req.asReadOnlyWrap(),

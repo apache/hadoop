@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.nfs.nfs3;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 
@@ -31,7 +33,6 @@ import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
 import org.apache.hadoop.security.ShellBasedIdMapping;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 public class TestOpenFileCtxCache {
   static boolean cleaned = false;
@@ -43,10 +44,10 @@ public class TestOpenFileCtxCache {
     // Only two entries will be in the cache
     conf.setInt(NfsConfigKeys.DFS_NFS_MAX_OPEN_FILES_KEY, 2);
 
-    DFSClient dfsClient = Mockito.mock(DFSClient.class);
+    DFSClient dfsClient = mock(DFSClient.class);
     Nfs3FileAttributes attr = new Nfs3FileAttributes();
-    HdfsDataOutputStream fos = Mockito.mock(HdfsDataOutputStream.class);
-    Mockito.when(fos.getPos()).thenReturn((long) 0);
+    HdfsDataOutputStream fos = mock(HdfsDataOutputStream.class);
+    when(fos.getPos()).thenReturn((long) 0);
 
     OpenFileCtx context1 = new OpenFileCtx(fos, attr, "/dumpFilePath",
         dfsClient, new ShellBasedIdMapping(new NfsConfiguration()));
@@ -102,10 +103,10 @@ public class TestOpenFileCtxCache {
     // Only two entries will be in the cache
     conf.setInt(NfsConfigKeys.DFS_NFS_MAX_OPEN_FILES_KEY, 2);
 
-    DFSClient dfsClient = Mockito.mock(DFSClient.class);
+    DFSClient dfsClient = mock(DFSClient.class);
     Nfs3FileAttributes attr = new Nfs3FileAttributes();
-    HdfsDataOutputStream fos = Mockito.mock(HdfsDataOutputStream.class);
-    Mockito.when(fos.getPos()).thenReturn((long) 0);
+    HdfsDataOutputStream fos = mock(HdfsDataOutputStream.class);
+    when(fos.getPos()).thenReturn((long) 0);
 
     OpenFileCtx context1 = new OpenFileCtx(fos, attr, "/dumpFilePath",
         dfsClient, new ShellBasedIdMapping(new NfsConfiguration()));

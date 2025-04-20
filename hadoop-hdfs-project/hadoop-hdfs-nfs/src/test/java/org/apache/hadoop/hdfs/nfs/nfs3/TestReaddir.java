@@ -19,6 +19,8 @@
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -44,7 +46,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 /**
  * Test READDIR and READDIRPLUS request with zero, nonzero cookies
@@ -84,8 +85,8 @@ public class TestReaddir {
 
     nfsd = (RpcProgramNfs3) nfs3.getRpcProgram();
 
-    securityHandler = Mockito.mock(SecurityHandler.class);
-    Mockito.when(securityHandler.getUser()).thenReturn(
+    securityHandler = mock(SecurityHandler.class);
+    when(securityHandler.getUser()).thenReturn(
         System.getProperty("user.name"));
   }
 

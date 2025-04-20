@@ -52,14 +52,14 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.Assertions;
-import org.mockito.Mockito;
 
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 
 /**
@@ -145,8 +145,8 @@ public class TestViewfsWithNfs3 {
     mountd = (RpcProgramMountd) nfs.getMountd().getRpcProgram();
 
     // Mock SecurityHandler which returns system user.name
-    securityHandler = Mockito.mock(SecurityHandler.class);
-    Mockito.when(securityHandler.getUser()).thenReturn(currentUser);
+    securityHandler = mock(SecurityHandler.class);
+    when(securityHandler.getUser()).thenReturn(currentUser);
     viewFs.delete(new Path("/hdfs2/dir2"), true);
     viewFs.mkdirs(new Path("/hdfs2/dir2"));
     DFSTestUtil.createFile(viewFs, new Path("/hdfs1/file1"), 0, (short) 1, 0);
@@ -166,17 +166,17 @@ public class TestViewfsWithNfs3 {
 
   @Test
   public void testNumExports() throws Exception {
-    Assertions.assertEquals(mountd.getExports().size(),
+    assertEquals(mountd.getExports().size(),
         viewFs.getChildFileSystems().length);
   }
 
   @Test
   public void testPaths() throws Exception {
-    Assertions.assertEquals(hdfs1.resolvePath(new Path("/user1/file1")),
+    assertEquals(hdfs1.resolvePath(new Path("/user1/file1")),
         viewFs.resolvePath(new Path("/hdfs1/file1")));
-    Assertions.assertEquals(hdfs1.resolvePath(new Path("/user1/file2")),
+    assertEquals(hdfs1.resolvePath(new Path("/user1/file2")),
         viewFs.resolvePath(new Path("/hdfs1/file2")));
-    Assertions.assertEquals(hdfs2.resolvePath(new Path("/user2/dir2")),
+    assertEquals(hdfs2.resolvePath(new Path("/user2/dir2")),
         viewFs.resolvePath(new Path("/hdfs2/dir2")));
   }
 
@@ -184,11 +184,11 @@ public class TestViewfsWithNfs3 {
   public void testFileStatus() throws Exception {
     HdfsFileStatus status = nn1.getRpcServer().getFileInfo("/user1/file1");
     FileStatus st = viewFs.getFileStatus(new Path("/hdfs1/file1"));
-    Assertions.assertEquals(st.isDirectory(), status.isDirectory());
+    assertEquals(st.isDirectory(), status.isDirectory());
 
     HdfsFileStatus status2 = nn2.getRpcServer().getFileInfo("/user2/dir2");
     FileStatus st2 = viewFs.getFileStatus(new Path("/hdfs2/dir2"));
-    Assertions.assertEquals(st2.isDirectory(), status2.isDirectory());
+    assertEquals(st2.isDirectory(), status2.isDirectory());
   }
 
   // Test for getattr
@@ -200,8 +200,8 @@ public class TestViewfsWithNfs3 {
     req.serialize(xdrReq);
     GETATTR3Response response = nfsd.getattr(xdrReq.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    Assertions.assertEquals(
-       expectedStatus, response.getStatus(), "Incorrect return code");
+    assertEquals(expectedStatus, response.getStatus(),
+        "Incorrect return code");
   }
 
   @Test
@@ -249,7 +249,7 @@ public class TestViewfsWithNfs3 {
     WRITE3Response response = nfsd.write(xdrReq.asReadOnlyWrap(),
         null, 1, securityHandler,
         new InetSocketAddress("localhost", 1234));
-    Assertions.assertEquals(null, response, "Incorrect response:");
+    assertEquals(null, response, "Incorrect response:");
   }
 
   @Test
@@ -297,17 +297,17 @@ public class TestViewfsWithNfs3 {
 
     HdfsFileStatus statusBeforeRename =
         nn1.getRpcServer().getFileInfo("/user1/renameMultiNN");
-    Assertions.assertEquals(statusBeforeRename.isDirectory(), false);
+    assertEquals(statusBeforeRename.isDirectory(), false);
 
     testNfsRename(fromHandle, "renameMultiNN",
         toHandle, "renameMultiNNFail", Nfs3Status.NFS3ERR_INVAL);
 
     HdfsFileStatus statusAfterRename =
         nn2.getRpcServer().getFileInfo("/user2/renameMultiNNFail");
-    Assertions.assertEquals(statusAfterRename, null);
+    assertEquals(statusAfterRename, null);
 
     statusAfterRename = nn1.getRpcServer().getFileInfo("/user1/renameMultiNN");
-    Assertions.assertEquals(statusAfterRename.isDirectory(), false);
+    assertEquals(statusAfterRename.isDirectory(), false);
   }
 
   @Test
@@ -322,7 +322,7 @@ public class TestViewfsWithNfs3 {
 
     HdfsFileStatus statusBeforeRename =
         nn1.getRpcServer().getFileInfo("/user1/renameSingleNN");
-    Assertions.assertEquals(statusBeforeRename.isDirectory(), false);
+    assertEquals(statusBeforeRename.isDirectory(), false);
 
     Path successFilePath = new Path("/user1/renameSingleNNSucess");
     hdfs1.delete(successFilePath, false);
@@ -331,10 +331,10 @@ public class TestViewfsWithNfs3 {
 
     HdfsFileStatus statusAfterRename =
         nn1.getRpcServer().getFileInfo("/user1/renameSingleNNSucess");
-    Assertions.assertEquals(statusAfterRename.isDirectory(), false);
+    assertEquals(statusAfterRename.isDirectory(), false);
 
     statusAfterRename =
         nn1.getRpcServer().getFileInfo("/user1/renameSingleNN");
-    Assertions.assertEquals(statusAfterRename, null);
+    assertEquals(statusAfterRename, null);
   }
 }

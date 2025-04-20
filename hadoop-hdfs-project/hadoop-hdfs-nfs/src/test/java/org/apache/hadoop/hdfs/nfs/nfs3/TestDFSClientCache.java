@@ -57,8 +57,8 @@ public class TestDFSClientCache {
 
     cache.getDfsClient("test2", namenodeId);
     assertTrue(isDfsClientClose(c1));
-    assertTrue(
-       cache.getClientCache().size() <= MAX_CACHE_SIZE, "cache size should be the max size or less");
+    assertTrue(cache.getClientCache().size() <= MAX_CACHE_SIZE,
+        "cache size should be the max size or less");
   }
 
   @Test
@@ -80,9 +80,8 @@ public class TestDFSClientCache {
 
     assertThat(ugiResult.getUserName()).isEqualTo(userName);
     assertThat(ugiResult.getRealUser()).isEqualTo(currentUserUgi);
-    assertThat(
-            ugiResult.getAuthenticationMethod()
-    ).isEqualTo(UserGroupInformation.AuthenticationMethod.PROXY);
+    assertThat(ugiResult.getAuthenticationMethod()).isEqualTo(
+        UserGroupInformation.AuthenticationMethod.PROXY);
   }
 
   @Test
@@ -100,9 +99,8 @@ public class TestDFSClientCache {
 
     assertThat(ugiResult.getUserName()).isEqualTo(userName);
     assertThat(ugiResult.getRealUser()).isEqualTo(currentUserUgi);
-    assertThat(
-            ugiResult.getAuthenticationMethod()
-    ).isEqualTo(UserGroupInformation.AuthenticationMethod.PROXY);
+    assertThat(ugiResult.getAuthenticationMethod()).isEqualTo(
+        UserGroupInformation.AuthenticationMethod.PROXY);
   }
 
   private static boolean isDfsClientClose(DFSClient c) {

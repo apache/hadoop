@@ -84,8 +84,8 @@ public class TestNfs3HttpServer {
 
     // Check default servlets.
     String pageContents = DFSTestUtil.urlGet(new URL(urlRoot + "/jmx"));
-    assertTrue(
-       pageContents.contains("java.lang:type="), "Bad contents: " + pageContents);
+    assertTrue(pageContents.contains("java.lang:type="),
+        "Bad contents: " + pageContents);
     System.out.println("pc:" + pageContents);
 
     int port = infoServer.getSecurePort();

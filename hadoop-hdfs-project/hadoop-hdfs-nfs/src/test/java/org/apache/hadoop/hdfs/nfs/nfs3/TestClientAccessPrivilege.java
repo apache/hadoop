@@ -41,7 +41,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mockito.Mockito;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestClientAccessPrivilege {
   static MiniDFSCluster cluster = null;
@@ -69,8 +70,8 @@ public class TestClientAccessPrivilege {
     config.setInt("nfs3.mountd.port", 0);
     config.setInt("nfs3.server.port", 0);
 
-    securityHandler = Mockito.mock(SecurityHandler.class);
-    Mockito.when(securityHandler.getUser()).thenReturn(
+    securityHandler = mock(SecurityHandler.class);
+    when(securityHandler.getUser()).thenReturn(
         System.getProperty("user.name"));
   }
 
@@ -115,9 +116,8 @@ public class TestClientAccessPrivilege {
         securityHandler, new InetSocketAddress("localhost", 1234));
 
     // Assert on return code
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response.getStatus(), "Incorrect return code");
-
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response.getStatus(), "Incorrect return code");
   }
 
 }

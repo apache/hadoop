@@ -17,41 +17,41 @@
  */
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Assertions;
 
 public class TestOffsetRange {
   @Test
   public void testConstructor1() throws IOException {
-      Assertions.assertThrows(IllegalArgumentException.class, () -> {
-          new OffsetRange(0, 0);
-      });
+    assertThrows(IllegalArgumentException.class, () -> {
+      new OffsetRange(0, 0);
+    });
   }
 
   @Test
   public void testConstructor2() throws IOException {
-      Assertions.assertThrows(IllegalArgumentException.class, () -> {
-          new OffsetRange(-1, 0);
-      });
+    assertThrows(IllegalArgumentException.class, () -> {
+      new OffsetRange(-1, 0);
+    });
   }
 
   @Test
   public void testConstructor3() throws IOException {
-      Assertions.assertThrows(IllegalArgumentException.class, () -> {
-          new OffsetRange(-3, -1);
-      });
+    assertThrows(IllegalArgumentException.class, () -> {
+      new OffsetRange(-3, -1);
+    });
   }
 
   @Test
   public void testConstructor4() throws IOException {
-      Assertions.assertThrows(IllegalArgumentException.class, () -> {
-          new OffsetRange(-3, 100);
-      });
+    assertThrows(IllegalArgumentException.class, () -> {
+      new OffsetRange(-3, 100);
+    });
   }
 
   @Test
