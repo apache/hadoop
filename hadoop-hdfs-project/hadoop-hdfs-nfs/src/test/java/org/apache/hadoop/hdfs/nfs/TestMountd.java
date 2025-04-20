@@ -30,8 +30,8 @@ import org.apache.hadoop.hdfs.nfs.mount.RpcProgramMountd;
 import org.apache.hadoop.hdfs.nfs.nfs3.Nfs3;
 import org.apache.hadoop.hdfs.nfs.nfs3.RpcProgramNfs3;
 import org.apache.hadoop.oncrpc.XDR;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestMountd {
 

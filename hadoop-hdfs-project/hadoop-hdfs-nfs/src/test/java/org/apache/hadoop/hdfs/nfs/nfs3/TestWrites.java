@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -53,8 +53,8 @@ import org.apache.hadoop.oncrpc.security.SecurityHandler;
 import org.apache.hadoop.security.ShellBasedIdMapping;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 public class TestWrites {
@@ -77,7 +77,7 @@ public class TestWrites {
         request.getStableHow(), request.getData(), null, 1, false,
         WriteCtx.DataState.NO_DUMP);
 
-    Assert.assertTrue(writeCtx1.getData().array().length == originalCount);
+    Assertions.assertTrue(writeCtx1.getData().array().length == originalCount);
 
     // Now change the write request
     OpenFileCtx.alterWriteRequest(request, 12);
@@ -89,12 +89,12 @@ public class TestWrites {
 
     int position = appendedData.position();
     int limit = appendedData.limit();
-    Assert.assertTrue(position == 12);
-    Assert.assertTrue(limit - position == 8);
-    Assert.assertTrue(appendedData.get(position) == (byte) 12);
-    Assert.assertTrue(appendedData.get(position + 1) == (byte) 13);
-    Assert.assertTrue(appendedData.get(position + 2) == (byte) 14);
-    Assert.assertTrue(appendedData.get(position + 7) == (byte) 19);
+    Assertions.assertTrue(position == 12);
+    Assertions.assertTrue(limit - position == 8);
+    Assertions.assertTrue(appendedData.get(position) == (byte) 12);
+    Assertions.assertTrue(appendedData.get(position + 1) == (byte) 13);
+    Assertions.assertTrue(appendedData.get(position + 2) == (byte) 14);
+    Assertions.assertTrue(appendedData.get(position + 7) == (byte) 19);
 
     // Test current file write offset is at boundaries
     buffer.position(0);
@@ -107,10 +107,10 @@ public class TestWrites {
     appendedData = writeCtx3.getData();
     position = appendedData.position();
     limit = appendedData.limit();
-    Assert.assertTrue(position == 1);
-    Assert.assertTrue(limit - position == 19);
-    Assert.assertTrue(appendedData.get(position) == (byte) 1);
-    Assert.assertTrue(appendedData.get(position + 18) == (byte) 19);
+    Assertions.assertTrue(position == 1);
+    Assertions.assertTrue(limit - position == 19);
+    Assertions.assertTrue(appendedData.get(position) == (byte) 1);
+    Assertions.assertTrue(appendedData.get(position + 18) == (byte) 19);
 
     // Reset buffer position before test another boundary
     buffer.position(0);
@@ -123,9 +123,9 @@ public class TestWrites {
     appendedData = writeCtx4.getData();
     position = appendedData.position();
     limit = appendedData.limit();
-    Assert.assertTrue(position == 19);
-    Assert.assertTrue(limit - position == 1);
-    Assert.assertTrue(appendedData.get(position) == (byte) 19);
+    Assertions.assertTrue(position == 19);
+    Assertions.assertTrue(limit - position == 1);
+    Assertions.assertTrue(appendedData.get(position) == (byte) 19);
   }
 
   @Test
@@ -149,50 +149,50 @@ public class TestWrites {
     ctx.setActiveStatusForTest(false);
     Channel ch = Mockito.mock(Channel.class);
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_CTX);
+    Assertions.assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_CTX);
 
     ctx.getPendingWritesForTest().put(new OffsetRange(5, 10),
         new WriteCtx(null, 0, 0, 0, null, null, null, 0, false, null));
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_WITH_PENDING_WRITE);
+    Assertions.assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_WITH_PENDING_WRITE);
 
     // Test request with non zero commit offset
     ctx.setActiveStatusForTest(true);
     Mockito.when(fos.getPos()).thenReturn((long) 10);
     ctx.setNextOffsetForTest(10);
     COMMIT_STATUS status = ctx.checkCommitInternal(5, null, 1, attr, false);
-    Assert.assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
+    Assertions.assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
     // Do_SYNC state will be updated to FINISHED after data sync
     ret = ctx.checkCommit(dfsClient, 5, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
+    Assertions.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
     
     status = ctx.checkCommitInternal(10, ch, 1, attr, false);
-    Assert.assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
+    Assertions.assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
     ret = ctx.checkCommit(dfsClient, 10, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
+    Assertions.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
 
     ConcurrentNavigableMap<Long, CommitCtx> commits = ctx
         .getPendingCommitsForTest();
-    Assert.assertTrue(commits.size() == 0);
+    Assertions.assertTrue(commits.size() == 0);
     ret = ctx.checkCommit(dfsClient, 11, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_WAIT);
-    Assert.assertTrue(commits.size() == 1);
+    Assertions.assertTrue(ret == COMMIT_STATUS.COMMIT_WAIT);
+    Assertions.assertTrue(commits.size() == 1);
     long key = commits.firstKey();
-    Assert.assertTrue(key == 11);
+    Assertions.assertTrue(key == 11);
 
     // Test request with zero commit offset
     commits.remove(new Long(11));
     // There is one pending write [5,10]
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_WAIT);
-    Assert.assertTrue(commits.size() == 1);
+    Assertions.assertTrue(ret == COMMIT_STATUS.COMMIT_WAIT);
+    Assertions.assertTrue(commits.size() == 1);
     key = commits.firstKey();
-    Assert.assertTrue(key == 9);
+    Assertions.assertTrue(key == 9);
 
     // Empty pending writes
     ctx.getPendingWritesForTest().remove(new OffsetRange(5, 10));
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
+    Assertions.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
   }
   
   @Test
@@ -215,56 +215,56 @@ public class TestWrites {
     ctx.setActiveStatusForTest(false);
     Channel ch = Mockito.mock(Channel.class);
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_CTX);
+    Assertions.assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_CTX);
 
     ctx.getPendingWritesForTest().put(new OffsetRange(10, 15),
         new WriteCtx(null, 0, 0, 0, null, null, null, 0, false, null));
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_WITH_PENDING_WRITE);
+    Assertions.assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_WITH_PENDING_WRITE);
 
     // Test request with non zero commit offset
     ctx.setActiveStatusForTest(true);
     Mockito.when(fos.getPos()).thenReturn((long) 8);
     ctx.setNextOffsetForTest(10);
     COMMIT_STATUS status = ctx.checkCommitInternal(5, null, 1, attr, false);
-    Assert.assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
+    Assertions.assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
     // Do_SYNC state will be updated to FINISHED after data sync
     ret = ctx.checkCommit(dfsClient, 5, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
+    Assertions.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
     
     // Test commit sequential writes
     status = ctx.checkCommitInternal(10, ch, 1, attr, false);
-    Assert.assertTrue(status == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
+    Assertions.assertTrue(status == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
     ret = ctx.checkCommit(dfsClient, 10, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
+    Assertions.assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
 
     // Test commit non-sequential writes
     ConcurrentNavigableMap<Long, CommitCtx> commits = ctx
         .getPendingCommitsForTest();
-    Assert.assertTrue(commits.size() == 1);
+    Assertions.assertTrue(commits.size() == 1);
     ret = ctx.checkCommit(dfsClient, 16, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_SUCCESS);
-    Assert.assertTrue(commits.size() == 1);
+    Assertions.assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_SUCCESS);
+    Assertions.assertTrue(commits.size() == 1);
     
     // Test request with zero commit offset
     commits.remove(new Long(10));
     // There is one pending write [10,15]
     ret = ctx.checkCommitInternal(0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
+    Assertions.assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
     
     ret = ctx.checkCommitInternal(9, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
-    Assert.assertTrue(commits.size() == 2);
+    Assertions.assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
+    Assertions.assertTrue(commits.size() == 2);
 
     // Empty pending writes. nextOffset=10, flushed pos=8
     ctx.getPendingWritesForTest().remove(new OffsetRange(10, 15));
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
+    Assertions.assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
     
     // Empty pending writes
     ctx.setNextOffsetForTest((long) 8); // flushed pos = 8
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
+    Assertions.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
     
   }
   
@@ -284,7 +284,7 @@ public class TestWrites {
     // is greater than the number of bytes we've so far flushed.
     Mockito.when(fos.getPos()).thenReturn((long) 2);
     COMMIT_STATUS status = ctx.checkCommitInternal(5, null, 1, attr, false);
-    Assert.assertTrue(status == COMMIT_STATUS.COMMIT_FINISHED);
+    Assertions.assertTrue(status == COMMIT_STATUS.COMMIT_FINISHED);
     
     // Test the case when we actually have received more bytes than we're trying
     // to commit.
@@ -293,7 +293,7 @@ public class TestWrites {
     Mockito.when(fos.getPos()).thenReturn((long) 10);
     ctx.setNextOffsetForTest((long)10);
     status = ctx.checkCommitInternal(5, null, 1, attr, false);
-    Assert.assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
+    Assertions.assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
   }
 
   @Test
