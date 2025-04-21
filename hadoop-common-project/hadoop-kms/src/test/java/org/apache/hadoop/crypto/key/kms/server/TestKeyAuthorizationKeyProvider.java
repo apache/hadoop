@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -37,7 +40,6 @@ import org.apache.hadoop.crypto.key.UserProvider;
 import org.apache.hadoop.crypto.key.kms.server.KeyAuthorizationKeyProvider.KeyACLs;
 import org.apache.hadoop.crypto.key.kms.server.KeyAuthorizationKeyProvider.KeyOpType;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class TestKeyAuthorizationKeyProvider {
@@ -66,14 +68,14 @@ public class TestKeyAuthorizationKeyProvider {
               kpExt.createKey("foo", SecureRandom.getSeed(16),
                   newOptions(conf));
             } catch (IOException ioe) {
-              Assertions.fail("User should be Authorized !!");
+              fail("User should be Authorized !!");
             }
 
             // "bar" key not configured
             try {
               kpExt.createKey("bar", SecureRandom.getSeed(16),
                   newOptions(conf));
-              Assertions.fail("User should NOT be Authorized !!");
+              fail("User should NOT be Authorized !!");
             } catch (IOException ioe) {
               // Ignore
             }
@@ -90,7 +92,7 @@ public class TestKeyAuthorizationKeyProvider {
             try {
               kpExt.createKey("foo", SecureRandom.getSeed(16),
                   newOptions(conf));
-              Assertions.fail("User should NOT be Authorized !!");
+              fail("User should NOT be Authorized !!");
             } catch (IOException ioe) {
               // Ignore
             }
@@ -138,17 +140,17 @@ public class TestKeyAuthorizationKeyProvider {
               kpExt.rollNewVersion(kv.getName(), SecureRandom.getSeed(16));
               kpExt.deleteKey(kv.getName());
             } catch (IOException ioe) {
-              Assertions.fail("User should be Authorized !!");
+              fail("User should be Authorized !!");
             }
 
             KeyVersion retkv = null;
             try {
               retkv = kpExt.createKey("bar", SecureRandom.getSeed(16), opt);
               kpExt.generateEncryptedKey(retkv.getName());
-              Assertions.fail("User should NOT be Authorized to generate EEK !!");
+              fail("User should NOT be Authorized to generate EEK !!");
             } catch (IOException ioe) {
             }
-            Assertions.assertNotNull(retkv);
+            assertNotNull(retkv);
             return retkv;
           }
         }
@@ -161,7 +163,7 @@ public class TestKeyAuthorizationKeyProvider {
               public EncryptedKeyVersion run() throws Exception {
                 try {
                   kpExt.deleteKey(barKv.getName());
-                  Assertions.fail("User should NOT be Authorized to "
+                  fail("User should NOT be Authorized to "
                       + "perform any other operation !!");
                 } catch (IOException ioe) {
                 }
@@ -175,7 +177,7 @@ public class TestKeyAuthorizationKeyProvider {
           public KeyVersion run() throws Exception {
             try {
               kpExt.deleteKey(barKv.getName());
-              Assertions.fail("User should NOT be Authorized to "
+              fail("User should NOT be Authorized to "
                   + "perform any other operation !!");
             } catch (IOException ioe) {
             }
@@ -200,7 +202,7 @@ public class TestKeyAuthorizationKeyProvider {
               kpExt.decryptEncryptedKey(ekv);
               kpExt.deleteKey(kv.getName());
             } catch (IOException ioe) {
-              Assertions.fail("User should be Allowed to do everything !!");
+              fail("User should be Allowed to do everything !!");
             }
             return null;
           }
@@ -218,7 +220,7 @@ public class TestKeyAuthorizationKeyProvider {
 
   @Test
   public void testDecryptWithKeyVersionNameKeyMismatch() throws Exception {
-      Assertions.assertThrows(IllegalArgumentException.class, () -> {
+    assertThrows(IllegalArgumentException.class, () -> {
           final Configuration conf = new Configuration();
           KeyProvider kp =
         new UserProvider.Factory().createProvider(new URI("user:///"), conf);
@@ -267,7 +269,5 @@ public class TestKeyAuthorizationKeyProvider {
         }
     );
       });
-  
-}
-
+  }
 }

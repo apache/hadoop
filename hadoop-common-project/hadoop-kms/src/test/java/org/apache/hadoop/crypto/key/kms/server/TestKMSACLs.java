@@ -20,11 +20,14 @@ package org.apache.hadoop.crypto.key.kms.server;
 import static org.apache.hadoop.crypto.key.kms.server.KMSConfiguration.*;
 import static org.apache.hadoop.crypto.key.kms.server.KeyAuthorizationKeyProvider.KEY_ACL;
 import static org.apache.hadoop.crypto.key.kms.server.KeyAuthorizationKeyProvider.KeyOpType;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -38,7 +41,7 @@ public class TestKMSACLs {
   public void testDefaults() {
     final KMSACLs acls = new KMSACLs(new Configuration(false));
     for (KMSACLs.Type type : KMSACLs.Type.values()) {
-      Assertions.assertTrue(acls.hasAccess(type,
+      assertTrue(acls.hasAccess(type,
           UserGroupInformation.createRemoteUser("foo")));
     }
   }
@@ -51,9 +54,9 @@ public class TestKMSACLs {
     }
     final KMSACLs acls = new KMSACLs(conf);
     for (KMSACLs.Type type : KMSACLs.Type.values()) {
-      Assertions.assertTrue(acls.hasAccess(type,
+      assertTrue(acls.hasAccess(type,
           UserGroupInformation.createRemoteUser(type.toString())));
-      Assertions.assertFalse(acls.hasAccess(type,
+      assertFalse(acls.hasAccess(type,
           UserGroupInformation.createRemoteUser("foo")));
     }
   }
@@ -69,16 +72,16 @@ public class TestKMSACLs {
     conf.set(DEFAULT_KEY_ACL_PREFIX + "ALL", "invalid");
     conf.set(WHITELIST_KEY_ACL_PREFIX + "ALL", "invalid");
     final KMSACLs acls = new KMSACLs(conf);
-    Assertions.assertTrue(acls.keyAcls.size() == 2, "expected key ACL size is 2 but got "
+    assertTrue(acls.keyAcls.size() == 2, "expected key ACL size is 2 but got "
         + acls.keyAcls.size());
-    Assertions.assertTrue(acls.whitelistKeyAcls.size() == 1, "expected whitelist ACL size is 1 but got "
+    assertTrue(acls.whitelistKeyAcls.size() == 1, "expected whitelist ACL size is 1 but got "
         + acls.whitelistKeyAcls.size());
-    Assertions.assertFalse(
-       acls.whitelistKeyAcls.containsKey(KeyOpType.ALL), "ALL should not be allowed for whitelist ACLs.");
-    Assertions.assertTrue(acls.defaultKeyAcls.size() == 1, "expected default ACL size is 1 but got "
+    assertFalse(acls.whitelistKeyAcls.containsKey(KeyOpType.ALL),
+        "ALL should not be allowed for whitelist ACLs.");
+    assertTrue(acls.defaultKeyAcls.size() == 1, "expected default ACL size is 1 but got "
         + acls.defaultKeyAcls.size());
-    Assertions.assertTrue(
-       acls.defaultKeyAcls.size() == 1, "ALL should not be allowed for default ACLs.");
+    assertTrue(acls.defaultKeyAcls.size() == 1,
+        "ALL should not be allowed for default ACLs.");
   }
 
   @Test
@@ -95,15 +98,15 @@ public class TestKMSACLs {
     conf.set(WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK", "whitelist1");
     conf.set(WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK", "*");
     final KMSACLs acls = new KMSACLs(conf);
-    Assertions.assertTrue(acls.keyAcls.size() == 2, "expected key ACL size is 2 but got "
+    assertTrue(acls.keyAcls.size() == 2, "expected key ACL size is 2 but got "
         + acls.keyAcls.size());
     assertKeyAcl("test_key_1", acls, KeyOpType.DECRYPT_EEK, "decrypt2");
     assertKeyAcl("test_key_2", acls, KeyOpType.ALL, "all1", "all3");
     assertDefaultKeyAcl(acls, KeyOpType.MANAGEMENT);
     assertDefaultKeyAcl(acls, KeyOpType.DECRYPT_EEK);
     AccessControlList acl = acls.whitelistKeyAcls.get(KeyOpType.DECRYPT_EEK);
-    Assertions.assertNotNull(acl);
-    Assertions.assertTrue(acl.isAllAllowed());
+    assertNotNull(acl);
+    assertTrue(acl.isAllAllowed());
   }
 
   @Test
@@ -160,8 +163,8 @@ public class TestKMSACLs {
     conf.set(DEFAULT_KEY_ACL_PREFIX + "DECRYPT_EEK", "*");
     acls.setKeyACLs(conf);
     AccessControlList acl = acls.defaultKeyAcls.get(KeyOpType.DECRYPT_EEK);
-    Assertions.assertTrue(acl.isAllAllowed());
-    Assertions.assertTrue(acl.getUsers().isEmpty());
+    assertTrue(acl.isAllAllowed());
+    assertTrue(acl.getUsers().isEmpty());
     // everything else should still be the same.
     assertDefaultKeyAcl(acls, KeyOpType.READ, "read2");
     assertDefaultKeyAcl(acls, KeyOpType.MANAGEMENT, "mgmt1", "mgmt2");
@@ -178,9 +181,9 @@ public class TestKMSACLs {
     conf.set(DEFAULT_KEY_ACL_PREFIX + "DECRYPT_EEK", "new");
     acls.setKeyACLs(conf);
     assertDefaultKeyAcl(acls, KeyOpType.DECRYPT_EEK, "new");
-    Assertions.assertTrue(acls.keyAcls.isEmpty());
-    Assertions.assertTrue(acls.whitelistKeyAcls.isEmpty());
-    Assertions.assertEquals(1, acls.defaultKeyAcls.size(), "Got unexpected sized acls:"
+    assertTrue(acls.keyAcls.isEmpty());
+    assertTrue(acls.whitelistKeyAcls.isEmpty());
+    assertEquals(1, acls.defaultKeyAcls.size(), "Got unexpected sized acls:"
         + acls.defaultKeyAcls);
   }
 
@@ -198,23 +201,22 @@ public class TestKMSACLs {
 
   private void assertKeyAcl(final String keyName, final KMSACLs acls,
       final KeyOpType op, final String... names) {
-    Assertions.assertTrue(acls.keyAcls.containsKey(keyName));
+    assertTrue(acls.keyAcls.containsKey(keyName));
     final HashMap<KeyOpType, AccessControlList> keyacl =
         acls.keyAcls.get(keyName);
-    Assertions.assertNotNull(keyacl.get(op));
+    assertNotNull(keyacl.get(op));
     assertAcl(keyacl.get(op), op, names);
   }
 
   private void assertAcl(final AccessControlList acl,
       final KeyOpType op, final String... names) {
-    Assertions.assertNotNull(acl);
-    Assertions.assertFalse(acl.isAllAllowed());
+    assertNotNull(acl);
+    assertFalse(acl.isAllAllowed());
     final Collection<String> actual = acl.getUsers();
     final HashSet<String> expected = new HashSet<>();
     for (String name : names) {
       expected.add(name);
     }
-    Assertions.assertEquals(
-       expected, actual, "defaultKeyAcls don't match for op:" + op);
+    assertEquals(expected, actual, "defaultKeyAcls don't match for op:" + op);
   }
 }
