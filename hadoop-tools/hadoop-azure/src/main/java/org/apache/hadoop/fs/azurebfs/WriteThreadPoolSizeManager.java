@@ -36,6 +36,7 @@ public class WriteThreadPoolSizeManager implements Closeable {
   private static final ConcurrentHashMap<String, WriteThreadPoolSizeManager>
       poolSizeManagerMap = new ConcurrentHashMap<>();
   String filesystemName;
+  int initialPoolSize;
 
   /**
    * Private constructor to initialize the thread pool and CPU monitor executor.
@@ -65,7 +66,7 @@ public class WriteThreadPoolSizeManager implements Closeable {
 
     // Final max threads cap
     int calculatedMaxPoolSize = processors * multiplier;
-    int initialPoolSize = Math.max(1, abfsConfiguration.getWriteMaxConcurrentRequestCount());
+    initialPoolSize = Math.max(1, abfsConfiguration.getWriteMaxConcurrentRequestCount());
     // Adjust maxThreadPoolSize based on calculated value
     this.maxThreadPoolSize = Math.max(calculatedMaxPoolSize, initialPoolSize);
     boundedThreadPool = Executors.newFixedThreadPool(initialPoolSize);
@@ -184,9 +185,9 @@ public class WriteThreadPoolSizeManager implements Closeable {
     int currentPoolSize = ((ThreadPoolExecutor) boundedThreadPool).getMaximumPoolSize();
     try {
       if (cpuUtilization > HIGH_CPU_THRESHOLD) {
-        newMaxPoolSize = Math.max(1, currentPoolSize - currentPoolSize / 3);
+        newMaxPoolSize = Math.max(initialPoolSize, currentPoolSize - currentPoolSize / 3);
       } else if (cpuUtilization > MEDIUM_CPU_THRESHOLD) {
-        newMaxPoolSize = Math.max(1, currentPoolSize - currentPoolSize / 5);
+        newMaxPoolSize = Math.max(initialPoolSize, currentPoolSize - currentPoolSize / 5);
       } else if (cpuUtilization < LOW_CPU_THRESHOLD) {
         newMaxPoolSize = Math.min(maxThreadPoolSize, (int) (currentPoolSize * 1.5));
       } else {
