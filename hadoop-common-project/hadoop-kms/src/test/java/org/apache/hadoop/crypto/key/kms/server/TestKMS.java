@@ -919,8 +919,9 @@ public class TestKMS {
         kpce.rollNewVersion("k6");
         kpce.invalidateCache("k6");
         EncryptedKeyVersion ekv2 = kpce.generateEncryptedKey("k6");
-        assertNotEquals(ekv1.getEncryptionKeyVersionName()
-,             ekv2.getEncryptionKeyVersionName(), "rollover did not generate a new key even after"
+        assertNotEquals(ekv1.getEncryptionKeyVersionName(),
+            ekv2.getEncryptionKeyVersionName(),
+            "rollover did not generate a new key even after"
             + " queue is drained");
         return null;
       }
@@ -964,22 +965,22 @@ public class TestKMS {
         KeyProvider.KeyVersion kv0 = kmscp.createKey(keyName, options);
         assertNotNull(kv0.getVersionName());
 
-        assertEquals("k1@0",
-            kmscp.generateEncryptedKey(keyName).getEncryptionKeyVersionName(), "Default key version name is incorrect.");
+        assertEquals("k1@0", kmscp.generateEncryptedKey(keyName).getEncryptionKeyVersionName(),
+            "Default key version name is incorrect.");
 
         kmscp.invalidateCache(keyName);
         kq.get(keyName).put(mockEKV);
-        assertEquals(mockVersionName
-,             kmscp.generateEncryptedKey(keyName).getEncryptionKeyVersionName(), "Key version incorrect after invalidating cache + putting"
-                + " mock key.");
+        assertEquals(mockVersionName,
+            kmscp.generateEncryptedKey(keyName).getEncryptionKeyVersionName(),
+            "Key version incorrect after invalidating cache + putting"
+            + " mock key.");
 
         // test new version is returned after invalidation.
         for (int i = 0; i < 100; ++i) {
           kq.get(keyName).put(mockEKV);
           kmscp.invalidateCache(keyName);
-          assertEquals("k1@0",
-              kmscp.generateEncryptedKey(keyName)
-                  .getEncryptionKeyVersionName(), "Cache invalidation guarantee failed.");
+          assertEquals("k1@0", kmscp.generateEncryptedKey(keyName)
+              .getEncryptionKeyVersionName(), "Cache invalidation guarantee failed.");
         }
         return null;
       }
@@ -1421,9 +1422,8 @@ public class TestKMS {
                           new KeyProvider.Options(conf));
                       fail("This should not succeed..");
                     } catch (IOException e) {
-                      assertTrue(
-                      e
-                              .getMessage().contains("401"), "HTTP exception must be a 401 : " + e.getMessage());
+                      assertTrue(e.getMessage().contains("401"),
+                          "HTTP exception must be a 401 : " + e.getMessage());
                     }
                     return null;
                   }
@@ -2192,11 +2192,10 @@ public class TestKMS {
   }
 
   private Text getTokenService(KeyProvider provider) {
-    assertTrue((provider instanceof
-            LoadBalancingKMSClientProvider), "KeyProvider should be an instance of " +
-        "LoadBalancingKMSClientProvider");
-    assertEquals(1
-,         ((LoadBalancingKMSClientProvider)provider).getProviders().length, "Num client providers should be 1");
+    assertTrue((provider instanceof LoadBalancingKMSClientProvider),
+        "KeyProvider should be an instance of " + "LoadBalancingKMSClientProvider");
+    assertEquals(1, ((LoadBalancingKMSClientProvider)provider).getProviders().length,
+        "Num client providers should be 1");
     final Text tokenService = new Text(
         (((LoadBalancingKMSClientProvider)provider).getProviders()[0])
         .getCanonicalServiceName());
@@ -2402,8 +2401,8 @@ public class TestKMS {
 
             // wait for token to expire.
             Thread.sleep(5100);
-            assertTrue(
-               maxTime > 0 && maxTime < Time.now(), "maxTime " + maxTime + " is not less than now.");
+            assertTrue(maxTime > 0 && maxTime < Time.now(),
+                "maxTime " + maxTime + " is not less than now.");
             try {
               kp.getKeys();
               fail("Operation should fail since dt is expired.");
