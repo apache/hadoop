@@ -54,13 +54,15 @@ public class TestNfs3Utils {
     Mockito.when(attr.getGid()).thenReturn(10);
     Mockito.when(attr.getMode()).thenReturn(288); // 440
     Mockito.when(attr.getType()).thenReturn(NfsFileType.NFSREG.toValue());
-    assertEquals(1 /* R */, Nfs3Utils.getAccessRightsForUserGroup(3, 4, new int[] {5, 16, 10}, attr),
+    assertEquals(1 /* R */,
+        Nfs3Utils.getAccessRightsForUserGroup(3, 4, new int[] {5, 16, 10}, attr),
         "Access should be allowed as mode is 440 and Aux GID does match");
     Mockito.when(attr.getUid()).thenReturn(2);
     Mockito.when(attr.getGid()).thenReturn(10);
     Mockito.when(attr.getMode()).thenReturn(448); // 700
     Mockito.when(attr.getType()).thenReturn(NfsFileType.NFSDIR.toValue());
-    assertEquals(31 /* Lookup */, Nfs3Utils.getAccessRightsForUserGroup(2, 4, new int[] {5, 16, 10}, attr),
+    assertEquals(31 /* Lookup */,
+        Nfs3Utils.getAccessRightsForUserGroup(2, 4, new int[] {5, 16, 10}, attr),
         "Access should be allowed for dir as mode is 700 and UID does match");
     assertEquals(0, Nfs3Utils.getAccessRightsForUserGroup(3, 10, new int[] {5, 16, 4}, attr),
         "No access should be allowed for dir as mode is 700 even though GID does match");
@@ -71,7 +73,8 @@ public class TestNfs3Utils {
     Mockito.when(attr.getGid()).thenReturn(10);
     Mockito.when(attr.getMode()).thenReturn(457); // 711
     Mockito.when(attr.getType()).thenReturn(NfsFileType.NFSDIR.toValue());
-    assertEquals(2 /* Lookup */, Nfs3Utils.getAccessRightsForUserGroup(3, 10, new int[] {5, 16, 11}, attr),
+    assertEquals(2 /* Lookup */,
+        Nfs3Utils.getAccessRightsForUserGroup(3, 10, new int[] {5, 16, 11}, attr),
         "Access should be allowed for dir as mode is 711 and GID matches");
   }
 }

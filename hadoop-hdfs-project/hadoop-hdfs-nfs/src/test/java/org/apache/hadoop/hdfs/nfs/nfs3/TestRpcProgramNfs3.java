@@ -199,14 +199,14 @@ public class TestRpcProgramNfs3 {
     GETATTR3Response response1 = nfsd.getattr(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code");
 
     // Attempt by a priviledged user should pass.
     GETATTR3Response response2 = nfsd.getattr(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code");
   }
 
   @Test
@@ -226,14 +226,14 @@ public class TestRpcProgramNfs3 {
     SETATTR3Response response1 = nfsd.setattr(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code");
 
     // Attempt by a priviledged user should pass.
     SETATTR3Response response2 = nfsd.setattr(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code");
   }
 
   @Test
@@ -251,14 +251,14 @@ public class TestRpcProgramNfs3 {
     LOOKUP3Response response1 = nfsd.lookup(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code");
 
     // Attempt by a priviledged user should pass.
     LOOKUP3Response response2 = nfsd.lookup(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code");
   }
 
   @Test
@@ -276,14 +276,14 @@ public class TestRpcProgramNfs3 {
     ACCESS3Response response1 = nfsd.access(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code");
 
     // Attempt by a priviledged user should pass.
     ACCESS3Response response2 = nfsd.access(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code");
   }
 
   @Test
@@ -301,8 +301,8 @@ public class TestRpcProgramNfs3 {
     
     SYMLINK3Response response = nfsd.symlink(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response.getStatus(), "Incorrect return code:");
 
     // Now perform readlink operations.
     FileHandle handle2 = response.getObjFileHandle();
@@ -314,14 +314,14 @@ public class TestRpcProgramNfs3 {
     READLINK3Response response1 = nfsd.readlink(xdr_req2.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+         response1.getStatus(), "Incorrect return code:");
 
     // Attempt by a priviledged user should pass.
     READLINK3Response response2 = nfsd.readlink(xdr_req2.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code:");
   }
 
   @Test
@@ -340,14 +340,14 @@ public class TestRpcProgramNfs3 {
     READ3Response response1 = nfsd.read(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code:");
 
     // Attempt by a priviledged user should pass.
     READ3Response response2 = nfsd.read(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code:");
   }
 
   @Test
@@ -368,8 +368,8 @@ public class TestRpcProgramNfs3 {
     createFileUsingNfs(encFile1, buffer);
     commit(encFile1, len);
     assertArrayEquals(
-       getFileContentsUsingNfs(encFile1, len)
-,         getFileContentsUsingDfs(encFile1, len), "encFile1 not equal");
+        getFileContentsUsingNfs(encFile1, len),
+        getFileContentsUsingDfs(encFile1, len), "encFile1 not equal");
 
     /*
      * Same thing except this time create the encrypted file using DFS.
@@ -378,8 +378,8 @@ public class TestRpcProgramNfs3 {
     final Path encFile2Path = new Path(encFile2);
     DFSTestUtil.createFile(hdfs, encFile2Path, len, (short) 1, 0xFEED);
     assertArrayEquals(
-       getFileContentsUsingNfs(encFile2, len)
-,         getFileContentsUsingDfs(encFile2, len), "encFile2 not equal");
+        getFileContentsUsingNfs(encFile2, len),
+        getFileContentsUsingDfs(encFile2, len), "encFile2 not equal");
   }
 
   private void createFileUsingNfs(String fileName, byte[] buffer)
@@ -415,8 +415,8 @@ public class TestRpcProgramNfs3 {
 
     final READ3Response response = nfsd.read(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response.getStatus(), "Incorrect return code: ");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response.getStatus(), "Incorrect return code: ");
     assertTrue(response.isEof(), "expected full read");
     return response.getData().array();
   }
@@ -475,8 +475,8 @@ public class TestRpcProgramNfs3 {
     WRITE3Response response1 = nfsd.write(xdr_req.asReadOnlyWrap(),
         null, 1, securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code:");
 
     // Attempt by a priviledged user should pass.
     WRITE3Response response2 = nfsd.write(xdr_req.asReadOnlyWrap(),
@@ -501,14 +501,14 @@ public class TestRpcProgramNfs3 {
     CREATE3Response response1 = nfsd.create(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code:");
 
     // Attempt by a priviledged user should pass.
     CREATE3Response response2 = nfsd.create(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code:");
   }
 
   @Test
@@ -526,8 +526,8 @@ public class TestRpcProgramNfs3 {
     MKDIR3Response response1 = nfsd.mkdir(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code:");
 
     XDR xdr_req2 = new XDR();
     MKDIR3Request req2 = new MKDIR3Request(handle, "fubar2", new SetAttr3());
@@ -536,8 +536,8 @@ public class TestRpcProgramNfs3 {
     // Attempt to mkdir by a privileged user should pass.
     MKDIR3Response response2 = nfsd.mkdir(xdr_req2.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code:");
   }
 
   @Test
@@ -556,14 +556,14 @@ public class TestRpcProgramNfs3 {
     SYMLINK3Response response1 = nfsd.symlink(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code:");
 
     // Attempt by a privileged user should pass.
     SYMLINK3Response response2 = nfsd.symlink(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code:");
   }
 
   @Test
@@ -581,14 +581,14 @@ public class TestRpcProgramNfs3 {
     REMOVE3Response response1 = nfsd.remove(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code:");
 
     // Attempt by a priviledged user should pass.
     REMOVE3Response response2 = nfsd.remove(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code:");
   }
 
   @Test
@@ -606,14 +606,14 @@ public class TestRpcProgramNfs3 {
     RMDIR3Response response1 = nfsd.rmdir(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code:");
 
     // Attempt by a privileged user should pass.
     RMDIR3Response response2 = nfsd.rmdir(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code:");
   }
 
   @Test
@@ -631,14 +631,14 @@ public class TestRpcProgramNfs3 {
     RENAME3Response response1 = nfsd.rename(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code:");
 
     // Attempt by a privileged user should pass.
     RENAME3Response response2 = nfsd.rename(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code:");
   }
 
   @Test
@@ -656,14 +656,14 @@ public class TestRpcProgramNfs3 {
     READDIR3Response response1 = nfsd.readdir(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code:");
 
     // Attempt by a priviledged user should pass.
     READDIR3Response response2 = nfsd.readdir(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code:");
   }
 
   @Test
@@ -681,14 +681,14 @@ public class TestRpcProgramNfs3 {
     READDIRPLUS3Response response1 = nfsd.readdirplus(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code:");
 
     // Attempt by a privileged user should pass.
     READDIRPLUS3Response response2 = nfsd.readdirplus(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code:");
   }
 
   @Test
@@ -706,14 +706,14 @@ public class TestRpcProgramNfs3 {
     FSSTAT3Response response1 = nfsd.fsstat(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code:");
 
     // Attempt by a priviledged user should pass.
     FSSTAT3Response response2 = nfsd.fsstat(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code:");
   }
 
   @Test
@@ -731,14 +731,14 @@ public class TestRpcProgramNfs3 {
     FSINFO3Response response1 = nfsd.fsinfo(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code:");
 
     // Attempt by a priviledged user should pass.
     FSINFO3Response response2 = nfsd.fsinfo(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code:");
   }
 
   @Test
@@ -756,14 +756,14 @@ public class TestRpcProgramNfs3 {
     PATHCONF3Response response1 = nfsd.pathconf(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code:");
 
     // Attempt by a priviledged user should pass.
     PATHCONF3Response response2 = nfsd.pathconf(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3_OK
-,         response2.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3_OK,
+        response2.getStatus(), "Incorrect return code:");
   }
 
   @Test
@@ -783,8 +783,8 @@ public class TestRpcProgramNfs3 {
     COMMIT3Response response1 = nfsd.commit(xdr_req.asReadOnlyWrap(),
         ch, 1, securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
-    assertEquals(Nfs3Status.NFS3ERR_ACCES
-,         response1.getStatus(), "Incorrect return code:");
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response1.getStatus(), "Incorrect return code:");
 
     // Attempt by a priviledged user should pass.
     COMMIT3Response response2 = nfsd.commit(xdr_req.asReadOnlyWrap(),
@@ -825,8 +825,7 @@ public class TestRpcProgramNfs3 {
       if (idempotent) {
         assertTrue(proc.isIdempotent(), ("Procedure " + proc + " should be idempotent"));
       } else {
-       assertFalse(
-            proc.isIdempotent(), ("Procedure " + proc + " should be non-idempotent"));
+        assertFalse(proc.isIdempotent(), ("Procedure " + proc + " should be non-idempotent"));
       }
     }
   }

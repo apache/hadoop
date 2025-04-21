@@ -290,10 +290,10 @@ public class TestExportsTable {
 
       FileSystemException fileSystemException =
           assertThrows(FileSystemException.class, () -> {
-        // Start nfs
-        final Nfs3 nfsServer = new Nfs3(config);
-        nfsServer.startServiceInternal(false);
-      });
+            // Start nfs
+            final Nfs3 nfsServer = new Nfs3(config);
+            nfsServer.startServiceInternal(false);
+          });
       assertTrue(fileSystemException.getMessage().
           contains("Only HDFS is supported as underlyingFileSystem, fs scheme:file"));
     } finally {
