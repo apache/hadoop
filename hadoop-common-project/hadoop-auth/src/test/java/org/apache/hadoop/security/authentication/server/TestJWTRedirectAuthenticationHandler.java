@@ -396,7 +396,8 @@ public class TestJWTRedirectAuthenticationHandler extends
 
     String loginURL = handler.constructLoginURL(request);
     assertNotNull(loginURL, "loginURL should not be null.");
-    assertEquals("https://localhost:8443/authserver?originalUrl=" + SERVICE_URL + "?name=value", loginURL);
+    assertEquals("https://localhost:8443/authserver?originalUrl=" +
+        SERVICE_URL + "?name=value", loginURL);
   }
 
   @Test

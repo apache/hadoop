@@ -105,8 +105,7 @@ public class TestFixKerberosTicketOrder extends KerberosSecurityTestcase {
       }
     }
     // make sure the first ticket is not tgt
-    assertFalse(
-        subject.getPrivateCredentials().stream()
+    assertFalse(subject.getPrivateCredentials().stream()
         .filter(c -> c instanceof KerberosTicket)
         .map(c -> ((KerberosTicket) c).getServer().getName()).findFirst()
         .get().startsWith("krbtgt"), "The first ticket is still tgt, "
