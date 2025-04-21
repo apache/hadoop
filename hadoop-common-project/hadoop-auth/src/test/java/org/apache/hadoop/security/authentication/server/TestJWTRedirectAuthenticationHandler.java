@@ -69,7 +69,7 @@ public class TestJWTRedirectAuthenticationHandler extends
 
       Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
       HttpServletRequest request = mock(HttpServletRequest.class);
-      when(request.getCookies()).thenReturn(new Cookie[] { cookie });
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
       when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
       HttpServletResponse response = mock(HttpServletResponse.class);
@@ -101,7 +101,7 @@ public class TestJWTRedirectAuthenticationHandler extends
 
       Cookie cookie = new Cookie("jowt", jwt.serialize());
       HttpServletRequest request = mock(HttpServletRequest.class);
-      when(request.getCookies()).thenReturn(new Cookie[] { cookie });
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
       when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
       HttpServletResponse response = mock(HttpServletResponse.class);
@@ -134,7 +134,7 @@ public class TestJWTRedirectAuthenticationHandler extends
 
       Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
       HttpServletRequest request = mock(HttpServletRequest.class);
-      when(request.getCookies()).thenReturn(new Cookie[] { cookie });
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
       when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
       HttpServletResponse response = mock(HttpServletResponse.class);
@@ -171,7 +171,7 @@ public class TestJWTRedirectAuthenticationHandler extends
 
       Cookie cookie = new Cookie("hadoop-jwt", "ljm" + jwt.serialize());
       HttpServletRequest request = mock(HttpServletRequest.class);
-      when(request.getCookies()).thenReturn(new Cookie[] { cookie });
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
       when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
       HttpServletResponse response = mock(HttpServletResponse.class);
@@ -210,7 +210,7 @@ public class TestJWTRedirectAuthenticationHandler extends
 
       Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
       HttpServletRequest request = mock(HttpServletRequest.class);
-      when(request.getCookies()).thenReturn(new Cookie[] { cookie });
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
       when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
       HttpServletResponse response = mock(HttpServletResponse.class);
@@ -240,7 +240,7 @@ public class TestJWTRedirectAuthenticationHandler extends
 
       Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
       HttpServletRequest request = mock(HttpServletRequest.class);
-      when(request.getCookies()).thenReturn(new Cookie[] { cookie });
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
       when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
       HttpServletResponse response = mock(HttpServletResponse.class);
@@ -269,7 +269,7 @@ public class TestJWTRedirectAuthenticationHandler extends
 
       Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
       HttpServletRequest request = mock(HttpServletRequest.class);
-      when(request.getCookies()).thenReturn(new Cookie[] { cookie });
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
       when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
       HttpServletResponse response = mock(HttpServletResponse.class);
@@ -302,7 +302,7 @@ public class TestJWTRedirectAuthenticationHandler extends
 
       Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
       HttpServletRequest request = mock(HttpServletRequest.class);
-      when(request.getCookies()).thenReturn(new Cookie[] { cookie });
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
       when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
       HttpServletResponse response = mock(HttpServletResponse.class);
@@ -334,7 +334,7 @@ public class TestJWTRedirectAuthenticationHandler extends
 
       Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
       HttpServletRequest request = mock(HttpServletRequest.class);
-      when(request.getCookies()).thenReturn(new Cookie[] { cookie });
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
       when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
       HttpServletResponse response = mock(HttpServletResponse.class);
@@ -364,7 +364,7 @@ public class TestJWTRedirectAuthenticationHandler extends
 
       Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
       HttpServletRequest request = mock(HttpServletRequest.class);
-      when(request.getCookies()).thenReturn(new Cookie[] { cookie });
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
       when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
       HttpServletResponse response = mock(HttpServletResponse.class);
