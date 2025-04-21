@@ -38,8 +38,9 @@ import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.MultiSchemeAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.net.HttpURLConnection;
@@ -47,7 +48,7 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.Callable;
-import org.junit.jupiter.api.Timeout;
+
 
 /**
  * Test class for {@link KerberosAuthenticator}.

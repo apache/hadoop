@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.minikdc;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+
 import org.apache.kerby.kerberos.kerb.keytab.Keytab;
 import org.apache.kerby.kerberos.kerb.type.base.PrincipalName;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.security.auth.Subject;
@@ -70,7 +72,7 @@ public class TestMiniKdc extends KerberosSecurityTestcase {
   @Test
   public void testMiniKdcStart() {
     MiniKdc kdc = getKdc();
-    Assertions.assertNotSame(0, kdc.getPort());
+    assertNotSame(0, kdc.getPort());
   }
 
   @Test
@@ -87,7 +89,7 @@ public class TestMiniKdc extends KerberosSecurityTestcase {
       principals.add(principalName.getName());
     }
 
-    Assertions.assertEquals(new HashSet<String>(Arrays.asList(
+    assertEquals(new HashSet<String>(Arrays.asList(
             "foo/bar@" + kdc.getRealm(), "bar/foo@" + kdc.getRealm())),
             principals);
   }
@@ -170,10 +172,10 @@ public class TestMiniKdc extends KerberosSecurityTestcase {
               KerberosConfiguration.createClientConfig(principal, keytab));
       loginContext.login();
       subject = loginContext.getSubject();
-      Assertions.assertEquals(1, subject.getPrincipals().size());
-      Assertions.assertEquals(KerberosPrincipal.class,
+      assertEquals(1, subject.getPrincipals().size());
+      assertEquals(KerberosPrincipal.class,
               subject.getPrincipals().iterator().next().getClass());
-      Assertions.assertEquals(principal + "@" + kdc.getRealm(),
+      assertEquals(principal + "@" + kdc.getRealm(),
               subject.getPrincipals().iterator().next().getName());
       loginContext.logout();
 
@@ -184,10 +186,10 @@ public class TestMiniKdc extends KerberosSecurityTestcase {
               KerberosConfiguration.createServerConfig(principal, keytab));
       loginContext.login();
       subject = loginContext.getSubject();
-      Assertions.assertEquals(1, subject.getPrincipals().size());
-      Assertions.assertEquals(KerberosPrincipal.class,
+      assertEquals(1, subject.getPrincipals().size());
+      assertEquals(KerberosPrincipal.class,
               subject.getPrincipals().iterator().next().getClass());
-      Assertions.assertEquals(principal + "@" + kdc.getRealm(),
+      assertEquals(principal + "@" + kdc.getRealm(),
               subject.getPrincipals().iterator().next().getName());
       loginContext.logout();
 

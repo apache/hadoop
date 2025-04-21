@@ -45,11 +45,10 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLException;
-
-import org.junit.jupiter.api.Timeout;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -254,8 +253,8 @@ public class TestLogLevel extends KerberosSecurityTestcase {
       throw new Exception("Invalid client protocol " + connectProtocol);
     }
     Level oldLevel = log.getEffectiveLevel();
-    assertNotEquals(
-       Level.ERROR, oldLevel, "Get default Log Level which shouldn't be ERROR.");
+    assertNotEquals(Level.ERROR, oldLevel,
+        "Get default Log Level which shouldn't be ERROR.");
 
     // configs needed for SPNEGO at server side
     if (isSpnego) {
