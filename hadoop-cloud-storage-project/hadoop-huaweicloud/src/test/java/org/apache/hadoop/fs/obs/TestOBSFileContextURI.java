@@ -83,7 +83,7 @@ public class TestOBSFileContextURI extends FileContextURIBase {
 
   @Override
   public void testFileStatus() {
-    assumeTrue( false, "unsupport.");
+    assumeTrue(false, "unsupport.");
   }
 
 }
