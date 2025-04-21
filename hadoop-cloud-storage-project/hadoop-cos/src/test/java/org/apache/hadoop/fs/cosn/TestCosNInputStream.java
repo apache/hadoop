@@ -79,9 +79,9 @@ public class TestCosNInputStream {
     for (int i = 0; i != seekTimes; i++) {
       long pos = fileSize / (seekTimes - i) - 1;
       inputStream.seek(pos);
-      assertTrue(
-         inputStream.getPos() == pos, "expected position at: " +
-              pos + ", but got: " + inputStream.getPos());
+      assertTrue(inputStream.getPos() == pos,
+          "expected position at: " +
+          pos + ", but got: " + inputStream.getPos());
       LOG.info("completed seeking at pos: " + inputStream.getPos());
     }
     LOG.info("begin to random position seeking test...");
@@ -90,9 +90,9 @@ public class TestCosNInputStream {
       long pos = Math.abs(random.nextLong()) % fileSize;
       LOG.info("seeking for pos: " + pos);
       inputStream.seek(pos);
-      assertTrue(
-         inputStream.getPos() == pos, "expected position at: " +
-              pos + ", but got: " + inputStream.getPos());
+      assertTrue(inputStream.getPos() == pos,
+          "expected position at: " +
+          pos + ", but got: " + inputStream.getPos());
       LOG.info("completed seeking at pos: " + inputStream.getPos());
     }
   }
@@ -113,9 +113,9 @@ public class TestCosNInputStream {
     Random random = new Random();
     long pos = Math.abs(random.nextLong()) % fileSize;
     inputStream.seek(pos);
-    assertTrue(
-       inputStream.getPos() == pos, "expected position at: " +
-            pos + ", but got: " + inputStream.getPos());
+    assertTrue(inputStream.getPos() == pos,
+        "expected position at: " +
+        pos + ", but got: " + inputStream.getPos());
     LOG.info("completed get pos tests.");
   }
 
@@ -157,7 +157,8 @@ public class TestCosNInputStream {
 
       if (bytesRead % (1 * Unit.MB) == 0) {
         int available = inputStream.available();
-        assertTrue((fileSize - bytesRead) == available, "expected remaining: " + (fileSize - bytesRead) +
+        assertTrue((fileSize - bytesRead) == available,
+            "expected remaining: " + (fileSize - bytesRead) +
             " but got: " + available);
         LOG.info("Bytes read: " +
             Math.round((double) bytesRead / Unit.MB) + "MB");
