@@ -21,11 +21,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.Before;
-import org.junit.After;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 
@@ -34,14 +33,12 @@ import java.io.IOException;
  * <p>
  * If the test.fs.cosn.name property is not set, all test case will fail.
  */
+@Timeout(3600)
 public class TestCosNOutputStream {
   private FileSystem fs;
   private Path testRootDir;
 
-  @Rule
-  public Timeout timeout = new Timeout(3600 * 1000);
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration configuration = new Configuration();
     configuration.setInt(
@@ -53,7 +50,7 @@ public class TestCosNOutputStream {
     this.testRootDir = new Path("/test");
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
   }
 
