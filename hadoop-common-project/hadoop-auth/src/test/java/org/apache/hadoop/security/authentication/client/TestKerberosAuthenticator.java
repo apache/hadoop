@@ -13,6 +13,10 @@
  */
 package org.apache.hadoop.security.authentication.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.apache.hadoop.security.authentication.server.MultiSchemeAuthenticationHandler.SCHEMES_PROPERTY;
 import static org.apache.hadoop.security.authentication.server.MultiSchemeAuthenticationHandler.AUTH_HANDLER_PROPERTY;
 import static org.apache.hadoop.security.authentication.server.AuthenticationFilter.AUTH_TYPE;
@@ -34,10 +38,8 @@ import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.MultiSchemeAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.File;
 import java.net.HttpURLConnection;
@@ -55,7 +57,7 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
   public TestKerberosAuthenticator() {
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     // create keytab
     File keytabFile = new File(KerberosTestUtils.getKeytabFile());
@@ -122,8 +124,8 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
       URL url = new URL(auth.getBaseURL());
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       conn.connect();
-      Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, conn.getResponseCode());
-      Assert.assertTrue(conn.getHeaderField(KerberosAuthenticator.WWW_AUTHENTICATE) != null);
+      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, conn.getResponseCode());
+      assertTrue(conn.getHeaderField(KerberosAuthenticator.WWW_AUTHENTICATE) != null);
     } finally {
       auth.stop();
     }
@@ -200,9 +202,9 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
       URL url = new URL(auth.getBaseURL());
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       conn.connect();
-      Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
+      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
           conn.getResponseCode());
-      Assert.assertTrue(conn
+      assertTrue(conn
           .getHeaderField(KerberosAuthenticator.WWW_AUTHENTICATE) != null);
     } finally {
       auth.stop();
@@ -247,15 +249,15 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
     ex = new IOException("Induced exception");
     ex = KerberosAuthenticator.wrapExceptionWithMessage(ex, "Error while "
         + "authenticating with endpoint: localhost");
-    Assert.assertEquals("Induced exception", ex.getCause().getMessage());
-    Assert.assertEquals("Error while authenticating with endpoint: localhost",
+    assertEquals("Induced exception", ex.getCause().getMessage());
+    assertEquals("Error while authenticating with endpoint: localhost",
         ex.getMessage());
 
     ex = new AuthenticationException("Auth exception");
     ex = KerberosAuthenticator.wrapExceptionWithMessage(ex, "Error while "
         + "authenticating with endpoint: localhost");
-    Assert.assertEquals("Auth exception", ex.getCause().getMessage());
-    Assert.assertEquals("Error while authenticating with endpoint: localhost",
+    assertEquals("Auth exception", ex.getCause().getMessage());
+    assertEquals("Error while authenticating with endpoint: localhost",
         ex.getMessage());
 
     // Test for Exception with  no (String) constructor
@@ -263,8 +265,8 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
     ex = new CharacterCodingException();
     Exception ex2 = KerberosAuthenticator.wrapExceptionWithMessage(ex,
         "Error while authenticating with endpoint: localhost");
-    Assert.assertTrue(ex instanceof CharacterCodingException);
-    Assert.assertTrue(ex.equals(ex2));
+    assertTrue(ex instanceof CharacterCodingException);
+    assertTrue(ex.equals(ex2));
   }
 
   @Test
@@ -273,16 +275,16 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
           IllegalAccessException, IOException {
     KerberosAuthenticator kerberosAuthenticator = new KerberosAuthenticator();
 
-    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
-    Mockito.when(conn.getHeaderField(KerberosAuthenticator.WWW_AUTHENTICATE)).
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    when(conn.getHeaderField(KerberosAuthenticator.WWW_AUTHENTICATE)).
             thenReturn(KerberosAuthenticator.NEGOTIATE);
-    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
 
     Method method = KerberosAuthenticator.class.getDeclaredMethod("isNegotiate",
             HttpURLConnection.class);
     method.setAccessible(true);
 
-    Assert.assertTrue((boolean)method.invoke(kerberosAuthenticator, conn));
+    assertTrue((boolean)method.invoke(kerberosAuthenticator, conn));
   }
 
   @Test
@@ -291,16 +293,16 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
           IllegalAccessException, IOException {
     KerberosAuthenticator kerberosAuthenticator = new KerberosAuthenticator();
 
-    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
-    Mockito.when(conn.getHeaderField("www-authenticate"))
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    when(conn.getHeaderField("www-authenticate"))
             .thenReturn(KerberosAuthenticator.NEGOTIATE);
-    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
 
     Method method = KerberosAuthenticator.class.getDeclaredMethod("isNegotiate",
             HttpURLConnection.class);
     method.setAccessible(true);
 
-    Assert.assertTrue((boolean)method.invoke(kerberosAuthenticator, conn));
+    assertTrue((boolean)method.invoke(kerberosAuthenticator, conn));
   }
 
   @Test
@@ -312,9 +314,9 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
 
     Base64 base64 = new Base64();
 
-    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
-    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
-    Mockito.when(conn.getHeaderField(KerberosAuthenticator.WWW_AUTHENTICATE))
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
+    when(conn.getHeaderField(KerberosAuthenticator.WWW_AUTHENTICATE))
             .thenReturn(KerberosAuthenticator.NEGOTIATE + " " +
                     Arrays.toString(base64.encode("foobar".getBytes())));
 
@@ -334,9 +336,9 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
 
     Base64 base64 = new Base64();
 
-    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
-    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
-    Mockito.when(conn.getHeaderField("www-authenticate"))
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
+    when(conn.getHeaderField("www-authenticate"))
             .thenReturn(KerberosAuthenticator.NEGOTIATE +
                     Arrays.toString(base64.encode("foobar".getBytes())));
 

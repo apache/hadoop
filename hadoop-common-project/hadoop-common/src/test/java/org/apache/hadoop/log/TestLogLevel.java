@@ -324,8 +324,8 @@ public class TestLogLevel extends KerberosSecurityTestcase {
     CLI cli = new CLI(sslConf);
     cli.run(setLevelArgs);
 
-    assertEquals("new level not equal to expected: ", newLevel.toUpperCase(),
-        log.getEffectiveLevel().toString());
+    assertEquals(newLevel.toUpperCase(), log.getEffectiveLevel().toString(),
+        "new level not equal to expected: ");
   }
 
   /**

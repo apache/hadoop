@@ -13,14 +13,16 @@
  */
 package org.apache.hadoop.security.authentication.server;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.util.Properties;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 public class TestAltKerberosAuthenticationHandler
@@ -51,24 +53,38 @@ public class TestAltKerberosAuthenticationHandler
   @Test
   @Timeout(value = 60)
   public void testAlternateAuthenticationAsBrowser() throws Exception {
-    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    if (handler != null) {
+      handler.destroy();
+      handler = null;
+    }
+    handler = getNewAuthenticationHandler();
+    Properties props = getDefaultProperties();
+    props.setProperty("alt-kerberos.non-browser.user-agents", "foo, bar");
+    try {
+      handler.init(props);
+    } catch (Exception ex) {
+      handler = null;
+      throw ex;
+    }
+
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    HttpServletResponse response = mock(HttpServletResponse.class);
 
     // By default, a User-Agent without "java", "curl", "wget", or "perl" in it
     // is considered a browser
-    Mockito.when(request.getHeader("User-Agent")).thenReturn("Some Browser");
+    when(request.getHeader("User-Agent")).thenReturn("Some Browser");
 
     AuthenticationToken token = handler.authenticate(request, response);
-    Assert.assertEquals("A", token.getUserName());
-    Assert.assertEquals("B", token.getName());
-    Assert.assertEquals(getExpectedType(), token.getType());
+    assertEquals("A", token.getUserName());
+    assertEquals("B", token.getName());
+    assertEquals(getExpectedType(), token.getType());
   }
 
   @Test
   @Timeout(value = 60)
   public void testNonDefaultNonBrowserUserAgentAsBrowser() throws Exception {
-    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    HttpServletResponse response = mock(HttpServletResponse.class);
 
     if (handler != null) {
       handler.destroy();
@@ -85,12 +101,12 @@ public class TestAltKerberosAuthenticationHandler
     }
 
     // Pretend we're something that will not match with "foo" (or "bar")
-    Mockito.when(request.getHeader("User-Agent")).thenReturn("blah");
+    when(request.getHeader("User-Agent")).thenReturn("blah");
     // Should use alt authentication
     AuthenticationToken token = handler.authenticate(request, response);
-    Assert.assertEquals("A", token.getUserName());
-    Assert.assertEquals("B", token.getName());
-    Assert.assertEquals(getExpectedType(), token.getType());
+    assertEquals("A", token.getUserName());
+    assertEquals("B", token.getName());
+    assertEquals(getExpectedType(), token.getType());
   }
 
   @Test
