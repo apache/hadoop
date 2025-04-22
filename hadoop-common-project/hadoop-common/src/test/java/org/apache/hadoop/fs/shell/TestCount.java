@@ -440,6 +440,27 @@ public class TestCount {
   }
 
   @Test
+  public void processOptionsHeaderWithOwner() {
+    LinkedList<String> options = new LinkedList<String>();
+    options.add("-v");
+    options.add("-o");
+    options.add("user");
+    options.add("dummy");
+
+    PrintStream out = mock(PrintStream.class);
+
+    Count count = new Count();
+    count.out = out;
+
+    count.processOptions(options);
+
+    String withOwnerHeader =
+        "OWNER   DIR_COUNT   FILE_COUNT       CONTENT_SIZE PATHNAME";
+    verify(out).println(withOwnerHeader);
+    verifyNoMoreInteractions(out);
+  }
+
+  @Test
   public void getCommandName() {
     Count count = new Count();
     String actual = count.getCommandName();
@@ -477,7 +498,7 @@ public class TestCount {
     String actual = count.getUsage();
     String expected =
         "-count [-q] [-h] [-v] [-t [<storage type>]]"
-        + " [-u] [-x] [-e] [-s] <path> ...";
+        + " [-u] [-x] [-e] [-s] [-o user] <path> ...";
     assertEquals(expected, actual, "Count.getUsage");
   }
 
@@ -507,10 +528,12 @@ public class TestCount {
         + "ram_disk, ssd, disk, archive and nvdimm.\n"
         + "It can also pass the value '', 'all' or 'ALL' to specify all the "
         + "storage types.\n"
-        + "The -u option shows the quota and \n"
-        + "the usage against the quota without the detailed content summary."
-        + "The -e option shows the erasure coding policy."
-        + "The -s option shows snapshot counts.";
+        + "The -u option shows the quota and "
+        + "the usage against the quota without the detailed content summary. \n"
+        + "The -e option shows the erasure coding policy. \n"
+        + "The -s option shows snapshot counts. \n"
+        + "The -o option shows the owner's counts.";
+
 
     assertEquals(expected, actual, "Count.getDescription");
   }

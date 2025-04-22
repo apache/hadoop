@@ -139,7 +139,7 @@ Identical to the -get command.
 count
 -----
 
-Usage: `hadoop fs -count [-q] [-h] [-v] [-x] [-t [<storage type>]] [-u] [-e] [-s] <paths> `
+Usage: `hadoop fs -count [-q] [-h] [-v] [-x] [-t [<storage type>]] [-u] [-e] [-s] [-o user] <paths> `
 
 Count the number of directories, files and bytes under the paths that match the specified file pattern. Get the quota and the usage. The output columns with -count are: DIR\_COUNT, FILE\_COUNT, CONTENT\_SIZE, PATHNAME
 
@@ -165,6 +165,8 @@ The ERASURECODING\_POLICY is name of the policy for the file. If an erasure codi
 
 The -s option shows the snapshot counts for each directory.
 
+The -o option shows the owner's counts.
+
 Example:
 
 * `hadoop fs -count hdfs://nn1.example.com/file1 hdfs://nn2.example.com/file2`
@@ -176,6 +178,7 @@ Example:
 * `hadoop fs -count -u -h -v hdfs://nn1.example.com/file1`
 * `hadoop fs -count -e hdfs://nn1.example.com/file1`
 * `hadoop fs -count -s hdfs://nn1.example.com/file1`
+* `hadoop fs -count -o user hdfs://nn1.example.com/file1`
 
 Exit Code:
 

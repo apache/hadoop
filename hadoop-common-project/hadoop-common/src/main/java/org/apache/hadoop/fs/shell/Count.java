@@ -57,6 +57,7 @@ public class Count extends FsCommand {
   private static final String OPTION_QUOTA_AND_USAGE = "u";
   private static final String OPTION_ECPOLICY = "e";
   private static final String OPTION_SNAPSHOT_COUNT = "s";
+  private static final String OPTION_OWNER = "o";
 
   public static final String NAME = "count";
   public static final String USAGE =
@@ -64,7 +65,7 @@ public class Count extends FsCommand {
           + "] [-" + OPTION_TYPE + " [<storage type>]] [-" +
           OPTION_QUOTA_AND_USAGE + "] [-" + OPTION_EXCLUDE_SNAPSHOT
           + "] [-" + OPTION_ECPOLICY + "] [-" + OPTION_SNAPSHOT_COUNT
-          + "] <path> ...";
+          + "] [-" + OPTION_OWNER + " user] <path> ...";
   public static final String DESCRIPTION =
       "Count the number of directories, files and bytes under the paths\n" +
           "that match the specified file pattern.  The output columns are:\n" +
@@ -92,10 +93,11 @@ public class Count extends FsCommand {
           "ram_disk, ssd, disk, archive and nvdimm.\n" +
           "It can also pass the value '', 'all' or 'ALL' to specify all " +
           "the storage types.\n" +
-          "The -" + OPTION_QUOTA_AND_USAGE + " option shows the quota and \n" +
-          "the usage against the quota without the detailed content summary."+
-          "The -" + OPTION_ECPOLICY + " option shows the erasure coding policy."
-          + "The -" + OPTION_SNAPSHOT_COUNT + " option shows snapshot counts.";
+          "The -" + OPTION_QUOTA_AND_USAGE + " option shows the quota and " +
+          "the usage against the quota without the detailed content summary. \n" +
+          "The -" + OPTION_ECPOLICY + " option shows the erasure coding policy. \n" +
+          "The -" + OPTION_SNAPSHOT_COUNT + " option shows snapshot counts. \n" +
+          "The -" + OPTION_OWNER + " option shows the owner's counts.";
 
   private boolean showQuotas;
   private boolean humanReadable;
@@ -105,6 +107,7 @@ public class Count extends FsCommand {
   private boolean excludeSnapshots;
   private boolean displayECPolicy;
   private boolean showSnapshot;
+  private String owner;
 
   /** Constructor */
   public Count() {}
@@ -128,6 +131,7 @@ public class Count extends FsCommand {
         OPTION_EXCLUDE_SNAPSHOT,
         OPTION_ECPOLICY, OPTION_SNAPSHOT_COUNT);
     cf.addOptionWithValue(OPTION_TYPE);
+    cf.addOptionWithValue(OPTION_OWNER);
     cf.parse(args);
     if (args.isEmpty()) { // default path is the current working directory
       args.add(".");
@@ -138,6 +142,7 @@ public class Count extends FsCommand {
     excludeSnapshots = cf.getOpt(OPTION_EXCLUDE_SNAPSHOT);
     displayECPolicy = cf.getOpt(OPTION_ECPOLICY);
     showSnapshot = cf.getOpt(OPTION_SNAPSHOT_COUNT);
+    owner = cf.getOptValue(OPTION_OWNER);
 
     if (showQuotas || showQuotasAndUsageOnly) {
       String types = cf.getOptValue(OPTION_TYPE);
@@ -157,7 +162,10 @@ public class Count extends FsCommand {
 
     if (cf.getOpt(OPTION_HEADER)) {
       StringBuilder headString = new StringBuilder();
-      if (showQuotabyType) {
+      if (owner != null && !owner.isEmpty()) {
+        headString.append("OWNER");
+        headString.append(ContentSummary.getHeader(false));
+      } else if (showQuotabyType) {
         headString.append(QuotaUsage.getStorageTypeHeader(storageTypes));
       } else {
         if (showQuotasAndUsageOnly) {
@@ -195,7 +203,12 @@ public class Count extends FsCommand {
   @Override
   protected void processPath(PathData src) throws IOException {
     StringBuilder outputString = new StringBuilder();
-    if (showQuotasAndUsageOnly || showQuotabyType) {
+    if (owner != null && !owner.isEmpty()) {
+      outputString.append(owner);
+      ContentSummary summary = src.fs.getContentSummary(src.path, owner);
+      outputString.append(summary.toString(
+          false, isHumanReadable()));
+    } else if (showQuotasAndUsageOnly || showQuotabyType) {
       QuotaUsage usage = src.fs.getQuotaUsage(src.path);
       outputString.append(usage.toString(
           isHumanReadable(), showQuotabyType, storageTypes));

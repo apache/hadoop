@@ -1921,20 +1921,45 @@ public abstract class FileSystem extends Configured
    * @return content summary.
    */
   public ContentSummary getContentSummary(Path f) throws IOException {
+    return getContentSummary(f, null);
+  }
+
+  /** Return the {@link ContentSummary} of a given {@link Path}.
+   * @param f path to use
+   * @param owner path owner
+   * @throws FileNotFoundException if the path does not resolve
+   * @throws IOException IO failure
+   * @return content summary.
+   */
+  public ContentSummary getContentSummary(Path f, String owner) throws IOException {
     FileStatus status = getFileStatus(f);
     if (status.isFile()) {
       // f is a file
       long length = status.getLen();
-      return new ContentSummary.Builder().length(length).
-          fileCount(1).directoryCount(0).spaceConsumed(length).build();
+      // owner mismatch, output 0 0 0
+      if (owner == null || owner.equals(status.getOwner())) {
+        return new ContentSummary.Builder().length(length).
+            fileCount(1).directoryCount(0).spaceConsumed(length).build();
+      } else {
+        return new ContentSummary.Builder().length(length).
+            fileCount(0).directoryCount(0).spaceConsumed(0).build();
+      }
     }
     // f is a directory
-    long[] summary = {0, 0, 1};
+    long i = (owner == null || owner.equals(status.getOwner())) ? 1 : 0;
+    long[] summary = {0, 0, i};
     for(FileStatus s : listStatus(f)) {
       long length = s.getLen();
-      ContentSummary c = s.isDirectory() ? getContentSummary(s.getPath()) :
-          new ContentSummary.Builder().length(length).
-          fileCount(1).directoryCount(0).spaceConsumed(length).build();
+      ContentSummary c;
+      if (s.isDirectory()) {
+        c = getContentSummary(s.getPath(), owner);
+      } else if (owner == null || owner.equals(s.getOwner())) {
+        c = new ContentSummary.Builder().length(length).
+            fileCount(1).directoryCount(0).spaceConsumed(length).build();
+      } else {
+        // skip owner mismatch
+        continue;
+      }
       summary[0] += c.getLength();
       summary[1] += c.getFileCount();
       summary[2] += c.getDirectoryCount();
