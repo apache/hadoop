@@ -347,8 +347,9 @@ public class AzureBlobFileSystem extends FileSystem
 
   @Override
   public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
-    LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path, bufferSize);
     // bufferSize is unused.
+    LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path,
+            abfsStore.getAbfsConfiguration().getReadBufferSize());
     return open(path, Optional.empty());
   }
 
