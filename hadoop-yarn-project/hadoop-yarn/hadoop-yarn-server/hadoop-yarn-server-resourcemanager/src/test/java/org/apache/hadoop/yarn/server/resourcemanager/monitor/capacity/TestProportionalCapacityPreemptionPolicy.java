@@ -1084,28 +1084,35 @@ public class TestProportionalCapacityPreemptionPolicy {
 
   @Test
   public void testLeafQueueNameExtractionWithFlexibleAQC() throws Exception {
-    runLeafQueueNameExtractionTest(true);
+    ProportionalCapacityPreemptionPolicy policy = buildPolicy(Q_DATA_FOR_IGNORE);
+    ParentQueue root = (ParentQueue) mCS.getRootQueue();
+
+    root.addDynamicParentQueue("childlessFlexible");
+    ParentQueue dynamicParent = setupDynamicParentQueue("root.dynamicParent", true);
+    extendRootQueueWithMock(root, dynamicParent);
+
+    policy.editSchedule();
+    assertFalse(policy.getLeafQueueNames().contains( "root.dynamicParent"),
+            "root.dynamicLegacyParent" + " should not be a LeafQueue candidate");
   }
 
   @Test
   public void testLeafQueueNameExtractionWithLegacyAQC() throws Exception {
-    runLeafQueueNameExtractionTest(false);
-  }
-
-  private void runLeafQueueNameExtractionTest(boolean isFlexible) throws Exception {
     ProportionalCapacityPreemptionPolicy policy = buildPolicy(Q_DATA_FOR_IGNORE);
     ParentQueue root = (ParentQueue) mCS.getRootQueue();
 
-    String queueName = isFlexible ? "childlessFlexible" : "childlessLegacy";
-    String dynamicQueuePath = isFlexible ? "root.dynamicParent" : "root.dynamicLegacyParent";
+    root.addDynamicParentQueue("childlessLegacy");
+    ParentQueue dynamicParent = setupDynamicParentQueue("root.dynamicLegacyParent", false);
+    extendRootQueueWithMock(root, dynamicParent);
 
-    root.addDynamicParentQueue(queueName);
-    List<CSQueue> queues = root.getChildQueues();
-    ArrayList<CSQueue> extendedQueues = new ArrayList<>();
-    LinkedList<ParentQueue> pqs = new LinkedList<>();
+    policy.editSchedule();
+    assertFalse(policy.getLeafQueueNames().contains( "root.dynamicLegacyParent"),
+            "root.dynamicLegacyParent" + " should not be a LeafQueue candidate");
+  }
 
-    ParentQueue dynamicParent = mockParentQueue(null, 0, pqs);
-    mockQueueFields(dynamicParent, dynamicQueuePath);
+  private ParentQueue setupDynamicParentQueue(String queuePath, boolean isFlexible) {
+    ParentQueue dynamicParent = mockParentQueue(null, 0, new LinkedList<>());
+    mockQueueFields(dynamicParent, queuePath);
 
     if (isFlexible) {
       when(dynamicParent.isEligibleForAutoQueueCreation()).thenReturn(true);
@@ -1113,14 +1120,15 @@ public class TestProportionalCapacityPreemptionPolicy {
       when(dynamicParent.isEligibleForLegacyAutoQueueCreation()).thenReturn(true);
     }
 
-    extendedQueues.add(dynamicParent);
+    return dynamicParent;
+  }
+
+  private void extendRootQueueWithMock(ParentQueue root, ParentQueue mockQueue) {
+    List<CSQueue> queues = root.getChildQueues();
+    ArrayList<CSQueue> extendedQueues = new ArrayList<>();
+    extendedQueues.add(mockQueue);
     extendedQueues.addAll(queues);
     when(root.getChildQueues()).thenReturn(extendedQueues);
-
-    policy.editSchedule();
-
-    assertFalse(policy.getLeafQueueNames().contains(dynamicQueuePath),
-        "dynamicParent should not be a LeafQueue candidate");
   }
 
   private void mockQueueFields(ParentQueue queue, String queuePath) {
@@ -1144,6 +1152,7 @@ public class TestProportionalCapacityPreemptionPolicy {
     usage.setReserved(Resources.createResource(1024));
     when(queue.getQueueResourceUsage()).thenReturn(usage);
   }
+
   static class IsPreemptionRequestFor
       implements ArgumentMatcher<ContainerPreemptEvent> {
     private final ApplicationAttemptId appAttId;

@@ -22,8 +22,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -434,7 +433,7 @@ public class ProportionalCapacityPreemptionPolicy
     // It is a concrete leaf queue (not a childless parent)
     if (CollectionUtils.isEmpty(q.children)) {
       CSQueue queue = scheduler.getQueue(q.queueName);
-      if (queue instanceof LeafQueue || queue instanceof AutoCreatedLeafQueue) {
+      if (queue instanceof AbstractLeafQueue) {
         return ImmutableSet.of(q.queueName);
       }
       return Collections.emptySet();
