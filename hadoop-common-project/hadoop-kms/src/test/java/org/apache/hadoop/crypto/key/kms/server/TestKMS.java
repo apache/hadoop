@@ -1633,38 +1633,38 @@ public class TestKMS {
 
         final KeyVersion currKv =
             doAs("GET", new PrivilegedExceptionAction<KeyVersion>() {
-          @Override
-          public KeyVersion run() throws Exception {
-            KeyProvider kp = createProvider(uri, conf);
-            try {
-              kp.getKeyVersion("k1@0");
-              KeyVersion kv = kp.getCurrentKey("k1");
-              return kv;
-            } catch (Exception ex) {
-              fail(ex.toString());
-            }
-            return null;
-          }
-        });
+              @Override
+              public KeyVersion run() throws Exception {
+                KeyProvider kp = createProvider(uri, conf);
+                try {
+                  kp.getKeyVersion("k1@0");
+                  KeyVersion kv = kp.getCurrentKey("k1");
+                  return kv;
+                } catch (Exception ex) {
+                    fail(ex.toString());
+                }
+                return null;
+              }
+            });
 
         final EncryptedKeyVersion encKv =
             doAs("GENERATE_EEK",
                 new PrivilegedExceptionAction<EncryptedKeyVersion>() {
-          @Override
-          public EncryptedKeyVersion run() throws Exception {
-            KeyProvider kp = createProvider(uri, conf);
-            try {
-              KeyProviderCryptoExtension kpCE = KeyProviderCryptoExtension.
-                      createKeyProviderCryptoExtension(kp);
-              EncryptedKeyVersion ek1 =
-                  kpCE.generateEncryptedKey(currKv.getName());
-              return ek1;
-            } catch (Exception ex) {
-              fail(ex.toString());
-            }
-            return null;
-          }
-        });
+                @Override
+                public EncryptedKeyVersion run() throws Exception {
+                  KeyProvider kp = createProvider(uri, conf);
+                  try {
+                    KeyProviderCryptoExtension kpCE = KeyProviderCryptoExtension.
+                            createKeyProviderCryptoExtension(kp);
+                    EncryptedKeyVersion ek1 =
+                        kpCE.generateEncryptedKey(currKv.getName());
+                    return ek1;
+                  } catch (Exception ex) {
+                    fail(ex.toString());
+                  }
+                  return null;
+                }
+            });
 
         doAs("GENERATE_EEK", new PrivilegedExceptionAction<Void>() {
           @Override

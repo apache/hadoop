@@ -241,31 +241,31 @@ public class TestKeyAuthorizationKeyProvider {
       when(mock.hasAccessToKey("testKey", sudo,
         KeyOpType.ALL)).thenReturn(true);
       final KeyProviderCryptoExtension kpExt =
-        new KeyAuthorizationKeyProvider(
+          new KeyAuthorizationKeyProvider(
             KeyProviderCryptoExtension.createKeyProviderCryptoExtension(kp),
             mock);
-          sudo.doAs(
-        new PrivilegedExceptionAction<Void>() {
-          @Override
-          public Void run() throws Exception {
-            Options opt = newOptions(conf);
-            Map<String, String> m = new HashMap<String, String>();
-            m.put("key.acl.name", "testKey");
-            opt.setAttributes(m);
-            KeyVersion kv =
-                kpExt.createKey("foo", SecureRandom.getSeed(16), opt);
-            kpExt.rollNewVersion(kv.getName());
-            kpExt.rollNewVersion(kv.getName(), SecureRandom.getSeed(16));
-            EncryptedKeyVersion ekv = kpExt.generateEncryptedKey(kv.getName());
-            ekv = EncryptedKeyVersion.createForDecryption(
-                ekv.getEncryptionKeyName() + "x",
-                ekv.getEncryptionKeyVersionName(),
-                ekv.getEncryptedKeyIv(),
-                ekv.getEncryptedKeyVersion().getMaterial());
-            kpExt.decryptEncryptedKey(ekv);
-            return null;
+      sudo.doAs(
+          new PrivilegedExceptionAction<Void>() {
+            @Override
+            public Void run() throws Exception {
+              Options opt = newOptions(conf);
+              Map<String, String> m = new HashMap<String, String>();
+              m.put("key.acl.name", "testKey");
+              opt.setAttributes(m);
+              KeyVersion kv =
+                  kpExt.createKey("foo", SecureRandom.getSeed(16), opt);
+              kpExt.rollNewVersion(kv.getName());
+              kpExt.rollNewVersion(kv.getName(), SecureRandom.getSeed(16));
+              EncryptedKeyVersion ekv = kpExt.generateEncryptedKey(kv.getName());
+              ekv = EncryptedKeyVersion.createForDecryption(
+                  ekv.getEncryptionKeyName() + "x",
+                  ekv.getEncryptionKeyVersionName(),
+                  ekv.getEncryptedKeyIv(),
+                  ekv.getEncryptedKeyVersion().getMaterial());
+              kpExt.decryptEncryptedKey(ekv);
+              return null;
+            }
           }
-        }
       );
     });
   }
