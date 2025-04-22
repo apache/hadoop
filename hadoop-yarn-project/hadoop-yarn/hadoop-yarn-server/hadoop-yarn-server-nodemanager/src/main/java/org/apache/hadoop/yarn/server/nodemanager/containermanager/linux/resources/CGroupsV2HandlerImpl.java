@@ -109,6 +109,7 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
       LOG.info("Failed to read the cgroup controllers file in the preconfigured directory: {}. " +
               "The cgroup v2 hierarchy may not be mounted under the specified path, or the node might be using " +
               "cgroup v1.", this.cGroupsMountConfig.getV2MountPath());
+      LOG.debug("Exception while reading the cgroup.controllers file: ", e);
     }
     return controllerMappings;
   }
