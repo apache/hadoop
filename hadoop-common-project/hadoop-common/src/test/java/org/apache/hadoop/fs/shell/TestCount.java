@@ -498,7 +498,7 @@ public class TestCount {
     String actual = count.getUsage();
     String expected =
         "-count [-q] [-h] [-v] [-t [<storage type>]]"
-        + " [-u] [-x] [-e] [-s] [-o user] <path> ...";
+        + " [-u] [-x] [-e] [-s] [-o [<user>]] <path> ...";
     assertEquals(expected, actual, "Count.getUsage");
   }
 

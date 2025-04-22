@@ -65,7 +65,7 @@ public class Count extends FsCommand {
           + "] [-" + OPTION_TYPE + " [<storage type>]] [-" +
           OPTION_QUOTA_AND_USAGE + "] [-" + OPTION_EXCLUDE_SNAPSHOT
           + "] [-" + OPTION_ECPOLICY + "] [-" + OPTION_SNAPSHOT_COUNT
-          + "] [-" + OPTION_OWNER + " user] <path> ...";
+          + "] [-" + OPTION_OWNER + " [<user>]] <path> ...";
   public static final String DESCRIPTION =
       "Count the number of directories, files and bytes under the paths\n" +
           "that match the specified file pattern.  The output columns are:\n" +

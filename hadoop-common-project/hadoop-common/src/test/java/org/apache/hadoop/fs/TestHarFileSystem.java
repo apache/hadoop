@@ -116,6 +116,7 @@ public class TestHarFileSystem {
     public short getReplication(Path src);
     public void processDeleteOnExit();
     public ContentSummary getContentSummary(Path f);
+    public ContentSummary getContentSummary(Path f, String owner);
     public QuotaUsage getQuotaUsage(Path f);
     void setQuota(Path f, long namespaceQuota, long storagespaceQuota);
     void setQuotaByStorageType(Path f, StorageType type, long quota);
