@@ -18,6 +18,7 @@
 #ifndef HDFSPP_FSINFO_H_
 #define HDFSPP_FSINFO_H_
 
+#include <cstdint>
 #include <string>
 
 namespace hdfs {
