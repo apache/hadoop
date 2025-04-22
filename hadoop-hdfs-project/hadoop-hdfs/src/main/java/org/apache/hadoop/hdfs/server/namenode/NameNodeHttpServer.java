@@ -19,6 +19,10 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_REST_CSRF_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_REST_CSRF_ENABLED_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_HTTP_AUTHENTICATION_TYPE;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEBHDFS_AUTHENTICATION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEBHDFS_AUTHENTICATION_KEY_DEFAULT;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -51,6 +55,8 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -92,6 +98,27 @@ public class NameNodeHttpServer {
         HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT));
 
     final String pathSpec = WebHdfsFileSystem.PATH_PREFIX + "/*";
+
+    if (conf.get(HADOOP_SECURITY_AUTHENTICATION,
+        "simple").equalsIgnoreCase("kerberos") &&
+        conf.get(HADOOP_HTTP_AUTHENTICATION_TYPE,
+            "simple").equalsIgnoreCase("simple") &&
+        conf.get(DFS_WEBHDFS_AUTHENTICATION_KEY,
+            DFS_WEBHDFS_AUTHENTICATION_KEY_DEFAULT).equalsIgnoreCase("kerberos")) {
+      Map<String, String> params = new HashMap<>();
+      String principalInConf = conf.get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY);
+      if (principalInConf != null && !principalInConf.isEmpty()) {
+        params.put("kerberos.principal", SecurityUtil.getServerPrincipal(
+            principalInConf, NameNode.getServiceAddress(conf, true).getHostName()));
+      }
+      String keytabFile = conf.get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY);
+      if (keytabFile != null && !keytabFile.isEmpty()) {
+        params.put("kerberos.keytab", keytabFile);
+      }
+      params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
+      HttpServer2.defineFilter(httpServer2.getWebAppContext(), HttpServer2.SPNEGO_FILTER,
+          AuthenticationFilter.class.getName(), params, new String[] {pathSpec});
+    }
 
     // add REST CSRF prevention filter
     if (conf.getBoolean(DFS_WEBHDFS_REST_CSRF_ENABLED_KEY,

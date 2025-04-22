@@ -86,6 +86,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_WEBHDFS_USE_IPC_CALLQ =
       "dfs.webhdfs.use.ipc.callq";
   public static final boolean DFS_WEBHDFS_USE_IPC_CALLQ_DEFAULT = true;
+  public static final String DFS_WEBHDFS_AUTHENTICATION_KEY = "dfs.webhdfs.authentication";
+  public static final String DFS_WEBHDFS_AUTHENTICATION_KEY_DEFAULT = "simple";
 
   // HA related configuration
   public static final String  DFS_DATANODE_RESTART_REPLICA_EXPIRY_KEY = "dfs.datanode.restart.replica.expiration";

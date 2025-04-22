@@ -4060,6 +4060,14 @@
 </property>
 
   <property>
+    <name>dfs.webhdfs.authentication</name>
+    <value>simple</value>
+    <description>
+      Possible values are simple (no authentication), and kerberos
+    </description>
+  </property>
+
+  <property>
     <name>dfs.xframe.enabled</name>
     <value>true</value>
     <description>
