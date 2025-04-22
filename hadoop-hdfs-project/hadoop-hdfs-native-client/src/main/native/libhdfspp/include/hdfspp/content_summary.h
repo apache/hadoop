@@ -18,7 +18,6 @@
 #ifndef HDFSPP_CONTENT_SUMMARY_H_
 #define HDFSPP_CONTENT_SUMMARY_H_
 
-#include <cstdint>
 #include <string>
 
 namespace hdfs {

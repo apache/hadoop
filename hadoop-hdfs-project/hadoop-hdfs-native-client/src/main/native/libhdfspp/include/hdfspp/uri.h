@@ -19,7 +19,6 @@
 #ifndef COMMON_HDFS_URI_H_
 #define COMMON_HDFS_URI_H_
 
-#include <cstdint>
 #include <iostream>
 #include <string>
 #include <vector>
