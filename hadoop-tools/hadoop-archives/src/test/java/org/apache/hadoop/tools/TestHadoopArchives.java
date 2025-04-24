@@ -810,8 +810,6 @@ public class TestHadoopArchives {
     conf.set(HadoopArchives.HAR_BLOCKSIZE_LABEL, "1m");
 
     final String inputPathStr = inputPath.toUri().getPath();
-    System.out.println("inputPathStr = " + inputPathStr);
-
     final String harName = "foo.har";
     final String[] args =
         { "-archiveName", harName, "-p", inputPathStr, "*",
