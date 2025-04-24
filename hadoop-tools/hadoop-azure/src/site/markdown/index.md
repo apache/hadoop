@@ -652,13 +652,17 @@ To know more about how SAS Authentication works refer to
 [Grant limited access to Azure Storage resources using shared access signatures (SAS)](https://learn.microsoft.com/en-us/azure/storage/common/storage-sas-overview)
 
 There are three types of SAS supported by Azure Storage:
-- [User Delegation SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas): Recommended for use with ABFS Driver with HNS Enabled ADLS Gen2 accounts. It is Identity based SAS that works at blob/directory level)
+- [User Delegation SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas):
+  SAS-based authentication works with HNS-enabled ADLS Gen2 accounts
+  (recommended for use with ABFS) and is also supported with non-HNS (FNS) Blob
+  accounts. However, it is **NOT SUPPORTED** with FNS-DFS accounts.
 - [Service SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-service-sas): Global and works at container level.
 - [Account SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-account-sas): Global and works at account level.
 
 #### Known Issues With SAS
-- SAS Based Authentication works only with HNS Enabled ADLS Gen2 Accounts which
-is a recommended account type to be used with ABFS.
+- SAS Based Authentication works with HNS Enabled ADLS Gen2 Accounts (which
+  is a recommended account type to be used with ABFS). It is also supported with
+  non-HNS (FNS) Blob accounts. It is **NOT SUPPORTED** with FNS-DFS accounts.
 - Certain root level operations are known to fail with SAS Based Authentication.
 
 #### Using User Delegation SAS with ABFS
@@ -1465,7 +1469,12 @@ Once the above properties are configured, `hdfs dfs -ls abfs://container1@abfswa
 
 Following failures are known and expected to fail as of now.
 1. AzureBlobFileSystem.setXAttr() and AzureBlobFileSystem.getXAttr() will fail when attempted on root ("/") path with `Operation failed: "The request URI is invalid.", HTTP 400 Bad Request`
-
+2. If you're using user-delegation SAS authentication:
+    - Listing operation for HNS accounts (on DFS endpoint) works with SAS token supporting either blob or directory
+      scopes (Signed Resource Type as Blob or Directory),
+      though it is intended to work only at the directory scope. It is a known bug.
+    - AzureBlobFileSystem.getFileStatus() is expected to fail at root ("/") path with
+      `Operation failed: "Server failed to authenticate the request.", HTTP 401 Unauthorized Error`
 ## <a name="testing"></a> Testing ABFS
 
 See the relevant section in [Testing Azure](testing_azure.html).
