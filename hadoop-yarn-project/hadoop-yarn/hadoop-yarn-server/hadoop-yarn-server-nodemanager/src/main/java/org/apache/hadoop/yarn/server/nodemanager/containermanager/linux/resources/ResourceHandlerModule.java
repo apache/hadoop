@@ -77,7 +77,8 @@ public class ResourceHandlerModule {
       cGroupsCpuResourceHandler;
 
   private static void initializeCGroupHandlers(Configuration conf,
-                                               CGroupsHandler.CGroupController controller) throws ResourceHandlerException {
+                                               CGroupsHandler.CGroupController controller)
+      throws ResourceHandlerException {
     if (cgroupsV2Enabled) {
       initializeCGroupV2Handler(conf);
       if (!isMountedInCGroupsV2(controller)) {
