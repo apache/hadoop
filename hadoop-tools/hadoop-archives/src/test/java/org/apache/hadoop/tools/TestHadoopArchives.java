@@ -825,7 +825,7 @@ public class TestHadoopArchives {
       LocatedFileStatus next = listFiles.next();
       if (next.getPath().toString().matches(".*/part-\\d+$")) {
         // compare blockSize
-        Assert.assertEquals(1 * 1024 * 1024, next.getBlockSize());
+        assertEquals(1 * 1024 * 1024, next.getBlockSize());
       }
     }
   }
