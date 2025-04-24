@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -41,7 +42,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,7 +118,22 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_APPEND;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_CREATE;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_CREATE_NON_RECURSIVE;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_DELETE;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_EXIST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_DELEGATION_TOKEN;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_FILE_STATUS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_LIST_STATUS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_MKDIRS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_OPEN;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_RENAME;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.DIRECTORIES_CREATED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.DIRECTORIES_DELETED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.ERROR_IGNORED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_CREATED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_DELETED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
@@ -348,8 +363,9 @@ public class AzureBlobFileSystem extends FileSystem
   @Override
   public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
     // bufferSize is unused.
-    LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path,
-            abfsStore.getAbfsConfiguration().getReadBufferSize());
+    LOG.debug(
+        "AzureBlobFileSystem.open path: {} bufferSize as configured in 'fs.azure.read.request.size': {}",
+        path, abfsStore.getAbfsConfiguration().getReadBufferSize());
     return open(path, Optional.empty());
   }
 

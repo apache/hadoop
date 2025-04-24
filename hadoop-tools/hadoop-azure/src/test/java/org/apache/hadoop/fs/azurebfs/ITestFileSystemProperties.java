@@ -135,4 +135,23 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
 
     assertEquals(properties, fetchedProperties);
   }
+
+  @Test
+  //Test to verify buffersize remains the same as set in the configuration, irrespective of the parameter passed to FSDataInputStream
+  public void testBufferSizeSet() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    AbfsConfiguration abfsConfig = fs.getAbfsStore().getAbfsConfiguration();
+    int bufferSizeConfig = 5 * 1024 * 1024;
+    int bufferSizeArg = 10 * 1024 * 1024;
+
+    Path testPath = path(TEST_PATH);
+    fs.create(testPath);
+
+    abfsConfig.setReadBufferSize(bufferSizeConfig);
+    fs.open(testPath, bufferSizeArg);
+    int actualBufferSize = abfsConfig.getReadBufferSize();
+
+    assertEquals(bufferSizeConfig, actualBufferSize);
+    assertNotEquals(bufferSizeArg, actualBufferSize);
+  }
 }
