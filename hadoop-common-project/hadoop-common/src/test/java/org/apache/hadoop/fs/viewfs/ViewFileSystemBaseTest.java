@@ -116,7 +116,7 @@ abstract public class ViewFileSystemBaseTest {
 
   @TempDir
   public File temporaryFolder;
-  
+
   @BeforeEach
   public void setUp() throws Exception {
     initializeTargetTestRoot();
@@ -174,7 +174,7 @@ abstract public class ViewFileSystemBaseTest {
       LOG.info("MountPoint: " + mountPoint.getMountedOnPath() + " => "
           + mountPoint.getTargetFileSystemURIs()[0]);
     }
-    Assertions.assertEquals(mountPoints.length, getExpectedMountPoints()); 
+    Assertions.assertEquals(mountPoints.length, getExpectedMountPoints());
   }
   
   int getExpectedMountPoints() {
@@ -190,7 +190,7 @@ abstract public class ViewFileSystemBaseTest {
   public void testGetDelegationTokens() throws IOException {
     Token<?>[] delTokens = 
         fsView.addDelegationTokens("sanjay", new Credentials());
-    Assertions.assertEquals(delTokens.length, getExpectedDelegationTokenCount()); 
+    Assertions.assertEquals(delTokens.length, getExpectedDelegationTokenCount());
   }
   
   int getExpectedDelegationTokenCount() {
@@ -735,7 +735,7 @@ abstract public class ViewFileSystemBaseTest {
     Assertions.assertTrue(fs.isFile(), "Created file shoudl appear as a file");
     fs = fileSystemTestHelper.containsPath(fsView, "/data/dirX", dirPaths);
     Assertions.assertNotNull(fs);
-    Assertions.assertTrue(fs.isDirectory(), "Created dir should appear as a dir"); 
+    Assertions.assertTrue(fs.isDirectory(), "Created dir should appear as a dir");
   }
 
   private FileStatus[] listStatusInternal(boolean located, Path dataPath) throws IOException {
