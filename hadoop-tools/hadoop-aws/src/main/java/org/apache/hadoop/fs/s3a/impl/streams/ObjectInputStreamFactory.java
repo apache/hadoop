@@ -20,9 +20,9 @@ package org.apache.hadoop.fs.s3a.impl.streams;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.s3a.Statistic;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 
+import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.service.Service;
 

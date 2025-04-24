@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.impl.streams;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
+import org.apache.hadoop.fs.s3a.Statistic;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -332,6 +333,11 @@ public class TestStreamFactories extends AbstractHadoopTestBase {
 
     @Override
     public S3AsyncClient getOrCreateAsyncClient(final boolean requireCRT) throws IOException {
+      throw new UnsupportedOperationException("not implemented");
+    }
+
+    @Override
+    public void incrementFactoryStatistic(Statistic statistic) {
       throw new UnsupportedOperationException("not implemented");
     }
   }

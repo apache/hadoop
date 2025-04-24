@@ -98,9 +98,9 @@ public class AnalyticsStreamFactory extends AbstractObjectInputStreamFactory {
 
   @Override
   protected void serviceStop() throws Exception {
-    super.serviceStop();
     this.s3SeekableInputStreamFactory.close();
     callbacks().incrementFactoryStatistic(ANALYTICS_STREAM_FACTORY_CLOSED);
+    super.serviceStop();
   }
 
   private S3SeekableInputStreamFactory getOrCreateS3SeekableInputStreamFactory()
