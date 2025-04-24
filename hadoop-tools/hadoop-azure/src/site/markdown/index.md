@@ -1469,7 +1469,12 @@ Once the above properties are configured, `hdfs dfs -ls abfs://container1@abfswa
 
 Following failures are known and expected to fail as of now.
 1. AzureBlobFileSystem.setXAttr() and AzureBlobFileSystem.getXAttr() will fail when attempted on root ("/") path with `Operation failed: "The request URI is invalid.", HTTP 400 Bad Request`
-
+2. If you're using user-delegation SAS authentication:
+    - Listing operation for HNS accounts (on DFS endpoint) works with SAS token supporting either blob or directory
+      scopes (Signed Resource Type as Blob or Directory),
+      though it is intended to work only at the directory scope. It is a known bug.
+    - AzureBlobFileSystem.getFileStatus() is expected to fail at root ("/") path with
+      `Operation failed: "Server failed to authenticate the request.", HTTP 401 Unauthorized Error`
 ## <a name="testing"></a> Testing ABFS
 
 See the relevant section in [Testing Azure](testing_azure.html).
