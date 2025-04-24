@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.client.impl;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.Random;
@@ -28,9 +28,10 @@ import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * This tests BlockReaderRemote.
@@ -57,7 +58,7 @@ public class TestBlockReaderRemote {
     return util.getBlockReader(block, 0, blockData.length);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     util = new BlockReaderTestUtil(1, new HdfsConfiguration());
     blockData = getBlockData();
@@ -70,12 +71,13 @@ public class TestBlockReaderRemote {
     reader = getBlockReader(blk);
   }
 
-  @After
+  @AfterEach
   public void shutdown() throws Exception {
     util.shutdown();
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testSkip() throws IOException {
     Random random = new Random();
     byte [] buf = new byte[1];

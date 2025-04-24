@@ -110,7 +110,9 @@ public class TestSSLHttpServerConfigs {
             sslConf.get(SSL_SERVER_TRUSTSTORE_PROP_PREFIX + ".location"),
             trustStorePassword,
             sslConf.get(SSL_SERVER_TRUSTSTORE_PROP_PREFIX + ".type", "jks"))
-        .excludeCiphers(sslConf.get("ssl.server.exclude.cipher.list")).build();
+        .excludeCiphers(sslConf.get("ssl.server.exclude.cipher.list"))
+        .includeCiphers(sslConf.get("ssl.server.include.cipher.list"))
+        .build();
 
     return server;
   }

@@ -34,23 +34,22 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferTestCase;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.security.TestPermission;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 
 /**
  * This tests enabling NN sending the established QOP back to client,
  * in encrypted message, using block access token key.
  */
-@RunWith(Parameterized.class)
 public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
   public static final Logger LOG = LoggerFactory.getLogger(TestPermission.class);
 
@@ -61,7 +60,6 @@ public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
   private String configKey;
   private String qopValue;
 
-  @Parameterized.Parameters
   public static Collection<Object[]> qopSettings() {
     // if configured with privacy, the negotiated QOP should auth-conf
     // similarly for the other two
@@ -72,12 +70,13 @@ public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
     });
   }
 
-  public TestBlockTokenWrappingQOP(String configKey, String qopValue) {
-    this.configKey = configKey;
-    this.qopValue = qopValue;
+  public void initTestBlockTokenWrappingQOP(String pconfigKey, String pqopValue)
+      throws Exception {
+    this.configKey = pconfigKey;
+    this.qopValue = pqopValue;
+    setup();
   }
 
-  @Before
   public void setup() throws Exception {
     conf = createSecureConfig(this.configKey);
     conf.set(DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY, "12000");
@@ -109,15 +108,17 @@ public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
     dfs = (DistributedFileSystem) FileSystem.get(uriAuxiliary, conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Test
-  public void testAddBlockWrappingQOP() throws Exception {
+  @MethodSource("qopSettings")
+  @ParameterizedTest
+  public void testAddBlockWrappingQOP(String pconfigKey, String pqopValue) throws Exception {
+    initTestBlockTokenWrappingQOP(pconfigKey, pqopValue);
     final String src = "/testAddBlockWrappingQOP";
     final Path path = new Path(src);
 
@@ -132,8 +133,10 @@ public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
     assertEquals(this.qopValue, new String(secret));
   }
 
-  @Test
-  public void testAppendWrappingQOP() throws Exception {
+  @MethodSource("qopSettings")
+  @ParameterizedTest
+  public void testAppendWrappingQOP(String pconfigKey, String pqopValue) throws Exception {
+    initTestBlockTokenWrappingQOP(pconfigKey, pqopValue);
     final String src = "/testAppendWrappingQOP";
     final Path path = new Path(src);
 
@@ -155,8 +158,11 @@ public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
     assertEquals(this.qopValue, new String(secret));
   }
 
-  @Test
-  public void testGetBlockLocationWrappingQOP() throws Exception {
+  @MethodSource("qopSettings")
+  @ParameterizedTest
+  public void testGetBlockLocationWrappingQOP(String pconfigKey, String pqopValue)
+      throws Exception {
+    initTestBlockTokenWrappingQOP(pconfigKey, pqopValue);
     final String src = "/testGetBlockLocationWrappingQOP";
     final Path path = new Path(src);
 

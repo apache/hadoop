@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TimeoutException;
@@ -115,14 +116,15 @@ public class BlobRenameHandler extends ListActionTaker {
 
   /**
    * Orchestrates the rename operation.
+   * @param isRenameRecovery true if the rename operation is a recovery of a previous failed atomic rename operation
    *
    * @return AbfsClientRenameResult containing the result of the rename operation
    * @throws AzureBlobFileSystemException if server call fails
    */
-  public boolean execute() throws AzureBlobFileSystemException {
+  public boolean execute(final boolean isRenameRecovery) throws AzureBlobFileSystemException {
     PathInformation pathInformation = getPathInformation(src, tracingContext);
     boolean result = false;
-    if (preCheck(src, dst, pathInformation)) {
+    if (preCheck(src, dst, pathInformation, isRenameRecovery)) {
       RenameAtomicity renameAtomicity = null;
       if (pathInformation.getIsDirectory()
           && pathInformation.getIsImplicit()) {
@@ -147,6 +149,8 @@ public class BlobRenameHandler extends ListActionTaker {
            * recovers the lease on a log file, to gain exclusive access to it, before
            * it splits it.
            */
+          getAbfsClient().getAbfsCounters()
+              .incrementCounter(AbfsStatistic.ATOMIC_RENAME_PATH_ATTEMPTS, 1);
           if (srcAbfsLease == null) {
             srcAbfsLease = takeLease(src, srcEtag);
           }
@@ -192,6 +196,13 @@ public class BlobRenameHandler extends ListActionTaker {
     tracingContext.setOperatedBlobCount(operatedBlobCount.get() + 1);
     try {
       return renameInternal(src, dst);
+    } catch(AbfsRestOperationException e) {
+      if (e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+        // If the destination path already exists, then delete the source path.
+        getAbfsClient().deleteBlobPath(src, null, tracingContext);
+        return true;
+      }
+      throw e;
     } finally {
       tracingContext.setOperatedBlobCount(null);
     }
@@ -249,16 +260,17 @@ public class BlobRenameHandler extends ListActionTaker {
    * @param src source path
    * @param dst destination path
    * @param pathInformation object in which path information of the source path would be stored
+   * @param isRenameRecovery true if the rename operation is a recovery of a previous failed atomic rename operation
    *
    * @return true if the pre-checks pass
    * @throws AzureBlobFileSystemException if server call fails or given paths are invalid.
    */
   private boolean preCheck(final Path src, final Path dst,
-      final PathInformation pathInformation)
+      final PathInformation pathInformation, final boolean isRenameRecovery)
       throws AzureBlobFileSystemException {
     validateDestinationIsNotSubDir(src, dst);
     validateSourcePath(pathInformation);
-    validateDestinationPathNotExist(src, dst, pathInformation);
+    validateDestinationPathNotExist(src, dst, pathInformation, isRenameRecovery);
     validateDestinationParentExist(src, dst, pathInformation);
 
     return true;
@@ -319,13 +331,13 @@ public class BlobRenameHandler extends ListActionTaker {
    * @param src source path
    * @param dst destination path
    * @param pathInformation object containing the path information of the source path
+   * @param isRenameRecovery true if the rename operation is a recovery of a previous failed atomic rename operation
    *
    * @throws AbfsRestOperationException if the destination path already exists
    */
   private void validateDestinationPathNotExist(final Path src,
-      final Path dst,
-      final PathInformation pathInformation)
-      throws AzureBlobFileSystemException {
+      final Path dst, final PathInformation pathInformation,
+      final boolean isRenameRecovery) throws AzureBlobFileSystemException {
     /*
      * Destination path name can be same to that of source path name only in the
      * case of a directory rename.
@@ -333,8 +345,8 @@ public class BlobRenameHandler extends ListActionTaker {
      * In case the directory is being renamed to some other name, the destination
      * check would happen on the AzureBlobFileSystem#rename method.
      */
-    if (pathInformation.getIsDirectory() && dst.getName()
-        .equals(src.getName())) {
+    if (!isRenameRecovery && pathInformation.getIsDirectory()
+        && dst.getName().equals(src.getName())) {
       PathInformation dstPathInformation = getPathInformation(
           dst,
           tracingContext);

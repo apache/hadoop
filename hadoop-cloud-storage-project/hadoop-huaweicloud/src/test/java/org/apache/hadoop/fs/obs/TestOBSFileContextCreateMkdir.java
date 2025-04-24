@@ -18,19 +18,20 @@
 
 package org.apache.hadoop.fs.obs;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DelegateToFileSystem;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextCreateMkdirBaseTest;
 import org.apache.hadoop.fs.FileContextTestHelper;
 import org.apache.hadoop.fs.FileSystem;
-import org.junit.Assume;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 
 import java.net.URI;
 import java.util.UUID;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import edu.umd.cs.findbugs.annotation.SuppressFBWarnings;
 
 /**
  * File context create mkdir test cases on obs file system.
@@ -38,9 +39,9 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 public class TestOBSFileContextCreateMkdir extends
     FileContextCreateMkdirBaseTest {
 
-  @BeforeClass
+  @BeforeAll
   public static void skipTestCheck() {
-    Assume.assumeTrue(OBSContract.isContractTestEnabled());
+    assumeTrue(OBSContract.isContractTestEnabled());
   }
 
 

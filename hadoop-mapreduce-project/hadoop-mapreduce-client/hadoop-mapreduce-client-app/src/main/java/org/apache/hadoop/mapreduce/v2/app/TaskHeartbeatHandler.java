@@ -34,7 +34,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.yarn.util.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -29,11 +29,7 @@ import org.apache.hadoop.util.Time;
  * interval to expire.
  * This function can return a negative value and it must be handled correctly
  * by callers. See the documentation of System#nanoTime for caveats.
- * @deprecated This class has been moved to {@link org.apache.hadoop.util.MonotonicClock}
- * in hadoop-common-project and will be removed in future version.
- * Please use {@link org.apache.hadoop.util.MonotonicClock} instead.
  */
-@Deprecated
 @Public
 @Evolving
 public class MonotonicClock implements Clock {

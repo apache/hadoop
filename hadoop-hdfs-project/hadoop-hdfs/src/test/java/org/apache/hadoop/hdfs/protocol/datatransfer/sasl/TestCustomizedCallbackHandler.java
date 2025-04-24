@@ -22,8 +22,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferServer.
 import org.apache.hadoop.security.CustomizedCallbackHandler;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +33,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /** For testing {@link CustomizedCallbackHandler}. */
 public class TestCustomizedCallbackHandler {
@@ -54,10 +56,10 @@ public class TestCustomizedCallbackHandler {
   /** Assert if the callbacks in {@link #LAST_CALLBACKS} are the same as the expected callbacks. */
   static void assertCallbacks(Callback[] expected) {
     final List<Callback> computed = LAST_CALLBACKS.getAndSet(null);
-    Assert.assertNotNull(computed);
-    Assert.assertEquals(expected.length, computed.size());
+    assertNotNull(computed);
+    assertEquals(expected.length, computed.size());
     for (int i = 0; i < expected.length; i++) {
-      Assert.assertSame(expected[i], computed.get(i));
+      assertSame(expected[i], computed.get(i));
     }
   }
 

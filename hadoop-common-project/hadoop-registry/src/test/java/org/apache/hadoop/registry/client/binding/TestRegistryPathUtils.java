@@ -24,10 +24,10 @@ import java.util.List;
 
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.registry.client.exceptions.InvalidPathnameException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-public class TestRegistryPathUtils extends Assert {
+public class TestRegistryPathUtils extends Assertions {
 
 
   public static final String EURO = "\u20AC";
@@ -59,7 +59,7 @@ public class TestRegistryPathUtils extends Assert {
 
   protected void assertConverted(String expected, String in) {
     String out = RegistryPathUtils.encodeForRegistry(in);
-    assertEquals("Conversion of " + in, expected, out);
+    assertEquals(expected, out, "Conversion of " + in);
   }
 
   @Test
@@ -103,8 +103,8 @@ public class TestRegistryPathUtils extends Assert {
   private static void assertCreatedPathEquals(String expected, String base,
       String path) throws IOException {
     String fullPath = createFullPath(base, path);
-    assertEquals("\"" + base + "\" + \"" + path + "\" =\"" + fullPath + "\"",
-        expected, fullPath);
+    assertEquals(expected, fullPath,
+        "\"" + base + "\" + \"" + path + "\" =\"" + fullPath + "\"");
   }
 
   @Test
@@ -146,9 +146,11 @@ public class TestRegistryPathUtils extends Assert {
     assertEquals("c",lastPathEntry("/a/b/c/"));
   }
 
-  @Test(expected = PathNotFoundException.class)
+  @Test
   public void testParentOfRoot() throws Throwable {
-    parentOf("/");
+    assertThrows(PathNotFoundException.class, () -> {
+      parentOf("/");
+    });
   }
 
   @Test

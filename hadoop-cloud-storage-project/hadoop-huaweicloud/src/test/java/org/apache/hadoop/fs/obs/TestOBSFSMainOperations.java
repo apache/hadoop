@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.fs.obs;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.TestFSMainOperationsLocalFileSystem;
-import org.junit.After;
-import org.junit.Assume;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * <p>
@@ -46,7 +47,7 @@ public class TestOBSFSMainOperations extends
     TestFSMainOperationsLocalFileSystem {
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     skipTestCheck();
     Configuration conf = new Configuration();
@@ -56,17 +57,17 @@ public class TestOBSFSMainOperations extends
 
   @Override
   public void testWorkingDirectory() {
-    Assume.assumeTrue("unspport.", false);
+    assumeTrue(false, "unspport.");
   }
 
   @Override
   public void testListStatusThrowsExceptionForUnreadableDir() {
-    Assume.assumeTrue("unspport.", false);
+    assumeTrue(false, "unspport.");
   }
 
   @Override
   public void testRenameDirectoryToItself() {
-    Assume.assumeTrue("unspport.", false);
+    assumeTrue(false, "unspport.");
   }
 
   @Override
@@ -76,11 +77,11 @@ public class TestOBSFSMainOperations extends
 
   @Override
   public void testRenameFileToItself() {
-    Assume.assumeTrue("unspport.", false);
+    assumeTrue(false, "unspport.");
   }
 
   @Override
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if(fSys != null) {
       super.tearDown();
@@ -88,6 +89,6 @@ public class TestOBSFSMainOperations extends
   }
 
   public void skipTestCheck() {
-    Assume.assumeTrue(OBSContract.isContractTestEnabled());
+    assumeTrue(OBSContract.isContractTestEnabled());
   }
 }

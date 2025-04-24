@@ -45,7 +45,6 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -1353,7 +1352,7 @@ public class AbfsDfsClient extends AbfsClient {
         LOG.debug("ListPath listed {} paths with {} as continuation token",
             listResultSchema.paths().size(),
             getContinuationFromResponse(result));
-        List<FileStatus> fileStatuses = new ArrayList<>();
+        List<VersionedFileStatus> fileStatuses = new ArrayList<>();
         for (DfsListResultEntrySchema entry : listResultSchema.paths()) {
           fileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
         }

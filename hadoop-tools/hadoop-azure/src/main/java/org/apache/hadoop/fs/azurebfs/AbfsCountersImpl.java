@@ -37,6 +37,7 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableMetric;
 
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.ATOMIC_RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_RECEIVED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_SENT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_APPEND;
@@ -134,7 +135,8 @@ public class AbfsCountersImpl implements AbfsCounters {
       SERVER_UNAVAILABLE,
       RENAME_RECOVERY,
       METADATA_INCOMPLETE_RENAME_FAILURES,
-      RENAME_PATH_ATTEMPTS
+      RENAME_PATH_ATTEMPTS,
+      ATOMIC_RENAME_PATH_ATTEMPTS
   };
 
   private static final AbfsStatistic[] DURATION_TRACKER_LIST = {

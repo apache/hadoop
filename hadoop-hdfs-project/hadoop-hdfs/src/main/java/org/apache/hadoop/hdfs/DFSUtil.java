@@ -1630,7 +1630,9 @@ public class DFSUtil {
             getPassword(sslConf, DFS_SERVER_HTTPS_TRUSTSTORE_PASSWORD_KEY),
             sslConf.get("ssl.server.truststore.type", "jks"))
         .excludeCiphers(
-            sslConf.get("ssl.server.exclude.cipher.list"));
+            sslConf.get("ssl.server.exclude.cipher.list"))
+        .includeCiphers(
+            sslConf.get("ssl.server.include.cipher.list"));
   }
 
   /**
