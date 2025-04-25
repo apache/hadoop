@@ -32,6 +32,7 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.LazyAutoCloseableReference;
 
 import static org.apache.hadoop.fs.s3a.Constants.ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX;
+import static org.apache.hadoop.fs.s3a.Statistic.ANALYTICS_STREAM_FACTORY_CLOSED;
 import static org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration.populateVectoredIOContext;
 
 /**
@@ -93,6 +94,13 @@ public class AnalyticsStreamFactory extends AbstractObjectInputStreamFactory {
     return new StreamFactoryRequirements(0,
             0, vectorContext,
             StreamFactoryRequirements.Requirements.ExpectUnauditedGetRequests);
+  }
+
+  @Override
+  protected void serviceStop() throws Exception {
+    this.s3SeekableInputStreamFactory.close();
+    callbacks().incrementFactoryStatistic(ANALYTICS_STREAM_FACTORY_CLOSED);
+    super.serviceStop();
   }
 
   private S3SeekableInputStreamFactory getOrCreateS3SeekableInputStreamFactory()

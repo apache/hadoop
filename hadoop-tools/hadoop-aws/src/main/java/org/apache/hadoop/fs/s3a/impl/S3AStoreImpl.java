@@ -996,6 +996,12 @@ public class S3AStoreImpl
       LOG.debug("Stream factory requested async client");
       return clientManager().getOrCreateAsyncClient();
     }
+
+    @Override
+    public void incrementFactoryStatistic(Statistic statistic) {
+      incrementStatistic(statistic);
+    }
+
   }
 
   /*
