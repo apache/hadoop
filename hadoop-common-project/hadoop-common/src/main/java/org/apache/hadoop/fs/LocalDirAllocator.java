@@ -65,7 +65,10 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Unstable
 public class LocalDirAllocator {
-  
+
+  static final String E_NO_SPACE_AVAILABLE =
+      "No space available in any of the local directories";
+
   //A Map from the config item names like "mapred.local.dir"
   //to the instance of the AllocatorPerContext. This
   //is a static object to make sure there exists exactly one instance per JVM
@@ -393,6 +396,8 @@ public class LocalDirAllocator {
      */
     public Path getLocalPathForWrite(String pathStr, long size,
         Configuration conf, boolean checkWrite) throws IOException {
+      LOG.debug("searchng for directory for file at {}, size = {}; checkWrite={}",
+          pathStr, size, checkWrite);
       Context ctx = confChanged(conf);
       int numDirs = ctx.localDirs.length;
       int numDirsSearched = 0;
@@ -406,27 +411,40 @@ public class LocalDirAllocator {
         pathStr = pathStr.substring(1);
       }
       Path returnPath = null;
-      
-      if(size == SIZE_UNKNOWN) {  //do roulette selection: pick dir with probability 
-                    //proportional to available size
-        long[] availableOnDisk = new long[ctx.dirDF.length];
-        long totalAvailable = 0;
-        
-            //build the "roulette wheel"
-        for(int i =0; i < ctx.dirDF.length; ++i) {
-          final DF target = ctx.dirDF[i];
-          // attempt to recreate the dir so that getAvailable() is valid
-          // if it fails, getAvailable() will return 0, so the dir will
-          // be declared unavailable.
-          // return value is logged at debug to keep spotbugs quiet.
-          final boolean b = new File(target.getDirPath()).mkdirs();
-          LOG.debug("mkdirs of {}={}", target, b);
-          availableOnDisk[i] = target.getAvailable();
-          totalAvailable += availableOnDisk[i];
-        }
 
-        if (totalAvailable == 0){
-          throw new DiskErrorException("No space available in any of the local directories.");
+      final int dirCount = ctx.dirDF.length;
+      long[] availableOnDisk = new long[dirCount];
+      long totalAvailable = 0;
+
+      StringBuilder pathNames = new StringBuilder();
+
+      //build the "roulette wheel"
+      for (int i =0; i < dirCount; ++i) {
+        final DF target = ctx.dirDF[i];
+        // attempt to recreate the dir so that getAvailable() is valid
+        // if it fails, getAvailable() will return 0, so the dir will
+        // be declared unavailable.
+        // return value is logged at debug to keep spotbugs quiet.
+        final String name = target.getDirPath();
+        pathNames.append(" ").append(name);
+        final File dirPath = new File(name);
+        if (!dirPath.exists()) {
+          LOG.debug("creating buffer dir {}}", name);
+          dirPath.mkdirs();
+        }
+        availableOnDisk[i] = target.getAvailable();
+        totalAvailable += availableOnDisk[i];
+      }
+
+      LOG.debug("Directory count is {}; total available capacity is {}",
+          dirCount, totalAvailable);
+
+      if (size == SIZE_UNKNOWN) {  //do roulette selection: pick dir with probability
+                    //proportional to available size
+        LOG.debug("Size not specified, so picking at random");
+
+        if (totalAvailable == 0) {
+          throw new DiskErrorException(E_NO_SPACE_AVAILABLE + pathNames);
         }
 
         // Keep rolling the wheel till we get a valid path
@@ -439,14 +457,19 @@ public class LocalDirAllocator {
             dir++;
           }
           ctx.dirNumLastAccessed.set(dir);
-          returnPath = createPath(ctx.localDirs[dir], pathStr, checkWrite);
+          final Path localDir = ctx.localDirs[dir];
+          returnPath = createPath(localDir, pathStr, checkWrite);
           if (returnPath == null) {
             totalAvailable -= availableOnDisk[dir];
             availableOnDisk[dir] = 0; // skip this disk
             numDirsSearched++;
+            LOG.debug("No capacity in {}", localDir);
+          } else {
+            LOG.debug("Allocated file {} in {}", returnPath, localDir);
           }
         }
       } else {
+        LOG.debug("Size is {}; searching", size);
         // Start linear search with random increment if possible
         int randomInc = 1;
         if (numDirs > 2) {
@@ -459,17 +482,20 @@ public class LocalDirAllocator {
             maxCapacity = capacity;
           }
           if (capacity > size) {
+            final Path localDir = ctx.localDirs[dirNum];
             try {
-              returnPath = createPath(ctx.localDirs[dirNum], pathStr,
-                  checkWrite);
+              returnPath = createPath(localDir, pathStr, checkWrite);
             } catch (IOException e) {
               errorText = e.getMessage();
               diskException = e;
-              LOG.debug("DiskException caught for dir {}", ctx.localDirs[dirNum], e);
+              LOG.debug("DiskException caught for dir {}", localDir, e);
             }
             if (returnPath != null) {
               ctx.getAndIncrDirNumLastAccessed(numDirsSearched);
+              LOG.debug("Allocated file {} in {}", returnPath, localDir);
               break;
+            } else {
+              LOG.debug("No capacity in {}", localDir);
             }
           }
           dirNum++;
@@ -484,7 +510,9 @@ public class LocalDirAllocator {
       //no path found
       String newErrorText = "Could not find any valid local directory for " +
           pathStr + " with requested size " + size +
-          " as the max capacity in any directory is " + maxCapacity;
+          " as the max capacity in any directory"
+          + " (" + pathNames + " )"
+          + " is " + maxCapacity;
       if (errorText != null) {
         newErrorText = newErrorText + " due to " + errorText;
       }

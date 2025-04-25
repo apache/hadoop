@@ -26,14 +26,16 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Shell;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static org.apache.hadoop.fs.LocalDirAllocator.E_NO_SPACE_AVAILABLE;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -564,13 +566,8 @@ public class TestLocalDirAllocator {
       throws Exception {
     initTestLocalDirAllocator(paramRoot, paramPrefix);
     conf.set(CONTEXT, " ");
-    try {
-      dirAllocator.getLocalPathForWrite("/test", conf);
-      fail("not throwing the exception");
-    } catch (IOException e) {
-      assertEquals("No space available in any of the local directories.",
-          e.getMessage(), "Incorrect exception message");
-    }
+    intercept(IOException.class, E_NO_SPACE_AVAILABLE, () ->
+        dirAllocator.getLocalPathForWrite("/test", conf));
   }
 
   /**
@@ -587,10 +584,13 @@ public class TestLocalDirAllocator {
     String dir0 = buildBufferDir(root, 0);
     String dir1 = buildBufferDir(root, 1);
     conf.set(CONTEXT, dir0 + "," + dir1);
-    LambdaTestUtils.intercept(DiskErrorException.class,
+    final DiskErrorException ex = intercept(DiskErrorException.class,
         String.format("Could not find any valid local directory for %s with requested size %s",
             "p1/x", Long.MAX_VALUE - 1), "Expect a DiskErrorException.",
         () -> dirAllocator.getLocalPathForWrite("p1/x", Long.MAX_VALUE - 1, conf));
+    Assertions.assertThat(ex.getMessage())
+        .contains(new File(dir0).getName())
+        .contains(new File(dir1).getName());
   }
 
   /**
@@ -614,5 +614,31 @@ public class TestLocalDirAllocator {
     // and expect to get a new file back
     dirAllocator.getLocalPathForWrite("file2", -1, conf);
   }
+
+
+  /**
+   * Test for HADOOP-19554. LocalDirAllocator still doesn't always recover
+   * from directory tree deletion.
+   */
+  @Timeout(value = 30)
+  @MethodSource("params")
+  @ParameterizedTest
+  public void testDirectoryRecoveryKnownSize(String paramRoot, String paramPrefix) throws Throwable {
+    initTestLocalDirAllocator(paramRoot, paramPrefix);
+    String dir0 = buildBufferDir(root, 0);
+    String subdir = dir0 + "/subdir1/subdir2";
+
+    conf.set(CONTEXT, subdir);
+    // get local path and an ancestor
+    final Path pathForWrite = dirAllocator.getLocalPathForWrite("file", 512, conf);
+    final Path ancestor = pathForWrite.getParent().getParent();
+
+    // delete that ancestor
+    localFs.delete(ancestor, true);
+    // and expect to get a new file back
+    dirAllocator.getLocalPathForWrite("file2", -1, conf);
+  }
+
+
 }
 
