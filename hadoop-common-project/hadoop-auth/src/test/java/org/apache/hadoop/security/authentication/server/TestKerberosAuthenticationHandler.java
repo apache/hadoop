@@ -215,7 +215,7 @@ public class TestKerberosAuthenticationHandler
           user + "@" + KerberosTestUtils.getRealm());
       boolean expected = user.startsWith("HTTP/");
       assertEquals(expected,
-          loginPrincipals.contains(principal), "checking for "+user);
+          loginPrincipals.contains(principal), "checking for " + user);
     }
   }
 
