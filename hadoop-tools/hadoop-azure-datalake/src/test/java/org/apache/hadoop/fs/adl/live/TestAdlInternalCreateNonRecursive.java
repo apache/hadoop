@@ -25,10 +25,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.adl.common.Parallelized;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -92,7 +92,7 @@ public class TestAdlInternalCreateNonRecursive {
             IOException.class }*/});
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Assume.assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
     adlStore = AdlStorageConfiguration.createStorageConnector();
@@ -122,12 +122,12 @@ public class TestAdlInternalCreateNonRecursive {
         throw e;
       }
 
-      Assert.assertEquals(expectedExceptionType, e.getClass());
+      Assertions.assertEquals(expectedExceptionType, e.getClass());
       return;
     }
 
     if (expectedExceptionType != null) {
-      Assert.fail("CreateNonRecursive should have failed with exception "
+      Assertions.fail("CreateNonRecursive should have failed with exception "
           + expectedExceptionType.getName());
     }
   }

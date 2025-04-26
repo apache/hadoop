@@ -44,15 +44,15 @@ import static org.apache.hadoop.fs.adl.AdlConfKeys
     .AZURE_AD_TOKEN_PROVIDER_TYPE_KEY;
 import static org.apache.hadoop.fs.adl.AdlConfKeys.DEVICE_CODE_CLIENT_APP_ID;
 import static org.apache.hadoop.fs.adl.TokenProviderType.*;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 
 /**
@@ -81,7 +81,7 @@ public class TestAzureADTokenProvider {
     AdlFileSystem fileSystem = new AdlFileSystem();
     fileSystem.initialize(uri, conf);
     AccessTokenProvider tokenProvider = fileSystem.getTokenProvider();
-    Assert.assertTrue(tokenProvider instanceof RefreshTokenBasedTokenProvider);
+    Assertions.assertTrue(tokenProvider instanceof RefreshTokenBasedTokenProvider);
   }
 
   @Test
@@ -97,7 +97,7 @@ public class TestAzureADTokenProvider {
     AdlFileSystem fileSystem = new AdlFileSystem();
     fileSystem.initialize(uri, conf);
     AccessTokenProvider tokenProvider = fileSystem.getTokenProvider();
-    Assert.assertTrue(tokenProvider instanceof ClientCredsTokenProvider);
+    Assertions.assertTrue(tokenProvider instanceof ClientCredsTokenProvider);
   }
 
   @Test
@@ -110,7 +110,7 @@ public class TestAzureADTokenProvider {
     AdlFileSystem fileSystem = new AdlFileSystem();
     fileSystem.initialize(uri, conf);
     AccessTokenProvider tokenProvider = fileSystem.getTokenProvider();
-    Assert.assertTrue(tokenProvider instanceof MsiTokenProvider);
+    Assertions.assertTrue(tokenProvider instanceof MsiTokenProvider);
   }
 
   @Test
@@ -129,7 +129,7 @@ public class TestAzureADTokenProvider {
       AdlFileSystem fileSystem = new AdlFileSystem();
       fileSystem.initialize(uri, conf);
       AccessTokenProvider tokenProvider = fileSystem.getTokenProvider();
-      Assert.assertTrue(tokenProvider instanceof DeviceCodeTokenProvider);
+      Assertions.assertTrue(tokenProvider instanceof DeviceCodeTokenProvider);
     }
   }
 
@@ -145,7 +145,7 @@ public class TestAzureADTokenProvider {
     AdlFileSystem fileSystem = new AdlFileSystem();
     fileSystem.initialize(uri, conf);
     AccessTokenProvider tokenProvider = fileSystem.getTokenProvider();
-    Assert.assertTrue(tokenProvider instanceof SdkTokenProviderAdapter);
+    Assertions.assertTrue(tokenProvider instanceof SdkTokenProviderAdapter);
   }
 
   @Test
@@ -157,7 +157,7 @@ public class TestAzureADTokenProvider {
     AdlFileSystem fileSystem = new AdlFileSystem();
     try {
       fileSystem.initialize(uri, conf);
-      Assert.fail("Initialization should have failed due no token provider "
+      Assertions.fail("Initialization should have failed due no token provider "
           + "configuration");
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains(
@@ -179,10 +179,10 @@ public class TestAzureADTokenProvider {
         "wrong.classpath.CustomMockTokenProvider");
     try {
       fileSystem.initialize(uri, conf);
-      Assert.fail("Initialization should have failed due invalid provider "
+      Assertions.fail("Initialization should have failed due invalid provider "
           + "configuration");
     } catch (RuntimeException e) {
-      Assert.assertTrue(
+      Assertions.assertTrue(
           e.getMessage().contains("wrong.classpath.CustomMockTokenProvider"));
     }
   }
@@ -217,7 +217,7 @@ public class TestAzureADTokenProvider {
     fileSystem.initialize(uri, conf);
     RefreshTokenBasedTokenProvider expected =
         new RefreshTokenBasedTokenProvider(CLIENT_ID, REFRESH_TOKEN);
-    Assert.assertTrue(EqualsBuilder.reflectionEquals(expected,
+    Assertions.assertTrue(EqualsBuilder.reflectionEquals(expected,
         fileSystem.getTokenProvider()));
   }
 
@@ -236,7 +236,7 @@ public class TestAzureADTokenProvider {
     fileSystem.initialize(uri, conf);
     RefreshTokenBasedTokenProvider expected =
         new RefreshTokenBasedTokenProvider(CLIENT_ID, REFRESH_TOKEN);
-    Assert.assertTrue(EqualsBuilder.reflectionEquals(expected,
+    Assertions.assertTrue(EqualsBuilder.reflectionEquals(expected,
         fileSystem.getTokenProvider()));
   }
 
@@ -263,7 +263,7 @@ public class TestAzureADTokenProvider {
     fileSystem.initialize(uri, conf);
     ClientCredsTokenProvider expected = new ClientCredsTokenProvider(
         REFRESH_URL, CLIENT_ID, CLIENT_SECRET);
-    Assert.assertTrue(EqualsBuilder.reflectionEquals(expected,
+    Assertions.assertTrue(EqualsBuilder.reflectionEquals(expected,
         fileSystem.getTokenProvider()));
   }
 
@@ -283,7 +283,7 @@ public class TestAzureADTokenProvider {
     fileSystem.initialize(uri, conf);
     ClientCredsTokenProvider expected = new ClientCredsTokenProvider(
         REFRESH_URL, CLIENT_ID, CLIENT_SECRET);
-    Assert.assertTrue(EqualsBuilder.reflectionEquals(expected,
+    Assertions.assertTrue(EqualsBuilder.reflectionEquals(expected,
         fileSystem.getTokenProvider()));
   }
 

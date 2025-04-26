@@ -23,9 +23,9 @@ import com.microsoft.azure.datalake.store.SSLSocketFactoryEx.SSLChannelMode;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.adl.AdlFileSystem;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -57,8 +57,8 @@ public class TestAdlSdkConfiguration {
     // Skip this test if we can't get a real FS
     Assume.assumeNotNull(fs);
     effectiveTimeout = fs.getAdlClient().getDefaultTimeout();
-    Assert.assertFalse("A negative timeout is not supposed to take effect",
-        effectiveTimeout < 0);
+    Assertions.assertFalse(effectiveTimeout < 0,
+        "A negative timeout is not supposed to take effect");
 
     conf = AdlStorageConfiguration.getConfiguration();
     conf.setInt(ADL_HTTP_TIMEOUT, 17);
@@ -71,8 +71,8 @@ public class TestAdlSdkConfiguration {
     }
 
     effectiveTimeout = fs.getAdlClient().getDefaultTimeout();
-    Assert.assertEquals("Timeout is getting set",
-        effectiveTimeout, 17);
+    Assertions.assertEquals(
+        effectiveTimeout, 17, "Timeout is getting set");
 
     // The default value may vary by SDK, so that value is not tested here.
   }
@@ -101,8 +101,8 @@ public class TestAdlSdkConfiguration {
     Assume.assumeNotNull(fs);
 
     SSLChannelMode sslChannelMode = fs.getAdlClient().getSSLChannelMode();
-    Assert.assertEquals(
-        "Unexpected SSL Channel Mode for adl.ssl.channel.mode config value : "
-            + sslChannelModeConfigValue, expectedMode, sslChannelMode);
+    Assertions.assertEquals(
+    expectedMode, sslChannelMode, "Unexpected SSL Channel Mode for adl.ssl.channel.mode config value : "
+            + sslChannelModeConfigValue);
   }
 }

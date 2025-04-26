@@ -23,10 +23,10 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.adl.common.Parallelized;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
@@ -246,7 +246,7 @@ public class TestAdlSupportedCharsetInPath {
     filePathList.add("bobτ");
   }
 
-  @AfterClass
+  @AfterAll
   public static void testReport() throws IOException, URISyntaxException {
     if (!AdlStorageConfiguration.isContractTestEnabled()) {
       return;
@@ -263,16 +263,16 @@ public class TestAdlSupportedCharsetInPath {
     Path specialFile = new Path(parentPath, path);
     FileSystem fs = AdlStorageConfiguration.createStorageConnector();
 
-    Assert.assertTrue("Mkdir failed : " + specialFile, fs.mkdirs(specialFile));
-    Assert.assertTrue("File not Found after Mkdir success" + specialFile,
-        fs.exists(specialFile));
-    Assert.assertTrue("Not listed under parent " + parentPath,
-        contains(fs.listStatus(parentPath),
-            fs.makeQualified(specialFile).toString()));
-    Assert.assertTrue("Delete failed : " + specialFile,
-            fs.delete(specialFile, true));
-    Assert.assertFalse("File still exist after delete " + specialFile,
-        fs.exists(specialFile));
+    Assertions.assertTrue(fs.mkdirs(specialFile), "Mkdir failed : " + specialFile);
+    Assertions.assertTrue(
+       fs.exists(specialFile), "File not Found after Mkdir success" + specialFile);
+    Assertions.assertTrue(
+       contains(fs.listStatus(parentPath),
+            fs.makeQualified(specialFile).toString()), "Not listed under parent " + parentPath);
+    Assertions.assertTrue(
+           fs.delete(specialFile, true), "Delete failed : " + specialFile);
+    Assertions.assertFalse(
+       fs.exists(specialFile), "File still exist after delete " + specialFile);
   }
 
   private boolean contains(FileStatus[] statuses, String remotePath) {
@@ -286,7 +286,7 @@ public class TestAdlSupportedCharsetInPath {
     return false;
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     org.junit.Assume
         .assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
@@ -301,34 +301,34 @@ public class TestAdlSupportedCharsetInPath {
     Path anotherLocation = new Path(parentPath + UUID.randomUUID().toString());
     FileSystem fs = AdlStorageConfiguration.createStorageConnector();
 
-    Assert.assertTrue("Could not create " + specialFile.toString(),
-        fs.createNewFile(specialFile));
-    Assert.assertTrue(
-        "Failed to rename " + specialFile.toString() + " --> " + anotherLocation
-            .toString(), fs.rename(specialFile, anotherLocation));
-    Assert.assertFalse("File should not be present after successful rename : "
-        + specialFile.toString(), fs.exists(specialFile));
-    Assert.assertTrue("File should be present after successful rename : "
-        + anotherLocation.toString(), fs.exists(anotherLocation));
-    Assert.assertFalse(
-        "Listed under parent whereas expected not listed : " + parentPath,
-        contains(fs.listStatus(new Path(parentPath)),
-            fs.makeQualified(specialFile).toString()));
+    Assertions.assertTrue(
+       fs.createNewFile(specialFile), "Could not create " + specialFile.toString());
+    Assertions.assertTrue(
+    fs.rename(specialFile, anotherLocation), "Failed to rename " + specialFile.toString() + " --> " + anotherLocation
+            .toString());
+    Assertions.assertFalse(fs.exists(specialFile), "File should not be present after successful rename : "
+        + specialFile.toString());
+    Assertions.assertTrue(fs.exists(anotherLocation), "File should be present after successful rename : "
+        + anotherLocation.toString());
+    Assertions.assertFalse(
+    
+       contains(fs.listStatus(new Path(parentPath)),
+            fs.makeQualified(specialFile).toString()), "Listed under parent whereas expected not listed : " + parentPath);
 
-    Assert.assertTrue(
-        "Failed to rename " + anotherLocation.toString() + " --> " + specialFile
-            .toString(), fs.rename(anotherLocation, specialFile));
-    Assert.assertTrue(
-        "File should be present after successful rename : " + "" + specialFile
-            .toString(), fs.exists(specialFile));
-    Assert.assertFalse("File should not be present after successful rename : "
-        + anotherLocation.toString(), fs.exists(anotherLocation));
+    Assertions.assertTrue(
+    fs.rename(anotherLocation, specialFile), "Failed to rename " + anotherLocation.toString() + " --> " + specialFile
+            .toString());
+    Assertions.assertTrue(
+    fs.exists(specialFile), "File should be present after successful rename : " + "" + specialFile
+            .toString());
+    Assertions.assertFalse(fs.exists(anotherLocation), "File should not be present after successful rename : "
+        + anotherLocation.toString());
 
-    Assert.assertTrue("Not listed under parent " + parentPath,
-        contains(fs.listStatus(new Path(parentPath)),
-            fs.makeQualified(specialFile).toString()));
+    Assertions.assertTrue(
+       contains(fs.listStatus(new Path(parentPath)),
+            fs.makeQualified(specialFile).toString()), "Not listed under parent " + parentPath);
 
-    Assert.assertTrue("Failed to delete " + parentPath,
-        fs.delete(new Path(parentPath), true));
+    Assertions.assertTrue(
+       fs.delete(new Path(parentPath), true), "Failed to delete " + parentPath);
   }
 }

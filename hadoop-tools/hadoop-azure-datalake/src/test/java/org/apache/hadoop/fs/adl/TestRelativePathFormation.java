@@ -20,8 +20,8 @@ package org.apache.hadoop.fs.adl;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
@@ -48,17 +48,17 @@ public class TestRelativePathFormation {
 
     fs.initialize(new URI("adl://temp.account.net"), configuration);
 
-    Assert.assertEquals("/usr", fs.toRelativeFilePath(new Path("/usr")));
-    Assert.assertEquals("/usr",
+    Assertions.assertEquals("/usr", fs.toRelativeFilePath(new Path("/usr")));
+    Assertions.assertEquals("/usr",
         fs.toRelativeFilePath(new Path("adl://temp.account.net/usr")));
 
     // When working directory is set.
     fs.setWorkingDirectory(new Path("/a/b/"));
-    Assert.assertEquals("/usr", fs.toRelativeFilePath(new Path("/usr")));
-    Assert.assertEquals("/a/b/usr", fs.toRelativeFilePath(new Path("usr")));
-    Assert.assertEquals("/usr",
+    Assertions.assertEquals("/usr", fs.toRelativeFilePath(new Path("/usr")));
+    Assertions.assertEquals("/a/b/usr", fs.toRelativeFilePath(new Path("usr")));
+    Assertions.assertEquals("/usr",
         fs.toRelativeFilePath(new Path("adl://temp.account.net/usr")));
-    Assert.assertEquals("/usr",
+    Assertions.assertEquals("/usr",
         fs.toRelativeFilePath(new Path("wasb://temp.account.net/usr")));
   }
 

@@ -22,8 +22,8 @@ package org.apache.hadoop.fs.adl.live;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
@@ -39,7 +39,7 @@ public class TestAdlFileContextMainOperationsLive
 
   private static final String KEY_FILE_SYSTEM = "test.fs.adl.name";
 
-  @BeforeClass
+  @BeforeAll
   public static void skipTestCheck() {
     Assume.assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
   }

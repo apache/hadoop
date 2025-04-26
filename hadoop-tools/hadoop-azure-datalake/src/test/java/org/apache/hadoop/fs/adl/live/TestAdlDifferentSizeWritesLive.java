@@ -24,10 +24,10 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.adl.common.Parallelized;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -71,7 +71,7 @@ public class TestAdlDifferentSizeWritesLive {
             {10 * 1024, 8 * 1024}});
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void cleanUpParent() throws IOException, URISyntaxException {
     if (AdlStorageConfiguration.isContractTestEnabled()) {
       Path path = new Path("/test/dataIntegrityCheck/");
@@ -80,7 +80,7 @@ public class TestAdlDifferentSizeWritesLive {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     org.junit.Assume
         .assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
@@ -117,7 +117,7 @@ public class TestAdlDifferentSizeWritesLive {
     FSDataInputStream in = fs.open(path);
     in.readFully(0, actualData);
     in.close();
-    Assert.assertArrayEquals(expectedData, actualData);
-    Assert.assertTrue(fs.delete(path, true));
+    Assertions.assertArrayEquals(expectedData, actualData);
+    Assertions.assertTrue(fs.delete(path, true));
   }
 }
