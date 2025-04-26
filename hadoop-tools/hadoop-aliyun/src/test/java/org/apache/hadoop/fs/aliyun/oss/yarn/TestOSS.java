@@ -63,12 +63,12 @@ public class TestOSS {
     FsStatus fsStatus = fc.getFsStatus(null);
     assertNotNull(fsStatus);
     assertTrue(
-       fsStatus.getUsed() >= 0, "Used capacity should be positive: " + fsStatus.getUsed());
+        fsStatus.getUsed() >= 0, "Used capacity should be positive: " + fsStatus.getUsed());
     assertTrue(
-       fsStatus.getRemaining() >= 0, "Remaining capacity should be positive: " + fsStatus
+        fsStatus.getRemaining() >= 0, "Remaining capacity should be positive: " + fsStatus
         .getRemaining());
     assertTrue(
-       fsStatus.getCapacity() >= 0, "Capacity should be positive: " + fsStatus.getCapacity());
+        fsStatus.getCapacity() >= 0, "Capacity should be positive: " + fsStatus.getCapacity());
   }
 
   @Test

@@ -267,7 +267,7 @@ public class TestAliyunOSSBlockOutputStream {
       LinkedHashSet<String> files = (LinkedHashSet<String>)field.get(name);
       assertTrue(files.isEmpty(), "in DeleteOnExitHook");
       assertFalse(
-         (new ArrayList<>(files)).contains(tmp.getPath()), "in DeleteOnExitHook");
+          (new ArrayList<>(files)).contains(tmp.getPath()), "in DeleteOnExitHook");
     } catch (Exception e) {
       e.printStackTrace();
     }

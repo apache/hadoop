@@ -75,7 +75,7 @@ public class TestAliyunOSSFileSystemContract
     //this catches overrides of the base exists() method that don't
     //use getFileStatus() as an existence probe
     assertTrue(
-       fs.exists(super.path("/")), "FileSystem.exists() fails for root");
+        fs.exists(super.path("/")), "FileSystem.exists() fails for root");
   }
 
   @Test
@@ -355,18 +355,18 @@ public class TestAliyunOSSFileSystemContract
     this.createFile(filePath);
     assertTrue(this.fs.getFileStatus(filePath).isFile(), "Should be file");
     assertFalse(
-       this.fs.getFileStatus(filePath).isDirectory(), "Should not be directory");
+        this.fs.getFileStatus(filePath).isDirectory(), "Should not be directory");
 
     Path dirPath = this.path("/test/oss/dir");
     this.fs.mkdirs(dirPath);
     assertTrue(
-       this.fs.getFileStatus(dirPath).isDirectory(), "Should be directory");
+        this.fs.getFileStatus(dirPath).isDirectory(), "Should be directory");
     assertFalse(this.fs.getFileStatus(dirPath).isFile(), "Should not be file");
 
     Path parentPath = this.path("/test/oss");
     for (FileStatus fileStatus: fs.listStatus(parentPath)) {
       assertTrue(
-         fileStatus.getModificationTime() > 0L, "file and directory should be new");
+          fileStatus.getModificationTime() > 0L, "file and directory should be new");
     }
   }
 
