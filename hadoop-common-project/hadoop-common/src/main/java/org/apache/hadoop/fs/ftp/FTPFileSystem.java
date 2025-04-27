@@ -530,7 +530,7 @@ public class FTPFileSystem extends FileSystem {
       return new FileStatus(length, isDir, blockReplication, blockSize,
           modTime, this.makeQualified(root));
     }
-    String pathName = new File(parentPath.toUri().getPath()).getCanonicalPath();
+    String pathName = parentPath.toUri().getPath();
     FTPFile[] ftpFiles = client.listFiles(pathName);
     if (ftpFiles != null) {
       for (FTPFile ftpFile : ftpFiles) {

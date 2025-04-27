@@ -19,18 +19,10 @@ package org.apache.hadoop.fs.ftp;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Comparator;
 
-import org.apache.commons.net.PrintCommandListener;
-import org.apache.commons.net.ftp.FTPClientConfig;
-import org.apache.commons.net.ftp.FTPReply;
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
@@ -276,95 +268,11 @@ public class TestFTPFileSystem {
 
     FileSystem fs = FileSystem.get(configuration);
 
-    Path ftpDir = fs.makeQualified(new Path(testDir.toAbsolutePath().toString()));
+    Path ftpDir = fs.makeQualified(new Path("/"));
     Path file1 = fs.makeQualified(new Path(ftpDir, "renamefile" + "1"));
     Path file2 = fs.makeQualified(new Path(ftpDir, "renamefile" + "2"));
 
     touch(fs, file1);
-    FTPClient ftpClient = connect(configuration);
-    FTPFile[] files = ftpClient.listFiles("/D/projects/github/apache/hadoop/hadoop-common-project/hadoop-common/target/test/data");
-    FTPFile[] files1 = ftpClient.listFiles("D:/projects/github/apache/hadoop/hadoop-common-project/hadoop-common/target/test/data");
-    FTPFile[] files2 = ftpClient.listFiles("D:\\projects\\github\\apache\\hadoop\\hadoop-common-project\\hadoop-common\\target\\test\\data");
     assertTrue(fs.rename(file1, file2));
-  }
-
-  private FTPClient connect(Configuration conf) throws IOException {
-    FTPClient client = null;
-    String host = conf.get("fs.ftp.host");
-    int port = conf.getInt("fs.ftp.host.port", FTP.DEFAULT_PORT);
-    String user = conf.get("fs.ftp.user." + host);
-    String password = conf.get("fs.ftp.password." + host);
-    client = new FTPClient();
-    FTPClientConfig config = new FTPClientConfig(FTPClientConfig.SYST_NT);
-    client.configure(config);
-    client.connect(host, port);
-    int reply = client.getReplyCode();
-    if (!FTPReply.isPositiveCompletion(reply)) {
-      throw NetUtils.wrapException(host, port,
-          NetUtils.UNKNOWN_HOST, 0,
-          new ConnectException("Server response " + reply));
-    } else if (client.login(user, password)) {
-      client.setFileTransferMode(getTransferMode(conf));
-      client.setFileType(FTP.BINARY_FILE_TYPE);
-      client.setBufferSize(FTPFileSystem.DEFAULT_BUFFER_SIZE);
-      setTimeout(client, conf);
-      setDataConnectionMode(client, conf);
-    } else {
-      throw new IOException("Login failed on server - " + host + ", port - "
-          + port + " as user '" + user + "'");
-    }
-
-    client.enterLocalActiveMode();
-    client.initiateListParsing();
-
-    client.addProtocolCommandListener(new PrintCommandListener(new PrintWriter(System.out), true));
-    return client;
-  }
-
-  private
-  int getTransferMode(Configuration conf) {
-    final String mode = conf.get(FTPFileSystem.FS_FTP_TRANSFER_MODE);
-    // FTP default is STREAM_TRANSFER_MODE, but Hadoop FTPFS's default is
-    // FTP.BLOCK_TRANSFER_MODE historically.
-    int ret = FTP.BLOCK_TRANSFER_MODE;
-    if (mode == null) {
-      return ret;
-    }
-    final String upper = mode.toUpperCase();
-    if (upper.equals("STREAM_TRANSFER_MODE")) {
-      ret = FTP.STREAM_TRANSFER_MODE;
-    } else if (upper.equals("COMPRESSED_TRANSFER_MODE")) {
-      ret = FTP.COMPRESSED_TRANSFER_MODE;
-    } else {
-      if (!upper.equals("BLOCK_TRANSFER_MODE")) {
-        LOG.warn("Cannot parse the value for " + FTPFileSystem.FS_FTP_TRANSFER_MODE
-            + ": {}. Using default.", mode);
-      }
-    }
-    return ret;
-  }
-
-  private void setTimeout(FTPClient client, Configuration conf) {
-    long timeout = conf.getLong(FTPFileSystem.FS_FTP_TIMEOUT, FTPFileSystem.DEFAULT_TIMEOUT);
-    client.setControlKeepAliveTimeout(timeout);
-  }
-
-  private void setDataConnectionMode(FTPClient client, Configuration conf) throws IOException {
-    final String mode = conf.get(FTPFileSystem.FS_FTP_DATA_CONNECTION_MODE);
-    if (mode == null) {
-      return;
-    }
-    final String upper = mode.toUpperCase();
-    if (upper.equals("PASSIVE_LOCAL_DATA_CONNECTION_MODE")) {
-      client.enterLocalPassiveMode();
-    } else if (upper.equals("PASSIVE_REMOTE_DATA_CONNECTION_MODE")) {
-      client.enterRemotePassiveMode();
-    } else {
-      if (!upper.equals("ACTIVE_LOCAL_DATA_CONNECTION_MODE")) {
-        LOG.warn(
-            "Cannot parse the value for " + FTPFileSystem.FS_FTP_DATA_CONNECTION_MODE + ": " + mode
-                + ". Using default.");
-      }
-    }
   }
 }
