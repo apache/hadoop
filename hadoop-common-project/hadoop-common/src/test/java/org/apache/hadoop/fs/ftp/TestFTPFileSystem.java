@@ -53,6 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @Timeout(180)
 public class TestFTPFileSystem {
+
   private FtpTestServer server;
   private java.nio.file.Path testDir;
 
@@ -267,7 +268,6 @@ public class TestFTPFileSystem {
     Path ftpDir = fs.makeQualified(new Path("/"));
     Path file1 = fs.makeQualified(new Path(ftpDir, "renamefile" + "1"));
     Path file2 = fs.makeQualified(new Path(ftpDir, "renamefile" + "2"));
-
     touch(fs, file1);
     assertTrue(fs.rename(file1, file2));
   }
