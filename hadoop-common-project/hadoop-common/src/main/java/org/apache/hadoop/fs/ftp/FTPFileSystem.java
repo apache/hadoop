@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs.ftp;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;

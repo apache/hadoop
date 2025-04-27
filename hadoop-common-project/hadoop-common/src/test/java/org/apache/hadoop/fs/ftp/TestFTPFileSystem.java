@@ -42,8 +42,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -55,8 +53,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @Timeout(180)
 public class TestFTPFileSystem {
-  public static final Logger LOG = LoggerFactory.getLogger(TestFTPFileSystem.class);
-
   private FtpTestServer server;
   private java.nio.file.Path testDir;
 
