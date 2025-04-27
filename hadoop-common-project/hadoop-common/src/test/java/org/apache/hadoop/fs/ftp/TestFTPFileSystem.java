@@ -234,7 +234,8 @@ public class TestFTPFileSystem {
     assertEquals(client.getControlKeepAliveTimeout(), timeout);
   }
 
-  private static void touch(FileSystem fs, Path filePath) throws IOException {
+  private static void touch(FileSystem fs, Path filePath)
+          throws IOException {
     touch(fs, filePath, new byte[] {1});
   }
 
