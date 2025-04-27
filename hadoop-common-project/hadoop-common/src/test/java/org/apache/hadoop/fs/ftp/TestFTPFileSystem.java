@@ -236,6 +236,7 @@ public class TestFTPFileSystem {
 
   private static void touch(FileSystem fs, Path filePath)
           throws IOException {
+    // Create a file with a single byte of data.
     touch(fs, filePath, new byte[] {1});
   }
 
@@ -266,6 +267,8 @@ public class TestFTPFileSystem {
 
     FileSystem fs = FileSystem.get(configuration);
 
+    // All the file operations will be relative to the root directory specified by the testDir
+    // member variable.
     Path ftpDir = fs.makeQualified(new Path("/"));
     Path file1 = fs.makeQualified(new Path(ftpDir, "renamefile" + "1"));
     Path file2 = fs.makeQualified(new Path(ftpDir, "renamefile" + "2"));
