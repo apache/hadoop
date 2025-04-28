@@ -74,6 +74,39 @@ public class GetJournalEditServlet extends DfsServlet {
   static final String JOURNAL_ID_PARAM = "jid";
   static final String SEGMENT_TXID_PARAM = "segmentTxId";
   static final String IN_PROGRESS_OK = "inProgressOk";
+  private Set<String> validRequestors = new HashSet<String>();
+
+  @Override
+  public void init() throws ServletException {
+    super.init();
+    if (UserGroupInformation.isSecurityEnabled()) {
+      final Configuration conf = (Configuration) getServletContext()
+          .getAttribute(JspHelper.CURRENT_CONF);
+      try {
+        validRequestors.addAll(DFSUtil.getAllNnPrincipals(conf));
+      } catch (Exception e) {
+        LOG.error("NameNode principal could not be added", e);
+        throw new ServletException(e);
+      }
+      try {
+        validRequestors.add(
+            SecurityUtil.getServerPrincipal(conf
+                    .get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_PRINCIPAL_KEY),
+                SecondaryNameNode.getHttpAddress(conf).getHostName()));
+      } catch (Exception e) {
+        // Don't halt if SecondaryNameNode principal could not be added.
+        LOG.debug("SecondaryNameNode principal could not be added", e);
+        String msg = String.format(
+            "SecondaryNameNode principal not considered, %s = %s, %s = %s",
+            DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_PRINCIPAL_KEY,
+            conf.get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_PRINCIPAL_KEY),
+            DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+            conf.get(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+                DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_DEFAULT));
+        LOG.warn(msg);
+      }
+    }
+  }
 
   protected boolean isValidRequestor(HttpServletRequest request, Configuration conf)
       throws IOException {
@@ -83,26 +116,6 @@ public class GetJournalEditServlet extends DfsServlet {
       LOG.debug("Validating request made by " + ugi.getUserName() +
           " / " + ugi.getShortUserName() + ". This user is: " +
           UserGroupInformation.getLoginUser());
-    }
-
-    Set<String> validRequestors = new HashSet<String>();
-    validRequestors.addAll(DFSUtil.getAllNnPrincipals(conf));
-    try {
-      validRequestors.add(
-          SecurityUtil.getServerPrincipal(conf
-              .get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_PRINCIPAL_KEY),
-              SecondaryNameNode.getHttpAddress(conf).getHostName()));
-    } catch (Exception e) {
-      // Don't halt if SecondaryNameNode principal could not be added.
-      LOG.debug("SecondaryNameNode principal could not be added", e);
-      String msg = String.format(
-        "SecondaryNameNode principal not considered, %s = %s, %s = %s",
-        DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_PRINCIPAL_KEY,
-        conf.get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_PRINCIPAL_KEY),
-        DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
-        conf.get(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
-          DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_DEFAULT));
-      LOG.warn(msg);
     }
 
     // Check the full principal name of all the configured valid requestors.
