@@ -26,7 +26,7 @@ import org.apache.hadoop.fs.FileContextCreateMkdirBaseTest;
 import org.apache.hadoop.fs.FileContextTestHelper;
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.Assume;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.BeforeClass;
 
 import java.net.URI;
 import java.util.UUID;
@@ -38,7 +38,7 @@ public class TestAdlFileContextCreateMkdirLive
     extends FileContextCreateMkdirBaseTest {
   private static final String KEY_FILE_SYSTEM = "test.fs.adl.name";
 
-  @BeforeAll
+  @BeforeClass
   public static void skipTestCheck() {
     Assume.assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
   }

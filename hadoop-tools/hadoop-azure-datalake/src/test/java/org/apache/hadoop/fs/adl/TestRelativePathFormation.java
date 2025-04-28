@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.adl;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -31,6 +30,7 @@ import static org.apache.hadoop.fs.adl.AdlConfKeys
     .AZURE_AD_TOKEN_PROVIDER_CLASS_KEY;
 import static org.apache.hadoop.fs.adl.AdlConfKeys
     .AZURE_AD_TOKEN_PROVIDER_TYPE_KEY;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * This class verifies path conversion to SDK.
@@ -48,17 +48,17 @@ public class TestRelativePathFormation {
 
     fs.initialize(new URI("adl://temp.account.net"), configuration);
 
-    Assertions.assertEquals("/usr", fs.toRelativeFilePath(new Path("/usr")));
-    Assertions.assertEquals("/usr",
+    assertEquals("/usr", fs.toRelativeFilePath(new Path("/usr")));
+    assertEquals("/usr",
         fs.toRelativeFilePath(new Path("adl://temp.account.net/usr")));
 
     // When working directory is set.
     fs.setWorkingDirectory(new Path("/a/b/"));
-    Assertions.assertEquals("/usr", fs.toRelativeFilePath(new Path("/usr")));
-    Assertions.assertEquals("/a/b/usr", fs.toRelativeFilePath(new Path("usr")));
-    Assertions.assertEquals("/usr",
+    assertEquals("/usr", fs.toRelativeFilePath(new Path("/usr")));
+    assertEquals("/a/b/usr", fs.toRelativeFilePath(new Path("usr")));
+    assertEquals("/usr",
         fs.toRelativeFilePath(new Path("adl://temp.account.net/usr")));
-    Assertions.assertEquals("/usr",
+    assertEquals("/usr",
         fs.toRelativeFilePath(new Path("wasb://temp.account.net/usr")));
   }
 

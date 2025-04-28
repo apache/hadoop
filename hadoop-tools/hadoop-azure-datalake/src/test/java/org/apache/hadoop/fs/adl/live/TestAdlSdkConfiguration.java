@@ -23,8 +23,6 @@ import com.microsoft.azure.datalake.store.SSLSocketFactoryEx.SSLChannelMode;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.adl.AdlFileSystem;
-import org.junit.jupiter.api.Assertions;
-import org.junit.Assume;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -32,6 +30,9 @@ import java.net.URISyntaxException;
 
 import static org.apache.hadoop.fs.adl.AdlConfKeys.ADL_HTTP_TIMEOUT;
 import static org.apache.hadoop.fs.adl.AdlConfKeys.ADL_SSL_CHANNEL_MODE;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Tests interactions with SDK and ensures configuration is having the desired
@@ -55,9 +56,9 @@ public class TestAdlSdkConfiguration {
     }
 
     // Skip this test if we can't get a real FS
-    Assume.assumeNotNull(fs);
+    assumeTrue(fs != null);
     effectiveTimeout = fs.getAdlClient().getDefaultTimeout();
-    Assertions.assertFalse(effectiveTimeout < 0,
+    assertFalse(effectiveTimeout < 0,
         "A negative timeout is not supposed to take effect");
 
     conf = AdlStorageConfiguration.getConfiguration();
@@ -71,7 +72,7 @@ public class TestAdlSdkConfiguration {
     }
 
     effectiveTimeout = fs.getAdlClient().getDefaultTimeout();
-    Assertions.assertEquals(
+    assertEquals(
         effectiveTimeout, 17, "Timeout is getting set");
 
     // The default value may vary by SDK, so that value is not tested here.
@@ -98,11 +99,11 @@ public class TestAdlSdkConfiguration {
     conf = AdlStorageConfiguration.getConfiguration();
     conf.set(ADL_SSL_CHANNEL_MODE, sslChannelModeConfigValue);
     fs = (AdlFileSystem) (AdlStorageConfiguration.createStorageConnector(conf));
-    Assume.assumeNotNull(fs);
+    assumeTrue(fs != null);
 
     SSLChannelMode sslChannelMode = fs.getAdlClient().getSSLChannelMode();
-    Assertions.assertEquals(
-    expectedMode, sslChannelMode, "Unexpected SSL Channel Mode for adl.ssl.channel.mode config value : "
-            + sslChannelModeConfigValue);
+    assertEquals(expectedMode, sslChannelMode,
+        "Unexpected SSL Channel Mode for adl.ssl.channel.mode config value : "
+        + sslChannelModeConfigValue);
   }
 }

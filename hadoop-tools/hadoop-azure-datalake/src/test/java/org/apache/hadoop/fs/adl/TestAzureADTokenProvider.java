@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
 
 import com.microsoft.azure.datalake.store.oauth2.DeviceCodeTokenProvider;
 import com.microsoft.azure.datalake.store.oauth2.MsiTokenProvider;
@@ -45,15 +46,15 @@ import static org.apache.hadoop.fs.adl.AdlConfKeys
 import static org.apache.hadoop.fs.adl.AdlConfKeys.DEVICE_CODE_CLIENT_APP_ID;
 import static org.apache.hadoop.fs.adl.TokenProviderType.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.jupiter.api.Assertions;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Test appropriate token provider is loaded as per configuration.
@@ -65,8 +66,8 @@ public class TestAzureADTokenProvider {
   private static final String CLIENT_SECRET = "MY_CLIENT_SECRET";
   private static final String REFRESH_URL = "http://localhost:8080/refresh";
 
-  @Rule
-  public final TemporaryFolder tempDir = new TemporaryFolder();
+  @TempDir
+  private Path tempDir;
 
   @Test
   public void testRefreshTokenProvider()
@@ -81,7 +82,7 @@ public class TestAzureADTokenProvider {
     AdlFileSystem fileSystem = new AdlFileSystem();
     fileSystem.initialize(uri, conf);
     AccessTokenProvider tokenProvider = fileSystem.getTokenProvider();
-    Assertions.assertTrue(tokenProvider instanceof RefreshTokenBasedTokenProvider);
+    assertTrue(tokenProvider instanceof RefreshTokenBasedTokenProvider);
   }
 
   @Test
@@ -97,7 +98,7 @@ public class TestAzureADTokenProvider {
     AdlFileSystem fileSystem = new AdlFileSystem();
     fileSystem.initialize(uri, conf);
     AccessTokenProvider tokenProvider = fileSystem.getTokenProvider();
-    Assertions.assertTrue(tokenProvider instanceof ClientCredsTokenProvider);
+    assertTrue(tokenProvider instanceof ClientCredsTokenProvider);
   }
 
   @Test
@@ -110,7 +111,7 @@ public class TestAzureADTokenProvider {
     AdlFileSystem fileSystem = new AdlFileSystem();
     fileSystem.initialize(uri, conf);
     AccessTokenProvider tokenProvider = fileSystem.getTokenProvider();
-    Assertions.assertTrue(tokenProvider instanceof MsiTokenProvider);
+    assertTrue(tokenProvider instanceof MsiTokenProvider);
   }
 
   @Test
@@ -129,7 +130,7 @@ public class TestAzureADTokenProvider {
       AdlFileSystem fileSystem = new AdlFileSystem();
       fileSystem.initialize(uri, conf);
       AccessTokenProvider tokenProvider = fileSystem.getTokenProvider();
-      Assertions.assertTrue(tokenProvider instanceof DeviceCodeTokenProvider);
+      assertTrue(tokenProvider instanceof DeviceCodeTokenProvider);
     }
   }
 
@@ -145,7 +146,7 @@ public class TestAzureADTokenProvider {
     AdlFileSystem fileSystem = new AdlFileSystem();
     fileSystem.initialize(uri, conf);
     AccessTokenProvider tokenProvider = fileSystem.getTokenProvider();
-    Assertions.assertTrue(tokenProvider instanceof SdkTokenProviderAdapter);
+    assertTrue(tokenProvider instanceof SdkTokenProviderAdapter);
   }
 
   @Test
@@ -157,7 +158,7 @@ public class TestAzureADTokenProvider {
     AdlFileSystem fileSystem = new AdlFileSystem();
     try {
       fileSystem.initialize(uri, conf);
-      Assertions.fail("Initialization should have failed due no token provider "
+      fail("Initialization should have failed due no token provider "
           + "configuration");
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains(
@@ -179,17 +180,17 @@ public class TestAzureADTokenProvider {
         "wrong.classpath.CustomMockTokenProvider");
     try {
       fileSystem.initialize(uri, conf);
-      Assertions.fail("Initialization should have failed due invalid provider "
+      fail("Initialization should have failed due invalid provider "
           + "configuration");
     } catch (RuntimeException e) {
-      Assertions.assertTrue(
+      assertTrue(
           e.getMessage().contains("wrong.classpath.CustomMockTokenProvider"));
     }
   }
 
   private CredentialProvider createTempCredProvider(Configuration conf)
       throws URISyntaxException, IOException {
-    final File file = tempDir.newFile("test.jks");
+    final File file = tempDir.resolve("test.jks").toFile();
     final URI jks = ProviderUtils.nestURIForLocalJavaKeyStoreProvider(
         file.toURI());
     conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
@@ -217,7 +218,7 @@ public class TestAzureADTokenProvider {
     fileSystem.initialize(uri, conf);
     RefreshTokenBasedTokenProvider expected =
         new RefreshTokenBasedTokenProvider(CLIENT_ID, REFRESH_TOKEN);
-    Assertions.assertTrue(EqualsBuilder.reflectionEquals(expected,
+    assertTrue(EqualsBuilder.reflectionEquals(expected,
         fileSystem.getTokenProvider()));
   }
 
@@ -236,7 +237,7 @@ public class TestAzureADTokenProvider {
     fileSystem.initialize(uri, conf);
     RefreshTokenBasedTokenProvider expected =
         new RefreshTokenBasedTokenProvider(CLIENT_ID, REFRESH_TOKEN);
-    Assertions.assertTrue(EqualsBuilder.reflectionEquals(expected,
+    assertTrue(EqualsBuilder.reflectionEquals(expected,
         fileSystem.getTokenProvider()));
   }
 
@@ -263,7 +264,7 @@ public class TestAzureADTokenProvider {
     fileSystem.initialize(uri, conf);
     ClientCredsTokenProvider expected = new ClientCredsTokenProvider(
         REFRESH_URL, CLIENT_ID, CLIENT_SECRET);
-    Assertions.assertTrue(EqualsBuilder.reflectionEquals(expected,
+    assertTrue(EqualsBuilder.reflectionEquals(expected,
         fileSystem.getTokenProvider()));
   }
 
@@ -283,7 +284,7 @@ public class TestAzureADTokenProvider {
     fileSystem.initialize(uri, conf);
     ClientCredsTokenProvider expected = new ClientCredsTokenProvider(
         REFRESH_URL, CLIENT_ID, CLIENT_SECRET);
-    Assertions.assertTrue(EqualsBuilder.reflectionEquals(expected,
+    assertTrue(EqualsBuilder.reflectionEquals(expected,
         fileSystem.getTokenProvider()));
   }
 
