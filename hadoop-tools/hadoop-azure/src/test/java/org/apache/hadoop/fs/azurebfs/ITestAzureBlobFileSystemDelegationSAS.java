@@ -23,12 +23,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,10 +42,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
+import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -91,7 +97,9 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   public void setup() throws Exception {
     isHNSEnabled = this.getConfiguration().getBoolean(
         TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
-    Assume.assumeTrue(isHNSEnabled);
+    if (!isHNSEnabled) {
+      assumeBlobServiceType();
+    }
     createFilesystemForSASTests();
     super.setup();
   }
@@ -99,6 +107,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   @Test
   // Test filesystem operations access, create, mkdirs, setOwner, getFileStatus
   public void testCheckAccess() throws Exception {
+    assumeHnsEnabled();
     final AzureBlobFileSystem fs = getFileSystem();
 
     Path rootPath = new Path("/");
@@ -217,6 +226,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
 
   @Test
   public void checkExceptionForRenameOverwrites() throws Exception {
+    assumeHnsEnabled();
     final AzureBlobFileSystem fs = getFileSystem();
     Path src = new Path("a/b/f1.txt");
     Path dest = new Path("a/b/f2.txt");
@@ -297,12 +307,18 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = getFileSystem();
     Path dirPath = new Path(UUID.randomUUID().toString());
     Path filePath = new Path(dirPath, UUID.randomUUID().toString());
+    Path filePath2 = new Path(dirPath, UUID.randomUUID().toString());
 
     fs.mkdirs(dirPath);
 
     // create file with content "hello"
     try (FSDataOutputStream stream = fs.create(filePath)) {
       stream.writeBytes("hello");
+    }
+
+    // create file with content "bye"
+    try (FSDataOutputStream stream = fs.create(filePath2)) {
+      stream.writeBytes("bye");
     }
 
     fs.listStatus(filePath);
@@ -314,6 +330,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   // Test filesystem operations setAcl, getAclStatus, removeAcl
   // setPermissions and getFileStatus
   public void testAcl() throws Exception {
+    assumeHnsEnabled();
     final AzureBlobFileSystem fs = getFileSystem();
     Path reqPath = new Path(UUID.randomUUID().toString());
 
@@ -343,6 +360,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   @Test
   // Test getFileStatus and getAclStatus operations on root path
   public void testRootPath() throws Exception {
+    assumeHnsEnabled();
     final AzureBlobFileSystem fs = getFileSystem();
     Path rootPath = new Path(AbfsHttpConstants.ROOT_PATH);
 
@@ -410,16 +428,77 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
-  public void testSignatureMask() throws Exception {
+  // FileSystemProperties are not supported by delegation SAS and should throw exception
+  public void testSetFileSystemProperties() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    String src = String.format("/testABC/test%s.xt", UUID.randomUUID());
-    fs.create(new Path(src)).close();
-    AbfsRestOperation abfsHttpRestOperation = fs.getAbfsClient()
-        .renamePath(src, "/testABC" + "/abc.txt", null,
-            getTestTracingContext(fs, false), null,
-            false)
-        .getOp();
-    AbfsHttpOperation result = abfsHttpRestOperation.getResult();
+    final Hashtable<String, String>
+        properties = new Hashtable<>();
+    properties.put("FileSystemProperties", "true");
+    TracingContext tracingContext = getTestTracingContext(fs, true);
+    assertThrows(IOException.class, () -> fs.getAbfsStore()
+        .setFilesystemProperties(properties, tracingContext));
+    assertThrows(IOException.class,
+        () -> fs.getAbfsStore().getFilesystemProperties(tracingContext));
+  }
+
+  @Test
+  //Test list and delete operation on implicit paths
+  public void testListAndDeleteImplicitPaths() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    AbfsBlobClient client = ((AbfsBlobClient) getFileSystem().getAbfsClient());
+    assumeBlobServiceType();
+
+    Path file1 = new Path("/testDir/dir1/file1");
+    Path file2 = new Path("/testDir/dir1/file2");
+    Path implicitDir = file1.getParent();
+
+    createAzCopyFolder(implicitDir);
+    createAzCopyFile(file1);
+    createAzCopyFile(file2);
+
+    AbfsRestOperation op = client.listPath(
+        implicitDir.toString(), false, 2, null,
+        getTestTracingContext(getFileSystem(), false), null, false).getOp();
+    List<? extends ListResultEntrySchema> list = op.getResult()
+        .getListResultSchema()
+        .paths();
+    Assertions.assertThat(list).hasSize(2);
+
+    client.deletePath(implicitDir.toString(), true, "",
+        getTestTracingContext(fs, false));
+
+    Assertions.assertThat(fs.exists(file1))
+        .describedAs("Deleted file1 should not exist.").isFalse();
+    Assertions.assertThat(fs.exists(file2))
+        .describedAs("Deleted file2 should not exist.").isFalse();
+    Assertions.assertThat(fs.exists(implicitDir))
+        .describedAs("The parent dir should not exist.")
+        .isFalse();
+  }
+
+
+  /**
+   * Spies on the AzureBlobFileSystem's store and client to enable mocking and verification
+   * of client interactions in tests. It replaces the actual store and client with mocked versions.
+   *
+   * @param fs the AzureBlobFileSystem instance
+   * @return the spied AbfsClient for interaction verification
+   */
+  private AbfsClient addSpyHooksOnClient(final AzureBlobFileSystem fs) {
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    Mockito.doReturn(store).when(fs).getAbfsStore();
+    AbfsClient client = Mockito.spy(store.getClient());
+    Mockito.doReturn(client).when(store).getClient();
+    return client;
+  }
+
+  /**
+   * Asserts the signature masking in the URL and encoded URL of the AbfsRestOperation.
+   *
+   * @param op the AbfsRestOperation
+   */
+  private void checkSignatureMaskAssertions(AbfsRestOperation op) {
+    AbfsHttpOperation result = op.getResult();
     String url = result.getMaskedUrl();
     String encodedUrl = result.getMaskedEncodedUrl();
     Assertions.assertThat(url.substring(url.indexOf("sig=")))
@@ -428,6 +507,68 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     Assertions.assertThat(encodedUrl.substring(encodedUrl.indexOf("sig%3D")))
         .describedAs("Signature query param should be masked")
         .startsWith("sig%3DXXXXX");
+  }
+
+  @Test
+  // Test masking of signature for rename operation for Blob
+  public void testSignatureMaskforBlob() throws Exception {
+    assumeBlobServiceType();
+    final AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem());
+    AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
+
+    fs.getAbfsStore().setClient(client);
+    String src = String.format("/testABC/test%s.xt", UUID.randomUUID());
+    String dest = "/testABC" + "/abc.txt";
+    fs.create(new Path(src)).close();
+
+    Mockito.doAnswer(answer -> {
+          Path srcCopy = answer.getArgument(0);
+          Path dstCopy = answer.getArgument(1);
+          String leaseId = answer.getArgument(2);
+          TracingContext tracingContext = answer.getArgument(3);
+          AbfsRestOperation op
+              = ((AbfsBlobClient) getFileSystem().getAbfsClient()).copyBlob(srcCopy,
+              dstCopy, leaseId, tracingContext);
+          checkSignatureMaskAssertions(op);
+          return answer.callRealMethod();
+        })
+        .when(client)
+        .copyBlob(Mockito.any(Path.class), Mockito.any(Path.class),
+            Mockito.any(String.class), Mockito.any(TracingContext.class));
+
+    Mockito.doAnswer(answer -> {
+          Path blobPath = answer.getArgument(0);
+          String leaseId = answer.getArgument(1);
+          TracingContext tracingContext = answer.getArgument(2);
+          AbfsRestOperation op
+              = ((AbfsBlobClient) getFileSystem().getAbfsClient()).deleteBlobPath(
+              blobPath,
+              leaseId, tracingContext);
+          checkSignatureMaskAssertions(op);
+          return answer.callRealMethod();
+        })
+        .when(client)
+        .deleteBlobPath(Mockito.any(Path.class), Mockito.any(String.class),
+            Mockito.any(TracingContext.class));
+
+    client.renamePath(src, dest, null,
+        getTestTracingContext(fs, false), null,
+        false);
+  }
+
+  // Test masking of signature for rename operation for DFS
+  @Test
+  public void testSignatureMask() throws Exception {
+    assumeDfsServiceType();
+    final AzureBlobFileSystem fs = getFileSystem();
+    String src = String.format("/testABC/test%s.xt", UUID.randomUUID());
+    fs.create(new Path(src)).close();
+    AbfsRestOperation abfsHttpRestOperation = fs.getAbfsClient()
+        .renamePath(src, "/testABC" + "/abc.txt", null,
+            getTestTracingContext(fs, false), null,
+            false)
+        .getOp();
+    checkSignatureMaskAssertions(abfsHttpRestOperation);
   }
 
   @Test
@@ -442,6 +583,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   @Test
   // SetPermission should fail when saoid is not the owner and succeed when it is.
   public void testSetPermissionForNonOwner() throws Exception {
+    assumeHnsEnabled();
     final AzureBlobFileSystem fs = getFileSystem();
 
     Path rootPath = new Path("/");
@@ -477,6 +619,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   @Test
   // Without saoid or suoid, setPermission should succeed with sp=p for a non-owner.
   public void testSetPermissionWithoutAgentForNonOwner() throws Exception {
+    assumeHnsEnabled();
     final AzureBlobFileSystem fs = getFileSystem();
     Path path = new Path(MockDelegationSASTokenProvider.NO_AGENT_PATH);
     fs.create(path).close();

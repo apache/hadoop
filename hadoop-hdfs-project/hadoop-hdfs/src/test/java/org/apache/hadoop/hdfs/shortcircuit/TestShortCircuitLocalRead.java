@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hdfs.shortcircuit;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.EOFException;
 import java.io.File;
@@ -61,12 +62,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test for short circuit read functionality using {@link BlockReaderLocal}.
@@ -78,20 +78,20 @@ import org.junit.Test;
 public class TestShortCircuitLocalRead {
   private static TemporarySocketDirectory sockDir;
 
-  @BeforeClass
+  @BeforeAll
   public static void init() {
     sockDir = new TemporarySocketDirectory();
     DomainSocket.disableBindPathValidation();
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdown() throws IOException {
     sockDir.close();
   }
 
-  @Before
+  @BeforeEach
   public void before() {
-    Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
+    assumeTrue(DomainSocket.getLoadingFailureReason() == null);
   }
 
   static final long seed = 0xDEADBEEFL;
@@ -115,7 +115,7 @@ public class TestShortCircuitLocalRead {
       int len, String message) {
     for (int idx = 0; idx < len; idx++) {
       if (expected[from + idx] != actual[idx]) {
-        Assert.fail(message + " byte " + (from + idx) + " differs. expected " +
+        fail(message + " byte " + (from + idx) + " differs. expected " +
             expected[from + idx] + " actual " + actual[idx] +
             "\nexpected: " +
             StringUtils.byteToHexString(expected, from, from + len) +
@@ -275,8 +275,7 @@ public class TestShortCircuitLocalRead {
     try {
       // check that / exists
       Path path = new Path("/");
-      assertTrue("/ should be a directory",
-          fs.getFileStatus(path).isDirectory());
+      assertTrue(fs.getFileStatus(path).isDirectory(), "/ should be a directory");
 
       byte[] fileData = AppendTestUtil.randomBytes(seed, size);
       Path file1 = fs.makeQualified(new Path("filelocal.dat"));
@@ -295,17 +294,20 @@ public class TestShortCircuitLocalRead {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testFileLocalReadNoChecksum() throws Exception {
     doTestShortCircuitRead(true, 3*blockSize+100, 0);
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testFileLocalReadChecksum() throws Exception {
     doTestShortCircuitRead(false, 3*blockSize+100, 0);
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testSmallFileLocalRead() throws Exception {
     doTestShortCircuitRead(false, 13, 0);
     doTestShortCircuitRead(false, 13, 5);
@@ -313,7 +315,8 @@ public class TestShortCircuitLocalRead {
     doTestShortCircuitRead(true, 13, 5);
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testLocalReadLegacy() throws Exception {
     doTestShortCircuitReadLegacy(true, 13, 0, getCurrentUser(),
         getCurrentUser(), false);
@@ -324,19 +327,22 @@ public class TestShortCircuitLocalRead {
    * to use short circuit. The test ensures reader falls back to non
    * shortcircuit reads when shortcircuit is disallowed.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testLocalReadFallback() throws Exception {
     doTestShortCircuitReadLegacy(
         true, 13, 0, getCurrentUser(), "notallowed", true);
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testReadFromAnOffset() throws Exception {
     doTestShortCircuitRead(false, 3*blockSize+100, 777);
     doTestShortCircuitRead(true, 3*blockSize+100, 777);
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testLongFile() throws Exception {
     doTestShortCircuitRead(false, 10*blockSize+100, 777);
     doTestShortCircuitRead(true, 10*blockSize+100, 777);
@@ -353,7 +359,8 @@ public class TestShortCircuitLocalRead {
     });
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testDeprecatedGetBlockLocalPathInfoRpc() throws IOException {
     final Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
@@ -374,11 +381,11 @@ public class TestShortCircuitLocalRead {
               dnInfo, conf, 60000, false);
       try {
         proxy.getBlockLocalPathInfo(blk, token);
-        Assert.fail("The call should have failed as this user "
+        fail("The call should have failed as this user "
             + " is not configured in "
             + DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY);
       } catch (IOException ex) {
-        Assert.assertTrue(ex.getMessage().contains(
+        assertTrue(ex.getMessage().contains(
             "not configured in "
             + DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY));
       }
@@ -388,7 +395,8 @@ public class TestShortCircuitLocalRead {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testSkipWithVerifyChecksum() throws IOException {
     int size = blockSize;
     Configuration conf = new Configuration();
@@ -405,8 +413,7 @@ public class TestShortCircuitLocalRead {
     try {
       // check that / exists
       Path path = new Path("/");
-      assertTrue("/ should be a directory",
-          fs.getFileStatus(path).isDirectory());
+      assertTrue(fs.getFileStatus(path).isDirectory(), "/ should be a directory");
 
       byte[] fileData = AppendTestUtil.randomBytes(seed, size*3);
       // create a new file in home directory. Do not close it.
@@ -433,7 +440,8 @@ public class TestShortCircuitLocalRead {
     }
   }
 
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testHandleTruncatedBlockFile() throws IOException {
     MiniDFSCluster cluster = null;
     HdfsConfiguration conf = new HdfsConfiguration();
@@ -467,10 +475,10 @@ public class TestShortCircuitLocalRead {
       try {
         DFSTestUtil.waitReplication(fs, TEST_PATH, (short)1);
       } catch (InterruptedException e) {
-        Assert.fail("unexpected InterruptedException during " +
+        fail("unexpected InterruptedException during " +
             "waitReplication: " + e);
       } catch (TimeoutException e) {
-        Assert.fail("unexpected TimeoutException during " +
+        fail("unexpected TimeoutException during " +
             "waitReplication: " + e);
       }
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, TEST_PATH);
@@ -489,7 +497,7 @@ public class TestShortCircuitLocalRead {
         byte buf[] = new byte[100];
         fsIn.seek(2000);
         fsIn.readFully(buf, 0, buf.length);
-        Assert.fail("shouldn't be able to read from corrupt 0-length " +
+        fail("shouldn't be able to read from corrupt 0-length " +
             "block file.");
       } catch (IOException e) {
         DFSClient.LOG.error("caught exception ", e);
@@ -585,7 +593,8 @@ public class TestShortCircuitLocalRead {
     fs.delete(file1, false);
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testReadWithRemoteBlockReader2()
       throws IOException, InterruptedException {
     doTestShortCircuitReadWithRemoteBlockReader2(3 * blockSize + 100,
@@ -610,8 +619,7 @@ public class TestShortCircuitLocalRead {
     // check that / exists
     Path path = new Path("/");
     URI uri = cluster.getURI();
-    assertTrue(
-        "/ should be a directory", fs.getFileStatus(path).isDirectory());
+    assertTrue(fs.getFileStatus(path).isDirectory(), "/ should be a directory");
 
     byte[] fileData = AppendTestUtil.randomBytes(seed, size);
     Path file1 = new Path("filelocal.dat");
@@ -620,16 +628,15 @@ public class TestShortCircuitLocalRead {
     stm.write(fileData);
     stm.close();
     try {
-      checkFileContent(uri, file1, fileData, readOffset, shortCircuitUser, 
+      checkFileContent(uri, file1, fileData, readOffset, shortCircuitUser,
           conf, shortCircuitFails);
       //BlockReaderRemote2 have unsupported method read(ByteBuffer bf)
-      assertFalse(
-          "BlockReaderRemote2 unsupported method read(ByteBuffer bf) error",
-          checkUnsupportedMethod(fs, file1, fileData, readOffset));
-    } catch(IOException e) {
+      assertFalse(checkUnsupportedMethod(fs, file1, fileData, readOffset),
+          "BlockReaderRemote2 unsupported method read(ByteBuffer bf) error");
+    } catch (IOException e) {
       throw new IOException(
           "doTestShortCircuitReadWithRemoteBlockReader ex error ", e);
-    } catch(InterruptedException inEx) {
+    } catch (InterruptedException inEx) {
       throw inEx;
     } finally {
       fs.close();

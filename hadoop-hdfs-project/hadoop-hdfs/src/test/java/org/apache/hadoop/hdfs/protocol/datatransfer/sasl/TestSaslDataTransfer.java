@@ -20,9 +20,12 @@ package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HTTP_POLICY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTING_KEY;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -56,14 +59,12 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
+@Timeout(300)
 public class TestSaslDataTransfer extends SaslDataTransferTestCase {
 
   private static final int BLOCK_SIZE = 4096;
@@ -73,13 +74,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
   private MiniDFSCluster cluster;
   private FileSystem fs;
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
-  @Rule
-  public Timeout timeout = new Timeout(300_000);
-
-  @After
+  @AfterEach
   public void shutdown() {
     IOUtils.cleanupWithLogger(null, fs);
     if (cluster != null) {
@@ -124,9 +119,11 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
     startCluster(clusterConf);
     HdfsConfiguration clientConf = new HdfsConfiguration(clusterConf);
     clientConf.set(DFS_DATA_TRANSFER_PROTECTION_KEY, "authentication");
-    exception.expect(IOException.class);
-    exception.expectMessage("could only be written to 0");
-    doTest(clientConf);
+    IOException exception = assertThrows(IOException.class, () -> {
+      doTest(clientConf);
+    });
+    assertTrue(exception.getMessage().contains("could only be written to 0"));
+
   }
 
   @Test
@@ -143,7 +140,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
         LoggerFactory.getLogger(DataNode.class));
     try {
       doTest(clientConf);
-      Assert.fail("Should fail if SASL data transfer protection is not " +
+      fail("Should fail if SASL data transfer protection is not " +
           "configured or not supported in client");
     } catch (IOException e) {
       GenericTestUtils.assertMatches(e.getMessage(), 
@@ -160,9 +157,9 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
   @Test
   public void testDataNodeAbortsIfNoSasl() throws Exception {
     HdfsConfiguration clusterConf = createSecureConfig("");
-    exception.expect(RuntimeException.class);
-    exception.expectMessage("Cannot start secure DataNode");
-    startCluster(clusterConf);
+    assertThrows(RuntimeException.class, () -> {
+      startCluster(clusterConf);
+    });
   }
 
   @Test
@@ -170,9 +167,9 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
     HdfsConfiguration clusterConf = createSecureConfig("authentication");
     clusterConf.set(DFS_HTTP_POLICY_KEY,
         HttpConfig.Policy.HTTP_AND_HTTPS.name());
-    exception.expect(RuntimeException.class);
-    exception.expectMessage("Cannot start secure DataNode");
-    startCluster(clusterConf);
+    assertThrows(RuntimeException.class, () -> {
+      startCluster(clusterConf);
+    });
   }
 
   @Test
@@ -226,7 +223,8 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
   /**
    * Verifies that peerFromSocketAndKey honors socket read timeouts.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void TestPeerFromSocketAndKeyReadTimeout() throws Exception {
     HdfsConfiguration conf = createSecureConfig(
         "authentication,integrity,privacy");
@@ -253,7 +251,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
       Peer peer = DFSUtilClient.peerFromSocketAndKey(saslClient, socket,
           dataEncKeyFactory, new Token(), fakeDatanodeId, 1);
       peer.close();
-      Assert.fail("Expected DFSClient#peerFromSocketAndKey to time out.");
+      fail("Expected DFSClient#peerFromSocketAndKey to time out.");
     } catch (SocketTimeoutException e) {
       GenericTestUtils.assertExceptionContains("Read timed out", e);
     } finally {
@@ -304,7 +302,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
       saslClient.socketSend(socket, null, null, dataEncryptionKeyFactory,
           null, null);
 
-      Assert.fail("Expected IOException from "
+      fail("Expected IOException from "
           + "SaslDataTransferClient#checkTrustAndSend");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("Encryption enabled", e);
@@ -353,7 +351,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
       saslClient.socketSend(socket, null, null, dataEncryptionKeyFactory,
           null, null);
 
-      Assert.fail("Expected IOException from "
+      fail("Expected IOException from "
           + "SaslDataTransferClient#checkTrustAndSend");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("Encryption enabled", e);

@@ -105,6 +105,13 @@ public final class StreamStatisticNames {
   public static final String STREAM_READ_ANALYTICS_OPENED = "stream_read_analytics_opened";
 
   /**
+   * Total count of times object stream factory was closed.
+   *
+   * Value: {@value}.
+   */
+  public static final String ANALYTICS_STREAM_FACTORY_CLOSED = "analytics_stream_factory_closed";
+
+  /**
    * Count of exceptions raised during input stream reads.
    * Value: {@value}.
    */

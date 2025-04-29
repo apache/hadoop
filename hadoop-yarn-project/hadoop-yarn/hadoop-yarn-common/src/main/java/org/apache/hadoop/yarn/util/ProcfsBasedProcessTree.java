@@ -52,8 +52,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.CpuTimeTracker;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.SysInfoLinux;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**

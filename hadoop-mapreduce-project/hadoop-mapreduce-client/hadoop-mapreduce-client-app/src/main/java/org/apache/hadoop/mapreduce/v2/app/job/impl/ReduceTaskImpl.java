@@ -31,7 +31,7 @@ import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.yarn.util.Clock;
 
 @SuppressWarnings({ "rawtypes" })
 public class ReduceTaskImpl extends TaskImpl {

@@ -35,8 +35,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedP
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueManagementChange;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.MonotonicClock;
+import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.io.IOException;

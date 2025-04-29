@@ -20,8 +20,8 @@
 
 package org.apache.hadoop.example;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.*;
 import java.util.Arrays;
@@ -37,7 +37,7 @@ import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -134,8 +134,8 @@ public class ITUseHadoopCodecs {
       int expected;
       do {
         expected = originalIn.read();
-        assertEquals("Inflated stream read by byte does not match",
-                expected, inflateFilter.read());
+        assertEquals(expected, inflateFilter.read(),
+            "Inflated stream read by byte does not match");
       } while (expected != -1);
     }
 

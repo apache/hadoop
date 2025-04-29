@@ -13,8 +13,13 @@
  */
 package org.apache.hadoop.security.authentication.server;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.security.KeyPair;
@@ -35,11 +40,9 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.nimbusds.jose.*;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -65,12 +68,12 @@ public class TestJWTRedirectAuthenticationHandler extends
           privateKey);
 
       Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
-      HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-      Mockito.when(request.getCookies()).thenReturn(new Cookie[] { cookie });
-      Mockito.when(request.getRequestURL()).thenReturn(
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+      when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
-      HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-      Mockito.when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
+      HttpServletResponse response = mock(HttpServletResponse.class);
+      when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
           SERVICE_URL);
 
       AuthenticationToken token = handler.alternateAuthenticate(request,
@@ -97,17 +100,17 @@ public class TestJWTRedirectAuthenticationHandler extends
           privateKey);
 
       Cookie cookie = new Cookie("jowt", jwt.serialize());
-      HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-      Mockito.when(request.getCookies()).thenReturn(new Cookie[] { cookie });
-      Mockito.when(request.getRequestURL()).thenReturn(
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+      when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
-      HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-      Mockito.when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
+      HttpServletResponse response = mock(HttpServletResponse.class);
+      when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
           SERVICE_URL);
 
       AuthenticationToken token = handler.alternateAuthenticate(request,
           response);
-      Assert.assertEquals("bob", token.getUserName());
+      assertEquals("bob", token.getUserName());
     } catch (ServletException se) {
       fail("alternateAuthentication should NOT have thrown a ServletException: "
           + se.getMessage());
@@ -130,12 +133,12 @@ public class TestJWTRedirectAuthenticationHandler extends
           privateKey);
 
       Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
-      HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-      Mockito.when(request.getCookies()).thenReturn(new Cookie[] { cookie });
-      Mockito.when(request.getRequestURL()).thenReturn(
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+      when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
-      HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-      Mockito.when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
+      HttpServletResponse response = mock(HttpServletResponse.class);
+      when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
           SERVICE_URL);
 
       AuthenticationToken token = handler.alternateAuthenticate(request,
@@ -167,17 +170,17 @@ public class TestJWTRedirectAuthenticationHandler extends
           privateKey);
 
       Cookie cookie = new Cookie("hadoop-jwt", "ljm" + jwt.serialize());
-      HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-      Mockito.when(request.getCookies()).thenReturn(new Cookie[] { cookie });
-      Mockito.when(request.getRequestURL()).thenReturn(
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+      when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
-      HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-      Mockito.when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
+      HttpServletResponse response = mock(HttpServletResponse.class);
+      when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
           SERVICE_URL);
 
       AuthenticationToken token = handler.alternateAuthenticate(request,
           response);
-      Mockito.verify(response).sendRedirect(REDIRECT_LOCATION);
+      verify(response).sendRedirect(REDIRECT_LOCATION);
     } catch (ServletException se) {
       fail("alternateAuthentication should NOT have thrown a ServletException");
     } catch (AuthenticationException ae) {
@@ -206,17 +209,17 @@ public class TestJWTRedirectAuthenticationHandler extends
           privateKey);
 
       Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
-      HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-      Mockito.when(request.getCookies()).thenReturn(new Cookie[] { cookie });
-      Mockito.when(request.getRequestURL()).thenReturn(
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+      when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
-      HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-      Mockito.when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
+      HttpServletResponse response = mock(HttpServletResponse.class);
+      when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
           SERVICE_URL);
 
       AuthenticationToken token = handler.alternateAuthenticate(request,
           response);
-      Mockito.verify(response).sendRedirect(REDIRECT_LOCATION);
+      verify(response).sendRedirect(REDIRECT_LOCATION);
     } catch (ServletException se) {
       fail("alternateAuthentication should NOT have thrown a ServletException");
     } catch (AuthenticationException ae) {
@@ -236,17 +239,17 @@ public class TestJWTRedirectAuthenticationHandler extends
           privateKey);
 
       Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
-      HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-      Mockito.when(request.getCookies()).thenReturn(new Cookie[] { cookie });
-      Mockito.when(request.getRequestURL()).thenReturn(
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+      when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
-      HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-      Mockito.when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
+      HttpServletResponse response = mock(HttpServletResponse.class);
+      when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
           SERVICE_URL);
 
       AuthenticationToken token = handler.alternateAuthenticate(request,
           response);
-      Mockito.verify(response).sendRedirect(REDIRECT_LOCATION);
+      verify(response).sendRedirect(REDIRECT_LOCATION);
     } catch (ServletException se) {
       fail("alternateAuthentication should NOT have thrown a ServletException");
     } catch (AuthenticationException ae) {
@@ -265,18 +268,18 @@ public class TestJWTRedirectAuthenticationHandler extends
       SignedJWT jwt = getJWT("bob", null, privateKey);
 
       Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
-      HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-      Mockito.when(request.getCookies()).thenReturn(new Cookie[] { cookie });
-      Mockito.when(request.getRequestURL()).thenReturn(
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+      when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
-      HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-      Mockito.when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
+      HttpServletResponse response = mock(HttpServletResponse.class);
+      when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
           SERVICE_URL);
 
       AuthenticationToken token = handler.alternateAuthenticate(request,
           response);
-      Assert.assertNotNull("Token should not be null.", token);
-      Assert.assertEquals("bob", token.getUserName());
+      assertNotNull(token, "Token should not be null.");
+      assertEquals("bob", token.getUserName());
     } catch (ServletException se) {
       fail("alternateAuthentication should NOT have thrown a ServletException");
     } catch (AuthenticationException ae) {
@@ -298,17 +301,17 @@ public class TestJWTRedirectAuthenticationHandler extends
           privateKey);
 
       Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
-      HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-      Mockito.when(request.getCookies()).thenReturn(new Cookie[] { cookie });
-      Mockito.when(request.getRequestURL()).thenReturn(
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+      when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
-      HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-      Mockito.when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
+      HttpServletResponse response = mock(HttpServletResponse.class);
+      when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
           SERVICE_URL);
 
       AuthenticationToken token = handler.alternateAuthenticate(request,
           response);
-      Mockito.verify(response).sendRedirect(REDIRECT_LOCATION);
+      verify(response).sendRedirect(REDIRECT_LOCATION);
     } catch (ServletException se) {
       fail("alternateAuthentication should NOT have thrown a ServletException");
     } catch (AuthenticationException ae) {
@@ -330,17 +333,17 @@ public class TestJWTRedirectAuthenticationHandler extends
           privateKey);
 
       Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
-      HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-      Mockito.when(request.getCookies()).thenReturn(new Cookie[] { cookie });
-      Mockito.when(request.getRequestURL()).thenReturn(
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+      when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
-      HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-      Mockito.when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
+      HttpServletResponse response = mock(HttpServletResponse.class);
+      when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
           SERVICE_URL);
 
       AuthenticationToken token = handler.alternateAuthenticate(request,
           response);
-      Assert.assertEquals("bob", token.getUserName());
+      assertEquals("bob", token.getUserName());
     } catch (ServletException se) {
       fail("alternateAuthentication should NOT have thrown a ServletException");
     } catch (AuthenticationException ae) {
@@ -360,18 +363,18 @@ public class TestJWTRedirectAuthenticationHandler extends
           privateKey);
 
       Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
-      HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-      Mockito.when(request.getCookies()).thenReturn(new Cookie[] { cookie });
-      Mockito.when(request.getRequestURL()).thenReturn(
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+      when(request.getRequestURL()).thenReturn(
           new StringBuffer(SERVICE_URL));
-      HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-      Mockito.when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
+      HttpServletResponse response = mock(HttpServletResponse.class);
+      when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
           SERVICE_URL);
 
       AuthenticationToken token = handler.alternateAuthenticate(request,
           response);
-      Assert.assertNotNull("Token should not be null.", token);
-      Assert.assertEquals("alice", token.getUserName());
+      assertNotNull(token, "Token should not be null.");
+      assertEquals("alice", token.getUserName());
     } catch (ServletException se) {
       fail("alternateAuthentication should NOT have thrown a ServletException.");
     } catch (AuthenticationException ae) {
@@ -386,14 +389,15 @@ public class TestJWTRedirectAuthenticationHandler extends
     Properties props = getProperties();
     handler.init(props);
 
-    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-    Mockito.when(request.getRequestURL()).thenReturn(
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getRequestURL()).thenReturn(
         new StringBuffer(SERVICE_URL));
-    Mockito.when(request.getQueryString()).thenReturn("name=value");
+    when(request.getQueryString()).thenReturn("name=value");
 
     String loginURL = handler.constructLoginURL(request);
-    Assert.assertNotNull("loginURL should not be null.", loginURL);
-    Assert.assertEquals("https://localhost:8443/authserver?originalUrl=" + SERVICE_URL + "?name=value", loginURL);
+    assertNotNull(loginURL, "loginURL should not be null.");
+    assertEquals("https://localhost:8443/authserver?originalUrl=" +
+        SERVICE_URL + "?name=value", loginURL);
   }
 
   @Test
@@ -403,17 +407,17 @@ public class TestJWTRedirectAuthenticationHandler extends
     Properties props = getProperties();
     handler.init(props);
 
-    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-    Mockito.when(request.getRequestURL()).thenReturn(
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getRequestURL()).thenReturn(
         new StringBuffer(SERVICE_URL));
-    Mockito.when(request.getQueryString()).thenReturn(null);
+    when(request.getQueryString()).thenReturn(null);
 
     String loginURL = handler.constructLoginURL(request);
-    Assert.assertNotNull("LoginURL should not be null.", loginURL);
-    Assert.assertEquals("https://localhost:8443/authserver?originalUrl=" + SERVICE_URL, loginURL);
+    assertNotNull(loginURL, "LoginURL should not be null.");
+    assertEquals("https://localhost:8443/authserver?originalUrl=" + SERVICE_URL, loginURL);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception, NoSuchAlgorithmException {
     setupKerberosRequirements();
 
@@ -434,7 +438,7 @@ public class TestJWTRedirectAuthenticationHandler extends
     getKdc().createPrincipal(new File(keytab), keytabUsers);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     handler.destroy();
   }
