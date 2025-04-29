@@ -20,13 +20,17 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Hashtable;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 
 /**
  * Test FileSystemProperties.
@@ -141,17 +145,23 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
   public void testBufferSizeSet() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     AbfsConfiguration abfsConfig = fs.getAbfsStore().getAbfsConfiguration();
-    int bufferSizeConfig = 5 * 1024 * 1024;
-    int bufferSizeArg = 10 * 1024 * 1024;
+    int bufferSizeConfig = 6 * ONE_MB;
+    int bufferSizeArg = 10 * ONE_MB;
 
     Path testPath = path(TEST_PATH);
     fs.create(testPath);
 
     abfsConfig.setReadBufferSize(bufferSizeConfig);
-    fs.open(testPath, bufferSizeArg);
-    int actualBufferSize = abfsConfig.getReadBufferSize();
+    FSDataInputStream inputStream = fs.open(testPath, bufferSizeArg);
+    AbfsInputStream abfsInputStream
+        = (AbfsInputStream) inputStream.getWrappedStream();
+    int actualBufferSize = abfsInputStream.getBufferSize();
 
-    assertEquals(bufferSizeConfig, actualBufferSize);
-    assertNotEquals(bufferSizeArg, actualBufferSize);
+    Assertions.assertThat(actualBufferSize)
+        .describedAs("Buffer size should be set to the value in the configuration")
+        .isEqualTo(bufferSizeConfig);
+    Assertions.assertThat(actualBufferSize)
+        .describedAs("Buffer size should not be set to the value passed as argument")
+        .isNotEqualTo(bufferSizeArg);
   }
 }

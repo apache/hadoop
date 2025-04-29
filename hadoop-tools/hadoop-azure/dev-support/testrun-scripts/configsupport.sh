@@ -115,7 +115,7 @@ promptNamespaceType() {
     printf "* In the left-hand menu, select 'Overview' section and look for 'Properties'. \n"
     printf "* Under 'Blob service', check if 'Hierarchical namespace' is enabled or disabled. \n"
     echo "$contactTeamMsg"
-    select namespaceType in "HNS" "NonHNS"
+    select namespaceType in "HNS" "NonHNS (FNS)"
     do
         case $namespaceType in
             HNS)
