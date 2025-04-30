@@ -829,7 +829,8 @@ class S3ABlockOutputStream extends OutputStream implements
   @Override
   public void hflush() throws IOException {
     statistics.hflushInvoked();
-    handleSyncableInvocation();
+    // do not reject these, but downgrade to a no-oop
+    LOG.debug("Hflush invoked");
   }
 
   @Override
@@ -839,7 +840,7 @@ class S3ABlockOutputStream extends OutputStream implements
   }
 
   /**
-   * Shared processing of Syncable operation reporting/downgrade.
+   * Processing of Syncable operation reporting/downgrade.
    * @throws UnsupportedOperationException if required.
    */
   private void handleSyncableInvocation() {

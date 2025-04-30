@@ -148,7 +148,7 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
 
   /**
    * Unless configured to downgrade, the stream will raise exceptions on
-   * Syncable API calls.
+   * Syncable.hsync() API calls.
    */
   @Test
   public void testSyncableUnsupported() throws Exception {
@@ -156,13 +156,13 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
         builder = mockS3ABuilder();
     builder.withDowngradeSyncableExceptions(false);
     stream = spy(new S3ABlockOutputStream(builder));
-    intercept(UnsupportedOperationException.class, () -> stream.hflush());
+    stream.hflush();
     intercept(UnsupportedOperationException.class, () -> stream.hsync());
   }
 
   /**
    * When configured to downgrade, the stream downgrades on
-   * Syncable API calls.
+   * Syncable.hsync() API calls.
    */
   @Test
   public void testSyncableDowngrade() throws Exception {
