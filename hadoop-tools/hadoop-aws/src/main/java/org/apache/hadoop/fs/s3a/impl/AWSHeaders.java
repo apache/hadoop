@@ -40,6 +40,7 @@ public interface AWSHeaders {
   String LAST_MODIFIED = "Last-Modified";
   String IF_NONE_MATCH = "If-None-Match";
   String IF_MATCH = "If-Match";
+  String USER_AGENT = "User-Agent";
 
   /*
    * Amazon HTTP Headers used by S3A.

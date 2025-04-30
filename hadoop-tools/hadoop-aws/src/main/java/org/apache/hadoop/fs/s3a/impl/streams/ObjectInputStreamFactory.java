@@ -81,11 +81,10 @@ public interface ObjectInputStreamFactory
 
     /**
      * Get the Async S3Client, raising a failure to create as an IOException.
-     * @param requireCRT is the CRT required.
      * @return the Async S3 client
      * @throws IOException failure to create the client.
      */
-    S3AsyncClient getOrCreateAsyncClient(boolean requireCRT) throws IOException;
+    S3AsyncClient getOrCreateAsyncClient() throws IOException;
 
     void incrementFactoryStatistic(Statistic statistic);
   }

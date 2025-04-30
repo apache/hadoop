@@ -50,6 +50,7 @@ full details.
 * [Auditing Architecture](./auditing_architecture.html).
 * [Testing](./testing.html)
 * [S3Guard](./s3guard.html)
+* [Using the S3 CRT Client](./crt_client.html).
 
 ## <a name="overview"></a> Overview
 

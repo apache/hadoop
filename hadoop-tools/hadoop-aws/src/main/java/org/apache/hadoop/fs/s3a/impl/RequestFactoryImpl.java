@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
 
+import software.amazon.awssdk.awscore.AwsRequest;
+import software.amazon.awssdk.awscore.AwsRequestOverrideConfiguration;
 import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm;
@@ -64,6 +66,7 @@ import org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.fs.s3a.Constants.REQUESTER_PAYS_HEADER_VALUE;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PART_UPLOAD_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.IF_NONE_MATCH_STAR;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_C;
@@ -71,6 +74,8 @@ import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.UNKNOWN_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.setRequestTimeout;
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_MATCH;
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_NONE_MATCH;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.USER_AGENT;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
@@ -151,6 +156,21 @@ public class RequestFactoryImpl implements RequestFactory {
   private final ChecksumAlgorithm checksumAlgorithm;
 
   /**
+   * Is the S3 CRT client enabled?
+   */
+  private final Boolean isCRTEnabled;
+
+  /**
+   * Is requester pays?
+   */
+  private final Boolean isRequesterPays;
+
+  /**
+   * User agent to use on requests.
+   */
+  private final String userAgent;
+
+  /**
    * Constructor.
    * @param builder builder with all the configuration.
    */
@@ -166,6 +186,9 @@ public class RequestFactoryImpl implements RequestFactory {
     this.isMultipartUploadEnabled = builder.isMultipartUploadEnabled;
     this.partUploadTimeout = builder.partUploadTimeout;
     this.checksumAlgorithm = builder.checksumAlgorithm;
+    this.isCRTEnabled = builder.isCRTEnabled;
+    this.isRequesterPays = builder.isRequesterPays;
+    this.userAgent = builder.userAgent;
   }
 
   /**
@@ -275,6 +298,10 @@ public class RequestFactoryImpl implements RequestFactory {
       copyObjectRequestBuilder.storageClass(srcom.storageClass());
     }
 
+    if (isCRTEnabled) {
+      addRequestLevelHeaders(copyObjectRequestBuilder);
+    }
+
     copyObjectRequestBuilder.destinationBucket(getBucket())
         .destinationKey(dstKey).sourceBucket(getBucket()).sourceKey(srcKey);
 
@@ -372,10 +399,13 @@ public class RequestFactoryImpl implements RequestFactory {
       putObjectRequestBuilder.storageClass(storageClass);
     }
 
-    // Set the timeout for object uploads but not directory markers.
-    if (!isDirectoryMarker) {
+    // Set the timeout for object uploads but not directory markers, or if using the CRT client.
+    // CRT client is used for the upload when doing a copyFromLocal() operation only,
+    // as that uses the transfer manager.
+    if (!isDirectoryMarker && !isCRTEnabled) {
       setRequestTimeout(putObjectRequestBuilder, partUploadTimeout);
     }
+
 
     if (options != null) {
       if (options.isNoObjectOverwrite()) {
@@ -387,6 +417,10 @@ public class RequestFactoryImpl implements RequestFactory {
         LOG.debug("setting If-Match");
         putObjectRequestBuilder.overrideConfiguration(
                 override -> override.putHeader(IF_MATCH, options.getEtagOverwrite()));
+      }
+
+    if (isCRTEnabled) {
+      addRequestLevelHeaders(putObjectRequestBuilder);
       }
     }
 
@@ -741,6 +775,18 @@ public class RequestFactoryImpl implements RequestFactory {
     encryptionSecrets = secrets;
   }
 
+  private void addRequestLevelHeaders(AwsRequest.Builder requestBuilder) {
+    AwsRequestOverrideConfiguration.Builder builder = AwsRequestOverrideConfiguration.builder();
+
+    if (isRequesterPays) {
+      builder.putHeader(REQUESTER_PAYS_HEADER, REQUESTER_PAYS_HEADER_VALUE);
+    }
+
+    builder.putHeader(USER_AGENT, userAgent);
+
+    requestBuilder.overrideConfiguration(builder.build());
+  }
+
   /**
    * Create a builder.
    * @return new builder.
@@ -791,6 +837,21 @@ public class RequestFactoryImpl implements RequestFactory {
      * Is Multipart Enabled on the path.
      */
     private boolean isMultipartUploadEnabled = true;
+
+    /**
+     * Is the S3 CRT client enabled?
+     */
+    private boolean isCRTEnabled;
+
+    /**
+     * Is requester pays?
+     */
+    private boolean isRequesterPays;
+
+    /**
+     * User agent to use on requests.
+     */
+    private String userAgent;
 
     /**
      * Timeout for uploading objects/parts.
@@ -921,6 +982,38 @@ public class RequestFactoryImpl implements RequestFactory {
      */
     public RequestFactoryBuilder withChecksumAlgorithm(final ChecksumAlgorithm value) {
       checksumAlgorithm = value;
+      return this;
+    }
+
+    /**
+     * Should the CRT client be used as the S3 Async client?
+     * @param value new value
+     * @return the builder
+     */
+    public RequestFactoryBuilder withCRTEnabled(final boolean value) {
+      isCRTEnabled = value;
+      return this;
+    }
+
+    /**
+     * Is requester pays enabled?
+     * Required for the CRT client, where this header must be set on the request level.
+     * @param value new value
+     * @return the builder
+     */
+    public RequestFactoryBuilder withRequesterPays(final boolean value) {
+      isRequesterPays = value;
+      return this;
+    }
+
+    /**
+     * User agent to use on requests.
+     * Required for the CRT client, where this header must be set on the request level.
+     * @param value new value
+     * @return the builder
+     */
+    public RequestFactoryBuilder withUserAgent(final String value) {
+      userAgent = value;
       return this;
     }
   }

@@ -208,6 +208,11 @@ public interface S3ClientFactory {
     private boolean isAnalyticsAcceleratorEnabled;
 
     /**
+     * Is CRT enabled?
+     */
+    private boolean crtEnabled;
+
+    /**
      * List of execution interceptors to include in the chain
      * of interceptors in the SDK.
      * @return the interceptors list
@@ -600,6 +605,24 @@ public interface S3ClientFactory {
      */
     public S3ClientCreationParameters withFipsEnabled(final boolean value) {
       fipsEnabled = value;
+      return this;
+    }
+
+    /**
+     * Get the crt enabled flag.
+     * @return is crt enabled
+     */
+    public boolean isCrtEnabled() {
+      return crtEnabled;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withCrtEnabled(final boolean value) {
+      crtEnabled = value;
       return this;
     }
   }

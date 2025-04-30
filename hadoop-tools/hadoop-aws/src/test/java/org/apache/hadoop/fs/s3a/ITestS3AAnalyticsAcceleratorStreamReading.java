@@ -22,6 +22,8 @@ package org.apache.hadoop.fs.s3a;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Collection;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -36,6 +38,8 @@ import org.apache.hadoop.fs.s3a.impl.streams.InputStreamType;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStream;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import software.amazon.s3.analyticsaccelerator.S3SeekableInputStreamConfiguration;
 import software.amazon.s3.analyticsaccelerator.common.ConnectorConfiguration;
 
@@ -43,6 +47,7 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_PARQUET;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
 import static org.apache.hadoop.fs.s3a.Constants.ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX;
+import static org.apache.hadoop.fs.s3a.Constants.CRT_CLIENT_ENABLED;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.enableAnalyticsAccelerator;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
@@ -61,11 +66,29 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * parquet files.
  *
  */
+@RunWith(Parameterized.class)
 public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBase {
 
   private static final String PHYSICAL_IO_PREFIX = "physicalio";
 
+  /**
+   * Parameterization.
+   */
+  @Parameterized.Parameters(name = "crtEnabled={0}")
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+        {true},
+        {false},
+    });
+  }
+
+  private final boolean isCRTEnabled;
+
   private Path externalTestFile;
+
+  public ITestS3AAnalyticsAcceleratorStreamReading(final boolean isCRTEnabled) {
+    this.isCRTEnabled =  isCRTEnabled;
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -77,6 +100,10 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
   @Override
   public Configuration createConfiguration() {
     Configuration configuration = super.createConfiguration();
+
+    removeBaseAndBucketOverrides(configuration, CRT_CLIENT_ENABLED);
+    configuration.setBoolean(CRT_CLIENT_ENABLED, isCRTEnabled);
+
     enableAnalyticsAccelerator(configuration);
     return configuration;
   }

@@ -142,11 +142,11 @@ public class ClientManagerImpl
    * @return a callable which will create the client.
    */
   private CallableRaisingIOE<S3AsyncClient> createAsyncClient() {
-    return trackDurationOfOperation(
-        durationTrackerFactory,
+    return trackDurationOfOperation(durationTrackerFactory,
         STORE_CLIENT_CREATION.getSymbol(),
         () -> clientFactory.createS3AsyncClient(getUri(), clientCreationParameters));
   }
+
 
   /**
    * Create the function to create the unencrypted S3 client.

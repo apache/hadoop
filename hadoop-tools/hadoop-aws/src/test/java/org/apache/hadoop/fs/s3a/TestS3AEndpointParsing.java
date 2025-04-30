@@ -22,6 +22,11 @@ import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import software.amazon.awssdk.regions.Region;
 
+import org.apache.hadoop.fs.s3a.impl.AWSRegionEndpointResolver;
+
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+
+
 public class TestS3AEndpointParsing extends AbstractS3AMockTest {
 
     private static final String VPC_ENDPOINT = "vpce-1a2b3c4d-5e6f.s3.us-west-2.vpce.amazonaws.com";
@@ -31,13 +36,21 @@ public class TestS3AEndpointParsing extends AbstractS3AMockTest {
 
     @Test
     public void testVPCEndpoint() {
-        Region region = DefaultS3ClientFactory.getS3RegionFromEndpoint(VPC_ENDPOINT, false);
-        Assertions.assertThat(region).isEqualTo(Region.of(US_WEST_2));
+      Region region = AWSRegionEndpointResolver.getS3RegionFromEndpoint(VPC_ENDPOINT, false);
+      Assertions.assertThat(region).isEqualTo(Region.of(US_WEST_2));
     }
 
     @Test
     public void testNonVPCEndpoint() {
-        Region region = DefaultS3ClientFactory.getS3RegionFromEndpoint(NON_VPC_ENDPOINT, false);
-        Assertions.assertThat(region).isEqualTo(Region.of(EU_WEST_1));
+      Region region = AWSRegionEndpointResolver.getS3RegionFromEndpoint(NON_VPC_ENDPOINT, false);
+      Assertions.assertThat(region).isEqualTo(Region.of(EU_WEST_1));
+    }
+
+    @Test
+    public void testWithMalformedEndpoint() throws Throwable  {
+      intercept(IllegalArgumentException.class,
+              () -> AWSRegionEndpointResolver.getEndpointRegionResolution(
+                        new S3ClientFactory.S3ClientCreationParameters()
+                                .withEndpoint("https ://s3.us-east-1.amazonaws.com"), conf));
     }
 }

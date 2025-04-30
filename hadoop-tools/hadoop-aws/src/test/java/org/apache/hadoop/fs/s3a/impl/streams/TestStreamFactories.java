@@ -332,7 +332,7 @@ public class TestStreamFactories extends AbstractHadoopTestBase {
   private static final class Callbacks implements ObjectInputStreamFactory.StreamFactoryCallbacks {
 
     @Override
-    public S3AsyncClient getOrCreateAsyncClient(final boolean requireCRT) throws IOException {
+    public S3AsyncClient getOrCreateAsyncClient() throws IOException {
       throw new UnsupportedOperationException("not implemented");
     }
 

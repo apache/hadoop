@@ -1860,7 +1860,6 @@ public final class Constants {
    */
   public static final String S3A_IO_RATE_LIMIT = "fs.s3a.io.rate.limit";
 
-
   /**
    * Prefix to configure Analytics Accelerator Library.
    * Value: {@value}.
@@ -1875,4 +1874,20 @@ public final class Constants {
    *      AWS S3 PutObject API Documentation</a>
    */
   public static final String IF_NONE_MATCH_STAR = "*";
+
+  /**
+   * Flag to enable the CRT client. Value {@value}.
+   */
+  public static final String CRT_CLIENT_ENABLED = "fs.s3a.crt.enabled";
+
+  /**
+   * Default value for {@link #DEFAULT_CRT_ENABLED}.
+   * Value: {@value}.
+   */
+  public static final boolean DEFAULT_CRT_ENABLED = false;
+
+  /**
+   * Requester pays header value. Value {@value}.
+   */
+  public static final String REQUESTER_PAYS_HEADER_VALUE = "requester";
 }

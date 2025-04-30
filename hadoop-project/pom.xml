@@ -204,6 +204,7 @@
     <surefire.fork.timeout>900</surefire.fork.timeout>
     <aws-java-sdk.version>1.12.720</aws-java-sdk.version>
     <aws-java-sdk-v2.version>2.29.52</aws-java-sdk-v2.version>
+    <aws-crt-client.version>0.33.3</aws-crt-client.version>
     <amazon-s3-encryption-client-java.version>3.1.1</amazon-s3-encryption-client-java.version>
     <amazon-s3-analyticsaccelerator-s3.version>1.0.0</amazon-s3-analyticsaccelerator-s3.version>
     <aws.eventstream.version>1.0.1</aws.eventstream.version>
@@ -1107,6 +1108,11 @@
             <artifactId>*</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>software.amazon.awssdk.crt</groupId>
+        <artifactId>aws-crt</artifactId>
+        <version>${aws-crt-client.version}</version>
       </dependency>
       <dependency>
         <groupId>software.amazon.encryption.s3</groupId>

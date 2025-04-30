@@ -43,7 +43,6 @@ public class AnalyticsStreamFactory extends AbstractObjectInputStreamFactory {
 
   private S3SeekableInputStreamConfiguration seekableInputStreamConfiguration;
   private LazyAutoCloseableReference<S3SeekableInputStreamFactory>  s3SeekableInputStreamFactory;
-  private boolean requireCrt;
 
   public AnalyticsStreamFactory() {
     super("AnalyticsStreamFactory");
@@ -56,7 +55,6 @@ public class AnalyticsStreamFactory extends AbstractObjectInputStreamFactory {
                 ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX);
     this.seekableInputStreamConfiguration =
                 S3SeekableInputStreamConfiguration.fromConfiguration(configuration);
-    this.requireCrt = false;
   }
 
   @Override
@@ -110,7 +108,7 @@ public class AnalyticsStreamFactory extends AbstractObjectInputStreamFactory {
 
   private CallableRaisingIOE<S3SeekableInputStreamFactory> createS3SeekableInputStreamFactory() {
     return () -> new S3SeekableInputStreamFactory(
-            new S3SdkObjectClient(callbacks().getOrCreateAsyncClient(requireCrt)),
+            new S3SdkObjectClient(callbacks().getOrCreateAsyncClient()),
             seekableInputStreamConfiguration);
   }
 

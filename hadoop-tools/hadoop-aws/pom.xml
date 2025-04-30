@@ -123,6 +123,8 @@
                 <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
                 <!-- Stream Type -->
                 <fs.s3a.input.stream.type>${stream}</fs.s3a.input.stream.type>
+                <!-- S3 CRT Client -->
+                <fs.s3a.crt.enabled>${fs.s3a.crt.enabled}</fs.s3a.crt.enabled>
               </systemPropertyVariables>
             </configuration>
           </plugin>
@@ -324,6 +326,19 @@
       </properties>
     </profile>
 
+    <!-- Use the S3 CRT client -->
+    <profile>
+      <id>crt</id>
+      <activation>
+        <property>
+          <name>crt</name>
+        </property>
+      </activation>
+      <properties>
+        <fs.s3a.crt.enabled>true</fs.s3a.crt.enabled>
+      </properties>
+    </profile>
+
   </profiles>
 
   <build>
@@ -477,6 +492,11 @@
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>bundle</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk.crt</groupId>
+      <artifactId>aws-crt</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>

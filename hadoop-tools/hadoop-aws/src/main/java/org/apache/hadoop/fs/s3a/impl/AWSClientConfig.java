@@ -35,6 +35,10 @@ import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
+import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
+import software.amazon.awssdk.services.s3.crt.S3CrtHttpConfiguration;
+import software.amazon.awssdk.services.s3.crt.S3CrtProxyConfiguration;
+import software.amazon.awssdk.services.s3.crt.S3CrtRetryConfiguration;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
@@ -163,6 +167,36 @@ public final class AWSClientConfig {
   }
 
   /**
+   * Configure connection settings for the CRT client.
+   *
+   * @param s3CrtAsyncClientBuilder CRT client builder
+   * @param conf configuration
+   * @param bucket bucket to use to look up per-bucket proxy secrets
+   * @return S3CrtAsyncClientBuilder
+   * @throws IOException on any problem
+   */
+  public static S3CrtAsyncClientBuilder configureConnectionSettings(
+      S3CrtAsyncClientBuilder s3CrtAsyncClientBuilder, Configuration conf, String bucket)
+      throws IOException {
+    final ConnectionSettings conn = createConnectionSettings(conf);
+
+    S3CrtHttpConfiguration.Builder s3CrtHttpConfiguration =
+        S3CrtHttpConfiguration.builder().connectionTimeout(conn.getEstablishTimeout());
+
+    S3CrtRetryConfiguration.Builder s3CrtRetryConfiguration = S3CrtRetryConfiguration.builder();
+    s3CrtRetryConfiguration.numRetries(
+        S3AUtils.intOption(conf, MAX_ERROR_RETRIES, DEFAULT_MAX_ERROR_RETRIES, 0));
+
+    return s3CrtAsyncClientBuilder.httpConfiguration(
+        s3CrtHttpConfiguration
+             .proxyConfiguration(mapCRTProxyConfiguration(createAsyncProxyConfiguration(conf, bucket)))
+            .connectionTimeout(conn.getEstablishTimeout())
+            .build())
+        .maxConcurrency(conn.getMaxConnections())
+        .retryConfiguration(s3CrtRetryConfiguration.build());
+  }
+
+  /**
    * Create and configure the async http client with timeouts for:
    * connection acquisition, max idle, timeout, TTL, socket and keepalive.
    * This is netty based and does not allow for the SSL channel mode to be set.
@@ -210,6 +244,27 @@ public final class AWSClientConfig {
         DEFAULT_MAX_ERROR_RETRIES, 0));
 
     return retryPolicyBuilder;
+  }
+
+
+  private static S3CrtProxyConfiguration mapCRTProxyConfiguration(
+          software.amazon.awssdk.http.nio.netty.ProxyConfiguration proxyConfiguration) {
+
+    // If no proxy configurations are set, then proxy configuration can be null.
+    if (proxyConfiguration == null) {
+      return null;
+    }
+
+    S3CrtProxyConfiguration.Builder builder = S3CrtProxyConfiguration.builder();
+
+    builder.host(proxyConfiguration.host());
+    builder.port(proxyConfiguration.port());
+    builder.scheme(proxyConfiguration.scheme());
+
+    builder.username(proxyConfiguration.username());
+    builder.password(proxyConfiguration.password());
+
+    return builder.build();
   }
 
   /**
@@ -371,14 +426,23 @@ public final class AWSClientConfig {
    * @param clientConfig AWS SDK configuration to update
    */
   private static void initUserAgent(Configuration conf,
-      ClientOverrideConfiguration.Builder clientConfig) {
+     ClientOverrideConfiguration.Builder clientConfig) {
+     clientConfig.putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX, getUserAgent(conf));
+  }
+
+  /**
+   * Builds user agent string
+   * @param conf Hadoop configuration
+   * @return String
+   */
+  public static String getUserAgent(Configuration conf) {
     String userAgent = "Hadoop " + VersionInfo.getVersion();
     String userAgentPrefix = conf.getTrimmed(USER_AGENT_PREFIX, "");
     if (!userAgentPrefix.isEmpty()) {
       userAgent = userAgentPrefix + ", " + userAgent;
     }
     LOG.debug("Using User-Agent: {}", userAgent);
-    clientConfig.putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX, userAgent);
+    return userAgent;
   }
 
   /**

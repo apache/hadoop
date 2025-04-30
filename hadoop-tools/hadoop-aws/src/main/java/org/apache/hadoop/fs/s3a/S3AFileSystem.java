@@ -154,6 +154,7 @@ import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 import org.apache.hadoop.fs.s3a.impl.streams.StreamFactoryRequirements;
 import org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration;
 import org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags;
+import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
@@ -481,6 +482,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private boolean fipsEnabled;
 
   /**
+   * Is CRT enabled?
+   */
+  private boolean isCRTEnabled;
+
+  /**
    * A cache of files that should be deleted when the FileSystem is closed
    * or the JVM is exited.
    */
@@ -646,6 +652,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       // If encryption method is set to CSE-KMS or CSE-CUSTOM then CSE is enabled.
       isCSEEnabled = CSEUtils.isCSEEnabled(getS3EncryptionAlgorithm().getMethod());
+
+      isCRTEnabled = conf.getBoolean(CRT_CLIENT_ENABLED, DEFAULT_CRT_ENABLED);
 
       isAnalyticsAcceleratorEnabled = StreamIntegration.determineInputStreamType(conf)
           .equals(InputStreamType.Analytics);
@@ -969,7 +977,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * runs.
    * <p>
    * It requires the S3Store to have been instantiated.
-   * @param conf configuration.
    */
   private void initThreadPools() {
     Configuration conf = getConf();
@@ -1181,7 +1188,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withClientSideEncryptionEnabled(isCSEEnabled)
         .withClientSideEncryptionMaterials(cseMaterials)
         .withAnalyticsAcceleratorEnabled(isAnalyticsAcceleratorEnabled)
-        .withKMSRegion(conf.get(S3_ENCRYPTION_CSE_KMS_REGION));
+        .withKMSRegion(conf.get(S3_ENCRYPTION_CSE_KMS_REGION))
+        .withCrtEnabled(isCRTEnabled);
 
     // this is where clients and the transfer manager are created on demand.
     return createClientManager(clientFactory, unencryptedClientFactory, parameters,
@@ -1342,6 +1350,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withMultipartUploadEnabled(isMultipartUploadEnabled)
         .withPartUploadTimeout(partUploadTimeout)
         .withChecksumAlgorithm(ChecksumSupport.getChecksumAlgorithm(getConf()))
+        .withCRTEnabled(isCRTEnabled)
+        .withRequesterPays(getConf().getBoolean(ALLOW_REQUESTER_PAYS, DEFAULT_ALLOW_REQUESTER_PAYS))
+        .withUserAgent(AWSClientConfig.getUserAgent(getConf()))
         .build();
   }
 

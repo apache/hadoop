@@ -39,6 +39,7 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.functional.LazyAtomicReference;
 
+import static org.apache.hadoop.fs.s3a.impl.AWSRegionEndpointResolver.getS3Endpoint;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.unavailable;
 
 /**
