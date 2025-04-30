@@ -55,6 +55,7 @@ import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARK
 import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP;
 import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.CRT_CLIENT_ENABLED;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER;
 
 /**
@@ -286,7 +287,7 @@ public final class InternalConstants {
           DIRECTORY_LISTING_INCONSISTENT,
           FIPS_ENDPOINT,
           AWS_S3_ACCESS_GRANTS_ENABLED,
-
+          CRT_CLIENT_ENABLED,
           // s3 specific
           STORE_CAPABILITY_AWS_V2,
           STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP,
@@ -313,4 +314,8 @@ public final class InternalConstants {
   public static final String UPLOAD_PROGRESS_LOG_NAME =
       "org.apache.hadoop.fs.s3a.S3AFileSystem.Progress";
 
+  /**
+   * Requester pays header value. Value {@value}.
+   */
+  public static final String REQUESTER_PAYS_HEADER_VALUE = "requester";
 }

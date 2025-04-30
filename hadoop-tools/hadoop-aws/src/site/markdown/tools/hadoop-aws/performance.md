@@ -263,6 +263,16 @@ however the overall process is much less expensive than either sequentially
 reading through a file with the `random` policy, or reading columnar data
 with the `sequential` policy.
 
+## <a name="analytics-stream"></a> Improving read performance through Analytics Accelerator Library for S3
+
+Support for the Analytics Accelerator Library was added in Hadoop version 3.4.2. This library provides file format 
+aware input stream implementations, with current support for Parquet. For parquet file formats, it implements 
+optimisations uch as pre-fetching metadata located in the footer of the object and predictive column pre-fetching. 
+For more details, see the analytics accelerator library
+[documentation](https://github.com/awslabs/analytics-accelerator-s3/tree/main/input-stream).
+
+This input stream can also be used with the S3 CRT client, see the [crt client documentation](./crt_client.html) for
+more details.
 
 ## <a name="commit"></a> Committing Work in MapReduce and Spark
 

@@ -431,7 +431,7 @@ public final class AWSClientConfig {
   }
 
   /**
-   * Builds user agent string
+   * Builds user agent string.
    * @param conf Hadoop configuration
    * @return String
    */

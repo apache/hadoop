@@ -22,8 +22,8 @@ transfer throughput from S3 due to its enhanced connection pool management. More
 can be found
 [here](https://aws.amazon.com/blogs/developer/introducing-crt-based-s3-client-and-the-s3-transfer-manager-in-the-aws-sdk-for-java-2-x/).
 
-When making multiple parallel GET requests, using the CRT ensures load is evenly distributed across S3. This can be
-useful for all three input streams available with versions > 3.4.2, as:
+When making multiple parallel GET requests, using the CRT ensures load is evenly distributed across S3 front-end. 
+This can be useful for all three input streams available with versions >= 3.4.2, as:
 * The Analytics accelerator will make parallel GETs for columns it predicts will be required on a Parquet file open.
 * The Prefetch input stream can make up to 8 parallel 8MB GETs by default.
 * The Classic input stream will make async parallel GETs for column reads when using VectoredIO.
@@ -40,7 +40,7 @@ asynchronous client. The move to an async client is tracked in
 ## Enabling the CRT Client
 The CRT client can be enabled as follows:
 
-```
+```xml
     <property>
         <name>fs.s3a.crt.enabled</name>
         <value>true</value>

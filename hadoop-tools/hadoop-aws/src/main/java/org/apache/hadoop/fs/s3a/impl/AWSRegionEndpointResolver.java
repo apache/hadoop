@@ -150,7 +150,6 @@ public class AWSRegionEndpointResolver {
       // region configuration was set to empty string.
       // allow this if people really want it; it is OK to rely on this
       // when deployed in EC2.
-      WARN_OF_DEFAULT_REGION_CHAIN.debug(SDK_REGION_CHAIN_IN_USE);
       LOG.debug(SDK_REGION_CHAIN_IN_USE);
       origin = "SDK region chain";
     }

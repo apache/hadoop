@@ -5475,6 +5475,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case AWS_S3_ACCESS_GRANTS_ENABLED:
       return s3AccessGrantsEnabled;
 
+    case CRT_CLIENT_ENABLED:
+      return isCRTEnabled;
+
     default:
       // is it a performance flag?
       if (performanceFlags.hasCapability(capability)) {

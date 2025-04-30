@@ -79,7 +79,8 @@ Weaknesses
 
 An input stream aware-of and adapted-to the columnar storage
 formats used in production, currently with specific support for
-Apache Parquet.
+Apache Parquet. More details about this stream can be found in the analytics accelerator library 
+[documentation](https://github.com/awslabs/analytics-accelerator-s3/tree/main/input-stream).
 
 ```xml
 <property>
@@ -87,6 +88,9 @@ Apache Parquet.
   <value>analytics</value>
 </property>
 ```
+
+This stream can also be used with the CRT client, see the [crt client documentation](./crt_client.html) for 
+more details.
 
 Strengths
 * Significant speedup measured when reading Parquet files through Spark.

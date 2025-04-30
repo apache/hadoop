@@ -1886,8 +1886,4 @@ public final class Constants {
    */
   public static final boolean DEFAULT_CRT_ENABLED = false;
 
-  /**
-   * Requester pays header value. Value {@value}.
-   */
-  public static final String REQUESTER_PAYS_HEADER_VALUE = "requester";
 }
