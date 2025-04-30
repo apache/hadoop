@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.tools.util.TestDistCpUtils;
+import org.apache.hadoop.util.ExitUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,13 +66,11 @@ public class TestExternalCall {
 
   @BeforeEach
   public void setup() {
+    ExitUtil.disableSystemExit();
+    ExitUtil.disableSystemHalt();
+    ExitUtil.resetFirstExitException();
+    ExitUtil.resetFirstHaltException();
 
-    try {
-      securityManager = System.getSecurityManager();
-      System.setSecurityManager(new NoExitSecurityManager());
-    } catch (UnsupportedOperationException e) {
-      assumeTrue(false, "Test is skipped because SecurityManager cannot be set (JEP 411)");
-    }
     try {
       fs = FileSystem.get(getConf());
       root = new Path("target/tmp").makeQualified(fs.getUri(),
@@ -84,12 +83,8 @@ public class TestExternalCall {
 
   @AfterEach
   public void tearDown() {
-    try {
-      System.setSecurityManager(securityManager);
-    } catch (UnsupportedOperationException e) {
-      // JUnit 5 calls @AfterEach even if @BeforeEach has thrown TestAbortedException
-      // The test has already been already skipped
-    }
+    ExitUtil.resetFirstExitException();
+    ExitUtil.resetFirstHaltException();
   }
 
 /**
@@ -147,7 +142,7 @@ public class TestExternalCall {
       DistCp.main(arg);
       fail();
 
-    } catch (ExitException t) {
+    } catch (ExitUtil.ExitException t) {
       assertTrue(fs.exists(target));
       assertEquals(t.status, 0);
       assertEquals(
@@ -186,33 +181,4 @@ public class TestExternalCall {
   }
 
 
-  private SecurityManager securityManager;
-
-  protected static class ExitException extends SecurityException {
-    private static final long serialVersionUID = -1982617086752946683L;
-    public final int status;
-
-    public ExitException(int status) {
-      super("There is no escape!");
-      this.status = status;
-    }
-  }
-
-  private static class NoExitSecurityManager extends SecurityManager {
-    @Override
-    public void checkPermission(Permission perm) {
-      // allow anything.
-    }
-
-    @Override
-    public void checkPermission(Permission perm, Object context) {
-      // allow anything.
-    }
-
-    @Override
-    public void checkExit(int status) {
-      super.checkExit(status);
-      throw new ExitException(status);
-    }
-  }
 }
