@@ -852,30 +852,7 @@ public final class Constants {
   public static final String SIGNING_ALGORITHM_STS =
       "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_STS.toLowerCase()
           + ".signing-algorithm";
-
-  /** Prefix for S3A client-specific properties. */
-  public static final String FS_S3A_CLIENT_PREFIX = "fs.s3a.client.";
-
-  /** Custom headers postfix. */
-  public static final String CUSTOM_HEADERS_POSTFIX = ".custom.headers";
-
-  /**
-   * List of custom headers to be set on the service client.
-   * Multiple parameters can be used to specify custom headers.
-   * fs.s3a.client.s3.custom.headers - headers to add on all the s3 requests.
-   * fs.s3a.client.sts.custom.headers - headers to add on all the sts requests.
-   * Examples
-   * CustomHeader {@literal ->} 'Header1:Value1'
-   * CustomHeaders {@literal ->} 'Header1=Value1:Value2,Header2=Value1'
-   */
-  public static final String CUSTOM_HEADERS_STS =
-      FS_S3A_CLIENT_PREFIX + Constants.AWS_SERVICE_IDENTIFIER_STS.toLowerCase()
-          + CUSTOM_HEADERS_POSTFIX;
-
-  public static final String CUSTOM_HEADERS_S3 =
-      FS_S3A_CLIENT_PREFIX + Constants.AWS_SERVICE_IDENTIFIER_S3.toLowerCase()
-          + CUSTOM_HEADERS_POSTFIX;
-
+  
   @Deprecated
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
