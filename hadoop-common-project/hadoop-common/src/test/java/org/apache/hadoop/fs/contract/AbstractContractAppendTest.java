@@ -135,17 +135,21 @@ public abstract class AbstractContractAppendTest extends AbstractFSContractTestB
     touch(getFileSystem(), target);
     assertPathExists("original file does not exist", target);
     byte[] dataset = dataset(256, 'a', 'z');
-    FSDataOutputStream outputStream = getFileSystem().append(target);
-    if (isSupported(CREATE_VISIBILITY_DELAYED)) {
-      // Some filesystems like WebHDFS doesn't assure sequential consistency.
-      // In such a case, delay is needed. Given that we can not check the lease
-      // because here is closed in client side package, simply add a sleep.
-      Thread.sleep(100);
+    try (FSDataOutputStream outputStream = getFileSystem().append(target)) {
+      if (isSupported(CREATE_VISIBILITY_DELAYED)) {
+        // Some filesystems like WebHDFS doesn't assure sequential consistency.
+        // In such a case, delay is needed. Given that we can not check the lease
+        // because here is closed in client side package, simply add a sleep.
+        Thread.sleep(100);
+      }
+      outputStream.write(dataset);
     }
-    outputStream.write(dataset);
+
     Path renamed = new Path(testPath, "renamed");
+    // Renaming must be done after the "target" file is closed. Renaming will fail
+    // on Windows otherwise. The 'try' block above ensures that the "target" file gets
+    // closed.
     rename(target, renamed);
-    outputStream.close();
     String listing = ls(testPath);
 
     //expected: the stream goes to the file that was being renamed, not
