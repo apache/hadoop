@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -44,16 +44,42 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.MEDIUM_C
  * Manages a thread pool for writing operations, adjusting the pool size based on CPU utilization.
  */
 public class WriteThreadPoolSizeManager implements Closeable {
+
   private final int maxThreadPoolSize;
+
   private final ScheduledExecutorService cpuMonitorExecutor;
+
   private volatile ExecutorService boundedThreadPool;
+
   private final Lock lock = new ReentrantLock();
+
   private volatile int newMaxPoolSize;
-  private static final Logger LOG = LoggerFactory.getLogger(WriteThreadPoolSizeManager.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      WriteThreadPoolSizeManager.class);
+
   private static final ConcurrentHashMap<String, WriteThreadPoolSizeManager>
       poolSizeManagerMap = new ConcurrentHashMap<>();
+
   String filesystemName;
+
   int initialPoolSize;
+
+  private static final long BYTES_PER_GIGABYTE = 1024L * 1024 * 1024;
+
+  private static final int LOW_MEMORY_THRESHOLD_GB = 2;
+
+  private static final int MEDIUM_MEMORY_THRESHOLD_GB = 4;
+
+  private static final int HIGH_MEMORY_THRESHOLD_GB = 8;
+
+  private static final int LOW_MEMORY_MULTIPLIER = 10;
+
+  private static final int MEDIUM_MEMORY_MULTIPLIER = 25;
+
+  private static final int HIGH_MEMORY_MULTIPLIER = 40;
+
+  private static final int VERY_HIGH_MEMORY_MULTIPLIER = 50;
 
   /**
    * Private constructor to initialize the write thread pool and CPU monitor executor
@@ -70,7 +96,8 @@ public class WriteThreadPoolSizeManager implements Closeable {
     int computedMaxPoolSize = getComputedMaxPoolSize(availableProcessors);
 
     /* Get the initial pool size from config, fallback to at least 1 */
-    this.initialPoolSize = Math.max(1, abfsConfiguration.getWriteMaxConcurrentRequestCount());
+    this.initialPoolSize = Math.max(1,
+        abfsConfiguration.getWriteMaxConcurrentRequestCount());
 
     /* Set the upper bound for the thread pool size */
     this.maxThreadPoolSize = Math.max(computedMaxPoolSize, initialPoolSize);
@@ -79,7 +106,8 @@ public class WriteThreadPoolSizeManager implements Closeable {
     this.boundedThreadPool = Executors.newFixedThreadPool(initialPoolSize);
 
     ThreadPoolExecutor executor = (ThreadPoolExecutor) this.boundedThreadPool;
-    executor.setKeepAliveTime(abfsConfiguration.getWriteThreadPoolKeepAliveTime(), TimeUnit.SECONDS);
+    executor.setKeepAliveTime(
+        abfsConfiguration.getWriteThreadPoolKeepAliveTime(), TimeUnit.SECONDS);
     executor.allowCoreThreadTimeOut(true);
 
     /* Create a scheduled executor for CPU monitoring and pool adjustment */
@@ -95,22 +123,23 @@ public class WriteThreadPoolSizeManager implements Closeable {
    * @return Computed max thread pool size.
    */
   private int getComputedMaxPoolSize(final int availableProcessors) {
-    long totalMemoryBytes = getTotalMemoryInBytes(); // Could use available memory if needed
-    long totalMemoryGB = totalMemoryBytes / (1024L * 1024 * 1024);
+    long totalMemoryBytes
+        = getTotalMemoryInBytes(); // Could use available memory if needed
+    long totalMemoryGB = totalMemoryBytes / (BYTES_PER_GIGABYTE);
 
     // Estimate memory available per processor core
     long memoryPerCoreGB = totalMemoryGB / availableProcessors;
 
     // Determine multiplier based on memory-per-core tiers
     int multiplier;
-    if (memoryPerCoreGB <= 2) {
-      multiplier = 10;
-    } else if (memoryPerCoreGB <= 4) {
-      multiplier = 25;
-    } else if (memoryPerCoreGB <= 8) {
-      multiplier = 40;
+    if (memoryPerCoreGB <= LOW_MEMORY_THRESHOLD_GB) {
+      multiplier = LOW_MEMORY_MULTIPLIER;
+    } else if (memoryPerCoreGB <= MEDIUM_MEMORY_THRESHOLD_GB) {
+      multiplier = MEDIUM_MEMORY_MULTIPLIER;
+    } else if (memoryPerCoreGB <= HIGH_MEMORY_THRESHOLD_GB) {
+      multiplier = HIGH_MEMORY_MULTIPLIER;
     } else {
-      multiplier = 50;
+      multiplier = VERY_HIGH_MEMORY_MULTIPLIER;
     }
 
     /* Compute max thread pool size with upper bound safeguard */
@@ -153,7 +182,8 @@ public class WriteThreadPoolSizeManager implements Closeable {
     }
 
     /* Otherwise, create a new instance, put it in the map, and return it */
-    LOG.debug("Creating new WriteThreadPoolSizeManager instance for filesystem: {}",
+    LOG.debug(
+        "Creating new WriteThreadPoolSizeManager instance for filesystem: {}",
         filesystemName);
     WriteThreadPoolSizeManager newInstance = new WriteThreadPoolSizeManager(
         filesystemName, abfsConfiguration);
@@ -168,7 +198,8 @@ public class WriteThreadPoolSizeManager implements Closeable {
    */
   private void adjustThreadPoolSize(int newMaxPoolSize) {
     synchronized (this) {
-      ThreadPoolExecutor threadPoolExecutor = ((ThreadPoolExecutor) boundedThreadPool);
+      ThreadPoolExecutor threadPoolExecutor
+          = ((ThreadPoolExecutor) boundedThreadPool);
       int currentCorePoolSize = threadPoolExecutor.getCorePoolSize();
       if (newMaxPoolSize >= currentCorePoolSize) {
         threadPoolExecutor.setMaximumPoolSize(newMaxPoolSize);
@@ -179,7 +210,8 @@ public class WriteThreadPoolSizeManager implements Closeable {
       }
       LOG.debug("The thread pool size is: {} ", newMaxPoolSize);
       LOG.debug("The pool size is: {} ", threadPoolExecutor.getPoolSize());
-      LOG.debug("The active thread count is: {}", threadPoolExecutor.getActiveCount());
+      LOG.debug("The active thread count is: {}",
+          threadPoolExecutor.getActiveCount());
     }
   }
 
@@ -234,14 +266,18 @@ public class WriteThreadPoolSizeManager implements Closeable {
   public void adjustThreadPoolSizeBasedOnCPU(double cpuUtilization)
       throws InterruptedException {
     lock.lock();
-    int currentPoolSize = ((ThreadPoolExecutor) boundedThreadPool).getMaximumPoolSize();
+    int currentPoolSize
+        = ((ThreadPoolExecutor) boundedThreadPool).getMaximumPoolSize();
     try {
       if (cpuUtilization > HIGH_CPU_THRESHOLD) {
-        newMaxPoolSize = Math.max(initialPoolSize, currentPoolSize - currentPoolSize / 3);
+        newMaxPoolSize = Math.max(initialPoolSize,
+            currentPoolSize - currentPoolSize / 3);
       } else if (cpuUtilization > MEDIUM_CPU_THRESHOLD) {
-        newMaxPoolSize = Math.max(initialPoolSize, currentPoolSize - currentPoolSize / 5);
+        newMaxPoolSize = Math.max(initialPoolSize,
+            currentPoolSize - currentPoolSize / 5);
       } else if (cpuUtilization < LOW_CPU_THRESHOLD) {
-        newMaxPoolSize = Math.min(maxThreadPoolSize, (int) (currentPoolSize * 1.5));
+        newMaxPoolSize = Math.min(maxThreadPoolSize,
+            (int) (currentPoolSize * 1.5));
       } else {
         newMaxPoolSize = currentPoolSize;
       }

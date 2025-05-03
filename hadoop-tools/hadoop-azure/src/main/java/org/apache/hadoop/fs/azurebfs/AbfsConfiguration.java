@@ -1468,13 +1468,6 @@ public class AbfsConfiguration{
     return this.writeMaxConcurrentRequestCount;
   }
 
-  public int getWriteMaxThreadPoolSize() {
-    if (this.writeMaxConcurrentRequestCount < 1) {
-      return 50 * Runtime.getRuntime().availableProcessors();
-    }
-    return this.writeMaxConcurrentRequestCount;
-  }
-
   public int getWriteThreadPoolKeepAliveTime() {
     return writeThreadPoolKeepAliveTime;
   }
