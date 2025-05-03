@@ -205,7 +205,9 @@ public class TestRouterRpcSingleNS {
     cluster.getCluster().getFileSystem()
         .setSafeMode(SafeModeAction.ENTER);
     Boolean saveNamespace = routerProtocol.saveNamespace(0, 0);
-
     assertTrue(saveNamespace);
+    // Leave safe mode after saving the namespace.
+    cluster.getCluster().getFileSystem()
+        .setSafeMode(SafeModeAction.LEAVE);
   }
 }

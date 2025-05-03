@@ -635,11 +635,12 @@ hadoop-dist/target upon successful build. Run these commands from an
 "x64 Native Tools Command Prompt for VS 2019" which can be found under "Visual Studio 2019" in the
 Windows start menu. If you're using the Docker image from Dockerfile_windows_10, you'll be
 logged into "x64 Native Tools Command Prompt for VS 2019" automatically when you start the
-container.
+container. The Docker image does not have a full VS install, so you need to add the
+-Dskip.platformToolsetDetection option (already included below in the examples).
 
 > set classpath=
 > set PROTOBUF_HOME=C:\vcpkg\installed\x64-windows
-> mvn clean package -Dhttps.protocols=TLSv1.2 -DskipTests -DskipDocs -Pnative-win,dist^
+> mvn clean package -Dhttps.protocols=TLSv1.2 -DskipTests -DskipDocs -Pnative-win,dist -Dskip.platformToolsetDetection^
     -Drequire.openssl -Drequire.test.libhadoop -Pyarn-ui -Dshell-executable=C:\Git\bin\bash.exe^
     -Dtar -Dopenssl.prefix=C:\vcpkg\installed\x64-windows^
     -Dcmake.prefix.path=C:\vcpkg\installed\x64-windows^
@@ -651,7 +652,7 @@ Assuming that we're still running in the Docker container hadoop-windows-10-buil
 following command to create the Apache Hadoop release tarball -
 
 > set IS_WINDOWS=1
-> set MVN_ARGS="-Dshell-executable=C:\Git\bin\bash.exe -Dhttps.protocols=TLSv1.2 -Pnative-win -Drequire.openssl -Dopenssl.prefix=C:\vcpkg\installed\x64-windows -Dcmake.prefix.path=C:\vcpkg\installed\x64-windows -Dwindows.cmake.toolchain.file=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off -Duse.platformToolsetVersion=v142 -Dwindows.no.sasl=on -DskipTests -DskipDocs -Drequire.test.libhadoop"
+> set MVN_ARGS="-Dshell-executable=C:\Git\bin\bash.exe -Dhttps.protocols=TLSv1.2 -Pnative-win -Dskip.platformToolsetDetection -Drequire.openssl -Dopenssl.prefix=C:\vcpkg\installed\x64-windows -Dcmake.prefix.path=C:\vcpkg\installed\x64-windows -Dwindows.cmake.toolchain.file=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off -Duse.platformToolsetVersion=v142 -Dwindows.no.sasl=on -DskipTests -DskipDocs -Drequire.test.libhadoop"
 > C:\Git\bin\bash.exe C:\hadoop\dev-support\bin\create-release --mvnargs=%MVN_ARGS%
 
 Note:

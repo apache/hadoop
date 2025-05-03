@@ -23,8 +23,10 @@ import java.util.Set;
 
 import org.apache.hadoop.mapred.gridmix.RandomTextDataGenerator;
 
-import static org.junit.Assert.*;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test {@link RandomTextDataGenerator}.
@@ -40,15 +42,15 @@ public class TestRandomTextDataGenerator {
     List<String> words = rtdg.getRandomWords();
 
     // check the size
-    assertEquals("List size mismatch", 10, words.size());
+    assertEquals(10, words.size(), "List size mismatch");
 
     // check the words
     Set<String> wordsSet = new HashSet<String>(words);
-    assertEquals("List size mismatch due to duplicates", 10, wordsSet.size());
+    assertEquals(10, wordsSet.size(), "List size mismatch due to duplicates");
 
     // check the word lengths
     for (String word : wordsSet) {
-      assertEquals("Word size mismatch", 5, word.length());
+      assertEquals(5, word.length(), "Word size mismatch");
     }
   }
   
@@ -64,7 +66,7 @@ public class TestRandomTextDataGenerator {
     RandomTextDataGenerator rtdg2 = new RandomTextDataGenerator(10, 0L, 5);
     List<String> words2 = rtdg2.getRandomWords();
     
-    assertTrue("List mismatch", words1.equals(words2));
+    assertTrue(words1.equals(words2), "List mismatch");
   }
   
   /**
@@ -79,6 +81,6 @@ public class TestRandomTextDataGenerator {
     RandomTextDataGenerator rtdg2 = new RandomTextDataGenerator(10, 0L, 5);
     Set<String> words2 = new HashSet(rtdg2.getRandomWords());
     
-    assertFalse("List size mismatch across lists", words1.equals(words2));
+    assertFalse(words1.equals(words2), "List size mismatch across lists");
   }
 }

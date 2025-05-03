@@ -49,20 +49,13 @@ RUN powershell Copy-Item -Recurse -Path 'C:\Program Files\Git' -Destination C:\G
 # hadolint ignore=DL3003
 RUN powershell git clone https://github.com/microsoft/vcpkg.git \
     && cd vcpkg \
-    && git checkout 7ffa425e1db8b0c3edf9c50f2f3a0f25a324541d \
+    && git fetch --all \
+    && git checkout 2025.03.19 \
     && .\bootstrap-vcpkg.bat
 
-# Fix wrong download link for 7-zip in .\vcpkg\scripts\vcpkgTools.xml:
-# - https://www.nuget.org/api/v2/package/7-Zip.CommandLine/18.1.0 (not working anymore) is replaced with
-# - https://globalcdn.nuget.org/packages/7-zip.commandline.18.1.0.nupkg?packageVersion=18.1.0 (working)
-# Replacing is done using the Linux tool "sed".
-RUN choco install sed -y
-RUN sed -i "s,https://www.nuget.org/api/v2/package/7-Zip.CommandLine/18.1.0,https://globalcdn.nuget.org/packages/7-zip.commandline.18.1.0.nupkg?packageVersion=18.1.0,g" .\vcpkg\scripts\vcpkgTools.xml
+ADD vcpkg/vcpkg.json .
 
-RUN powershell .\vcpkg\vcpkg.exe install boost:x64-windows
-RUN powershell .\vcpkg\vcpkg.exe install protobuf:x64-windows
-RUN powershell .\vcpkg\vcpkg.exe install openssl:x64-windows
-RUN powershell .\vcpkg\vcpkg.exe install zlib:x64-windows
+RUN powershell .\vcpkg\vcpkg.exe install --x-install-root .\vcpkg\installed
 
 # Install Azul Java 8 JDK.
 RUN powershell Invoke-WebRequest -URI https://cdn.azul.com/zulu/bin/zulu8.62.0.19-ca-jdk8.0.332-win_x64.zip -OutFile $Env:TEMP\zulu8.62.0.19-ca-jdk8.0.332-win_x64.zip

@@ -174,6 +174,21 @@ public class TestDatanodeManager {
 
     assertNull("should be no node with old ip", dm.getDatanodeByHost(ipOld));
     assertNotNull("should be a node with new ip", dm.getDatanodeByHost(ipNew));
+
+    storageID = "someStorageID2";
+    String hostnameOld = "someHostNameOld" + storageID;
+    String hostnameNew = "someHostNameNew" + storageID;
+
+    dm.registerDatanode(new DatanodeRegistration(
+            new DatanodeID("ip", hostnameOld, storageID, 9000, 0, 0, 0),
+            null, null, "version"));
+
+    dm.registerDatanode(new DatanodeRegistration(
+            new DatanodeID("ip", hostnameNew, storageID, 9000, 0, 0, 0),
+            null, null, "version"));
+
+    assertNull("should be no node with old hostname", dm.getDatanodeByHostName(hostnameOld));
+    assertNotNull("should be a node with new hostname", dm.getDatanodeByHostName(hostnameNew));
   }
 
   /**

@@ -1530,7 +1530,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               STREAM_WRITE_TOTAL_DATA.getSymbol(),
               STREAM_WRITE_TOTAL_TIME.getSymbol(),
               INVOCATION_HFLUSH.getSymbol(),
-              INVOCATION_HSYNC.getSymbol())
+              INVOCATION_HSYNC.getSymbol(),
+              CONDITIONAL_CREATE.getSymbol(),
+              CONDITIONAL_CREATE_FAILED.getSymbol())
           .withGauges(
               STREAM_WRITE_BLOCK_UPLOADS_ACTIVE.getSymbol(),
               STREAM_WRITE_BLOCK_UPLOADS_PENDING.getSymbol(),
@@ -1686,6 +1688,15 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void hsyncInvoked() {
       incCounter(INVOCATION_HSYNC.getSymbol(), 1);
+    }
+
+    @Override
+    public void conditionalCreateOutcome(boolean success) {
+      if (success) {
+        incCounter(CONDITIONAL_CREATE.getSymbol(), 1);
+      } else {
+        incCounter(CONDITIONAL_CREATE_FAILED.getSymbol(), 1);
+      }
     }
 
     @Override

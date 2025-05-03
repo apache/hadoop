@@ -253,6 +253,7 @@ public final class HttpServer2 implements FilterContainer {
         new ArrayList<>(Collections.singletonList(
             "hadoop.http.authentication."));
     private String excludeCiphers;
+    private String includeCiphers;
 
     private boolean xFrameEnabled;
     private XFrameOption xFrameOption = XFrameOption.SAMEORIGIN;
@@ -400,6 +401,11 @@ public final class HttpServer2 implements FilterContainer {
       return this;
     }
 
+    public Builder includeCiphers(String pIncludeCiphers) {
+      this.includeCiphers = pIncludeCiphers;
+      return this;
+    }
+
     /**
      * Adds the ability to control X_FRAME_OPTIONS on HttpServer2.
      * @param xFrameEnabled - True enables X_FRAME_OPTIONS false disables it.
@@ -481,6 +487,7 @@ public final class HttpServer2 implements FilterContainer {
       trustStoreType = sslConf.get(SSLFactory.SSL_SERVER_TRUSTSTORE_TYPE,
           SSLFactory.SSL_SERVER_TRUSTSTORE_TYPE_DEFAULT);
       excludeCiphers = sslConf.get(SSLFactory.SSL_SERVER_EXCLUDE_CIPHER_LIST);
+      includeCiphers = sslConf.get(SSLFactory.SSL_SERVER_INCLUDE_CIPHER_LIST);
     }
 
     public HttpServer2 build() throws IOException {
@@ -608,10 +615,17 @@ public final class HttpServer2 implements FilterContainer {
           sslContextFactory.setTrustStorePassword(trustStorePassword);
         }
       }
-      if(null != excludeCiphers && !excludeCiphers.isEmpty()) {
+
+      if (StringUtils.hasLength(excludeCiphers)) {
         sslContextFactory.setExcludeCipherSuites(
             StringUtils.getTrimmedStrings(excludeCiphers));
-        LOG.info("Excluded Cipher List:" + excludeCiphers);
+        LOG.info("Excluded Cipher List:{}", excludeCiphers);
+      }
+
+      if (StringUtils.hasLength(includeCiphers)) {
+        sslContextFactory.setIncludeCipherSuites(
+          StringUtils.getTrimmedStrings(includeCiphers));
+        LOG.info("Included Cipher List:{}", includeCiphers);
       }
 
       setEnabledProtocols(sslContextFactory);

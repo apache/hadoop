@@ -19,15 +19,15 @@ package org.apache.hadoop.hdfs.util;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.io.erasurecode.ECSchema;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.List;
 
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 
 /**

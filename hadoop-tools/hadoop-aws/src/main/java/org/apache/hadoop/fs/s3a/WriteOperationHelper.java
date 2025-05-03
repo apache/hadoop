@@ -318,8 +318,7 @@ public class WriteOperationHelper implements WriteOperations {
           retrying,
           () -> {
             final CompleteMultipartUploadRequest.Builder requestBuilder =
-                getRequestFactory().newCompleteMultipartUploadRequestBuilder(
-                    destKey, uploadId, partETags);
+                getRequestFactory().newCompleteMultipartUploadRequestBuilder(destKey, uploadId, partETags, putOptions);
             return writeOperationHelperCallbacks.completeMultipartUpload(requestBuilder.build());
           });
       return uploadResult;

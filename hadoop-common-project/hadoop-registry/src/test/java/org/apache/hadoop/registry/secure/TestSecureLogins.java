@@ -49,7 +49,7 @@ import static org.apache.hadoop.security.authentication.util.KerberosName.MECHAN
 import static org.apache.hadoop.security.authentication.util.KerberosName.MECHANISM_MIT;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +69,7 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
   @Test
   public void testJaasFileSetup() throws Throwable {
     // the JVM has seemed inconsistent on setting up here
-    assertNotNull("jaasFile", jaasFile);
+    assertNotNull(jaasFile, "jaasFile");
     String confFilename = System.getProperty(Environment.JAAS_CONF_KEY);
     assertEquals(jaasFile.getAbsolutePath(), confFilename);
   }
@@ -77,7 +77,7 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
   @Test
   public void testJaasFileBinding() throws Throwable {
     // the JVM has seemed inconsistent on setting up here
-    assertNotNull("jaasFile", jaasFile);
+    assertNotNull(jaasFile, "jaasFile");
     RegistrySecurity.bindJVMtoJAASFile(jaasFile);
     String confFilename = System.getProperty(Environment.JAAS_CONF_KEY);
     assertEquals(jaasFile.getAbsolutePath(), confFilename);
@@ -92,7 +92,7 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
     try {
       logLoginDetails(ALICE_LOCALHOST, client);
       String confFilename = System.getProperty(Environment.JAAS_CONF_KEY);
-      assertNotNull("Unset: "+ Environment.JAAS_CONF_KEY, confFilename);
+      assertNotNull(confFilename, "Unset: "+ Environment.JAAS_CONF_KEY);
       String config = FileUtils.readFileToString(new File(confFilename), StandardCharsets.UTF_8);
       LOG.info("{}=\n{}", confFilename, config);
       RegistrySecurity.setZKSaslClientProperties(ALICE, ALICE_CLIENT_CONTEXT);
@@ -175,10 +175,10 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
         new HashMap<String, String>(), options);
     Method methodLogin = kerb5LoginObject.getClass().getMethod("login");
     boolean loginOk = (Boolean) methodLogin.invoke(kerb5LoginObject);
-    assertTrue("Failed to login", loginOk);
+    assertTrue(loginOk, "Failed to login");
     Method methodCommit = kerb5LoginObject.getClass().getMethod("commit");
     boolean commitOk = (Boolean) methodCommit.invoke(kerb5LoginObject);
-    assertTrue("Failed to Commit", commitOk);
+    assertTrue(commitOk, "Failed to Commit");
   }
 
   @Test
@@ -191,8 +191,8 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
 
   @Test
   public void testKerberosRulesValid() throws Throwable {
-    assertTrue("!KerberosName.hasRulesBeenSet()",
-        KerberosName.hasRulesBeenSet());
+    assertTrue(KerberosName.hasRulesBeenSet(),
+        "!KerberosName.hasRulesBeenSet()");
     String rules = KerberosName.getRules();
     assertEquals(kerberosRule, rules);
     LOG.info(rules);
@@ -218,10 +218,9 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
     RegistrySecurity.UgiInfo ugiInfo =
         new RegistrySecurity.UgiInfo(ugi);
     LOG.info("logged in as: {}", ugiInfo);
-    assertTrue("security is not enabled: " + ugiInfo,
-        UserGroupInformation.isSecurityEnabled());
-    assertTrue("login is keytab based: " + ugiInfo,
-        ugi.isFromKeytab());
+    assertTrue(UserGroupInformation.isSecurityEnabled(),
+        "security is not enabled: " + ugiInfo);
+    assertTrue(ugi.isFromKeytab(), "login is keytab based: " + ugiInfo);
 
     // now we are here, build a SASL ACL
     ACL acl = ugi.doAs(new PrivilegedExceptionAction<ACL>() {

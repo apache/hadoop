@@ -77,6 +77,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriAuthorityExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.ListResponseData;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
@@ -118,6 +119,7 @@ import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.CRC64;
 import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
+import org.apache.hadoop.fs.azurebfs.utils.ListUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.impl.BackReference;
@@ -1271,7 +1273,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             : generateContinuationTokenForNonXns(relativePath, startFrom);
       }
     }
-
+    List<FileStatus> fileStatusList = new ArrayList<>();
     do {
       try (AbfsPerfInfo perfInfo = startTracking("listStatus", "listPath")) {
         ListResponseData listResponseData = listingClient.listPath(relativePath,
@@ -1280,9 +1282,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         AbfsRestOperation op = listResponseData.getOp();
         perfInfo.registerResult(op.getResult());
         continuation = listResponseData.getContinuationToken();
-        List<FileStatus> fileStatusListInCurrItr = listResponseData.getFileStatusList();
+        List<VersionedFileStatus> fileStatusListInCurrItr = listResponseData.getFileStatusList();
         if (fileStatusListInCurrItr != null && !fileStatusListInCurrItr.isEmpty()) {
-          fileStatuses.addAll(fileStatusListInCurrItr);
+          fileStatusList.addAll(fileStatusListInCurrItr);
         }
         perfInfo.registerSuccess(true);
         countAggregate++;
@@ -1294,6 +1296,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         }
       }
     } while (shouldContinue);
+
+    if (listingClient instanceof AbfsBlobClient) {
+      fileStatuses.addAll(ListUtils.getUniqueListResult(fileStatusList));
+      LOG.debug("ListBlob API returned a total of {} elements including duplicates."
+          + "Number of unique Elements are {}", fileStatusList.size(), fileStatuses.size());
+    } else {
+      fileStatuses.addAll(fileStatusList);
+    }
 
     return continuation;
   }

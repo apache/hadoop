@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -30,9 +31,8 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test for {@link KMSMDCFilter}.
@@ -48,11 +48,11 @@ public class TestKMSMDCFilter {
   private HttpServletRequest httpRequest;
   private HttpServletResponse httpResponse;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     filter = new KMSMDCFilter();
-    httpRequest = Mockito.mock(HttpServletRequest.class);
-    httpResponse = Mockito.mock(HttpServletResponse.class);
+    httpRequest = mock(HttpServletRequest.class);
+    httpResponse = mock(HttpServletResponse.class);
     KMSMDCFilter.setContext(null, null, null, null);
   }
 
@@ -66,10 +66,10 @@ public class TestKMSMDCFilter {
       @Override
       public void doFilter(ServletRequest request, ServletResponse response)
           throws IOException, ServletException {
-        assertEquals("filter.remoteClientAddress", REMOTE_ADDRESS,
-            KMSMDCFilter.getRemoteClientAddress());
-        assertEquals("filter.method", METHOD, KMSMDCFilter.getMethod());
-        assertEquals("filter.url", URL, KMSMDCFilter.getURL());
+        assertEquals(REMOTE_ADDRESS,
+            KMSMDCFilter.getRemoteClientAddress(), "filter.remoteClientAddress");
+        assertEquals(METHOD, KMSMDCFilter.getMethod(), "filter.method");
+        assertEquals(URL, KMSMDCFilter.getURL(), "filter.url");
       }
     };
 
@@ -79,10 +79,10 @@ public class TestKMSMDCFilter {
   }
 
   private void checkMDCValuesAreEmpty() {
-    assertNull("getRemoteClientAddress", KMSMDCFilter.getRemoteClientAddress());
-    assertNull("getMethod", KMSMDCFilter.getMethod());
-    assertNull("getURL", KMSMDCFilter.getURL());
-    assertNull("getUgi", KMSMDCFilter.getUgi());
+    assertNull(KMSMDCFilter.getRemoteClientAddress(), "getRemoteClientAddress");
+    assertNull(KMSMDCFilter.getMethod(), "getMethod");
+    assertNull(KMSMDCFilter.getURL(), "getURL");
+    assertNull(KMSMDCFilter.getUgi(), "getUgi");
   }
 
 }

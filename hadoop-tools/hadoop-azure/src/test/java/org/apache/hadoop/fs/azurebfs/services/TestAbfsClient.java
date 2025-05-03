@@ -57,6 +57,7 @@ public class TestAbfsClient {
     public void testTimerInitializationWithoutMetricCollection() throws Exception {
         final Configuration configuration = new Configuration();
         AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, ACCOUNT_NAME);
+        abfsConfiguration.unset(FS_AZURE_METRIC_FORMAT);
 
         AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
         AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters).build();
@@ -151,11 +152,11 @@ public class TestAbfsClient {
    * @throws Exception if an error occurs while mocking the operation creation
    */
   public static void mockAbfsOperationCreation(final AbfsClient abfsClient,
-      final MockIntercept mockIntercept) throws Exception {
-    boolean[] flag = new boolean[1];
+      final MockIntercept mockIntercept, int failedCall) throws Exception {
+    int[] flag = new int[1];
     Mockito.doAnswer(answer -> {
-          if (!flag[0]) {
-            flag[0] = true;
+          if (flag[0] == failedCall) {
+            flag[0] += 1;
             AbfsRestOperation op = Mockito.spy(
                 new AbfsRestOperation(
                     answer.getArgument(0),
@@ -173,6 +174,7 @@ public class TestAbfsClient {
             Mockito.doReturn(true).when(op).isARetriedRequest();
             return op;
           }
+          flag[0] += 1;
           return answer.callRealMethod();
         }).when(abfsClient)
         .getAbfsRestOperation(any(), any(), any(), any());

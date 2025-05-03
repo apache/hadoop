@@ -108,6 +108,12 @@ public enum Statistic {
       "Filesystem close",
       TYPE_DURATION),
 
+  CONDITIONAL_CREATE(StoreStatisticNames.CONDITIONAL_CREATE,
+          "Count of successful conditional create operations.",
+          TYPE_COUNTER),
+  CONDITIONAL_CREATE_FAILED(StoreStatisticNames.CONDITIONAL_CREATE_FAILED,
+          "Count of failed conditional create operations.",
+          TYPE_COUNTER),
   DIRECTORIES_CREATED("directories_created",
       "Total number of directories created through the object store.",
       TYPE_COUNTER),
@@ -346,6 +352,10 @@ public enum Statistic {
       StreamStatisticNames.STREAM_READ_CLOSE_OPERATIONS,
       "Total count of times an attempt to close an input stream was made",
       TYPE_COUNTER),
+  ANALYTICS_STREAM_FACTORY_CLOSED(
+          "analytics_stream_factory_closed",
+          "Count of times the analytics stream factory was closed",
+          TYPE_COUNTER),
   STREAM_READ_EXCEPTIONS(
       StreamStatisticNames.STREAM_READ_EXCEPTIONS,
       "Count of exceptions raised during input stream reads",

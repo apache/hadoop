@@ -21,8 +21,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -39,7 +39,7 @@ public class TestGetJournalEditServlet {
 
   private final static GetJournalEditServlet SERVLET = new GetJournalEditServlet();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws ServletException {
     // Configure Hadoop
     CONF.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:4321/");

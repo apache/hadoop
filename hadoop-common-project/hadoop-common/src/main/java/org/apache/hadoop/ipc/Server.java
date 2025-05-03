@@ -673,9 +673,8 @@ public abstract class Server {
    * Update rpc metrics for defered calls.
    * @param call The Rpc Call
    * @param name Rpc method name
-   * @param processingTime processing call in ms unit.
    */
-  void updateDeferredMetrics(Call call, String name, long processingTime) {
+  void updateDeferredMetrics(Call call, String name) {
     long completionTimeNanos = Time.monotonicNowNanos();
     long arrivalTimeNanos = call.timestampNanos;
 
@@ -684,6 +683,8 @@ public abstract class Server {
         details.get(Timing.LOCKWAIT, rpcMetrics.getMetricsTimeUnit());
     long responseTime =
         details.get(Timing.RESPONSE, rpcMetrics.getMetricsTimeUnit());
+    long processingTime =
+        details.get(Timing.PROCESSING, rpcMetrics.getMetricsTimeUnit());
     rpcMetrics.addRpcLockWaitTime(waitTime);
     rpcMetrics.addRpcProcessingTime(processingTime);
     rpcMetrics.addRpcResponseTime(responseTime);

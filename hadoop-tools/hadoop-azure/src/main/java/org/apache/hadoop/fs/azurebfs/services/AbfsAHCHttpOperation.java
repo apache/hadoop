@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect10
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
@@ -47,6 +48,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.util.EntityUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APACHE_IMPL;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
@@ -192,14 +194,26 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   public void processResponse(final byte[] buffer,
       final int offset,
       final int length) throws IOException {
-    if (!isPayloadRequest) {
-      prepareRequest();
-      LOG.debug("Sending request: {}", httpRequestBase);
-      httpResponse = executeRequest();
-      LOG.debug("Request sent: {}; response {}", httpRequestBase,
-          httpResponse);
+    try {
+      if (!isPayloadRequest) {
+        prepareRequest();
+        LOG.debug("Sending request: {}", httpRequestBase);
+        httpResponse = executeRequest();
+        LOG.debug("Request sent: {}; response {}", httpRequestBase,
+            httpResponse);
+      }
+      parseResponseHeaderAndBody(buffer, offset, length);
+    } finally {
+      if (httpResponse != null) {
+        try {
+          EntityUtils.consume(httpResponse.getEntity());
+        } finally {
+          if (httpResponse instanceof CloseableHttpResponse) {
+            ((CloseableHttpResponse) httpResponse).close();
+          }
+        }
+      }
     }
-    parseResponseHeaderAndBody(buffer, offset, length);
   }
 
   /**

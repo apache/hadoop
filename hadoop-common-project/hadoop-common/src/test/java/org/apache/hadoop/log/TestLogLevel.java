@@ -37,23 +37,24 @@ import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
-import org.junit.Assert;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test LogLevel.
@@ -72,7 +73,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
   private final static String KEYTAB  = "loglevel.keytab";
   private static final String PREFIX = "hadoop.http.authentication.";
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     org.slf4j.Logger logger =
         LoggerFactory.getLogger(KerberosAuthenticator.class);
@@ -94,7 +95,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
     sslConf = KeyStoreTestUtil.getSslConfig();
   }
 
-  @Before
+  @BeforeEach
   public void setupKerberos() throws Exception {
     File keytabFile = new File(KerberosTestUtils.getKeytabFile());
     clientPrincipal = KerberosTestUtils.getClientPrincipal();
@@ -106,7 +107,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
     getKdc().createPrincipal(keytabFile, clientPrincipal, serverPrincipal);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
     FileUtil.fullyDelete(BASEDIR);
@@ -116,7 +117,8 @@ public class TestLogLevel extends KerberosSecurityTestcase {
    * Test client command line options. Does not validate server behavior.
    * @throws Exception
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testCommandOptions() throws Exception {
     final String className = this.getClass().getName();
 
@@ -251,8 +253,8 @@ public class TestLogLevel extends KerberosSecurityTestcase {
       throw new Exception("Invalid client protocol " + connectProtocol);
     }
     Level oldLevel = log.getEffectiveLevel();
-    Assert.assertNotEquals("Get default Log Level which shouldn't be ERROR.",
-        Level.ERROR, oldLevel);
+    assertNotEquals(Level.ERROR, oldLevel,
+        "Get default Log Level which shouldn't be ERROR.");
 
     // configs needed for SPNEGO at server side
     if (isSpnego) {
@@ -321,8 +323,8 @@ public class TestLogLevel extends KerberosSecurityTestcase {
     CLI cli = new CLI(sslConf);
     cli.run(setLevelArgs);
 
-    assertEquals("new level not equal to expected: ", newLevel.toUpperCase(),
-        log.getEffectiveLevel().toString());
+    assertEquals(newLevel.toUpperCase(), log.getEffectiveLevel().toString(),
+        "new level not equal to expected: ");
   }
 
   /**
@@ -330,7 +332,8 @@ public class TestLogLevel extends KerberosSecurityTestcase {
    *
    * @throws Exception
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testInfoLogLevel() throws Exception {
     testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTP, false,
         "Info");
@@ -341,7 +344,8 @@ public class TestLogLevel extends KerberosSecurityTestcase {
    *
    * @throws Exception
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testErrorLogLevel() throws Exception {
     testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTP, false,
         "Error");
@@ -352,7 +356,8 @@ public class TestLogLevel extends KerberosSecurityTestcase {
    *
    * @throws Exception
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testLogLevelByHttp() throws Exception {
     testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTP, false);
     try {
@@ -373,7 +378,8 @@ public class TestLogLevel extends KerberosSecurityTestcase {
    *
    * @throws Exception
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testLogLevelByHttpWithSpnego() throws Exception {
     testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTP, true);
     try {
@@ -394,7 +400,8 @@ public class TestLogLevel extends KerberosSecurityTestcase {
    *
    * @throws Exception
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testLogLevelByHttps() throws Exception {
     testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTPS,
         false);
@@ -416,7 +423,8 @@ public class TestLogLevel extends KerberosSecurityTestcase {
    *
    * @throws Exception
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testLogLevelByHttpsWithSpnego() throws Exception {
     testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTPS,
         true);

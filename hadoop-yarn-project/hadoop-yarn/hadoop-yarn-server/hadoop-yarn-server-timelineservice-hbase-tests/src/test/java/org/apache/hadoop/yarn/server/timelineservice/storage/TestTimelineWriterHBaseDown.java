@@ -33,9 +33,10 @@ import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_SERVICE_READER_STORAGE_MONITOR_INTERVAL_MS;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * This class tests HbaseTimelineWriter with Hbase Down.
+ * This class tests HbaseTimelineWriter with HBase Down.
  */
 public class TestTimelineWriterHBaseDown {
 
@@ -86,6 +87,13 @@ public class TestTimelineWriterHBaseDown {
       }
       assertTrue(
           exceptionCaught, "HBaseStorageMonitor failed to detect HBase Down");
+    } catch (Exception e) {
+      // TODO catch InaccessibleObjectException directly once Java 8 support is dropped
+      if (e.getClass().getSimpleName().equals("InaccessibleObjectException")) {
+        assumeTrue(false, "Could not start HBase because of HBASE-29234");
+      } else {
+        throw e;
+      }
     } finally {
       writer.stop();
       util.shutdownMiniCluster();

@@ -22,7 +22,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.util.MonotonicClock;
+import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolic
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 
-import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
 import java.io.IOException;

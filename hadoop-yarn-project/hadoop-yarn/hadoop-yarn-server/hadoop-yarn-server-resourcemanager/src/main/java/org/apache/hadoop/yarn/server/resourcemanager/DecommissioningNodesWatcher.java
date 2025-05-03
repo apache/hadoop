@@ -41,7 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
-import org.apache.hadoop.util.MonotonicClock;
+import org.apache.hadoop.yarn.util.MonotonicClock;
 
 /**
  * DecommissioningNodesWatcher is used by ResourceTrackerService to track

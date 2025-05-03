@@ -18,7 +18,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.invariants;
 
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
-import org.apache.hadoop.util.UTCClock;
+import org.apache.hadoop.yarn.util.UTCClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -20,13 +20,14 @@
 
 package org.apache.hadoop.example;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.net.URISyntaxException;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,7 +70,7 @@ public class ITUseMiniCluster {
       + "fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,"
       + " sunt in culpa qui officia deserunt mollit anim id est laborum.";
 
-  @Before
+  @BeforeEach
   public void clusterUp() throws IOException {
     final Configuration conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf)
@@ -84,7 +85,7 @@ public class ITUseMiniCluster {
     yarnCluster.start();
   }
 
-  @After
+  @AfterEach
   public void clusterDown() {
     if (cluster != null) {
       cluster.close();
@@ -111,7 +112,7 @@ public class ITUseMiniCluster {
     }
     try (FSDataInputStream in = fs.open(path)) {
       final String result = in.readUTF();
-      Assert.assertEquals("Didn't read back text we wrote.", TEXT, result);
+      assertEquals(TEXT, result, "Didn't read back text we wrote.");
     }
   }
 
