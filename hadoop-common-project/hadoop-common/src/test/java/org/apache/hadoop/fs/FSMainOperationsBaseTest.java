@@ -1005,14 +1005,14 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     fSys.mkdirs(dst.getParent());
     
     rename(src, dst, true, false, true, options);
-    assertFalse(
-        exists(fSys, getTestRootPath(fSys, "test/hadoop/dir/file1")), "Nested file1 exists");
-    assertFalse(
-        exists(fSys, getTestRootPath(fSys, "test/hadoop/dir/subdir/file2")), "Nested file2 exists");
-    assertTrue(
-       exists(fSys, getTestRootPath(fSys, "test/new/newdir/file1")), "Renamed nested file1 exists");
-    assertTrue(
-        exists(fSys, getTestRootPath(fSys, "test/new/newdir/subdir/file2")), "Renamed nested exists");
+    assertFalse(exists(fSys, getTestRootPath(fSys, 
+        "test/hadoop/dir/file1")), "Nested file1 exists");
+    assertFalse(exists(fSys, getTestRootPath(fSys, "test/hadoop/dir/subdir/file2")), 
+        "Nested file2 exists");
+    assertTrue(exists(fSys, getTestRootPath(fSys, "test/new/newdir/file1")), 
+        "Renamed nested file1 exists");
+    assertTrue(exists(fSys, getTestRootPath(fSys, "test/new/newdir/subdir/file2")), 
+        "Renamed nested exists");
   }
 
   @Test
@@ -1134,8 +1134,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     fSys.initialize(new URI("file:///"), conf);
     writeFile(fSys, fileToFS);
     if (fSys.exists(crcFileAtLFS))
-      assertTrue(fSys
-          .delete(crcFileAtLFS, true), "CRC files not deleted");
+      assertTrue(fSys.delete(crcFileAtLFS, true), "CRC files not deleted");
     fSys.copyToLocalFile(false, fileToFS, fileToLFS, true);
     assertFalse(fSys.exists(crcFileAtLFS), "CRC files are created");
   }
