@@ -33,7 +33,7 @@ import java.util.function.IntFunction;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.ListAssert;
 import org.assertj.core.api.ObjectAssert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -57,6 +57,7 @@ import static org.apache.hadoop.fs.VectoredReadUtils.validateAndSortRanges;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.MoreAsserts.assertFutureCompletedSuccessfully;
 import static org.apache.hadoop.test.MoreAsserts.assertFutureFailedExceptionally;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test behavior of {@link VectoredReadUtils}.
@@ -105,7 +106,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     // test the contents of the slice
     intBuffer = slice.asIntBuffer();
     for(int i=0; i < sliceLength / Integer.BYTES; ++i) {
-      assertEquals("i = " + i, i + sliceStart / Integer.BYTES, intBuffer.get());
+      assertEquals(i + sliceStart / Integer.BYTES, intBuffer.get(), "i = " + i);
     }
   }
 
@@ -116,11 +117,11 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   @Test
   public void testRounding() {
     for (int i = 5; i < 10; ++i) {
-      assertEquals("i = " + i, 5, VectoredReadUtils.roundDown(i, 5));
-      assertEquals("i = " + i, 10, VectoredReadUtils.roundUp(i + 1, 5));
+      assertEquals(5, VectoredReadUtils.roundDown(i, 5), "i = " + i);
+      assertEquals(10, VectoredReadUtils.roundUp(i + 1, 5), "i = " + i);
     }
-    assertEquals("Error while roundDown", 13, VectoredReadUtils.roundDown(13, 1));
-    assertEquals("Error while roundUp", 13, VectoredReadUtils.roundUp(13, 1));
+    assertEquals(13, VectoredReadUtils.roundDown(13, 1), "Error while roundDown");
+    assertEquals(13, VectoredReadUtils.roundUp(13, 1), "Error while roundUp");
   }
 
   /**
@@ -135,25 +136,25 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     CombinedFileRange mergeBase = new CombinedFileRange(2000, 3000, base);
 
     // test when the gap between is too big
-    assertFalse("Large gap ranges shouldn't get merged", mergeBase.merge(5000, 6000,
-        createFileRange(5000, 1000), 2000, 4000));
+    assertFalse(mergeBase.merge(5000, 6000,
+        createFileRange(5000, 1000), 2000, 4000), "Large gap ranges shouldn't get merged");
     assertUnderlyingSize(mergeBase,
         "Number of ranges in merged range shouldn't increase",
         1);
     assertFileRange(mergeBase, 2000, 1000);
 
     // test when the total size gets exceeded
-    assertFalse("Large size ranges shouldn't get merged",
-        mergeBase.merge(5000, 6000,
-        createFileRange(5000, 1000), 2001, 3999));
-    assertEquals("Number of ranges in merged range shouldn't increase",
-        1, mergeBase.getUnderlying().size());
+    assertFalse(
+       mergeBase.merge(5000, 6000,
+        createFileRange(5000, 1000), 2001, 3999), "Large size ranges shouldn't get merged");
+    assertEquals(
+       1, mergeBase.getUnderlying().size(), "Number of ranges in merged range shouldn't increase");
     assertFileRange(mergeBase, 2000, 1000);
 
     // test when the merge works
-    assertTrue("ranges should get merged ", mergeBase.merge(5000, 6000,
+    assertTrue(mergeBase.merge(5000, 6000,
         createFileRange(5000, 1000, tracker2),
-        2001, 4000));
+        2001, 4000), "ranges should get merged ");
     assertUnderlyingSize(mergeBase, "merge list after merge", 2);
     assertFileRange(mergeBase, 2000, 4000);
 
@@ -168,8 +169,8 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     mergeBase = new CombinedFileRange(200, 300, base);
     assertFileRange(mergeBase, 200, 100);
 
-    assertTrue("ranges should get merged ", mergeBase.merge(500, 600,
-        createFileRange(5000, 1000), 201, 400));
+    assertTrue(mergeBase.merge(500, 600,
+        createFileRange(5000, 1000), 201, 400), "ranges should get merged ");
     assertUnderlyingSize(mergeBase, "merge list after merge", 2);
     assertFileRange(mergeBase, 200, 400);
   }
@@ -551,10 +552,10 @@ public class TestVectoredReadUtils extends HadoopTestBase {
         ByteBuffer::allocate);
     assertFutureCompletedSuccessfully(result);
     ByteBuffer buffer = result.get();
-    assertEquals("Size of result buffer", 100, buffer.remaining());
+    assertEquals(100, buffer.remaining(), "Size of result buffer");
     byte b = 0;
     while (buffer.remaining() > 0) {
-      assertEquals("remain = " + buffer.remaining(), b++, buffer.get());
+      assertEquals(b++, buffer.get(), "remain = " + buffer.remaining());
     }
   }
 
@@ -597,7 +598,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             allocate);
     assertFutureCompletedSuccessfully(result);
     ByteBuffer buffer = result.get();
-    assertEquals("Size of result buffer", 100, buffer.remaining());
+    assertEquals(100, buffer.remaining(), "Size of result buffer");
     validateBuffer("buffer", buffer, 0);
 
 
@@ -639,8 +640,8 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   private static void validateBuffer(String message, ByteBuffer buffer, int start) {
     byte expected = (byte) start;
     while (buffer.remaining() > 0) {
-      assertEquals(message + " remain: " + buffer.remaining(), expected,
-          buffer.get());
+      assertEquals(expected
+,           buffer.get(), message + " remain: " + buffer.remaining());
       // increment with wrapping.
       expected = (byte) (expected + 1);
     }

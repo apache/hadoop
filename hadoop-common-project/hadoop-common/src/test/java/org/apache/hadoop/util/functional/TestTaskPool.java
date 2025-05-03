@@ -32,9 +32,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
@@ -118,7 +118,7 @@ public class TestTaskPool extends HadoopTestBase {
     return numThreads > 1;
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     items = IntStream.rangeClosed(1, ITEM_COUNT)
         .mapToObj(i -> new Item(i,
@@ -138,7 +138,7 @@ public class TestTaskPool extends HadoopTestBase {
 
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     if (threadPool != null) {
       threadPool.shutdown();
@@ -166,13 +166,13 @@ public class TestTaskPool extends HadoopTestBase {
   private void assertRun(TaskPool.Builder<Item> builder,
       CounterTask task) throws IOException {
     boolean b = builder.run(task);
-    assertTrue("Run of " + task + " failed", b);
+    assertTrue(b, "Run of " + task + " failed");
   }
 
   private void assertFailed(TaskPool.Builder<Item> builder,
       CounterTask task) throws IOException {
     boolean b = builder.run(task);
-    assertFalse("Run of " + task + " unexpectedly succeeded", b);
+    assertFalse(b, "Run of " + task + " unexpectedly succeeded");
   }
 
   private String itemsToString() {
@@ -221,7 +221,7 @@ public class TestTaskPool extends HadoopTestBase {
       items.stream().filter(i -> !i.committed)
           .map(Item::assertAborted);
       items.stream().filter(i -> i.committed)
-          .forEach(i -> assertFalse(i.toString(), i.aborted));
+          .forEach(i -> assertFalse(i.aborted, i.toString()));
     }
   }
 
@@ -417,30 +417,30 @@ public class TestTaskPool extends HadoopTestBase {
     }
 
     public Item assertCommitted() {
-      assertTrue(toString() + " was not committed in\n"
-              + itemsToString(),
-          committed);
+      assertTrue(
+         committed, toString() + " was not committed in\n"
+              + itemsToString());
       return this;
     }
 
     public Item assertCommittedOrFailed() {
-      assertTrue(toString() + " was not committed nor failed in\n"
-              + itemsToString(),
-          committed || failed);
+      assertTrue(
+         committed || failed, toString() + " was not committed nor failed in\n"
+              + itemsToString());
       return this;
     }
 
     public Item assertAborted() {
-      assertTrue(toString() + " was not aborted in\n"
-              + itemsToString(),
-          aborted);
+      assertTrue(
+         aborted, toString() + " was not aborted in\n"
+              + itemsToString());
       return this;
     }
 
     public Item assertReverted() {
-      assertTrue(toString() + " was not reverted in\n"
-              + itemsToString(),
-          reverted);
+      assertTrue(
+         reverted, toString() + " was not reverted in\n"
+              + itemsToString());
       return this;
     }
 
@@ -519,16 +519,16 @@ public class TestTaskPool extends HadoopTestBase {
     }
 
     void assertInvoked(String text, int expected) {
-      assertEquals(toString() + ": " + text, expected, getCount());
+      assertEquals(expected, getCount(), toString() + ": " + text);
     }
 
     void assertInvokedAtLeast(String text, int expected) {
       int actual = getCount();
-      assertTrue(toString() + ": " + text
+      assertTrue(
+         expected <= actual, toString() + ": " + text
               + "-expected " + expected
               + " invocations, but got " + actual
-              + " in " + itemsToString(),
-          expected <= actual);
+              + " in " + itemsToString());
     }
 
     @Override

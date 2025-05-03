@@ -31,8 +31,8 @@ import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.util.Lists;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
@@ -51,6 +51,7 @@ import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.decodeBytes;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.encodeBytes;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.extractXAttrLongValue;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests of header processing logic in {@link HeaderProcessing}.
@@ -92,7 +93,7 @@ public class TestHeaderProcessing extends HadoopTestBase {
       XA_LAST_MODIFIED
   };
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     CONTEXT_ACCESSORS.len = FILE_LENGTH;
     CONTEXT_ACCESSORS.userHeaders.put(

@@ -31,10 +31,10 @@ import software.amazon.awssdk.services.s3.model.CompletedPart;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,6 +66,7 @@ import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.BUCKET;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.getOutputPath;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.getOutputPathUri;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.pathIsDirectory;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Scale test of the directory committer: if there are many, many files
@@ -105,7 +106,7 @@ public class TestDirectoryCommitterScale
         createTaskAttemptForJob());
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupStaging() throws Exception {
     stagingDir = File.createTempFile("staging", null);
     stagingDir.delete();
@@ -115,7 +116,7 @@ public class TestDirectoryCommitterScale
   }
 
 
-  @AfterClass
+  @AfterAll
   public static void teardownStaging() throws IOException {
     try {
       if (stagingDir != null) {

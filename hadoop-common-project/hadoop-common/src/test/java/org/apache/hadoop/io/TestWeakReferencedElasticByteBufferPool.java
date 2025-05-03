@@ -24,11 +24,12 @@ import java.util.List;
 import java.util.Random;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import org.apache.hadoop.test.HadoopTestBase;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@code WeakReferencedElasticByteBufferPool}.

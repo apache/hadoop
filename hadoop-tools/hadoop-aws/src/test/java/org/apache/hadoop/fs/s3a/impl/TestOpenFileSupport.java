@@ -27,7 +27,7 @@ import java.util.Set;
 
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.ObjectAssert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -64,6 +64,7 @@ import static org.apache.hadoop.fs.s3a.S3AInputPolicy.Normal;
 import static org.apache.hadoop.fs.s3a.S3AInputPolicy.Random;
 import static org.apache.hadoop.fs.s3a.S3AInputPolicy.Sequential;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link OpenFileSupport} and the associated

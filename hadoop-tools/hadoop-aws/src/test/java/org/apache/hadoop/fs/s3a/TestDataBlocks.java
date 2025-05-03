@@ -27,7 +27,7 @@ import java.util.Optional;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.data.Index;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -42,6 +42,7 @@ import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_ARRAY;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_DISK;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BYTEBUFFER;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link S3ADataBlocks}.
@@ -107,11 +108,11 @@ public class TestDataBlocks extends HadoopTestBase {
       int bufferLen = buffer.length;
       block.write(buffer, 0, bufferLen);
       assertEquals(bufferLen, block.dataSize());
-      assertEquals("capacity in " + block,
-          limit - bufferLen, block.remainingCapacity());
-      assertTrue("hasCapacity(64) in " + block, block.hasCapacity(64));
-      assertTrue("No capacity in " + block,
-          block.hasCapacity(limit - bufferLen));
+      assertEquals(
+         limit - bufferLen, block.remainingCapacity(), "capacity in " + block);
+      assertTrue(block.hasCapacity(64), "hasCapacity(64) in " + block);
+      assertTrue(
+         block.hasCapacity(limit - bufferLen), "No capacity in " + block);
 
       // now start the write
       S3ADataBlocks.BlockUploadData blockUploadData = block.startUpload();

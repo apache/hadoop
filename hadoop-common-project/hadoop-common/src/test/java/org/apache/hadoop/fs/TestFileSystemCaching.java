@@ -38,11 +38,12 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningE
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_CREATION_PARALLEL_COUNT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 
 public class TestFileSystemCaching extends HadoopTestBase {

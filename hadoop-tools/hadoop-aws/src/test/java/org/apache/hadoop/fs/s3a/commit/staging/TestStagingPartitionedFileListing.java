@@ -29,8 +29,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.util.Lists;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,13 +39,13 @@ import org.apache.hadoop.fs.Path;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.*;
-import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.CoreMatchers.hasItem;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test partitioned staging committer's logic for putting data in the right
  * place.
  */
+
 public class TestStagingPartitionedFileListing
     extends TaskCommitterTest<PartitionedStagingCommitter> {
 
@@ -63,7 +63,7 @@ public class TestStagingPartitionedFileListing
   private FileSystem attemptFS;
   private Path attemptPath;
 
-  @After
+  @AfterEach
   public void cleanupAttempt() {
     cleanup("teardown", attemptFS, attemptPath);
   }
@@ -96,7 +96,7 @@ public class TestStagingPartitionedFileListing
           .collect(Collectors.toList());
       Collections.sort(expectedFiles);
       Collections.sort(actualFiles);
-      assertEquals("File sets should match", expectedFiles, actualFiles);
+      assertEquals(expectedFiles, actualFiles, "File sets should match");
     } finally {
       deleteQuietly(attemptFS, attemptPath, true);
     }
@@ -136,7 +136,7 @@ public class TestStagingPartitionedFileListing
           .collect(Collectors.toList());
       Collections.sort(expectedFiles);
       Collections.sort(actualFiles);
-      assertEquals("File sets should match", expectedFiles, actualFiles);
+      assertEquals(expectedFiles, actualFiles, "File sets should match");
     } finally {
       deleteQuietly(attemptFS, attemptPath, true);
     }

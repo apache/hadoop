@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import org.apache.hadoop.test.HadoopTestBase;
@@ -33,6 +33,7 @@ import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.buildPartHandle
 import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.parsePartHandlePayload;
 import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.extractChecksum;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit test of multipart upload support methods and classes.
