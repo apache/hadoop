@@ -593,18 +593,16 @@ configure the bit-ness of the build, and set several optional components.
 Several tests require that the user must have the Create Symbolic Links
 privilege.
 
-To simplify the installation of Boost, Protocol buffers, OpenSSL and Zlib dependencies we can use
-vcpkg (https://github.com/Microsoft/vcpkg.git). Upon cloning the vcpkg repo, checkout the commit
-7ffa425e1db8b0c3edf9c50f2f3a0f25a324541d to get the required versions of the dependencies
-mentioned above.
-> git clone https://github.com/Microsoft/vcpkg.git
+We use vcpkg (https://github.com/microsoft/vcpkg.git) for installing Boost, Protocol buffers,
+OpenSSL and Zlib dependencies. Run the following commands to setup these dependencies.
+> git clone https://github.com/microsoft/vcpkg.git
 > cd vcpkg
-> git checkout 7ffa425e1db8b0c3edf9c50f2f3a0f25a324541d
+> git fetch --all
+> git checkout 2025.03.19
 > .\bootstrap-vcpkg.bat
-> .\vcpkg.exe install boost:x64-windows
-> .\vcpkg.exe install protobuf:x64-windows
-> .\vcpkg.exe install openssl:x64-windows
-> .\vcpkg.exe install zlib:x64-windows
+(Assuming that vcpkg was checked out at C:\vcpkg and Hadoop at C:\hadoop)
+> copy C:\hadoop\dev-support\docker\vcpkg\vcpkg.json C:\vcpkg
+> .\vcpkg.exe install --x-install-root .\installed
 
 Set the following environment variables -
 (Assuming that vcpkg was checked out at C:\vcpkg)
