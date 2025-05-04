@@ -19,15 +19,15 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test native raw Reed-solomon encoding and decoding.
  */
 public class TestNativeRSRawCoder extends TestRSRawCoderBase {
 
-  @Before
+  @BeforeEach
   public void setup() {
     Assume.assumeTrue(ErasureCodeNative.isNativeCodeLoaded());
     this.encoderFactoryClass = NativeRSRawErasureCoderFactory.class;

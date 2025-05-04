@@ -18,11 +18,11 @@
 package org.apache.hadoop.io.erasurecode;
 
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -60,7 +60,7 @@ public class TestECSchema {
     extraMap.put(extraOption, extraOptionValue);
     ECSchema sameSchema = new ECSchema(codec, numDataUnits, numParityUnits,
         extraMap);
-    assertEquals("Different constructors not equal", sameSchema, schema);
+    assertEquals(sameSchema, schema, "Different constructors not equal");
   }
 
   @Test

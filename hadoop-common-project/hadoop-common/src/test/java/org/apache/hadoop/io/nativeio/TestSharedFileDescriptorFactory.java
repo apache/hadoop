@@ -22,10 +22,11 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -39,13 +40,14 @@ public class TestSharedFileDescriptorFactory {
 
   private static final File TEST_BASE = GenericTestUtils.getTestDir();
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     Assume.assumeTrue(null ==
         SharedFileDescriptorFactory.getLoadingFailureReason());
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testReadAndWrite() throws Exception {
     File path = new File(TEST_BASE, "testReadAndWrite");
     path.mkdirs();
@@ -57,7 +59,7 @@ public class TestSharedFileDescriptorFactory {
     FileOutputStream outStream = new FileOutputStream(inStream.getFD());
     outStream.write(101);
     inStream.getChannel().position(0);
-    Assert.assertEquals(101, inStream.read());
+    Assertions.assertEquals(101, inStream.read());
     inStream.close();
     outStream.close();
     FileUtil.fullyDelete(path);
@@ -69,7 +71,8 @@ public class TestSharedFileDescriptorFactory {
     fos.close();
   }
   
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testCleanupRemainders() throws Exception {
     Assume.assumeTrue(NativeIO.isAvailable());
     Assume.assumeTrue(SystemUtils.IS_OS_UNIX);
@@ -85,12 +88,13 @@ public class TestSharedFileDescriptorFactory {
         new String[] { path.getAbsolutePath() });
     // creating the SharedFileDescriptorFactory should have removed 
     // the remainders
-    Assert.assertFalse(new File(remainder1).exists());
-    Assert.assertFalse(new File(remainder2).exists());
+    Assertions.assertFalse(new File(remainder1).exists());
+    Assertions.assertFalse(new File(remainder2).exists());
     FileUtil.fullyDelete(path);
   }
   
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testDirectoryFallbacks() throws Exception {
     File nonExistentPath = new File(TEST_BASE, "nonexistent");
     File permissionDeniedPath = new File("/");
@@ -100,7 +104,7 @@ public class TestSharedFileDescriptorFactory {
       SharedFileDescriptorFactory.create("shm_", 
           new String[] { nonExistentPath.getAbsolutePath(),
                           permissionDeniedPath.getAbsolutePath() });
-      Assert.fail();
+      Assertions.fail();
     } catch (IOException e) {
     }
     SharedFileDescriptorFactory factory =
@@ -108,7 +112,7 @@ public class TestSharedFileDescriptorFactory {
             new String[] { nonExistentPath.getAbsolutePath(),
                             permissionDeniedPath.getAbsolutePath(),
                             goodPath.getAbsolutePath() } );
-    Assert.assertEquals(goodPath.getAbsolutePath(), factory.getPath());
+    Assertions.assertEquals(goodPath.getAbsolutePath(), factory.getPath());
     FileUtil.fullyDelete(goodPath);
   }
 }

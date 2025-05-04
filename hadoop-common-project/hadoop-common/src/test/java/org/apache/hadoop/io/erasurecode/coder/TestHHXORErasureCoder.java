@@ -20,12 +20,12 @@ package org.apache.hadoop.io.erasurecode.coder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestHHXORErasureCoder extends TestHHErasureCoderBase {
 
-  @Before
+  @BeforeEach
   public void setup() {
     this.encoderClass = HHXORErasureEncoder.class;
     this.decoderClass = HHXORErasureDecoder.class;
