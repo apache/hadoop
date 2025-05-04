@@ -25,25 +25,25 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestExecutorServiceFuturePool extends AbstractHadoopTestBase {
 
   private ExecutorService executorService;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     executorService = Executors.newFixedThreadPool(3);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (executorService != null) {
       executorService.shutdownNow();
@@ -58,7 +58,7 @@ public class TestExecutorServiceFuturePool extends AbstractHadoopTestBase {
     Future<Void> future =
         futurePool.executeRunnable(() -> atomicBoolean.set(true));
     future.get(30, TimeUnit.SECONDS);
-    assertTrue("atomicBoolean set to true?", atomicBoolean.get());
+    assertTrue(atomicBoolean.get(), "atomicBoolean set to true?");
   }
 
   @Test
@@ -71,7 +71,7 @@ public class TestExecutorServiceFuturePool extends AbstractHadoopTestBase {
       return null;
     });
     future.get(30, TimeUnit.SECONDS);
-    assertTrue("atomicBoolean set to true?", atomicBoolean.get());
+    assertTrue(atomicBoolean.get(), "atomicBoolean set to true?");
   }
 
   @Test

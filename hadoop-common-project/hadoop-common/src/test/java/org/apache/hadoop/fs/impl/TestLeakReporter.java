@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.impl;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +30,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.impl.LeakReporter.THREAD_FORMAT;
 import static org.apache.hadoop.test.GenericTestUtils.LogCapturer.captureLogs;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public final class TestLeakReporter extends AbstractHadoopTestBase {
 

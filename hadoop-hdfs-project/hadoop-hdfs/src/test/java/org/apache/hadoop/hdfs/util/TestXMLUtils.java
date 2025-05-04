@@ -18,16 +18,16 @@
 package org.apache.hadoop.hdfs.util;
 
 import org.apache.hadoop.hdfs.util.XMLUtils.UnmanglingError;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestXMLUtils {
   private static void testRoundTripImpl(String str, String expectedMangled,
                                     boolean encodeEntityRefs) {
     String mangled = XMLUtils.mangleXmlString(str, encodeEntityRefs);
-    Assert.assertEquals(expectedMangled, mangled);
+    Assertions.assertEquals(expectedMangled, mangled);
     String unmangled = XMLUtils.unmangleXmlString(mangled, encodeEntityRefs);
-    Assert.assertEquals(str, unmangled);
+    Assertions.assertEquals(str, unmangled);
   }
 
   private static void testRoundTrip(String str, String expectedMangled) {
@@ -65,13 +65,13 @@ public class TestXMLUtils {
   public void testInvalidSequence() throws Exception {
     try {
       XMLUtils.unmangleXmlString("\\000g;foo", false);
-      Assert.fail("expected an unmangling error");
+      Assertions.fail("expected an unmangling error");
     } catch (UnmanglingError e) {
       // pass through
     }
     try {
       XMLUtils.unmangleXmlString("\\0", false);
-      Assert.fail("expected an unmangling error");
+      Assertions.fail("expected an unmangling error");
     } catch (UnmanglingError e) {
       // pass through
     }

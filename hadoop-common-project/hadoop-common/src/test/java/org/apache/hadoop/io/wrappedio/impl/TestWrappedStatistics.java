@@ -25,8 +25,8 @@ import java.io.UncheckedIOException;
 import java.util.Map;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +45,7 @@ import org.apache.hadoop.util.functional.Tuples;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for IOStatistics wrapping.
@@ -76,7 +77,7 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
    */
   private Path jsonPath;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     String testDataDir = new FileSystemTestHelper().getTestRootDir();
     File tempDir = new File(testDataDir);

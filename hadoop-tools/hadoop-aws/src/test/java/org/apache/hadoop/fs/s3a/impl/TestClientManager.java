@@ -28,8 +28,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -48,6 +48,7 @@ import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.FunctionalIO.toUncheckedIOExceptionSupplier;
 import static org.mockito.Mockito.mock;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test the client manager.
@@ -83,7 +84,7 @@ public class TestClientManager extends AbstractHadoopTestBase {
 
   private URI uri;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     asyncClient = mock(S3AsyncClient.class);
     transferManager = mock(S3TransferManager.class);

@@ -22,7 +22,7 @@ package org.apache.hadoop.fs.s3a.prefetch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.impl.prefetch.ExceptionAsserts;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;

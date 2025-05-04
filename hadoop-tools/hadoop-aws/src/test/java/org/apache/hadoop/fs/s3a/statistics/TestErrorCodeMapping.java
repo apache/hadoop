@@ -22,7 +22,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -40,6 +40,7 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_500;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_503;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_5XX;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test mapping logic of {@link StatisticsFromAwsSdkImpl}.

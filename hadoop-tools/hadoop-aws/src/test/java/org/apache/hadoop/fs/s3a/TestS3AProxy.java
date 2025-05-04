@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
 
 import org.apache.hadoop.conf.Configuration;
@@ -31,6 +31,7 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_HOST;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_PORT;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_SECURED;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests to verify {@link S3AUtils} translates the proxy configurations

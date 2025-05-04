@@ -19,12 +19,13 @@
 package org.apache.hadoop.fs.statistics;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.util.JsonSerialization;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test the {@link MeanStatistic} class.

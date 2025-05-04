@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.impl;
 import java.util.EnumSet;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
@@ -31,6 +31,7 @@ import static java.util.EnumSet.noneOf;
 import static org.apache.hadoop.fs.impl.FlagSet.buildFlagSet;
 import static org.apache.hadoop.fs.impl.FlagSet.createFlagSet;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link FlagSet} class.

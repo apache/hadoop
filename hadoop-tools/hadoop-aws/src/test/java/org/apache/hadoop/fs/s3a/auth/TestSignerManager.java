@@ -30,8 +30,8 @@ import software.amazon.awssdk.core.signer.Signer;
 import software.amazon.awssdk.http.SdkHttpFullRequest;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -47,6 +47,7 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
 import static org.apache.hadoop.fs.s3a.auth.SignerFactory.S3_V2_SIGNER;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for the SignerManager.
@@ -61,7 +62,7 @@ public class TestSignerManager extends AbstractHadoopTestBase {
   private static final String TESTUSER1 = "testuser1";
   private static final String TESTUSER2 = "testuser2";
 
-  @Before
+  @BeforeEach
   public void beforeTest() {
     SignerForTest1.reset();
     SignerForTest2.reset();

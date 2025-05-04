@@ -19,8 +19,8 @@ package org.apache.hadoop.test;
 
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
@@ -95,7 +95,7 @@ public abstract class AbstractHadoopTestBase {
   /**
    * Static initializer names this thread "JUnit".
    */
-  @BeforeClass
+  @BeforeAll
   public static void nameTestThread() {
     Thread.currentThread().setName("JUnit");
   }
@@ -103,7 +103,7 @@ public abstract class AbstractHadoopTestBase {
   /**
    * Before each method, the thread is renamed to match the method name.
    */
-  @Before
+  @BeforeEach
   public void nameThreadToMethod() {
     Thread.currentThread().setName("JUnit-" + getMethodName());
   }

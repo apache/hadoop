@@ -32,8 +32,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +46,7 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_SERVICE_CLASSNAME;
 import static org.apache.hadoop.fs.s3a.audit.impl.ActiveAuditManagerS3A.PRUNE_THRESHOLD;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatisticsStore;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * This test attempts to recreate the OOM problems of
@@ -90,7 +91,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
   private final List<WeakReference<ActiveAuditManagerS3A>> auditManagers =
       new ArrayList<>();
 
-  @After
+  @AfterEach
   public void teardown() {
     if (workers != null) {
       workers.shutdown();

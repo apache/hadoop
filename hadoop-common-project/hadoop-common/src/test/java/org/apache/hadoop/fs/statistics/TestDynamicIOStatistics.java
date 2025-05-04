@@ -24,8 +24,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,7 +85,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
 
   private static final String[] KEYS = new String[]{ALONG, AINT, COUNT, EVAL};
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     statistics = dynamicIOStatistics()
         .withAtomicLongCounter(ALONG, aLong)

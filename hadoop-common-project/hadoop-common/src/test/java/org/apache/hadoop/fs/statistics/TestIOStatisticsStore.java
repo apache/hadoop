@@ -19,9 +19,9 @@
 package org.apache.hadoop.fs.statistics;
 
 import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +36,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatis
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticMinimumValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test the IOStatisticStore implementation.
@@ -60,7 +61,7 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
 
   private IOStatisticsStore stats;
 
-  @Before
+  @BeforeEach
   public void setup() {
     stats = iostatisticsStore()
         .withCounters(COUNT)
@@ -71,7 +72,7 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
         .build();
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     LOG.info("stats {}", stats);
   }

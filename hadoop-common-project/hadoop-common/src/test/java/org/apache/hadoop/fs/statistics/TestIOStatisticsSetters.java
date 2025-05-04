@@ -22,7 +22,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -36,6 +36,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatSt
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticMean;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticMinimum;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test the {@link IOStatisticsSetters} interface implementations through

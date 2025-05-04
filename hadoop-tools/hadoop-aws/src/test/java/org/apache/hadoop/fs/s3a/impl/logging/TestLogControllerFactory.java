@@ -20,9 +20,9 @@ package org.apache.hadoop.fs.s3a.impl.logging;
 
 import org.assertj.core.api.AbstractStringAssert;
 import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +35,7 @@ import static org.apache.hadoop.fs.s3a.impl.logging.LogControllerFactory.createC
 import static org.apache.hadoop.fs.s3a.impl.logging.LogControllerFactory.createLog4JController;
 import static org.apache.hadoop.test.GenericTestUtils.LogCapturer.captureLogs;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit test for log controller factory.
@@ -73,7 +74,7 @@ public class TestLogControllerFactory extends AbstractHadoopTestBase {
   /**
    * Setup: create the contract then init it.
    */
-  @Before
+  @BeforeEach
   public void setup() {
     controller = requireNonNull(createLog4JController());
     capturer = captureLogs(LOG);
@@ -83,7 +84,7 @@ public class TestLogControllerFactory extends AbstractHadoopTestBase {
   /**
    * Teardown.
    */
-  @After
+  @AfterEach
   public void teardown() {
     if (capturer != null) {
       capturer.stopCapturing();

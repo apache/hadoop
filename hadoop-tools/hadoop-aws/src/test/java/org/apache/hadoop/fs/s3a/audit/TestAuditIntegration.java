@@ -29,7 +29,7 @@ import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.http.SdkHttpRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3ARetryPolicy;

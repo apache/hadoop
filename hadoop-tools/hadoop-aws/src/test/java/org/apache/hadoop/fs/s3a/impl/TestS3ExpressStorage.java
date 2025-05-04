@@ -19,11 +19,12 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.isS3ExpressStore;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test S3 Express Storage methods.
