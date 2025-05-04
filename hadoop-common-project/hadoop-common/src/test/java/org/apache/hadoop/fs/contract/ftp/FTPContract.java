@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
 
 import java.net.URI;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * The contract of FTP; requires the option "test.testdir" to be set
@@ -55,7 +55,7 @@ public class FTPContract extends AbstractBondedFSContract {
   @Override
   public Path getTestPath() {
     String pathString = getOption(TEST_FS_TESTDIR, null);
-    assertNotNull("Undefined test option " + TEST_FS_TESTDIR, pathString);
+    assertNotNull(pathString, "Undefined test option " + TEST_FS_TESTDIR);
     Path path = new Path(pathString);
     return path;
   }

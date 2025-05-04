@@ -72,7 +72,7 @@ public class TestOBSFSMainOperations extends
 
   @Override
   public void testGlobStatusThrowsExceptionForUnreadableDir() {
-    Assume.assumeTrue("unspport.", false);
+    assumeTrue(false, "unspport.");
   }
 
   @Override
