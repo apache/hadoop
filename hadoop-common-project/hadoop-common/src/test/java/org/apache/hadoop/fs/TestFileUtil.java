@@ -429,15 +429,15 @@ public class TestFileUtil {
     grantPermissions(xSubSubDir);
     
     assertFalse(ret, "The return value should have been false.");
-    assertTrue(new File(del, FILE_1_NAME).exists(), 
+    assertTrue(new File(del, FILE_1_NAME).exists(),
         "The file file1 should not have been deleted.");
-    assertEquals(expectedRevokedPermissionDirsExist, xSubDir.exists(), 
+    assertEquals(expectedRevokedPermissionDirsExist, xSubDir.exists(),
         "The directory xSubDir *should* not have been deleted.");
-    assertEquals(expectedRevokedPermissionDirsExist, file2.exists(), 
+    assertEquals(expectedRevokedPermissionDirsExist, file2.exists(),
         "The file file2 *should* not have been deleted.");
-    assertEquals(expectedRevokedPermissionDirsExist, xSubSubDir.exists(), 
+    assertEquals(expectedRevokedPermissionDirsExist, xSubSubDir.exists(),
         "The directory xSubSubDir *should* not have been deleted.");
-    assertEquals(expectedRevokedPermissionDirsExist, file22.exists(), 
+    assertEquals(expectedRevokedPermissionDirsExist, file22.exists(),
         "The file file22 *should* not have been deleted.");
     assertFalse(ySubDir.exists(), "The directory ySubDir should have been deleted.");
     assertFalse(zlink.exists(), "The link zlink should have been deleted.");
@@ -1317,7 +1317,7 @@ public class TestFileUtil {
       new File(tmp, "wildcard2.jar"), new File(tmp, "wildcard3.JAR"),
       new File(tmp, "wildcard4.JAR"));
     for (File wildcardMatch: wildcardMatches) {
-      assertTrue(wildcardMatch.createNewFile(), 
+      assertTrue(wildcardMatch.createNewFile(),
           "failure creating file: " + wildcardMatch);
     }
 
@@ -1333,11 +1333,11 @@ public class TestFileUtil {
     List<String> classPaths = Arrays.asList("", "cp1.jar", "cp2.jar", wildcardPath,
       "cp3.jar", nonExistentSubdir);
     String inputClassPath = StringUtils.join(File.pathSeparator, classPaths);
-    String[] jarCp = FileUtil.createJarWithClassPath(inputClassPath + 
+    String[] jarCp = FileUtil.createJarWithClassPath(inputClassPath +
         File.pathSeparator + "unexpandedwildcard/*",
         new Path(tmp.getCanonicalPath()), System.getenv());
     String classPathJar = jarCp[0];
-    assertNotEquals(jarCp[1].indexOf("unexpanded"), -1, 
+    assertNotEquals(jarCp[1].indexOf("unexpanded"), -1,
         "Unexpanded wildcard was not placed in extra classpath");
 
     // verify classpath by reading manifest from jar file
@@ -1399,7 +1399,7 @@ public class TestFileUtil {
   @Test
   public void testGetJarsInDirectory() throws Exception {
     List<Path> jars = FileUtil.getJarsInDirectory("/foo/bar/bogus/");
-    assertTrue(jars.isEmpty(), 
+    assertTrue(jars.isEmpty(),
         "no jars should be returned for a bogus path");
 
 
@@ -1423,7 +1423,7 @@ public class TestFileUtil {
     for (Path jar: jars) {
       URL url = jar.toUri().toURL();
       assertTrue(url.equals(jar1.getCanonicalFile().toURI().toURL()) ||
-          url.equals(jar2.getCanonicalFile().toURI().toURL()), 
+          url.equals(jar2.getCanonicalFile().toURI().toURL()),
           "the jar should match either of the jars");
     }
   }
@@ -1549,25 +1549,25 @@ public class TestFileUtil {
         File rootDir = new File("tmp");
         try (TarArchiveOutputStream tos = new TarArchiveOutputStream(os)) {
           tos.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
-    
+
           // Create arbitrary dir
           File arbitraryDir = new File(rootDir, "arbitrary-dir/");
           Verify.mkdirs(arbitraryDir);
-    
+
           // We will tar from the tar-root lineage
           File tarRoot = new File(rootDir, "tar-root/");
           File symlinkRoot = new File(tarRoot, "dir1/");
           Verify.mkdirs(symlinkRoot);
-    
+
           // Create Symbolic Link to an arbitrary dir
           java.nio.file.Path symLink = Paths.get(symlinkRoot.getPath(), "sl");
           Files.createSymbolicLink(symLink, arbitraryDir.toPath().toAbsolutePath());
-    
+
           // Put entries in tar file
           putEntriesInTar(tos, tarRoot);
           putEntriesInTar(tos, new File(symLink.toFile(), "dir-outside-tar-root/"));
           tos.close();
-    
+
           // Untar using Java
           File untarFile = new File(rootDir, "extracted");
           FileUtil.unTarUsingJava(simpleTar, untarFile, false);

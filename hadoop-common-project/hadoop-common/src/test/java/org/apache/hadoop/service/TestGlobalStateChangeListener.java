@@ -80,7 +80,7 @@ public class TestGlobalStateChangeListener extends ServiceAssert {
    */
   public void assertListenerEventCount(BreakableStateChangeListener breakable,
                                        int count) {
-    assertEquals(count, breakable.getEventCount(), 
+    assertEquals(count, breakable.getEventCount(),
         "Wrong event count in " + breakable);
   }
 

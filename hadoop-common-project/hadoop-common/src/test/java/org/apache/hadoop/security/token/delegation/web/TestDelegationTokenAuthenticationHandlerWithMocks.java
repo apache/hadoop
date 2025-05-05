@@ -101,7 +101,7 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
   }
 
   private DelegationTokenAuthenticationHandler handler;
-  
+
   @BeforeEach
   public void setUp() throws Exception {
     Properties conf = new Properties();

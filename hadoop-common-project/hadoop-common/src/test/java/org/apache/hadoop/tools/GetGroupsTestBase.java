@@ -52,42 +52,40 @@ public abstract class GetGroupsTestBase {
   public void testNoUserGiven() throws Exception {
     String actualOutput = runTool(conf, new String[0], true);
     UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
-    assertEquals("No user provided should default to current user",
-        getExpectedOutput(currentUser), actualOutput);
+    assertEquals(getExpectedOutput(currentUser), actualOutput, 
+        "No user provided should default to current user");
   }
   
   @Test
   public void testExistingUser() throws Exception {
     String actualOutput = runTool(conf, new String[]{testUser1.getUserName()}, true);
-    assertEquals("Show only the output of the user given",
-        getExpectedOutput(testUser1), actualOutput);
+    assertEquals(getExpectedOutput(testUser1), actualOutput, 
+        "Show only the output of the user given");
   }
   
   @Test
   public void testMultipleExistingUsers() throws Exception {
     String actualOutput = runTool(conf,
         new String[]{testUser1.getUserName(), testUser2.getUserName()}, true);
-    assertEquals("Show the output for both users given",
-        getExpectedOutput(testUser1) + getExpectedOutput(testUser2), actualOutput);
+    assertEquals(getExpectedOutput(testUser1) + getExpectedOutput(testUser2), actualOutput, 
+        "Show the output for both users given");
   }
   
   @Test
   public void testNonExistentUser() throws Exception {
     String actualOutput = runTool(conf,
         new String[]{"does-not-exist"}, true);
-    assertEquals("Show the output for only the user given, with no groups",
-        getExpectedOutput(UserGroupInformation.createRemoteUser("does-not-exist")),
-        actualOutput);
+    assertEquals(getExpectedOutput(UserGroupInformation.createRemoteUser("does-not-exist")),
+        actualOutput, "Show the output for only the user given, with no groups");
   }
   
   @Test
   public void testMultipleNonExistingUsers() throws Exception {
     String actualOutput = runTool(conf,
         new String[]{"does-not-exist1", "does-not-exist2"}, true);
-    assertEquals("Show the output for only the user given, with no groups",
-        getExpectedOutput(UserGroupInformation.createRemoteUser("does-not-exist1")) +
+    assertEquals(getExpectedOutput(UserGroupInformation.createRemoteUser("does-not-exist1")) +
         getExpectedOutput(UserGroupInformation.createRemoteUser("does-not-exist2")),
-        actualOutput);
+        actualOutput, "Show the output for only the user given, with no groups");
   }
   
   @Test
@@ -95,12 +93,12 @@ public abstract class GetGroupsTestBase {
     String actualOutput = runTool(conf,
         new String[]{"does-not-exist1", testUser1.getUserName(),
                      "does-not-exist2", testUser2.getUserName()}, true);
-    assertEquals("Show the output for only the user given, with no groups",
-        getExpectedOutput(UserGroupInformation.createRemoteUser("does-not-exist1")) +
+    assertEquals(getExpectedOutput(UserGroupInformation.createRemoteUser("does-not-exist1")) +
         getExpectedOutput(testUser1) +
         getExpectedOutput(UserGroupInformation.createRemoteUser("does-not-exist2")) +
         getExpectedOutput(testUser2),
-        actualOutput);
+        actualOutput,
+        "Show the output for only the user given, with no groups");
   }
   
   private static String getExpectedOutput(UserGroupInformation user) {

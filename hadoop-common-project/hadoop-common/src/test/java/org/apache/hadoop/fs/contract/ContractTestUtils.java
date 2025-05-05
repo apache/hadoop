@@ -185,7 +185,7 @@ public class ContractTestUtils extends Assertions {
   public static void writeDataset(FileSystem fs, Path path, byte[] src,
       int len, int buffersize, boolean overwrite, boolean useBuilder)
       throws IOException {
-    assertTrue(src.length >= len, 
+    assertTrue(src.length >= len,
         "Not enough data in source array to write " + len + " bytes");
     FSDataOutputStream out;
     if (useBuilder) {
@@ -340,7 +340,7 @@ public class ContractTestUtils extends Assertions {
   public static void compareByteArrays(byte[] original,
                                        byte[] received,
                                        int len) {
-    assertEquals(len, received.length, 
+    assertEquals(len, received.length,
         "Number of bytes read != number written");
     int errors = 0;
     int firstErrorByte = -1;
@@ -485,7 +485,7 @@ public class ContractTestUtils extends Assertions {
   public static void rename(FileSystem fileSystem, Path src, Path dst)
       throws IOException {
     rejectRootOperation(src, false);
-    assertTrue(fileSystem.rename(src, dst), 
+    assertTrue(fileSystem.rename(src, dst),
         "rename(" + src + ", " + dst + ") failed");
     assertPathDoesNotExist(fileSystem, "renamed source dir", src);
   }
@@ -613,7 +613,7 @@ public class ContractTestUtils extends Assertions {
   public static void assertFileHasLength(FileSystem fs, Path path,
                                          int expected) throws IOException {
     FileStatus status = fs.getFileStatus(path);
-    assertEquals(expected, status.getLen(), 
+    assertEquals(expected, status.getLen(),
         "Wrong file length of file " + path + " status: " + status);
   }
 
@@ -635,7 +635,7 @@ public class ContractTestUtils extends Assertions {
    * @param fileStatus stats to check
    */
   public static void assertIsDirectory(FileStatus fileStatus) {
-    assertTrue(fileStatus.isDirectory(), 
+    assertTrue(fileStatus.isDirectory(),
         "Should be a directory -but isn't: " + fileStatus);
   }
 
@@ -662,7 +662,7 @@ public class ContractTestUtils extends Assertions {
   public static void assertNotErasureCoded(final FileSystem fs,
       final Path path) throws IOException {
     FileStatus fileStatus = fs.getFileStatus(path);
-    assertFalse(fileStatus.isErasureCoded(), 
+    assertFalse(fileStatus.isErasureCoded(),
         path + " should not be erasure coded!");
   }
 
@@ -962,9 +962,9 @@ public class ContractTestUtils extends Assertions {
    */
   public static void assertIsFile(Path filename, FileStatus status) {
     String fileInfo = filename + "  " + status;
-    assertFalse(status.isDirectory(), 
+    assertFalse(status.isDirectory(),
         "File claims to be a directory " + fileInfo);
-    assertFalse(status.isSymlink(), 
+    assertFalse(status.isSymlink(),
         "File claims to be a symlink " + fileInfo);
   }
 
@@ -1130,7 +1130,7 @@ public class ContractTestUtils extends Assertions {
         found = true;
       }
     }
-    assertTrue(found, 
+    assertTrue(found,
         "Path " + subdir + " not found in directory " + dir + ":" + builder);
   }
 
@@ -1174,7 +1174,7 @@ public class ContractTestUtils extends Assertions {
         break;
       }
     }
-    assertFalse(mismatch, 
+    assertFalse(mismatch,
         "File content of file is not as expected at offset " + idx);
   }
 
@@ -1710,13 +1710,13 @@ public class ContractTestUtils extends Assertions {
   public static void assertCapabilities(
       Object stream, String[] shouldHaveCapabilities,
       String[] shouldNotHaveCapabilities) {
-    assertTrue(stream instanceof StreamCapabilities, 
+    assertTrue(stream instanceof StreamCapabilities,
         "Stream should be instanceof StreamCapabilities");
 
     StreamCapabilities source = (StreamCapabilities) stream;
     if (shouldHaveCapabilities != null) {
       for (String shouldHaveCapability : shouldHaveCapabilities) {
-        assertTrue(source.hasCapability(shouldHaveCapability), 
+        assertTrue(source.hasCapability(shouldHaveCapability),
             "Should have capability: " + shouldHaveCapability
             + " in " + source);
       }
@@ -1724,7 +1724,7 @@ public class ContractTestUtils extends Assertions {
 
     if (shouldNotHaveCapabilities != null) {
       for (String shouldNotHaveCapability : shouldNotHaveCapabilities) {
-        assertFalse(source.hasCapability(shouldNotHaveCapability), 
+        assertFalse(source.hasCapability(shouldNotHaveCapability),
             "Should not have capability: " + shouldNotHaveCapability
             + " in " + source);
       }
@@ -1772,7 +1772,7 @@ public class ContractTestUtils extends Assertions {
       final String...capabilities) throws IOException {
 
     for (String shouldHaveCapability: capabilities) {
-      assertTrue(source.hasPathCapability(path, shouldHaveCapability), 
+      assertTrue(source.hasPathCapability(path, shouldHaveCapability),
           "Should have capability: " + shouldHaveCapability
           + " under " + path
           + " in " + source);
@@ -1793,7 +1793,7 @@ public class ContractTestUtils extends Assertions {
       final String...capabilities) throws IOException {
 
     for (String shouldHaveCapability: capabilities) {
-      assertFalse(source.hasPathCapability(path, shouldHaveCapability), 
+      assertFalse(source.hasPathCapability(path, shouldHaveCapability),
           "Path  must not support capability: " + shouldHaveCapability
           + " under " + path);
     }
@@ -2019,11 +2019,11 @@ public class ContractTestUtils extends Assertions {
      */
     public void assertSizeEquals(String text, long f, long d, long o) {
       String self = dump();
-      assertEquals(f, getFileCount(), 
+      assertEquals(f, getFileCount(),
           text + ": file count in " + self);
-      assertEquals(d, getDirCount(), 
+      assertEquals(d, getDirCount(),
           text + ": directory count in " + self);
-      assertEquals(o, getOtherCount(), 
+      assertEquals(o, getOtherCount(),
           text + ": 'other' count in " + self);
     }
 

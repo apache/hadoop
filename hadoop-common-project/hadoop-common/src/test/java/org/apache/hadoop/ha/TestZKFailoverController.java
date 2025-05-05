@@ -60,7 +60,7 @@ import org.slf4j.event.Level;
 public class TestZKFailoverController extends ClientBaseWithFixes {
   private Configuration conf;
   private MiniZKFCCluster cluster;
-  
+
   // Set up ZK digest-based credentials for the purposes of the tests,
   // to make sure all of our functionality works with auth and ACLs
   // present.

@@ -122,7 +122,7 @@ public class TestViewFileSystemLocalFileSystem extends ViewFileSystemBaseTest {
       FileSystem.get(URI.create("viewfs://mt/"), conf);
       fail("Expected bad minReplication exception.");
     } catch (IOException ioe) {
-      assertTrue(ioe.getMessage().contains("Minimum replication"), 
+      assertTrue(ioe.getMessage().contains("Minimum replication"),
           "No minReplication message");
     }
   }

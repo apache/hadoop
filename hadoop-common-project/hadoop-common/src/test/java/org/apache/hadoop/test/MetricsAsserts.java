@@ -155,7 +155,7 @@ public class MetricsAsserts {
    */
   public static void assertGauge(String name, int expected,
                                  MetricsRecordBuilder rb) {
-    assertEquals(expected, getIntGauge(name, rb), 
+    assertEquals(expected, getIntGauge(name, rb),
         "Bad value for metric " + name);
   }
 
@@ -174,7 +174,7 @@ public class MetricsAsserts {
    */
   public static void assertCounter(String name, int expected,
                                    MetricsRecordBuilder rb) {
-    assertEquals(expected, getIntCounter(name, rb), 
+    assertEquals(expected, getIntCounter(name, rb),
         "Bad value for metric " + name);
   }
 
@@ -194,7 +194,7 @@ public class MetricsAsserts {
    */
   public static void assertGauge(String name, long expected,
                                  MetricsRecordBuilder rb) {
-    assertEquals(expected, getLongGauge(name, rb), 
+    assertEquals(expected, getLongGauge(name, rb),
         "Bad value for metric " + name);
   }
 
@@ -232,7 +232,7 @@ public class MetricsAsserts {
    */
   public static void assertCounter(String name, long expected,
                                    MetricsRecordBuilder rb) {
-    assertEquals(expected, getLongCounter(name, rb), 
+    assertEquals(expected, getLongCounter(name, rb),
         "Bad value for metric " + name);
   }
 
@@ -280,7 +280,7 @@ public class MetricsAsserts {
    * Check that this metric was captured exactly once.
    */
   private static void checkCaptured(ArgumentCaptor<?> captor, String name) {
-    assertEquals(1, captor.getAllValues().size(), 
+    assertEquals(1, captor.getAllValues().size(),
         "Expected exactly one metric for name " + name);
   }
 
@@ -336,7 +336,7 @@ public class MetricsAsserts {
    */
   public static void assertCounterGt(String name, long greater,
                                      MetricsRecordBuilder rb) {
-    assertTrue(getLongCounter(name, rb) > greater, 
+    assertTrue(getLongCounter(name, rb) > greater,
         "Bad value for metric " + name);
   }
 
@@ -359,7 +359,7 @@ public class MetricsAsserts {
    */
   public static void assertGaugeGt(String name, double greater,
                                    MetricsRecordBuilder rb) {
-    assertTrue(getDoubleGauge(name, rb) > greater, 
+    assertTrue(getDoubleGauge(name, rb) > greater,
         "Bad value for metric " + name);
   }
 
@@ -372,7 +372,7 @@ public class MetricsAsserts {
   public static void assertGaugeGte(String name, double greater,
       MetricsRecordBuilder rb) {
     double curValue = getDoubleGauge(name, rb);
-    assertTrue(curValue >= greater, 
+    assertTrue(curValue >= greater,
         "Bad value for metric " + name);
   }
 

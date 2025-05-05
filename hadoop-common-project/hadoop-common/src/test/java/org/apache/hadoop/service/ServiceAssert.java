@@ -44,7 +44,7 @@ public class ServiceAssert extends Assertions {
 
   public static void assertServiceInState(Service service, Service.STATE state) {
     assertNotNull(service, "Null service");
-    assertEquals(state, service.getServiceState(), 
+    assertEquals(state, service.getServiceState(),
         "Service in wrong state: " + service);
   }
 
@@ -74,7 +74,7 @@ public class ServiceAssert extends Assertions {
    */
   public static void assertServiceConfigurationContains(Service service,
                                                         String key) {
-    assertNotNull(service.getConfig().get(key), 
+    assertNotNull(service.getConfig().get(key),
         "No option "+ key + " in service configuration");
   }
 }

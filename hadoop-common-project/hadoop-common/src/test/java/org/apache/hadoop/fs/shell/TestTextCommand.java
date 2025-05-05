@@ -65,7 +65,7 @@ public class TestTextCommand {
 
   private static final String SEQUENCE_FILE_EXPECTED_OUTPUT =
       "Key1\tValue1" + SEPARATOR + "Key2\tValue2" + SEPARATOR;
-  
+
   /**
    * Tests whether binary Avro data files are displayed correctly.
    */

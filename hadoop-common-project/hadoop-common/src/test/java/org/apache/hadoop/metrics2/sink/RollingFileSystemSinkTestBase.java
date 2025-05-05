@@ -341,7 +341,7 @@ public class RollingFileSystemSinkTestBase {
         + "\\s+testTag22=testTagValue22,\\s+Hostname=.*$[\\n\\r]*",
          Pattern.MULTILINE);
 
-    assertTrue(expectedContentPattern.matcher(contents).matches(), 
+    assertTrue(expectedContentPattern.matcher(contents).matches(),
         "Sink did not produce the expected output. Actual output was: "
         + contents);
   }
@@ -366,7 +366,7 @@ public class RollingFileSystemSinkTestBase {
         + "\\s+testTag22=testTagValue22,\\s+Hostname=.*$[\\n\\r]*",
          Pattern.MULTILINE);
 
-    assertTrue(expectedContentPattern.matcher(contents).matches(), 
+    assertTrue(expectedContentPattern.matcher(contents).matches(),
         "Sink did not produce the expected output. Actual output was: "
         + contents);
   }
@@ -501,10 +501,10 @@ public class RollingFileSystemSinkTestBase {
       count++;
     }
 
-    assertTrue(expected >= count, 
+    assertTrue(expected >= count,
         "The sink created additional unexpected log files. " + count
         + " files were created");
-    assertTrue(expected <= count, 
+    assertTrue(expected <= count,
         "The sink created too few log files. " + count + " files were "
         + "created");
   }

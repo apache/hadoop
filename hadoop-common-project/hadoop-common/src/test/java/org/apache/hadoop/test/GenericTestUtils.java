@@ -298,7 +298,7 @@ public abstract class GenericTestUtils {
     Set<String> expectedSet = new TreeSet<>(
         Arrays.asList(expectedMatches));
     assertEquals(Joiner.on(",").join(expectedSet),
-        Joiner.on(",").join(found), 
+        Joiner.on(",").join(found),
         "Bad files matching " + pattern + " in " + dir);
   }
 
@@ -696,13 +696,13 @@ public abstract class GenericTestUtils {
   }
 
   public static void assertDoesNotMatch(String output, String pattern) {
-    assertFalse(Pattern.compile(pattern).matcher(output).find(), 
+    assertFalse(Pattern.compile(pattern).matcher(output).find(),
         "Expected output to match /" + pattern + "/" +
         " but got:\n" + output);
   }
 
   public static void assertMatches(String output, String pattern) {
-    assertTrue(Pattern.compile(pattern).matcher(output).find(), 
+    assertTrue(Pattern.compile(pattern).matcher(output).find(),
         "Expected output to match /" + pattern + "/" +
         " but got:\n" + output);
   }
@@ -713,7 +713,7 @@ public abstract class GenericTestUtils {
 
   public static void assertValueWithinRange(long expectedMin, long expectedMax,
       long actual) {
-    assertTrue(expectedMin <= actual && actual <= expectedMax, 
+    assertTrue(expectedMin <= actual && actual <= expectedMax,
         "Expected " + actual + " to be in range (" + expectedMin + ","
         + expectedMax + ")");
   }

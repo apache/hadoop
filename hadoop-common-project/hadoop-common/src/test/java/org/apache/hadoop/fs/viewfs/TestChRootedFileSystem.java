@@ -321,13 +321,13 @@ public class TestChRootedFileSystem {
   
   @Test
   public void testResolvePath() throws IOException {
-    assertEquals(chrootedTo, fSys.resolvePath(new Path("/"))); 
+    assertEquals(chrootedTo, fSys.resolvePath(new Path("/")));
     fileSystemTestHelper.createFile(fSys, "/foo");
     assertEquals(new Path(chrootedTo, "foo"),
         fSys.resolvePath(new Path("/foo"))); 
   }
 
-  @Test 
+  @Test
   public void testResolvePathNonExisting() throws IOException {
     assertThrows(FileNotFoundException.class, () -> {
       fSys.resolvePath(new Path("/nonExisting"));

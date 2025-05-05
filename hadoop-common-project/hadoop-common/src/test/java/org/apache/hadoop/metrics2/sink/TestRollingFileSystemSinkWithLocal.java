@@ -114,7 +114,7 @@ public class TestRollingFileSystemSinkWithLocal
       // publish the metrics
       ms.publishMetricsNow();
 
-      assertTrue(MockSink.errored, 
+      assertTrue(MockSink.errored,
           "No exception was generated while writing metrics "
           + "even though the target directory was not writable");
 
@@ -143,7 +143,7 @@ public class TestRollingFileSystemSinkWithLocal
       // publish the metrics
       ms.publishMetricsNow();
 
-      assertFalse(MockSink.errored, 
+      assertFalse(MockSink.errored,
           "An exception was generated while writing metrics "
           + "when the target directory was not writable, even though the "
           + "sink is set to ignore errors");

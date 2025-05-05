@@ -61,7 +61,7 @@ public class MetricsRecords {
       String metricName) {
     AbstractMetric resourceLimitMetric = getFirstMetricByName(
         record, metricName);
-    assertNotNull(resourceLimitMetric, 
+    assertNotNull(resourceLimitMetric,
         "Metric " + metricName + " doesn't exist");
   }
 

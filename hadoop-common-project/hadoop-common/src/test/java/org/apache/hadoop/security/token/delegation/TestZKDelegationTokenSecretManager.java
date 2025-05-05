@@ -84,7 +84,7 @@ public class TestZKDelegationTokenSecretManager {
   protected static final long DAY_IN_SECS = 86400;
 
   protected TestingServer zkServer;
-  
+
   @BeforeEach
   public void setup() throws Exception {
     zkServer = new TestingServer();
