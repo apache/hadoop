@@ -323,6 +323,7 @@ public class TestAdlSupportedCharsetInPath {
     assertTrue(contains(fs.listStatus(new Path(parentPath)),
         fs.makeQualified(specialFile).toString()), "Not listed under parent " + parentPath);
 
-    assertTrue(fs.delete(new Path(parentPath), true), "Failed to delete " + parentPath);
+    assertTrue(fs.delete(new Path(parentPath), true),
+        "Failed to delete " + parentPath);
   }
 }
