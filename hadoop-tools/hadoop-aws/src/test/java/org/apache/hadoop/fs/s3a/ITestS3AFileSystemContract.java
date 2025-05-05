@@ -101,14 +101,14 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
     Path dst = path("testRenameDirectoryAsExistingNew/newdir");
     fs.mkdirs(dst);
     rename(src, dst, true, false, true);
-    assertFalse(
-       fs.exists(path(src + "/file1")), "Nested file1 exists");
-    assertFalse(
-       fs.exists(path(src + "/subdir/file2")), "Nested file2 exists");
-    assertTrue(
-       fs.exists(path(dst + "/file1")), "Renamed nested file1 exists");
-    assertTrue(
-       fs.exists(path(dst + "/subdir/file2")), "Renamed nested exists");
+    assertFalse(fs.exists(path(src + "/file1")), 
+        "Nested file1 exists");
+    assertFalse(fs.exists(path(src + "/subdir/file2")), 
+        "Nested file2 exists");
+    assertTrue(fs.exists(path(dst + "/file1")), 
+        "Renamed nested file1 exists");
+    assertTrue(fs.exists(path(dst + "/subdir/file2")), 
+        "Renamed nested exists");
   }
 
   @Test

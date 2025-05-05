@@ -29,7 +29,6 @@ import java.util.Map;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import org.assertj.core.api.Assertions;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -106,7 +105,7 @@ public class TestHeaderProcessing extends HadoopTestBase {
 
   @Test
   public void testByteRoundTrip() throws Throwable {
-    Assertions.assertThat(decodeBytes(encodeBytes(VALUE)))
+    assertThat(decodeBytes(encodeBytes(VALUE)))
         .describedAs("encoding of " + VALUE)
         .isEqualTo(VALUE);
   }
@@ -126,9 +125,9 @@ public class TestHeaderProcessing extends HadoopTestBase {
    */
   @Test
   public void testGetDateXAttr() throws Throwable {
-    Assertions.assertThat(
+    assertThat(
         decodeBytes(headerProcessing.getXAttr(MAGIC_PATH,
-            XA_LAST_MODIFIED)))
+        XA_LAST_MODIFIED)))
         .describedAs("XAttribute " + XA_LAST_MODIFIED)
         .isEqualTo(CONTEXT_ACCESSORS.date.toString());
   }
@@ -149,7 +148,7 @@ public class TestHeaderProcessing extends HadoopTestBase {
   @Test
   public void testGetAllXAttrs() throws Throwable {
     Map<String, byte[]> xAttrs = headerProcessing.getXAttrs(MAGIC_PATH);
-    Assertions.assertThat(xAttrs.keySet())
+    assertThat(xAttrs.keySet())
         .describedAs("Attribute keys")
         .contains(RETRIEVED_XATTRS);
   }
@@ -161,7 +160,7 @@ public class TestHeaderProcessing extends HadoopTestBase {
   @Test
   public void testListXAttrKeys() throws Throwable {
     List<String> xAttrs = headerProcessing.listXAttrs(MAGIC_PATH);
-    Assertions.assertThat(xAttrs)
+    assertThat(xAttrs)
         .describedAs("Attribute keys")
         .contains(RETRIEVED_XATTRS);
   }
@@ -173,7 +172,7 @@ public class TestHeaderProcessing extends HadoopTestBase {
   public void testGetFilteredXAttrs() throws Throwable {
     Map<String, byte[]> xAttrs = headerProcessing.getXAttrs(MAGIC_PATH,
         Lists.list(XA_MAGIC_MARKER, XA_CONTENT_LENGTH, "unknown"));
-    Assertions.assertThat(xAttrs.keySet())
+    assertThat(xAttrs.keySet())
         .describedAs("Attribute keys")
         .containsExactlyInAnyOrder(XA_MAGIC_MARKER, XA_CONTENT_LENGTH);
     // and the values are good
@@ -194,7 +193,7 @@ public class TestHeaderProcessing extends HadoopTestBase {
   public void testFilterEmptyXAttrs() throws Throwable {
     Map<String, byte[]> xAttrs = headerProcessing.getXAttrs(MAGIC_PATH,
         Lists.list());
-    Assertions.assertThat(xAttrs.keySet())
+    assertThat(xAttrs.keySet())
         .describedAs("Attribute keys")
         .isEmpty();
   }
@@ -212,17 +211,17 @@ public class TestHeaderProcessing extends HadoopTestBase {
     final HeadObjectResponse source = CONTEXT_ACCESSORS
         .getObjectMetadata(MAGIC_KEY);
     final Map<String, String> sourceUserMD = source.metadata();
-    Assertions.assertThat(sourceUserMD.get(owner))
+    assertThat(sourceUserMD.get(owner))
         .describedAs("owner header in copied MD")
         .isEqualTo(root);
 
     Map<String, String> destUserMetadata = new HashMap<>();
     headerProcessing.cloneObjectMetadata(source, destUserMetadata, CopyObjectRequest.builder());
 
-    Assertions.assertThat(destUserMetadata.get(X_HEADER_MAGIC_MARKER))
+    assertThat(destUserMetadata.get(X_HEADER_MAGIC_MARKER))
         .describedAs("Magic marker header in copied MD")
         .isNull();
-    Assertions.assertThat(destUserMetadata.get(owner))
+    assertThat(destUserMetadata.get(owner))
         .describedAs("owner header in copied MD")
         .isEqualTo(root);
   }
@@ -237,7 +236,7 @@ public class TestHeaderProcessing extends HadoopTestBase {
       final String key,
       final byte[] bytes,
       final long expected) {
-    Assertions.assertThat(extractXAttrLongValue(bytes))
+    assertThat(extractXAttrLongValue(bytes))
         .describedAs("XAttribute " + key)
         .isNotEmpty()
         .hasValue(expected);

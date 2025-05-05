@@ -35,10 +35,6 @@ import org.junit.jupiter.api.Test;
 import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.hadoop.util.IntrusiveCollection.Element;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 public class TestIntrusiveCollection extends HadoopTestBase {
   static class SimpleElement implements IntrusiveCollection.Element {
     private Map<IntrusiveCollection<? extends Element>, Element>
@@ -111,10 +107,10 @@ public class TestIntrusiveCollection extends HadoopTestBase {
     SimpleElement element = new SimpleElement();
     intrusiveCollection.add(element);
 
-    assertFalse(
-       intrusiveCollection.isEmpty(), "Collection should not be empty");
-    assertTrue(
-       intrusiveCollection.contains(element), "Collection should contain added element");
+    assertFalse(intrusiveCollection.isEmpty(), 
+        "Collection should not be empty");
+    assertTrue(intrusiveCollection.contains(element), 
+        "Collection should contain added element");
   }
 
   /**
@@ -136,8 +132,8 @@ public class TestIntrusiveCollection extends HadoopTestBase {
     intrusiveCollection.remove(element);
 
     assertTrue(intrusiveCollection.isEmpty(), "Collection should be empty");
-    assertFalse(
-       intrusiveCollection.contains(element), "Collection should not contain removed element");
+    assertFalse(intrusiveCollection.contains(element), 
+        "Collection should not contain removed element");
   }
 
   /**
@@ -185,8 +181,7 @@ public class TestIntrusiveCollection extends HadoopTestBase {
     Iterator<SimpleElement> iterator = intrusiveCollection.iterator();
 
     assertEquals(elem1, iterator.next(), "First element returned is incorrect");
-    assertEquals(elem2
-,         iterator.next(), "Second element returned is incorrect");
+    assertEquals(elem2, iterator.next(), "Second element returned is incorrect");
     assertEquals(elem3, iterator.next(), "Third element returned is incorrect");
     assertFalse(iterator.hasNext(), "Iterator should not have next element");
   }

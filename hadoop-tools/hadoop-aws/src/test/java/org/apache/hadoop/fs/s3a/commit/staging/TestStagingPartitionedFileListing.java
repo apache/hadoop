@@ -45,7 +45,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Test partitioned staging committer's logic for putting data in the right
  * place.
  */
-
 public class TestStagingPartitionedFileListing
     extends TaskCommitterTest<PartitionedStagingCommitter> {
 
@@ -158,14 +157,13 @@ public class TestStagingPartitionedFileListing
     String oct2017 = "year=2017/month=10";
     Path octLog = new Path(attemptPath, oct2017 + "/log-2017-10-04.txt");
     touch(attemptFS, octLog);
-    assertThat(listPartitions(attemptFS, attemptPath), hasItem(oct2017));
+    assertThat(listPartitions(attemptFS, attemptPath)).contains(oct2017);
 
     // add a root entry and it ends up under the table_root entry
     Path rootFile = new Path(attemptPath, "root.txt");
     touch(attemptFS, rootFile);
-    assertThat(listPartitions(attemptFS, attemptPath),
-        allOf(hasItem(oct2017),
-            hasItem(StagingCommitterConstants.TABLE_ROOT)));
+    assertThat(listPartitions(attemptFS, attemptPath)).
+        containsAnyOf(oct2017,StagingCommitterConstants.TABLE_ROOT);
   }
 
   /**

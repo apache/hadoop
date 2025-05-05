@@ -96,12 +96,10 @@ public class TestMarshalledCredentials extends HadoopTestBase {
         credentials,
         MarshalledCredentials.CredentialTypeRequired.SessionOnly);
     AwsCredentials aws = provider.resolveCredentials();
-    assertEquals(
-       credentials.getAccessKey()
-,         aws.accessKeyId(), credentials.toString());
-    assertEquals(
-       credentials.getSecretKey()
-,         aws.secretAccessKey(), credentials.toString());
+    assertEquals(credentials.getAccessKey(),
+        aws.accessKeyId(), credentials.toString());
+    assertEquals(credentials.getSecretKey(),
+        aws.secretAccessKey(), credentials.toString());
     // because the credentials are set to full only, creation will fail
   }
 

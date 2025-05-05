@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azure;
 
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
@@ -50,7 +50,7 @@ public class ITestNativeAzureFileSystemContractEmulator extends
     if (testAccount != null) {
       fs = testAccount.getFileSystem();
     }
-    assumeNotNull(fs);
+    assumeTrue(fs != null);
     basePath = fs.makeQualified(
         AzureTestUtils.createTestPath(
             new Path("ITestNativeAzureFileSystemContractEmulator")));

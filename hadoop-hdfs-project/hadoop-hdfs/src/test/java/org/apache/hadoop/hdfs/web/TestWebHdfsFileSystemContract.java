@@ -246,8 +246,8 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       in.close();
   
       for (int i = 0; i < buf.length; i++) {
-        assertEquals(
-           mydata[i + offset], buf[i], "Position " + i + ", offset=" + offset + ", length=" + len);
+        assertEquals(mydata[i + offset], buf[i], 
+            "Position " + i + ", offset=" + offset + ", length=" + len);
       }
     }
 
@@ -261,8 +261,8 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       in.close();
   
       for (int i = 0; i < buf.length; i++) {
-        assertEquals(
-           mydata[i + offset], buf[i], "Position " + i + ", offset=" + offset + ", length=" + len);
+        assertEquals(mydata[i + offset], buf[i], 
+            "Position " + i + ", offset=" + offset + ", length=" + len);
       }
     }
   }

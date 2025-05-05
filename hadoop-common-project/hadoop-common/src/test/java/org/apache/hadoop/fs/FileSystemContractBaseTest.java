@@ -21,7 +21,6 @@ package org.apache.hadoop.fs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -32,8 +31,12 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.StringUtils;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -59,7 +62,7 @@ public abstract class FileSystemContractBaseTest {
   protected final static String TEST_UMASK = "062";
   protected FileSystem fs;
   protected byte[] data = dataset(getBlockSize() * 2, 0, 255);
-  
+
   /**
    * Get the timeout in milliseconds for each test case.
    * @return a time in milliseconds.
@@ -512,14 +515,14 @@ public abstract class FileSystemContractBaseTest {
     fs.mkdirs(dst.getParent());
     rename(src, dst, true, false, true);
     
-    assertFalse(
-       fs.exists(path(src + "/file1")), "Nested file1 exists");
-    assertFalse(
-       fs.exists(path(src + "/subdir/file2")), "Nested file2 exists");
-    assertTrue(
-       fs.exists(path(dst + "/file1")), "Renamed nested file1 exists");
-    assertTrue(
-       fs.exists(path(dst + "/subdir/file2")), "Renamed nested exists");
+    assertFalse(fs.exists(path(src + "/file1")), 
+        "Nested file1 exists");
+    assertFalse(fs.exists(path(src + "/subdir/file2")), 
+        "Nested file2 exists");
+    assertTrue(fs.exists(path(dst + "/file1")), 
+        "Renamed nested file1 exists");
+    assertTrue(fs.exists(path(dst + "/subdir/file2")), 
+        "Renamed nested exists");
   }
 
   @Test
@@ -544,16 +547,16 @@ public abstract class FileSystemContractBaseTest {
     final Path dst = path("testRenameDirectoryAsExistingDirectoryNew/newdir");
     fs.mkdirs(dst);
     rename(src, dst, true, false, true);
-    assertTrue(
-       fs.exists(path(dst + "/dir")), "Destination changed");
-    assertFalse(
-       fs.exists(path(src + "/file1")), "Nested file1 exists");
-    assertFalse(
-       fs.exists(path(src + "/dir/subdir/file2")), "Nested file2 exists");
-    assertTrue(
-       fs.exists(path(dst + "/dir/file1")), "Renamed nested file1 exists");
-    assertTrue(
-       fs.exists(path(dst + "/dir/subdir/file2")), "Renamed nested exists");
+    assertTrue(fs.exists(path(dst + "/dir")), 
+        "Destination changed");
+    assertFalse(fs.exists(path(src + "/file1")), 
+        "Nested file1 exists");
+    assertFalse(fs.exists(path(src + "/dir/subdir/file2")), 
+        "Nested file2 exists");
+    assertTrue(fs.exists(path(dst + "/dir/file1")), 
+        "Renamed nested file1 exists");
+    assertTrue(fs.exists(path(dst + "/dir/subdir/file2")), 
+        "Renamed nested exists");
   }
 
   @Test
@@ -646,10 +649,9 @@ public abstract class FileSystemContractBaseTest {
     assertTrue(fs.exists(lower), "File does not exist" + lower);
     //verify the length of the upper file hasn't changed
     FileStatus newStatus = fs.getFileStatus(upper);
-    assertEquals(
-                upperStatus.getLen()
-,                  newStatus.getLen(), "Expected status:" + upperStatus
-                 + " actual status " + newStatus); }
+    assertEquals(upperStatus.getLen(),
+        newStatus.getLen(), "Expected status:" + upperStatus
+        + " actual status " + newStatus); }
 
   /**
    * Asserts that a zero byte file has a status of file and not
@@ -851,9 +853,8 @@ public abstract class FileSystemContractBaseTest {
         found = true;
       }
     }
-    assertTrue(
-              found, "Path " + subdir
-               + " not found in directory " + dir + ":" + builder);
+    assertTrue(found, "Path " + subdir
+        + " not found in directory " + dir + ":" + builder);
   }
 
   protected void assertListStatusFinds(Path dir, Path subdir)
@@ -867,9 +868,8 @@ public abstract class FileSystemContractBaseTest {
         found = true;
       }
     }
-    assertTrue(
-              found, "Path " + subdir
-               + " not found in directory " + dir + ":" + builder);
+    assertTrue(found, "Path " + subdir
+        + " not found in directory " + dir + ":" + builder);
   }
 
 
@@ -884,10 +884,10 @@ public abstract class FileSystemContractBaseTest {
     FileStatus status = fs.getFileStatus(filename);
     String fileInfo = filename + "  " + status;
     assertTrue(status.isFile(), "Not a file " + fileInfo);
-    assertFalse(
-               status.isSymlink(), "File claims to be a symlink " + fileInfo);
-    assertFalse(
-               status.isDirectory(), "File claims to be a directory " + fileInfo);
+    assertFalse(status.isSymlink(), 
+        "File claims to be a symlink " + fileInfo);
+    assertFalse(status.isDirectory(), 
+        "File claims to be a directory " + fileInfo);
   }
 
   /**
@@ -914,8 +914,8 @@ public abstract class FileSystemContractBaseTest {
   protected void writeAndRead(Path path, byte[] src, int len,
                               boolean overwrite,
                               boolean delete) throws IOException {
-    assertTrue(
-              src.length >= len, "Not enough data in source array to write " + len + " bytes");
+    assertTrue(src.length >= len, 
+        "Not enough data in source array to write " + len + " bytes");
     fs.mkdirs(path.getParent());
 
     FSDataOutputStream out = fs.create(path, overwrite,

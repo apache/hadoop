@@ -49,7 +49,6 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_503_SERVICE_UNA
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_504_GATEWAY_TIMEOUT;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 import static org.assertj.core.api.Assertions.assertThat;
-import org.junit.jupiter.api.Assertions;
 
 /**
  * Test the {@link Invoker} code and the associated {@link S3ARetryPolicy}.
@@ -378,46 +377,43 @@ public class TestInvoker extends HadoopTestBase {
 
   @Test
   public void testExtractConnectTimeoutException() throws Throwable {
-      Assertions.assertThrows(org.apache.hadoop.net.ConnectTimeoutException.class, () -> {
-          throw extractException("", "",
-        new ExecutionException(
-            SdkException.builder()
-                .cause(LOCAL_CONNECTION_TIMEOUT_EX)
-                .build()));
-      });
+    assertThrows(org.apache.hadoop.net.ConnectTimeoutException.class, () -> {
+      throw extractException("", "", new ExecutionException(
+        SdkException.builder().cause(LOCAL_CONNECTION_TIMEOUT_EX).build()));
+    });
   }
 
   @Test
   public void testExtractSocketTimeoutException() throws Throwable {
-      Assertions.assertThrows(SocketTimeoutException.class, () -> {
-          throw extractException("", "",
+    assertThrows(SocketTimeoutException.class, () -> {
+      throw extractException("", "",
         new ExecutionException(
             SdkException.builder()
-                .cause(SOCKET_TIMEOUT_EX)
-                .build()));
-      });
+            .cause(SOCKET_TIMEOUT_EX)
+            .build()));
+    });
   }
 
   @Test
   public void testExtractConnectTimeoutExceptionFromCompletionException() throws Throwable {
-      Assertions.assertThrows(org.apache.hadoop.net.ConnectTimeoutException.class, () -> {
-          throw extractException("", "",
+    assertThrows(org.apache.hadoop.net.ConnectTimeoutException.class, () -> {
+      throw extractException("", "",
         new CompletionException(
-            SdkException.builder()
-                .cause(LOCAL_CONNECTION_TIMEOUT_EX)
-                .build()));
-      });
+          SdkException.builder()
+          .cause(LOCAL_CONNECTION_TIMEOUT_EX)
+          .build()));
+    });
   }
 
   @Test
   public void testExtractSocketTimeoutExceptionFromCompletionException() throws Throwable {
-      Assertions.assertThrows(SocketTimeoutException.class, () -> {
-          throw extractException("", "",
+    assertThrows(SocketTimeoutException.class, () -> {
+      throw extractException("", "",
         new CompletionException(
             SdkException.builder()
-                .cause(SOCKET_TIMEOUT_EX)
-                .build()));
-      });
+            .cause(SOCKET_TIMEOUT_EX)
+            .build()));
+    });
   }
 
   /**
@@ -488,12 +484,12 @@ public class TestInvoker extends HadoopTestBase {
    */
   @Test
   public void testNoRetryOfBadRequestNonIdempotent() throws Throwable {
-      Assertions.assertThrows(AWSBadRequestException.class, () -> {
-          invoker.retry("test", null, false,
-        () -> {
-          throw serviceException(400, "bad request");
-        });
-      });
+     assertThrows(AWSBadRequestException.class, () -> {
+       invoker.retry("test", null, false,
+         () -> {
+            throw serviceException(400, "bad request");
+         });
+     });
   }
 
   /**
@@ -516,12 +512,12 @@ public class TestInvoker extends HadoopTestBase {
    */
   @Test
   public void testRetryBadRequestNotIdempotent() throws Throwable {
-      Assertions.assertThrows(AWSBadRequestException.class, () -> {
-          invoker.retry("test", null, false,
+    assertThrows(AWSBadRequestException.class, () -> {
+      invoker.retry("test", null, false,
         () -> {
           throw BAD_REQUEST;
         });
-      });
+    });
   }
 
   @Test

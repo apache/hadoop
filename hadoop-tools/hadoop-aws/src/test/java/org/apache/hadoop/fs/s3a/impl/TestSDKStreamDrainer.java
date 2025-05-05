@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import software.amazon.awssdk.http.Abortable;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.test.HadoopTestBase;
@@ -166,7 +165,7 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
     while (stream.read() > 0) {
       count++;
     }
-    Assertions.assertThat(count)
+    assertThat(count)
         .describedAs("bytes read from %s", stream)
         .isEqualTo(BYTES);
   }
@@ -199,7 +198,7 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
    * @return the drainer.
    */
   private SDKStreamDrainer assertAborted(SDKStreamDrainer drainer) {
-    Assertions.assertThat(drainer)
+    assertThat(drainer)
         .matches(SDKStreamDrainer::aborted, "aborted");
     return drainer;
   }
@@ -210,7 +209,7 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
    * @return the drainer.
    */
   private SDKStreamDrainer assertNotAborted(SDKStreamDrainer drainer) {
-    Assertions.assertThat(drainer)
+    assertThat(drainer)
         .matches(d -> !d.aborted(), "is not aborted");
     return drainer;
   }
@@ -234,7 +233,7 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
    */
   private static SDKStreamDrainer assertBytesRead(final SDKStreamDrainer drainer,
       final int bytes) {
-    Assertions.assertThat(drainer)
+    assertThat(drainer)
         .describedAs("bytes read by %s", drainer)
         .extracting(SDKStreamDrainer::getDrained)
         .isEqualTo(bytes);

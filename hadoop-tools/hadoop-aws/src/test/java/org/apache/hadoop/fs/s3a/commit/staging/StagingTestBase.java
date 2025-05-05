@@ -49,7 +49,6 @@ import org.apache.hadoop.fs.s3a.S3AStore;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.mockito.invocation.InvocationOnMock;
@@ -83,9 +82,15 @@ import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.test.HadoopTestBase;
 
-
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 /**
  * Test base for mock tests of staging committers:
@@ -203,8 +208,8 @@ public class StagingTestBase {
       StagingCommitter committer,
       JobContext job,
       ConflictResolution mode) {
-    Assertions.assertEquals(
-       mode, committer.getConflictResolutionMode(job, new Configuration()), "Conflict resolution mode in " + committer);
+    assertEquals(mode, committer.getConflictResolutionMode(job, new Configuration()), 
+        "Conflict resolution mode in " + committer);
   }
 
   public static void pathsExist(FileSystem mockS3, String... children)

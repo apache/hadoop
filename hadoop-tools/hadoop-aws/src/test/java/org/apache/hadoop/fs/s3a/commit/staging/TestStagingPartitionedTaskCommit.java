@@ -27,7 +27,6 @@ import java.util.UUID;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -39,9 +38,9 @@ import org.apache.hadoop.mapreduce.JobContext;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.mockito.Mockito.*;
-import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.reset;
+import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.*;
 
 /** Mocking test of the partitioned committer. */
 public class TestStagingPartitionedTaskCommit
@@ -153,12 +152,12 @@ public class TestStagingPartitionedTaskCommit
       assertEquals(BUCKET, request.bucket());
       files.add(request.key());
     }
-    Assertions.assertThat(files)
+    assertThat(files)
         .describedAs("Should have the right number of uploads")
         .hasSize(relativeFiles.size());
 
     Set<String> expected = buildExpectedList(committer);
-    Assertions.assertThat(files)
+    assertThat(files)
         .describedAs("Should have correct paths")
         .containsExactlyInAnyOrderElementsOf(expected);
   }

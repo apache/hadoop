@@ -31,7 +31,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,8 +129,8 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
   @Test
   @SuppressWarnings("deprecation")
   public void testPermission() throws Exception {
-    assumeTrue("No native library",
-        NativeCodeLoader.isNativeCodeLoaded());
+    assumeTrue(NativeCodeLoader.isNativeCodeLoaded(), 
+        "No native library");
     Path testDir = getTestBaseDir();
     String testFilename = "teststat2File";
     Path path = new Path(testDir, testFilename);

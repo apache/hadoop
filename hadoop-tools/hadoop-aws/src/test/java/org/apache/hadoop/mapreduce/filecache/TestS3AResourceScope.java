@@ -57,8 +57,7 @@ public class TestS3AResourceScope extends HadoopTestBase {
       throws IOException {
     Map<URI, FileStatus> cache = new HashMap<>();
     cache.put(PATH.toUri(), status);
-    assertFalse(
-       ClientDistributedCacheManager.ancestorsHaveExecutePermissions(
-            null, PATH, cache), "Should not have been executable " + status);
+    assertFalse(ClientDistributedCacheManager.ancestorsHaveExecutePermissions(
+        null, PATH, cache), "Should not have been executable " + status);
   }
 }

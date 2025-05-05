@@ -39,7 +39,8 @@ import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.reset;
 
 /** Mocking test of directory committer. */
 public class TestStagingDirectoryOutputCommitter
@@ -199,7 +200,7 @@ public class TestStagingDirectoryOutputCommitter
     LOG.info("source of conflict mode {}", sourceStr);
     String baseConfVal = baseConf
         .getTrimmed(FS_S3A_COMMITTER_STAGING_CONFLICT_MODE);
-    assertEquals(
-       CONFLICT_MODE_APPEND, baseConfVal, "conflict mode in core config from " + sourceStr);
+    assertEquals(CONFLICT_MODE_APPEND, baseConfVal, 
+        "conflict mode in core config from " + sourceStr);
   }
 }

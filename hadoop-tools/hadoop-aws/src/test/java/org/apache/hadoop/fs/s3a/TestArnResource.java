@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.s3a;
 
 import software.amazon.awssdk.regions.Region;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +72,7 @@ public class TestArnResource extends HadoopTestBase {
         "test");
     String expected = "s3-accesspoint.eu-west-1.amazonaws.com";
 
-    Assertions.assertThat(accessPoint.getEndpoint())
+    assertThat(accessPoint.getEndpoint())
         .describedAs("Endpoint has invalid format. Access Point requests will not work")
         .isEqualTo(expected);
   }
@@ -86,7 +85,7 @@ public class TestArnResource extends HadoopTestBase {
         "test");
     String expected = "s3-outposts.eu-west-1.amazonaws.com";
 
-    Assertions.assertThat(accessPoint.getEndpoint())
+    assertThat(accessPoint.getEndpoint())
         .describedAs("Endpoint has invalid format. Access Point requests will not work")
         .isEqualTo(expected);
   }

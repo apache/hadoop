@@ -24,11 +24,6 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.test.HadoopTestBase;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.Assertions;
-
 public class TestCloseableReferenceCount extends HadoopTestBase {
   @Test
   public void testReference() throws ClosedChannelException {
@@ -42,8 +37,8 @@ public class TestCloseableReferenceCount extends HadoopTestBase {
     CloseableReferenceCount clr = new CloseableReferenceCount();
     clr.reference();
     clr.reference();
-    assertFalse(
-       clr.unreference(), "New reference count should not equal STATUS_CLOSED_MASK");
+    assertFalse(clr.unreference(), 
+        "New reference count should not equal STATUS_CLOSED_MASK");
     assertEquals(1, clr.getReferenceCount(), "Incorrect reference count");
   }
 
@@ -66,33 +61,33 @@ public class TestCloseableReferenceCount extends HadoopTestBase {
 
   @Test
   public void testReferenceClosedReference() throws ClosedChannelException {
-      Assertions.assertThrows(ClosedChannelException.class, () -> {
-          CloseableReferenceCount clr = new CloseableReferenceCount();
-          clr.setClosed();
-          assertFalse(clr.isOpen(), "Reference count should be closed");
-          clr.reference();
-      });
+    assertThrows(ClosedChannelException.class, () -> {
+      CloseableReferenceCount clr = new CloseableReferenceCount();
+      clr.setClosed();
+      assertFalse(clr.isOpen(), "Reference count should be closed");
+      clr.reference();
+    });
   }
 
   @Test
   public void testUnreferenceClosedReference() throws ClosedChannelException {
-      Assertions.assertThrows(ClosedChannelException.class, () -> {
-          CloseableReferenceCount clr = new CloseableReferenceCount();
-          clr.reference();
-          clr.setClosed();
-          assertFalse(clr.isOpen(), "Reference count should be closed");
-          clr.unreferenceCheckClosed();
-      });
+    assertThrows(ClosedChannelException.class, () -> {
+      CloseableReferenceCount clr = new CloseableReferenceCount();
+      clr.reference();
+      clr.setClosed();
+      assertFalse(clr.isOpen(), "Reference count should be closed");
+      clr.unreferenceCheckClosed();
+    });
   }
 
   @Test
   public void testDoubleClose() throws ClosedChannelException {
-      Assertions.assertThrows(ClosedChannelException.class, () -> {
-          CloseableReferenceCount clr = new CloseableReferenceCount();
-          assertTrue(clr.isOpen(), "Reference count should be open");
-          clr.setClosed();
-          assertFalse(clr.isOpen(), "Reference count should be closed");
-          clr.setClosed();
-      });
+    assertThrows(ClosedChannelException.class, () -> {
+      CloseableReferenceCount clr = new CloseableReferenceCount();
+      assertTrue(clr.isOpen(), "Reference count should be open");
+      clr.setClosed();
+      assertFalse(clr.isOpen(), "Reference count should be closed");
+      clr.setClosed();
+    });
   }
 }

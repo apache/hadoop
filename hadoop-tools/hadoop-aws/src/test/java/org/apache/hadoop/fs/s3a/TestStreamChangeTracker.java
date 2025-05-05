@@ -96,8 +96,8 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         ChangeDetectionPolicy.Mode.Warn,
         ChangeDetectionPolicy.Source.ETag,
         false);
-    assertFalse(
-       tracker.maybeApplyConstraint(newGetObjectRequestBuilder()), "Tracker should not have applied constraints " + tracker);
+    assertFalse(tracker.maybeApplyConstraint(newGetObjectRequestBuilder()), 
+        "Tracker should not have applied constraints " + tracker);
     tracker.processResponse(
         newResponse("e1", null),
         "", 0);
@@ -122,8 +122,8 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         ChangeDetectionPolicy.Mode.Client,
         ChangeDetectionPolicy.Source.VersionId,
         false);
-    assertFalse(
-       tracker.maybeApplyConstraint(newGetObjectRequestBuilder()), "Tracker should not have applied constraints " + tracker);
+    assertFalse(tracker.maybeApplyConstraint(newGetObjectRequestBuilder()), 
+        "Tracker should not have applied constraints " + tracker);
     tracker.processResponse(
         newResponse(null, "rev1"),
         "", 0);
@@ -149,8 +149,8 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         ChangeDetectionPolicy.Mode.Server,
         ChangeDetectionPolicy.Source.VersionId,
         false);
-    assertFalse(
-       tracker.maybeApplyConstraint(newGetObjectRequestBuilder()), "Tracker should not have applied contraints " + tracker);
+    assertFalse(tracker.maybeApplyConstraint(newGetObjectRequestBuilder()), 
+        "Tracker should not have applied contraints " + tracker);
     tracker.processResponse(
         newResponse(null, "rev1"),
         "", 0);
@@ -209,8 +209,8 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         ChangeDetectionPolicy.Source.VersionId,
         false,
         objectAttributes("etag1", "versionid1"));
-    assertFalse(
-       tracker.maybeApplyConstraint(newCopyObjectRequest()), "Tracker should not have applied contraints " + tracker);
+    assertFalse(tracker.maybeApplyConstraint(newCopyObjectRequest()), 
+        "Tracker should not have applied contraints " + tracker);
   }
 
   @Test
@@ -264,14 +264,14 @@ public class TestStreamChangeTracker extends HadoopTestBase {
 
   protected void assertConstraintApplied(final ChangeTracker tracker,
       final GetObjectRequest.Builder builder) {
-    assertTrue(
-       tracker.maybeApplyConstraint(builder), "Tracker should have applied contraints " + tracker);
+    assertTrue(tracker.maybeApplyConstraint(builder), 
+        "Tracker should have applied contraints " + tracker);
   }
 
   protected void assertConstraintApplied(final ChangeTracker tracker,
       final CopyObjectRequest.Builder requestBuilder) throws PathIOException {
-    assertTrue(
-       tracker.maybeApplyConstraint(requestBuilder), "Tracker should have applied contraints " + tracker);
+    assertTrue(tracker.maybeApplyConstraint(requestBuilder), 
+        "Tracker should have applied contraints " + tracker);
   }
 
   protected RemoteFileChangedException expectChangeException(
@@ -352,16 +352,16 @@ public class TestStreamChangeTracker extends HadoopTestBase {
 
   protected void assertRevisionId(final ChangeTracker tracker,
       final String revId) {
-    assertEquals(
-       revId, tracker.getRevisionId(), "Wrong revision ID in " + tracker);
+    assertEquals(revId, tracker.getRevisionId(), 
+        "Wrong revision ID in " + tracker);
   }
 
 
   protected void assertTrackerMismatchCount(
       final ChangeTracker tracker,
       final int expectedCount) {
-    assertEquals(
-       expectedCount, tracker.getVersionMismatches(), "counter in tracker " + tracker);
+    assertEquals(expectedCount, tracker.getVersionMismatches(), 
+        "counter in tracker " + tracker);
   }
 
   /**
@@ -391,8 +391,8 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         new CountingChangeTracker(), objectAttributes);
     if (objectAttributes.getVersionId() == null
         && objectAttributes.getETag() == null) {
-      assertFalse(
-         tracker.maybeApplyConstraint(newGetObjectRequestBuilder()), "Tracker should not have applied constraints " + tracker);
+      assertFalse(tracker.maybeApplyConstraint(newGetObjectRequestBuilder()), 
+          "Tracker should not have applied constraints " + tracker);
     }
     return tracker;
   }

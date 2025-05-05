@@ -20,22 +20,20 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
 
-import org.assertj.core.api.Assertions;
 import org.assertj.core.data.Index;
-import org.junit.Rule;
-import org.junit.jupiter.api.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.impl.UploadContentProviders;
 import org.apache.hadoop.fs.store.ByteBufferInputStream;
 import org.apache.hadoop.test.HadoopTestBase;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static java.util.Optional.empty;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_ARRAY;
@@ -48,10 +46,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Unit tests for {@link S3ADataBlocks}.
  * Parameterized on the buffer type.
  */
-@RunWith(Parameterized.class)
 public class TestDataBlocks extends HadoopTestBase {
-
-  @Parameterized.Parameters(name = "{0}")
+  
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {FAST_UPLOAD_BUFFER_DISK},
@@ -60,16 +56,16 @@ public class TestDataBlocks extends HadoopTestBase {
     });
   }
 
-  @Rule
-  public final TemporaryFolder tempDir = new TemporaryFolder();
+  @TempDir
+  public Path tempDir;
 
   /**
    * Buffer type.
    */
-  private final String bufferType;
+  private String bufferType;
 
-  public TestDataBlocks(final String bufferType) {
-    this.bufferType = bufferType;
+  public void initTestDataBlocks(final String pBufferType) {
+    this.bufferType = pBufferType;
   }
 
   /**
@@ -81,7 +77,7 @@ public class TestDataBlocks extends HadoopTestBase {
     // this one passed in a file allocation function
     case FAST_UPLOAD_BUFFER_DISK:
       return new S3ADataBlocks.DiskBlockFactory((i, l) ->
-          tempDir.newFile("file" + i));
+          tempDir.resolve("file" + i).toFile());
     case FAST_UPLOAD_BUFFER_ARRAY:
       return new S3ADataBlocks.ArrayBlockFactory(null);
     case FAST_UPLOAD_BYTEBUFFER:
@@ -96,8 +92,10 @@ public class TestDataBlocks extends HadoopTestBase {
    * they produce.
    * There are extra assertions on the {@link ByteBufferInputStream}.
    */
-  @Test
-  public void testBlockFactoryIO() throws Throwable {
+  @ParameterizedTest(name = "BufferType : {0}")
+  @MethodSource("params")
+  public void testBlockFactoryIO(String pBufferType) throws Throwable {
+    initTestDataBlocks(pBufferType);
     try (S3ADataBlocks.BlockFactory factory = createFactory()) {
       int limit = 128;
       S3ADataBlocks.DataBlock block
@@ -123,7 +121,7 @@ public class TestDataBlocks extends HadoopTestBase {
       InputStream stream = cp.newStream();
 
       assertStreamCreationCount(cp, 1);
-      Assertions.assertThat(stream.markSupported())
+      assertThat(stream.markSupported())
           .describedAs("markSupported() of %s", stream)
           .isTrue();
 
@@ -133,7 +131,7 @@ public class TestDataBlocks extends HadoopTestBase {
               : empty();
 
       bbStream.ifPresent(bb -> {
-        Assertions.assertThat(bb.hasRemaining())
+        assertThat(bb.hasRemaining())
             .describedAs("hasRemaining() in %s", bb)
             .isTrue();
       });
@@ -171,7 +169,7 @@ public class TestDataBlocks extends HadoopTestBase {
       assertAvailableValue(stream, 0);
 
       bbStream.ifPresent(bb -> {
-        Assertions.assertThat(bb.hasRemaining())
+        assertThat(bb.hasRemaining())
             .describedAs("hasRemaining() in %s", bb)
             .isFalse();
       });
@@ -190,17 +188,17 @@ public class TestDataBlocks extends HadoopTestBase {
 
       // this must close the old stream
       bbStream.ifPresent(bb -> {
-        Assertions.assertThat(bb.isOpen())
+        assertThat(bb.isOpen())
             .describedAs("stream %s is open", bb)
             .isFalse();
       });
 
       // do a read(byte[]) of everything
       byte[] readBuffer = new byte[bufferLen];
-      Assertions.assertThat(stream2.read(readBuffer))
+      assertThat(stream2.read(readBuffer))
           .describedAs("number of bytes read from stream %s", stream2)
           .isEqualTo(bufferLen);
-      Assertions.assertThat(readBuffer)
+      assertThat(readBuffer)
           .describedAs("data read into buffer")
           .isEqualTo(buffer);
 
@@ -221,21 +219,21 @@ public class TestDataBlocks extends HadoopTestBase {
 
   private static void assertByteAtIndex(final byte[] bytes,
       final int index, final char expected) {
-    Assertions.assertThat(bytes)
+    assertThat(bytes)
         .contains(expected, Index.atIndex(index));
   }
 
   private static void assertReadEquals(final InputStream stream,
       final int ch)
       throws IOException {
-    Assertions.assertThat(stream.read())
+    assertThat(stream.read())
         .describedAs("read() in %s", stream)
         .isEqualTo(ch);
   }
 
   private static void assertAvailableValue(final InputStream stream,
       final int expected) throws IOException {
-    Assertions.assertThat(stream.available())
+    assertThat(stream.available())
         .describedAs("wrong available() in %s", stream)
         .isEqualTo(expected);
   }
@@ -243,7 +241,7 @@ public class TestDataBlocks extends HadoopTestBase {
   private static void assertStreamCreationCount(
       final UploadContentProviders.BaseContentProvider<?> cp,
       final int count) {
-    Assertions.assertThat(cp.getStreamCreationCount())
+    assertThat(cp.getStreamCreationCount())
         .describedAs("stream creation count of %s", cp)
         .isEqualTo(count);
   }
@@ -262,7 +260,7 @@ public class TestDataBlocks extends HadoopTestBase {
     if (factory instanceof S3ADataBlocks.ByteBufferBlockFactory) {
       S3ADataBlocks.ByteBufferBlockFactory bufferFactory =
           (S3ADataBlocks.ByteBufferBlockFactory) factory;
-      Assertions.assertThat(bufferFactory.getOutstandingBufferCount())
+      assertThat(bufferFactory.getOutstandingBufferCount())
           .describedAs("outstanding buffers in %s", factory)
           .isEqualTo(expectedCount);
     }

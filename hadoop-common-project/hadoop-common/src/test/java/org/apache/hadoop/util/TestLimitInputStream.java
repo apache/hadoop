@@ -26,10 +26,6 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.test.HadoopTestBase;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import org.junit.jupiter.api.Assertions;
-
 public class TestLimitInputStream extends HadoopTestBase {
   static class RandomInputStream extends InputStream {
     private Random rn = new Random(0);
@@ -54,12 +50,12 @@ public class TestLimitInputStream extends HadoopTestBase {
 
   @Test
   public void testResetWithoutMark() throws IOException {
-      Assertions.assertThrows(IOException.class, () -> {
-          try (LimitInputStream limitInputStream =
-      new LimitInputStream(new RandomInputStream(), 128)) {
-      limitInputStream.reset();
-    }
-      });
+    assertThrows(IOException.class, () -> {
+       try (LimitInputStream limitInputStream = 
+         new LimitInputStream(new RandomInputStream(), 128)) {
+         limitInputStream.reset();
+      }
+    });
   }
 
   @Test
