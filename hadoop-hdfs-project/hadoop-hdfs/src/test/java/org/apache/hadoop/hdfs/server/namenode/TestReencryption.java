@@ -104,7 +104,7 @@ public class TestReencryption {
     return JavaKeyStoreProvider.SCHEME_NAME + "://file" + new Path(
         testRootDir.toString(), "test.jks").toUri();
   }
-  
+
   @BeforeEach
   public void setup() throws Exception {
     conf = new HdfsConfiguration();
@@ -411,8 +411,8 @@ public class TestReencryption {
 
     assertKeyVersionEquals(encFile0, fei0new);
     assertKeyVersionEquals(encFile9, fei9new);
-    assertNull(
-       getReencryptionStatus().getNextUnprocessedZone(), "Re-encrypt queue should be empty after restart");
+    assertNull(getReencryptionStatus().getNextUnprocessedZone(), 
+        "Re-encrypt queue should be empty after restart");
   }
 
   @Test
@@ -491,18 +491,18 @@ public class TestReencryption {
     restartClusterDisableReencrypt();
 
     final Long zoneId = fsn.getFSDirectory().getINode(zone.toString()).getId();
-    assertEquals(
-       zoneId, getReencryptionStatus().getNextUnprocessedZone(), "Re-encrypt should restore to the last checkpoint zone");
-    assertEquals("Re-encrypt should restore to the last checkpoint file",
-        new Path(subdir, "4").toString(),
-        getEzManager().getZoneStatus(zone.toString()).getLastCheckpointFile());
+    assertEquals(zoneId, getReencryptionStatus().getNextUnprocessedZone(), 
+        "Re-encrypt should restore to the last checkpoint zone");
+    assertEquals(new Path(subdir, "4").toString(),
+        getEzManager().getZoneStatus(zone.toString()).getLastCheckpointFile(),
+        "Re-encrypt should restore to the last checkpoint file");
 
     getEzManager().resumeReencryptForTesting();
     waitForReencryptedZones(1);
     assertKeyVersionChanged(encFile0, fei0);
     assertKeyVersionChanged(encFile9, fei9);
-    assertNull(
-       getReencryptionStatus().getNextUnprocessedZone(), "Re-encrypt queue should be empty after restart");
+    assertNull(getReencryptionStatus().getNextUnprocessedZone(), 
+        "Re-encrypt queue should be empty after restart");
     assertEquals(11, getZoneStatus(zone.toString()).getFilesReencrypted());
   }
 
@@ -542,8 +542,8 @@ public class TestReencryption {
 
     assertKeyVersionEquals(encFile0, fei0new);
     assertKeyVersionEquals(encFile9, fei9new);
-    assertNull(
-       getReencryptionStatus().getNextUnprocessedZone(), "Re-encrypt queue should be empty after restart");
+    assertNull(getReencryptionStatus().getNextUnprocessedZone(), 
+        "Re-encrypt queue should be empty after restart");
   }
 
   @Test
@@ -610,12 +610,12 @@ public class TestReencryption {
    */
   private void verifyZoneCompletionTime(final ZoneReencryptionStatus zs) {
     assertNotNull(zs);
-    assertTrue(
-       zs.getCompletionTime() > 0, "Completion time should be positive. " + zs.getCompletionTime());
-    assertTrue(
-       zs.getCompletionTime() >= zs.getSubmissionTime(), "Completion time " + zs.getCompletionTime()
-            + " should be no less than submission time "
-            + zs.getSubmissionTime());
+    assertTrue(zs.getCompletionTime() > 0, 
+        "Completion time should be positive. " + zs.getCompletionTime());
+    assertTrue(zs.getCompletionTime() >= zs.getSubmissionTime(), 
+        "Completion time " + zs.getCompletionTime()
+        + " should be no less than submission time "
+        + zs.getSubmissionTime());
   }
 
   @Test
@@ -1378,15 +1378,15 @@ public class TestReencryption {
   private void assertKeyVersionChanged(final Path file,
       final FileEncryptionInfo original) throws Exception {
     final FileEncryptionInfo actual = getFileEncryptionInfo(file);
-    assertNotEquals(
-       original.getEzKeyVersionName(), actual.getEzKeyVersionName(), "KeyVersion should be different");
+    assertNotEquals(original.getEzKeyVersionName(), actual.getEzKeyVersionName(), 
+        "KeyVersion should be different");
   }
 
   private void assertKeyVersionEquals(final Path file,
       final FileEncryptionInfo expected) throws Exception {
     final FileEncryptionInfo actual = getFileEncryptionInfo(file);
-    assertEquals(
-       expected.getEzKeyVersionName(), actual.getEzKeyVersionName(), "KeyVersion should be the same");
+    assertEquals(expected.getEzKeyVersionName(), actual.getEzKeyVersionName(), 
+        "KeyVersion should be the same");
   }
 
   @Test

@@ -1005,13 +1005,13 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     fSys.mkdirs(dst.getParent());
     
     rename(src, dst, true, false, true, options);
-    assertFalse(exists(fSys, getTestRootPath(fSys, 
+    assertFalse(exists(fSys, getTestRootPath(fSys,
         "test/hadoop/dir/file1")), "Nested file1 exists");
-    assertFalse(exists(fSys, getTestRootPath(fSys, "test/hadoop/dir/subdir/file2")), 
+    assertFalse(exists(fSys, getTestRootPath(fSys, "test/hadoop/dir/subdir/file2")),
         "Nested file2 exists");
-    assertTrue(exists(fSys, getTestRootPath(fSys, "test/new/newdir/file1")), 
+    assertTrue(exists(fSys, getTestRootPath(fSys, "test/new/newdir/file1")),
         "Renamed nested file1 exists");
-    assertTrue(exists(fSys, getTestRootPath(fSys, "test/new/newdir/subdir/file2")), 
+    assertTrue(exists(fSys, getTestRootPath(fSys, "test/new/newdir/subdir/file2")),
         "Renamed nested exists");
   }
 

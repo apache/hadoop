@@ -167,14 +167,14 @@ public class TestReservedRawPaths {
      * Use accessTime and modificationTime as substitutes for INode to check
      * for resolution to the same underlying file.
      */
-    assertEquals(p1Stat.getAccessTime()
-,         p2Stat.getAccessTime(), "Access times not equal");
-    assertEquals(p1Stat.getModificationTime()
-,         p2Stat.getModificationTime(), "Modification times not equal");
-    assertEquals(p1
-,         Path.getPathWithoutSchemeAndAuthority(p1Stat.getPath()), "pathname1 not equal");
-    assertEquals(p2
-,             Path.getPathWithoutSchemeAndAuthority(p2Stat.getPath()), "pathname1 not equal");
+    assertEquals(p1Stat.getAccessTime(),
+        p2Stat.getAccessTime(), "Access times not equal");
+    assertEquals(p1Stat.getModificationTime(),
+        p2Stat.getModificationTime(), "Modification times not equal");
+    assertEquals(p1, Path.getPathWithoutSchemeAndAuthority(p1Stat.getPath()), 
+        "pathname1 not equal");
+    assertEquals(p2, Path.getPathWithoutSchemeAndAuthority(p2Stat.getPath()), 
+        "pathname1 not equal");
   }
 
   /**

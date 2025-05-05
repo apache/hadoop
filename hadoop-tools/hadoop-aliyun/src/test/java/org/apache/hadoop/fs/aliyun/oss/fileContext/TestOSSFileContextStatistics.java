@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.fs.aliyun.oss.fileContext;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FCStatisticsBaseTest;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.aliyun.oss.AliyunOSSTestUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 
 import java.net.URI;
@@ -53,13 +54,13 @@ public class TestOSSFileContextStatistics extends FCStatisticsBaseTest {
   @Override
   protected void verifyReadBytes(FileSystem.Statistics stats) {
     // one blockSize for read, one for pread
-    Assertions.assertEquals(2 * blockSize, stats.getBytesRead());
+    assertEquals(2 * blockSize, stats.getBytesRead());
   }
 
   @Override
   protected void verifyWrittenBytes(FileSystem.Statistics stats) {
     // no extra bytes are written
-    Assertions.assertEquals(blockSize, stats.getBytesWritten());
+    assertEquals(blockSize, stats.getBytesWritten());
   }
 
   @Override

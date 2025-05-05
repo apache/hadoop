@@ -357,6 +357,7 @@ public abstract class FileContextMainOperationsBaseTest  {
         paths));
     assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/c"),
         paths));
+
     paths = fc.util().listStatus(getTestRootPath(fc, "test/hadoop/a"));
     assertEquals(0, paths.length);
     
@@ -1189,13 +1190,13 @@ public abstract class FileContextMainOperationsBaseTest  {
     fc.mkdir(dst.getParent(), FileContext.DEFAULT_PERM, true);
     
     rename(src, dst, false, true, options);
-    assertFalse(exists(fc, getTestRootPath(fc, 
+    assertFalse(exists(fc, getTestRootPath(fc,
         "test/hadoop/dir/file1")), "Nested file1 exists");
-    assertFalse(exists(fc, getTestRootPath(fc, 
+    assertFalse(exists(fc, getTestRootPath(fc,
         "test/hadoop/dir/subdir/file2")), "Nested file2 exists");
-    assertTrue(exists(fc, getTestRootPath(fc, 
+    assertTrue(exists(fc, getTestRootPath(fc,
         "test/new/newdir/file1")), "Renamed nested file1 exists");
-    assertTrue(exists(fc, getTestRootPath(fc, 
+    assertTrue(exists(fc, getTestRootPath(fc,
         "test/new/newdir/subdir/file2")), "Renamed nested exists");
   }
 
@@ -1546,7 +1547,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     CompletableFuture<Long> readAllBytes = fc.openFile(path)
         .build()
         .thenApply(ContractTestUtils::readStream);
-    assertEquals(data.length, (long) readAllBytes.get(), 
+    assertEquals(data.length, (long) readAllBytes.get(),
         "Wrong number of bytes read from stream");
   }
 

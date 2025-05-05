@@ -23,6 +23,7 @@ import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestNativeAzureFileSystemOperationsMocked extends
     FSMainOperationsBaseTest {
@@ -33,7 +34,8 @@ public class TestNativeAzureFileSystemOperationsMocked extends
   public TestNativeAzureFileSystemOperationsMocked (){
     super(TEST_ROOT_DIR);
   }
-
+  
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     fSys = AzureBlobStorageTestAccount.createMock().getFileSystem();
