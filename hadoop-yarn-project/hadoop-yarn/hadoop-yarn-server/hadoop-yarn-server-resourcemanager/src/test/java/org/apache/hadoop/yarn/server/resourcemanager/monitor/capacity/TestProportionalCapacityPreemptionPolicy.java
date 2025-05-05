@@ -473,7 +473,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   @Test
   public void testPerQueueDisablePreemptionInheritParent() {
     int[][] qData = new int[][] {
-        //  /    A                   E        
+        //  /    A                   E          
         //            B    C    D         F    G    H
         {1000, 500, 200, 200, 100, 500, 200, 200, 100 },  // abs (guar)
         {1000,1000,1000,1000,1000,1000,1000,1000,1000 },  // maxCap
