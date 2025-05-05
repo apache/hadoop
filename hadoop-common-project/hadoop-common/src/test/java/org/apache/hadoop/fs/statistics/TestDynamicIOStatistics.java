@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -141,7 +140,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
    */
   @Test
   public void testKeys() throws Throwable {
-    Assertions.assertThat(statistics.counters().keySet())
+    assertThat(statistics.counters().keySet())
         .describedAs("statistic keys of %s", statistics)
         .containsExactlyInAnyOrder(KEYS);
   }
