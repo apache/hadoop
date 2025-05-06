@@ -38,7 +38,7 @@ public class TestWeakReferencedElasticByteBufferPool
   private boolean isDirect;
 
   private String type;
-  
+
   public static List<String> params() {
     return Arrays.asList("direct", "array");
   }

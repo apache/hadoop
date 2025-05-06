@@ -200,7 +200,7 @@ public class TestStagingDirectoryOutputCommitter
     LOG.info("source of conflict mode {}", sourceStr);
     String baseConfVal = baseConf
         .getTrimmed(FS_S3A_COMMITTER_STAGING_CONFLICT_MODE);
-    assertEquals(CONFLICT_MODE_APPEND, baseConfVal, 
+    assertEquals(CONFLICT_MODE_APPEND, baseConfVal,
         "conflict mode in core config from " + sourceStr);
   }
 }

@@ -258,7 +258,7 @@ public class TestStagingPartitionedJobCommit
 
     verifyReplaceCommitActions(mockS3);
     verifyDeleted(mockS3, "dateint=20161116/hour=14");
-    assertTrue(((PartitionedStagingCommitterForTesting) committer).aborted, 
+    assertTrue(((PartitionedStagingCommitterForTesting) committer).aborted,
         "Should have aborted");
     verifyCompletion(mockS3);
   }

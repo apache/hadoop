@@ -101,10 +101,10 @@ public class TestChecksumFs extends HadoopTestBase {
 
     // ensure file + checksum are moved
     createTestFile(fs, srcPath, 1);
-    assertTrue(fc.util().exists(fs.getChecksumFile(srcPath)), 
+    assertTrue(fc.util().exists(fs.getChecksumFile(srcPath)),
         "Checksum file doesn't exist for source file - " + srcPath);
     fs.rename(srcPath, dstPath, renameOpt);
-    assertTrue(fc.util().exists(fs.getChecksumFile(dstPath)), 
+    assertTrue(fc.util().exists(fs.getChecksumFile(dstPath)),
         "Checksum file doesn't exist for dest file - " + srcPath);
     try (FSDataInputStream is = fs.open(dstPath)) {
       assertEquals(1, is.readInt());

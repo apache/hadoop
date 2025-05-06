@@ -83,7 +83,7 @@ public abstract class FileContextUtilBase {
     assertTrue(fc.util().exists(file2), "Failed to copy file2  ");
     // verify that file2 contains test string
     assertTrue(Arrays.equals(ts.getBytes(),
-        readFile(fc,file2,ts.getBytes().length)), "Copied files does not match ");
+         readFile(fc, file2, ts.getBytes().length)), "Copied files does not match ");
   }
 
   @Test
@@ -106,6 +106,6 @@ public abstract class FileContextUtilBase {
     assertTrue(fc.util().exists(file2), "Failed to copy file2  ");
     // verify that file2 contains test string
     assertTrue(Arrays.equals(ts.getBytes(),
-        readFile(fc,file2,ts.getBytes().length)), "Copied files does not match ");
+        readFile(fc, file2, ts.getBytes().length)), "Copied files does not match ");
   }
 }

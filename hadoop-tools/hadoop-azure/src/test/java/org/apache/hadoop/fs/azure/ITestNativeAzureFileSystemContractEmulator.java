@@ -37,7 +37,7 @@ public class ITestNativeAzureFileSystemContractEmulator extends
   private Path basePath;
 
   @RegisterExtension
-  public TestName methodName = new TestName();
+  private TestName methodName = new TestName();
 
   private void nameThread() {
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());

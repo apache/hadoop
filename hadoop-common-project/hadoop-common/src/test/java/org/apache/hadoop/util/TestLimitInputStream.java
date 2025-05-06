@@ -38,22 +38,22 @@ public class TestLimitInputStream extends HadoopTestBase {
   public void testRead() throws IOException {
     try (LimitInputStream limitInputStream =
       new LimitInputStream(new RandomInputStream(), 0)) {
-      assertEquals(-1
-,           limitInputStream.read(), "Reading byte after reaching limit should return -1");
+      assertEquals(-1, limitInputStream.read(),
+          "Reading byte after reaching limit should return -1");
     }
     try (LimitInputStream limitInputStream =
       new LimitInputStream(new RandomInputStream(), 4)) {
-      assertEquals(new Random(0).nextInt()
-,           limitInputStream.read(), "Incorrect byte returned");
+      assertEquals(new Random(0).nextInt(),
+          limitInputStream.read(), "Incorrect byte returned");
     }
   }
 
   @Test
   public void testResetWithoutMark() throws IOException {
     assertThrows(IOException.class, () -> {
-       try (LimitInputStream limitInputStream = 
-         new LimitInputStream(new RandomInputStream(), 128)) {
-         limitInputStream.reset();
+      try (LimitInputStream limitInputStream =
+        new LimitInputStream(new RandomInputStream(), 128)) {
+           limitInputStream.reset();
       }
     });
   }

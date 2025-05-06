@@ -47,7 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Parameterized on the buffer type.
  */
 public class TestDataBlocks extends HadoopTestBase {
-  
+
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {FAST_UPLOAD_BUFFER_DISK},
@@ -57,7 +57,7 @@ public class TestDataBlocks extends HadoopTestBase {
   }
 
   @TempDir
-  public Path tempDir;
+  private Path tempDir;
 
   /**
    * Buffer type.
@@ -106,8 +106,8 @@ public class TestDataBlocks extends HadoopTestBase {
       int bufferLen = buffer.length;
       block.write(buffer, 0, bufferLen);
       assertEquals(bufferLen, block.dataSize());
-      assertEquals(
-         limit - bufferLen, block.remainingCapacity(), "capacity in " + block);
+      assertEquals(limit - bufferLen, block.remainingCapacity(),
+          "capacity in " + block);
       assertTrue(block.hasCapacity(64), "hasCapacity(64) in " + block);
       assertTrue(
          block.hasCapacity(limit - bufferLen), "No capacity in " + block);

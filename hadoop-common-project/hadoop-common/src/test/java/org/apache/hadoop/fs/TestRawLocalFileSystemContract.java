@@ -129,7 +129,7 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
   @Test
   @SuppressWarnings("deprecation")
   public void testPermission() throws Exception {
-    assumeTrue(NativeCodeLoader.isNativeCodeLoaded(), 
+    assumeTrue(NativeCodeLoader.isNativeCodeLoaded(),
         "No native library");
     Path testDir = getTestBaseDir();
     String testFilename = "teststat2File";

@@ -438,30 +438,27 @@ public class TestTaskPool extends HadoopTestBase {
     }
 
     public Item assertCommitted() {
-      assertTrue(
-         committed, toString() + " was not committed in\n"
-              + itemsToString());
+      assertTrue(committed, toString() + " was not committed in\n"
+          + itemsToString());
       return this;
     }
 
     public Item assertCommittedOrFailed() {
-      assertTrue(
-         committed || failed, toString() + " was not committed nor failed in\n"
-              + itemsToString());
+      assertTrue(committed || failed,
+          toString() + " was not committed nor failed in\n"
+          + itemsToString());
       return this;
     }
 
     public Item assertAborted() {
-      assertTrue(
-         aborted, toString() + " was not aborted in\n"
-              + itemsToString());
+      assertTrue(aborted, toString() + " was not aborted in\n"
+          + itemsToString());
       return this;
     }
 
     public Item assertReverted() {
-      assertTrue(
-         reverted, toString() + " was not reverted in\n"
-              + itemsToString());
+      assertTrue(reverted, toString() + " was not reverted in\n"
+          + itemsToString());
       return this;
     }
 
@@ -545,11 +542,10 @@ public class TestTaskPool extends HadoopTestBase {
 
     void assertInvokedAtLeast(String text, int expected) {
       int actual = getCount();
-      assertTrue(
-         expected <= actual, toString() + ": " + text
-              + "-expected " + expected
-              + " invocations, but got " + actual
-              + " in " + itemsToString());
+      assertTrue(expected <= actual, toString() + ": " + text
+          + "-expected " + expected
+          + " invocations, but got " + actual
+          + " in " + itemsToString());
     }
 
     @Override

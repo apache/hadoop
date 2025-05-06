@@ -208,7 +208,7 @@ public class StagingTestBase {
       StagingCommitter committer,
       JobContext job,
       ConflictResolution mode) {
-    assertEquals(mode, committer.getConflictResolutionMode(job, new Configuration()), 
+    assertEquals(mode, committer.getConflictResolutionMode(job, new Configuration()),
         "Conflict resolution mode in " + committer);
   }
 

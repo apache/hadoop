@@ -37,7 +37,7 @@ public class TestCloseableReferenceCount extends HadoopTestBase {
     CloseableReferenceCount clr = new CloseableReferenceCount();
     clr.reference();
     clr.reference();
-    assertFalse(clr.unreference(), 
+    assertFalse(clr.unreference(),
         "New reference count should not equal STATUS_CLOSED_MASK");
     assertEquals(1, clr.getReferenceCount(), "Incorrect reference count");
   }

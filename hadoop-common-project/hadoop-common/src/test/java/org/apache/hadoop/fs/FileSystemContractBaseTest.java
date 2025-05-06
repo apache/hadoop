@@ -515,13 +515,13 @@ public abstract class FileSystemContractBaseTest {
     fs.mkdirs(dst.getParent());
     rename(src, dst, true, false, true);
     
-    assertFalse(fs.exists(path(src + "/file1")), 
+    assertFalse(fs.exists(path(src + "/file1")),
         "Nested file1 exists");
-    assertFalse(fs.exists(path(src + "/subdir/file2")), 
+    assertFalse(fs.exists(path(src + "/subdir/file2")),
         "Nested file2 exists");
-    assertTrue(fs.exists(path(dst + "/file1")), 
+    assertTrue(fs.exists(path(dst + "/file1")),
         "Renamed nested file1 exists");
-    assertTrue(fs.exists(path(dst + "/subdir/file2")), 
+    assertTrue(fs.exists(path(dst + "/subdir/file2")),
         "Renamed nested exists");
   }
 
@@ -547,15 +547,15 @@ public abstract class FileSystemContractBaseTest {
     final Path dst = path("testRenameDirectoryAsExistingDirectoryNew/newdir");
     fs.mkdirs(dst);
     rename(src, dst, true, false, true);
-    assertTrue(fs.exists(path(dst + "/dir")), 
+    assertTrue(fs.exists(path(dst + "/dir")),
         "Destination changed");
-    assertFalse(fs.exists(path(src + "/file1")), 
+    assertFalse(fs.exists(path(src + "/file1")),
         "Nested file1 exists");
-    assertFalse(fs.exists(path(src + "/dir/subdir/file2")), 
+    assertFalse(fs.exists(path(src + "/dir/subdir/file2")),
         "Nested file2 exists");
-    assertTrue(fs.exists(path(dst + "/dir/file1")), 
+    assertTrue(fs.exists(path(dst + "/dir/file1")),
         "Renamed nested file1 exists");
-    assertTrue(fs.exists(path(dst + "/dir/subdir/file2")), 
+    assertTrue(fs.exists(path(dst + "/dir/subdir/file2")),
         "Renamed nested exists");
   }
 
@@ -884,9 +884,9 @@ public abstract class FileSystemContractBaseTest {
     FileStatus status = fs.getFileStatus(filename);
     String fileInfo = filename + "  " + status;
     assertTrue(status.isFile(), "Not a file " + fileInfo);
-    assertFalse(status.isSymlink(), 
+    assertFalse(status.isSymlink(),
         "File claims to be a symlink " + fileInfo);
-    assertFalse(status.isDirectory(), 
+    assertFalse(status.isDirectory(),
         "File claims to be a directory " + fileInfo);
   }
 
@@ -914,7 +914,7 @@ public abstract class FileSystemContractBaseTest {
   protected void writeAndRead(Path path, byte[] src, int len,
                               boolean overwrite,
                               boolean delete) throws IOException {
-    assertTrue(src.length >= len, 
+    assertTrue(src.length >= len,
         "Not enough data in source array to write " + len + " bytes");
     fs.mkdirs(path.getParent());
 

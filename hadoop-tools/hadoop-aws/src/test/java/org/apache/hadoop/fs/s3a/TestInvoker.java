@@ -484,12 +484,12 @@ public class TestInvoker extends HadoopTestBase {
    */
   @Test
   public void testNoRetryOfBadRequestNonIdempotent() throws Throwable {
-     assertThrows(AWSBadRequestException.class, () -> {
-       invoker.retry("test", null, false,
-         () -> {
-            throw serviceException(400, "bad request");
-         });
-     });
+    assertThrows(AWSBadRequestException.class, () -> {
+      invoker.retry("test", null, false,
+        () -> {
+          throw serviceException(400, "bad request");
+      });
+    });
   }
 
   /**

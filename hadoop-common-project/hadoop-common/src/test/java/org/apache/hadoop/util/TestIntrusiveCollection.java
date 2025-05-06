@@ -107,9 +107,9 @@ public class TestIntrusiveCollection extends HadoopTestBase {
     SimpleElement element = new SimpleElement();
     intrusiveCollection.add(element);
 
-    assertFalse(intrusiveCollection.isEmpty(), 
+    assertFalse(intrusiveCollection.isEmpty(),
         "Collection should not be empty");
-    assertTrue(intrusiveCollection.contains(element), 
+    assertTrue(intrusiveCollection.contains(element),
         "Collection should contain added element");
   }
 
@@ -132,7 +132,7 @@ public class TestIntrusiveCollection extends HadoopTestBase {
     intrusiveCollection.remove(element);
 
     assertTrue(intrusiveCollection.isEmpty(), "Collection should be empty");
-    assertFalse(intrusiveCollection.contains(element), 
+    assertFalse(intrusiveCollection.contains(element),
         "Collection should not contain removed element");
   }
 

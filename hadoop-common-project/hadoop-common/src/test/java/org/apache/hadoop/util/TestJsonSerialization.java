@@ -164,9 +164,9 @@ public class TestJsonSerialization extends HadoopTestBase {
     LocalFileSystem fs = FileSystem.getLocal(new Configuration());
     try {
       serDeser.save(fs, tempPath, source, false);
-      assertEquals(source, serDeser.load(fs, tempPath), 
+      assertEquals(source, serDeser.load(fs, tempPath),
           "JSON loaded with load(fs, path)");
-      assertEquals(source, serDeser.load(fs, tempPath, fs.getFileStatus(tempPath)), 
+      assertEquals(source, serDeser.load(fs, tempPath, fs.getFileStatus(tempPath)),
           "JSON loaded with load(fs, path, status)");
     } finally {
       fs.delete(tempPath, false);

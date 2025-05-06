@@ -52,7 +52,7 @@ public abstract class HadoopTestBase extends Assertions {
    * The method name.
    */
   @RegisterExtension
-  public TestName methodName = new TestName();
+  private TestName methodName = new TestName();
 
   /**
    * Get the method name; defaults to the value of {@link #methodName}.

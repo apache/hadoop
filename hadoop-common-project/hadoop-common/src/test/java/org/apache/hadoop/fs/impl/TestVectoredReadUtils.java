@@ -144,10 +144,10 @@ public class TestVectoredReadUtils extends HadoopTestBase {
 
     // test when the total size gets exceeded
     assertFalse(
-       mergeBase.merge(5000, 6000,
+        mergeBase.merge(5000, 6000,
         createFileRange(5000, 1000), 2001, 3999), "Large size ranges shouldn't get merged");
-    assertEquals(
-       1, mergeBase.getUnderlying().size(), "Number of ranges in merged range shouldn't increase");
+    assertEquals(1, mergeBase.getUnderlying().size(),
+        "Number of ranges in merged range shouldn't increase");
     assertFileRange(mergeBase, 2000, 1000);
 
     // test when the merge works
@@ -639,8 +639,8 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   private static void validateBuffer(String message, ByteBuffer buffer, int start) {
     byte expected = (byte) start;
     while (buffer.remaining() > 0) {
-      assertEquals(expected
-,           buffer.get(), message + " remain: " + buffer.remaining());
+      assertEquals(expected,
+          buffer.get(), message + " remain: " + buffer.remaining());
       // increment with wrapping.
       expected = (byte) (expected + 1);
     }
