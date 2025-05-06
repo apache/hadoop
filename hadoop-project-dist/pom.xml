@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.4.2-SNAPSHOT</version>
+    <version>3.4.2</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-project-dist</artifactId>
-  <version>3.4.2-SNAPSHOT</version>
+  <version>3.4.2</version>
   <description>Apache Hadoop Project Dist POM</description>
   <name>Apache Hadoop Project Dist POM</name>
   <packaging>pom</packaging>

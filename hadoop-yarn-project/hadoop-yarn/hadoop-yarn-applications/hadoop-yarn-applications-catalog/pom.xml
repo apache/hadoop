@@ -19,7 +19,7 @@
     <parent>
         <artifactId>hadoop-yarn-applications</artifactId>
         <groupId>org.apache.hadoop</groupId>
-        <version>3.4.2-SNAPSHOT</version>
+        <version>3.4.2</version>
     </parent>
 
     <groupId>org.apache.hadoop</groupId>

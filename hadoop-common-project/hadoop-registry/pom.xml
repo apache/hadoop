@@ -19,12 +19,12 @@
   <parent>
     <artifactId>hadoop-project</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.4.2-SNAPSHOT</version>
+    <version>3.4.2</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-registry</artifactId>
-  <version>3.4.2-SNAPSHOT</version>
+  <version>3.4.2</version>
   <name>Apache Hadoop Registry</name>
 
   <dependencies>

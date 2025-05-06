@@ -18,11 +18,11 @@
 <parent>
    <groupId>org.apache.hadoop</groupId>
    <artifactId>hadoop-project-dist</artifactId>
-   <version>3.4.2-SNAPSHOT</version>
+   <version>3.4.2</version>
    <relativePath>../../hadoop-project-dist</relativePath>
 </parent>
   <artifactId>hadoop-client</artifactId>
-  <version>3.4.2-SNAPSHOT</version>
+  <version>3.4.2</version>
 
   <description>Apache Hadoop Client aggregation pom with dependencies exposed</description>
   <name>Apache Hadoop Client Aggregator</name>

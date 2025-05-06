@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.4.2-SNAPSHOT</version>
+    <version>3.4.2</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-cloud-storage-project</artifactId>
-  <version>3.4.2-SNAPSHOT</version>
+  <version>3.4.2</version>
   <description>Apache Hadoop Cloud Storage Project</description>
   <name>Apache Hadoop Cloud Storage Project</name>
   <packaging>pom</packaging>
