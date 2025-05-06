@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a.auth;
 
 import java.io.IOException;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,7 +77,7 @@ public class TestIAMInstanceCredentialsProvider extends AbstractHadoopTestBase {
         LOG.info("Credentials: retrieved from {}: key={}",
             provider.isContainerCredentialsProvider() ? "container" : "EC2",
             credentials.accessKeyId());
-        Assertions.assertThat(credentials.accessKeyId())
+        assertThat(credentials.accessKeyId())
             .describedAs("Access key from IMDS")
             .isNotBlank();
 
@@ -89,7 +88,7 @@ public class TestIAMInstanceCredentialsProvider extends AbstractHadoopTestBase {
         LOG.info("Not running in a container/EC2");
         LOG.info("Exception raised", expected);
         // and we expect to have fallen back to InstanceProfileCredentialsProvider
-        Assertions.assertThat(provider.isContainerCredentialsProvider())
+        assertThat(provider.isContainerCredentialsProvider())
             .describedAs("%s: shoud be using InstanceProfileCredentialsProvider")
             .isFalse();
         final Throwable cause = expected.getCause();

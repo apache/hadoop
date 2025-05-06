@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.statistics;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,13 +87,13 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
     verifyStatisticGaugeValue(stats, GAUGE, 2);
     stats.setGauge(GAUGE, -1);
     verifyStatisticGaugeValue(stats, GAUGE, -1);
-    Assertions.assertThat(stats.incrementGauge(GAUGE, -1))
+    assertThat(stats.incrementGauge(GAUGE, -1))
         .isEqualTo(-2);
     verifyStatisticGaugeValue(stats, GAUGE, -2);
-    Assertions.assertThat(stats.getGaugeReference(GAUGE).get())
+    assertThat(stats.getGaugeReference(GAUGE).get())
         .isEqualTo(-2);
     stats.setGauge(UNKNOWN, 1);
-    Assertions.assertThat(stats.incrementGauge(UNKNOWN, 1))
+    assertThat(stats.incrementGauge(UNKNOWN, 1))
         .isEqualTo(0);
   }
 
@@ -163,15 +162,15 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
 
   @Test
   public void testUnknownCounter() throws Throwable {
-    Assertions.assertThat(stats.incrementCounter("unknown", -10))
+    assertThat(stats.incrementCounter("unknown", -10))
         .isEqualTo(0);
   }
 
   @Test
   public void testNegativeCounterIncrementIgnored() throws Throwable {
-    Assertions.assertThat(stats.incrementCounter(COUNT, 2))
+    assertThat(stats.incrementCounter(COUNT, 2))
         .isEqualTo(2);
-    Assertions.assertThat(stats.incrementCounter(COUNT, -10))
+    assertThat(stats.incrementCounter(COUNT, -10))
         .isEqualTo(2);
   }
 

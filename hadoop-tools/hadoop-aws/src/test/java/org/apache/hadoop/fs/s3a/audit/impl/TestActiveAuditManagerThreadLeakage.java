@@ -31,7 +31,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -113,11 +112,11 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
       // get the span map
       final WeakReferenceThreadMap<?> spanMap
           = auditManager.getActiveSpanMap();
-      Assertions.assertThat(spanMap.size())
+      assertThat(spanMap.size())
           .describedAs("map size")
           .isEqualTo(1);
       auditManager.stop();
-      Assertions.assertThat(spanMap.size())
+      assertThat(spanMap.size())
           .describedAs("map size")
           .isEqualTo(0);
     }
@@ -138,14 +137,14 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
     // audit managers
     LOG.info("Total prune count {}", pruneCount);
 
-    Assertions.assertThat(pruneCount)
+    assertThat(pruneCount)
         .describedAs("Total prune count")
         .isNotZero();
 
     // now count number of audit managers GC'd
     // some must have been GC'd, showing that no other
     // references are being retained internally.
-    Assertions.assertThat(auditManagers.stream()
+    assertThat(auditManagers.stream()
             .filter((r) -> r.get() == null)
             .count())
         .describedAs("number of audit managers garbage collected")
@@ -242,7 +241,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
 
         // get the the span for that ID. which must never be
         // null
-        Assertions.assertThat(spanMap.get(id))
+        assertThat(spanMap.get(id))
             .describedAs("Span map entry for thread %d", id)
             .isNotNull();
 
@@ -258,7 +257,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
       // of entries not probed, then at least one span was
       // recreated
       if (derefenced > threadIdArray.length - subset) {
-        Assertions.assertThat(spansRecreated)
+        assertThat(spansRecreated)
             .describedAs("number of recreated spans")
             .isGreaterThan(0);
       }
@@ -269,7 +268,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
         LOG.info("{} executed across {} threads and pruned {} entries",
             auditManager, threadsUsed, pruned);
       }
-      Assertions.assertThat(pruned)
+      assertThat(pruned)
           .describedAs("Count of references pruned")
           .isEqualTo(derefenced - spansRecreated);
       return pruned + (int) derefenced;
@@ -294,7 +293,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
     auditManager.getActiveAuditSpan();
     final AuditSpanS3A auditSpan =
         auditManager.createSpan("span", null, null);
-    Assertions.assertThat(auditSpan)
+    assertThat(auditSpan)
         .describedAs("audit span for current thread")
         .isNotNull();
     // this is needed to ensure that more of the thread pool is used up
@@ -348,7 +347,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
         }
       }
       // pruning must have taken place
-      Assertions.assertThat(pruningCount)
+      assertThat(pruningCount)
           .describedAs("Intermittent pruning count")
           .isEqualTo(2);
     }
@@ -368,13 +367,13 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
           = auditManager.getActiveSpanMap();
       final AuditSpanS3A auditSpan =
           auditManager.createSpan("span", null, null);
-      Assertions.assertThat(auditManager.getActiveAuditSpan())
+      assertThat(auditManager.getActiveAuditSpan())
           .describedAs("active span")
           .isSameAs(auditSpan);
       // this assert gets used repeatedly, so define a lambda-exp
       // which can be envoked with different arguments
       Consumer<Boolean> assertMapHasKey = expected ->
-          Assertions.assertThat(spanMap.containsKey(spanMap.currentThreadId()))
+          assertThat(spanMap.containsKey(spanMap.currentThreadId()))
               .describedAs("map entry for current thread")
               .isEqualTo(expected);
 
@@ -386,7 +385,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
 
       // asking for the current span will return the unbonded one
       final AuditSpanS3A newSpan = auditManager.getActiveAuditSpan();
-      Assertions.assertThat(newSpan)
+      assertThat(newSpan)
           .describedAs("active span")
           .isNotNull()
           .matches(s -> !s.isValidSpan());

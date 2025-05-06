@@ -20,13 +20,12 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.File;
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.Collection;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.io.TempDir;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
@@ -51,9 +50,9 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
 import static org.apache.hadoop.fs.s3a.S3AUtils.patchSecurityCredentialProviders;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
 import static org.apache.hadoop.fs.s3a.S3AUtils.setBucketOption;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * S3A tests for configuration option propagation.
@@ -63,8 +62,8 @@ public class TestBucketConfiguration extends AbstractHadoopTestBase {
 
   private static final String NEW_ALGORITHM_KEY_GLOBAL = "CSE-KMS";
   private static final String OLD_ALGORITHM_KEY_BUCKET = "SSE-KMS";
-  @Rule
-  public final TemporaryFolder tempDir = new TemporaryFolder();
+  @TempDir
+  private Path tempDir;
 
   /**
    * Setup: create the contract then init it.
@@ -91,10 +90,10 @@ public class TestBucketConfiguration extends AbstractHadoopTestBase {
 
     String[] sources = updated.getPropertySources(basekey);
     assertEquals(1, sources.length);
-    Assertions.assertThat(sources)
+    assertThat(sources)
         .describedAs("base key property sources")
         .hasSize(1);
-    Assertions.assertThat(sources[0])
+    assertThat(sources[0])
         .describedAs("Property source")
         .contains(bucketKey);
   }
@@ -218,7 +217,7 @@ public class TestBucketConfiguration extends AbstractHadoopTestBase {
     // Get the encryption method and verify that the value is per-bucket of
     // old keys.
     String value = getEncryptionAlgorithm("b", updated).getMethod();
-    Assertions.assertThat(value)
+    assertThat(value)
         .describedAs("lookupPassword(%s)", S3_ENCRYPTION_ALGORITHM)
         .isEqualTo(OLD_ALGORITHM_KEY_BUCKET);
   }
@@ -227,7 +226,7 @@ public class TestBucketConfiguration extends AbstractHadoopTestBase {
   public void testJceksDeprecatedEncryptionAlgorithm() throws Exception {
     // set up conf to have a cred provider
     final Configuration conf = new Configuration(false);
-    final File file = tempDir.newFile("test.jks");
+    final File file = tempDir.resolve("test.jks").toFile();
     final URI jks = ProviderUtils.nestURIForLocalJavaKeyStoreProvider(
         file.toURI());
     conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
@@ -252,11 +251,11 @@ public class TestBucketConfiguration extends AbstractHadoopTestBase {
     // Get the encryption method and verify that the value is per-bucket of
     // old keys.
     final EncryptionSecrets secrets = S3AUtils.buildEncryptionSecrets("b", conf);
-    Assertions.assertThat(secrets.getEncryptionMethod().getMethod())
+    assertThat(secrets.getEncryptionMethod().getMethod())
         .describedAs("buildEncryptionSecrets() encryption algorithm resolved to %s", secrets)
         .isEqualTo(OLD_ALGORITHM_KEY_BUCKET);
 
-    Assertions.assertThat(secrets.getEncryptionKey())
+    assertThat(secrets.getEncryptionKey())
         .describedAs("buildEncryptionSecrets() encryption key resolved to %s", secrets)
         .isEqualTo(bucketKey);
 

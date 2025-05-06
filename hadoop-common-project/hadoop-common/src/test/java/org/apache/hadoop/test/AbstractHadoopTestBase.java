@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.test;
 
-import java.util.concurrent.TimeUnit;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.Rule;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import static org.apache.hadoop.test.AbstractHadoopTestBase.TEST_DEFAULT_TIMEOUT_VALUE;
 
 /**
  * A base class for JUnit5+ tests that sets a default timeout for all tests
@@ -35,6 +34,7 @@ import org.junit.rules.Timeout;
  * Unlike {@link HadoopTestBase} this class does not extend JUnit Assert
  * so is easier to use with AssertJ.
  */
+@Timeout(TEST_DEFAULT_TIMEOUT_VALUE)
 public abstract class AbstractHadoopTestBase {
 
   /**
@@ -48,40 +48,13 @@ public abstract class AbstractHadoopTestBase {
    * {@link #PROPERTY_TEST_DEFAULT_TIMEOUT}
    * is not set: {@value}.
    */
-  public static final int TEST_DEFAULT_TIMEOUT_VALUE = 100000;
-
-  /**
-   * The JUnit rule that sets the default timeout for tests.
-   */
-  @Rule
-  public Timeout defaultTimeout = retrieveTestTimeout();
-
-  /**
-   * Retrieve the test timeout from the system property
-   * {@link #PROPERTY_TEST_DEFAULT_TIMEOUT}, falling back to
-   * the value in {@link #TEST_DEFAULT_TIMEOUT_VALUE} if the
-   * property is not defined.
-   * @return the recommended timeout for tests
-   */
-  public static Timeout retrieveTestTimeout() {
-    String propval = System.getProperty(PROPERTY_TEST_DEFAULT_TIMEOUT,
-                                         Integer.toString(
-                                           TEST_DEFAULT_TIMEOUT_VALUE));
-    int millis;
-    try {
-      millis = Integer.parseInt(propval);
-    } catch (NumberFormatException e) {
-      //fall back to the default value, as the property cannot be parsed
-      millis = TEST_DEFAULT_TIMEOUT_VALUE;
-    }
-    return new Timeout(millis, TimeUnit.MILLISECONDS);
-  }
+  public static final int TEST_DEFAULT_TIMEOUT_VALUE = 100;
 
   /**
    * The method name.
    */
-  @Rule
-  public TestName methodName = new TestName();
+  @RegisterExtension
+  private TestName methodName = new TestName();
 
   /**
    * Get the method name; defaults to the value of {@link #methodName}.

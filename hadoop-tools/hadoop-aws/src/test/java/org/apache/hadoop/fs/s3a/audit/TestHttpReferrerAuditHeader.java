@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 
-import org.assertj.core.api.Assertions;
 import software.amazon.awssdk.http.SdkHttpRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -433,12 +432,12 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
     });
     try {
       final HttpReferrerAuditHeader referrer = ReferrerExtractor.getReferrer(auditor, span());
-      Assertions.assertThat(referrer.buildHttpReferrer())
+      assertThat(referrer.buildHttpReferrer())
           .describedAs("referrer header")
           .isBlank();
       // repeat
       LOG.info("second attempt: there should be no second warning below");
-      Assertions.assertThat(referrer.buildHttpReferrer())
+      assertThat(referrer.buildHttpReferrer())
           .describedAs("referrer header 2")
           .isBlank();
       referrer.buildHttpReferrer();

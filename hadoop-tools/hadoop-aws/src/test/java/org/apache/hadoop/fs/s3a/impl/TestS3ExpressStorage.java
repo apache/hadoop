@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
@@ -56,7 +55,7 @@ public class TestS3ExpressStorage extends AbstractHadoopTestBase {
   }
 
   private void assertS3ExpressState(final String bucket, final boolean expected, String endpoint) {
-    Assertions.assertThat(isS3ExpressStore(bucket, endpoint))
+    assertThat(isS3ExpressStore(bucket, endpoint))
         .describedAs("isS3ExpressStore(%s) with endpoint %s", bucket, endpoint)
         .isEqualTo(expected);
   }

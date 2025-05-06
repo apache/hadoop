@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import java.net.URI;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.impl.WeakRefMetricsSource;
@@ -58,7 +57,7 @@ public class TestInstrumentationLifecycle extends AbstractHadoopTestBase {
     final MetricsSource source = activeMetrics.getSource(metricSourceName);
     // verify the source is registered through a weak ref, and that the
     // reference maps to the instance.
-    Assertions.assertThat(source)
+    assertThat(source)
         .describedAs("metric source %s", metricSourceName)
         .isNotNull()
         .isInstanceOf(WeakRefMetricsSource.class)

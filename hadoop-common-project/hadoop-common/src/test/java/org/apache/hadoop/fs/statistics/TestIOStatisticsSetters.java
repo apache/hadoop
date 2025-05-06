@@ -21,14 +21,11 @@ package org.apache.hadoop.fs.statistics;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import org.apache.hadoop.fs.statistics.impl.ForwardingIOStatisticsStore;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticGauge;
@@ -47,8 +44,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * is set, to verify it is harmless.
  */
 
-@RunWith(Parameterized.class)
-
 public class TestIOStatisticsSetters extends AbstractHadoopTestBase {
 
   public static final String COUNTER = "counter";
@@ -61,11 +56,10 @@ public class TestIOStatisticsSetters extends AbstractHadoopTestBase {
 
   public static final String MEAN = "mean";
 
-  private final IOStatisticsSetters ioStatistics;
+  private IOStatisticsSetters ioStatistics;
 
-  private final boolean createsNewEntries;
+  private boolean createsNewEntries;
 
-  @Parameterized.Parameters(name="{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {"IOStatisticsSnapshot", new IOStatisticsSnapshot(), true},
@@ -88,17 +82,20 @@ public class TestIOStatisticsSetters extends AbstractHadoopTestBase {
         .build();
   }
 
-  public TestIOStatisticsSetters(
-      String source,
+  public void initTestIOStatisticsSetters(String source,
       IOStatisticsSetters ioStatisticsSetters,
       boolean createsNewEntries) {
     this.ioStatistics = ioStatisticsSetters;
-
     this.createsNewEntries = createsNewEntries;
   }
 
-  @Test
-  public void testCounter() throws Throwable {
+  @ParameterizedTest(name="{0}")
+  @MethodSource("params")
+  public void testCounter(String source,
+      IOStatisticsSetters ioStatisticsSetters, boolean createsNewEntries)
+      throws Throwable {
+    initTestIOStatisticsSetters(source, ioStatisticsSetters, createsNewEntries);
+
     // write
     ioStatistics.setCounter(COUNTER, 1);
     assertThatStatisticCounter(ioStatistics, COUNTER)
@@ -116,14 +113,17 @@ public class TestIOStatisticsSetters extends AbstractHadoopTestBase {
       assertThatStatisticCounter(ioStatistics, unknown)
           .isEqualTo(3);
     } else {
-      Assertions.assertThat(ioStatistics.counters())
+      assertThat(ioStatistics.counters())
           .describedAs("Counter map in {}", ioStatistics)
           .doesNotContainKey(unknown);
     }
   }
 
-  @Test
-  public void testMaximum() throws Throwable {
+  @ParameterizedTest(name="{0}")
+  @MethodSource("params")
+  public void testMaximum(String source,
+    IOStatisticsSetters ioStatisticsSetters, boolean createsNewEntries) throws Throwable {
+    initTestIOStatisticsSetters(source, ioStatisticsSetters, createsNewEntries);
     // write
     ioStatistics.setMaximum(MAXIMUM, 1);
     assertThatStatisticMaximum(ioStatistics, MAXIMUM)
@@ -138,8 +138,11 @@ public class TestIOStatisticsSetters extends AbstractHadoopTestBase {
     ioStatistics.setMaximum("mm2", 3);
   }
 
-  @Test
-  public void testMinimum() throws Throwable {
+  @ParameterizedTest(name="{0}")
+  @MethodSource("params")
+  public void testMinimum(String source,
+    IOStatisticsSetters ioStatisticsSetters, boolean createsNewEntries) throws Throwable {
+    initTestIOStatisticsSetters(source, ioStatisticsSetters, createsNewEntries);
     // write
     ioStatistics.setMinimum(MINIMUM, 1);
     assertThatStatisticMinimum(ioStatistics, MINIMUM)
@@ -154,8 +157,11 @@ public class TestIOStatisticsSetters extends AbstractHadoopTestBase {
     ioStatistics.setMinimum("c2", 3);
   }
 
-  @Test
-  public void testGauge() throws Throwable {
+  @ParameterizedTest(name="{0}")
+  @MethodSource("params")
+  public void testGauge(String source,
+    IOStatisticsSetters ioStatisticsSetters, boolean createsNewEntries) throws Throwable {
+    initTestIOStatisticsSetters(source, ioStatisticsSetters, createsNewEntries);
     // write
     ioStatistics.setGauge(GAUGE, 1);
     assertThatStatisticGauge(ioStatistics, GAUGE)
@@ -170,8 +176,11 @@ public class TestIOStatisticsSetters extends AbstractHadoopTestBase {
     ioStatistics.setGauge("g2", 3);
   }
 
-  @Test
-  public void testMean() throws Throwable {
+  @ParameterizedTest(name="{0}")
+  @MethodSource("params")
+  public void testMean(String source,
+    IOStatisticsSetters ioStatisticsSetters, boolean createsNewEntries) throws Throwable {
+    initTestIOStatisticsSetters(source, ioStatisticsSetters, createsNewEntries);
     // write
     final MeanStatistic mean11 = new MeanStatistic(1, 1);
     ioStatistics.setMeanStatistic(MEAN, mean11);

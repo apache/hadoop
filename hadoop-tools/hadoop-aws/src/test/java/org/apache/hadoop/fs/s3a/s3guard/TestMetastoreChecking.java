@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.net.URI;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -94,7 +93,7 @@ public class TestMetastoreChecking extends AbstractHadoopTestBase {
   private void checkOutcome(final String classname, final boolean outcome) throws PathIOException {
     Configuration conf = chooseStore(classname);
 
-    Assertions.assertThat(checkNoS3Guard(fsUri, conf))
+    assertThat(checkNoS3Guard(fsUri, conf))
         .describedAs("check with classname %s", classname)
         .isEqualTo(outcome);
   }

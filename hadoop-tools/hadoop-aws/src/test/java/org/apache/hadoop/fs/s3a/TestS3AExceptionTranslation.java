@@ -27,7 +27,10 @@ import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.maybeTranslateAudi
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractChannelException;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.*;
 import static org.apache.hadoop.test.LambdaTestUtils.verifyCause;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
@@ -37,7 +40,6 @@ import java.nio.file.AccessDeniedException;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
@@ -59,7 +61,6 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.http.NoHttpResponseException;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit test suite covering translation of AWS/network exceptions to S3A exceptions,
@@ -107,8 +108,8 @@ public class TestS3AExceptionTranslation extends AbstractHadoopTestBase {
   }
 
   protected void assertContained(String text, String contained) {
-    assertTrue(
-       text != null && text.contains(contained), "string \""+ contained + "\" not found in \"" + text + "\"");
+    assertTrue(text != null && text.contains(contained),
+        "string \""+ contained + "\" not found in \"" + text + "\"");
   }
 
   protected <E extends Throwable> E verifyTranslated(
@@ -263,24 +264,24 @@ public class TestS3AExceptionTranslation extends AbstractHadoopTestBase {
 
   @Test
   public void testExtractInterrupted() throws Throwable {
-      Assertions.assertThrows(InterruptedIOException.class, () -> {
-          throw extractException("", "",
+    assertThrows(InterruptedIOException.class, () -> {
+      throw extractException("", "",
         new ExecutionException(
             SdkException.builder()
-                .cause(new InterruptedException(""))
-                .build()));
-      });
+            .cause(new InterruptedException(""))
+            .build()));
+    });
   }
 
   @Test
   public void testExtractInterruptedIO() throws Throwable {
-      Assertions.assertThrows(InterruptedIOException.class, () -> {
-          throw extractException("", "",
+    assertThrows(InterruptedIOException.class, () -> {
+      throw extractException("", "",
         new ExecutionException(
             SdkException.builder()
-                .cause(new InterruptedIOException(""))
-                .build()));
-      });
+            .cause(new InterruptedIOException(""))
+            .build()));
+    });
   }
 
   @Test

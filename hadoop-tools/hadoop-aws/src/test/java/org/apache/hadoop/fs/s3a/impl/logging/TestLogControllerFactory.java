@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.s3a.impl.logging;
 
 import org.assertj.core.api.AbstractStringAssert;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -96,7 +95,7 @@ public class TestLogControllerFactory extends AbstractHadoopTestBase {
    */
   @Test
   public void testInstantationWrongClass() throws Throwable {
-    Assertions.assertThat(createController(CLASSNAME))
+    assertThat(createController(CLASSNAME))
         .describedAs("controller of wrong type")
         .isNull();
   }
@@ -107,7 +106,7 @@ public class TestLogControllerFactory extends AbstractHadoopTestBase {
    */
   @Test
   public void testInstantationNoClass() throws Throwable {
-    Assertions.assertThat(createController("not.a.class"))
+    assertThat(createController("not.a.class"))
         .describedAs("missing class")
         .isNull();
   }
@@ -126,7 +125,7 @@ public class TestLogControllerFactory extends AbstractHadoopTestBase {
         failing.setLevel(CLASSNAME, LogControl.LogLevel.DEBUG));
 
     // outer one doesn't
-    Assertions.assertThat(failing.setLogLevel(CLASSNAME, LogControl.LogLevel.DEBUG))
+    assertThat(failing.setLogLevel(CLASSNAME, LogControl.LogLevel.DEBUG))
         .describedAs("Invocation of setLogLevel()")
         .isFalse();
   }
@@ -175,7 +174,7 @@ public class TestLogControllerFactory extends AbstractHadoopTestBase {
     capturer.clearOutput();
     setLogLevel(level);
     logMessages();
-    return Assertions.assertThat(capturer.getOutput())
+    return assertThat(capturer.getOutput())
         .describedAs("captured output")
         .contains(contains);
   }
@@ -185,7 +184,7 @@ public class TestLogControllerFactory extends AbstractHadoopTestBase {
    * @param level level to set to.
    */
   private void setLogLevel(final LogControl.LogLevel level) {
-    Assertions.assertThat(controller.setLogLevel(CLASSNAME, level))
+    assertThat(controller.setLogLevel(CLASSNAME, level))
         .describedAs("Set log level %s", level)
         .isTrue();
   }

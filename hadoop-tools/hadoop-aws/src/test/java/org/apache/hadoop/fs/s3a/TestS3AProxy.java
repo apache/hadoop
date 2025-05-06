@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
 
@@ -83,10 +82,10 @@ public class TestS3AProxy extends AbstractHadoopTestBase {
         AWSClientConfig.createProxyConfiguration(proxyConfig, "testBucket");
     ProxyConfiguration asyncConfig =
         AWSClientConfig.createProxyConfiguration(proxyConfig, "testBucket");
-    Assertions.assertThat(config.scheme())
+    assertThat(config.scheme())
         .describedAs("Proxy protocol not as expected")
         .isEqualTo(isExpectedSecured ? "https" : "http");
-    Assertions.assertThat(asyncConfig.scheme())
+    assertThat(asyncConfig.scheme())
         .describedAs("Proxy protocol not as expected")
         .isEqualTo(isExpectedSecured ? "https" : "http");
   }
