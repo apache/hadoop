@@ -139,7 +139,7 @@ public class TestCodecPool {
         CodecPool.getLeasedDecompressorsCount(codec), LEASE_COUNT_ERR);
 
     CodecPool.returnDecompressor(decomp2);
-    assertEquals( 1,
+    assertEquals(1,
         CodecPool.getLeasedDecompressorsCount(codec), LEASE_COUNT_ERR);
 
     CodecPool.returnDecompressor(decomp1);
@@ -147,7 +147,7 @@ public class TestCodecPool {
         CodecPool.getLeasedDecompressorsCount(codec), LEASE_COUNT_ERR);
 
     CodecPool.returnDecompressor(decomp1);
-    assertEquals( 0,
+    assertEquals(0,
         CodecPool.getLeasedCompressorsCount(codec), LEASE_COUNT_ERR);
   }
 

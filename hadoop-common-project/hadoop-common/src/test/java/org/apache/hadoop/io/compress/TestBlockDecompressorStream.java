@@ -72,7 +72,7 @@ public class TestBlockDecompressorStream {
     // get decompression stream
     try (BlockDecompressorStream blockDecompressorStream =
       new BlockDecompressorStream(bytesIn, new FakeDecompressor(), 1024)) {
-      assertEquals(-1 , blockDecompressorStream.read(),
+      assertEquals(-1, blockDecompressorStream.read(),
           "return value is not -1");
     } catch (IOException e) {
       fail("unexpected IOException : " + e);

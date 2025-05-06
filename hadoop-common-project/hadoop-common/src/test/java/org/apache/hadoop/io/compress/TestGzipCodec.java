@@ -164,6 +164,6 @@ public class TestGzipCodec {
       }
       result.append(new String(buf, 0, len, StandardCharsets.UTF_8));
     }
-    assertEquals( DATA1, result.toString(), "Output must match input");
+    assertEquals(DATA1, result.toString(), "Output must match input");
   }
 }

@@ -119,8 +119,7 @@ public class TestVLong {
   @Test
   public void testVLong5Bytes() throws IOException {
     long size = writeAndVerify(Byte.SIZE * 3);
-     assertEquals((1 << Short.SIZE) * 6 - 256
-        - 16 - 3, size, "Incorrect encoded size");
+    assertEquals((1 << Short.SIZE) * 6 - 256 - 16 - 3, size, "Incorrect encoded size");
   }
 
   private void verifySixOrMoreBytes(int bytes) throws IOException {

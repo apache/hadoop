@@ -82,7 +82,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
   @ParameterizedTest
   @MethodSource("data")
   public void testValidate(Class<? extends RawErasureCoderFactory> factoryClass,
-    int numDataUnits, int numParityUnits, int[] erasedDataIndexes, int[] erasedParityIndexes) {
+      int numDataUnits, int numParityUnits, int[] erasedDataIndexes, int[] erasedParityIndexes) {
     initTestDecodingValidator(factoryClass, numDataUnits, numParityUnits,
         erasedDataIndexes, erasedParityIndexes);
     prepare(null, numDataUnits, numParityUnits, erasedDataIndexes,
@@ -193,8 +193,8 @@ public class TestDecodingValidator extends TestRawCoderBase {
   @ParameterizedTest
   @MethodSource("data")
   public void testValidateWithBadDecoding(Class<? extends RawErasureCoderFactory> factoryClass,
-    int numDataUnits, int numParityUnits, int[] erasedDataIndexes, int[] erasedParityIndexes)
-    throws IOException {
+      int numDataUnits, int numParityUnits, int[] erasedDataIndexes, int[] erasedParityIndexes)
+      throws IOException {
     initTestDecodingValidator(factoryClass, numDataUnits, numParityUnits,
         erasedDataIndexes, erasedParityIndexes);
     prepare(null, numDataUnits, numParityUnits, erasedDataIndexes,
@@ -243,7 +243,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
   @ParameterizedTest
   @MethodSource("data")
   public void testIdempotentReleases(Class<? extends RawErasureCoderFactory> factoryClass,
-    int numDataUnits, int numParityUnits, int[] erasedDataIndexes, int[] erasedParityIndexes) {
+      int numDataUnits, int numParityUnits, int[] erasedDataIndexes, int[] erasedParityIndexes) {
     initTestDecodingValidator(factoryClass, numDataUnits, numParityUnits,
         erasedDataIndexes, erasedParityIndexes);
     prepareCoders(true);

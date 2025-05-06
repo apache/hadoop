@@ -143,11 +143,11 @@ public class TestZStandardCompressorDecompressor {
   //test on ArrayIndexOutOfBoundsException in {@code decompressor.setInput()}
   @Test
   public void testDecompressorSetInputAIOUBException() {
-   assertThrows(ArrayIndexOutOfBoundsException.class, () -> {
-     ZStandardDecompressor decompressor =
+    assertThrows(ArrayIndexOutOfBoundsException.class, () -> {
+      ZStandardDecompressor decompressor =
         new ZStandardDecompressor(IO_FILE_BUFFER_SIZE_DEFAULT);
         decompressor.setInput(new byte[] {}, -5, 10);
-   });
+    });
   }
 
   //test on NullPointerException in {@code compressor.compress()}
