@@ -143,7 +143,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b/c/d/e", resolveResult3.resolvedPath);
     assertEquals(new Path("/f/g/h/i"), resolveResult3.remainingPath);
     assertTrue(resolveResult3.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN4_TARGET, ((TestNestMountPointFileSystem) resolveResult3.targetFileSystem).getUri());
+    assertEquals(NN4_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult3.targetFileSystem).getUri());
     assertTrue(resolveResult3.isLastInternalDirLink());
   }
 

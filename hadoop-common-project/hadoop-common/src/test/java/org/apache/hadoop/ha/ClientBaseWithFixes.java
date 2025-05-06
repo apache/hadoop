@@ -90,8 +90,8 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
    *
    */
   protected class NullWatcher implements Watcher {
-      @Override
-      public void process(WatchedEvent event) { /* nada */ }
+    @Override
+    public void process(WatchedEvent event) { /* nada */ }
   }
 
   protected static class CountdownWatcher implements Watcher {
@@ -110,7 +110,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
     public CountdownWatcher() {
       reset();
     }
-    
+
     synchronized public void reset() {
       clientConnected = new CountDownLatch(1);
       connected = false;
@@ -119,38 +119,37 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
     @Override
     synchronized public void process(WatchedEvent event) {
       if (event.getState() == KeeperState.SyncConnected ||
-        event.getState() == KeeperState.ConnectedReadOnly) {
-        connected = true;
-        notifyAll();
-        clientConnected.countDown();
+          event.getState() == KeeperState.ConnectedReadOnly) {
+          connected = true;
+          notifyAll();
+          clientConnected.countDown();
       } else {
         connected = false;
         notifyAll();
       }
     }
-    
+
     synchronized boolean isConnected() {
       return connected;
     }
 
     @VisibleForTesting
     public synchronized void waitForConnected(long timeout)
-      throws InterruptedException, TimeoutException {
-        long expire = Time.now() + timeout;
-        long left = timeout;
-        while(!connected && left > 0) {
-            wait(left);
-            left = expire - Time.now();
-        }
-        if (!connected) {
-            throw new TimeoutException("Did not connect");
-
-        }
+        throws InterruptedException, TimeoutException {
+      long expire = Time.now() + timeout;
+      long left = timeout;
+      while(!connected && left > 0) {
+          wait(left);
+          left = expire - Time.now();
+      }
+      if (!connected) {
+          throw new TimeoutException("Did not connect");
+      }
     }
-    
+
     @VisibleForTesting
     public synchronized void waitForDisconnected(long timeout)
-      throws InterruptedException, TimeoutException {
+        throws InterruptedException, TimeoutException {
       long expire = Time.now() + timeout;
       long left = timeout;
       while(connected && left > 0) {
@@ -164,12 +163,12 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
   }
 
   protected TestableZooKeeper createClient()
-    throws IOException, InterruptedException{
+      throws IOException, InterruptedException {
     return createClient(hostPort);
   }
 
   protected TestableZooKeeper createClient(String hp)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     CountdownWatcher watcher = new CountdownWatcher();
     return createClient(watcher, hp);
   }
@@ -178,7 +177,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
   private boolean allClientsSetup = false;
 
   protected TestableZooKeeper createClient(CountdownWatcher watcher, String hp)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     return createClient(watcher, hp, CONNECTION_TIMEOUT);
   }
 
@@ -191,14 +190,14 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
     }
     synchronized (this) {
       if (!allClientsSetup) {
-          LOG.error("allClients never setup");
-          fail("allClients never setup");
+        LOG.error("allClients never setup");
+        fail("allClients never setup");
       }
       if (allClients != null) {
-          allClients.add(zk);
+        allClients.add(zk);
       } else {
-          // test done - close the zk, not needed
-          zk.close();
+        // test done - close the zk, not needed
+        zk.close();
       }
     }
     watcher.initializeWatchedClient(zk);
@@ -206,12 +205,12 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
   }
 
   public static class HostPort {
-      String host;
-      int port;
-      public HostPort(String host, int port) {
-          this.host = host;
-          this.port = port;
-      }
+    String host;
+    int port;
+    public HostPort(String host, int port) {
+      this.host = host;
+      this.port = port;
+    }
   }
 
   public static List<HostPort> parseHostPortList(String hplist) {
@@ -248,7 +247,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
         outstream.write(cmd.getBytes());
         outstream.flush();
         // this replicates NC - close the output stream before reading
-        sock.shutdownOutput();  
+        sock.shutdownOutput();
         reader =
             new BufferedReader(
                     new InputStreamReader(sock.getInputStream()));

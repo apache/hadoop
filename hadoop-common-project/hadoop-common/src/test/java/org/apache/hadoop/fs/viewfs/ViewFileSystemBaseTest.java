@@ -1082,7 +1082,7 @@ abstract public class ViewFileSystemBaseTest {
   public void testInternalRemoveAclEntries() throws IOException {
     assertThrows(AccessControlException.class, () -> {
       fsView.removeAclEntries(new Path("/internalDir"),
-         new ArrayList<AclEntry>());
+          new ArrayList<AclEntry>());
     });
   }
 
@@ -1514,11 +1514,9 @@ abstract public class ViewFileSystemBaseTest {
       Map<MountPoint, FsStatus> mountPointFsStatusMap =
           ViewFileSystemUtil.getStatus(fileSystem, InodeTree.SlashPath);
       assertEquals(getExpectedMountPoints(), mountPointFsStatusMap.size());
-        mountPointFsStatusMap =
-
       // Case 2: Verify FsStatus of an internal dir returns all
       // MountPoints status.
-      ViewFileSystemUtil.getStatus(fileSystem, new Path("/internalDir"));
+      mountPointFsStatusMap = ViewFileSystemUtil.getStatus(fileSystem, new Path("/internalDir"));
       assertEquals(getExpectedMountPoints(), mountPointFsStatusMap.size());
 
       // Case 3: Verify FsStatus of a matching MountPoint returns exactly
