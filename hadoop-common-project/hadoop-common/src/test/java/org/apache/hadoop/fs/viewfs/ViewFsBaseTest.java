@@ -710,7 +710,7 @@ abstract public class ViewFsBaseTest {
     assertThrows(AccessControlException.class, () -> {
       fcView.mkdir(fileContextTestHelper.getTestRootPath(fcView,
           "/internalDir/linkToDir2"),
-        FileContext.DEFAULT_PERM, false);
+          FileContext.DEFAULT_PERM, false);
     });
   }
   @Test
@@ -950,7 +950,7 @@ abstract public class ViewFsBaseTest {
   public void testInternalRenameSnapshot() throws IOException {
     assertThrows(AccessControlException.class, () -> {
       fcView.renameSnapshot(new Path("/internalDir"), "snapOldName",
-        "snapNewName");
+          "snapNewName");
     });
   }
 
