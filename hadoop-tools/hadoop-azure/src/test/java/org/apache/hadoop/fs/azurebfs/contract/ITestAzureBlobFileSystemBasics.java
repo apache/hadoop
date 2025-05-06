@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.azurebfs.contract;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.FileStatus;
@@ -36,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Basic Contract test for Azure BlobFileSystem.
  */
-@Timeout(TEST_TIMEOUT)
+@Timeout(value = TEST_TIMEOUT, unit = TimeUnit.MILLISECONDS)
 public class ITestAzureBlobFileSystemBasics extends FileSystemContractBaseTest {
   private final ABFSContractTestBinding binding;
 

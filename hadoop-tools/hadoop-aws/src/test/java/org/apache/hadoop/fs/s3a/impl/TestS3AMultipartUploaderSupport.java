@@ -65,8 +65,8 @@ public class TestS3AMultipartUploaderSupport extends HadoopTestBase {
     assertEquals(1, result.getPartNumber());
     assertEquals("11223344", result.getEtag());
     assertEquals(len, result.getLen());
-   assertThat(result.getChecksumAlgorithm())
-       .describedAs("Checksum algorithm must not be present").isNull();
+    assertThat(result.getChecksumAlgorithm())
+        .describedAs("Checksum algorithm must not be present").isNull();
     assertThat(result.getChecksum())
         .describedAs("Checksum must not be generated").isNull();
   }

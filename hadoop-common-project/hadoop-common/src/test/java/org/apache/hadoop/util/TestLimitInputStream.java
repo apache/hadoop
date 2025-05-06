@@ -52,8 +52,8 @@ public class TestLimitInputStream extends HadoopTestBase {
   public void testResetWithoutMark() throws IOException {
     assertThrows(IOException.class, () -> {
       try (LimitInputStream limitInputStream =
-        new LimitInputStream(new RandomInputStream(), 128)) {
-           limitInputStream.reset();
+          new LimitInputStream(new RandomInputStream(), 128)) {
+        limitInputStream.reset();
       }
     });
   }

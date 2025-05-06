@@ -109,8 +109,8 @@ public class TestDataBlocks extends HadoopTestBase {
       assertEquals(limit - bufferLen, block.remainingCapacity(),
           "capacity in " + block);
       assertTrue(block.hasCapacity(64), "hasCapacity(64) in " + block);
-      assertTrue(
-         block.hasCapacity(limit - bufferLen), "No capacity in " + block);
+      assertTrue(block.hasCapacity(limit - bufferLen),
+          "No capacity in " + block);
 
       // now start the write
       S3ADataBlocks.BlockUploadData blockUploadData = block.startUpload();

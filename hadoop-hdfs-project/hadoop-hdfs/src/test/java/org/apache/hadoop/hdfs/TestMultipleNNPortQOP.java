@@ -73,7 +73,7 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
     // rpc, it would return client port, in this case, it will be the
     // auxiliary port for data node. Which is not what auxiliary is for.
     // setting service rpc port to avoid this.
-    clusterConf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "localhost:9020");
+    clusterConf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "localhost:9021");
     clusterConf.set(
         CommonConfigurationKeys.HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS,
         "org.apache.hadoop.security.IngressPortBasedResolver");

@@ -163,7 +163,7 @@ public class TestStagingPartitionedFileListing
     Path rootFile = new Path(attemptPath, "root.txt");
     touch(attemptFS, rootFile);
     assertThat(listPartitions(attemptFS, attemptPath)).
-       containsAnyOf(oct2017, StagingCommitterConstants.TABLE_ROOT);
+        containsAnyOf(oct2017, StagingCommitterConstants.TABLE_ROOT);
   }
 
   /**

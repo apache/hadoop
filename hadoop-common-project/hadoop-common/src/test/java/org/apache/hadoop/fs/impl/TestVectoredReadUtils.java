@@ -688,7 +688,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   }
 
   /**
-   * Mock run a vectored read and validate the results with the 
+   * Mock run a vectored read and validate the results with the
    * <ol>
    *   <li> {@code ByteBufferPositionedReadable.readFully()} is invoked once per range.</li>
    *   <li> The buffers are filled with data</li>
