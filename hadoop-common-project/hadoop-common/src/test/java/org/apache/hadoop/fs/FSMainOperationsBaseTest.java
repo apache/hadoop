@@ -350,7 +350,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     // listStatus with filters returns empty correctly
     FileStatus[] filteredPaths = fSys.listStatus(
         getTestRootPath(fSys, "test"), TEST_X_FILTER);
-    assertEquals(0,filteredPaths.length);
+    assertEquals(0, filteredPaths.length);
     
   }
   
@@ -371,7 +371,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     // should return 2 paths ("/test/hadoop/axa" and "/test/hadoop/axx")
     FileStatus[] filteredPaths = fSys.listStatus(
         getTestRootPath(fSys, "test/hadoop"), TEST_X_FILTER);
-    assertEquals(2,filteredPaths.length);
+    assertEquals(2, filteredPaths.length);
     assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXA), filteredPaths));
     assertTrue(containsTestRootPath(getTestRootPath(fSys,
@@ -503,7 +503,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     FileStatus[] filteredPaths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoop/?"),
         DEFAULT_FILTER);
-    assertEquals(0,filteredPaths.length);
+    assertEquals(0, filteredPaths.length);
   }
   
   @Test
@@ -607,7 +607,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     FileStatus[] filteredPaths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoop/?"),
         TEST_X_FILTER);
-    assertEquals(0,filteredPaths.length);
+    assertEquals(0, filteredPaths.length);
   }
   
   @Test

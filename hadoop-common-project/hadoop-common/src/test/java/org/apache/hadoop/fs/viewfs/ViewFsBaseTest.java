@@ -674,7 +674,7 @@ abstract public class ViewFsBaseTest {
   public void testResolvePathMissingThroughMountPoints2() throws IOException {
     assertThrows(FileNotFoundException.class, () -> {
       fcView.mkdir(fileContextTestHelper.getTestRootPath(fcView, "/user/dirX"),
-        FileContext.DEFAULT_PERM, false);
+          FileContext.DEFAULT_PERM, false);
       fcView.resolvePath(new Path("/user/dirX/nonExisting"));
     });
   }
@@ -694,7 +694,7 @@ abstract public class ViewFsBaseTest {
   public void testInternalMkdirSlash() throws IOException {
     assertThrows(AccessControlException.class, () -> {
       fcView.mkdir(fileContextTestHelper.getTestRootPath(fcView, "/"),
-        FileContext.DEFAULT_PERM, false);
+          FileContext.DEFAULT_PERM, false);
     });
   }
   
@@ -702,7 +702,7 @@ abstract public class ViewFsBaseTest {
   public void testInternalMkdirExisting1() throws IOException {
     assertThrows(AccessControlException.class, () -> {
       fcView.mkdir(fileContextTestHelper.getTestRootPath(fcView, "/internalDir"),
-        FileContext.DEFAULT_PERM, false);
+          FileContext.DEFAULT_PERM, false);
     });
   }
   @Test
@@ -710,21 +710,21 @@ abstract public class ViewFsBaseTest {
     assertThrows(AccessControlException.class, () -> {
       fcView.mkdir(fileContextTestHelper.getTestRootPath(fcView,
           "/internalDir/linkToDir2"),
-      FileContext.DEFAULT_PERM, false);
+        FileContext.DEFAULT_PERM, false);
     });
   }
   @Test
   public void testInternalMkdirNew() throws IOException {
     assertThrows(AccessControlException.class, () -> {
       fcView.mkdir(fileContextTestHelper.getTestRootPath(fcView, "/dirNew"),
-        FileContext.DEFAULT_PERM, false);
+          FileContext.DEFAULT_PERM, false);
     });
   }
   @Test
   public void testInternalMkdirNew2() throws IOException {
     assertThrows(AccessControlException.class, () -> {
       fcView.mkdir(fileContextTestHelper.getTestRootPath(fcView, "/internalDir/dirNew"),
-        FileContext.DEFAULT_PERM, false);
+          FileContext.DEFAULT_PERM, false);
     });
   }
   
@@ -790,7 +790,7 @@ abstract public class ViewFsBaseTest {
   public void testInternalDeleteExisting2() throws IOException {
     assertThrows(AccessControlException.class, () -> {
       assertTrue(fcView.getFileStatus(new Path("/internalDir/linkToDir2")).isDirectory(),
-        "Delete of link to dir should succeed");
+          "Delete of link to dir should succeed");
       fcView.delete(new Path("/internalDir/linkToDir2"), false);
     });
   } 
@@ -808,7 +808,7 @@ abstract public class ViewFsBaseTest {
   public void testInternalRename2() throws IOException {
     assertThrows(AccessControlException.class, () -> {
       assertTrue(fcView.getFileStatus(new Path("/internalDir/linkToDir2")).isDirectory(),
-        "linkTODir2 should be a dir");
+          "linkTODir2 should be a dir");
       fcView.rename(new Path("/internalDir/linkToDir2"), new Path("/internalDir/dir1"));
     });
   }
@@ -950,7 +950,7 @@ abstract public class ViewFsBaseTest {
   public void testInternalRenameSnapshot() throws IOException {
     assertThrows(AccessControlException.class, () -> {
       fcView.renameSnapshot(new Path("/internalDir"), "snapOldName",
-      "snapNewName");
+        "snapNewName");
     });
   }
 

@@ -65,13 +65,13 @@ public class TestViewFsWithAuthorityLocalFs extends ViewFsBaseTest {
   public void testBasicPaths() {
     assertEquals(schemeWithAuthority, fcView.getDefaultFileSystem().getUri());
     assertEquals(fcView.makeQualified(
-      new Path("/user/" + System.getProperty("user.name"))),
-      fcView.getWorkingDirectory());
+        new Path("/user/" + System.getProperty("user.name"))),
+    fcView.getWorkingDirectory());
     assertEquals(fcView.makeQualified(
-      new Path("/user/" + System.getProperty("user.name"))),
-      fcView.getHomeDirectory());
+        new Path("/user/" + System.getProperty("user.name"))),
+    fcView.getHomeDirectory());
     assertEquals(
-      new Path("/foo/bar").makeQualified(schemeWithAuthority, null),
-      fcView.makeQualified(new Path("/foo/bar")));
+        new Path("/foo/bar").makeQualified(schemeWithAuthority, null),
+    fcView.makeQualified(new Path("/foo/bar")));
   }
 }

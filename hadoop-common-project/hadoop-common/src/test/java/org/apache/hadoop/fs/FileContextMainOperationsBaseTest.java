@@ -443,7 +443,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     // listStatus with filters returns empty correctly
     FileStatus[] filteredPaths = fc.util().listStatus(
         getTestRootPath(fc, "test"), TEST_X_FILTER);
-    assertEquals(0,filteredPaths.length);
+    assertEquals(0, filteredPaths.length);
     
   }
   
@@ -465,7 +465,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     FileStatus[] filteredPaths = fc.util()
         .listStatus(getTestRootPath(fc, "test/hadoop"),
             TEST_X_FILTER);
-    assertEquals(2,filteredPaths.length);
+    assertEquals(2, filteredPaths.length);
     assertTrue(containsPath(getTestRootPath(fc,
         TEST_DIR_AXA), filteredPaths));
     assertTrue(containsPath(getTestRootPath(fc,
@@ -597,7 +597,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     FileStatus[] filteredPaths = fc.util().globStatus(
         getTestRootPath(fc, "test/hadoop/?"),
         DEFAULT_FILTER);
-    assertEquals(0,filteredPaths.length);
+    assertEquals(0, filteredPaths.length);
   }
   
   @Test
@@ -701,7 +701,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     FileStatus[] filteredPaths = fc.util().globStatus(
         getTestRootPath(fc, "test/hadoop/?"),
         TEST_X_FILTER);
-    assertEquals(0,filteredPaths.length);
+    assertEquals(0, filteredPaths.length);
   }
   
   @Test
