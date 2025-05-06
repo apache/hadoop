@@ -145,8 +145,7 @@ public class TestHCFSMountTableConfigLoader {
   @Test
   public void testLoadWithMountFile() throws Exception {
     assertThrows(FileNotFoundException.class, () -> {
-      loader.load(new URI(targetTestRoot.toString() + "/Non-Existent-File.xml")
-      .toString(), conf);
+      loader.load(new URI(targetTestRoot.toString() + "/Non-Existent-File.xml").toString(), conf);
     });
   }
 

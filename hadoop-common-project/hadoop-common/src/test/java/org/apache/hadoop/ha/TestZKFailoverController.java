@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.same;
-import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
@@ -478,8 +477,8 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     long st = Time.now();
     proxy.cedeActive(3000);
     long et = Time.now();
-    assertTrue(
-       et - st < 1000, "RPC to cedeActive took " + (et - st) + " ms");
+    assertTrue(et - st < 1000,
+        "RPC to cedeActive took " + (et - st) + " ms");
 
     // Should be in "INIT" state since it's not in the election
     // at this point.
@@ -490,8 +489,8 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     // since the other node in the cluster would have taken ACTIVE.
     cluster.waitForElectorState(0, ActiveStandbyElector.State.STANDBY);
     long et2 = Time.now();
-    assertTrue(
-       et2 - et > 2800, "Should take ~3 seconds to rejoin. Only took " + (et2 - et) +
+    assertTrue(et2 - et > 2800,
+        "Should take ~3 seconds to rejoin. Only took " + (et2 - et) +
         "ms before rejoining.");
   }
 

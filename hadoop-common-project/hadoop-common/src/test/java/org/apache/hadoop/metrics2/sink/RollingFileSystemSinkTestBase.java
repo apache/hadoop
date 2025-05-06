@@ -79,7 +79,7 @@ public class RollingFileSystemSinkTestBase {
    * The name of the current test method.
    */
   @RegisterExtension
-  public TestName methodName = new TestName();
+  private TestName methodName = new TestName();
 
   /**
    * A sample metric class

@@ -83,7 +83,7 @@ public class TestFileUtil {
   private static final Logger LOG = LoggerFactory.getLogger(TestFileUtil.class);
 
   @TempDir
-  public java.nio.file.Path testFolder;
+  private java.nio.file.Path testFolder;
 
   private static final String FILE = "x";
   private static final String LINK = "y";
@@ -1544,37 +1544,37 @@ public class TestFileUtil {
   @Test
   public void testCreateArbitrarySymlinkUsingJava() throws IOException {
     assertThrows(IOException.class, () -> {
-        final File simpleTar = new File(del, FILE);
-        OutputStream os = new FileOutputStream(simpleTar);
-        File rootDir = new File("tmp");
-        try (TarArchiveOutputStream tos = new TarArchiveOutputStream(os)) {
-          tos.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
+      final File simpleTar = new File(del, FILE);
+      OutputStream os = new FileOutputStream(simpleTar);
+      File rootDir = new File("tmp");
+      try (TarArchiveOutputStream tos = new TarArchiveOutputStream(os)) {
+        tos.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
 
-          // Create arbitrary dir
-          File arbitraryDir = new File(rootDir, "arbitrary-dir/");
-          Verify.mkdirs(arbitraryDir);
+        // Create arbitrary dir
+        File arbitraryDir = new File(rootDir, "arbitrary-dir/");
+        Verify.mkdirs(arbitraryDir);
 
-          // We will tar from the tar-root lineage
-          File tarRoot = new File(rootDir, "tar-root/");
-          File symlinkRoot = new File(tarRoot, "dir1/");
-          Verify.mkdirs(symlinkRoot);
+        // We will tar from the tar-root lineage
+        File tarRoot = new File(rootDir, "tar-root/");
+        File symlinkRoot = new File(tarRoot, "dir1/");
+        Verify.mkdirs(symlinkRoot);
 
-          // Create Symbolic Link to an arbitrary dir
-          java.nio.file.Path symLink = Paths.get(symlinkRoot.getPath(), "sl");
-          Files.createSymbolicLink(symLink, arbitraryDir.toPath().toAbsolutePath());
+        // Create Symbolic Link to an arbitrary dir
+        java.nio.file.Path symLink = Paths.get(symlinkRoot.getPath(), "sl");
+        Files.createSymbolicLink(symLink, arbitraryDir.toPath().toAbsolutePath());
 
-          // Put entries in tar file
-          putEntriesInTar(tos, tarRoot);
-          putEntriesInTar(tos, new File(symLink.toFile(), "dir-outside-tar-root/"));
-          tos.close();
+        // Put entries in tar file
+        putEntriesInTar(tos, tarRoot);
+        putEntriesInTar(tos, new File(symLink.toFile(), "dir-outside-tar-root/"));
+        tos.close();
 
-          // Untar using Java
-          File untarFile = new File(rootDir, "extracted");
-          FileUtil.unTarUsingJava(simpleTar, untarFile, false);
-        } finally {
-          FileUtils.deleteDirectory(rootDir);
-        }
-      });
+        // Untar using Java
+        File untarFile = new File(rootDir, "extracted");
+        FileUtil.unTarUsingJava(simpleTar, untarFile, false);
+      } finally {
+        FileUtils.deleteDirectory(rootDir);
+      }
+    });
   }
 
   private void putEntriesInTar(TarArchiveOutputStream tos, File f)

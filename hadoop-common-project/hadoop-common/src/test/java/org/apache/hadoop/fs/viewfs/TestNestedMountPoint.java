@@ -123,7 +123,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b/c/d/e", resolveResult.resolvedPath);
     assertEquals(new Path("/f"), resolveResult.remainingPath);
     assertTrue(resolveResult.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN4_TARGET, ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
+    assertEquals(NN4_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
     assertTrue(resolveResult.isLastInternalDirLink());
 
     // /a/b/c/d/e resolves to /a/b/c/d/e and /
@@ -132,7 +133,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b/c/d/e", resolveResult2.resolvedPath);
     assertEquals(new Path("/"), resolveResult2.remainingPath);
     assertTrue(resolveResult2.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN4_TARGET, ((TestNestMountPointFileSystem) resolveResult2.targetFileSystem).getUri());
+    assertEquals(NN4_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult2.targetFileSystem).getUri());
     assertTrue(resolveResult2.isLastInternalDirLink());
 
     // /a/b/c/d/e/f/g/h/i resolves to /a/b/c/d/e and /f/g/h/i
@@ -153,7 +155,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b/c/d/e", resolveResult.resolvedPath);
     assertEquals(new Path("/f"), resolveResult.remainingPath);
     assertTrue(resolveResult.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN4_TARGET, ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
+    assertEquals(NN4_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
     assertTrue(resolveResult.isLastInternalDirLink());
 
     // /a/b/c/d/e resolves to /a/b/c/d and /e
@@ -162,7 +165,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b/c/d", resolveResult2.resolvedPath);
     assertEquals(new Path("/e"), resolveResult2.remainingPath);
     assertTrue(resolveResult2.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN3_TARGET, ((TestNestMountPointFileSystem) resolveResult2.targetFileSystem).getUri());
+    assertEquals(NN3_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult2.targetFileSystem).getUri());
     assertTrue(resolveResult2.isLastInternalDirLink());
 
     // /a/b/c/d/e/f/g/h/i resolves to /a/b/c/d/e and /f/g/h/i
@@ -171,7 +175,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b/c/d/e", resolveResult3.resolvedPath);
     assertEquals(new Path("/f/g/h/i"), resolveResult3.remainingPath);
     assertTrue(resolveResult3.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN4_TARGET, ((TestNestMountPointFileSystem) resolveResult3.targetFileSystem).getUri());
+    assertEquals(NN4_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult3.targetFileSystem).getUri());
     assertTrue(resolveResult3.isLastInternalDirLink());
   }
 
@@ -183,7 +188,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b/c/d", resolveResult.resolvedPath);
     assertEquals(new Path("/f"), resolveResult.remainingPath);
     assertTrue(resolveResult.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN3_TARGET, ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
+    assertEquals(NN3_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
     assertTrue(resolveResult.isLastInternalDirLink());
 
     // /a/b/c/d resolves to /a/b/c/d and /
@@ -192,7 +198,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b/c/d", resolveResult2.resolvedPath);
     assertEquals(new Path("/"), resolveResult2.remainingPath);
     assertTrue(resolveResult2.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN3_TARGET, ((TestNestMountPointFileSystem) resolveResult2.targetFileSystem).getUri());
+    assertEquals(NN3_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult2.targetFileSystem).getUri());
     assertTrue(resolveResult2.isLastInternalDirLink());
 
     // /a/b/c/d/f/g/h/i resolves to /a/b/c/d and /f/g/h/i
@@ -201,7 +208,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b/c/d", resolveResult3.resolvedPath);
     assertEquals(new Path("/f/g/h/i"), resolveResult3.remainingPath);
     assertTrue(resolveResult3.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN3_TARGET, ((TestNestMountPointFileSystem) resolveResult3.targetFileSystem).getUri());
+    assertEquals(NN3_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult3.targetFileSystem).getUri());
     assertTrue(resolveResult3.isLastInternalDirLink());
   }
 
@@ -213,7 +221,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b/c/d", resolveResult.resolvedPath);
     assertEquals(new Path("/f"), resolveResult.remainingPath);
     assertTrue(resolveResult.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN3_TARGET, ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
+    assertEquals(NN3_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
     assertTrue(resolveResult.isLastInternalDirLink());
 
     // /a/b/c/d resolves to /a/b and /c/d
@@ -222,7 +231,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b", resolveResult2.resolvedPath);
     assertEquals(new Path("/c/d"), resolveResult2.remainingPath);
     assertTrue(resolveResult2.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN1_TARGET, ((TestNestMountPointFileSystem) resolveResult2.targetFileSystem).getUri());
+    assertEquals(NN1_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult2.targetFileSystem).getUri());
     assertTrue(resolveResult2.isLastInternalDirLink());
 
     // /a/b/c/d/f/g/h/i resolves to /a/b/c/d and /f/g/h/i
@@ -231,7 +241,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b/c/d", resolveResult3.resolvedPath);
     assertEquals(new Path("/f/g/h/i"), resolveResult3.remainingPath);
     assertTrue(resolveResult3.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN3_TARGET, ((TestNestMountPointFileSystem) resolveResult3.targetFileSystem).getUri());
+    assertEquals(NN3_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult3.targetFileSystem).getUri());
     assertTrue(resolveResult3.isLastInternalDirLink());
   }
 
@@ -243,7 +254,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b", resolveResult.resolvedPath);
     assertEquals(new Path("/f"), resolveResult.remainingPath);
     assertTrue(resolveResult.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN1_TARGET, ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
+    assertEquals(NN1_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
     assertTrue(resolveResult.isLastInternalDirLink());
 
     // /a/b resolves to /a/b and /
@@ -252,7 +264,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b", resolveResult2.resolvedPath);
     assertEquals(new Path("/"), resolveResult2.remainingPath);
     assertTrue(resolveResult2.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN1_TARGET, ((TestNestMountPointFileSystem) resolveResult2.targetFileSystem).getUri());
+    assertEquals(NN1_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult2.targetFileSystem).getUri());
     assertTrue(resolveResult2.isLastInternalDirLink());
   }
 
@@ -264,7 +277,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b", resolveResult.resolvedPath);
     assertEquals(new Path("/f"), resolveResult.remainingPath);
     assertTrue(resolveResult.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN1_TARGET, ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
+    assertEquals(NN1_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
     assertTrue(resolveResult.isLastInternalDirLink());
 
     // /a/b resolves to /a and /b
@@ -273,7 +287,8 @@ public class TestNestedMountPoint {
     assertEquals("/a", resolveResult2.resolvedPath);
     assertEquals(new Path("/b"), resolveResult2.remainingPath);
     assertTrue(resolveResult2.targetFileSystem instanceof TestNestMountPointInternalFileSystem);
-    assertEquals(fsUri, ((TestNestMountPointInternalFileSystem) resolveResult2.targetFileSystem).getUri());
+    assertEquals(fsUri,
+        ((TestNestMountPointInternalFileSystem) resolveResult2.targetFileSystem).getUri());
     assertFalse(resolveResult2.isLastInternalDirLink());
   }
 
@@ -285,7 +300,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b", resolveResult.resolvedPath);
     assertEquals(new Path("/c"), resolveResult.remainingPath);
     assertTrue(resolveResult.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN1_TARGET, ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
+    assertEquals(NN1_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
     assertTrue(resolveResult.isLastInternalDirLink());
   }
 
@@ -297,7 +313,8 @@ public class TestNestedMountPoint {
     assertEquals("/a/b", resolveResult.resolvedPath);
     assertEquals(new Path("/c"), resolveResult.remainingPath);
     assertTrue(resolveResult.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(NN1_TARGET, ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
+    assertEquals(NN1_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
     assertTrue(resolveResult.isLastInternalDirLink());
   }
 
@@ -309,7 +326,8 @@ public class TestNestedMountPoint {
     assertEquals("/", resolveResult.resolvedPath);
     assertEquals(new Path("/a/e"), resolveResult.remainingPath);
     assertTrue(resolveResult.targetFileSystem instanceof TestNestMountPointFileSystem);
-    assertEquals(LINKFALLBACK_TARGET, ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
+    assertEquals(LINKFALLBACK_TARGET,
+        ((TestNestMountPointFileSystem) resolveResult.targetFileSystem).getUri());
     assertFalse(resolveResult.isLastInternalDirLink());
   }
 
@@ -321,7 +339,8 @@ public class TestNestedMountPoint {
     assertEquals("/a", resolveResult.resolvedPath);
     assertEquals(new Path("/e"), resolveResult.remainingPath);
     assertTrue(resolveResult.targetFileSystem instanceof TestNestMountPointInternalFileSystem);
-    assertEquals(fsUri, ((TestNestMountPointInternalFileSystem) resolveResult.targetFileSystem).getUri());
+    assertEquals(fsUri,
+        ((TestNestMountPointInternalFileSystem) resolveResult.targetFileSystem).getUri());
     assertFalse(resolveResult.isLastInternalDirLink());
   }
 
@@ -333,7 +352,8 @@ public class TestNestedMountPoint {
     assertEquals("/b/c", resolveResult.resolvedPath);
     assertEquals(new Path("/"), resolveResult.remainingPath);
     assertTrue(resolveResult.targetFileSystem instanceof TestNestMountPointInternalFileSystem);
-    assertEquals(fsUri, ((TestNestMountPointInternalFileSystem) resolveResult.targetFileSystem).getUri());
+    assertEquals(fsUri,
+        ((TestNestMountPointInternalFileSystem) resolveResult.targetFileSystem).getUri());
     assertFalse(resolveResult.isLastInternalDirLink());
   }
 
@@ -345,7 +365,8 @@ public class TestNestedMountPoint {
     assertEquals("/b", resolveResult.resolvedPath);
     assertEquals(new Path("/c"), resolveResult.remainingPath);
     assertTrue(resolveResult.targetFileSystem instanceof TestNestMountPointInternalFileSystem);
-    assertEquals(fsUri, ((TestNestMountPointInternalFileSystem) resolveResult.targetFileSystem).getUri());
+    assertEquals(fsUri,
+        ((TestNestMountPointInternalFileSystem) resolveResult.targetFileSystem).getUri());
     assertFalse(resolveResult.isLastInternalDirLink());
   }
 

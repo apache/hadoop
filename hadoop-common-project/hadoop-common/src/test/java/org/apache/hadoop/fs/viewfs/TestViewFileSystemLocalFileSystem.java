@@ -96,7 +96,7 @@ public class TestViewFileSystemLocalFileSystem extends ViewFileSystemBaseTest {
     FileSystem lfs = FileSystem.getLocal(testConf);
     for (final URI testUri : testUris) {
       final Path testFile = new Path(new Path(testUri), testFileName);
-      assertTrue( lfs.exists(testFile), testFile + " should exist!");
+      assertTrue(lfs.exists(testFile), testFile + " should exist!");
       final FSDataInputStream fsdis = lfs.open(testFile);
       try {
         assertEquals(testString, fsdis.readUTF(), "Wrong file content");

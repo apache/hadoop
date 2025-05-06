@@ -129,7 +129,7 @@ public class TestChRootedFileSystem {
     // Create file with recursive dir
     fileSystemTestHelper.createFile(fSys, "/newDir/foo");
     assertTrue(fSys.isFile(new Path("/newDir/foo")));
-    assertTrue(fSysTarget.isFile(new Path(chrootedTo,"newDir/foo")));
+    assertTrue(fSysTarget.isFile(new Path(chrootedTo, "newDir/foo")));
     
     // Delete the created file
     assertTrue(fSys.delete(new Path("/newDir/foo"), false));
@@ -139,12 +139,12 @@ public class TestChRootedFileSystem {
     // Create file with a 2 component dirs recursively
     fileSystemTestHelper.createFile(fSys, "/newDir/newDir2/foo");
     assertTrue(fSys.isFile(new Path("/newDir/newDir2/foo")));
-    assertTrue(fSysTarget.isFile(new Path(chrootedTo,"newDir/newDir2/foo")));
+    assertTrue(fSysTarget.isFile(new Path(chrootedTo, "newDir/newDir2/foo")));
     
     // Delete the created file
     assertTrue(fSys.delete(new Path("/newDir/newDir2/foo"), false));
     assertFalse(fSys.exists(new Path("/newDir/newDir2/foo")));
-    assertFalse(fSysTarget.exists(new Path(chrootedTo,"newDir/newDir2/foo")));
+    assertFalse(fSysTarget.exists(new Path(chrootedTo, "newDir/newDir2/foo")));
   }
   
   
@@ -152,21 +152,21 @@ public class TestChRootedFileSystem {
   public void testMkdirDelete() throws IOException {
     fSys.mkdirs(fileSystemTestHelper.getTestRootPath(fSys, "/dirX"));
     assertTrue(fSys.isDirectory(new Path("/dirX")));
-    assertTrue(fSysTarget.isDirectory(new Path(chrootedTo,"dirX")));
+    assertTrue(fSysTarget.isDirectory(new Path(chrootedTo, "dirX")));
     
     fSys.mkdirs(fileSystemTestHelper.getTestRootPath(fSys, "/dirX/dirY"));
     assertTrue(fSys.isDirectory(new Path("/dirX/dirY")));
-    assertTrue(fSysTarget.isDirectory(new Path(chrootedTo,"dirX/dirY")));
+    assertTrue(fSysTarget.isDirectory(new Path(chrootedTo, "dirX/dirY")));
     
 
     // Delete the created dir
     assertTrue(fSys.delete(new Path("/dirX/dirY"), false));
     assertFalse(fSys.exists(new Path("/dirX/dirY")));
-    assertFalse(fSysTarget.exists(new Path(chrootedTo,"dirX/dirY")));
+    assertFalse(fSysTarget.exists(new Path(chrootedTo, "dirX/dirY")));
     
     assertTrue(fSys.delete(new Path("/dirX"), false));
     assertFalse(fSys.exists(new Path("/dirX")));
-    assertFalse(fSysTarget.exists(new Path(chrootedTo,"dirX")));
+    assertFalse(fSysTarget.exists(new Path(chrootedTo, "dirX")));
     
   }
   @Test
@@ -175,18 +175,18 @@ public class TestChRootedFileSystem {
     fileSystemTestHelper.createFile(fSys, "/newDir/foo");
     fSys.rename(new Path("/newDir/foo"), new Path("/newDir/fooBar"));
     assertFalse(fSys.exists(new Path("/newDir/foo")));
-    assertFalse(fSysTarget.exists(new Path(chrootedTo,"newDir/foo")));
-    assertTrue(fSys.isFile(fileSystemTestHelper.getTestRootPath(fSys,"/newDir/fooBar")));
-    assertTrue(fSysTarget.isFile(new Path(chrootedTo,"newDir/fooBar")));
+    assertFalse(fSysTarget.exists(new Path(chrootedTo, "newDir/foo")));
+    assertTrue(fSys.isFile(fileSystemTestHelper.getTestRootPath(fSys, "/newDir/fooBar")));
+    assertTrue(fSysTarget.isFile(new Path(chrootedTo, "newDir/fooBar")));
     
     
     // Rename a dir
     fSys.mkdirs(new Path("/newDir/dirFoo"));
     fSys.rename(new Path("/newDir/dirFoo"), new Path("/newDir/dirFooBar"));
     assertFalse(fSys.exists(new Path("/newDir/dirFoo")));
-    assertFalse(fSysTarget.exists(new Path(chrootedTo,"newDir/dirFoo")));
-    assertTrue(fSys.isDirectory(fileSystemTestHelper.getTestRootPath(fSys,"/newDir/dirFooBar")));
-    assertTrue(fSysTarget.isDirectory(new Path(chrootedTo,"newDir/dirFooBar")));
+    assertFalse(fSysTarget.exists(new Path(chrootedTo, "newDir/dirFoo")));
+    assertTrue(fSys.isDirectory(fileSystemTestHelper.getTestRootPath(fSys, "/newDir/dirFooBar")));
+    assertTrue(fSysTarget.isDirectory(new Path(chrootedTo, "newDir/dirFooBar")));
   }
 
   @Test
@@ -240,17 +240,17 @@ public class TestChRootedFileSystem {
     
     // Note the the file status paths are the full paths on target
     fs = FileSystemTestHelper.containsPath(new Path(chrootedTo, "foo"), dirPaths);
-      assertNotNull(fs);
-      assertTrue(fs.isFile());
+    assertNotNull(fs);
+    assertTrue(fs.isFile());
     fs = FileSystemTestHelper.containsPath(new Path(chrootedTo, "bar"), dirPaths);
-      assertNotNull(fs);
-      assertTrue(fs.isFile());
+    assertNotNull(fs);
+    assertTrue(fs.isFile());
     fs = FileSystemTestHelper.containsPath(new Path(chrootedTo, "dirX"), dirPaths);
-      assertNotNull(fs);
-      assertTrue(fs.isDirectory());
+    assertNotNull(fs);
+    assertTrue(fs.isDirectory());
     fs = FileSystemTestHelper.containsPath(new Path(chrootedTo, "dirY"), dirPaths);
-      assertNotNull(fs);
-      assertTrue(fs.isDirectory());
+    assertNotNull(fs);
+    assertTrue(fs.isDirectory());
   }
   
   @Test

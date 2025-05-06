@@ -434,8 +434,8 @@ public class TestUserGroupInformation {
       String expect = (userName == null || userName.isEmpty())
           ? "Null user" : "Illegal principal name "+userName;
       String expect2 = "Malformed Kerberos name: "+userName;
-      assertTrue(
-         e.toString().contains(expect) || e.toString().contains(expect2), "Did not find "+ expect + " or " + expect2 + " in " + e);
+      assertTrue(e.toString().contains(expect) || e.toString().contains(expect2),
+          "Did not find "+ expect + " or " + expect2 + " in " + e);
     }
   }
 
@@ -1009,8 +1009,8 @@ public class TestUserGroupInformation {
             Token<? extends TokenIdentifier> t = mock(Token.class);
             when(t.getService()).thenReturn(new Text("t" + i));
             UserGroupInformation.getCurrentUser().addToken(t);
-            assertNull(
-               thread.cme, "ConcurrentModificationException encountered");
+            assertNull(thread.cme,
+                "ConcurrentModificationException encountered");
           }
         } catch (ConcurrentModificationException cme) {
           cme.printStackTrace();
@@ -1334,8 +1334,8 @@ public class TestUserGroupInformation {
     // Check if the tokens were loaded
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
     Credentials outCred = ugi.getCredentials();
-    assertEquals(
-       2, outCred.getAllTokens().size(), "Tokens: " + outCred.getAllTokens());
+    assertEquals(2, outCred.getAllTokens().size(),
+        "Tokens: " + outCred.getAllTokens());
     boolean found0 = false;
     boolean found1 = false;
     for (Token<? extends TokenIdentifier> token : outCred.getAllTokens()) {
@@ -1349,10 +1349,10 @@ public class TestUserGroupInformation {
         found1 = true;
       }
     }
-    assertTrue(
-       found0, "Expected token testTokenService0 not found: " + outCred);
-    assertTrue(
-       found1, "Expected token testTokenService1 not found: " + outCred);
+    assertTrue(found0,
+        "Expected token testTokenService0 not found: " + outCred);
+    assertTrue(found1,
+        "Expected token testTokenService1 not found: " + outCred);
 
     // Try to add the same token through configuration and file
     Credentials cred1 = new Credentials();
@@ -1364,8 +1364,8 @@ public class TestUserGroupInformation {
 
     UserGroupInformation ugi1 = UserGroupInformation.getLoginUser();
     Credentials outCred1 = ugi1.getCredentials();
-    assertEquals(
-       1, outCred1.getAllTokens().size(), "Tokens: " + outCred1.getAllTokens());
+    assertEquals(1, outCred1.getAllTokens().size(),
+        "Tokens: " + outCred1.getAllTokens());
   }
 
   @Test
@@ -1384,8 +1384,8 @@ public class TestUserGroupInformation {
     UserGroupInformation.reset();
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
     Credentials creds = ugi.getCredentials();
-    assertEquals(
-       1, creds.getAllTokens().size(), "Tokens: " + creds.getAllTokens());
+    assertEquals(1, creds.getAllTokens().size(),
+        "Tokens: " + creds.getAllTokens());
     assertArrayEquals(creds.getToken(service).getIdentifier(), identity);
 
     // Cleanup
