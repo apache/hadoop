@@ -126,7 +126,7 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
 
     @SuppressWarnings("unchecked")
     KMSClientProvider spy = getKMSClientProvider();
-    assertTrue(spy.getEncKeyQueueSize(TEST_KEY) > 0, 
+    assertTrue(spy.getEncKeyQueueSize(TEST_KEY) > 0,
         "key queue is empty after creating encryption zone");
 
     conf.setInt(

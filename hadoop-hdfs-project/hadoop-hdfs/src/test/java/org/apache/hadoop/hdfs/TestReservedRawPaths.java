@@ -171,9 +171,9 @@ public class TestReservedRawPaths {
         p2Stat.getAccessTime(), "Access times not equal");
     assertEquals(p1Stat.getModificationTime(),
         p2Stat.getModificationTime(), "Modification times not equal");
-    assertEquals(p1, Path.getPathWithoutSchemeAndAuthority(p1Stat.getPath()), 
+    assertEquals(p1, Path.getPathWithoutSchemeAndAuthority(p1Stat.getPath()),
         "pathname1 not equal");
-    assertEquals(p2, Path.getPathWithoutSchemeAndAuthority(p2Stat.getPath()), 
+    assertEquals(p2, Path.getPathWithoutSchemeAndAuthority(p2Stat.getPath()),
         "pathname1 not equal");
   }
 

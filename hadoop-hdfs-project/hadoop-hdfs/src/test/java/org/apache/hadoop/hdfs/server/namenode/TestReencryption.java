@@ -411,7 +411,7 @@ public class TestReencryption {
 
     assertKeyVersionEquals(encFile0, fei0new);
     assertKeyVersionEquals(encFile9, fei9new);
-    assertNull(getReencryptionStatus().getNextUnprocessedZone(), 
+    assertNull(getReencryptionStatus().getNextUnprocessedZone(),
         "Re-encrypt queue should be empty after restart");
   }
 
@@ -491,7 +491,7 @@ public class TestReencryption {
     restartClusterDisableReencrypt();
 
     final Long zoneId = fsn.getFSDirectory().getINode(zone.toString()).getId();
-    assertEquals(zoneId, getReencryptionStatus().getNextUnprocessedZone(), 
+    assertEquals(zoneId, getReencryptionStatus().getNextUnprocessedZone(),
         "Re-encrypt should restore to the last checkpoint zone");
     assertEquals(new Path(subdir, "4").toString(),
         getEzManager().getZoneStatus(zone.toString()).getLastCheckpointFile(),
@@ -501,7 +501,7 @@ public class TestReencryption {
     waitForReencryptedZones(1);
     assertKeyVersionChanged(encFile0, fei0);
     assertKeyVersionChanged(encFile9, fei9);
-    assertNull(getReencryptionStatus().getNextUnprocessedZone(), 
+    assertNull(getReencryptionStatus().getNextUnprocessedZone(),
         "Re-encrypt queue should be empty after restart");
     assertEquals(11, getZoneStatus(zone.toString()).getFilesReencrypted());
   }
@@ -542,7 +542,7 @@ public class TestReencryption {
 
     assertKeyVersionEquals(encFile0, fei0new);
     assertKeyVersionEquals(encFile9, fei9new);
-    assertNull(getReencryptionStatus().getNextUnprocessedZone(), 
+    assertNull(getReencryptionStatus().getNextUnprocessedZone(),
         "Re-encrypt queue should be empty after restart");
   }
 
@@ -610,9 +610,9 @@ public class TestReencryption {
    */
   private void verifyZoneCompletionTime(final ZoneReencryptionStatus zs) {
     assertNotNull(zs);
-    assertTrue(zs.getCompletionTime() > 0, 
+    assertTrue(zs.getCompletionTime() > 0,
         "Completion time should be positive. " + zs.getCompletionTime());
-    assertTrue(zs.getCompletionTime() >= zs.getSubmissionTime(), 
+    assertTrue(zs.getCompletionTime() >= zs.getSubmissionTime(),
         "Completion time " + zs.getCompletionTime()
         + " should be no less than submission time "
         + zs.getSubmissionTime());
@@ -1378,14 +1378,14 @@ public class TestReencryption {
   private void assertKeyVersionChanged(final Path file,
       final FileEncryptionInfo original) throws Exception {
     final FileEncryptionInfo actual = getFileEncryptionInfo(file);
-    assertNotEquals(original.getEzKeyVersionName(), actual.getEzKeyVersionName(), 
+    assertNotEquals(original.getEzKeyVersionName(), actual.getEzKeyVersionName(),
         "KeyVersion should be different");
   }
 
   private void assertKeyVersionEquals(final Path file,
       final FileEncryptionInfo expected) throws Exception {
     final FileEncryptionInfo actual = getFileEncryptionInfo(file);
-    assertEquals(expected.getEzKeyVersionName(), actual.getEzKeyVersionName(), 
+    assertEquals(expected.getEzKeyVersionName(), actual.getEzKeyVersionName(),
         "KeyVersion should be the same");
   }
 

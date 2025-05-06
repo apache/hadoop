@@ -1436,7 +1436,7 @@ public abstract class SymlinkBaseTest {
     long at = wrapper.getFileLinkStatus(link).getAccessTime();
     // the local file system may not support millisecond timestamps
     wrapper.setTimes(link, 2000L, 3000L);
-    assertTrue(wrapper.getFileLinkStatus(link).getAccessTime() >= at, 
+    assertTrue(wrapper.getFileLinkStatus(link).getAccessTime() >= at,
         "The atime of symlink should not be lesser after setTimes()");
     assertEquals(2000, wrapper.getFileStatus(file).getModificationTime());
     assertEquals(3000, wrapper.getFileStatus(file).getAccessTime());
@@ -1453,7 +1453,7 @@ public abstract class SymlinkBaseTest {
     long at = wrapper.getFileLinkStatus(link).getAccessTime();
     // the local file system may not support millisecond timestamps
     wrapper.setTimes(link, 2000L, 3000L);
-    assertTrue(wrapper.getFileLinkStatus(link).getAccessTime() >= at, 
+    assertTrue(wrapper.getFileLinkStatus(link).getAccessTime() >= at,
         "The atime of symlink should not be lesser after setTimes()");
     assertEquals(2000, wrapper.getFileStatus(dir).getModificationTime());
     assertEquals(3000, wrapper.getFileStatus(dir).getAccessTime());
@@ -1473,7 +1473,7 @@ public abstract class SymlinkBaseTest {
     } catch (IOException e) {
       // Expected
     }
-    assertTrue(wrapper.getFileLinkStatus(link).getAccessTime() >= at, 
+    assertTrue(wrapper.getFileLinkStatus(link).getAccessTime() >= at,
         "The atime of symlink should not be lesser after setTimes()");
   }
 }

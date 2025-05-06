@@ -34,7 +34,7 @@ public class TestNativeAzureFileSystemOperationsMocked extends
   public TestNativeAzureFileSystemOperationsMocked (){
     super(TEST_ROOT_DIR);
   }
-  
+
   @BeforeEach
   @Override
   public void setUp() throws Exception {
