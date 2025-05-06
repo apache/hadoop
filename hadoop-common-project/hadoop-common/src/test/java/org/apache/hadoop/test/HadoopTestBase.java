@@ -53,7 +53,7 @@ public abstract class HadoopTestBase extends Assertions {
   /**
    * The JUnit rule that sets the default timeout for tests.
    */
-  public int defaultTimeout = retrieveTestTimeout();
+  private int defaultTimeout = retrieveTestTimeout();
 
   /**
    * Retrieve the test timeout from the system property
