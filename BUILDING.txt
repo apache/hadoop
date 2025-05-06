@@ -29,7 +29,11 @@ This requires a recent version of docker (1.4.1 and higher are known to work).
 On Linux / Mac:
     Install Docker and run this command:
 
-    $ ./start-build-env.sh
+    $ ./start-build-env.sh [OS platform]
+
+   - [OS Platform] One of [centos_7, centos_8, debian_10, ubuntu_20, ubuntu_24, windows_10].
+        Default is 'ubuntu_20'.
+        Note: Currently only default ('ubuntu_20') is supported on arm machine
 
 The prompt which is then presented is located at a mounted version of the source tree
 and all required tools for testing and building have been installed and configured.
