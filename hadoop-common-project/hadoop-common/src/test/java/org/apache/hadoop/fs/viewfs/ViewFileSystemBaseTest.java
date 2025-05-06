@@ -364,7 +364,7 @@ abstract public class ViewFileSystemBaseTest {
     
     fsView.mkdirs(new Path("/user/dirFoo"));
     fsView.rename(new Path("/user/dirFoo"), new Path("/user/dirFooBar"));
-    assertFalse(fsView.exists(new Path("/user/dirFoo")), 
+    assertFalse(fsView.exists(new Path("/user/dirFoo")),
         "Renamed src should not exist");
     assertFalse(fsTarget.exists(new Path(targetTestRoot, "user/dirFoo")),
         "Renamed src should not exist in target");
@@ -1522,7 +1522,7 @@ abstract public class ViewFileSystemBaseTest {
       assertEquals(getExpectedMountPoints(), mountPointFsStatusMap.size());
 
       // Case 3: Verify FsStatus of a matching MountPoint returns exactly
-      // the corresponding MountPoint status.     
+      // the corresponding MountPoint status.
       mountPointFsStatusMap =
           ViewFileSystemUtil.getStatus(fileSystem, new Path("/user"));
       assertEquals(1, mountPointFsStatusMap.size());
@@ -1649,7 +1649,7 @@ abstract public class ViewFileSystemBaseTest {
     final Path actualMountRelLinkTarget = fsView.getLinkTarget(
         mountTargetRelativeSymLinkPath);
 
-    assertEquals(expectedMountRelLinkTarget, actualMountRelLinkTarget, 
+    assertEquals(expectedMountRelLinkTarget, actualMountRelLinkTarget,
         "Resolved relative link target path not matching!");
 
     try {

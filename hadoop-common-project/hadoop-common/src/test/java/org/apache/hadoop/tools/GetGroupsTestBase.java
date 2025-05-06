@@ -52,14 +52,14 @@ public abstract class GetGroupsTestBase {
   public void testNoUserGiven() throws Exception {
     String actualOutput = runTool(conf, new String[0], true);
     UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
-    assertEquals(getExpectedOutput(currentUser), actualOutput, 
+    assertEquals(getExpectedOutput(currentUser), actualOutput,
         "No user provided should default to current user");
   }
   
   @Test
   public void testExistingUser() throws Exception {
     String actualOutput = runTool(conf, new String[]{testUser1.getUserName()}, true);
-    assertEquals(getExpectedOutput(testUser1), actualOutput, 
+    assertEquals(getExpectedOutput(testUser1), actualOutput,
         "Show only the output of the user given");
   }
   
@@ -67,7 +67,7 @@ public abstract class GetGroupsTestBase {
   public void testMultipleExistingUsers() throws Exception {
     String actualOutput = runTool(conf,
         new String[]{testUser1.getUserName(), testUser2.getUserName()}, true);
-    assertEquals(getExpectedOutput(testUser1) + getExpectedOutput(testUser2), actualOutput, 
+    assertEquals(getExpectedOutput(testUser1) + getExpectedOutput(testUser2), actualOutput,
         "Show the output for both users given");
   }
   
