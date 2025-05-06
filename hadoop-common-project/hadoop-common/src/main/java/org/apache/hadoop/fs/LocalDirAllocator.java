@@ -387,6 +387,24 @@ public class LocalDirAllocator {
       return currentContext.get().dirNumLastAccessed.get();
     }
 
+    /**
+     * Format a string, log at debug and append it to the history as a new line.
+     *
+     * @param history history to fill in
+     * @param fmt format string
+     * @param args varags
+     */
+    private void note(StringBuilder history, String fmt, Object... args) {
+      try {
+        final String s = String.format(fmt, args);
+        history.append(s).append("\n");
+        LOG.debug(s);
+      } catch (Exception e) {
+        // some resilience in case the format string is wrong
+        LOG.debug(fmt, e);
+      }
+    }
+
     /** Get a path from the local FS. If size is known, we go
      *  round-robin over the set of disks (via the configured dirs) and return
      *  the first complete path which has enough space.
@@ -396,7 +414,11 @@ public class LocalDirAllocator {
      */
     public Path getLocalPathForWrite(String pathStr, long size,
         Configuration conf, boolean checkWrite) throws IOException {
-      LOG.debug("searchng for directory for file at {}, size = {}; checkWrite={}",
+
+      // history is built up and logged at error if the alloc
+      StringBuilder history = new StringBuilder();
+
+      note(history, "Searchng for a directory for file at %s, size = %,d; checkWrite=%s",
           pathStr, size, checkWrite);
       Context ctx = confChanged(conf);
       int numDirs = ctx.localDirs.length;
@@ -428,23 +450,39 @@ public class LocalDirAllocator {
         final String name = target.getDirPath();
         pathNames.append(" ").append(name);
         final File dirPath = new File(name);
+
+        // existence probe
         if (!dirPath.exists()) {
-          LOG.debug("creating buffer dir {}}", name);
-          dirPath.mkdirs();
+          LOG.debug("creating buffer dir {}", name);
+          if (dirPath.mkdirs()) {
+            note(history, "Created buffer dir %s", name);
+          } else {
+            note(history, "Failed to create buffer dir %s", name);
+          }
         }
-        availableOnDisk[i] = target.getAvailable();
-        totalAvailable += availableOnDisk[i];
+
+        // path already existed or the mkdir call had an outcome
+        // make sure the path is present and a dir, and if so add its availability
+        if (dirPath.isDirectory()) {
+          final long available = target.getAvailable();
+          availableOnDisk[i] = available;
+          note(history, "%s available under path %s",  pathStr, available);
+          totalAvailable += availableOnDisk[i];
+        } else {
+          note(history, "%s does not exist/is not a directory",  pathStr);
+        }
       }
 
-      LOG.debug("Directory count is {}; total available capacity is {}",
+      note(history, "Directory count is %d; total available capacity is %,d{}",
           dirCount, totalAvailable);
 
-      if (size == SIZE_UNKNOWN) {  //do roulette selection: pick dir with probability
-                    //proportional to available size
-        LOG.debug("Size not specified, so picking at random");
+      if (size == SIZE_UNKNOWN) {
+        //do roulette selection: pick dir with probability
+        // proportional to available size
+        note(history, "Size not specified, so picking at random.");
 
         if (totalAvailable == 0) {
-          throw new DiskErrorException(E_NO_SPACE_AVAILABLE + pathNames);
+          throw new DiskErrorException(E_NO_SPACE_AVAILABLE + pathNames + "; history=" + history);
         }
 
         // Keep rolling the wheel till we get a valid path
@@ -463,13 +501,13 @@ public class LocalDirAllocator {
             totalAvailable -= availableOnDisk[dir];
             availableOnDisk[dir] = 0; // skip this disk
             numDirsSearched++;
-            LOG.debug("No capacity in {}", localDir);
+            note(history, "No capacity in %s", localDir);
           } else {
-            LOG.debug("Allocated file {} in {}", returnPath, localDir);
+            note(history, "Allocated file %s in %s", returnPath, localDir);
           }
         }
       } else {
-        LOG.debug("Size is {}; searching", size);
+        note(history, "Size is %,d; searching", size);
         // Start linear search with random increment if possible
         int randomInc = 1;
         if (numDirs > 2) {
@@ -488,14 +526,16 @@ public class LocalDirAllocator {
             } catch (IOException e) {
               errorText = e.getMessage();
               diskException = e;
+              note(history, "Exception while creating path %s: %s", localDir, errorText);
               LOG.debug("DiskException caught for dir {}", localDir, e);
             }
             if (returnPath != null) {
+              // success
               ctx.getAndIncrDirNumLastAccessed(numDirsSearched);
-              LOG.debug("Allocated file {} in {}", returnPath, localDir);
+              note(history, "Allocated file %s in %s", returnPath, localDir);
               break;
             } else {
-              LOG.debug("No capacity in {}", localDir);
+              note(history, "No capacity in %s", localDir);
             }
           }
           dirNum++;
@@ -516,6 +556,8 @@ public class LocalDirAllocator {
       if (errorText != null) {
         newErrorText = newErrorText + " due to " + errorText;
       }
+      LOG.error(newErrorText);
+      LOG.error(history.toString());
       throw new DiskErrorException(newErrorText, diskException);
     }
 
