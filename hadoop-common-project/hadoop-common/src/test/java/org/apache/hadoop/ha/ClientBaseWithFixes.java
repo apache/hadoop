@@ -120,9 +120,9 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
     synchronized public void process(WatchedEvent event) {
       if (event.getState() == KeeperState.SyncConnected ||
           event.getState() == KeeperState.ConnectedReadOnly) {
-          connected = true;
-          notifyAll();
-          clientConnected.countDown();
+        connected = true;
+        notifyAll();
+        clientConnected.countDown();
       } else {
         connected = false;
         notifyAll();
@@ -139,11 +139,11 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
       long expire = Time.now() + timeout;
       long left = timeout;
       while(!connected && left > 0) {
-          wait(left);
-          left = expire - Time.now();
+        wait(left);
+        left = expire - Time.now();
       }
       if (!connected) {
-          throw new TimeoutException("Did not connect");
+        throw new TimeoutException("Did not connect");
       }
     }
 
@@ -214,23 +214,23 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
   }
 
   public static List<HostPort> parseHostPortList(String hplist) {
-      ArrayList<HostPort> alist = new ArrayList<HostPort>();
-      for (String hp: hplist.split(",")) {
-          int idx = hp.lastIndexOf(':');
-          String host = hp.substring(0, idx);
-          int port;
-          try {
-              port = Integer.parseInt(hp.substring(idx + 1));
-          } catch(RuntimeException e) {
-              throw new RuntimeException("Problem parsing " + hp + e.toString());
-          }
-          alist.add(new HostPort(host,port));
+    ArrayList<HostPort> alist = new ArrayList<HostPort>();
+    for (String hp: hplist.split(",")) {
+      int idx = hp.lastIndexOf(':');
+      String host = hp.substring(0, idx);
+      int port;
+      try {
+        port = Integer.parseInt(hp.substring(idx + 1));
+      } catch(RuntimeException e) {
+        throw new RuntimeException("Problem parsing " + hp + e.toString());
       }
-      return alist;
+      alist.add(new HostPort(host, port));
+    }
+    return alist;
   }
 
   /**
-   * Send the 4letterword
+   * Send the 4letterword.
    * @param host the destination host
    * @param port the destination port
    * @param cmd the 4letterword
@@ -238,30 +238,29 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
    * @throws IOException
    */
   public static String send4LetterWord(String host, int port, String cmd)
-    throws IOException {
+      throws IOException {
     LOG.info("connecting to " + host + " " + port);
     Socket sock = new Socket(host, port);
     BufferedReader reader = null;
     try {
-        OutputStream outstream = sock.getOutputStream();
-        outstream.write(cmd.getBytes());
-        outstream.flush();
-        // this replicates NC - close the output stream before reading
-        sock.shutdownOutput();
-        reader =
-            new BufferedReader(
-                    new InputStreamReader(sock.getInputStream()));
-        StringBuilder sb = new StringBuilder();
-        String line;
-        while((line = reader.readLine()) != null) {
-            sb.append(line + "\n");
-        }
-        return sb.toString();
+      OutputStream outstream = sock.getOutputStream();
+      outstream.write(cmd.getBytes());
+      outstream.flush();
+      // this replicates NC - close the output stream before reading
+      sock.shutdownOutput();
+      reader = new BufferedReader(
+          new InputStreamReader(sock.getInputStream()));
+      StringBuilder sb = new StringBuilder();
+      String line;
+      while((line = reader.readLine()) != null) {
+        sb.append(line + "\n");
+      }
+      return sb.toString();
     } finally {
-        sock.close();
-        if (reader != null) {
-            reader.close();
-        }
+      sock.close();
+      if (reader != null) {
+        reader.close();
+      }
     }
   }
 
@@ -273,7 +272,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
         HostPort hpobj = parseHostPortList(hp).get(0);
         String result = send4LetterWord(hpobj.host, hpobj.port, "stat");
         if (result.startsWith("Zookeeper version:") &&
-          !result.contains("READ-ONLY")) {
+            !result.contains("READ-ONLY")) {
           return true;
         }
       } catch (IOException e) {
@@ -335,47 +334,45 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
     String portstr = split[split.length-1];
     String[] pc = portstr.split("/");
     if (pc.length > 1) {
-        portstr = pc[0];
+      portstr = pc[0];
     }
     return Integer.parseInt(portstr);
   }
 
   static ServerCnxnFactory createNewServerInstance(File dataDir,
-    ServerCnxnFactory factory, String hostPort, int maxCnxns)
-    throws IOException, InterruptedException {
+      ServerCnxnFactory factory, String hostPort, int maxCnxns)
+      throws IOException, InterruptedException {
     ZooKeeperServer zks = new ZooKeeperServer(dataDir, dataDir, 3000);
-    final int PORT = getPort(hostPort);
+    final int port = getPort(hostPort);
     if (factory == null) {
-      factory = ServerCnxnFactory.createFactory(PORT, maxCnxns);
+      factory = ServerCnxnFactory.createFactory(port, maxCnxns);
     }
     factory.startup(zks);
-    assertTrue(ClientBaseWithFixes.waitForServerUp("127.0.0.1:" + PORT,
+    assertTrue(ClientBaseWithFixes.waitForServerUp("127.0.0.1:" + port,
         CONNECTION_TIMEOUT), "waiting for server up");
     return factory;
   }
 
   static void shutdownServerInstance(ServerCnxnFactory factory,
-    String hostPort) {
+      String hostPort) {
     if (factory != null) {
       ZKDatabase zkDb;
-      {
-          ZooKeeperServer zs = getServer(factory);
-          zkDb = zs.getZKDatabase();
-      }
+      ZooKeeperServer zs = getServer(factory);
+      zkDb = zs.getZKDatabase();
       factory.shutdown();
       try {
         zkDb.close();
       } catch (IOException ie) {
         LOG.warn("Error closing logs ", ie);
       }
-      final int PORT = getPort(hostPort);
-      assertTrue(ClientBaseWithFixes.waitForServerDown("127.0.0.1:" + PORT,
+      final int port = getPort(hostPort);
+      assertTrue(ClientBaseWithFixes.waitForServerDown("127.0.0.1:" + port,
           CONNECTION_TIMEOUT), "waiting for server down");
     }
   }
 
   /**
-   * Test specific setup
+   * Test specific setup.
    */
   public static void setupTestEnv() {
     // during the tests we run with 100K prealloc in the logs.
@@ -410,9 +407,9 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
     BASETEST.mkdirs();
     int port = 0;
     try {
-       port = ServerSocketUtil.getPort(port, 100);
+      port = ServerSocketUtil.getPort(port, 100);
     } catch (IOException e) {
-       throw new RuntimeException(e);
+      throw new RuntimeException(e);
     }
     return "127.0.0.1:" + port;
   }
@@ -436,8 +433,9 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
     synchronized (this) {
       if (allClients != null) for (ZooKeeper zk : allClients) {
         try {
-           if (zk != null)
-             zk.close();
+          if (zk != null) {
+            zk.close();
+          }
         } catch (InterruptedException e) {
           LOG.warn("ignoring interrupt", e);
         }
@@ -464,9 +462,9 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
 
   public static boolean recursiveDelete(File d) {
     if (d.isDirectory()) {
-      File children[] = d.listFiles();
+      File[] children = d.listFiles();
       for (File f : children) {
-          assertTrue(recursiveDelete(f), "delete " + f.toString());
+        assertTrue(recursiveDelete(f), "delete " + f.toString());
       }
     }
     return d.delete();
