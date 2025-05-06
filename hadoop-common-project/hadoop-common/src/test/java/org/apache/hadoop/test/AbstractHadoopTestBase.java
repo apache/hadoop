@@ -22,6 +22,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.util.concurrent.TimeUnit;
+
 import static org.apache.hadoop.test.AbstractHadoopTestBase.TEST_DEFAULT_TIMEOUT_VALUE;
 
 /**
@@ -34,7 +36,7 @@ import static org.apache.hadoop.test.AbstractHadoopTestBase.TEST_DEFAULT_TIMEOUT
  * Unlike {@link HadoopTestBase} this class does not extend JUnit Assert
  * so is easier to use with AssertJ.
  */
-@Timeout(TEST_DEFAULT_TIMEOUT_VALUE)
+@Timeout(value = TEST_DEFAULT_TIMEOUT_VALUE, unit = TimeUnit.MILLISECONDS)
 public abstract class AbstractHadoopTestBase {
 
   /**
@@ -48,7 +50,28 @@ public abstract class AbstractHadoopTestBase {
    * {@link #PROPERTY_TEST_DEFAULT_TIMEOUT}
    * is not set: {@value}.
    */
-  public static final int TEST_DEFAULT_TIMEOUT_VALUE = 100;
+  public static final int TEST_DEFAULT_TIMEOUT_VALUE = 100000;
+
+  /**
+   * Retrieve the test timeout from the system property
+   * {@link #PROPERTY_TEST_DEFAULT_TIMEOUT}, falling back to
+   * the value in {@link #TEST_DEFAULT_TIMEOUT_VALUE} if the
+   * property is not defined.
+   * @return the recommended timeout for tests
+   */
+  public static int retrieveTestTimeout() {
+    String propval = System.getProperty(PROPERTY_TEST_DEFAULT_TIMEOUT,
+                                         Integer.toString(
+                                           TEST_DEFAULT_TIMEOUT_VALUE));
+    int millis;
+    try {
+      millis = Integer.parseInt(propval);
+    } catch (NumberFormatException e) {
+      //fall back to the default value, as the property cannot be parsed
+      millis = 100000;
+    }
+    return millis;
+  }
 
   /**
    * The method name.

@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -46,7 +47,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
  * Tests related to secret providers and AWS credentials are also
  * included, as they share some common setup operations.
  */
-@Timeout(S3A_TEST_TIMEOUT)
+@Timeout(value = S3A_TEST_TIMEOUT, unit = TimeUnit.MILLISECONDS)
 public class TestSSEConfiguration extends Assertions {
 
   /** Bucket to use for per-bucket options. */
@@ -56,7 +57,7 @@ public class TestSSEConfiguration extends Assertions {
   private static final String VALID_ENCRYPTION_CONTEXT = "key1=value1, key2=value2, key3=value3";
 
   @TempDir
-  public Path tempDir;
+  private Path tempDir;
 
   @Test
   public void testSSECNoKey() throws Throwable {

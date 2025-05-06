@@ -21,8 +21,6 @@ package org.apache.hadoop.fs.s3a.statistics;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.fs.s3a.statistics.impl.StatisticsFromAwsSdkImpl;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -67,15 +65,15 @@ public class TestErrorCodeMapping extends AbstractHadoopTestBase {
 
   private String name;
 
-  public void initTestErrorCodeMapping(final int code, final String name) {
-    this.code = code;
-    this.name = name;
+  public void initTestErrorCodeMapping(final int pCode, final String pName) {
+    this.code = pCode;
+    this.name = pName;
   }
 
   @ParameterizedTest(name = "http {0} to {1}")
   @MethodSource("params")
-  public void testMapping(int code, String name) throws Throwable {
-    initTestErrorCodeMapping(code, name);
+  public void testMapping(int pCode, String pName) throws Throwable {
+    initTestErrorCodeMapping(pCode, pName);
     assertThat(mapErrorStatusCodeToStatisticName(code))
         .describedAs("Mapping of status code %d", code)
         .isEqualTo(name);

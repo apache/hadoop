@@ -24,6 +24,7 @@ import java.net.ConnectException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -79,7 +80,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 /**
  * S3A tests for configuration, especially credentials.
  */
-@Timeout(S3A_TEST_TIMEOUT)
+@Timeout(value = S3A_TEST_TIMEOUT, unit = TimeUnit.MILLISECONDS)
 public class ITestS3AConfiguration extends AbstractHadoopTestBase {
   private static final String EXAMPLE_ID = "AKASOMEACCESSKEY";
   private static final String EXAMPLE_KEY =
@@ -92,7 +93,7 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AConfiguration.class);
-  
+
   @TempDir
   private java.nio.file.Path tempDir;
 
@@ -152,7 +153,7 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
       }
       String region = getS3AInternals().getBucketLocation();
       assertEquals(
-         endPointRegion, region, "Endpoint config setting and bucket location differ: ");
+          endPointRegion, region, "Endpoint config setting and bucket location differ: ");
     }
   }
 
@@ -385,8 +386,8 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
           "clientConfiguration");
       S3Configuration s3Configuration =
           (S3Configuration)clientConfiguration.option(SdkClientOption.SERVICE_CONFIGURATION);
-      assertTrue(
-         s3Configuration.pathStyleAccessEnabled(), "Expected to find path style access to be switched on!");
+      assertTrue(s3Configuration.pathStyleAccessEnabled(),
+          "Expected to find path style access to be switched on!");
       byte[] file = ContractTestUtils.toAsciiByteArray("test file");
       ContractTestUtils.writeAndRead(fs,
           createTestPath(new Path("/path/style/access/testFile")),
@@ -474,8 +475,8 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
         getS3AInternals().shareCredentials("testCloseIdempotent");
     credentials.close();
     fs.close();
-    assertTrue(
-       credentials.isClosed(), "Closing FS didn't close credentials " + credentials);
+    assertTrue(credentials.isClosed(),
+        "Closing FS didn't close credentials " + credentials);
     assertEquals(0, credentials.getRefCount(), "refcount not zero in " + credentials);
     fs.close();
     // and the numbers should not change
@@ -514,8 +515,8 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
     tmp1.delete();
     File tmp2 = createTemporaryFileForWriting();
     tmp2.delete();
-    assertNotEquals(
-       tmp1.getParent(), tmp2.getParent(), "round robin not working");
+    assertNotEquals(tmp1.getParent(), tmp2.getParent(),
+        "round robin not working");
   }
 
   @Test
@@ -554,8 +555,7 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
     assertNotNull(obj, String.format(
         "Could not read field named %s in object with class %s.", fieldName,
         target.getClass().getName()));
-    assertTrue(
-       fieldType.isAssignableFrom(obj.getClass()), String.format(
+    assertTrue(fieldType.isAssignableFrom(obj.getClass()), String.format(
         "Unexpected type found for field named %s, expected %s, actual %s.",
         fieldName, fieldType.getName(), obj.getClass().getName()));
     return fieldType.cast(obj);

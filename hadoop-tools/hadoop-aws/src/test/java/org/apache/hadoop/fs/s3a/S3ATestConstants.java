@@ -219,7 +219,7 @@ public interface S3ATestConstants {
   /**
    * Timeout in Milliseconds for standard tests: {@value}.
    */
-  int S3A_TEST_TIMEOUT = 10 * 60;
+  int S3A_TEST_TIMEOUT = 10 * 60 * 1000;
 
   /**
    * Timeout in Seconds for Scale Tests: {@value}.
