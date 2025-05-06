@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
-import org.junit.Assume;
 import org.junit.jupiter.api.BeforeEach;
 
 /**
@@ -28,7 +29,7 @@ public class TestXORRawCoderInteroperable1 extends TestXORRawCoderBase {
 
   @BeforeEach
   public void setup() {
-    Assume.assumeTrue(ErasureCodeNative.isNativeCodeLoaded());
+    assumeTrue(ErasureCodeNative.isNativeCodeLoaded());
     this.encoderFactoryClass = XORRawErasureCoderFactory.class;
     this.decoderFactoryClass = NativeXORRawErasureCoderFactory.class;
     setAllowDump(true);

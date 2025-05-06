@@ -147,34 +147,34 @@ public class TestTFileSplit {
       end += (totalRecs / 2);
     end += (totalRecs / 2) + 1;
 
-    assertEquals(0, reader
-        .getRecordNumNear(0), "RecNum for offset=0 should be 0");
+    assertEquals(0, reader.getRecordNumNear(0),
+        "RecNum for offset=0 should be 0");
     for (long x : new long[] { fileLen, fileLen + 1, 2 * fileLen }) {
-      assertEquals(
-         totalRecs, reader.getRecordNumNear(x), "RecNum for offset>=fileLen should be total entries");
+      assertEquals(totalRecs, reader.getRecordNumNear(x),
+          "RecNum for offset>=fileLen should be total entries");
     }
 
     for (long i = 0; i < 100; ++i) {
-      assertEquals(i, reader
-          .getRecordNumByLocation(reader.getLocationByRecordNum(i)), "Locaton to RecNum conversion not symmetric");
+      assertEquals(i, reader.getRecordNumByLocation(reader.getLocationByRecordNum(i)),
+          "Locaton to RecNum conversion not symmetric");
     }
 
     for (long i = 1; i < 100; ++i) {
       long x = totalRecs - i;
-      assertEquals(x, reader
-          .getRecordNumByLocation(reader.getLocationByRecordNum(x)), "Locaton to RecNum conversion not symmetric");
+      assertEquals(x, reader.getRecordNumByLocation(reader.getLocationByRecordNum(x)),
+          "Locaton to RecNum conversion not symmetric");
     }
 
     for (long i = begin; i < end; ++i) {
-      assertEquals(i, reader
-          .getRecordNumByLocation(reader.getLocationByRecordNum(i)), "Locaton to RecNum conversion not symmetric");
+      assertEquals(i, reader.getRecordNumByLocation(reader.getLocationByRecordNum(i)),
+          "Locaton to RecNum conversion not symmetric");
     }
 
     for (int i = 0; i < 1000; ++i) {
       long x = random.nextLong() % totalRecs;
       if (x < 0) x += totalRecs;
-      assertEquals(x, reader
-          .getRecordNumByLocation(reader.getLocationByRecordNum(x)), "Locaton to RecNum conversion not symmetric");
+      assertEquals(x, reader.getRecordNumByLocation(reader.getLocationByRecordNum(x)),
+          "Locaton to RecNum conversion not symmetric");
     }
   }
 

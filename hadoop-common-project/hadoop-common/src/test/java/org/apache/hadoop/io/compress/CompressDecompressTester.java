@@ -19,6 +19,7 @@ package org.apache.hadoop.io.compress;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -37,13 +38,11 @@ import org.apache.hadoop.io.compress.zlib.ZlibCompressor;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.log4j.Logger;
-import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import static org.junit.jupiter.api.Assertions.*;
 
 public class CompressDecompressTester<T extends Compressor, E extends Decompressor> {
 
@@ -326,7 +325,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
           // check compressed output
           buf = bytesOut.toByteArray();
           int emSize = emptySize.get(compressor.getClass());
-          Assertions.assertEquals(emSize, buf.length,
+          assertEquals(emSize, buf.length,
               joiner.join(name, "empty stream compressed output size != " + emSize));
           // use compressed output as input for decompression
           bytesIn = new ByteArrayInputStream(buf);

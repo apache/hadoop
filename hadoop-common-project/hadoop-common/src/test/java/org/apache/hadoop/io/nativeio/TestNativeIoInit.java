@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.io.nativeio;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 
@@ -65,7 +65,7 @@ public class TestNativeIoInit {
   @Test
   @Timeout(value = 10)
   public void testDeadlockWindows() throws Exception {
-    assumeTrue("Expected windows", Path.WINDOWS);
+    assumeTrue(Path.WINDOWS, "Expected windows");
     Thread one = new Thread() {
       @Override
       public void run() {

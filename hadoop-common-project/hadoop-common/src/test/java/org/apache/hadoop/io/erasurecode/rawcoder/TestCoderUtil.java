@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.ByteBuffer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import org.junit.jupiter.api.Assertions;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Test of the utility of raw erasure coder.
@@ -119,9 +119,9 @@ public class TestCoderUtil {
 
   @Test
   public void testNoValidInput() {
-      Assertions.assertThrows(HadoopIllegalArgumentException.class, () -> {
-          byte[][] inputs = new byte[numInputs][];
-          CoderUtil.findFirstValidInput(inputs);
-      });
+    assertThrows(HadoopIllegalArgumentException.class, () -> {
+      byte[][] inputs = new byte[numInputs][];
+      CoderUtil.findFirstValidInput(inputs);
+    });
   }
 }

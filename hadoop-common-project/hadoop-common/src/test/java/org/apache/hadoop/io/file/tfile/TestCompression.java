@@ -18,7 +18,9 @@
 package org.apache.hadoop.io.file.tfile;
 
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 

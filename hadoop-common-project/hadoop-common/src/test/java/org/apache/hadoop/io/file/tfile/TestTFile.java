@@ -109,7 +109,8 @@ public class TestTFile {
       byte[] val = readValue(scanner);
       String keyStr = String.format(localFormatter, i);
       String valStr = value + keyStr;
-      assertTrue(Arrays.equals(keyStr.getBytes(), key), "bytes for keys do not match " + keyStr + " "
+      assertTrue(Arrays.equals(keyStr.getBytes(), key),
+          "bytes for keys do not match " + keyStr + " "
           + new String(key));
       assertTrue(Arrays.equals(
           valStr.getBytes(), val), "bytes for vals do not match " + valStr + " "

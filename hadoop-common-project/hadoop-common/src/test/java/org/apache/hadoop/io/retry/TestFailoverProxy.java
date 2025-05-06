@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.io.retry;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
@@ -354,8 +356,8 @@ public class TestFailoverProxy {
       unreliable.failsIfIdentifierDoesntMatch("no-such-identifier");
       fail("Should have thrown *some* exception");
     } catch (Exception e) {
-      assertTrue(
-         e instanceof IOException, "Expected IOE but got " + e.getClass());
+      assertTrue(e instanceof IOException,
+          "Expected IOE but got " + e.getClass());
     }
   }
 }

@@ -61,12 +61,16 @@ import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.Stat.*;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import static org.junit.Assume.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -109,8 +113,8 @@ public class TestNativeIO {
     assertEquals(expectedOwner, owner);
     assertNotNull(stat.getGroup());
     assertTrue(!stat.getGroup().isEmpty());
-    assertEquals(S_IFREG
-,       stat.getMode() & S_IFMT, "Stat mode field should indicate a regular file");
+    assertEquals(S_IFREG,
+        stat.getMode() & S_IFMT, "Stat mode field should indicate a regular file");
   }
 
   /**
@@ -141,8 +145,8 @@ public class TestNativeIO {
               assertEquals(System.getProperty("user.name"), stat.getOwner());
               assertNotNull(stat.getGroup());
               assertTrue(!stat.getGroup().isEmpty());
-              assertEquals(
-               S_IFREG, stat.getMode() & S_IFMT, "Stat mode field should indicate a regular file");
+              assertEquals(S_IFREG, stat.getMode() & S_IFMT,
+                  "Stat mode field should indicate a regular file");
             } catch (Throwable t) {
               thrown.set(t);
             }
@@ -291,8 +295,8 @@ public class TestNativeIO {
     LOG.info("Set a file pointer on Windows");
     try {
       File testfile = new File(TEST_DIR, "testSetFilePointer");
-      assertTrue(
-         testfile.exists() || testfile.createNewFile(), "Create test subject");
+      assertTrue(testfile.exists() || testfile.createNewFile(),
+          "Create test subject");
       FileWriter writer = new FileWriter(testfile);
       try {
         for (int i = 0; i < 200; i++)
@@ -337,8 +341,8 @@ public class TestNativeIO {
     LOG.info("Open a file on Windows with SHARE_DELETE shared mode");
     try {
       File testfile = new File(TEST_DIR, "testCreateFile");
-      assertTrue(
-         testfile.exists() || testfile.createNewFile(), "Create test subject");
+      assertTrue(testfile.exists() || testfile.createNewFile(),
+          "Create test subject");
 
       FileDescriptor fd = NativeIO.Windows.createFile(
           testfile.getCanonicalPath(),
@@ -528,8 +532,7 @@ public class TestNativeIO {
     }
 
     File toChmod = new File(TEST_DIR, "testChmod");
-    assertTrue(
-              toChmod.exists() || toChmod.mkdir(), "Create test subject");
+    assertTrue(toChmod.exists() || toChmod.mkdir(), "Create test subject");
     NativeIO.POSIX.chmod(toChmod.getAbsolutePath(), 0777);
     assertPermissions(toChmod, 0777);
     NativeIO.POSIX.chmod(toChmod.getAbsolutePath(), 0000);
@@ -632,20 +635,20 @@ public class TestNativeIO {
     // Test attempting to rename a nonexistent file.
     try {
       NativeIO.renameTo(nonExistentFile, targetFile);
-      Assertions.fail();
+      fail();
     } catch (NativeIOException e) {
       if (Path.WINDOWS) {
-        Assertions.assertEquals(
+        assertEquals(
           String.format("The system cannot find the file specified.%n"),
           e.getMessage());
       } else {
-        Assertions.assertEquals(Errno.ENOENT, e.getErrno());
+        assertEquals(Errno.ENOENT, e.getErrno());
       }
     }
 
     // Test renaming a file to itself.  It should succeed and do nothing.
     File sourceFile = new File(TEST_DIR, "source");
-    Assertions.assertTrue(sourceFile.createNewFile());
+    assertTrue(sourceFile.createNewFile());
     NativeIO.renameTo(sourceFile, sourceFile);
 
     // Test renaming a source to a destination.
@@ -653,18 +656,18 @@ public class TestNativeIO {
 
     // Test renaming a source to a path which uses a file as a directory.
     sourceFile = new File(TEST_DIR, "source");
-    Assertions.assertTrue(sourceFile.createNewFile());
+    assertTrue(sourceFile.createNewFile());
     File badTarget = new File(targetFile, "subdir");
     try {
       NativeIO.renameTo(sourceFile, badTarget);
-      Assertions.fail();
+      fail();
     } catch (NativeIOException e) {
       if (Path.WINDOWS) {
-        Assertions.assertEquals(
+        assertEquals(
           String.format("The parameter is incorrect.%n"),
           e.getMessage());
       } else {
-        Assertions.assertEquals(Errno.ENOTDIR, e.getErrno());
+        assertEquals(Errno.ENOTDIR, e.getErrno());
       }
     }
 
@@ -752,7 +755,7 @@ public class TestNativeIO {
         mapBuf.put(bytesToWrite);
       }
       NativeIO.copyFileUnbuffered(srcFile, dstFile);
-      Assertions.assertEquals(srcFile.length(), dstFile.length());
+      assertEquals(srcFile.length(), dstFile.length());
     } finally {
       IOUtils.cleanupWithLogger(LOG, channel);
       IOUtils.cleanupWithLogger(LOG, raSrcFile);
@@ -793,19 +796,19 @@ public class TestNativeIO {
   @Test
   @Timeout(value = 10)
   public void testNativeFadviseConsts() {
-    assumeTrue("Fadvise constants not supported", fadvisePossible);
-    assertTrue(
-     POSIX_FADV_NORMAL >= 0, "Native POSIX_FADV_NORMAL const not set");
-    assertTrue(
-     POSIX_FADV_RANDOM >= 0, "Native POSIX_FADV_RANDOM const not set");
-    assertTrue(
-     POSIX_FADV_SEQUENTIAL >= 0, "Native POSIX_FADV_SEQUENTIAL const not set");
-    assertTrue(
-     POSIX_FADV_WILLNEED >= 0, "Native POSIX_FADV_WILLNEED const not set");
-    assertTrue(
-     POSIX_FADV_DONTNEED >= 0, "Native POSIX_FADV_DONTNEED const not set");
-    assertTrue(
-     POSIX_FADV_NOREUSE >= 0, "Native POSIX_FADV_NOREUSE const not set");
+    assumeTrue(fadvisePossible, "Fadvise constants not supported");
+    assertTrue(POSIX_FADV_NORMAL >= 0,
+        "Native POSIX_FADV_NORMAL const not set");
+    assertTrue(POSIX_FADV_RANDOM >= 0,
+        "Native POSIX_FADV_RANDOM const not set");
+    assertTrue(POSIX_FADV_SEQUENTIAL >= 0,
+        "Native POSIX_FADV_SEQUENTIAL const not set");
+    assertTrue(POSIX_FADV_WILLNEED >= 0,
+        "Native POSIX_FADV_WILLNEED const not set");
+    assertTrue(POSIX_FADV_DONTNEED >= 0,
+        "Native POSIX_FADV_DONTNEED const not set");
+    assertTrue(POSIX_FADV_NOREUSE >= 0,
+        "Native POSIX_FADV_NOREUSE const not set");
   }
 
 

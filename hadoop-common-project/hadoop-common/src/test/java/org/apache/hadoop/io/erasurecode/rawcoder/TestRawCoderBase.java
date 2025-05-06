@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.hadoop.io.erasurecode.ECChunk;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.TestCoderBase;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -85,7 +87,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
 
     try {
       performTestCoding(baseChunkSize, false, true, false, true);
-      Assertions.fail("Encoding test with bad input should fail");
+      fail("Encoding test with bad input should fail");
     } catch (Exception e) {
       // Expected
     }
@@ -101,7 +103,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
 
     try {
       performTestCoding(baseChunkSize, false, false, true, true);
-      Assertions.fail("Decoding test with bad output should fail");
+      fail("Decoding test with bad output should fail");
     } catch (Exception e) {
       // Expected
     }
@@ -133,14 +135,14 @@ public abstract class TestRawCoderBase extends TestCoderBase {
   public void testCodingWithErasingTooMany() {
     try {
       testCoding(true);
-      Assertions.fail("Decoding test erasing too many should fail");
+      fail("Decoding test erasing too many should fail");
     } catch (Exception e) {
       // Expected
     }
 
     try {
       testCoding(false);
-      Assertions.fail("Decoding test erasing too many should fail");
+      fail("Decoding test erasing too many should fail");
     } catch (Exception e) {
       // Expected
     }
@@ -182,7 +184,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
     try {
       encoder.encode(dataChunks, parityChunks);
     } catch (IOException e) {
-      Assertions.fail("Should not get IOException: " + e.getMessage());
+      fail("Should not get IOException: " + e.getMessage());
     }
     dumpChunks("Encoded parity chunks", parityChunks);
 
@@ -217,7 +219,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
       decoder.decode(inputChunks, getErasedIndexesForDecoding(),
           recoveredChunks);
     } catch (IOException e) {
-      Assertions.fail("Should not get IOException: " + e.getMessage());
+      fail("Should not get IOException: " + e.getMessage());
     }
     dumpChunks("Decoded/recovered chunks", recoveredChunks);
 
@@ -315,7 +317,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
     try {
       encoder.encode(dataChunks, parityChunks);
     } catch (IOException e) {
-      Assertions.fail("Should not get IOException: " + e.getMessage());
+      fail("Should not get IOException: " + e.getMessage());
     }
     verifyBufferPositionAtEnd(dataChunks);
 
@@ -329,7 +331,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
       decoder.decode(inputChunks, getErasedIndexesForDecoding(),
           recoveredChunks);
     } catch (IOException e) {
-      Assertions.fail("Should not get IOException: " + e.getMessage());
+      fail("Should not get IOException: " + e.getMessage());
     }
     verifyBufferPositionAtEnd(inputChunks);
   }
@@ -337,7 +339,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
   void verifyBufferPositionAtEnd(ECChunk[] inputChunks) {
     for (ECChunk chunk : inputChunks) {
       if (chunk != null) {
-        Assertions.assertEquals(0, chunk.getBuffer().remaining());
+        assertEquals(0, chunk.getBuffer().remaining());
       }
     }
   }

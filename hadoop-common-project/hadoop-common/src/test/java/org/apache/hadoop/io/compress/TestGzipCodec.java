@@ -97,7 +97,7 @@ public class TestGzipCodec {
       }
       result.append(new String(buf, 0, len, StandardCharsets.UTF_8));
     }
-    assertEquals("Output must match input", DATA1 + DATA2, result.toString());
+    assertEquals(DATA1 + DATA2, result.toString(), "Output must match input");
   }
 
   // ensure all necessary methods are overwritten
@@ -164,6 +164,6 @@ public class TestGzipCodec {
       }
       result.append(new String(buf, 0, len, StandardCharsets.UTF_8));
     }
-    assertEquals("Output must match input", DATA1, result.toString());
+    assertEquals( DATA1, result.toString(), "Output must match input");
   }
 }

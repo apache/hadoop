@@ -17,8 +17,12 @@
  */
 package org.apache.hadoop.io.compress.zlib;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.Assume.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -115,8 +119,8 @@ public class TestZlibCompressorDecompressor {
         fail("testZlibCompressorDecompressorWithConfiguration ex error " + ex);
       }
     } else {
-      assertTrue(
-         ZlibFactory.isNativeZlibLoaded(conf), "ZlibFactory is using native libs against request");
+      assertTrue(ZlibFactory.isNativeZlibLoaded(conf),
+          "ZlibFactory is using native libs against request");
     }
   }
 
@@ -140,8 +144,8 @@ public class TestZlibCompressorDecompressor {
         fail("testZlibCompressorDecompressorWithConfiguration ex error " + ex);
       }
     } else {
-      assertTrue(
-             ZlibFactory.isNativeZlibLoaded(conf), "ZlibFactory is using native libs against request");
+      assertTrue(ZlibFactory.isNativeZlibLoaded(conf),
+          "ZlibFactory is using native libs against request");
     }
   }
 
@@ -154,33 +158,31 @@ public class TestZlibCompressorDecompressor {
     try {
       ZlibCompressor compressor = new ZlibCompressor();
       ZlibDecompressor decompressor = new ZlibDecompressor();
-      assertFalse(
-         compressor.finished(), "testZlibCompressDecompress finished error");
+      assertFalse(compressor.finished(),
+          "testZlibCompressDecompress finished error");
       compressor.setInput(rawData, 0, rawData.length);
-      assertTrue(
-         compressor.getBytesRead() == 0, "testZlibCompressDecompress getBytesRead before error");
+      assertTrue(compressor.getBytesRead() == 0,
+          "testZlibCompressDecompress getBytesRead before error");
       compressor.finish();
 
       byte[] compressedResult = new byte[rawDataSize];
       int cSize = compressor.compress(compressedResult, 0, rawDataSize);
-      assertTrue(
-         compressor.getBytesRead() == rawDataSize, "testZlibCompressDecompress getBytesRead ather error");
-      assertTrue(
-      
-         cSize < rawDataSize, "testZlibCompressDecompress compressed size no less then original size");
+      assertTrue(compressor.getBytesRead() == rawDataSize,
+          "testZlibCompressDecompress getBytesRead ather error");
+      assertTrue(cSize < rawDataSize,
+          "testZlibCompressDecompress compressed size no less then original size");
       decompressor.setInput(compressedResult, 0, cSize);
       byte[] decompressedBytes = new byte[rawDataSize];
       decompressor.decompress(decompressedBytes, 0, decompressedBytes.length);
-      assertArrayEquals(
-         rawData, decompressedBytes, "testZlibCompressDecompress arrays not equals ");
+      assertArrayEquals(rawData, decompressedBytes,
+          "testZlibCompressDecompress arrays not equals ");
       compressor.reset();
       decompressor.reset();
     } catch (IOException ex) {
       fail("testZlibCompressDecompress ex !!!" + ex);
     }
   }
-  
-  
+
   private void compressDecompressLoop(int rawDataSize) throws IOException {
     byte[] rawData = null;
     rawData = generate(rawDataSize);
@@ -247,8 +249,8 @@ public class TestZlibCompressorDecompressor {
       checkSetDictionaryArrayIndexOutOfBoundsException(zlibDecompressor);
       checkSetDictionaryArrayIndexOutOfBoundsException(zlibCompressor);
     } else {
-      assertTrue(
-         ZlibFactory.isNativeZlibLoaded(conf), "ZlibFactory is using native libs against request");
+      assertTrue(ZlibFactory.isNativeZlibLoaded(conf),
+          "ZlibFactory is using native libs against request");
     }
   }
 
@@ -256,22 +258,22 @@ public class TestZlibCompressorDecompressor {
   public void testZlibFactory() {
     Configuration cfg = new Configuration();
 
-    assertTrue(
-       CompressionLevel.DEFAULT_COMPRESSION == ZlibFactory
-            .getCompressionLevel(cfg), "testZlibFactory compression level error !!!");
+    assertTrue(CompressionLevel.DEFAULT_COMPRESSION == ZlibFactory
+        .getCompressionLevel(cfg),
+        "testZlibFactory compression level error !!!");
 
-    assertTrue(
-       CompressionStrategy.DEFAULT_STRATEGY == ZlibFactory
-            .getCompressionStrategy(cfg), "testZlibFactory compression strategy error !!!");
+    assertTrue(CompressionStrategy.DEFAULT_STRATEGY == ZlibFactory
+        .getCompressionStrategy(cfg),
+        "testZlibFactory compression strategy error !!!");
 
     ZlibFactory.setCompressionLevel(cfg, CompressionLevel.BEST_COMPRESSION);
-    assertTrue(
-       CompressionLevel.BEST_COMPRESSION == ZlibFactory
-            .getCompressionLevel(cfg), "testZlibFactory compression strategy error !!!");
+    assertTrue(CompressionLevel.BEST_COMPRESSION == ZlibFactory
+        .getCompressionLevel(cfg),
+        "testZlibFactory compression strategy error !!!");
 
     ZlibFactory.setCompressionStrategy(cfg, CompressionStrategy.FILTERED);
-    assertTrue(
-       CompressionStrategy.FILTERED == ZlibFactory.getCompressionStrategy(cfg), "testZlibFactory compression strategy error !!!");
+    assertTrue(CompressionStrategy.FILTERED == ZlibFactory.getCompressionStrategy(cfg),
+        "testZlibFactory compression strategy error !!!");
   }
   
 
@@ -344,9 +346,8 @@ public class TestZlibCompressorDecompressor {
     assertTrue(zlibDecompressor.getBytesRead() == cSize);
     zlibDecompressor.reset();
     assertTrue(zlibDecompressor.getRemaining() == 0);
-    assertArrayEquals(
-    
-       rawData, decompressedRawData, "testZlibCompressorDecompressorWithConfiguration array equals error");
+    assertArrayEquals(rawData, decompressedRawData,
+        "testZlibCompressorDecompressorWithConfiguration array equals error");
 
     return decompressedRawData;
   }
@@ -370,10 +371,10 @@ public class TestZlibCompressorDecompressor {
       fail("testBuiltInGzipDecompressorExceptions aioob error" + ex);
     }        
     
-    assertTrue(
-       decompresser.getBytesRead() == 0, "decompresser.getBytesRead error");
-    assertTrue(
-       decompresser.getRemaining() == 0, "decompresser.getRemaining error");
+    assertTrue(decompresser.getBytesRead() == 0,
+        "decompresser.getBytesRead error");
+    assertTrue(decompresser.getRemaining() == 0,
+        "decompresser.getRemaining error");
     decompresser.reset();
     decompresser.end();
 

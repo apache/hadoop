@@ -32,7 +32,8 @@ import org.apache.hadoop.io.TestGenericWritable.FooGenericWritable;
 import org.apache.hadoop.io.WritableComparator;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class TestWritableSerialization {
 

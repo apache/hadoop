@@ -18,6 +18,7 @@
 package org.apache.hadoop.io.compress.snappy;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -42,7 +43,6 @@ import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.snappy.SnappyDecompressor.SnappyDirectDecompressor;
 import org.apache.hadoop.test.MultithreadedTestUtil;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -175,11 +175,10 @@ public class TestSnappyCompressorDecompressor {
     byte[] bytes = BytesGenerator.get(BYTE_SIZE);
     SnappyCompressor compressor = new SnappyCompressor();
     compressor.setInput(bytes, 0, bytes.length);
-    assertTrue(
-       compressor.getBytesRead() > 0, "SnappyCompressDecompress getBytesRead error !!!");
-    assertEquals(
-    
-       0, compressor.getBytesWritten(), "SnappyCompressDecompress getBytesWritten before compress error !!!");
+    assertTrue(compressor.getBytesRead() > 0,
+        "SnappyCompressDecompress getBytesRead error !!!");
+    assertEquals(0, compressor.getBytesWritten(),
+        "SnappyCompressDecompress getBytesWritten before compress error !!!");
 
     // snappy compression may increase data size.
     // This calculation comes from "Snappy::MaxCompressedLength(size_t)"
@@ -188,9 +187,8 @@ public class TestSnappyCompressorDecompressor {
     int cSize = compressor.compress(compressed, 0, compressed.length);
     LOG.info("input size: {}", BYTE_SIZE);
     LOG.info("compressed size: {}", cSize);
-    assertTrue(
-    
-       compressor.getBytesWritten() > 0, "SnappyCompressDecompress getBytesWritten after compress error !!!");
+    assertTrue(compressor.getBytesWritten() > 0,
+        "SnappyCompressDecompress getBytesWritten after compress error !!!");
 
     SnappyDecompressor decompressor = new SnappyDecompressor();
     // set as input for decompressor only compressed data indicated with cSize
@@ -198,13 +196,13 @@ public class TestSnappyCompressorDecompressor {
     byte[] decompressed = new byte[BYTE_SIZE];
     decompressor.decompress(decompressed, 0, decompressed.length);
 
-    assertTrue(
-       decompressor.finished(), "testSnappyCompressDecompress finished error !!!");
-    Assertions.assertArrayEquals(bytes, decompressed);
+    assertTrue(decompressor.finished(),
+        "testSnappyCompressDecompress finished error !!!");
+    assertArrayEquals(bytes, decompressed);
     compressor.reset();
     decompressor.reset();
-    assertEquals(
-       0, decompressor.getRemaining(), "decompressor getRemaining error !!!");
+    assertEquals(0, decompressor.getRemaining(),
+        "decompressor getRemaining error !!!");
   }
 
   @Test
@@ -276,8 +274,8 @@ public class TestSnappyCompressorDecompressor {
           len -= bufLen;
         } while (len > 0);
       }
-      assertTrue(
-         out.toByteArray().length > 0, "testSnappyBlockCompression error !!!");
+      assertTrue(out.toByteArray().length > 0,
+          "testSnappyBlockCompression error !!!");
     } catch (Exception ex) {
       fail("testSnappyBlockCompression ex error !!!");
     }
@@ -397,9 +395,8 @@ public class TestSnappyCompressorDecompressor {
       byte[] result = new byte[BYTE_SIZE];
       inflateIn.read(result);
 
-      Assertions.assertArrayEquals(
-      result
-,           bytes, "original array not equals compress/decompressed array");
+      assertArrayEquals(result, bytes,
+          "original array not equals compress/decompressed array");
     } catch (IOException e) {
       fail("testSnappyCompressorDecopressorLogicWithCompressionStreams ex error !!!");
     } finally {

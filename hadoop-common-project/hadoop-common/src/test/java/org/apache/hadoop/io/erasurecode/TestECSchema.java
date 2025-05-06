@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.io.erasurecode;
 
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -27,12 +26,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
 
+@Timeout(300)
 public class TestECSchema {
-
-  @Rule
-  public Timeout globalTimeout = new Timeout(300000, TimeUnit.MILLISECONDS);
 
   @Test
   public void testGoodSchema() {

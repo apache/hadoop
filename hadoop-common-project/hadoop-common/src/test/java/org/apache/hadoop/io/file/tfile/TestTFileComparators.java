@@ -17,9 +17,9 @@
 
 package org.apache.hadoop.io.file.tfile;
 
-import java.io.IOException;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import org.junit.jupiter.api.Assertions;
+import java.io.IOException;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -76,7 +76,7 @@ public class TestTFileComparators {
   public void testFailureBadComparatorNames() throws IOException {
     try {
       writer = new Writer(out, BLOCK_SIZE, compression, "badcmp", conf);
-      Assertions.fail("Failed to catch unsupported comparator names");
+      fail("Failed to catch unsupported comparator names");
     }
     catch (Exception e) {
       // noop, expecting exceptions
@@ -91,7 +91,7 @@ public class TestTFileComparators {
       writer =
           new Writer(out, BLOCK_SIZE, compression,
               "jclass: some.non.existence.clazz", conf);
-      Assertions.fail("Failed to catch unsupported comparator names");
+      fail("Failed to catch unsupported comparator names");
     }
     catch (Exception e) {
       // noop, expecting exceptions
@@ -106,7 +106,7 @@ public class TestTFileComparators {
       writer =
           new Writer(out, BLOCK_SIZE, compression,
               "jclass:org.apache.hadoop.io.file.tfile.Chunk", conf);
-      Assertions.fail("Failed to catch unsupported comparator names");
+      fail("Failed to catch unsupported comparator names");
     }
     catch (Exception e) {
       // noop, expecting exceptions

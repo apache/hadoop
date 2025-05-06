@@ -34,12 +34,12 @@ import org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.XORRawErasureCoderFactory;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test the codec to raw coder mapping.
@@ -64,20 +64,20 @@ public class TestCodecRawCoderMapping {
     RawErasureDecoder decoder = CodecUtil.createRawDecoder(
         conf, ErasureCodeConstants.RS_CODEC_NAME, coderOptions);
     if (ErasureCodeNative.isNativeCodeLoaded()) {
-      Assertions.assertTrue(encoder instanceof NativeRSRawEncoder);
-      Assertions.assertTrue(decoder instanceof NativeRSRawDecoder);
+      assertTrue(encoder instanceof NativeRSRawEncoder);
+      assertTrue(decoder instanceof NativeRSRawDecoder);
     } else {
-      Assertions.assertTrue(encoder instanceof RSRawEncoder);
-      Assertions.assertTrue(decoder instanceof RSRawDecoder);
+      assertTrue(encoder instanceof RSRawEncoder);
+      assertTrue(decoder instanceof RSRawDecoder);
     }
 
     // should return default raw coder of rs-legacy codec
     encoder = CodecUtil.createRawEncoder(conf,
         ErasureCodeConstants.RS_LEGACY_CODEC_NAME, coderOptions);
-    Assertions.assertTrue(encoder instanceof RSLegacyRawEncoder);
+    assertTrue(encoder instanceof RSLegacyRawEncoder);
     decoder = CodecUtil.createRawDecoder(conf,
         ErasureCodeConstants.RS_LEGACY_CODEC_NAME, coderOptions);
-    Assertions.assertTrue(decoder instanceof RSLegacyRawDecoder);
+    assertTrue(decoder instanceof RSLegacyRawDecoder);
   }
 
   @Test
@@ -92,7 +92,7 @@ public class TestCodecRawCoderMapping {
     try {
       CodecUtil.createRawEncoder(conf,
           ErasureCodeConstants.RS_CODEC_NAME, coderOptions);
-      Assertions.fail();
+      fail();
     } catch (Exception e) {
       GenericTestUtils.assertExceptionContains(
           "Fail to create raw erasure encoder with given codec: rs", e);
@@ -104,7 +104,7 @@ public class TestCodecRawCoderMapping {
     try {
       CodecUtil.createRawEncoder(conf,
           ErasureCodeConstants.RS_LEGACY_CODEC_NAME, coderOptions);
-      Assertions.fail();
+      fail();
     } catch (Exception e) {
       GenericTestUtils.assertExceptionContains(
           "Fail to create raw erasure encoder with given codec: rs", e);
@@ -121,10 +121,10 @@ public class TestCodecRawCoderMapping {
     // should return default raw coder of rs codec
     RawErasureEncoder encoder = CodecUtil.createRawEncoder(
             conf, ErasureCodeConstants.RS_CODEC_NAME, coderOptions);
-    Assertions.assertTrue(encoder instanceof RSRawEncoder);
+    assertTrue(encoder instanceof RSRawEncoder);
     RawErasureDecoder decoder = CodecUtil.createRawDecoder(
             conf, ErasureCodeConstants.RS_CODEC_NAME, coderOptions);
-    Assertions.assertTrue(decoder instanceof RSRawDecoder);
+    assertTrue(decoder instanceof RSRawDecoder);
   }
 
   @Test
@@ -134,10 +134,10 @@ public class TestCodecRawCoderMapping {
     // should return default raw coder of rs-legacy codec
     RawErasureEncoder encoder = CodecUtil.createRawEncoder(
             conf, ErasureCodeConstants.RS_LEGACY_CODEC_NAME, coderOptions);
-    Assertions.assertTrue(encoder instanceof RSLegacyRawEncoder);
+    assertTrue(encoder instanceof RSLegacyRawEncoder);
     RawErasureDecoder decoder = CodecUtil.createRawDecoder(
             conf, ErasureCodeConstants.RS_LEGACY_CODEC_NAME, coderOptions);
-    Assertions.assertTrue(decoder instanceof RSLegacyRawDecoder);
+    assertTrue(decoder instanceof RSLegacyRawDecoder);
   }
 
   @Test
@@ -149,10 +149,10 @@ public class TestCodecRawCoderMapping {
     // should return second coder specified by IO_ERASURECODE_CODEC_CODERS
     RawErasureEncoder encoder = CodecUtil.createRawEncoder(
             conf, ErasureCodeConstants.XOR_CODEC_NAME, coderOptions);
-    Assertions.assertTrue(encoder instanceof XORRawEncoder);
+    assertTrue(encoder instanceof XORRawEncoder);
     RawErasureDecoder decoder = CodecUtil.createRawDecoder(
             conf, ErasureCodeConstants.XOR_CODEC_NAME, coderOptions);
-    Assertions.assertTrue(decoder instanceof XORRawDecoder);
+    assertTrue(decoder instanceof XORRawDecoder);
   }
 
   @Test

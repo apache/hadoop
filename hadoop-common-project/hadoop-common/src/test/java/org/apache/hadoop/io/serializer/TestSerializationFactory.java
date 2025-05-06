@@ -74,21 +74,21 @@ public class TestSerializationFactory {
   @Test
   public void testGetSerializer() {
     // Test that a valid serializer class is returned when its present
-    assertNotNull(
-       factory.getSerializer(Writable.class), "A valid class must be returned for default Writable SerDe");
+    assertNotNull(factory.getSerializer(Writable.class),
+        "A valid class must be returned for default Writable SerDe");
     // Test that a null is returned when none can be found.
-    assertNull(
-       factory.getSerializer(TestSerializationFactory.class), "A null should be returned if there are no serializers found.");
+    assertNull(factory.getSerializer(TestSerializationFactory.class),
+        "A null should be returned if there are no serializers found.");
   }
 
   @Test
   public void testGetDeserializer() {
     // Test that a valid serializer class is returned when its present
-    assertNotNull(
-       factory.getDeserializer(Writable.class), "A valid class must be returned for default Writable SerDe");
+    assertNotNull(factory.getDeserializer(Writable.class),
+        "A valid class must be returned for default Writable SerDe");
     // Test that a null is returned when none can be found.
-    assertNull(
-       factory.getDeserializer(TestSerializationFactory.class), "A null should be returned if there are no deserializers found");
+    assertNull(factory.getDeserializer(TestSerializationFactory.class),
+        "A null should be returned if there are no deserializers found");
   }
 
   @Test
@@ -96,7 +96,7 @@ public class TestSerializationFactory {
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.IO_SERIALIZATIONS_KEY, " org.apache.hadoop.io.serializer.WritableSerialization ");
     SerializationFactory factory = new SerializationFactory(conf);
-    assertNotNull(
-    factory.getSerializer(LongWritable.class), "Valid class must be returned");
+    assertNotNull(factory.getSerializer(LongWritable.class),
+        "Valid class must be returned");
    }
 }

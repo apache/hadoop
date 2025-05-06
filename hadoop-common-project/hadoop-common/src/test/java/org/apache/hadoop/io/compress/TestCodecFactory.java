@@ -143,9 +143,8 @@ public class TestCodecFactory {
     } else if (actual == null) {
       fail(msg + " result was null");
     } else {
-      assertEquals(
-             expected.getName()
-,               actual.getClass().getName(), msg + " unexpected codec found");
+      assertEquals(expected.getName(),
+          actual.getClass().getName(), msg + " unexpected codec found");
     }
   }
 

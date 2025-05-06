@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.io.retry;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.PathIOException;
@@ -106,26 +107,20 @@ public class TestConnectionRetryPolicy {
     rp1 = getDefaultRetryPolicy(true, "20000,3");
     rp2 = getDefaultRetryPolicy(true, "30000,4");
     assertNotEquals(rp1, rp2, "should not be equal");
-    assertNotEquals(
-    
-       rp1.hashCode()
-,         rp2.hashCode(), "should not have the same hash code");
+    assertNotEquals(rp1.hashCode(), rp2.hashCode(),
+        "should not have the same hash code");
 
     /* test disabled and the same specifications */
     rp1 = getDefaultRetryPolicy(false, "40000,5");
     rp2 = getDefaultRetryPolicy(false, "40000,5");
     assertEquals(rp1, rp2, "should be equal");
-    assertEquals(
-    
-       rp1, rp2, "should have the same hash code");
+    assertEquals(rp1, rp2, "should have the same hash code");
 
     /* test the disabled and different specifications */
     rp1 = getDefaultRetryPolicy(false, "50000,6");
     rp2 = getDefaultRetryPolicy(false, "60000,7");
     assertEquals(rp1, rp2, "should be equal");
-    assertEquals(
-    
-       rp1, rp2, "should have the same hash code");
+    assertEquals(rp1, rp2, "should have the same hash code");
   }
 
   public static RetryPolicy newTryOnceThenFail() {
@@ -146,10 +141,8 @@ public class TestConnectionRetryPolicy {
       for (int j = 0; j < polices.length; j++) {
         if (i != j) {
           assertEquals(polices[i], polices[j], "should be equal");
-          assertEquals(
-          
-             polices[i].hashCode()
-,               polices[j].hashCode(), "should have the same hash code");
+          assertEquals(polices[i].hashCode(),
+              polices[j].hashCode(), "should have the same hash code");
         }
       }
     }

@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.hadoop.io.erasurecode.ECChunk;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -64,7 +65,7 @@ public class TestDummyRawCoder extends TestRawCoderBase {
     try {
       encoder.encode(dataChunks, parityChunks);
     } catch (IOException e) {
-      Assertions.fail("Unexpected IOException: " + e.getMessage());
+      fail("Unexpected IOException: " + e.getMessage());
     }
     compareAndVerify(parityChunks, getEmptyChunks(parityChunks.length));
 
@@ -79,7 +80,7 @@ public class TestDummyRawCoder extends TestRawCoderBase {
       decoder.decode(inputChunks, getErasedIndexesForDecoding(),
           recoveredChunks);
     } catch (IOException e) {
-      Assertions.fail("Unexpected IOException: " + e.getMessage());
+      fail("Unexpected IOException: " + e.getMessage());
     }
     compareAndVerify(recoveredChunks, getEmptyChunks(recoveredChunks.length));
   }
