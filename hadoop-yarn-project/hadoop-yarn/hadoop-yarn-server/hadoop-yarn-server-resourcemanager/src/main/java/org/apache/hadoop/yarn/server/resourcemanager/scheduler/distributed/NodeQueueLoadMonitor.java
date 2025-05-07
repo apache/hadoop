@@ -245,6 +245,7 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
   protected ReentrantReadWriteLock sortedNodesLock = new ReentrantReadWriteLock();
   protected ReentrantReadWriteLock clusterNodesLock =
       new ReentrantReadWriteLock();
+  private long nodeComputationInterval;
 
   Runnable computeTask = new Runnable() {
     @Override
@@ -278,10 +279,13 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     this.sortedNodes = new ArrayList<>();
     this.scheduledExecutor = Executors.newScheduledThreadPool(1);
     this.comparator = comparator;
-    this.scheduledExecutor.scheduleAtFixedRate(computeTask,
-        nodeComputationInterval, nodeComputationInterval,
-        TimeUnit.MILLISECONDS);
+    this.nodeComputationInterval = nodeComputationInterval;
     numNodesForAnyAllocation = numNodes;
+  }
+
+  public void start() {
+    this.scheduledExecutor.scheduleAtFixedRate(computeTask, nodeComputationInterval,
+        nodeComputationInterval, TimeUnit.MILLISECONDS);
   }
 
   protected void updateSortedNodes() {

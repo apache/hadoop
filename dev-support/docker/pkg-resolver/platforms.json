@@ -1,6 +1,7 @@
 [
   "ubuntu:focal",
   "ubuntu:focal::arch64",
+  "ubuntu:noble",
   "centos:7",
   "centos:8",
   "debian:10"

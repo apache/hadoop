@@ -13,10 +13,12 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 import java.util.Map;
 import javax.security.auth.login.AppConfigurationEntry;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestJaasConfiguration {
 
@@ -36,20 +38,20 @@ public class TestJaasConfiguration {
             new JaasConfiguration("foo", "foo/localhost",
             "/some/location/foo.keytab");
     AppConfigurationEntry[] entries = jConf.getAppConfigurationEntry("bar");
-    Assert.assertNull(entries);
+    assertNull(entries);
     entries = jConf.getAppConfigurationEntry("foo");
-    Assert.assertEquals(1, entries.length);
+    assertEquals(1, entries.length);
     AppConfigurationEntry entry = entries[0];
-    Assert.assertEquals(AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
-            entry.getControlFlag());
-    Assert.assertEquals(krb5LoginModuleName, entry.getLoginModuleName());
+    assertEquals(AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
+        entry.getControlFlag());
+    assertEquals(krb5LoginModuleName, entry.getLoginModuleName());
     Map<String, ?> options = entry.getOptions();
-    Assert.assertEquals("/some/location/foo.keytab", options.get("keyTab"));
-    Assert.assertEquals("foo/localhost", options.get("principal"));
-    Assert.assertEquals("true", options.get("useKeyTab"));
-    Assert.assertEquals("true", options.get("storeKey"));
-    Assert.assertEquals("false", options.get("useTicketCache"));
-    Assert.assertEquals("true", options.get("refreshKrb5Config"));
-    Assert.assertEquals(6, options.size());
+    assertEquals("/some/location/foo.keytab", options.get("keyTab"));
+    assertEquals("foo/localhost", options.get("principal"));
+    assertEquals("true", options.get("useKeyTab"));
+    assertEquals("true", options.get("storeKey"));
+    assertEquals("false", options.get("useTicketCache"));
+    assertEquals("true", options.get("refreshKrb5Config"));
+    assertEquals(6, options.size());
   }
 }
