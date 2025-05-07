@@ -433,11 +433,11 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
     synchronized (this) {
       if (allClients != null) for (ZooKeeper zk : allClients) {
         try {
-          if (zk != null) {
-            zk.close();
-          }
-        } catch (InterruptedException e) {
-          LOG.warn("ignoring interrupt", e);
+            if (zk != null) {
+              zk.close();
+            }
+          } catch (InterruptedException e) {
+            LOG.warn("ignoring interrupt", e);
         }
       }
       allClients = null;
