@@ -27,14 +27,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class WriteThreadPoolSizeManagerTest extends AbstractAbfsIntegrationTest {
+public class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
 
   private AbfsConfiguration mockConfig;
+  private static final double HIGH_CPU_UTILIZATION_THRESHOLD = 0.95;
+  private static final double LOW_CPU_UTILIZATION_THRESHOLD = 0.05;
+  private static final int THREAD_SLEEP_DURATION_MS = 200;
 
-  public WriteThreadPoolSizeManagerTest() throws Exception {
+  public TestWriteThreadPoolSizeManager() throws Exception {
     super.setup();
   }
 
@@ -79,7 +83,7 @@ public class WriteThreadPoolSizeManagerTest extends AbstractAbfsIntegrationTest 
 
     // Simulate high CPU usage (e.g., 95% CPU utilization)
     int initialMaxSize = threadPoolExecutor.getMaximumPoolSize();
-    instance.adjustThreadPoolSizeBasedOnCPU(0.95);  // High CPU
+    instance.adjustThreadPoolSizeBasedOnCPU(HIGH_CPU_UTILIZATION_THRESHOLD);  // High CPU
 
     // Get the new maximum pool size after adjustment
     int newMaxSize = threadPoolExecutor.getMaximumPoolSize();
@@ -102,7 +106,7 @@ public class WriteThreadPoolSizeManagerTest extends AbstractAbfsIntegrationTest 
     ExecutorService executor = instance.getExecutorService();
     int initialSize = ((ThreadPoolExecutor) executor).getMaximumPoolSize();
 
-    instance.adjustThreadPoolSizeBasedOnCPU(0.05); // Low CPU
+    instance.adjustThreadPoolSizeBasedOnCPU(LOW_CPU_UTILIZATION_THRESHOLD); // Low CPU
 
     int newSize = ((ThreadPoolExecutor) executor).getMaximumPoolSize();
     Assertions.assertThat(newSize)
@@ -163,7 +167,7 @@ public class WriteThreadPoolSizeManagerTest extends AbstractAbfsIntegrationTest 
     instance.startCPUMonitoring();
 
     // Wait for a short period to allow the task to run and be scheduled
-    Thread.sleep(200);
+    Thread.sleep(THREAD_SLEEP_DURATION_MS);
 
     // Retrieve the CPU monitor executor (ScheduledThreadPoolExecutor) from the instance
     ScheduledThreadPoolExecutor monitor
@@ -177,7 +181,7 @@ public class WriteThreadPoolSizeManagerTest extends AbstractAbfsIntegrationTest 
     // Assert that the thread pool size is greater than 0, confirming that the task has been scheduled and threads are active
     Assertions.assertThat(monitor.getPoolSize())
         .as("Thread pool size should be greater than 0, indicating that the task is running")
-        .isGreaterThan(0);
+        .isGreaterThan(ZERO);
   }
 }
 

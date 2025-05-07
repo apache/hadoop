@@ -39,11 +39,22 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HIGH_CPU_THRESHOLD;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.LOW_CPU_THRESHOLD;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.MEDIUM_CPU_THRESHOLD;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BYTES_PER_GIGABYTE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HIGH_MEMORY_MULTIPLIER;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HIGH_MEMORY_THRESHOLD_GB;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.LOW_MEMORY_MULTIPLIER;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.LOW_MEMORY_THRESHOLD_GB;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MEDIUM_MEMORY_MULTIPLIER;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MEDIUM_MEMORY_THRESHOLD_GB;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.POOL_SIZE_INCREASE_FACTOR;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SIXTY_SECONDS;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.THIRTY_SECONDS;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.VERY_HIGH_MEMORY_MULTIPLIER;
 
 /**
  * Manages a thread pool for writing operations, adjusting the pool size based on CPU utilization.
  */
-public class WriteThreadPoolSizeManager implements Closeable {
+public final class WriteThreadPoolSizeManager implements Closeable {
 
   private final int maxThreadPoolSize;
 
@@ -59,27 +70,11 @@ public class WriteThreadPoolSizeManager implements Closeable {
       WriteThreadPoolSizeManager.class);
 
   private static final ConcurrentHashMap<String, WriteThreadPoolSizeManager>
-      poolSizeManagerMap = new ConcurrentHashMap<>();
+      POOL_SIZE_MANAGER_MAP = new ConcurrentHashMap<>();
 
-  String filesystemName;
+  private final String filesystemName;
 
-  int initialPoolSize;
-
-  private static final long BYTES_PER_GIGABYTE = 1024L * 1024 * 1024;
-
-  private static final int LOW_MEMORY_THRESHOLD_GB = 2;
-
-  private static final int MEDIUM_MEMORY_THRESHOLD_GB = 4;
-
-  private static final int HIGH_MEMORY_THRESHOLD_GB = 8;
-
-  private static final int LOW_MEMORY_MULTIPLIER = 10;
-
-  private static final int MEDIUM_MEMORY_MULTIPLIER = 25;
-
-  private static final int HIGH_MEMORY_MULTIPLIER = 40;
-
-  private static final int VERY_HIGH_MEMORY_MULTIPLIER = 50;
+  private final int initialPoolSize;
 
   /**
    * Private constructor to initialize the write thread pool and CPU monitor executor
@@ -172,7 +167,7 @@ public class WriteThreadPoolSizeManager implements Closeable {
   public static synchronized WriteThreadPoolSizeManager getInstance(
       String filesystemName, AbfsConfiguration abfsConfiguration) {
     /* Check if an instance already exists in the map for the given filesystem */
-    WriteThreadPoolSizeManager existingInstance = poolSizeManagerMap.get(
+    WriteThreadPoolSizeManager existingInstance = POOL_SIZE_MANAGER_MAP.get(
         filesystemName);
 
     /* If an existing instance is found, return it */
@@ -187,7 +182,7 @@ public class WriteThreadPoolSizeManager implements Closeable {
         filesystemName);
     WriteThreadPoolSizeManager newInstance = new WriteThreadPoolSizeManager(
         filesystemName, abfsConfiguration);
-    poolSizeManagerMap.put(filesystemName, newInstance);
+    POOL_SIZE_MANAGER_MAP.put(filesystemName, newInstance);
     return newInstance;
   }
 
@@ -218,7 +213,7 @@ public class WriteThreadPoolSizeManager implements Closeable {
   /**
    * Starts monitoring the CPU utilization and adjusts the thread pool size accordingly.
    */
-  protected synchronized void startCPUMonitoring() {
+  synchronized void startCPUMonitoring() {
     cpuMonitorExecutor.scheduleAtFixedRate(() -> {
       double cpuUtilization = getCpuUtilization();
       LOG.debug("Current CPU Utilization is this: {}", cpuUtilization);
@@ -229,7 +224,7 @@ public class WriteThreadPoolSizeManager implements Closeable {
             "Thread pool size adjustment interrupted for filesystem %s",
             filesystemName), e);
       }
-    }, 0, 60, TimeUnit.SECONDS);
+    }, 0, SIXTY_SECONDS, TimeUnit.SECONDS);
   }
 
   /**
@@ -277,17 +272,17 @@ public class WriteThreadPoolSizeManager implements Closeable {
             currentPoolSize - currentPoolSize / 5);
       } else if (cpuUtilization < LOW_CPU_THRESHOLD) {
         newMaxPoolSize = Math.min(maxThreadPoolSize,
-            (int) (currentPoolSize * 1.5));
+            (int) (currentPoolSize * POOL_SIZE_INCREASE_FACTOR));
       } else {
         newMaxPoolSize = currentPoolSize;
       }
       LOG.debug("Adjusting pool size from " + currentPoolSize + " to "
           + newMaxPoolSize);
+      if (newMaxPoolSize != currentPoolSize) {
+        this.adjustThreadPoolSize(newMaxPoolSize);
+      }
     } finally {
       lock.unlock();
-    }
-    if (newMaxPoolSize != currentPoolSize) {
-      this.adjustThreadPoolSize(newMaxPoolSize);
     }
   }
 
@@ -310,11 +305,11 @@ public class WriteThreadPoolSizeManager implements Closeable {
       try {
         // Shutdown executors
         cpuMonitorExecutor.shutdown();
-        HadoopExecutors.shutdown(boundedThreadPool, LOG, 30, TimeUnit.SECONDS);
+        HadoopExecutors.shutdown(boundedThreadPool, LOG, THIRTY_SECONDS, TimeUnit.SECONDS);
         boundedThreadPool = null;
 
         // Remove from the map
-        poolSizeManagerMap.remove(filesystemName);
+        POOL_SIZE_MANAGER_MAP.remove(filesystemName);
         LOG.debug("Closed and removed instance for filesystem: {}",
             filesystemName);
       } catch (Exception e) {

@@ -36,7 +36,46 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED = true;
   public static final String USER_HOME_DIRECTORY_PREFIX = "/user";
 
-  private static final int SIXTY_SECONDS = 60_000;
+  public static final int SIXTY_SECONDS = 60_000;
+  public static final int THIRTY_SECONDS = 30_000;
+  /**
+   * Number of bytes in a gigabyte.
+   */
+  public static final long BYTES_PER_GIGABYTE = 1024L * 1024 * 1024;
+  /**
+   * Threshold for low memory in gigabytes.
+   */
+  public static final int LOW_MEMORY_THRESHOLD_GB = 2;
+  /**
+   * Threshold for medium memory in gigabytes.
+   */
+  public static final int MEDIUM_MEMORY_THRESHOLD_GB = 4;
+  /**
+   * Threshold for high memory in gigabytes.
+   */
+  public static final int HIGH_MEMORY_THRESHOLD_GB = 8;
+
+  /**
+   * Multiplier used for low memory scenarios.
+   */
+  public static final int LOW_MEMORY_MULTIPLIER = 10;
+
+  /**
+   * Multiplier used for medium memory scenarios.
+   */
+  public static final int MEDIUM_MEMORY_MULTIPLIER = 25;
+  /**
+   * Multiplier used for high memory scenarios.
+   */
+  public static final int HIGH_MEMORY_MULTIPLIER = 40;
+  /**
+   * Multiplier used for very high memory scenarios.
+   */
+  public static final int VERY_HIGH_MEMORY_MULTIPLIER = 50;
+  /**
+   * Factor by which the pool size is increased when CPU utilization is low.
+   */
+  public static final double POOL_SIZE_INCREASE_FACTOR = 1.5;
 
   // Retry parameter defaults.
   public static final int DEFAULT_MIN_BACKOFF_INTERVAL = 500;  // 500ms
