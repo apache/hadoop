@@ -35,17 +35,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Implements WritableByteChannel to provide write access to GCS via java-storage client
+ * Implements WritableByteChannel to provide write access to GCS via java-storage client.
  */
 class GoogleCloudStorageClientWriteChannel implements WritableByteChannel {
-
-  public static final Logger LOG =
+  private static final Logger LOG =
       LoggerFactory.getLogger(GoogleCloudStorageClientWriteChannel.class);
 
   private final StorageResourceId resourceId;
   private WritableByteChannel writableByteChannel;
 
-  public GoogleCloudStorageClientWriteChannel(final Storage storage,
+  GoogleCloudStorageClientWriteChannel(final Storage storage,
       final StorageResourceId resourceId, final CreateOptions createOptions) throws IOException {
     this.resourceId = resourceId;
     BlobWriteSession blobWriteSession = getBlobWriteSession(storage, resourceId, createOptions);

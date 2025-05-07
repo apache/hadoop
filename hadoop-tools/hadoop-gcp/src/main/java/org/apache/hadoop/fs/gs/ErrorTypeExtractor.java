@@ -17,23 +17,22 @@
 package org.apache.hadoop.fs.gs;
 
 import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
-
-import javax.annotation.Nullable;
 
 /**
  * Implementation for {@link ErrorTypeExtractor} for exception specifically thrown from gRPC path.
  */
-class ErrorTypeExtractor {
+final class ErrorTypeExtractor {
 
   enum ErrorType {
-    NOT_FOUND, OUT_OF_RANGE, ALREADY_EXISTS, FAILED_PRECONDITION, INTERNAL, RESOURCE_EXHAUSTED, UNAVAILABLE, UNKNOWN
+    NOT_FOUND, OUT_OF_RANGE, ALREADY_EXISTS, FAILED_PRECONDITION, INTERNAL, RESOURCE_EXHAUSTED,
+    UNAVAILABLE, UNKNOWN
   }
 
   //  public static final ErrorTypeExtractor INSTANCE = new ErrorTypeExtractor();
 
   private static final String BUCKET_ALREADY_EXISTS_MESSAGE =
-      "FAILED_PRECONDITION: Your previous request to create the named bucket succeeded and you already own it.";
+      "FAILED_PRECONDITION: Your previous request to create the named bucket succeeded and you "
+          + "already own it.";
 
   private ErrorTypeExtractor() {
   }
@@ -57,40 +56,5 @@ class ErrorTypeExtractor {
     default:
       return ErrorType.UNKNOWN;
     }
-  }
-
-  static boolean bucketAlreadyExists(Exception e) {
-    ErrorType errorType = getErrorType(e);
-    if (errorType == ErrorType.ALREADY_EXISTS) {
-      return true;
-    }
-    // The gRPC API currently throws a FAILED_PRECONDITION status code instead of ALREADY_EXISTS,
-    // so we handle both these conditions in the interim.
-    // TODO: remove once the status codes are fixed.
-    else if (errorType == ErrorType.FAILED_PRECONDITION) {
-      StatusRuntimeException statusRuntimeException = getStatusRuntimeException(e);
-      return statusRuntimeException != null && BUCKET_ALREADY_EXISTS_MESSAGE.equals(
-          statusRuntimeException.getMessage());
-    }
-    return false;
-  }
-
-  /**
-   * Extracts StatusRuntimeException from the Exception, if it exists.
-   */
-  @Nullable
-  static private StatusRuntimeException getStatusRuntimeException(Exception e) {
-    Throwable cause = e;
-    // Keeping a counter to break early from the loop to avoid infinite loop condition due to
-    // cyclic exception chains.
-    int currentExceptionDepth = 0, maxChainDepth = 1000;
-    while (cause != null && currentExceptionDepth < maxChainDepth) {
-      if (cause instanceof StatusRuntimeException) {
-        return (StatusRuntimeException) cause;
-      }
-      cause = cause.getCause();
-      currentExceptionDepth++;
-    }
-    return null;
   }
 }

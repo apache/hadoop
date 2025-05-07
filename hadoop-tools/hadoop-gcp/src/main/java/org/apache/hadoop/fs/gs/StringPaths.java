@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Utility methods for String GCS paths
+ * Utility methods for String GCS paths.
  */
 final class StringPaths {
 
@@ -36,8 +36,9 @@ final class StringPaths {
   }
 
   // 14x faster (20ns vs 280ns) than "^[a-z0-9_.-]+$" regex
-  private static final CharMatcher BUCKET_NAME_CHAR_MATCHER = CharMatcher.ascii().and(
-          CharMatcher.inRange('0', '9').or(CharMatcher.inRange('a', 'z')).or(CharMatcher.anyOf("_.-")))
+  private static final CharMatcher BUCKET_NAME_CHAR_MATCHER = CharMatcher.ascii()
+      .and(CharMatcher.inRange('0', '9').or(CharMatcher.inRange('a', 'z'))
+          .or(CharMatcher.anyOf("_.-")))
       .precomputed();
 
   /**

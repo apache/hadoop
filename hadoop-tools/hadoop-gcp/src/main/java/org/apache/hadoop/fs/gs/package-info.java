@@ -16,16 +16,8 @@
  * limitations under the License.
  */
 
+/**
+ * Google Cloud Storage Filesystem.
+ */
+
 package org.apache.hadoop.fs.gs;
-
-final class Constants {
-  private Constants() {}
-
-  // URI scheme for GCS.
-  static final String SCHEME = "gs";
-  static final String PATH_DELIMITER = "/";
-
-  static final String GCS_CONFIG_PREFIX = "fs.gs";
-
-  static final String BASE_KEY_PREFIX = "google.cloud";
-}

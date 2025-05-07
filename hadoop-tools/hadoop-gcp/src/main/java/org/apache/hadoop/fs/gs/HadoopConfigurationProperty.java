@@ -29,10 +29,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Hadoop configuration property
+ * Hadoop configuration property.
  */
 class HadoopConfigurationProperty<T> {
-  public static final Logger LOG = LoggerFactory.getLogger(HadoopConfigurationProperty.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HadoopConfigurationProperty.class);
 
   private final String key;
   private final List<String> deprecatedKeys;
@@ -40,34 +40,34 @@ class HadoopConfigurationProperty<T> {
 
   private List<String> keyPrefixes = ImmutableList.of("");
 
-  public HadoopConfigurationProperty(String key) {
+  HadoopConfigurationProperty(String key) {
     this(key, null);
   }
 
-  public HadoopConfigurationProperty(String key, T defaultValue, String... deprecatedKeys) {
+  HadoopConfigurationProperty(String key, T defaultValue, String... deprecatedKeys) {
     this.key = key;
     this.deprecatedKeys =
         deprecatedKeys == null ? ImmutableList.of() : ImmutableList.copyOf(deprecatedKeys);
     this.defaultValue = defaultValue;
   }
 
-  public String getKey() {
+  String getKey() {
     return key;
   }
 
-  public T getDefault() {
+  T getDefault() {
     return defaultValue;
   }
 
-  public T get(Configuration config, BiFunction<String, T, T> getterFn) {
-    String lookupKey = getLookupKey(config, key, deprecatedKeys, (c, k) -> c.get(k) != null);
+  T get(Configuration config, BiFunction<String, T, T> getterFn) {
+    String lookupKey = getLookupKey(config, key, (c, k) -> c.get(k) != null);
     return logProperty(lookupKey, getterFn.apply(lookupKey, defaultValue));
   }
 
-  private String getLookupKey(Configuration config, String key, List<String> deprecatedKeys,
+  private String getLookupKey(Configuration config, String lookupKey,
       BiFunction<Configuration, String, Boolean> checkFn) {
     for (String prefix : keyPrefixes) {
-      String prefixedKey = prefix + key;
+      String prefixedKey = prefix + lookupKey;
       if (checkFn.apply(config, prefixedKey)) {
         return prefixedKey;
       }
@@ -80,7 +80,7 @@ class HadoopConfigurationProperty<T> {
         }
       }
     }
-    return keyPrefixes.get(0) + key;
+    return keyPrefixes.get(0) + lookupKey;
   }
 
   private static <S> S logProperty(String key, S value) {

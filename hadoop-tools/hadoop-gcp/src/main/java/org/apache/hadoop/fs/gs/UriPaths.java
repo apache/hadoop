@@ -26,7 +26,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 /**
- * Utility methods for URI GCS paths
+ * Utility methods for URI GCS paths.
  */
 final class UriPaths {
 
@@ -60,14 +60,14 @@ final class UriPaths {
     checkNotNull(path);
 
     // Root path has no parent.
-    if (path.equals(GoogleCloudStorageFileSystem.GCS_ROOT)) {
+    if (path.equals(GoogleCloudStorageFileSystem.GCSROOT)) {
       return null;
     }
 
     StorageResourceId resourceId = StorageResourceId.fromUriPath(path, true);
 
     if (resourceId.isBucket()) {
-      return GoogleCloudStorageFileSystem.GCS_ROOT;
+      return GoogleCloudStorageFileSystem.GCSROOT;
     }
 
     String objectName = resourceId.getObjectName();
@@ -95,7 +95,7 @@ final class UriPaths {
   public static URI fromStringPathComponents(String bucketName, String objectName,
       boolean allowEmptyObjectName) {
     if (allowEmptyObjectName && bucketName == null && objectName == null) {
-      return GoogleCloudStorageFileSystem.GCS_ROOT;
+      return GoogleCloudStorageFileSystem.GCSROOT;
     }
 
     String authority = StringPaths.validateBucketName(bucketName);

@@ -30,13 +30,13 @@ import java.net.URI;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * Provides FS semantics over GCS based on Objects API
+ * Provides FS semantics over GCS based on Objects API.
  */
 class GoogleCloudStorageFileSystem {
   private static final Logger LOG = LoggerFactory.getLogger(StorageResourceId.class);
 
   // URI of the root path.
-  static URI GCS_ROOT = URI.create(SCHEME + ":/");
+  static final URI GCSROOT = URI.create(SCHEME + ":/");
 
   // GCS access instance.
   private GoogleCloudStorage gcs;
@@ -49,12 +49,12 @@ class GoogleCloudStorageFileSystem {
     return new GoogleCloudStorage(configuration);
   }
 
-  public GoogleCloudStorageFileSystem(final GoogleHadoopFileSystemConfiguration configuration,
+  GoogleCloudStorageFileSystem(final GoogleHadoopFileSystemConfiguration configuration,
       final Credentials credentials) throws IOException {
     gcs = createCloudStorage(configuration, credentials);
   }
 
-  public WritableByteChannel create(final URI path, final CreateOptions createOptions)
+  WritableByteChannel create(final URI path, final CreateOptions createOptions)
       throws IOException {
     LOG.trace("create(path: {}, createOptions: {})", path, createOptions);
     checkNotNull(path, "path could not be null");
@@ -75,7 +75,7 @@ class GoogleCloudStorageFileSystem {
     return gcs.create(resourceId, createOptions);
   }
 
-  public void close() {
+  void close() {
     if (gcs == null) {
       return;
     }

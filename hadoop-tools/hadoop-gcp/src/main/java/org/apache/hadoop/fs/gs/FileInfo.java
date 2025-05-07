@@ -29,11 +29,11 @@ import java.util.Objects;
  * <p>Note: This class wraps GoogleCloudStorageItemInfo, adds file system specific information and
  * hides bucket/object specific information.
  */
-class FileInfo {
+final class FileInfo {
 
   // Info about the root path.
-  public static final FileInfo ROOT_INFO =
-      new FileInfo(GoogleCloudStorageFileSystem.GCS_ROOT, GoogleCloudStorageItemInfo.ROOT_INFO);
+  static final FileInfo ROOT_INFO =
+      new FileInfo(GoogleCloudStorageFileSystem.GCSROOT, GoogleCloudStorageItemInfo.ROOT_INFO);
 
   // Path of this file or directory.
   private final URI path;
@@ -56,21 +56,21 @@ class FileInfo {
   /**
    * Gets the path of this file or directory.
    */
-  public URI getPath() {
+  URI getPath() {
     return path;
   }
 
   /**
    * Indicates whether this item is a directory.
    */
-  public boolean isDirectory() {
+  boolean isDirectory() {
     return itemInfo.isDirectory();
   }
 
   /**
    * Indicates whether this item is an inferred directory.
    */
-  public boolean isInferredDirectory() {
+  boolean isInferredDirectory() {
     return itemInfo.isInferredDirectory();
   }
 
@@ -78,7 +78,7 @@ class FileInfo {
    * Indicates whether this instance has information about the unique, shared root of the underlying
    * storage system.
    */
-  public boolean isGlobalRoot() {
+  boolean isGlobalRoot() {
     return itemInfo.isGlobalRoot();
   }
 
@@ -87,7 +87,7 @@ class FileInfo {
    *
    * <p>Time is expressed as milliseconds since January 1, 1970 UTC.
    */
-  public long getCreationTime() {
+  long getCreationTime() {
     return itemInfo.getCreationTime();
   }
 
@@ -97,7 +97,7 @@ class FileInfo {
    * <p>For files, size is in number of bytes. For directories size is 0. For items that do not
    * exist, size is -1.
    */
-  public long getSize() {
+  long getSize() {
     return itemInfo.getSize();
   }
 
@@ -107,7 +107,7 @@ class FileInfo {
    *
    * <p>Time is expressed as milliseconds since January 1, 1970 UTC.
    */
-  public long getModificationTime() {
+  long getModificationTime() {
     return itemInfo.getModificationTime();
   }
 
@@ -116,21 +116,21 @@ class FileInfo {
    *
    * @return A map of file attributes
    */
-  public Map<String, byte[]> getAttributes() {
+  Map<String, byte[]> getAttributes() {
     return itemInfo.getMetadata();
   }
 
   /**
    * Indicates whether this file or directory exists.
    */
-  public boolean exists() {
+  boolean exists() {
     return itemInfo.exists();
   }
 
   /**
    * Returns CRC32C checksum of the file or {@code null}.
    */
-  public byte[] getCrc32cChecksum() {
+  byte[] getCrc32cChecksum() {
     VerificationAttributes verificationAttributes = itemInfo.getVerificationAttributes();
     return verificationAttributes == null ? null : verificationAttributes.getCrc32c();
   }
@@ -138,7 +138,7 @@ class FileInfo {
   /**
    * Returns MD5 checksum of the file or {@code null}.
    */
-  public byte[] getMd5Checksum() {
+  byte[] getMd5Checksum() {
     VerificationAttributes verificationAttributes = itemInfo.getVerificationAttributes();
     return verificationAttributes == null ? null : verificationAttributes.getMd5hash();
   }
@@ -181,7 +181,7 @@ class FileInfo {
    * Handy factory method for constructing a FileInfo from a GoogleCloudStorageItemInfo while
    * potentially returning a singleton instead of really constructing an object for cases like ROOT.
    */
-  public static FileInfo fromItemInfo(GoogleCloudStorageItemInfo itemInfo) {
+  static FileInfo fromItemInfo(GoogleCloudStorageItemInfo itemInfo) {
     if (itemInfo.isRoot()) {
       return ROOT_INFO;
     }
@@ -193,7 +193,7 @@ class FileInfo {
    * Handy factory method for constructing a list of FileInfo from a list of
    * GoogleCloudStorageItemInfo.
    */
-  public static List<FileInfo> fromItemInfos(List<GoogleCloudStorageItemInfo> itemInfos) {
+  static List<FileInfo> fromItemInfos(List<GoogleCloudStorageItemInfo> itemInfos) {
     List<FileInfo> fileInfos = new ArrayList<>(itemInfos.size());
     for (GoogleCloudStorageItemInfo itemInfo : itemInfos) {
       fileInfos.add(fromItemInfo(itemInfo));

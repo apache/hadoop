@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
 /**
  * Options that can be specified when creating a file in the {@link GoogleCloudStorageFileSystem}.
  */
-class CreateOptions {
+final class CreateOptions {
   private final ImmutableMap<String, byte[]> attributes;
   private final String contentType;
   private final boolean ensureNoDirectoryConflict;
@@ -37,9 +37,7 @@ class CreateOptions {
   private final long overwriteGenerationId;
   private final WriteMode mode;
 
-  public static final CreateOptions DEFAULT = builder().build();
-
-  public String getContentEncoding() {
+  String getContentEncoding() {
     return contentEncoding;
   }
 
@@ -51,19 +49,15 @@ class CreateOptions {
     this.ensureNoDirectoryConflict = builder.ensureNoDirectoryConflict;
     this.interval = builder.interval;
     this.overwriteGenerationId = builder.overwriteGenerationId;
-    this.mode = builder.mode;
+    this.mode = builder.writeMode;
     this.contentEncoding = builder.contentEncoding;
   }
 
-  public boolean isOverwriteExisting() {
+  boolean isOverwriteExisting() {
     return this.mode == WriteMode.OVERWRITE;
   }
 
   enum WriteMode {
-    /**
-     * Write new bytes to the end of the existing file rather than the beginning.
-     */
-    APPEND,
     /**
      * Creates a new file for write and fails if file already exists.
      */
@@ -74,14 +68,14 @@ class CreateOptions {
     OVERWRITE
   }
 
-  public static CreateOperationOptionsBuilder builder() {
+  static CreateOperationOptionsBuilder builder() {
     return new CreateOperationOptionsBuilder();
   }
 
   /**
    * Extended attributes to set when creating a file.
    */
-  public ImmutableMap<String, byte[]> getAttributes() {
+  ImmutableMap<String, byte[]> getAttributes() {
     return attributes;
   }
 
@@ -89,30 +83,14 @@ class CreateOptions {
    * Content-type to set when creating a file.
    */
   @Nullable
-  public String getContentType() {
+  String getContentType() {
     return contentType;
-  }
-
-  /**
-   * Configures the minimum time interval (milliseconds) between consecutive sync/flush calls
-   */
-  public Duration getMinSyncInterval() {
-    return interval;
-  }
-
-  /**
-   * If true, makes sure there isn't already a directory object of the same name. If false, you run
-   * the risk of creating hard-to-cleanup/access files whose names collide with directory names. If
-   * already sure no such directory exists, then this is safe to set for improved performance.
-   */
-  public boolean isEnsureNoDirectoryConflict() {
-    return ensureNoDirectoryConflict;
   }
 
   /**
    * Whether to overwrite an existing file with the same name.
    */
-  public WriteMode getWriteMode() {
+  WriteMode getWriteMode() {
     return mode;
   }
 
@@ -123,7 +101,7 @@ class CreateOptions {
    * only be overwritten by the newly created file if its generation matches this provided
    * generationId.
    */
-  public long getOverwriteGenerationId() {
+  long getOverwriteGenerationId() {
     return overwriteGenerationId;
   }
 
@@ -133,38 +111,12 @@ class CreateOptions {
     private boolean ensureNoDirectoryConflict = true;
     private Duration interval = Duration.ZERO;
     private long overwriteGenerationId = StorageResourceId.UNKNOWN_GENERATION_ID;
-    private WriteMode mode = WriteMode.CREATE_NEW;
+    private WriteMode writeMode = WriteMode.CREATE_NEW;
 
     private String contentEncoding = null;
 
-    public CreateOperationOptionsBuilder setAttributes(Map<String, byte[]> attributes) {
-      this.attributes = attributes;
-      return this;
-    }
-
-    public CreateOperationOptionsBuilder setContentType(String contentType) {
-      this.contentType = contentType;
-      return this;
-    }
-
-    public CreateOperationOptionsBuilder setEnsureNoDirectoryConflict(
-        boolean ensureNoDirectoryConflict) {
-      this.ensureNoDirectoryConflict = ensureNoDirectoryConflict;
-      return this;
-    }
-
-    public CreateOperationOptionsBuilder setMinSyncInterval(Duration interval) {
-      this.interval = interval;
-      return this;
-    }
-
-    public CreateOperationOptionsBuilder setOverwriteGenerationId(long overwriteGenerationId) {
-      this.overwriteGenerationId = overwriteGenerationId;
-      return this;
-    }
-
-    public CreateOperationOptionsBuilder setWriteMode(WriteMode mode) {
-      this.mode = mode;
+    CreateOperationOptionsBuilder setWriteMode(WriteMode mode) {
+      this.writeMode = mode;
       return this;
     }
 

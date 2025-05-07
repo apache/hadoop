@@ -65,7 +65,7 @@ class GoogleHadoopOutputStream extends OutputStream
    * @param createFileOptions options for file creation
    * @throws IOException if an IO error occurs.
    */
-  public GoogleHadoopOutputStream(GoogleHadoopFileSystem ghfs, URI dstGcsPath,
+  GoogleHadoopOutputStream(GoogleHadoopFileSystem ghfs, URI dstGcsPath,
       CreateOptions createFileOptions, FileSystem.Statistics statistics) throws IOException {
     LOG.trace("GoogleHadoopOutputStream(gcsPath: {}, createFileOptions: {})", dstGcsPath,
         createFileOptions);

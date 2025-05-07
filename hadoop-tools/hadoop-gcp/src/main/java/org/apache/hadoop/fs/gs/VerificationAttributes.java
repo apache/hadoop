@@ -26,7 +26,7 @@ class VerificationAttributes {
   private final byte[] md5hash;
   private final byte[] crc32c;
 
-  public VerificationAttributes(@Nullable byte[] md5hash, @Nullable byte[] crc32c) {
+  VerificationAttributes(@Nullable byte[] md5hash, @Nullable byte[] crc32c) {
     this.md5hash = md5hash;
     this.crc32c = crc32c;
   }
@@ -35,7 +35,7 @@ class VerificationAttributes {
    * MD5 hash of an object, if available.
    */
   @Nullable
-  public byte[] getMd5hash() {
+  byte[] getMd5hash() {
     return md5hash;
   }
 
@@ -43,7 +43,7 @@ class VerificationAttributes {
    * CRC32c checksum of an object, if available.
    */
   @Nullable
-  public byte[] getCrc32c() {
+  byte[] getCrc32c() {
     return crc32c;
   }
 

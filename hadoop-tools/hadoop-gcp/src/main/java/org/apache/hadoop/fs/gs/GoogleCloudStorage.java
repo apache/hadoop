@@ -36,7 +36,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A wrapper around <a href="https://github.com/googleapis/java-storage">Google cloud storage client</a>
+ * A wrapper around <a href="https://github.com/googleapis/java-storage">Google cloud storage
+ * client</a>.
  */
 class GoogleCloudStorage {
   public static final Logger LOG = LoggerFactory.getLogger(GoogleHadoopFileSystem.class);

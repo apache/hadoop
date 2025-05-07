@@ -59,7 +59,7 @@ public class GoogleHadoopFileSystem extends FileSystem {
   public static final Logger LOG = LoggerFactory.getLogger(GoogleHadoopFileSystem.class);
 
   /**
-   * URI scheme for GoogleHadoopFileSystem
+   * URI scheme for GoogleHadoopFileSystem.
    */
   private static final String SCHEME = Constants.SCHEME;
 
@@ -74,7 +74,7 @@ public class GoogleHadoopFileSystem extends FileSystem {
   /**
    * The URI the File System is passed in initialize.
    */
-  URI initUri;
+  private URI initUri;
 
   /**
    * Default block size. Note that this is the size that is reported to Hadoop FS clients. It does
@@ -407,13 +407,13 @@ public class GoogleHadoopFileSystem extends FileSystem {
     throw new UnsupportedOperationException(path.toString());
   }
 
-  /**
-   * Gets the default replication factor.
-   */
-  @Override
-  public short getDefaultReplication() {
-    return REPLICATION_FACTOR_DEFAULT;
-  }
+//  /**
+//   * Gets the default replication factor.
+//   */
+//  @Override
+//  public short getDefaultReplication() {
+//    return REPLICATION_FACTOR_DEFAULT;
+//  }
 
   @Override
   public FileStatus getFileStatus(final Path path) throws IOException {
@@ -489,11 +489,11 @@ public class GoogleHadoopFileSystem extends FileSystem {
     return result;
   }
 
-  @Override
-  public long getDefaultBlockSize() {
-    LOG.trace("getDefaultBlockSize(): {}", defaultBlockSize);
-    return defaultBlockSize;
-  }
+//  @Override
+//  public long getDefaultBlockSize() {
+//    LOG.trace("getDefaultBlockSize(): {}", defaultBlockSize);
+//    return defaultBlockSize;
+//  }
 
   @Override
   public void setWorkingDirectory(final Path hadoopPath) {

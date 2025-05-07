@@ -30,7 +30,7 @@ import java.util.Objects;
 /**
  * Contains information about an item in Google Cloud Storage.
  */
-class GoogleCloudStorageItemInfo {
+final class GoogleCloudStorageItemInfo {
   // Info about the root of GCS namespace.
   public static final GoogleCloudStorageItemInfo ROOT_INFO =
       new GoogleCloudStorageItemInfo(StorageResourceId.ROOT,
@@ -50,13 +50,14 @@ class GoogleCloudStorageItemInfo {
    * Factory method for creating a GoogleCloudStorageItemInfo for a bucket.
    *
    * @param resourceId       Resource ID that identifies a bucket
-   * @param creationTime     Time when a bucket was created (milliseconds since January 1, 1970 UTC).
+   * @param creationTime     Time when a bucket was created (milliseconds since January 1, 1970
+   *                         UTC).
    * @param modificationTime Time when a bucket was last modified (milliseconds since January 1,
    *                         1970 UTC).
    * @param location         Location of a bucket.
    * @param storageClass     Storage class of a bucket.
    */
-  public static GoogleCloudStorageItemInfo createBucket(StorageResourceId resourceId,
+  static GoogleCloudStorageItemInfo createBucket(StorageResourceId resourceId,
       long creationTime, long modificationTime, String location, String storageClass) {
     checkNotNull(resourceId, "resourceId must not be null");
     checkArgument(resourceId.isBucket(), "expected bucket but got '%s'", resourceId);
@@ -74,17 +75,23 @@ class GoogleCloudStorageItemInfo {
    * Factory method for creating a GoogleCloudStorageItemInfo for an object.
    *
    * @param resourceId   identifies either root, a Bucket, or a StorageObject
-   * @param creationTime Time when object was created (milliseconds since January 1, 1970 UTC).
-   * @param size         Size of the given object (number of bytes) or -1 if the object does not exist.
+   * @param creationTime Time when object was created (milliseconds since January 1, 1970
+   *                     UTC).
+   * @param size         Size of the given object (number of bytes) or -1 if the object
+   *                     does not exist.
    * @param metadata     User-supplied object metadata for this object.
    */
-  public static GoogleCloudStorageItemInfo createObject(StorageResourceId resourceId,
+  static GoogleCloudStorageItemInfo createObject(StorageResourceId resourceId,
       long creationTime, long modificationTime, long size, String contentType,
       String contentEncoding, Map<String, byte[]> metadata, long contentGeneration,
       long metaGeneration, VerificationAttributes verificationAttributes) {
     checkNotNull(resourceId, "resourceId must not be null");
-    checkArgument(!resourceId.isRoot(), "expected object or directory but got '%s'", resourceId);
-    checkArgument(!resourceId.isBucket(), "expected object or directory but got '%s'", resourceId);
+    checkArgument(
+        !resourceId.isRoot(),
+        "expected object or directory but got '%s'", resourceId);
+    checkArgument(
+        !resourceId.isBucket(),
+        "expected object or directory but got '%s'", resourceId);
     return new GoogleCloudStorageItemInfo(resourceId, creationTime, modificationTime, size,
         /* location= */ null,
         /* storageClass= */ null, contentType, contentEncoding, metadata, contentGeneration,
@@ -96,7 +103,7 @@ class GoogleCloudStorageItemInfo {
    *
    * @param resourceId Resource ID that identifies an inferred directory
    */
-  public static GoogleCloudStorageItemInfo createInferredDirectory(StorageResourceId resourceId) {
+  static GoogleCloudStorageItemInfo createInferredDirectory(StorageResourceId resourceId) {
     return new GoogleCloudStorageItemInfo(resourceId,
         /* creationTime= */ 0,
         /* modificationTime= */ 0,
@@ -116,7 +123,7 @@ class GoogleCloudStorageItemInfo {
    *
    * @param resourceId Resource ID that identifies an inferred directory
    */
-  public static GoogleCloudStorageItemInfo createNotFound(StorageResourceId resourceId) {
+  static GoogleCloudStorageItemInfo createNotFound(StorageResourceId resourceId) {
     return new GoogleCloudStorageItemInfo(resourceId,
         /* creationTime= */ 0,
         /* modificationTime= */ 0,
@@ -188,21 +195,21 @@ class GoogleCloudStorageItemInfo {
   /**
    * Gets bucket name of this item.
    */
-  public String getBucketName() {
+  String getBucketName() {
     return resourceId.getBucketName();
   }
 
   /**
    * Gets object name of this item.
    */
-  public String getObjectName() {
+  String getObjectName() {
     return resourceId.getObjectName();
   }
 
   /**
    * Gets the resourceId that holds the (possibly null) bucketName and objectName of this object.
    */
-  public StorageResourceId getResourceId() {
+  StorageResourceId getResourceId() {
     return resourceId;
   }
 
@@ -211,7 +218,7 @@ class GoogleCloudStorageItemInfo {
    *
    * <p>Time is expressed as milliseconds since January 1, 1970 UTC.
    */
-  public long getCreationTime() {
+  long getCreationTime() {
     return creationTime;
   }
 
@@ -220,14 +227,14 @@ class GoogleCloudStorageItemInfo {
    *
    * <p>Time is expressed as milliseconds since January 1, 1970 UTC.
    */
-  public long getModificationTime() {
+  long getModificationTime() {
     return modificationTime;
   }
 
   /**
    * Gets size of this item (number of bytes). Returns -1 if the object does not exist.
    */
-  public long getSize() {
+  long getSize() {
     return size;
   }
 
@@ -236,7 +243,7 @@ class GoogleCloudStorageItemInfo {
    *
    * <p>Note: Location is only supported for buckets. The value is always null for objects.
    */
-  public String getLocation() {
+  String getLocation() {
     return location;
   }
 
@@ -245,7 +252,7 @@ class GoogleCloudStorageItemInfo {
    *
    * <p>Note: Storage-class is only supported for buckets. The value is always null for objects.
    */
-  public String getStorageClass() {
+  String getStorageClass() {
     return storageClass;
   }
 
@@ -254,7 +261,7 @@ class GoogleCloudStorageItemInfo {
    *
    * <p>Note: content-type is only supported for objects, and will always be null for buckets.
    */
-  public String getContentType() {
+  String getContentType() {
     return contentType;
   }
 
@@ -263,7 +270,7 @@ class GoogleCloudStorageItemInfo {
    *
    * <p>Note: content-encoding is only supported for objects, and will always be null for buckets.
    */
-  public String getContentEncoding() {
+  String getContentEncoding() {
     return contentEncoding;
   }
 
@@ -272,21 +279,21 @@ class GoogleCloudStorageItemInfo {
    *
    * <p>Note: metadata is only supported for objects. This value is always an empty map for buckets.
    */
-  public Map<String, byte[]> getMetadata() {
+  Map<String, byte[]> getMetadata() {
     return metadata;
   }
 
   /**
    * Indicates whether this item is a bucket. Root is not considered to be a bucket.
    */
-  public boolean isBucket() {
+  boolean isBucket() {
     return resourceId.isBucket();
   }
 
   /**
    * Indicates whether this item refers to the GCS root (gs://).
    */
-  public boolean isRoot() {
+  boolean isRoot() {
     return resourceId.isRoot();
   }
 
@@ -294,21 +301,21 @@ class GoogleCloudStorageItemInfo {
    * Indicates whether this instance has information about the unique, shared root of the underlying
    * storage system.
    */
-  public boolean isGlobalRoot() {
+  boolean isGlobalRoot() {
     return isRoot() && exists();
   }
 
   /**
    * Indicates whether {@code itemInfo} is a directory.
    */
-  public boolean isDirectory() {
+  boolean isDirectory() {
     return isGlobalRoot() || isBucket() || resourceId.isDirectory();
   }
 
   /**
-   * Indicates whether {@code itemInfo} is an inferred directory
+   * Indicates whether {@code itemInfo} is an inferred directory.
    */
-  public boolean isInferredDirectory() {
+  boolean isInferredDirectory() {
     return creationTime == 0 && modificationTime == 0 && size == 0 && contentGeneration == 0
         && metaGeneration == 0;
   }
@@ -316,28 +323,28 @@ class GoogleCloudStorageItemInfo {
   /**
    * Get the content generation of the object.
    */
-  public long getContentGeneration() {
+  long getContentGeneration() {
     return contentGeneration;
   }
 
   /**
    * Get the meta generation of the object.
    */
-  public long getMetaGeneration() {
+  long getMetaGeneration() {
     return metaGeneration;
   }
 
   /**
    * Get object validation attributes.
    */
-  public VerificationAttributes getVerificationAttributes() {
+  VerificationAttributes getVerificationAttributes() {
     return verificationAttributes;
   }
 
   /**
    * Indicates whether this item exists.
    */
-  public boolean exists() {
+  boolean exists() {
     return size >= 0;
   }
 
