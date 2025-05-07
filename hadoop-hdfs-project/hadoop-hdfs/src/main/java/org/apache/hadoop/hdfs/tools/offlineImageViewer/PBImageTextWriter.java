@@ -643,6 +643,10 @@ abstract class PBImageTextWriter implements Closeable {
           LOG.info("Loading inode references");
           refIdList = FSImageLoader.loadINodeReferenceSection(is);
           break;
+        case ERASURE_CODING:
+          LOG.info("Loading erasure coding");
+          FSImageLoader.loadErasureCodingSection(is);
+          break;
         default:
           break;
         }

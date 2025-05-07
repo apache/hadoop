@@ -22,24 +22,31 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.SafeModeAction;
-import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.net.NetUtils;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -98,18 +105,18 @@ public class TestOfflineImageViewerWithStripedBlocks {
   }
 
   @Test(timeout = 60000)
-  public void testFileLargerThanABlockGroup1() throws IOException {
+  public void testFileLargerThanABlockGroup1() throws Exception {
     testFileSize(blockSize * dataBlocks + cellSize + 123);
   }
 
   @Test(timeout = 60000)
-  public void testFileLargerThanABlockGroup2() throws IOException {
+  public void testFileLargerThanABlockGroup2() throws Exception {
     testFileSize(blockSize * dataBlocks * 3 + cellSize * dataBlocks + cellSize
         + 123);
   }
 
   @Test(timeout = 60000)
-  public void testFileFullBlockGroup() throws IOException {
+  public void testFileFullBlockGroup() throws Exception {
     testFileSize(blockSize * dataBlocks);
   }
 
@@ -119,8 +126,7 @@ public class TestOfflineImageViewerWithStripedBlocks {
     testFileSize(numBytes);
   }
 
-  private void testFileSize(int numBytes) throws IOException,
-      UnresolvedLinkException, SnapshotAccessControlException {
+  private void testFileSize(int numBytes) throws Exception{
     fs.setSafeMode(SafeModeAction.LEAVE);
     File orgFsimage = null;
     Path file = new Path("/eczone/striped");
@@ -166,5 +172,37 @@ public class TestOfflineImageViewerWithStripedBlocks {
         "Wrongly computed file size contains striped blocks, file status:"
             + fileStatus + ". Expected file size is : " + EXPECTED_FILE_SIZE,
         fileStatus.contains(EXPECTED_FILE_SIZE));
+
+    testGetContentSummaryForFile(orgFsimage, file);
+  }
+
+  public void testGetContentSummaryForFile(File orgFsimage, Path file)
+      throws IOException, InterruptedException, URISyntaxException {
+    ContentSummary contentSummary = fs.getContentSummary(file);
+    try (WebImageViewer viewer = new WebImageViewer(NetUtils.createSocketAddr("localhost:0"))) {
+      viewer.initServer(orgFsimage.getAbsolutePath());
+      int port = viewer.getPort();
+      URL url =
+          new URL("http://localhost:" + port + "/webhdfs/v1" + file + "?op=GETCONTENTSUMMARY");
+      HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+      connection.setRequestMethod("GET");
+      connection.connect();
+      assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
+      // create a WebHdfsFileSystem instance
+      URI uri = new URI("webhdfs://localhost:" + port);
+      Configuration conf = new Configuration();
+      WebHdfsFileSystem webfs = (WebHdfsFileSystem) FileSystem.get(uri, conf);
+      ContentSummary summary = webfs.getContentSummary(file);
+      verifyContentSummary(contentSummary, summary);
+    }
+  }
+
+  private void verifyContentSummary(ContentSummary expected, ContentSummary actual) {
+    assertEquals(expected.getDirectoryCount(), actual.getDirectoryCount());
+    assertEquals(expected.getFileCount(), actual.getFileCount());
+    assertEquals(expected.getLength(), actual.getLength());
+    assertEquals(expected.getSpaceConsumed(), actual.getSpaceConsumed());
+    assertEquals(expected.getQuota(), actual.getQuota());
+    assertEquals(expected.getSpaceQuota(), actual.getSpaceQuota());
   }
 }

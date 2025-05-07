@@ -37,16 +37,22 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.XAttrHelper;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.XAttrNotFoundException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf;
 import org.apache.hadoop.hdfs.server.namenode.FSImageUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.ErasureCodingSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.namenode.SerialNumberManager;
+import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.resources.XAttrEncodingParam;
 import org.apache.hadoop.io.IOUtils;
@@ -232,6 +238,21 @@ class FSImageLoader {
     return builder.build();
   }
 
+  static ErasureCodingPolicyManager loadErasureCodingSection(InputStream in) throws IOException {
+    ErasureCodingSection s = ErasureCodingSection.parseDelimitedFrom(in);
+    List<ErasureCodingPolicyInfo> ecPolicies =
+        org.apache.hadoop.thirdparty.com.google.common.collect.Lists.newArrayListWithCapacity(
+            s.getPoliciesCount());
+    for (int i = 0; i < s.getPoliciesCount(); ++i) {
+      ecPolicies.add(PBHelperClient.convertErasureCodingPolicyInfo(s.getPolicies(i)));
+    }
+
+    ErasureCodingPolicyManager erasureCodingPolicyManager =
+        ErasureCodingPolicyManager.getInstance();
+    erasureCodingPolicyManager.loadPolicies(ecPolicies, new Configuration());
+    return erasureCodingPolicyManager;
+  }
+
   private static byte[][] loadINodeSection(InputStream in)
           throws IOException {
     FsImageProto.INodeSection s = FsImageProto.INodeSection
@@ -344,7 +365,7 @@ class FSImageLoader {
       data[1] = 1;
       data[2] = getFileSize(f);
       nsQuota = -1;
-      data[3] = data[2] * f.getReplication();
+      data[3] = getStorageSpaceConsumed(f);
       spaceQuota = -1;
       return fillSummaryMap(spaceQuota, nsQuota, data);
     case DIRECTORY:
@@ -396,7 +417,7 @@ class FSImageLoader {
         long curLength = getFileSize(f);
         data[1]++;
         data[2] += curLength;
-        data[3] += (curLength) * (f.getReplication());
+        data[3] += getStorageSpaceConsumed(f);
         break;
       case SYMLINK:
         data[1]++;
@@ -658,6 +679,26 @@ class FSImageLoader {
     long size = 0;
     for (HdfsProtos.BlockProto p : f.getBlocksList()) {
       size += p.getNumBytes();
+    }
+    return size;
+  }
+
+  static long getStorageSpaceConsumed(FsImageProto.INodeSection.INodeFile f) {
+    long size = 0;
+    boolean isStriped = f.hasErasureCodingPolicyID();
+    ErasureCodingPolicy ecPolicy = null;
+    if (isStriped) {
+      ecPolicy =
+          ErasureCodingPolicyManager.getInstance().getByID((byte) f.getErasureCodingPolicyID());
+    }
+
+    for (HdfsProtos.BlockProto p : f.getBlocksList()) {
+      if (isStriped) {
+        size += StripedBlockUtil.spaceConsumedByStripedBlock(p.getNumBytes(),
+            ecPolicy.getNumDataUnits(), ecPolicy.getNumParityUnits(), ecPolicy.getCellSize());
+      } else {
+        size += p.getNumBytes() * f.getReplication();
+      }
     }
     return size;
   }
