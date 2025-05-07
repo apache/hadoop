@@ -145,8 +145,8 @@ public class TestZStandardCompressorDecompressor {
   public void testDecompressorSetInputAIOUBException() {
     assertThrows(ArrayIndexOutOfBoundsException.class, () -> {
       ZStandardDecompressor decompressor =
-        new ZStandardDecompressor(IO_FILE_BUFFER_SIZE_DEFAULT);
-        decompressor.setInput(new byte[] {}, -5, 10);
+          new ZStandardDecompressor(IO_FILE_BUFFER_SIZE_DEFAULT);
+      decompressor.setInput(new byte[] {}, -5, 10);
     });
   }
 
