@@ -72,8 +72,8 @@
     <jaxb.version>2.3.1</jaxb.version>
 
     <!-- jackson versions -->
-    <jackson2.version>2.18.3</jackson2.version>
-    <jackson2.databind.version>2.18.3</jackson2.databind.version>
+    <jackson2.version>2.18.4</jackson2.version>
+    <jackson2.databind.version>2.18.4</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.13</httpclient.version>
