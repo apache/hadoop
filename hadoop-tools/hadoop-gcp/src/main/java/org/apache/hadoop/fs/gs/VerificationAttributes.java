@@ -22,7 +22,7 @@ import javax.annotation.Nullable;
 /**
  * GCS provided validation attributes for a single object.
  */
-public class VerificationAttributes {
+class VerificationAttributes {
   private final byte[] md5hash;
   private final byte[] crc32c;
 

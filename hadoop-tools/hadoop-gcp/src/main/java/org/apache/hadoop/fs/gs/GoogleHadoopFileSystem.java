@@ -455,7 +455,7 @@ public class GoogleHadoopFileSystem extends FileSystem {
   /**
    * Gets GCS FS instance.
    */
-  public GoogleCloudStorageFileSystem getGcsFs() {
+  GoogleCloudStorageFileSystem getGcsFs() {
     return gcsFs;
   }
 
