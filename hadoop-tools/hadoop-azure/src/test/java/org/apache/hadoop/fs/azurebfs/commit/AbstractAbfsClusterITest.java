@@ -22,9 +22,10 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.Assume;
 import org.junit.Rule;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.TemporaryFolder;
 
 import org.apache.hadoop.conf.Configuration;
@@ -80,6 +81,7 @@ public abstract class AbstractAbfsClusterITest extends
     return AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     binding.setup();
@@ -88,10 +90,10 @@ public abstract class AbstractAbfsClusterITest extends
     if (getClusterBinding() == null) {
       clusterBinding = demandCreateClusterBinding();
     }
-    assertNotNull("cluster is not bound", getClusterBinding());
+    assertNotNull(getClusterBinding(), "cluster is not bound");
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownClusters() throws IOException {
     terminateCluster(clusterBinding);
     clusterBinding = null;

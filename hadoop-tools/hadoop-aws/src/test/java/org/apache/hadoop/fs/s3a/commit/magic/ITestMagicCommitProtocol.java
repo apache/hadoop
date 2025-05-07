@@ -26,7 +26,6 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
 
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -42,8 +41,8 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3AUtils.listAndFilter;
@@ -54,10 +53,9 @@ import static org.apache.hadoop.util.functional.RemoteIterators.toList;
 /**
  * Test the magic committer's commit protocol.
  */
-@RunWith(Parameterized.class)
 public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
 
-  private final boolean trackCommitsInMemory;
+  private boolean trackCommitsInMemory;
 
   @Override
   protected String suitename() {
@@ -80,7 +78,6 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     CommitUtils.verifyIsMagicCommitFS(getFileSystem());
   }
 
-  @Parameterized.Parameters(name = "track-commit-in-memory-{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {false},
@@ -88,8 +85,10 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     });
   }
 
-  public ITestMagicCommitProtocol(boolean trackCommitsInMemory) {
-    this.trackCommitsInMemory = trackCommitsInMemory;
+  public void initITestMagicCommitProtocol(boolean pTrackCommitsInMemory)
+      throws Exception {
+    this.trackCommitsInMemory = pTrackCommitsInMemory;
+    setup();
   }
 
   @Override
@@ -183,8 +182,10 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
    * committer UUID to ensure uniqueness in the case of more than
    * one job writing to the same destination path.
    */
-  @Test
-  public void testCommittersPathsHaveUUID() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest(name = "track-commit-in-memory-{0}")
+  public void testCommittersPathsHaveUUID(boolean pTrackCommitsInMemory) throws Throwable {
+    initITestMagicCommitProtocol(pTrackCommitsInMemory);
     TaskAttemptContext tContext = new TaskAttemptContextImpl(
         getConfiguration(),
         getTaskAttempt0());

@@ -15,35 +15,25 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+package org.apache.hadoop.fs.extend;
 
-package org.apache.hadoop.fs.contract.router.web;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.AbstractContractDeleteTest;
-import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-
-import java.io.IOException;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
- * Test delete operations on a Router WebHDFS FS.
+ * This is a custom JUnit5 `RegisterExtension`
+ * we created to obtain the methond name of the executing function.
  */
-public class TestRouterWebHDFSContractDelete
-    extends AbstractContractDeleteTest {
+public class TestName implements BeforeEachCallback {
 
-  @BeforeAll
-  public static void createCluster() throws IOException {
-    RouterWebHDFSContract.createCluster();
-  }
-
-  @AfterAll
-  public static void teardownCluster() throws IOException {
-    RouterWebHDFSContract.destroyCluster();
-  }
+  private volatile String name;
 
   @Override
-  protected AbstractFSContract createContract(Configuration conf) {
-    return new RouterWebHDFSContract(conf);
+  public void beforeEach(ExtensionContext extensionContext) throws Exception {
+    name = extensionContext.getTestMethod().get().getName();
+  }
+
+  public String getMethodName() {
+    return this.name;
   }
 }

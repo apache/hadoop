@@ -22,7 +22,8 @@ import java.lang.ref.WeakReference;
 import java.time.Duration;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +59,7 @@ public class ITestS3AInputStreamLeakage extends AbstractS3ATestBase {
    */
   public static final long GC_DELAY = Duration.ofSeconds(1).toMillis();
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();

@@ -25,8 +25,10 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
 import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +62,7 @@ public class ITestJceksIO extends AbstractS3ATestBase {
   private ByteArrayOutputStream stdout, stderr;
   private PrintStream printStdout, printStderr;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -74,6 +77,7 @@ public class ITestJceksIO extends AbstractS3ATestBase {
     System.setErr(printStderr);
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     System.setOut(oldStdout);
@@ -86,7 +90,7 @@ public class ITestJceksIO extends AbstractS3ATestBase {
    * Shut down all filesystems for this user to avoid
    * leaking those used by credential providers.
    */
-  @AfterClass
+  @AfterAll
   public static void closeAllFilesystems() {
     try {
       LOG.info("Closing down all filesystems for current user");

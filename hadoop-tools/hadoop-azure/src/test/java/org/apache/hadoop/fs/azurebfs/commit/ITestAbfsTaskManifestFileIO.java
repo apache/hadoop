@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestTaskManifestFileIO;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Test Reading/writing manifest file through ABFS.
@@ -35,6 +36,7 @@ public class ITestAbfsTaskManifestFileIO extends TestTaskManifestFileIO {
     binding = new ABFSContractTestBinding();
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     binding.setup();

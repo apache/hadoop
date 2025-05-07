@@ -24,7 +24,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,12 +80,14 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
    */
   private CommitterTestHelper testHelper;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
     testHelper = new CommitterTestHelper(getFileSystem());
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     try {

@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSUnsupportedFeatureException;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.nio.file.AccessDeniedException;
 
@@ -51,6 +52,7 @@ public class ITestS3AHugeFilesSSECDiskBlocks
    * S3 throw AmazonS3Exception with status 403 AccessDenied
    * then it is translated into AccessDeniedException by S3AUtils.translateException(...)
    */
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     try {

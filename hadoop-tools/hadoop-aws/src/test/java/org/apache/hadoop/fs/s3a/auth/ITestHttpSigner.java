@@ -21,7 +21,9 @@ package org.apache.hadoop.fs.s3a.auth;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,6 +64,7 @@ public class ITestHttpSigner extends AbstractS3ATestBase {
 
   private String endpoint;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -82,6 +85,7 @@ public class ITestHttpSigner extends AbstractS3ATestBase {
     return getS3AInternals().getBucketLocation(bucketName);
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     super.teardown();

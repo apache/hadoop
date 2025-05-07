@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,7 +73,7 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
     assertIsFile(destFilePath);
 
     boolean rename = fs.rename(srcDir, destDir);
-    assertFalse("s3a doesn't support rename to non-empty directory", rename);
+    assertFalse(rename, "s3a doesn't support rename to non-empty directory");
   }
 
   /**

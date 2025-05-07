@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestCleanupStage;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Cleanup logic on ABFS.
@@ -35,6 +36,7 @@ public class ITestAbfsCleanupStage extends TestCleanupStage {
     binding = new ABFSContractTestBinding();
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     binding.setup();

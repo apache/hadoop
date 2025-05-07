@@ -25,11 +25,13 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.StsClientBuilder;
 import software.amazon.awssdk.services.sts.model.Credentials;
 import org.hamcrest.Matchers;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,12 +83,14 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
 
   private AWSCredentialProviderList credentials;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
     assumeSessionTestsEnabled(getConfiguration());
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     S3AUtils.closeAutocloseables(LOG, credentials);
@@ -224,9 +228,9 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
     long permittedExpiryOffset = 60;
     OffsetDateTime expirationTimestamp = sc.getExpirationDateTime().get();
     OffsetDateTime localTimestamp = OffsetDateTime.now();
-    assertTrue("local time of " + localTimestamp
-            + " is after expiry time of " + expirationTimestamp,
-        localTimestamp.isBefore(expirationTimestamp));
+    assertTrue(localTimestamp.isBefore(expirationTimestamp),
+        "local time of " + localTimestamp
+         + " is after expiry time of " + expirationTimestamp);
 
     // what is the interval
     Duration actualDuration = Duration.between(localTimestamp,

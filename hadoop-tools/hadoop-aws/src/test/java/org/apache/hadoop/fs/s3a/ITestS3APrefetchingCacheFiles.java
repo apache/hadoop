@@ -22,8 +22,9 @@ import java.io.File;
 import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,7 +69,7 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
 
   private String bufferDir;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setup();
     // Sets BUFFER_DIR by calling S3ATestUtils#prepareTestConfiguration
@@ -96,6 +97,7 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
     return configuration;
   }
 
+  @AfterEach
   @Override
   public synchronized void teardown() throws Exception {
     super.teardown();
@@ -141,14 +143,14 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
         Path path = new Path(tmpFile.getAbsolutePath());
         FileStatus stat = localFs.getFileStatus(path);
         ContractTestUtils.assertIsFile(path, stat);
-        assertEquals("File length not matching with prefetchBlockSize", prefetchBlockSize,
-            stat.getLen());
-        assertEquals("User permissions should be RW", FsAction.READ_WRITE,
-            stat.getPermission().getUserAction());
-        assertEquals("Group permissions should be NONE", FsAction.NONE,
-            stat.getPermission().getGroupAction());
-        assertEquals("Other permissions should be NONE", FsAction.NONE,
-            stat.getPermission().getOtherAction());
+        assertEquals(prefetchBlockSize,
+            stat.getLen(), "File length not matching with prefetchBlockSize");
+        assertEquals(FsAction.READ_WRITE,
+            stat.getPermission().getUserAction(), "User permissions should be RW");
+        assertEquals(FsAction.NONE,
+            stat.getPermission().getGroupAction(), "Group permissions should be NONE");
+        assertEquals(FsAction.NONE,
+            stat.getPermission().getOtherAction(), "Other permissions should be NONE");
       }
     }
   }

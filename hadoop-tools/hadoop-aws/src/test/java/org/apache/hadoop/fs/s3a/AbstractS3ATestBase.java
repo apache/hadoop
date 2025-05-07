@@ -31,8 +31,9 @@ import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.io.IOUtils;
 
-import org.junit.AfterClass;
-import org.junit.Assume;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +44,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * An extension of the contract test base set up for S3A tests.
@@ -93,6 +95,7 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     return new S3AContract(conf, false);
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     Thread.currentThread().setName("setup");
@@ -110,6 +113,7 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     IOStatisticsContext.getCurrentIOStatisticsContext().reset();
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     Thread.currentThread().setName("teardown");
@@ -125,7 +129,7 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   /**
    * Dump the filesystem statistics after the class.
    */
-  @AfterClass
+  @AfterAll
   public static void dumpFileSystemIOStatistics() {
     LOG.info("Aggregate FileSystem Statistics {}",
         ioStatisticsToPrettyString(FILESYSTEM_IOSTATS));
@@ -231,8 +235,8 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
    *  Method to assume that S3 client side encryption is disabled on a test.
    */
   public void skipIfClientSideEncryption() {
-    Assume.assumeTrue("Skipping test if CSE is enabled",
-        !getFileSystem().isCSEEnabled());
+    assumeTrue(!getFileSystem().isCSEEnabled(),
+        "Skipping test if CSE is enabled");
   }
 
   /**
