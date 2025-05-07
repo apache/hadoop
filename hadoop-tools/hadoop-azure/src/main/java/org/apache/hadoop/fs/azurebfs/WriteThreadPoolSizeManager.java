@@ -261,9 +261,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   public void adjustThreadPoolSizeBasedOnCPU(double cpuUtilization)
       throws InterruptedException {
     lock.lock();
-    int currentPoolSize
-        = ((ThreadPoolExecutor) boundedThreadPool).getMaximumPoolSize();
     try {
+      int currentPoolSize = ((ThreadPoolExecutor) boundedThreadPool).getMaximumPoolSize();
       if (cpuUtilization > HIGH_CPU_THRESHOLD) {
         newMaxPoolSize = Math.max(initialPoolSize,
             currentPoolSize - currentPoolSize / 3);
