@@ -122,7 +122,7 @@ public class TestIOStatisticsSetters extends AbstractHadoopTestBase {
   @ParameterizedTest(name="{0}")
   @MethodSource("params")
   public void testMaximum(String source,
-    IOStatisticsSetters pIoStatisticsSetters, boolean pCreatesNewEntries) throws Throwable {
+      IOStatisticsSetters pIoStatisticsSetters, boolean pCreatesNewEntries) throws Throwable {
     initTestIOStatisticsSetters(source, pIoStatisticsSetters, pCreatesNewEntries);
     // write
     ioStatistics.setMaximum(MAXIMUM, 1);
@@ -141,7 +141,7 @@ public class TestIOStatisticsSetters extends AbstractHadoopTestBase {
   @ParameterizedTest(name="{0}")
   @MethodSource("params")
   public void testMinimum(String source,
-    IOStatisticsSetters pIoStatisticsSetters, boolean pCreatesNewEntries) throws Throwable {
+      IOStatisticsSetters pIoStatisticsSetters, boolean pCreatesNewEntries) throws Throwable {
     initTestIOStatisticsSetters(source, pIoStatisticsSetters, pCreatesNewEntries);
     // write
     ioStatistics.setMinimum(MINIMUM, 1);
@@ -160,7 +160,7 @@ public class TestIOStatisticsSetters extends AbstractHadoopTestBase {
   @ParameterizedTest(name="{0}")
   @MethodSource("params")
   public void testGauge(String source,
-    IOStatisticsSetters pIoStatisticsSetters, boolean pCreatesNewEntries) throws Throwable {
+      IOStatisticsSetters pIoStatisticsSetters, boolean pCreatesNewEntries) throws Throwable {
     initTestIOStatisticsSetters(source, pIoStatisticsSetters, pCreatesNewEntries);
     // write
     ioStatistics.setGauge(GAUGE, 1);
@@ -179,7 +179,7 @@ public class TestIOStatisticsSetters extends AbstractHadoopTestBase {
   @ParameterizedTest(name="{0}")
   @MethodSource("params")
   public void testMean(String source,
-    IOStatisticsSetters pIoStatisticsSetters, boolean pCreatesNewEntries) throws Throwable {
+      IOStatisticsSetters pIoStatisticsSetters, boolean pCreatesNewEntries) throws Throwable {
     initTestIOStatisticsSetters(source, pIoStatisticsSetters, pCreatesNewEntries);
     // write
     final MeanStatistic mean11 = new MeanStatistic(1, 1);
