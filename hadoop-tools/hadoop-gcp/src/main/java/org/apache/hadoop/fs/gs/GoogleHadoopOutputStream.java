@@ -18,11 +18,6 @@
 
 package org.apache.hadoop.fs.gs;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
-import static org.apache.hadoop.thirdparty.com.google.common.base.Strings.isNullOrEmpty;
-
-import org.apache.hadoop.thirdparty.com.google.common.base.Ascii;
-
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -34,15 +29,11 @@ import javax.annotation.Nonnull;
 
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.StreamCapabilities;
-import org.apache.hadoop.fs.Syncable;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class GoogleHadoopOutputStream extends OutputStream
-    implements IOStatisticsSource, StreamCapabilities, Syncable {
+class GoogleHadoopOutputStream extends OutputStream {
   public static final Logger LOG = LoggerFactory.getLogger(StorageResourceId.class);
 
   private final GoogleHadoopFileSystem ghfs;
@@ -90,7 +81,6 @@ class GoogleHadoopOutputStream extends OutputStream
     }
     OutputStream outputStream = Channels.newOutputStream(channel);
     int bufferSize = fileSystemConfiguration.getOutStreamBufferSize();
-    //        gcsfs.getOptions().getCloudStorageOptions().getWriteChannelOptions().getBufferSize();
     return bufferSize > 0 ? new BufferedOutputStream(outputStream, bufferSize) : outputStream;
   }
 
@@ -108,24 +98,6 @@ class GoogleHadoopOutputStream extends OutputStream
     outputStream.write(b, offset, len);
     statistics.incrementBytesWritten(len);
     statistics.incrementWriteOps(1);
-  }
-
-  /**
-   * There is no way to flush data to become available for readers without a full-fledged hsync(),
-   * If the output stream is only syncable, this method is a no-op. If the output stream is also
-   * flushable, this method will simply use the same implementation of hsync().
-   *
-   * <p>If it is rate limited, unlike hsync(), which will try to acquire the permits and block, it
-   * will do nothing.
-   */
-  @Override
-  public void hflush() throws IOException {
-    // TODO:
-  }
-
-  @Override
-  public void hsync() throws IOException {
-    // TODO:
   }
 
   @Override
@@ -147,19 +119,6 @@ class GoogleHadoopOutputStream extends OutputStream
   private void throwIfNotOpen() throws IOException {
     if (outputStream == null) {
       throw new ClosedChannelException();
-    }
-  }
-
-  @Override
-  public boolean hasCapability(String capability) {
-    checkArgument(!isNullOrEmpty(capability), "capability must not be null or empty string");
-    switch (Ascii.toLowerCase(capability)) {
-    case StreamCapabilities.HFLUSH:
-    case StreamCapabilities.HSYNC:
-    case StreamCapabilities.IOSTATISTICS:
-      return false;
-    default:
-      return false;
     }
   }
 }

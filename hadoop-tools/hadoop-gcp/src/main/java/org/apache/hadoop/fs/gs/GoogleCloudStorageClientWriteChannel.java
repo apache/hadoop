@@ -60,7 +60,6 @@ class GoogleCloudStorageClientWriteChannel implements WritableByteChannel {
     BlobInfo blobInfo = BlobInfo.newBuilder(
             BlobId.of(resourceId.getBucketName(), resourceId.getObjectName(),
                 resourceId.getGenerationId())).setContentType(createOptions.getContentType())
-        .setContentEncoding(createOptions.getContentEncoding())
         //                    .setMetadata(encodeMetadata(createOptions.getMetadata())) // TODO:
         .build();
     return blobInfo;

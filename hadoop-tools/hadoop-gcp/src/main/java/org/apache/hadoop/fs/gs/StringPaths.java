@@ -115,7 +115,7 @@ final class StringPaths {
   public static String fromComponents(String bucketName, String objectName) {
     if (bucketName == null && objectName != null) {
       throw new IllegalArgumentException(
-          String.format("Invalid bucketName/objectName pair: gs://%s/%s", bucketName, objectName));
+          String.format("Invalid bucketName/objectName pair: gs://%s/%s", "<null>", objectName));
     }
     // TODO(user): Unify this method with other methods that convert bucketName/objectName
     // to a URI; maybe use the single slash for compatibility.

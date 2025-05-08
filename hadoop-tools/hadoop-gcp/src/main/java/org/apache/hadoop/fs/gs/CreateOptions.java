@@ -32,25 +32,14 @@ import javax.annotation.Nullable;
 final class CreateOptions {
   private final ImmutableMap<String, byte[]> attributes;
   private final String contentType;
-  private final boolean ensureNoDirectoryConflict;
-  private final Duration interval;
   private final long overwriteGenerationId;
   private final WriteMode mode;
-
-  String getContentEncoding() {
-    return contentEncoding;
-  }
-
-  private final String contentEncoding;
 
   private CreateOptions(CreateOperationOptionsBuilder builder) {
     this.attributes = ImmutableMap.copyOf(builder.attributes);
     this.contentType = builder.contentType;
-    this.ensureNoDirectoryConflict = builder.ensureNoDirectoryConflict;
-    this.interval = builder.interval;
     this.overwriteGenerationId = builder.overwriteGenerationId;
     this.mode = builder.writeMode;
-    this.contentEncoding = builder.contentEncoding;
   }
 
   boolean isOverwriteExisting() {
@@ -112,8 +101,6 @@ final class CreateOptions {
     private Duration interval = Duration.ZERO;
     private long overwriteGenerationId = StorageResourceId.UNKNOWN_GENERATION_ID;
     private WriteMode writeMode = WriteMode.CREATE_NEW;
-
-    private String contentEncoding = null;
 
     CreateOperationOptionsBuilder setWriteMode(WriteMode mode) {
       this.writeMode = mode;
