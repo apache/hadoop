@@ -246,10 +246,11 @@ class FSImageLoader {
     for (int i = 0; i < s.getPoliciesCount(); ++i) {
       ecPolicies.add(PBHelperClient.convertErasureCodingPolicyInfo(s.getPolicies(i)));
     }
-
+    Configuration conf = new Configuration();
     ErasureCodingPolicyManager erasureCodingPolicyManager =
         ErasureCodingPolicyManager.getInstance();
-    erasureCodingPolicyManager.loadPolicies(ecPolicies, new Configuration());
+    erasureCodingPolicyManager.init(conf);
+    erasureCodingPolicyManager.loadPolicies(ecPolicies, conf);
     return erasureCodingPolicyManager;
   }
 
