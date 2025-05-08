@@ -25,6 +25,7 @@ import javax.ws.rs.ext.Provider;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.AnnotationIntrospector;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
@@ -57,6 +58,7 @@ public class YarnJacksonJaxbJsonProvider extends JacksonJaxbJsonProvider {
   public static void configObjectMapper(ObjectMapper mapper) {
     AnnotationIntrospector introspector =
         new JaxbAnnotationIntrospector(TypeFactory.defaultInstance());
+    mapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
     mapper.setAnnotationIntrospector(introspector);
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
   }
