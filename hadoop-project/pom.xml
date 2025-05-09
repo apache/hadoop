@@ -2747,6 +2747,16 @@
         </dependencies>
       </dependencyManagement>
     </profile>
+    <profile>
+      <id>jdk17+</id>
+      <activation>
+        <jdk>[17,)</jdk>
+      </activation>
+      <properties>
+        <javac.version>17</javac.version>
+        <maven.compiler.release>${javac.version}</maven.compiler.release>
+      </properties>
+    </profile>
   </profiles>
 
   <repositories>
