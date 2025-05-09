@@ -950,8 +950,7 @@ The switch to turn S3A auditing on or off.
 
 ### Configuring Custom Headers for AWS Service Clients
 
-The S3A client allows users to set custom headers for specific AWS services, such as S3 and STS.
-This feature allows you to set specific headers for S3 and STS service clients independently.
+You can set custom headers for S3 and STS requests. These headers are set on client level, and will be sent for all requests made to these services.
 
 **Configuration Properties:**
 - `fs.s3a.client.s3.custom.headers`: Custom headers for S3 service requests.
