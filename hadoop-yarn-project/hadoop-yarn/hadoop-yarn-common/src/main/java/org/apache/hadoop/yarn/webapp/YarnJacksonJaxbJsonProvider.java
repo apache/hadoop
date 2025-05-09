@@ -31,6 +31,7 @@ import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 
 
 /**
@@ -52,13 +53,15 @@ public class YarnJacksonJaxbJsonProvider extends JacksonJaxbJsonProvider {
   public ObjectMapper locateMapper(Class<?> type, MediaType mediaType) {
     ObjectMapper mapper = super.locateMapper(type, mediaType);
     configObjectMapper(mapper);
+    if (type == TimelineAbout.class) {
+      mapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
+    }
     return mapper;
   }
 
   public static void configObjectMapper(ObjectMapper mapper) {
     AnnotationIntrospector introspector =
         new JaxbAnnotationIntrospector(TypeFactory.defaultInstance());
-    mapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
     mapper.setAnnotationIntrospector(introspector);
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
   }
