@@ -1425,6 +1425,7 @@
     token binding it may be used
     to communicate wih the STS endpoint to request session/role
     credentials.
+    org.apache.hadoop.fs.s3a.auth.ProfileAWSCredentialsProvider is also supported, but is not enabled by default.
   </description>
 </property>
 
