@@ -212,11 +212,10 @@ class IncrementalBlockReportManager {
       namenode.blockReceivedAndDeleted(registration, bpid, reports);
       success = true;
     } finally {
-
+      lastIBR = startTime;
       if (success) {
         dnMetrics.addIncrementalBlockReport(monotonicNow() - startTime,
             nnRpcLatencySuffix);
-        lastIBR = startTime;
       } else {
         // If we didn't succeed in sending the report, put all of the
         // blocks back onto our queue, but only in the case where we
