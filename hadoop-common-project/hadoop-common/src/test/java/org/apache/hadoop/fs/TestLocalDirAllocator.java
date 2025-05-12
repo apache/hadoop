@@ -615,7 +615,6 @@ public class TestLocalDirAllocator {
     dirAllocator.getLocalPathForWrite("file2", -1, conf);
   }
 
-
   /**
    * Test for HADOOP-19554. LocalDirAllocator still doesn't always recover
    * from directory tree deletion.

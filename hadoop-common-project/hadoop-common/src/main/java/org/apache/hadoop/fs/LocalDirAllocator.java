@@ -31,6 +31,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.net.NetUtils.getHostname;
+
 /** An implementation of a round-robin scheme for disk allocation for creating
  * files. The way it works is that it is kept track what disk was last
  * allocated for a file write. For the current request, the next disk from
@@ -418,7 +420,7 @@ public class LocalDirAllocator {
       // history is built up and logged at error if the alloc
       StringBuilder history = new StringBuilder();
 
-      note(history, "Searchng for a directory for file at %s, size = %,d; checkWrite=%s",
+      note(history, "Searching for a directory for file \"%s\", size = %,d; checkWrite=%s",
           pathStr, size, checkWrite);
       Context ctx = confChanged(conf);
       int numDirs = ctx.localDirs.length;
@@ -451,9 +453,9 @@ public class LocalDirAllocator {
         pathNames.append(" ").append(name);
         final File dirPath = new File(name);
 
-        // existence probe
+        // existence probe with directory recreation
         if (!dirPath.exists()) {
-          LOG.debug("creating buffer dir {}", name);
+          LOG.debug("Creating buffer dir {}", name);
           if (dirPath.mkdirs()) {
             note(history, "Created buffer dir %s", name);
           } else {
@@ -466,23 +468,29 @@ public class LocalDirAllocator {
         if (dirPath.isDirectory()) {
           final long available = target.getAvailable();
           availableOnDisk[i] = available;
-          note(history, "%s available under path %s",  pathStr, available);
+          note(history, "%,d bytes available under path %s",  available, name);
           totalAvailable += availableOnDisk[i];
         } else {
-          note(history, "%s does not exist/is not a directory",  pathStr);
+          note(history, "%s does not exist/is not a directory", name);
         }
       }
 
-      note(history, "Directory count is %d; total available capacity is %,d{}",
+      note(history, "Directory count is %d; total available capacity is %,d",
           dirCount, totalAvailable);
 
       if (size == SIZE_UNKNOWN) {
         //do roulette selection: pick dir with probability
         // proportional to available size
-        note(history, "Size not specified, so picking at random.");
+        note(history, "Size not specified, so picking directories at random.");
 
         if (totalAvailable == 0) {
-          throw new DiskErrorException(E_NO_SPACE_AVAILABLE + pathNames + "; history=" + history);
+          // log error and history
+          String newErrorText = E_NO_SPACE_AVAILABLE + pathNames
+              + " on host" + getHostname();
+          LOG.error(newErrorText);
+          LOG.error(history.toString());
+          // then raise the exception
+          throw new DiskErrorException(newErrorText);
         }
 
         // Keep rolling the wheel till we get a valid path
@@ -507,7 +515,8 @@ public class LocalDirAllocator {
           }
         }
       } else {
-        note(history, "Size is %,d; searching", size);
+        note(history, "Requested file size is %,d; searching for a suitable directory",
+            size);
         // Start linear search with random increment if possible
         int randomInc = 1;
         if (numDirs > 2) {
@@ -548,9 +557,11 @@ public class LocalDirAllocator {
       }
       
       //no path found
-      String newErrorText = "Could not find any valid local directory for " +
-          pathStr + " with requested size " + size +
-          " as the max capacity in any directory"
+      String hostname = getHostname();
+      String newErrorText = "Could not find any valid local directory for "
+          + pathStr + " with requested size " + size
+          + " on host " + hostname
+          + " as the max capacity in any directory"
           + " (" + pathNames + " )"
           + " is " + maxCapacity;
       if (errorText != null) {
