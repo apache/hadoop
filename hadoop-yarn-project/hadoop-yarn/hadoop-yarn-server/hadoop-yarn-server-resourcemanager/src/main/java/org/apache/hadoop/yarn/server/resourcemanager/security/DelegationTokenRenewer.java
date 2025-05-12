@@ -529,7 +529,7 @@ public class DelegationTokenRenewer extends AbstractService {
           } catch (IOException ioe) {
             if (ioe instanceof SecretManager.InvalidToken
                 && dttr.maxDate < Time.now()
-                && evt instanceof DelegationTokenRenewerAppRecoverEvent
+                && (evt instanceof DelegationTokenRenewerAppRecoverEvent || evt instanceof DelegationTokenRenewerAppSubmitEvent)
                 && token.getKind().equals(HDFS_DELEGATION_KIND)) {
               LOG.info("Failed to renew hdfs token " + dttr
                   + " on recovery as it expired, requesting new hdfs token for "
