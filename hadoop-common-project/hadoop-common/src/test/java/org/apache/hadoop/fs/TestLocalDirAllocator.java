@@ -35,6 +35,8 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.LocalDirAllocator.E_NO_SPACE_AVAILABLE;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.*;
 
@@ -524,13 +526,8 @@ public class TestLocalDirAllocator {
   @Test(timeout = 30000)
   public void testGetLocalPathForWriteForInvalidPaths() throws Exception {
     conf.set(CONTEXT, " ");
-    try {
-      dirAllocator.getLocalPathForWrite("/test", conf);
-      fail("not throwing the exception");
-    } catch (IOException e) {
-      assertEquals("Incorrect exception message",
-          "No space available in any of the local directories.", e.getMessage());
-    }
+    intercept(IOException.class, E_NO_SPACE_AVAILABLE, () ->
+        dirAllocator.getLocalPathForWrite("/test", conf));
   }
 
   /**
@@ -567,5 +564,27 @@ public class TestLocalDirAllocator {
     // and expect to get a new file back
     dirAllocator.getLocalPathForWrite("file2", -1, conf);
   }
+
+  /**
+   * Test for HADOOP-19554. LocalDirAllocator still doesn't always recover
+   * from directory tree deletion.
+   */
+  @Test(timeout = 30000)
+  public void testDirectoryRecoveryKnownSize() throws Throwable {
+    String dir0 = buildBufferDir(ROOT, 0);
+    String subdir = dir0 + "/subdir1/subdir2";
+
+    conf.set(CONTEXT, subdir);
+    // get local path and an ancestor
+    final Path pathForWrite = dirAllocator.getLocalPathForWrite("file", 512, conf);
+    final Path ancestor = pathForWrite.getParent().getParent();
+
+    // delete that ancestor
+    localFs.delete(ancestor, true);
+    // and expect to get a new file back
+    dirAllocator.getLocalPathForWrite("file2", -1, conf);
+  }
+
+
 }
 
