@@ -1384,9 +1384,9 @@ public abstract class Server {
         // from a method. It does not expect to receive an error.
         // This is equivalent to what happens in synchronous calls when the
         // Responder is not able to send out the response.
-        LOG.error("Failed to send deferred response. ThreadName=" + Thread
-            .currentThread().getName() + ", CallId="
-            + callId + ", hostname=" + getHostAddress());
+        LOG.error("Failed to send deferred response. ThreadName={}, CallId={}, Hostname={}," +
+            " Exception is {}", Thread.currentThread().getName(), callId,
+            getHostInetAddress(), e.toString());
       }
       getProcessingDetails().set(Timing.RESPONSE,
           Time.monotonicNowNanos() - startNanos, TimeUnit.NANOSECONDS);
@@ -1403,9 +1403,8 @@ public abstract class Server {
           // returned from a method. It does not expect to receive an error.
           // This is equivalent to what happens in synchronous calls when the
           // response cannot be sent.
-          LOG.error(
-              "Failed to setup deferred successful response. ThreadName=" +
-                  Thread.currentThread().getName() + ", Call=" + this);
+          LOG.error("Failed to setup deferred successful response. ThreadName={}, Call={}," +
+              " Exception is {}", Thread.currentThread().getName(), this, e.toString());
           return;
         }
         sendDeferedResponse();
