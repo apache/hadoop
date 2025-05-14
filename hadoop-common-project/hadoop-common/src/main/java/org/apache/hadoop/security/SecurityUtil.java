@@ -514,6 +514,7 @@ public final class SecurityUtil {
    * @param action action.
    * @param <T> generic type T.
    * @return generic type T.
+   * @deprecated Use {@link #callAsLoginUserOrFatalNoException()} instead
    */
   @Deprecated
   public static <T> T doAsLoginUserOrFatal(PrivilegedAction<T> action) { 
@@ -596,6 +597,7 @@ public final class SecurityUtil {
    * @param <T> Generics Type T.
    * @return the result of the action
    * @throws IOException in the event of error
+   * @deprecated Use {@link #callAsLoginUser()} instead
    */
   @Deprecated
   public static <T> T doAsLoginUser(PrivilegedExceptionAction<T> action)
@@ -629,6 +631,7 @@ public final class SecurityUtil {
    * @param <T> generic type T.
    * @return the result of the action
    * @throws IOException in the event of error
+   * @deprecated Use {@link #callAsCurrentUser()} instead
    */
   @Deprecated
   public static <T> T doAsCurrentUser(PrivilegedExceptionAction<T> action)

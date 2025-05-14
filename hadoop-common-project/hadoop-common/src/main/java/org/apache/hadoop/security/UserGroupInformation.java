@@ -2006,6 +2006,7 @@ public class UserGroupInformation {
    * @param <T> the return type of the run method
    * @param action the method to execute
    * @return the value from the run method
+   * @deprecated Use {@link #callAs()} or {@link #callAsNoException()} instead.
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
@@ -2026,6 +2027,7 @@ public class UserGroupInformation {
    * @throws RuntimeException if the action throws a RuntimeException
    * @throws InterruptedException if the action throws an InterruptedException
    * @throws UndeclaredThrowableException if the action throws something else
+   * @deprecated Use {@link #callAs()} instead.
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
