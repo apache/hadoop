@@ -22,7 +22,6 @@ import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 
-import java.time.Duration;
 import java.util.Map;
 import javax.annotation.Nullable;
 
@@ -97,8 +96,6 @@ final class CreateOptions {
   static class CreateOperationOptionsBuilder {
     private Map<String, byte[]> attributes = ImmutableMap.of();
     private String contentType = "application/octet-stream";
-    private boolean ensureNoDirectoryConflict = true;
-    private Duration interval = Duration.ZERO;
     private long overwriteGenerationId = StorageResourceId.UNKNOWN_GENERATION_ID;
     private WriteMode writeMode = WriteMode.CREATE_NEW;
 
