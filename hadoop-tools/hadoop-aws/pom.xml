@@ -532,7 +532,7 @@
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>bundle</artifactId>
-      <scope>compile</scope>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>software.amazon.encryption.s3</groupId>
