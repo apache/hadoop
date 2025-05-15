@@ -68,9 +68,10 @@ public class JQueryUI extends HtmlBlock {
         .link(root_url("static/dt-1.11.5/css/jquery.dataTables.css"))
         .link(root_url("static/dt-1.11.5/css/jui-dt.css"))
         .link(root_url("static/dt-1.11.5/css/custom_datatable.css"))
+        .link(root_url("static/dt-1.11.5/css/grid-datatable-adapter.css"))
         .script(root_url("static/yarn.dt.plugins.js"))
         .script(root_url("static/customjs/Accordion.js"))
-        .script(root_url("static/customjs/DataTable.js"))
+        .script(root_url("static/customjs/gridjs.umd.js"))
         .script(root_url("static/customjs/UtilsUI.js"))
         .style("#jsnotice { padding: 0.2em; text-align: center; }",
             ".ui-progressbar { height: 1em; min-width: 5em }"); // required
