@@ -1,0 +1,133 @@
+#cs-tree {
+    padding: 5px;
+}
+
+/* Dynamic Height for the queue-wrapper div*/
+.wunderbaum .wb-list-container {
+    height: auto !important;
+    max-height: 800px !important;
+    overflow: visible !important;
+}
+
+/* Remove the Wunderbaum border */
+.wunderbaum {
+    border: 0 !important;
+    color: black !important;
+}
+
+/* Title (first) column styling */
+span.wb-node.wb-col {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+/* Give the 3rd column bold for queue table row*/
+#cs-tree > div.wb-list-container > div > div.queue-table-row > span:nth-child(4){
+    font-weight: bold;
+}
+
+.wb-row {
+    width: 2500px !important;
+    display: flex;
+    align-items: center;
+    border: none !important; /* Hide the row border from default Wunderbaum Style*/
+}
+
+.wb-row.queue-header:hover{
+    background-color: #ddd2d2 !important;
+}
+
+/* Alternate row colors */
+.wb-row.queue-table-row:nth-child(even) {
+    background-color: rgba(0, 0, 255, 0.05);
+}
+
+/* Remove cell borders */
+.wb-row .wb-col {
+    border: none !important;
+}
+
+/* Hide the column Header of the table*/
+#cs-tree > div.wb-header {
+    display: none;
+}
+
+/* Hide the file icons at table's row */
+span.wb-node.wb-col > i.wb-icon.bi.bi-file-earmark,
+span.wb-node.wb-col.wb-active > i.wb-icon.bi.bi-file-earmark {
+    display: none;
+}
+
+
+/* Hide the Header column and the file icon at the node's row*/
+.wb-header .wb-icon.bi-file-earmark {
+    display: none !important;
+}
+
+/* First row header styles */
+div.wb-row.first-row-header {
+    background-color: #e6e6e6 !important;
+    border: 1px solid !important;
+}
+
+/* Changing the plus icon to minus icon when open*/
+i.wb-icon.bi.bi-folder2::before {
+    content: '\F4FE' !important;
+    color: #4e6879 !important;
+    font-size: 14px !important;
+}
+
+i.wb-icon.bi.bi-folder2-open::before {
+    content: '\F3A3' !important;
+    color: #4e6879 !important;
+    font-size: 14px !important;
+}
+
+/* Setting the Queue's Row background according to the UsedQueue Percentage*/
+.queue-header {
+    position: relative;
+    background-color: #e6e6e6;
+    width: var(--full-width) !important;
+    border: 1px solid #d3d3d3 !important;
+    border-radius: 10px !important;
+    /* Default overfill percentage*/
+    --overfill-percentage: 0%;
+
+    /* Fallback for when there is no dashed border set*/
+    background-image: linear-gradient(
+            to right,
+            var(--fill-color) calc(var(--show-dash) * var(--fill-percentage)), /* show-dash is 0 or 1 to not show the background when there is dashed line*/
+            var(--fill-color) calc(var(--show-dash) * (var(--fill-percentage) + var(--overfill-percentage))),
+            transparent calc(var(--show-dash) * (var(--fill-percentage) + var(--overfill-percentage)))
+    );
+}
+
+.queue-header::before {
+    content: '';
+    position: absolute;
+    width: var(--dash-width);
+    height: 100%;
+    background-image: linear-gradient(
+            to right,
+            var(--fill-color) var(--fill-percentage),
+            transparent var(--fill-percentage)
+    );
+    border: var(--dash-border, none);
+    border-radius: 10px var(--dash-border-radius-top-right, 10px) var(--dash-border-radius-bottom-right, 10px) 10px;
+}
+
+
+.queue-header::after {
+   content: '';
+   position: absolute;
+   left: var(--dash-width);
+   width: calc(var(--overfill-percentage)/10); /* divide by 10 to shortening the width of overfill-percentage*/
+   height: 100%;
+   background: var(--fill-color);
+}
+.legend-leaf { margin: 0.5em 0 0.5em 0.5em; line-height: 18px;}
+.qlegend {padding: 0 1em; margin: 1em; border-radius: 3px;}
+
+
+
+

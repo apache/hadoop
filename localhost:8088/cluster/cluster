@@ -1,0 +1,400 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+  <meta http-equiv="X-UA-Compatible" content="IE=8">
+  <meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+  <title>
+    About the Cluster
+  </title>
+  <link rel="stylesheet" href="/static/yarn.css">
+  <style type="text/css">
+    #layout { height: 100%; }
+    #layout thead td { height: 3em; }
+    #layout #navcell { width: 11em; padding: 0 1em; }
+    #layout td.content { padding-top: 0 }
+    #layout tbody { vertical-align: top; }
+    #layout tfoot td { height: 4em; }
+  </style>
+  <link rel="stylesheet" href="/static/jquery/themes-1.9.1/base/jquery-ui.css">
+  <link rel="stylesheet" href="/static/dt-1.11.5/css/jquery.dataTables.css">
+  <link rel="stylesheet" href="/static/dt-1.11.5/css/jui-dt.css">
+  <link rel="stylesheet" href="/static/dt-1.11.5/css/custom_datatable.css">
+  <link rel="stylesheet" href="/static/dt-1.11.5/css/grid-datatable-adapter.css">
+  <script type="text/javascript" src="/static/yarn.dt.plugins.js">
+  </script>
+  <script type="text/javascript" src="/static/customjs/Accordion.js">
+  </script>
+  <script type="text/javascript" src="/static/customjs/gridjs.umd.js">
+  </script>
+  <script type="text/javascript" src="/static/customjs/UtilsUI.js">
+  </script>
+  <style type="text/css">
+    #jsnotice { padding: 0.2em; text-align: center; }
+    .ui-progressbar { height: 1em; min-width: 5em }
+  </style>
+  <script type="text/javascript">
+    accordionJS('nav', 'accordion-parent');
+  </script>
+  <div>
+    
+  </div>
+  <script type="text/javascript">
+    
+  </script>
+  <div id="jsnotice" class="ui-state-error">
+    This page will not function without javascript enabled. Please enable javascript on your browser.
+  </div>
+  <script type="text/javascript">
+    document.getElementById('jsnotice').style.display = 'none'
+  </script>
+  <table id="layout" class="ui-widget-content">
+    <thead>
+      <tr>
+        <td colspan="2">
+          <div id="header" class="ui-widget">
+            <div id="user">
+              Logged in as: root
+            </div>
+            <div id="logo">
+              <img src="/static/hadoop-st.png">
+            </div>
+            <h1>
+              About
+            </h1>
+          </div>
+        </td>
+      </tr>
+    </thead>
+    <tfoot>
+      <tr>
+        <td colspan="2">
+          <div id="footer" class="ui-widget">
+          </div>
+        </td>
+      </tr>
+    </tfoot>
+    <tbody>
+      <tr>
+        <td id="navcell">
+          <div id="nav">
+            <h3 class="accordion-parent">
+              Cluster
+            </h3>
+            <ul class="container">
+              <li>
+                <a class="content" href="/cluster/cluster">About</a>
+              <li>
+                <a class="content" href="/cluster/nodes">Nodes</a>
+              <li>
+                <a class="content" href="/cluster/nodelabels">Node Labels</a>
+              <li>
+                <a href="/cluster/apps">Applications</a>
+                <ul>
+                  <li>
+                  <li>
+                    <a href="/cluster/apps/NEW">NEW</a>
+                  <li>
+                    <a href="/cluster/apps/NEW_SAVING">NEW_SAVING</a>
+                  <li>
+                    <a href="/cluster/apps/SUBMITTED">SUBMITTED</a>
+                  <li>
+                    <a href="/cluster/apps/ACCEPTED">ACCEPTED</a>
+                  <li>
+                    <a href="/cluster/apps/RUNNING">RUNNING</a>
+                  <li>
+                    <a href="/cluster/apps/FINISHED">FINISHED</a>
+                  <li>
+                    <a href="/cluster/apps/FAILED">FAILED</a>
+                  <li>
+                    <a href="/cluster/apps/KILLED">KILLED</a>
+                </ul>
+              <li>
+                <a href="/cluster/scheduler">Scheduler</a>
+            </ul>
+            <h3 class="accordion-parent">
+              Tools
+            </h3>
+            <ul>
+              <li>
+                <a href="/conf">Configuration</a>
+              <li>
+                <a href="/logs">Local logs</a>
+              <li>
+                <a href="/stacks">Server stacks</a>
+              <li>
+                <a href="/jmx?qry=Hadoop:*">Server metrics</a>
+            </ul>
+          </div>
+        </td>
+        <td class="content">
+          <style type="text/css">
+            .metrics {margin-bottom:5px}
+          </style>
+          <div class="metrics">
+            <h3>
+              Cluster Metrics
+            </h3>
+            <table id="metricsoverview">
+              <thead class="ui-widget-header">
+                <tr>
+                  <th class="ui-state-default">
+                    Apps Submitted
+                  </th>
+                  <th class="ui-state-default">
+                    Apps Pending
+                  </th>
+                  <th class="ui-state-default">
+                    Apps Running
+                  </th>
+                  <th class="ui-state-default">
+                    Apps Completed
+                  </th>
+                  <th class="ui-state-default">
+                    Containers Running
+                  </th>
+                  <th class="ui-state-default">
+                    Used Resources
+                  </th>
+                  <th class="ui-state-default">
+                    Total Resources
+                  </th>
+                  <th class="ui-state-default">
+                    Reserved Resources
+                  </th>
+                  <th class="ui-state-default">
+                    Physical Mem Used %
+                  </th>
+                  <th class="ui-state-default">
+                    Physical VCores Used %
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="ui-widget-content">
+                <tr>
+                  <td>
+                    2
+                  </td>
+                  <td>
+                    0
+                  </td>
+                  <td>
+                    0
+                  </td>
+                  <td>
+                    2
+                  </td>
+                  <td>
+                    0
+                  </td>
+                  <td>
+                    &lt;memory:0 B, vCores:0&gt;
+                  </td>
+                  <td>
+                    &lt;memory:48 GB, vCores:24&gt;
+                  </td>
+                  <td>
+                    &lt;memory:0 B, vCores:0&gt;
+                  </td>
+                  <td>
+                    24
+                  </td>
+                  <td>
+                    0
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <h3>
+              Cluster Nodes Metrics
+            </h3>
+            <table id="nodemetricsoverview">
+              <thead class="ui-widget-header">
+                <tr>
+                  <th class="ui-state-default">
+                    Active Nodes
+                  </th>
+                  <th class="ui-state-default">
+                    Decommissioning Nodes
+                  </th>
+                  <th class="ui-state-default">
+                    Decommissioned Nodes
+                  </th>
+                  <th class="ui-state-default">
+                    Lost Nodes
+                  </th>
+                  <th class="ui-state-default">
+                    Unhealthy Nodes
+                  </th>
+                  <th class="ui-state-default">
+                    Rebooted Nodes
+                  </th>
+                  <th class="ui-state-default">
+                    Shutdown Nodes
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="ui-widget-content">
+                <tr>
+                  <td>
+                    <a href="/cluster/nodes">3</a>
+                  </td>
+                  <td>
+                    <a href="/cluster/nodes/decommissioning">0</a>
+                  </td>
+                  <td>
+                    <a href="/cluster/nodes/decommissioned">0</a>
+                  </td>
+                  <td>
+                    <a href="/cluster/nodes/lost">0</a>
+                  </td>
+                  <td>
+                    <a href="/cluster/nodes/unhealthy">0</a>
+                  </td>
+                  <td>
+                    <a href="/cluster/nodes/rebooted">0</a>
+                  </td>
+                  <td>
+                    <a href="/cluster/nodes/shutdown">0</a>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <h3>
+              Scheduler Metrics
+            </h3>
+            <table id="schedulermetricsoverview">
+              <thead class="ui-widget-header">
+                <tr>
+                  <th class="ui-state-default">
+                    Scheduler Type
+                  </th>
+                  <th class="ui-state-default">
+                    Scheduling Resource Type
+                  </th>
+                  <th class="ui-state-default">
+                    Minimum Allocation
+                  </th>
+                  <th class="ui-state-default">
+                    Maximum Allocation
+                  </th>
+                  <th class="ui-state-default">
+                    Maximum Cluster Application Priority
+                  </th>
+                  <th class="ui-state-default">
+                    Scheduler Busy %
+                  </th>
+                  <th class="ui-state-default">
+                    RM Dispatcher EventQueue Size
+                  </th>
+                  <th class="ui-state-default">
+                    Scheduler Dispatcher EventQueue Size
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="ui-widget-content">
+                <tr>
+                  <td>
+                    Capacity Scheduler
+                  </td>
+                  <td>
+                    [memory-mb (unit=Mi), vcores]
+                  </td>
+                  <td>
+                    &lt;memory:1024, vCores:1&gt;
+                  </td>
+                  <td>
+                    &lt;memory:8192, vCores:4&gt;
+                  </td>
+                  <td>
+                    0
+                  </td>
+                  <td>
+                    0
+                  </td>
+                  <td>
+                    0
+                  </td>
+                  <td>
+                    0
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="info-wrap ui-widget-content ui-corner-bottom">
+            <table class="info">
+              <tr>
+                <th class="ui-state-default" colspan="2">
+                  Cluster overview
+                </th>
+              </tr>
+              <tr class="odd">
+                <th>
+                  Cluster ID:
+                </th>
+                <td>
+                  1747306358985
+                </td>
+              </tr>
+              <tr class="even">
+                <th>
+                  ResourceManager state:
+                </th>
+                <td>
+                  STARTED
+                </td>
+              </tr>
+              <tr class="odd">
+                <th>
+                  ResourceManager HA state:
+                </th>
+                <td>
+                  active
+                </td>
+              </tr>
+              <tr class="even">
+                <th>
+                  ResourceManager HA zookeeper connection state:
+                </th>
+                <td>
+                  Could not find leader elector. Verify both HA and automatic failover are enabled.
+                </td>
+              </tr>
+              <tr class="odd">
+                <th>
+                  ResourceManager RMStateStore:
+                </th>
+                <td>
+                  org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore
+                </td>
+              </tr>
+              <tr class="even">
+                <th>
+                  ResourceManager started on:
+                </th>
+                <td>
+                  Thu May 15 10:52:38 +0000 2025
+                </td>
+              </tr>
+              <tr class="odd">
+                <th>
+                  ResourceManager version:
+                </th>
+                <td>
+                  3.5.0-SNAPSHOT from f25328373d6b64fee1bcb45231794899f59fa604 by heanchhinling source checksum 87b86bfe9444ae366624cdabfcb40be on 2025-05-15T09:47Z
+                </td>
+              </tr>
+              <tr class="even">
+                <th>
+                  Hadoop version:
+                </th>
+                <td>
+                  3.5.0-SNAPSHOT from f25328373d6b64fee1bcb45231794899f59fa604 by heanchhinling source checksum b56ae6158b3a86a58b46316e8824becc on 2025-05-15T09:45Z
+                </td>
+              </tr>
+            </table>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</html>
