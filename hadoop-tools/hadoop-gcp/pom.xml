@@ -462,6 +462,15 @@
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
+      <!--
+      We're using a specific Protobuf version to ensure compatibility with the
+      Google Cloud Storage (GCS) client. The GCS client often relies on
+      particular Long-Term Support (LTS) versions of Protobuf. When we upgrade
+      the GCS client, we'll likely need to update Protobuf too. To prevent
+      dependency conflicts, Protobuf will be shaded within the GCS connector's
+      fat JAR.
+      -->
+      <version>3.25.3</version>
     </dependency>
 
   </dependencies>

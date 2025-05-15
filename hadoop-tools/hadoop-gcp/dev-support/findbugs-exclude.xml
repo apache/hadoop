@@ -15,75 +15,11 @@
    limitations under the License.
 -->
 <FindBugsFilter>
-
-  <!-- same code as in FileSystem is triggering the same warning. -->
-  <Match>
-    <Class name="org.apache.hadoop.fs.s3native.S3xLoginHelper" />
-    <Method name="checkPath" />
-    <Bug pattern="ES_COMPARING_STRINGS_WITH_EQ" />
-  </Match>
   <!-- Redundant null check makes code clearer, future-proof here. -->
   <Match>
-    <Class name="org.apache.hadoop.fs.s3a.S3AFileSystem" />
-    <Method name="s3Exists" />
+    <Class name="org.apache.hadoop.fs.gs.GoogleCloudStorage" />
+    <Method name="createItemInfoForBlob" />
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE" />
   </Match>
-  <!-- we are using completable futures, so ignore the Future which submit() returns -->
-  <Match>
-    <Class name="org.apache.hadoop.fs.s3a.impl.InputStreamCallbacksImpl" />
-    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
-  </Match>
 
-  <!--
-   findbugs gets confused by lambda expressions in synchronized methods
-   and considers references to fields to be unsynchronized.
-   As you can't disable the methods individually, we have to disable
-   them for the entire class.
-    -->
-  <Match>
-    <Class name="org.apache.hadoop.fs.s3a.S3AInputStream"/>
-    <Bug pattern="IS2_INCONSISTENT_SYNC"/>
-  </Match>
-  <!--
-    findbugs reporting RV ignored. Not true.
-    "Return value of S3AReadOpContext.getReadInvoker() ignored,
-    but method has no side effect"
-  -->
-  <Match>
-    <Class name="org.apache.hadoop.fs.s3a.S3AInputStream"/>
-    <Method name="reopen"/>
-    <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.fs.s3a.S3AFileSystem"/>
-    <Method name="openFileWithOptions"/>
-    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.fs.s3a.S3AFileSystem"/>
-    <Field name="futurePool"/>
-    <Bug pattern="IS2_INCONSISTENT_SYNC"/>
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.fs.s3a.s3guard.S3GuardTool$BucketInfo"/>
-    <Method name="run"/>
-    <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
-  </Match>
-
-  <!--
-  Some of the S3A Instrumentation classes increment volatile references from
-  within synchronized contexts; they use volatile to keep the cost
-  of these updates and reading them down.
-   -->
-  <Match>
-    <Class name="org.apache.hadoop.fs.s3a.S3AInstrumentation$InputStreamStatisticsImpl"/>
-    <Bug pattern="VO_VOLATILE_INCREMENT"/>
-  </Match>
-
-  <!-- Ignore return value from this method call -->
-  <Match>
-    <Class name="org.apache.hadoop.fs.s3a.impl.StoreContext"/>
-    <Method name="submit"/>
-    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
-  </Match>
 </FindBugsFilter>
