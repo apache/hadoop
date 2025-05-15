@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.ipc;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.ipc.ProcessingDetails.Timing;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Unit tests for ProcessingDetails time unit conversion and output.

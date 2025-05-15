@@ -38,9 +38,12 @@ import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
+
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeStoreAwsHosted;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeSkipRootTests;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -93,10 +96,13 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   @Override
   public void setup() throws Exception {
     super.setup();
+    skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
+        "Analytics Accelerator currently does not support SSE-C");
     assumeEnabled();
     // although not a root dir test, this confuses paths enough it shouldn't be run in
     // parallel with other jobs
     maybeSkipRootTests(getConfiguration());
+    assumeStoreAwsHosted(getFileSystem());
   }
 
   @Override

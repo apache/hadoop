@@ -20,9 +20,13 @@ package org.apache.hadoop.yarn.server.nodemanager.util;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 /**
  * Test the various functions provided by the NodeManagerHardwareUtils class.
@@ -91,44 +95,44 @@ public class TestNodeManagerHardwareUtils {
     final int numProcessors = 8;
     final int numCores = 4;
     ResourceCalculatorPlugin plugin =
-        Mockito.mock(ResourceCalculatorPlugin.class);
-    Mockito.doReturn(numProcessors).when(plugin).getNumProcessors();
-    Mockito.doReturn(numCores).when(plugin).getNumCores();
+        mock(ResourceCalculatorPlugin.class);
+    doReturn(numProcessors).when(plugin).getNumProcessors();
+    doReturn(numCores).when(plugin).getNumCores();
 
     conf.setInt(YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT, 0);
     boolean catchFlag = false;
     try {
       NodeManagerHardwareUtils.getContainersCPUs(plugin, conf);
-      Assert.fail("getContainerCores should have thrown exception");
+      fail("getContainerCores should have thrown exception");
     } catch (IllegalArgumentException ie) {
       catchFlag = true;
     }
-    Assert.assertTrue(catchFlag);
+    assertTrue(catchFlag);
 
     conf.setInt(YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT,
         100);
     ret = NodeManagerHardwareUtils.getContainersCPUs(plugin, conf);
-    Assert.assertEquals(4, (int) ret);
+    assertEquals(4, (int) ret);
 
     conf
       .setInt(YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT, 50);
     ret = NodeManagerHardwareUtils.getContainersCPUs(plugin, conf);
-    Assert.assertEquals(2, (int) ret);
+    assertEquals(2, (int) ret);
 
     conf
       .setInt(YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT, 75);
     ret = NodeManagerHardwareUtils.getContainersCPUs(plugin, conf);
-    Assert.assertEquals(3, (int) ret);
+    assertEquals(3, (int) ret);
 
     conf
       .setInt(YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT, 85);
     ret = NodeManagerHardwareUtils.getContainersCPUs(plugin, conf);
-    Assert.assertEquals(3.4, ret, 0.1);
+    assertEquals(3.4, ret, 0.1);
 
     conf.setInt(YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT,
         110);
     ret = NodeManagerHardwareUtils.getContainersCPUs(plugin, conf);
-    Assert.assertEquals(4, (int) ret);
+    assertEquals(4, (int) ret);
   }
 
   @Test
@@ -140,28 +144,28 @@ public class TestNodeManagerHardwareUtils {
     conf.setFloat(YarnConfiguration.NM_PCORES_VCORES_MULTIPLIER, 1.25f);
 
     int ret = NodeManagerHardwareUtils.getVCores(plugin, conf);
-    Assert.assertEquals(YarnConfiguration.DEFAULT_NM_VCORES, ret);
+    assertEquals(YarnConfiguration.DEFAULT_NM_VCORES, ret);
 
     conf.setBoolean(YarnConfiguration.NM_ENABLE_HARDWARE_CAPABILITY_DETECTION,
         true);
     ret = NodeManagerHardwareUtils.getVCores(plugin, conf);
-    Assert.assertEquals(5, ret);
+    assertEquals(5, ret);
 
     conf.setBoolean(YarnConfiguration.NM_COUNT_LOGICAL_PROCESSORS_AS_CORES,
         true);
     ret = NodeManagerHardwareUtils.getVCores(plugin, conf);
-    Assert.assertEquals(10, ret);
+    assertEquals(10, ret);
 
     conf.setInt(YarnConfiguration.NM_VCORES, 10);
     ret = NodeManagerHardwareUtils.getVCores(plugin, conf);
-    Assert.assertEquals(10, ret);
+    assertEquals(10, ret);
 
     YarnConfiguration conf1 = new YarnConfiguration();
     conf1.setBoolean(YarnConfiguration.NM_ENABLE_HARDWARE_CAPABILITY_DETECTION,
         false);
     conf.setInt(YarnConfiguration.NM_VCORES, 10);
     ret = NodeManagerHardwareUtils.getVCores(plugin, conf);
-    Assert.assertEquals(10, ret);
+    assertEquals(10, ret);
   }
 
   @Test
@@ -173,26 +177,26 @@ public class TestNodeManagerHardwareUtils {
     conf.setBoolean(YarnConfiguration.NM_ENABLE_HARDWARE_CAPABILITY_DETECTION,
         true);
     long mem = NodeManagerHardwareUtils.getContainerMemoryMB(null, conf);
-    Assert.assertEquals(YarnConfiguration.DEFAULT_NM_PMEM_MB, mem);
+    assertEquals(YarnConfiguration.DEFAULT_NM_PMEM_MB, mem);
 
     mem = NodeManagerHardwareUtils.getContainerMemoryMB(plugin, conf);
     int hadoopHeapSizeMB =
         (int) (Runtime.getRuntime().maxMemory() / (1024 * 1024));
     int calculatedMemMB =
         (int) (0.8 * (physicalMemMB - (2 * hadoopHeapSizeMB)));
-    Assert.assertEquals(calculatedMemMB, mem);
+    assertEquals(calculatedMemMB, mem);
 
     conf.setInt(YarnConfiguration.NM_PMEM_MB, 1024);
     mem = NodeManagerHardwareUtils.getContainerMemoryMB(conf);
-    Assert.assertEquals(1024, mem);
+    assertEquals(1024, mem);
 
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.NM_ENABLE_HARDWARE_CAPABILITY_DETECTION,
         false);
     mem = NodeManagerHardwareUtils.getContainerMemoryMB(conf);
-    Assert.assertEquals(YarnConfiguration.DEFAULT_NM_PMEM_MB, mem);
+    assertEquals(YarnConfiguration.DEFAULT_NM_PMEM_MB, mem);
     conf.setInt(YarnConfiguration.NM_PMEM_MB, 10 * 1024);
     mem = NodeManagerHardwareUtils.getContainerMemoryMB(conf);
-    Assert.assertEquals(10 * 1024, mem);
+    assertEquals(10 * 1024, mem);
   }
 }

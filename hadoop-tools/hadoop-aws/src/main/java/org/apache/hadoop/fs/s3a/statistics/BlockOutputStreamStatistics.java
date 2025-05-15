@@ -42,7 +42,8 @@ public interface BlockOutputStreamStatistics extends Closeable,
   void blockUploadStarted(Duration timeInQueue, long blockSize);
 
   /**
-   * A block upload has completed. Duration excludes time in the queue.
+   * A block upload has completed, successfully or not.
+   * Duration excludes time in the queue.
    * @param timeSinceUploadStarted time in since the transfer began.
    * @param blockSize block size
    */
@@ -145,4 +146,14 @@ public interface BlockOutputStreamStatistics extends Closeable,
    * Syncable.hsync() has been invoked.
    */
   void hsyncInvoked();
+
+  /**
+   * Record the outcome of a conditional create operation.
+   * <p>
+   * This method increments the appropriate counter based on whether
+   * the conditional create operation was successful or failed.
+   * @param success {@code true} if the conditional create operation succeeded,
+   *                {@code false} if it failed.
+   */
+  void conditionalCreateOutcome(boolean success);
 }

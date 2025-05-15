@@ -19,9 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
-import com.google.inject.Module;
 
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -46,8 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSec
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -55,6 +52,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -67,17 +65,12 @@ public class TestRMWebAppFairScheduler {
     final RMContext rmContext = mockRMContext(appStates);
     Injector injector = WebAppTests.createMockInjector(RMContext.class,
         rmContext,
-        new Module() {
-          @Override
-          public void configure(Binder binder) {
-            try {
-              ResourceManager mockRmWithFairScheduler =
-                  mockRm(rmContext);
-              binder.bind(ResourceManager.class).toInstance
-                  (mockRmWithFairScheduler);
-            } catch (IOException e) {
-              throw new IllegalStateException(e);
-            }
+        binder -> {
+          try {
+            ResourceManager mockRmWithFairScheduler = mockRm(rmContext);
+            binder.bind(ResourceManager.class).toInstance(mockRmWithFairScheduler);
+          } catch (IOException e) {
+            throw new IllegalStateException(e);
           }
         });
     FairSchedulerPage fsViewInstance = injector.getInstance(FairSchedulerPage
@@ -89,7 +82,7 @@ public class TestRMWebAppFairScheduler {
 
   /**
    *  Testing inconsistent state between AbstractYarnScheduler#applications and
-   *  RMContext#applications
+   *  RMContext#applications.
    */
   @Test
   public void testFairSchedulerWebAppPageInInconsistentState() {
@@ -105,17 +98,12 @@ public class TestRMWebAppFairScheduler {
     final RMContext rmContext = mockRMContext(appStates);
     Injector injector = WebAppTests.createMockInjector(RMContext.class,
         rmContext,
-        new Module() {
-          @Override
-          public void configure(Binder binder) {
-            try {
-              ResourceManager mockRmWithFairScheduler =
-                  mockRmWithApps(rmContext);
-              binder.bind(ResourceManager.class).toInstance
-                  (mockRmWithFairScheduler);
-            } catch (IOException e) {
-              throw new IllegalStateException(e);
-            }
+        binder -> {
+          try {
+            ResourceManager mockRmWithFairScheduler = mockRmWithApps(rmContext);
+            binder.bind(ResourceManager.class).toInstance(mockRmWithFairScheduler);
+          } catch (IOException e) {
+            throw new IllegalStateException(e);
           }
         });
     FairSchedulerPage fsViewInstance =
@@ -123,7 +111,7 @@ public class TestRMWebAppFairScheduler {
     try {
       fsViewInstance.render();
     } catch (Exception e) {
-      Assert.fail("Failed to render FairSchedulerPage: " +
+      fail("Failed to render FairSchedulerPage: " +
           StringUtils.stringifyException(e));
     }
     WebAppTests.flushOutput(injector);

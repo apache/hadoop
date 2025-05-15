@@ -18,15 +18,15 @@
 package org.apache.hadoop.hdfs.server.federation.store;
 
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.clearRecords;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Set;
 
 import org.apache.hadoop.hdfs.server.federation.store.records.DisabledNameservice;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the basic {@link StateStoreService}
@@ -36,7 +36,7 @@ public class TestStateStoreDisabledNameservice extends TestStateStoreBase {
 
   private static DisabledNameserviceStore disabledStore;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException, InterruptedException {
     disabledStore = getStateStore()
         .getRegisteredRecordStore(DisabledNameserviceStore.class);

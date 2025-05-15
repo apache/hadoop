@@ -23,19 +23,22 @@ import java.util.Arrays;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.hadoop.conf.Configuration;
 
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestOsSecureRandom {
 
   private static OsSecureRandom getOsSecureRandom() throws IOException {
-    Assume.assumeTrue(SystemUtils.IS_OS_LINUX);
+    assumeTrue(SystemUtils.IS_OS_LINUX);
     OsSecureRandom random = new OsSecureRandom();
     random.setConf(new Configuration());
     return random;
   }
 
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testRandomBytes() throws Exception {
     OsSecureRandom random = getOsSecureRandom();
     // len = 16
@@ -68,7 +71,8 @@ public class TestOsSecureRandom {
    * Test will timeout if secure random implementation always returns a 
    * constant value.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testRandomInt() throws Exception {
     OsSecureRandom random = getOsSecureRandom();
     
@@ -84,7 +88,8 @@ public class TestOsSecureRandom {
    * Test will timeout if secure random implementation always returns a 
    * constant value.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testRandomLong() throws Exception {
     OsSecureRandom random = getOsSecureRandom();
     
@@ -100,7 +105,8 @@ public class TestOsSecureRandom {
    * Test will timeout if secure random implementation always returns a 
    * constant value.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testRandomFloat() throws Exception {
     OsSecureRandom random = getOsSecureRandom();
     
@@ -116,7 +122,8 @@ public class TestOsSecureRandom {
    * Test will timeout if secure random implementation always returns a 
    * constant value.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testRandomDouble() throws Exception {
     OsSecureRandom random = getOsSecureRandom();
     
@@ -128,7 +135,8 @@ public class TestOsSecureRandom {
     random.close();
   }
 
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testRefillReservoir() throws Exception {
     OsSecureRandom random = getOsSecureRandom();
 

@@ -733,6 +733,23 @@
 </property>
 
 <property>
+  <name>hadoop.security.sasl.mechanism</name>
+  <value>DIGEST-MD5</value>
+  <description>
+    The SASL mechanism used in Hadoop.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.sasl.CustomizedCallbackHandler.class</name>
+  <value></value>
+  <description>
+    Some security provider may define a new javax.security.auth.callback.Callback.
+    This property allows users to configure a customized callback handler.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.sensitive-config-keys</name>
   <value>
       secret$
@@ -742,6 +759,7 @@
       fs.s3a.*.server-side-encryption.key
       fs.s3a.encryption.algorithm
       fs.s3a.encryption.key
+      fs.s3a.encryption.context
       fs.s3a.secret.key
       fs.s3a.*.secret.key
       fs.s3a.session.key
@@ -1042,6 +1060,28 @@
     Used to decide whether to enable native codec. If set to false, native codec
     would not be created and ISA-L support would be disabled. Recommend to set to
     false when your CPU does not support ISA-L.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.secret-manager.key-generator.algorithm</name>
+  <value>HmacSHA1</value>
+  <description>
+    The configuration key specifying the KeyGenerator algorithm used in SecretManager
+    for generating secret keys. The algorithm must be a KeyGenerator algorithm supported by
+    the Java Cryptography Architecture (JCA). Common examples include "HmacSHA1",
+    "HmacSHA256", and "HmacSHA512".
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.secret-manager.key-length</name>
+  <value>64</value>
+  <description>
+    The configuration key specifying the key length of the generated secret keys
+    in SecretManager. The key length must be appropriate for the algorithm.
+    For example, longer keys are generally more secure but may not be supported
+    by all algorithms.
   </description>
 </property>
 
@@ -1424,6 +1464,7 @@
     token binding it may be used
     to communicate wih the STS endpoint to request session/role
     credentials.
+    org.apache.hadoop.fs.s3a.auth.ProfileAWSCredentialsProvider is also supported, but is not enabled by default.
   </description>
 </property>
 
@@ -1757,6 +1798,15 @@
     S3 KMS key, otherwise you should set this property to the specific KMS key
     id. In case of 'CSE-KMS' this value needs to be the AWS-KMS Key ID
     generated from AWS console.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.encryption.context</name>
+  <description>Specific encryption context to use if fs.s3a.encryption.algorithm
+    has been set to 'SSE-KMS' or 'DSSE-KMS'. The value of this property is a set
+    of non-secret comma-separated key-value pairs of additional contextual
+    information about the data that are separated by equal operator (=).
   </description>
 </property>
 
@@ -2360,6 +2410,7 @@ The switch to turn S3A auditing on or off.
   <value>100</value>
   <description>
     Define the maximum number of outstanding async calls.
+    If negative, there is no limit on the number of outstanding async calls.
   </description>
 </property>
 
@@ -4419,4 +4470,25 @@ The switch to turn S3A auditing on or off.
     <description>The AbstractFileSystem for Ozone FileSystem o3fs uri</description>
   </property>
 
+  <property>
+    <name>fs.hdfs.impl.disable.cache</name>
+    <value>false</value>
+    <description>Whether disable cached hdfs filesystem instances or not.
+      If false, return a cached hdfs fileSystem instance to the caller if exists.
+      If true, a new hdfs fileSystem instance will be created,
+      initialized with the configuration and URI, cached and returned to the caller,
+      it is slower than using cached hdfs filesystme instances.
+      </description>
+  </property>
+
+  <property>
+    <name>hadoop.security.hostname.cache.expire-interval.seconds</name>
+    <value>0</value>
+    <description>The expiration time in seconds for cached hostname resolutions.
+      This cache is used to avoid repeated resolution for hostname.
+      A shorter interval may provide more up-to-date resolutions,
+      while a longer interval reduces lookup overhead.
+      If the value is less than or equal to 0, the cache is disabled entirely.
+    </description>
+  </property>
 </configuration>

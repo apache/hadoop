@@ -168,12 +168,14 @@ public interface RequestFactory {
    * @param destKey destination object key
    * @param uploadId ID of initiated upload
    * @param partETags ordered list of etags
+   * @param putOptions options for the request
    * @return the request builder.
    */
   CompleteMultipartUploadRequest.Builder newCompleteMultipartUploadRequestBuilder(
       String destKey,
       String uploadId,
-      List<CompletedPart> partETags);
+      List<CompletedPart> partETags,
+      PutObjectOptions putOptions);
 
   /**
    * Create a HEAD object request builder.
@@ -203,6 +205,7 @@ public interface RequestFactory {
    * @param destKey      destination key of ongoing operation
    * @param uploadId     ID of ongoing upload
    * @param partNumber   current part number of the upload
+   * @param isLastPart   isLastPart is this the last part?
    * @param size         amount of data
    * @return the request builder.
    * @throws PathIOException if the part number is out of range.
@@ -211,6 +214,7 @@ public interface RequestFactory {
       String destKey,
       String uploadId,
       int partNumber,
+      boolean isLastPart,
       long size) throws PathIOException;
 
   /**

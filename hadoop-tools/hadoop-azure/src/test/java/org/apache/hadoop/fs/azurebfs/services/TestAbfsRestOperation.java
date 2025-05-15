@@ -24,8 +24,12 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.junit.Test;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_FAILED;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.DeletePath;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_URI;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import java.util.ArrayList;
@@ -39,6 +43,12 @@ public class TestAbfsRestOperation extends
   public TestAbfsRestOperation() throws Exception {
   }
 
+  private void checkPrerequisites() {
+    assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_METRIC_ACCOUNT_NAME);
+    assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_METRIC_ACCOUNT_KEY);
+    assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_METRIC_URI);
+  }
+
   /**
    * Test for backoff retry metrics.
    *
@@ -49,6 +59,7 @@ public class TestAbfsRestOperation extends
    */
   @Test
   public void testBackoffRetryMetrics() throws Exception {
+    checkPrerequisites();
     // Create an AzureBlobFileSystem instance.
     final Configuration configuration = getRawConfiguration();
     configuration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.INTERNAL_BACKOFF_METRIC_FORMAT));
@@ -58,8 +69,9 @@ public class TestAbfsRestOperation extends
     // Get an instance of AbfsClient and AbfsRestOperation.
     AbfsClient testClient = super.getAbfsClient(super.getAbfsStore(fs));
     AbfsRestOperation op = ITestAbfsClient.getRestOp(
-            DeletePath, testClient, HTTP_METHOD_DELETE,
-            ITestAbfsClient.getTestUrl(testClient, "/NonExistingPath"), ITestAbfsClient.getTestRequestHeaders(testClient));
+        DeletePath, testClient, HTTP_METHOD_DELETE,
+        ITestAbfsClient.getTestUrl(testClient, "/NonExistingPath"),
+        ITestAbfsClient.getTestRequestHeaders(testClient), getConfiguration());
 
     // Mock retry counts and status code.
     ArrayList<String> retryCounts = new ArrayList<>(Arrays.asList("35", "28", "31", "45", "10", "2", "9"));
@@ -72,7 +84,7 @@ public class TestAbfsRestOperation extends
 
     // For retry count greater than the max configured value, the request should fail.
     Assert.assertEquals("Number of failed requests does not match expected value.",
-            "3", String.valueOf(testClient.getAbfsCounters().getAbfsBackoffMetrics().getNumberOfRequestsFailed()));
+            "3", String.valueOf(testClient.getAbfsCounters().getAbfsBackoffMetrics().getMetricValue(NUMBER_OF_REQUESTS_FAILED)));
 
     // Close the AzureBlobFileSystem.
     fs.close();

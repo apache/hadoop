@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.event;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -29,8 +27,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.slf4j.Logger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
@@ -45,11 +41,9 @@ import static org.apache.hadoop.metrics2.lib.Interns.info;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class TestAsyncDispatcher {
@@ -177,19 +171,10 @@ public class TestAsyncDispatcher {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.
         YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD, 5000);
-    Logger log = mock(Logger.class);
-    AsyncDispatcher dispatcher = new AsyncDispatcher();
+    AsyncDispatcherForTest dispatcher = new AsyncDispatcherForTest();
     dispatcher.init(conf);
 
-    Field logger = AsyncDispatcher.class.getDeclaredField("LOG");
-    logger.setAccessible(true);
-    Field modifiers = Field.class.getDeclaredField("modifiers");
-    modifiers.setAccessible(true);
-    modifiers.setInt(logger, logger.getModifiers() & ~Modifier.FINAL);
-    Object oldLog = logger.get(null);
-
     try {
-      logger.set(null, log);
       dispatcher.register(TestEnum.class, new TestHandler());
       dispatcher.start();
 
@@ -200,11 +185,9 @@ public class TestAsyncDispatcher {
       }
       Thread.sleep(2000);
       //Make sure more than one event to take
-      verify(log, atLeastOnce()).
-          info("Latest dispatch event type: TestEventType");
+      assertEquals(dispatcher.getLastTriggered(), "Latest dispatch event type: TestEventType");
     } finally {
       //... restore logger object
-      logger.set(null, oldLog);
       dispatcher.stop();
     }
   }
@@ -223,19 +206,10 @@ public class TestAsyncDispatcher {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.
         YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD, 10);
-    Logger log = mock(Logger.class);
     AsyncDispatcher dispatcher = new AsyncDispatcher();
     dispatcher.init(conf);
 
-    Field logger = AsyncDispatcher.class.getDeclaredField("LOG");
-    logger.setAccessible(true);
-    Field modifiers = Field.class.getDeclaredField("modifiers");
-    modifiers.setAccessible(true);
-    modifiers.setInt(logger, logger.getModifiers() & ~Modifier.FINAL);
-    Object oldLog = logger.get(null);
-
     try {
-      logger.set(null, log);
       dispatcher.register(TestEnum.class, new TestHandler(0));
       dispatcher.start();
 
@@ -246,8 +220,6 @@ public class TestAsyncDispatcher {
       }
       Thread.sleep(3000);
     } finally {
-      //... restore logger object
-      logger.set(null, oldLog);
       dispatcher.stop();
     }
   }
@@ -418,4 +390,18 @@ public class TestAsyncDispatcher {
     }
 
   }
+
+  private class AsyncDispatcherForTest extends AsyncDispatcher {
+    private String lastTriggered = "";
+
+    @Override
+    protected void logTriggered(String message) {
+      LOG.info(message);
+      lastTriggered = message;
+    }
+
+    public String getLastTriggered() {
+      return lastTriggered;
+    }
+  };
 }

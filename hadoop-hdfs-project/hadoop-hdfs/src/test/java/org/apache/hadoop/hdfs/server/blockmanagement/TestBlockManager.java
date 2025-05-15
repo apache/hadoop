@@ -75,6 +75,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.erasurecode.ECSchema;
@@ -166,6 +167,10 @@ public class TestBlockManager {
     fsn = Mockito.mock(FSNamesystem.class);
     Mockito.doReturn(true).when(fsn).hasWriteLock();
     Mockito.doReturn(true).when(fsn).hasReadLock();
+    Mockito.doReturn(true).when(fsn).hasWriteLock(RwLockMode.GLOBAL);
+    Mockito.doReturn(true).when(fsn).hasReadLock(RwLockMode.GLOBAL);
+    Mockito.doReturn(true).when(fsn).hasWriteLock(RwLockMode.BM);
+    Mockito.doReturn(true).when(fsn).hasReadLock(RwLockMode.BM);
     Mockito.doReturn(true).when(fsn).isRunning();
     //Make shouldPopulaeReplQueues return true
     HAContext haContext = Mockito.mock(HAContext.class);
@@ -1619,7 +1624,7 @@ public class TestBlockManager {
       }
       failedStorageDataNode.updateHeartbeat(reports.toArray(StorageReport
           .EMPTY_ARRAY), 0L, 0L, 0, 0, null);
-      ns.writeLock();
+      ns.writeLock(RwLockMode.BM);
       DatanodeStorageInfo corruptStorageInfo= null;
       for(int i=0; i<corruptStorageDataNode.getStorageInfos().length; i++) {
         corruptStorageInfo = corruptStorageDataNode.getStorageInfos()[i];
@@ -1633,16 +1638,16 @@ public class TestBlockManager {
       blockManager.findAndMarkBlockAsCorrupt(blk, corruptStorageDataNode,
           corruptStorageInfo.getStorageID(),
           CorruptReplicasMap.Reason.ANY.toString());
-      ns.writeUnlock();
+      ns.writeUnlock(RwLockMode.BM, "testBlockManagerMachinesArray");
       BlockInfo[] blockInfos = new BlockInfo[] {blockInfo};
-      ns.readLock();
+      ns.readLock(RwLockMode.BM);
       LocatedBlocks locatedBlocks =
           blockManager.createLocatedBlocks(blockInfos, 3L, false, 0L, 3L,
               false, false, null, null);
       assertTrue("Located Blocks should exclude corrupt" +
               "replicas and failed storages",
           locatedBlocks.getLocatedBlocks().size() == 1);
-      ns.readUnlock();
+      ns.readUnlock(RwLockMode.BM, "open");
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -1833,7 +1838,7 @@ public class TestBlockManager {
     DataInputStream in = new DataInputStream(fstream);
 
     BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     String line;
     try {
       while ((line = reader.readLine()) != null) {
@@ -1861,7 +1866,7 @@ public class TestBlockManager {
     FileInputStream fstream = new FileInputStream(file);
     DataInputStream in = new DataInputStream(fstream);
     BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     String line;
     try {
       while ((line = reader.readLine()) != null) {
@@ -1933,7 +1938,7 @@ public class TestBlockManager {
     FileInputStream fstream = new FileInputStream(file);
     DataInputStream in = new DataInputStream(fstream);
     BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     String line;
     try {
       while ((line = reader.readLine()) != null) {
@@ -1989,7 +1994,7 @@ public class TestBlockManager {
     FileInputStream fstream = new FileInputStream(file);
     DataInputStream in = new DataInputStream(fstream);
     BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     String line;
     try {
       while ((line = reader.readLine()) != null) {

@@ -73,7 +73,7 @@ public class JournalNodeHttpServer {
       }
     }
 
-    HttpServer2.Builder builder = DFSUtil.httpServerTemplateForNNAndJN(conf,
+    HttpServer2.Builder builder = DFSUtil.getHttpServerTemplate(conf,
         httpAddr, httpsAddr, "journal",
         DFSConfigKeys.DFS_JOURNALNODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
         DFSConfigKeys.DFS_JOURNALNODE_KEYTAB_FILE_KEY);

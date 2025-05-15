@@ -21,8 +21,8 @@ import static org.apache.hadoop.fs.permission.FsAction.ALL;
 import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verifyFileExists;
 import static org.apache.hadoop.test.GenericTestUtils.getMethodName;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.util.List;
@@ -42,10 +42,10 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test permission check of router federation rename.
@@ -66,17 +66,17 @@ public class TestRouterFederationRenamePermission
   private FileSystem routerFS;
   private MiniRouterDFSCluster cluster;
 
-  @BeforeClass
+  @BeforeAll
   public static void before() throws Exception {
     globalSetUp();
   }
 
-  @AfterClass
+  @AfterAll
   public static void after() {
     tearDown();
   }
 
-  @Before
+  @BeforeEach
   public void testSetup() throws Exception {
     setup();
     cluster = getCluster();

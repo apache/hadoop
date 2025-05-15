@@ -26,9 +26,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Simple test class for the {@link UniformRandomRouterPolicy}. Tests that one
@@ -36,7 +37,7 @@ import org.junit.Test;
  */
 public class TestUniformRandomRouterPolicy extends BaseRouterPoliciesTest {
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     setPolicy(new UniformRandomRouterPolicy());
     // needed for base test to work
@@ -57,7 +58,7 @@ public class TestUniformRandomRouterPolicy extends BaseRouterPoliciesTest {
   public void testOneSubclusterIsChosen() throws YarnException {
     SubClusterId chosen = ((FederationRouterPolicy) getPolicy())
         .getHomeSubcluster(getApplicationSubmissionContext(), null);
-    Assert.assertTrue(getActiveSubclusters().keySet().contains(chosen));
+    assertTrue(getActiveSubclusters().keySet().contains(chosen));
   }
 
 }

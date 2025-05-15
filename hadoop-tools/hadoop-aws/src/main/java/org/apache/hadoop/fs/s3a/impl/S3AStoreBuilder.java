@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.S3AStore;
@@ -49,6 +50,13 @@ public class S3AStoreBuilder {
   private RateLimiting writeRateLimiter;
 
   private AuditSpanSource<AuditSpanS3A> auditSpanSource;
+
+  /**
+   * The original file system statistics: fairly minimal but broadly
+   * collected so it is important to pick up.
+   * This may be null.
+   */
+  private FileSystem.Statistics fsStatistics;
 
   public S3AStoreBuilder withStoreContextFactory(
           final StoreContextFactory storeContextFactoryValue) {
@@ -104,6 +112,11 @@ public class S3AStoreBuilder {
     return this;
   }
 
+  public S3AStoreBuilder withFsStatistics(final FileSystem.Statistics value) {
+    this.fsStatistics = value;
+    return this;
+  }
+
   public S3AStore build() {
     return new S3AStoreImpl(storeContextFactory,
         clientManager,
@@ -113,6 +126,7 @@ public class S3AStoreBuilder {
         storageStatistics,
         readRateLimiter,
         writeRateLimiter,
-        auditSpanSource);
+        auditSpanSource,
+        fsStatistics);
   }
 }

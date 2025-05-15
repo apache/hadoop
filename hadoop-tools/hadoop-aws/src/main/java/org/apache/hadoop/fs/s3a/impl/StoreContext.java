@@ -32,6 +32,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.impl.FlagSet;
+import org.apache.hadoop.fs.s3a.api.PerformanceFlagEnum;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.Invoker;
@@ -118,6 +120,11 @@ public class StoreContext implements ActiveThreadSpanSource<AuditSpan> {
   private final boolean isCSEEnabled;
 
   /**
+   * Performance flags.
+   */
+  private final FlagSet<PerformanceFlagEnum> performanceFlags;
+
+  /**
    * Instantiate.
    */
   StoreContext(
@@ -137,7 +144,8 @@ public class StoreContext implements ActiveThreadSpanSource<AuditSpan> {
       final boolean useListV1,
       final ContextAccessors contextAccessors,
       final AuditSpanSource<AuditSpanS3A> auditor,
-      final boolean isCSEEnabled) {
+      final boolean isCSEEnabled,
+      final FlagSet<PerformanceFlagEnum> performanceFlags) {
     this.fsURI = fsURI;
     this.bucket = bucket;
     this.configuration = configuration;
@@ -158,6 +166,7 @@ public class StoreContext implements ActiveThreadSpanSource<AuditSpan> {
     this.contextAccessors = contextAccessors;
     this.auditor = auditor;
     this.isCSEEnabled = isCSEEnabled;
+    this.performanceFlags = performanceFlags;
   }
 
   public URI getFsURI() {
@@ -410,5 +419,13 @@ public class StoreContext implements ActiveThreadSpanSource<AuditSpan> {
    */
   public boolean isCSEEnabled() {
     return isCSEEnabled;
+  }
+
+  /**
+   * Get the performance flags.
+   * @return FlagSet containing the performance flags.
+   */
+  public FlagSet<PerformanceFlagEnum> getPerformanceFlags() {
+    return performanceFlags;
   }
 }

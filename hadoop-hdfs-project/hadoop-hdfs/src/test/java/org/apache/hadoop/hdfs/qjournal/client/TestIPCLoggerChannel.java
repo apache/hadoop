@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.qjournal.client;
 
-import static org.junit.Assert.*;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutionException;
@@ -37,11 +35,18 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.function.Supplier;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestIPCLoggerChannel {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -62,7 +67,7 @@ public class TestIPCLoggerChannel {
   private static final int LIMIT_QUEUE_SIZE_BYTES =
       LIMIT_QUEUE_SIZE_MB * 1024 * 1024;
   
-  @Before
+  @BeforeEach
   public void setupMock() {
     conf.setInt(DFSConfigKeys.DFS_QJOURNAL_QUEUE_SIZE_LIMIT_KEY,
         LIMIT_QUEUE_SIZE_MB);

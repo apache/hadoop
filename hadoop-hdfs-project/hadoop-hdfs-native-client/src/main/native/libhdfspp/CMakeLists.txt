@@ -28,7 +28,7 @@ project (libhdfspp)
 
 cmake_minimum_required(VERSION 2.8)
 
-find_package (Boost 1.72.0 REQUIRED COMPONENTS date_time)
+find_package (Boost 1.86.0 REQUIRED COMPONENTS date_time)
 
 enable_testing()
 set(CMAKE_CXX_STANDARD 17)

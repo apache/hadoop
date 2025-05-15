@@ -152,6 +152,13 @@
                       <exclude>io.dropwizard.metrics:metrics-core</exclude>
                       <exclude>org.eclipse.jetty:jetty-servlet</exclude>
                       <exclude>org.eclipse.jetty:jetty-security</exclude>
+                      <!-- Excluding Jetty dependencies to resolve `BanDuplicateClasses` issues caused by
+                       duplicate Jetty classes in `hadoop-client-minicluster` and `hadoop-client-runtime`.
+                       so keeping it here leads to conflicts.
+                      -->
+                      <exclude>org.eclipse.jetty:jetty-util</exclude>
+                      <exclude>org.eclipse.jetty:jetty-server</exclude>
+                      <exclude>org.eclipse.jetty:jetty-continuation</exclude>
                       <exclude>org.ow2.asm:*</exclude>
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>
@@ -159,6 +166,24 @@
                       <exclude>org.xerial.snappy:*</exclude>
                       <!-- leave out kotlin classes -->
                       <exclude>org.jetbrains.kotlin:*</exclude>
+                      <exclude>org.glassfish.jersey.test-framework:*</exclude>
+                      <exclude>org.glassfish.jersey.media:*</exclude>
+                      <exclude>org.glassfish.jersey.containers:*</exclude>
+                      <exclude>org.glassfish.jersey.test-framework.providers:*</exclude>
+                      <exclude>org.glassfish.hk2:*</exclude>
+                      <exclude>org.glassfish.jersey.inject:*</exclude>
+                      <exclude>org.glassfish.grizzly:*</exclude>
+                      <exclude>org.glassfish.jersey.core:*</exclude>
+                      <exclude>org.glassfish.hk2.external:*</exclude>
+                      <exclude>org.glassfish.jaxb:*</exclude>
+                      <exclude>jakarta.ws.rs:*</exclude>
+                      <exclude>jakarta.annotation:*</exclude>
+                      <exclude>jakarta.validation:*</exclude>
+                      <exclude>jakarta.servlet:*</exclude>
+                      <exclude>javax.annotation:*</exclude>
+                      <exclude>org.hamcrest:*</exclude>
+                      <exclude>aopalliance:*</exclude>
+                      <exclude>javassist:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
@@ -182,13 +207,6 @@
                       <artifact>tomcat:jasper-compiler</artifact>
                       <excludes>
                         <exclude>org/apache/jasper/compiler/Localizer.class</exclude>
-                      </excludes>
-                    </filter>
-                    <!-- We rely on jersey for our web interfaces. We want to use its java services stuff only internal to jersey -->
-                    <filter>
-                      <artifact>com.sun.jersey:*</artifact>
-                      <excludes>
-                        <exclude>META-INF/services/javax.*</exclude>
                       </excludes>
                     </filter>
                     <filter>
@@ -229,6 +247,9 @@
                         <exclude>jnamed*</exclude>
                         <exclude>lookup*</exclude>
                         <exclude>update*</exclude>
+                        <exclude>META-INF/versions/18/*</exclude>
+                        <exclude>META-INF/versions/18/**/*</exclude>
+                        <exclude>META-INF/services/java.net.spi.InetAddressResolverProvider</exclude>
                       </excludes>
                     </filter>
                     <filter>
@@ -243,6 +264,8 @@
                       <excludes>
                         <exclude>META-INF/versions/9/module-info.class</exclude>
                         <exclude>META-INF/versions/11/module-info.class</exclude>
+                        <exclude>META-INF/versions/18/module-info.class</exclude>
+                        <exclude>META-INF/versions/9/javax/xml/bind/ModuleUtil.class</exclude>
                       </excludes>
                     </filter>
 

@@ -24,10 +24,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -43,10 +43,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.hadoop.fs.aliyun.oss.Constants.MAX_PAGING_KEYS_DEFAULT;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test the bridging logic between Hadoop's abstract filesystem and
@@ -57,7 +57,7 @@ public class TestAliyunOSSFileSystemStore {
   private AliyunOSSFileSystemStore store;
   private AliyunOSSFileSystem fs;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     fs = new AliyunOSSFileSystem();
@@ -65,7 +65,7 @@ public class TestAliyunOSSFileSystemStore {
     store = fs.getStore();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     try {
       store.purge("test");
@@ -75,12 +75,12 @@ public class TestAliyunOSSFileSystemStore {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void checkSettings() throws Exception {
     Configuration conf = new Configuration();
-    assumeNotNull(conf.get(Constants.ACCESS_KEY_ID));
-    assumeNotNull(conf.get(Constants.ACCESS_KEY_SECRET));
-    assumeNotNull(conf.get("test.fs.oss.name"));
+    assumeTrue(conf.get(Constants.ACCESS_KEY_ID) != null);
+    assumeTrue(conf.get(Constants.ACCESS_KEY_SECRET) != null);
+    assumeTrue(conf.get("test.fs.oss.name") != null);
   }
 
   protected void writeRenameReadCompare(Path path, long len)
@@ -94,7 +94,7 @@ public class TestAliyunOSSFileSystemStore {
     out.flush();
     out.close();
 
-    assertTrue("Exists", fs.exists(path));
+    assertTrue(fs.exists(path), "Exists");
 
     ObjectMetadata srcMeta = fs.getStore().getObjectMetadata(
         path.toUri().getPath().substring(1));
@@ -102,7 +102,7 @@ public class TestAliyunOSSFileSystemStore {
     Path copyPath = path.suffix(".copy");
     fs.rename(path, copyPath);
 
-    assertTrue("Copy exists", fs.exists(copyPath));
+    assertTrue(fs.exists(copyPath), "Copy exists");
     // file type should not change
     ObjectMetadata dstMeta = fs.getStore().getObjectMetadata(
         copyPath.toUri().getPath().substring(1));
@@ -117,8 +117,8 @@ public class TestAliyunOSSFileSystemStore {
     }
     in.close();
 
-    assertEquals("Copy length matches original", len, copyLen);
-    assertArrayEquals("Digests match", digest.digest(), digest2.digest());
+    assertEquals(len, copyLen, "Copy length matches original");
+    assertArrayEquals(digest.digest(), digest2.digest(), "Digests match");
   }
 
   @Test

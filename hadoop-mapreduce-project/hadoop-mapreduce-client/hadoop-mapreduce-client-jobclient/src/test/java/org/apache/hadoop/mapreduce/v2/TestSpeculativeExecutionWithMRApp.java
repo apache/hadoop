@@ -29,7 +29,6 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.app.speculate.LegacyTaskRuntimeEstimator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.SimpleExponentialTaskRuntimeEstimator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.TaskRuntimeEstimator;
-import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -48,18 +47,17 @@ import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.ControlledClock;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * The type Test speculative execution with mr app.
  * It test the speculation behavior given a list of estimator classes.
  */
 @SuppressWarnings({ "unchecked", "rawtypes" })
-@RunWith(Parameterized.class)
 public class TestSpeculativeExecutionWithMRApp {
   private static final int NUM_MAPPERS = 5;
   private static final int NUM_REDUCERS = 0;
@@ -69,7 +67,6 @@ public class TestSpeculativeExecutionWithMRApp {
    *
    * @return the test parameters
    */
-  @Parameterized.Parameters(name = "{index}: TaskEstimator(EstimatorClass {0})")
   public static Collection<Object[]> getTestParameters() {
     return Arrays.asList(new Object[][] {
         {SimpleExponentialTaskRuntimeEstimator.class},
@@ -79,19 +76,19 @@ public class TestSpeculativeExecutionWithMRApp {
 
   private Class<? extends TaskRuntimeEstimator> estimatorClass;
 
-  private final ControlledClock controlledClk;
+  private ControlledClock controlledClk;
   /**
    * Instantiates a new Test speculative execution with mr app.
    *
-   * @param estimatorKlass the estimator klass
+   * @param pEstimatorKlass the estimator klass
    */
-  public TestSpeculativeExecutionWithMRApp(
-      Class<? extends TaskRuntimeEstimator>  estimatorKlass) {
-    this.estimatorClass = estimatorKlass;
+  public void initTestSpeculativeExecutionWithMRApp(
+      Class<? extends TaskRuntimeEstimator> pEstimatorKlass) {
+    this.estimatorClass = pEstimatorKlass;
     this.controlledClk = new ControlledClock();
+    setup();
   }
 
-  @Before
   public void setup() {
     this.controlledClk.setTime(System.currentTimeMillis());
   }
@@ -101,8 +98,12 @@ public class TestSpeculativeExecutionWithMRApp {
    *
    * @throws Exception the exception
    */
-  @Test (timeout = 360000)
-  public void testSpeculateSuccessfulWithoutUpdateEvents() throws Exception {
+  @ParameterizedTest(name = "{index}: TaskEstimator(EstimatorClass {0})")
+  @MethodSource("getTestParameters")
+  @Timeout(value = 360)
+  public void testSpeculateSuccessfulWithoutUpdateEvents(
+      Class<? extends TaskRuntimeEstimator> pEstimatorKlass) throws Exception {
+    initTestSpeculativeExecutionWithMRApp(pEstimatorKlass);
     MRApp app =
         new MRApp(NUM_MAPPERS, NUM_REDUCERS, false, "test", true,
             controlledClk);
@@ -110,8 +111,8 @@ public class TestSpeculativeExecutionWithMRApp {
     app.waitForState(job, JobState.RUNNING);
 
     Map<TaskId, Task> tasks = job.getTasks();
-    Assert.assertEquals("Num tasks is not correct", NUM_MAPPERS + NUM_REDUCERS,
-      tasks.size());
+    assertEquals(NUM_MAPPERS + NUM_REDUCERS,
+        tasks.size(), "Num tasks is not correct");
     Iterator<Task> taskIter = tasks.values().iterator();
     while (taskIter.hasNext()) {
       app.waitForState(taskIter.next(), TaskState.RUNNING);
@@ -161,8 +162,12 @@ public class TestSpeculativeExecutionWithMRApp {
    *
    * @throws Exception the exception
    */
-  @Test (timeout = 360000)
-  public void testSpeculateSuccessfulWithUpdateEvents() throws Exception {
+  @ParameterizedTest(name = "{index}: TaskEstimator(EstimatorClass {0})")
+  @MethodSource("getTestParameters")
+  @Timeout(value = 360)
+  public void testSpeculateSuccessfulWithUpdateEvents(
+      Class<? extends TaskRuntimeEstimator> pEstimatorKlass) throws Exception {
+    initTestSpeculativeExecutionWithMRApp(pEstimatorKlass);
     MRApp app =
         new MRApp(NUM_MAPPERS, NUM_REDUCERS, false, "test", true,
             controlledClk);
@@ -170,8 +175,8 @@ public class TestSpeculativeExecutionWithMRApp {
     app.waitForState(job, JobState.RUNNING);
 
     Map<TaskId, Task> tasks = job.getTasks();
-    Assert.assertEquals("Num tasks is not correct", NUM_MAPPERS + NUM_REDUCERS,
-      tasks.size());
+    assertEquals(NUM_MAPPERS + NUM_REDUCERS,
+        tasks.size(), "Num tasks is not correct");
     Iterator<Task> taskIter = tasks.values().iterator();
     while (taskIter.hasNext()) {
       app.waitForState(taskIter.next(), TaskState.RUNNING);

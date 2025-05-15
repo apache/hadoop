@@ -51,7 +51,6 @@ public class RSRawDecoder extends RawErasureDecoder {
   private byte[] gfTables;
   private int[] cachedErasedIndexes;
   private int[] validIndexes;
-  private int numErasedDataUnits;
   private boolean[] erasureFlags;
 
   public RSRawDecoder(ErasureCoderOptions coderOptions) {
@@ -120,14 +119,10 @@ public class RSRawDecoder extends RawErasureDecoder {
     this.gfTables = new byte[getNumAllUnits() * getNumDataUnits() * 32];
 
     this.erasureFlags = new boolean[getNumAllUnits()];
-    this.numErasedDataUnits = 0;
 
     for (int i = 0; i < erasedIndexes.length; i++) {
       int index = erasedIndexes[i];
       erasureFlags[index] = true;
-      if (index < getNumDataUnits()) {
-        numErasedDataUnits++;
-      }
     }
 
     generateDecodeMatrix(erasedIndexes);
@@ -156,21 +151,22 @@ public class RSRawDecoder extends RawErasureDecoder {
 
     GF256.gfInvertMatrix(tmpMatrix, invertMatrix, getNumDataUnits());
 
-    for (i = 0; i < numErasedDataUnits; i++) {
-      for (j = 0; j < getNumDataUnits(); j++) {
-        decodeMatrix[getNumDataUnits() * i + j] =
-                invertMatrix[getNumDataUnits() * erasedIndexes[i] + j];
-      }
-    }
-
-    for (p = numErasedDataUnits; p < erasedIndexes.length; p++) {
-      for (i = 0; i < getNumDataUnits(); i++) {
-        s = 0;
+    for (p = 0; p < erasedIndexes.length; p++) {
+      int erasedIndex = erasedIndexes[p];
+      if (erasedIndex < getNumDataUnits()) {
         for (j = 0; j < getNumDataUnits(); j++) {
-          s ^= GF256.gfMul(invertMatrix[j * getNumDataUnits() + i],
-                  encodeMatrix[getNumDataUnits() * erasedIndexes[p] + j]);
+          decodeMatrix[getNumDataUnits() * p + j] =
+              invertMatrix[getNumDataUnits() * erasedIndexes[p] + j];
         }
-        decodeMatrix[getNumDataUnits() * p + i] = s;
+      } else {
+        for (i = 0; i < getNumDataUnits(); i++) {
+          s = 0;
+          for (j = 0; j < getNumDataUnits(); j++) {
+            s ^= GF256.gfMul(invertMatrix[j * getNumDataUnits() + i],
+                encodeMatrix[getNumDataUnits() * erasedIndexes[p] + j]);
+          }
+          decodeMatrix[getNumDataUnits() * p + i] = s;
+        }
       }
     }
   }

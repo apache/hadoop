@@ -3972,6 +3972,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.lock.model.provider.class</name>
+  <value>org.apache.hadoop.hdfs.server.namenode.fgl.GlobalFSNamesystemLock</value>
+  <description>
+    An implementation class of FSNamesystem lock.
+    Defaults to GlobalFSNamesystemLock.class
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.bp-ready.timeout</name>
   <value>20</value>
   <description>
@@ -4113,6 +4122,60 @@
     Keytab based login can be enabled with dfs.balancer.keytab.enabled.
   </description>
 </property>
+
+  <property>
+    <name>dfs.balancer.kerberos.internal.spnego.principal</name>
+    <value></value>
+    <description>
+      Kerberos SPNEGO principal name used by the balancer.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.httpserver.enabled</name>
+    <value>false</value>
+    <description>
+      If true, balancer will start httpserver.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.http-address</name>
+    <value>0.0.0.0:8590</value>
+    <description>
+      The balancer http server address and port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.http-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the HTTP server will bind to. If this optional address
+      is set, it overrides only the hostname portion of
+      dfs.balancer.http-address. This is useful for making the Balancer
+      HTTP server listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.https-address</name>
+    <value>0.0.0.0:8591</value>
+    <description>
+      The balancer HTTPS server address and port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.https-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the HTTP server will bind to. If this optional address
+      is set, it overrides only the hostname portion of
+      dfs.balancer.https-address. This is useful for making the Balancer
+      HTTP server listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
 
 <property>
   <name>dfs.http.client.retry.policy.enabled</name>
@@ -5059,6 +5122,16 @@
     Time interval, in milliseconds, between two Journal Node syncs.
     This configuration takes effect only if the journalnode sync is enabled
     by setting the configuration parameter dfs.journalnode.enable.sync to true.
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.enable.sync.format</name>
+  <value>false</value>
+  <description>
+    If true, the journal node syncer daemon that tries to sync edit
+    logs between journal nodes will try to format its journal if it is not.
+    It will query the other journal nodes for the storage info required to format.
   </description>
 </property>
 
@@ -6369,6 +6442,15 @@
     <description>
       Whether the corrupt replicas should be deleted immediately, irrespective
       of other replicas on stale storages..
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.random.node.order.enabled</name>
+    <value>false</value>
+    <description>
+      Whether to randomized the order of data nodes of a block or sort by network
+      distance (default behavior) before returning to clients.
     </description>
   </property>
 

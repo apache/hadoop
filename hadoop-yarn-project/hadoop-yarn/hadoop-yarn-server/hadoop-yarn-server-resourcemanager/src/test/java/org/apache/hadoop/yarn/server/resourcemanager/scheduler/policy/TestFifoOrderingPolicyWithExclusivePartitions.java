@@ -18,13 +18,15 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -55,8 +57,8 @@ public class TestFifoOrderingPolicyWithExclusivePartitions {
 
     policy.addSchedulableEntity(p1);
     policy.addAllSchedulableEntities(Arrays.asList(p2, r1, r2));
-    Assert.assertEquals(4, policy.getNumSchedulableEntities());
-    Assert.assertEquals(4, policy.getSchedulableEntities().size());
+    assertEquals(4, policy.getNumSchedulableEntities());
+    assertEquals(4, policy.getSchedulableEntities().size());
     IteratorSelector sel = new IteratorSelector();
     // Should behave like FifoOrderingPolicy, regardless of partition
     verifyAssignmentIteratorOrder(policy,
@@ -68,8 +70,8 @@ public class TestFifoOrderingPolicyWithExclusivePartitions {
 
     policy.removeSchedulableEntity(p2);
     policy.removeSchedulableEntity(r2);
-    Assert.assertEquals(2, policy.getNumSchedulableEntities());
-    Assert.assertEquals(2, policy.getSchedulableEntities().size());
+    assertEquals(2, policy.getNumSchedulableEntities());
+    assertEquals(2, policy.getSchedulableEntities().size());
     verifyAssignmentIteratorOrder(policy,
         IteratorSelector.EMPTY_ITERATOR_SELECTOR, "r1", "p1");
     verifyPreemptionIteratorOrder(policy, "p1", "r1");
@@ -105,8 +107,8 @@ public class TestFifoOrderingPolicyWithExclusivePartitions {
     r3.setId("r3");
 
     policy.addSchedulableEntity(r1);
-    Assert.assertEquals(1, policy.getNumSchedulableEntities());
-    Assert.assertEquals("r1", policy.getSchedulableEntities()
+    assertEquals(1, policy.getNumSchedulableEntities());
+    assertEquals("r1", policy.getSchedulableEntities()
         .iterator().next().getId());
     verifyAssignmentIteratorOrder(policy,
         IteratorSelector.EMPTY_ITERATOR_SELECTOR, "r1");
@@ -115,8 +117,8 @@ public class TestFifoOrderingPolicyWithExclusivePartitions {
     List<MockSchedulableEntity> entities = Arrays.asList(r2, r3, p1, p2);
     policy.addAllSchedulableEntities(entities);
     policy.addSchedulableEntity(p3);
-    Assert.assertEquals(6, policy.getNumSchedulableEntities());
-    Assert.assertEquals(6, policy.getSchedulableEntities().size());
+    assertEquals(6, policy.getNumSchedulableEntities());
+    assertEquals(6, policy.getSchedulableEntities().size());
     // Assignment iterator should return non-PARTITION entities,
     // in order based on FifoOrderingPolicy
     verifyAssignmentIteratorOrder(policy,
@@ -135,8 +137,8 @@ public class TestFifoOrderingPolicyWithExclusivePartitions {
 
     policy.removeSchedulableEntity(p2);
     policy.removeSchedulableEntity(r2);
-    Assert.assertEquals(4, policy.getNumSchedulableEntities());
-    Assert.assertEquals(4, policy.getSchedulableEntities().size());
+    assertEquals(4, policy.getNumSchedulableEntities());
+    assertEquals(4, policy.getSchedulableEntities().size());
     verifyAssignmentIteratorOrder(policy,
         IteratorSelector.EMPTY_ITERATOR_SELECTOR, "r3", "r1");
     verifyPreemptionIteratorOrder(policy, "r1", "p3", "p1", "r3");
@@ -146,8 +148,8 @@ public class TestFifoOrderingPolicyWithExclusivePartitions {
 
     policy.removeSchedulableEntity(p1);
     policy.removeSchedulableEntity(p3);
-    Assert.assertEquals(2, policy.getNumSchedulableEntities());
-    Assert.assertEquals(2, policy.getSchedulableEntities().size());
+    assertEquals(2, policy.getNumSchedulableEntities());
+    assertEquals(2, policy.getSchedulableEntities().size());
     verifyAssignmentIteratorOrder(policy,
         IteratorSelector.EMPTY_ITERATOR_SELECTOR, "r3", "r1");
     verifyPreemptionIteratorOrder(policy, "r1", "r3");
@@ -187,8 +189,8 @@ public class TestFifoOrderingPolicyWithExclusivePartitions {
     s2.setId("s2");
 
     policy.addAllSchedulableEntities(Arrays.asList(s1, s2, r1));
-    Assert.assertEquals(3, policy.getNumSchedulableEntities());
-    Assert.assertEquals(3, policy.getSchedulableEntities().size());
+    assertEquals(3, policy.getNumSchedulableEntities());
+    assertEquals(3, policy.getSchedulableEntities().size());
     IteratorSelector sel = new IteratorSelector();
     // assignment iterator returns only default (non-partitioned) entities
     verifyAssignmentIteratorOrder(policy,
@@ -198,8 +200,8 @@ public class TestFifoOrderingPolicyWithExclusivePartitions {
     verifyAssignmentIteratorOrder(policy, sel, "r1");
 
     policy.addAllSchedulableEntities(Arrays.asList(r2, p1, p2));
-    Assert.assertEquals(6, policy.getNumSchedulableEntities());
-    Assert.assertEquals(6, policy.getSchedulableEntities().size());
+    assertEquals(6, policy.getNumSchedulableEntities());
+    assertEquals(6, policy.getSchedulableEntities().size());
     verifyAssignmentIteratorOrder(policy,
         IteratorSelector.EMPTY_ITERATOR_SELECTOR, "s2", "s1");
     sel.setPartition(PARTITION);
@@ -211,8 +213,8 @@ public class TestFifoOrderingPolicyWithExclusivePartitions {
     policy.removeSchedulableEntity(p2);
     policy.removeSchedulableEntity(r1);
     policy.removeSchedulableEntity(r2);
-    Assert.assertEquals(3, policy.getNumSchedulableEntities());
-    Assert.assertEquals(3, policy.getSchedulableEntities().size());
+    assertEquals(3, policy.getNumSchedulableEntities());
+    assertEquals(3, policy.getSchedulableEntities().size());
     verifyAssignmentIteratorOrder(policy,
         IteratorSelector.EMPTY_ITERATOR_SELECTOR, "s2", "s1");
     sel.setPartition(PARTITION);
@@ -237,8 +239,8 @@ public class TestFifoOrderingPolicyWithExclusivePartitions {
   private void verifyIteratorOrder(Iterator<MockSchedulableEntity> itr,
       String... ids) {
     for (String id : ids) {
-      Assert.assertEquals(id, itr.next().getId());
+      assertEquals(id, itr.next().getId());
     }
-    Assert.assertFalse(itr.hasNext());
+    assertFalse(itr.hasNext());
   }
 }

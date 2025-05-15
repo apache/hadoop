@@ -17,10 +17,10 @@
 package org.apache.hadoop.yarn.server.nodemanager.executor;
 
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -32,7 +32,7 @@ public class TestContainerReapContext {
   private Container container;
   private ContainerReapContext context;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     container = mock(Container.class);
     context = new ContainerReapContext.Builder()

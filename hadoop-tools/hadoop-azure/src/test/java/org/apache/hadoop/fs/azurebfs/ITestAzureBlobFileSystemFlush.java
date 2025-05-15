@@ -308,6 +308,11 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
   @Test
   public void testTracingHeaderForAppendBlob() throws Exception {
+    AzureBlobFileSystem fs1 = getFileSystem();
+    // AppendBlob not supported for FNS over DFS endpoint.
+    if (!getIsNamespaceEnabled(fs1)) {
+      assumeBlobServiceType();
+    }
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set(FS_AZURE_APPEND_BLOB_KEY, "abfss:/");
     config.set(TestConfigurationKeys.FS_AZURE_TEST_APPENDBLOB_ENABLED, "true");

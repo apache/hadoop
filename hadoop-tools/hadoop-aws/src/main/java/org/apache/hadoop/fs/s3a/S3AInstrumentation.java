@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.impl.WeakRefMetricsSource;
+import org.apache.hadoop.fs.s3a.impl.streams.InputStreamType;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.ChangeTrackerStatistics;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
@@ -840,6 +841,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private final AtomicLong closed;
     private final AtomicLong forwardSeekOperations;
     private final AtomicLong openOperations;
+    private final AtomicLong analyticsStreamOpenOperations;
     private final AtomicLong readExceptions;
     private final AtomicLong readsIncomplete;
     private final AtomicLong readOperations;
@@ -862,6 +864,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       this.filesystemStatistics = filesystemStatistics;
       IOStatisticsStore st = iostatisticsStore()
           .withCounters(
+              StreamStatisticNames.STREAM_LEAKS,
               StreamStatisticNames.STREAM_READ_ABORTED,
               StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_ABORT,
               StreamStatisticNames.STREAM_READ_CLOSED,
@@ -887,7 +890,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_VECTORED_OPERATIONS,
               StreamStatisticNames.STREAM_READ_VECTORED_READ_BYTES_DISCARDED,
               StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES,
-              StreamStatisticNames.STREAM_EVICT_BLOCKS_FROM_FILE_CACHE)
+              StreamStatisticNames.STREAM_EVICT_BLOCKS_FROM_FILE_CACHE,
+              StreamStatisticNames.STREAM_READ_ANALYTICS_OPENED)
           .withGauges(STREAM_READ_GAUGE_INPUT_POLICY,
               STREAM_READ_BLOCKS_IN_FILE_CACHE.getSymbol(),
               STREAM_READ_ACTIVE_PREFETCH_OPERATIONS.getSymbol(),
@@ -926,6 +930,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
           StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS);
       openOperations = st.getCounterReference(
           StreamStatisticNames.STREAM_READ_OPENED);
+      analyticsStreamOpenOperations = st.getCounterReference(
+          StreamStatisticNames.STREAM_READ_ANALYTICS_OPENED
+      );
       readExceptions = st.getCounterReference(
           StreamStatisticNames.STREAM_READ_EXCEPTIONS);
       readsIncomplete = st.getCounterReference(
@@ -1029,6 +1036,17 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       return openOperations.getAndIncrement();
     }
 
+    @Override
+    public long streamOpened(InputStreamType type) {
+      long count = openOperations.getAndIncrement();
+
+      if (type == InputStreamType.Analytics) {
+        count = analyticsStreamOpenOperations.getAndIncrement();
+      }
+
+      return count;
+    }
+
     /**
      * {@inheritDoc}.
      * If the connection was aborted, increment {@link #aborted}
@@ -1123,6 +1141,15 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void close() {
       increment(StreamStatisticNames.STREAM_READ_CLOSE_OPERATIONS);
+      merge(true);
+    }
+
+    /**
+     * Stream was leaked.
+     */
+    public void streamLeaked() {
+      increment(StreamStatisticNames.STREAM_LEAKS);
+      // merge as if closed.
       merge(true);
     }
 
@@ -1503,8 +1530,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               STREAM_WRITE_TOTAL_DATA.getSymbol(),
               STREAM_WRITE_TOTAL_TIME.getSymbol(),
               INVOCATION_HFLUSH.getSymbol(),
-              INVOCATION_HSYNC.getSymbol())
+              INVOCATION_HSYNC.getSymbol(),
+              CONDITIONAL_CREATE.getSymbol(),
+              CONDITIONAL_CREATE_FAILED.getSymbol())
           .withGauges(
+              STREAM_WRITE_BLOCK_UPLOADS_ACTIVE.getSymbol(),
               STREAM_WRITE_BLOCK_UPLOADS_PENDING.getSymbol(),
               STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol())
           .withDurationTracking(
@@ -1658,6 +1688,15 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void hsyncInvoked() {
       incCounter(INVOCATION_HSYNC.getSymbol(), 1);
+    }
+
+    @Override
+    public void conditionalCreateOutcome(boolean success) {
+      if (success) {
+        incCounter(CONDITIONAL_CREATE.getSymbol(), 1);
+      } else {
+        incCounter(CONDITIONAL_CREATE_FAILED.getSymbol(), 1);
+      }
     }
 
     @Override

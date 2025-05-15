@@ -23,12 +23,14 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import software.amazon.awssdk.awscore.AwsExecutionAttribute;
 import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.core.interceptor.Context;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.http.SdkHttpRequest;
+import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 
@@ -36,6 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.audit.AuditConstants;
 import org.apache.hadoop.fs.audit.CommonAuditContext;
@@ -62,10 +65,10 @@ import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.OUTSIDE_SPAN;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_ENABLED;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_FILTER;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REJECT_OUT_OF_SPAN_OPERATIONS;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.UNAUDITED_OPERATION;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.extractJobID;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.HEADER_REFERRER;
+import static org.apache.hadoop.fs.s3a.statistics.impl.StatisticsFromAwsSdkImpl.mapErrorStatusCodeToStatisticName;
 
 /**
  * The LoggingAuditor logs operations at DEBUG (in SDK Request) and
@@ -92,11 +95,6 @@ public class LoggingAuditor
    * Default span to use when there is no other.
    */
   private AuditSpanS3A warningSpan;
-
-  /**
-   * Should out of scope ops be rejected?
-   */
-  private boolean rejectOutOfSpan;
 
   /**
    * Map of attributes which will be added to all operations.
@@ -167,8 +165,6 @@ public class LoggingAuditor
   @Override
   protected void serviceInit(final Configuration conf) throws Exception {
     super.serviceInit(conf);
-    rejectOutOfSpan = conf.getBoolean(
-        REJECT_OUT_OF_SPAN_OPERATIONS, false);
     // attach the job ID if there is one in the configuration used
     // to create this file.
     String jobID = extractJobID(conf);
@@ -183,6 +179,7 @@ public class LoggingAuditor
         currentContext, createSpanID(), null, null);
     isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
               DEFAULT_MULTIPART_UPLOAD_ENABLED);
+    LOG.debug("Initialized {}", this);
   }
 
   @Override
@@ -191,7 +188,7 @@ public class LoggingAuditor
         "LoggingAuditor{");
     sb.append("ID='").append(getAuditorId()).append('\'');
     sb.append(", headerEnabled=").append(headerEnabled);
-    sb.append(", rejectOutOfSpan=").append(rejectOutOfSpan);
+    sb.append(", rejectOutOfSpan=").append(isRejectOutOfSpan());
     sb.append(", isMultipartUploadEnabled=").append(isMultipartUploadEnabled);
     sb.append('}');
     return sb.toString();
@@ -247,6 +244,18 @@ public class LoggingAuditor
    */
   private void setLastHeader(final String lastHeader) {
     this.lastHeader = lastHeader;
+  }
+
+  /**
+   * Get the referrer provided the span is an instance or
+   * subclass of LoggingAuditSpan.
+   * @param span span
+   * @return the referrer
+   * @throws ClassCastException if a different span type was passed in
+   */
+  @VisibleForTesting
+  HttpReferrerAuditHeader getReferrer(AuditSpanS3A span) {
+    return ((LoggingAuditSpan) span).getReferrer();
   }
 
   /**
@@ -438,11 +447,27 @@ public class LoggingAuditor
     }
 
     /**
-     * Get the referrer; visible for tests.
+     * Get the referrer.
      * @return the referrer.
      */
-    HttpReferrerAuditHeader getReferrer() {
+    private HttpReferrerAuditHeader getReferrer() {
       return referrer;
+    }
+
+    /**
+     * Execution failure: extract an error code and if this maps to
+     * a statistic name, update that counter.
+     */
+    @Override
+    public void onExecutionFailure(final Context.FailedExecution context,
+        final ExecutionAttributes executionAttributes) {
+      final Optional<SdkHttpResponse> response = context.httpResponse();
+      int sc = response.map(SdkHttpResponse::statusCode).orElse(0);
+      String stat = mapErrorStatusCodeToStatisticName(sc);
+      if (stat != null) {
+        LOG.debug("Incrementing error statistic {}", stat);
+        getIOStatistics().incrementCounter(stat);
+      }
     }
   }
 
@@ -514,7 +539,7 @@ public class LoggingAuditor
       } else {
         final RuntimeException ex = new AuditFailureException(unaudited);
         LOG.debug(unaudited, ex);
-        if (rejectOutOfSpan) {
+        if (isRejectOutOfSpan()) {
           throw ex;
         }
       }
@@ -522,4 +547,5 @@ public class LoggingAuditor
       super.beforeExecution(context, executionAttributes);
     }
   }
+
 }

@@ -26,7 +26,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.junit.After;
+import org.junit.jupiter.api.AfterEach;
 
 /**
  * Test Base for Application Master Service Protocol.
@@ -52,7 +52,7 @@ public abstract class ApplicationMasterServiceProtoTestBase
         .createRMProxy(this.conf, ApplicationMasterProtocol.class);
   }
 
-  @After
+  @AfterEach
   public void shutDown() {
     if(this.amClient != null) {
       RPC.stopProxy(this.amClient);

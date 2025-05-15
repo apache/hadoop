@@ -25,23 +25,23 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.fs.FileStatus;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests basic functionality for AliyunOSSInputStream, including seeking and
  * reading files.
  */
+@Timeout(30 * 60)
 public class TestAliyunOSSInputStream {
 
   private FileSystem fs;
@@ -52,16 +52,13 @@ public class TestAliyunOSSInputStream {
   private static String testRootPath =
       AliyunOSSTestUtils.generateUniqueTestPath();
 
-  @Rule
-  public Timeout testTimeout = new Timeout(30 * 60 * 1000);
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
     fs = AliyunOSSTestUtils.createTestFileSystem(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (fs != null) {
       fs.delete(new Path(testRootPath), true);
@@ -91,8 +88,8 @@ public class TestAliyunOSSInputStream {
       long pos = size / (seekTimes - i) - 1;
       LOG.info("begin seeking for pos: " + pos);
       instream.seek(pos);
-      assertTrue("expected position at:" + pos + ", but got:"
-          + instream.getPos(), instream.getPos() == pos);
+      assertTrue(instream.getPos() == pos, "expected position at:" + pos + ", but got:"
+          + instream.getPos());
       LOG.info("completed seeking at pos: " + instream.getPos());
     }
     LOG.info("random position seeking test...:");
@@ -101,8 +98,8 @@ public class TestAliyunOSSInputStream {
       long pos = Math.abs(rand.nextLong()) % size;
       LOG.info("begin seeking for pos: " + pos);
       instream.seek(pos);
-      assertTrue("expected position at:" + pos + ", but got:"
-          + instream.getPos(), instream.getPos() == pos);
+      assertTrue(instream.getPos() == pos, "expected position at:" + pos + ", but got:"
+          + instream.getPos());
       LOG.info("completed seeking at pos: " + instream.getPos());
     }
     IOUtils.closeStream(instream);
@@ -119,19 +116,18 @@ public class TestAliyunOSSInputStream {
     FSDataInputStream fsDataInputStream = this.fs.open(smallSeekFile);
     AliyunOSSInputStream in =
         (AliyunOSSInputStream)fsDataInputStream.getWrappedStream();
-    assertTrue("expected position at:" + 0 + ", but got:"
-        + fsDataInputStream.getPos(), fsDataInputStream.getPos() == 0);
+    assertTrue(fsDataInputStream.getPos() == 0, "expected position at:" + 0 + ", but got:"
+        + fsDataInputStream.getPos());
 
-    assertTrue("expected position at:"
+    assertTrue(in.getExpectNextPos() == Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT,
+        "expected position at:"
         + Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT + ", but got:"
-        + in.getExpectNextPos(),
-        in.getExpectNextPos() == Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT);
+        + in.getExpectNextPos());
     fsDataInputStream.seek(4 * 1024 * 1024);
-    assertTrue("expected position at:" + 4 * 1024 * 1024
+    assertTrue(in.getExpectNextPos() == 4 * 1024 * 1024
+        + Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT, "expected position at:" + 4 * 1024 * 1024
         + Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT + ", but got:"
-        + in.getExpectNextPos(),
-        in.getExpectNextPos() == 4 * 1024 * 1024
-        + Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT);
+        + in.getExpectNextPos());
     IOUtils.closeStream(fsDataInputStream);
   }
 
@@ -183,8 +179,8 @@ public class TestAliyunOSSInputStream {
       if (bytesRead % (1024 * 1024) == 0) {
         int available = instream.available();
         int remaining = (int)(size - bytesRead);
-        assertTrue("expected remaining:" + remaining + ", but got:" + available,
-            remaining == available);
+        assertTrue(remaining == available,
+            "expected remaining:" + remaining + ", but got:" + available);
         LOG.info("Bytes read: " + Math.round((double)bytesRead / (1024 * 1024))
             + " MB");
       }
@@ -197,7 +193,7 @@ public class TestAliyunOSSInputStream {
     Path emptyDirPath = setPath("/test/emptyDirectory");
     fs.mkdirs(emptyDirPath);
     FileStatus dirFileStatus = fs.getFileStatus(emptyDirPath);
-    assertTrue("expected the empty dir is new",
-        dirFileStatus.getModificationTime() > 0L);
+    assertTrue(dirFileStatus.getModificationTime() > 0L,
+        "expected the empty dir is new");
   }
 }

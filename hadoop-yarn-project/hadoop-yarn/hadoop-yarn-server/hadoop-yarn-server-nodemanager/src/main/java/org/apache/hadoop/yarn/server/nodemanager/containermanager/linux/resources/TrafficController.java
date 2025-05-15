@@ -225,7 +225,7 @@ import java.util.regex.Pattern;
       if (pattern.matcher(state).find()) {
         LOG.debug("Matched regex: {}", regex);
       } else {
-        String logLine = new StringBuffer("Failed to match regex: ")
+        String logLine = new StringBuilder("Failed to match regex: ")
               .append(regex).append(" Current state: ").append(state).toString();
         LOG.warn(logLine);
         return false;

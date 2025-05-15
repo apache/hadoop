@@ -26,7 +26,7 @@ import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import com.microsoft.azure.storage.CloudStorageAccount;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.NO_ACCESS_TO_CONTAINER_MSG;
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.verifyWasbAccountNameInConfig;

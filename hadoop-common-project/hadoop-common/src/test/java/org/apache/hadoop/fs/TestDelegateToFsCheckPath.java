@@ -26,7 +26,7 @@ import java.net.URISyntaxException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * The default port of DelegateToFileSystem is set from child file system.

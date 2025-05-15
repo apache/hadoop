@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.contract.s3a;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.SCALE_TEST_TIMEOUT_MILLIS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageStatistics;
@@ -76,6 +77,20 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
     super.testNonDirectWrite();
     assertEquals("Expected 2 renames for a non-direct write distcp", 2L,
         getRenameOperationCount() - renames);
+  }
+
+  @Override
+  public void testDistCpUpdateCheckFileSkip() throws Exception {
+    // Currently analytics accelerator does not support reading of files that have been overwritten.
+    // This is because the analytics accelerator library caches metadata and data, and when a
+    // file is overwritten, the old data continues to be used, until it is removed from the
+    // cache over time. This will be fixed in
+    // https://github.com/awslabs/analytics-accelerator-s3/issues/218.
+    // In this test case, the remote file is created, read, then deleted, and then created again
+    // with different contents, and read again, which leads to assertions failing.
+    skipIfAnalyticsAcceleratorEnabled(getContract().getConf(),
+        "Analytics Accelerator Library does not support update to existing files");
+    super.testDistCpUpdateCheckFileSkip();
   }
 
   private long getRenameOperationCount() {

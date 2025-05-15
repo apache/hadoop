@@ -125,12 +125,17 @@ public final class AssumedRoleCredentialProvider implements AwsCredentialsProvid
     duration = conf.getTimeDuration(ASSUMED_ROLE_SESSION_DURATION,
         ASSUMED_ROLE_SESSION_DURATION_DEFAULT, TimeUnit.SECONDS);
     String policy = conf.getTrimmed(ASSUMED_ROLE_POLICY, "");
+    String externalId = conf.getTrimmed(ASSUMED_ROLE_EXTERNAL_ID, "");
 
     LOG.debug("{}", this);
 
     AssumeRoleRequest.Builder requestBuilder =
         AssumeRoleRequest.builder().roleArn(arn).roleSessionName(sessionName)
             .durationSeconds((int) duration);
+
+    if (StringUtils.isNotEmpty(externalId)) {
+      requestBuilder.externalId(externalId);
+    }
 
     if (StringUtils.isNotEmpty(policy)) {
       LOG.debug("Scope down policy {}", policy);

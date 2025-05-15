@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -24,10 +29,9 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +60,7 @@ public class TestFilePool {
     return null;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     final Configuration conf = new Configuration();
     final FileSystem fs = FileSystem.getLocal(conf).getRaw();
@@ -91,7 +95,7 @@ public class TestFilePool {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws IOException {
     final Configuration conf = new Configuration();
     final FileSystem fs = FileSystem.getLocal(conf).getRaw();
@@ -133,8 +137,8 @@ public class TestFilePool {
     // match random within 12k
     files.clear();
     final long rand = r.nextInt(expectedPoolSize);
-    assertTrue("Missed: " + rand,
-        (NFILES / 2) * 1024 > rand - pool.getInputFiles(rand, files));
+    assertTrue((NFILES / 2) * 1024 > rand - pool.getInputFiles(rand, files),
+        "Missed: " + rand);
 
     // all files
     conf.setLong(FilePool.GRIDMIX_MIN_FILE, 0);

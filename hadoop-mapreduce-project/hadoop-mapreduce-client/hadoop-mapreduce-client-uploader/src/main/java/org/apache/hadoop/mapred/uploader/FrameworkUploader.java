@@ -560,7 +560,7 @@ public class FrameworkUploader implements Runnable {
       ignoreSymlink = true;
     }
     String fs = parser.getCommandLine()
-        .getOptionValue("fs", null);
+        .getOptionValue("fs", () -> null);
     String path = parser.getCommandLine().getOptionValue("target",
         "/usr/lib/mr-framework.tar.gz#mr-framework");
     boolean isFullPath =

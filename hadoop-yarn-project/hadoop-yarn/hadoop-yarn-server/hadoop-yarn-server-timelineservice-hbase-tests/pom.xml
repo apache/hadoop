@@ -44,7 +44,7 @@
     <!-- Since hbase 1.0.1 requires an older version of hadoop we enforce an
          older version of hadoop just for the hbase unit tests. We also need to
          exclude hadoop-common and hadoop-hdfs on each dependency that has
-         transitive depedencies on them.
+         transitive dependencies on them.
     -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -54,6 +54,10 @@
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-client</artifactId>
+          <groupId>org.glassfish.jersey.core</groupId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -85,7 +89,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -100,11 +103,38 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-hdfs-client</artifactId>
         </exclusion>
-        <exclusion>
-          <groupId>com.sun.jersey</groupId>
-          <artifactId>jersey-json</artifactId>
-        </exclusion>
       </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.jersey.core</groupId>
+      <artifactId>jersey-server</artifactId>
+      <scope>test</scope>
     </dependency>
 
     <!-- 'mvn dependency:analyze' fails to detect use of this direct
@@ -112,7 +142,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-auth</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -155,6 +184,14 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-hdfs-client</artifactId>
         </exclusion>
+        <exclusion>
+          <artifactId>jersey-common</artifactId>
+          <groupId>org.glassfish.jersey.core</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-server</artifactId>
+          <groupId>org.glassfish.jersey.core</groupId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -168,6 +205,30 @@
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.glassfish.jersey.core</groupId>
+          <artifactId>jersey-common</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.glassfish.jersey.core</groupId>
+          <artifactId>jersey-client</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.glassfish.jersey.inject</groupId>
+          <artifactId>jersey-hk2</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.glassfish.jersey.media</groupId>
+          <artifactId>jersey-media-json-jettison</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.glassfish.jersey.test-framework.providers</groupId>
+          <artifactId>jersey-test-framework-provider-jetty</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.glassfish.jersey.test-framework</groupId>
+          <artifactId>jersey-test-framework-core</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -183,12 +244,6 @@
       <groupId>org.xerial.snappy</groupId>
       <artifactId>snappy-java</artifactId>
       <scope>runtime</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-client</artifactId>
-      <scope>test</scope>
     </dependency>
 
     <dependency>
@@ -311,17 +366,12 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-auth</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.sun.jersey</groupId>
-          <artifactId>jersey-json</artifactId>
         </exclusion>
         <exclusion>
           <groupId>commons-logging</groupId>
@@ -335,7 +385,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -354,7 +403,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
       <exclusions>
@@ -372,7 +420,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs-client</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
       <scope>test</scope>
     </dependency>
 
@@ -446,7 +493,13 @@
     <!-- This is needed by HBaseTestingUtility -->
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
+      <artifactId>mockito-inline</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.glassfish.jersey.media</groupId>
+      <artifactId>jersey-media-json-jettison</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -491,6 +544,8 @@
       </plugin>
       <!-- The fork value is deliberately set to 0 to avoid VM crash while running tests
        on Jenkins, removing this leads to tests crashing silently due to VM crash -->
+      <!-- TODO: we should investigate and address the crash issue and re-enable fork,
+                 otherwise, JPMS args does not take effect -->
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>

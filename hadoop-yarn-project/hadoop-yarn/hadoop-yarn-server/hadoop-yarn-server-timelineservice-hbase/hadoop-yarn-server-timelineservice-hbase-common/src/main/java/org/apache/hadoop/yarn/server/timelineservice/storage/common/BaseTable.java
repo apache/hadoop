@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 
 /**
  * The base type of tables.
- * @param T table type
+ * @param <T> table type
  */
 public abstract class BaseTable<T> {
 }

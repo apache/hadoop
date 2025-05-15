@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_CONTEXT;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
@@ -69,6 +70,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     removeBaseAndBucketOverrides(conf,
         S3_ENCRYPTION_ALGORITHM,
         S3_ENCRYPTION_KEY,
+        S3_ENCRYPTION_CONTEXT,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_KEY);
     conf.set(S3_ENCRYPTION_ALGORITHM,

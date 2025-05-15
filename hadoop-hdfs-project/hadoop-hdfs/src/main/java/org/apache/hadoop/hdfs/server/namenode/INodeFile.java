@@ -253,9 +253,8 @@ public class INodeFile extends INodeWithAdditionalFields
 
   private BlockInfo[] blocks;
 
-  INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
-            long atime, BlockInfo[] blklist, short replication,
-            long preferredBlockSize) {
+  public INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime, long atime,
+      BlockInfo[] blklist, short replication, long preferredBlockSize) {
     this(id, name, permissions, mtime, atime, blklist, replication, null,
         preferredBlockSize, (byte) 0, CONTIGUOUS);
   }
@@ -972,6 +971,12 @@ public class INodeFile extends INodeWithAdditionalFields
 
   /**
    * Compute file size of the current file.
+   *
+   * ComputeFileSize only needs the FSLock even through it involves block.
+   * BlockSize only be changed by hsync, addBlock, commitBlockSynchronization,
+   * complete, updatePipeline and forceCompleteBlock, all these operations
+   * already hold the FSWriteLock.
+   * CompleteBlock also hold the FSWriteLock since it needs to update Quota
    * 
    * @param includesLastUcBlock
    *          If the last block is under construction, should it be included?

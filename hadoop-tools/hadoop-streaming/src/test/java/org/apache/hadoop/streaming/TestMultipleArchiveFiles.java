@@ -128,7 +128,7 @@ public class TestMultipleArchiveFiles extends TestStreaming
   }
 
   protected void checkOutput() throws IOException {
-    StringBuffer output = new StringBuffer(256);
+    StringBuilder output = new StringBuilder(256);
     Path[] fileList = FileUtil.stat2Paths(fileSys.listStatus(
                                             new Path(OUTPUT_DIR)));
     for (int i = 0; i < fileList.length; i++){

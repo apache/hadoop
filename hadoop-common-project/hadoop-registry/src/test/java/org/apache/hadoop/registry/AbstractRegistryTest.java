@@ -25,7 +25,7 @@ import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 
 import org.apache.hadoop.registry.server.services.RegistryAdminService;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +39,7 @@ public class AbstractRegistryTest extends AbstractZKRegistryTest {
   protected RegistryAdminService registry;
   protected RegistryOperations operations;
 
-  @Before
+  @BeforeEach
   public void setupRegistry() throws IOException {
     registry = new RegistryAdminService("yarnRegistry");
     operations = registry;

@@ -20,11 +20,12 @@ package org.apache.hadoop.yarn.service.conf;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test cluster name validation.
@@ -38,7 +39,7 @@ public class TestValidateServiceNames {
   void assertInvalidName(String name) {
     try {
       ServiceApiUtil.validateNameFormat(name, new Configuration());
-      Assert.fail();
+      fail();
     } catch (IllegalArgumentException e) {
       //
     }

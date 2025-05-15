@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.performance;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -33,6 +34,7 @@ import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
@@ -42,7 +44,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.toChar;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Constants.XA_HEADER_PREFIX;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.CREATE_FILE_NO_OVERWRITE;
@@ -54,6 +56,7 @@ import static org.apache.hadoop.fs.s3a.performance.OperationCost.GET_FILE_STATUS
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.HEAD_OPERATION;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.LIST_OPERATION;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.NO_HEAD_OR_LIST;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Assert cost of createFile operations, especially
@@ -82,12 +85,10 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
   private final boolean createPerformance;
 
   /**
-   * Create with markers kept, always.
+   * Create.
+   * @param createPerformance use the performance flag
    */
   public ITestCreateFileCost(final boolean createPerformance) {
-    // keep markers to permit assertions that create performance
-    // always skips marker deletion.
-    super(false);
     this.createPerformance = createPerformance;
   }
 
@@ -103,10 +104,9 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
 
   @Override
   public Configuration createConfiguration() {
-    final Configuration conf = super.createConfiguration();
-    removeBaseAndBucketOverrides(conf,
-        FS_S3A_CREATE_PERFORMANCE);
-    conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, createPerformance);
+    final Configuration conf = setPerformanceFlags(
+        super.createConfiguration(),
+        createPerformance ? "create" : "");
     S3ATestUtils.disableFilesystemCaching(conf);
     return conf;
   }
@@ -201,7 +201,9 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
           () -> buildFile(testFile, false, true,
               GET_FILE_STATUS_ON_FILE));
     } else {
-      buildFile(testFile, false, true, NO_HEAD_OR_LIST);
+      // will trigger conditional create and throw RemoteFileChangedException
+      intercept(RemoteFileChangedException.class,
+              () -> buildFile(testFile, false, true, NO_HEAD_OR_LIST));
     }
   }
 
@@ -211,8 +213,11 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     S3AFileSystem fs = getFileSystem();
 
     Path path = methodPath();
+    // increment progress events
+    AtomicLong progressEvents = new AtomicLong(0);
     FSDataOutputStreamBuilder builder = fs.createFile(path)
         .overwrite(false)
+        .progress(progressEvents::incrementAndGet)
         .recursive();
 
     // this has a broken return type; something to do with the return value of
@@ -223,6 +228,10 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
         always(NO_HEAD_OR_LIST),
         with(OBJECT_BULK_DELETE_REQUEST, 0),
         with(OBJECT_DELETE_REQUEST, 0));
+
+    Assertions.assertThat(progressEvents.get())
+        .describedAs("progress events")
+        .isGreaterThanOrEqualTo(1);
   }
 
   @Test

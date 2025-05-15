@@ -1946,7 +1946,12 @@ public class TestFsDatasetImpl {
       assertFalse(uuids.contains(dn.getDatanodeUuid()));
 
       // This replica has deleted from datanode memory.
-      assertNull(ds.getStoredBlock(bpid, extendedBlock.getBlockId()));
+      try {
+        Block storedBlock = ds.getStoredBlock(bpid, extendedBlock.getBlockId());
+        assertNull(storedBlock);
+      } catch (Exception e) {
+        GenericTestUtils.assertExceptionContains("ReplicaNotFoundException", e);
+      }
     } finally {
       cluster.shutdown();
       DataNodeFaultInjector.set(oldInjector);

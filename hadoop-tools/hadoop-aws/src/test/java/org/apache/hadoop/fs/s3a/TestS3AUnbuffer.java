@@ -44,6 +44,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
+
 /**
  * Uses mocks to check that the {@link ResponseInputStream<GetObjectResponse>} is
  * closed when {@link org.apache.hadoop.fs.CanUnbuffer#unbuffer} is called.
@@ -55,6 +57,8 @@ public class TestS3AUnbuffer extends AbstractS3AMockTest {
   @Test
   public void testUnbuffer() throws IOException {
     // Create mock ObjectMetadata for getFileStatus()
+    skipIfAnalyticsAcceleratorEnabled(conf,
+        "Analytics accelerator does not support unbuffer");
     Path path = new Path("/file");
     HeadObjectResponse objectMetadata = HeadObjectResponse.builder()
         .contentLength(1L)

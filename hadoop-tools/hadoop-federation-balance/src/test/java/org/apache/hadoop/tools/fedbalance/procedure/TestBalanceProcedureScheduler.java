@@ -26,10 +26,10 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.BeforeClass;
-import org.junit.AfterClass;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
@@ -46,12 +46,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.SCHEDULER_JOURNAL_URI;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.WORK_THREAD_NUM;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 /**
  * Test BalanceProcedureScheduler.
@@ -63,7 +67,7 @@ public class TestBalanceProcedureScheduler {
   private static DistributedFileSystem fs;
   private static final int DEFAULT_BLOCK_SIZE = 512;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     CONF.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
         true);
@@ -84,7 +88,7 @@ public class TestBalanceProcedureScheduler {
     fs.mkdirs(new Path(workPath));
   }
 
-  @AfterClass
+  @AfterAll
   public static void close() {
     if (cluster != null) {
       cluster.shutdown();
@@ -94,7 +98,8 @@ public class TestBalanceProcedureScheduler {
   /**
    * Test the scheduler could be shutdown correctly.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testShutdownScheduler() throws Exception {
     BalanceProcedureScheduler scheduler = new BalanceProcedureScheduler(CONF);
     scheduler.init(true);
@@ -115,7 +120,8 @@ public class TestBalanceProcedureScheduler {
   /**
    * Test a successful job.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testSuccessfulJob() throws Exception {
     BalanceProcedureScheduler scheduler = new BalanceProcedureScheduler(CONF);
     scheduler.init(true);
@@ -146,16 +152,17 @@ public class TestBalanceProcedureScheduler {
   /**
    * Test a job fails and the error can be got.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testFailedJob() throws Exception {
     BalanceProcedureScheduler scheduler = new BalanceProcedureScheduler(CONF);
     scheduler.init(true);
     try {
       // Mock bad procedure.
-      BalanceProcedure badProcedure = Mockito.mock(BalanceProcedure.class);
-      Mockito.doThrow(new IOException("Job failed exception."))
+      BalanceProcedure badProcedure = mock(BalanceProcedure.class);
+      doThrow(new IOException("Job failed exception."))
           .when(badProcedure).execute();
-      Mockito.doReturn("bad-procedure").when(badProcedure).name();
+      doReturn("bad-procedure").when(badProcedure).name();
 
       BalanceJob.Builder builder = new BalanceJob.Builder<>();
       builder.nextProcedure(badProcedure);
@@ -174,7 +181,8 @@ public class TestBalanceProcedureScheduler {
    * the last unfinished procedure, which is the first procedure without
    * journal.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testGetJobAfterRecover() throws Exception {
     BalanceProcedureScheduler scheduler = new BalanceProcedureScheduler(CONF);
     scheduler.init(true);
@@ -238,7 +246,8 @@ public class TestBalanceProcedureScheduler {
   /**
    * Test RetryException is handled correctly.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testRetry() throws Exception {
     BalanceProcedureScheduler scheduler = new BalanceProcedureScheduler(CONF);
     scheduler.init(true);
@@ -265,7 +274,8 @@ public class TestBalanceProcedureScheduler {
   /**
    * Test schedule an empty job.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testEmptyJob() throws Exception {
     BalanceProcedureScheduler scheduler = new BalanceProcedureScheduler(CONF);
     scheduler.init(true);
@@ -281,7 +291,8 @@ public class TestBalanceProcedureScheduler {
   /**
    * Test serialization and deserialization of Job.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testJobSerializeAndDeserialize() throws Exception {
     BalanceJob.Builder builder = new BalanceJob.Builder<RecordProcedure>();
     for (int i = 0; i < 5; i++) {
@@ -305,7 +316,8 @@ public class TestBalanceProcedureScheduler {
   /**
    * Test scheduler crashes and recovers.
    */
-  @Test(timeout = 180000)
+  @Test
+  @Timeout(value = 180)
   public void testSchedulerDownAndRecoverJob() throws Exception {
     BalanceProcedureScheduler scheduler = new BalanceProcedureScheduler(CONF);
     scheduler.init(true);
@@ -347,7 +359,8 @@ public class TestBalanceProcedureScheduler {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testRecoverJobFromJournal() throws Exception {
     BalanceJournal journal =
         ReflectionUtils.newInstance(BalanceJournalInfoHDFS.class, CONF);
@@ -374,14 +387,15 @@ public class TestBalanceProcedureScheduler {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testClearJournalFail() throws Exception {
     BalanceProcedureScheduler scheduler = new BalanceProcedureScheduler(CONF);
     scheduler.init(true);
 
-    BalanceJournal journal = Mockito.mock(BalanceJournal.class);
+    BalanceJournal journal = mock(BalanceJournal.class);
     AtomicInteger count = new AtomicInteger(0);
-    Mockito.doAnswer(invocation -> {
+    doAnswer(invocation -> {
       if (count.incrementAndGet() == 1) {
         throw new IOException("Mock clear failure");
       }
@@ -404,7 +418,8 @@ public class TestBalanceProcedureScheduler {
   /**
    * Test the job will be recovered if writing journal fails.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testJobRecoveryWhenWriteJournalFail() throws Exception {
     BalanceProcedureScheduler scheduler = new BalanceProcedureScheduler(CONF);
     scheduler.init(true);

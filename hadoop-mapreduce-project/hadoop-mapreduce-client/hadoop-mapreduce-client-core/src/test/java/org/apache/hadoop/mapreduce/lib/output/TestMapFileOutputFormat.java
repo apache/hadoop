@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.mapreduce.lib.output;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.MapFile.Reader;
 import org.apache.hadoop.mapreduce.Partitioner;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 public class TestMapFileOutputFormat {
@@ -42,7 +42,7 @@ public class TestMapFileOutputFormat {
     assertTrue(!MyPartitioner.isGetPartitionCalled());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     MyPartitioner.setGetPartitionCalled(false);
   }

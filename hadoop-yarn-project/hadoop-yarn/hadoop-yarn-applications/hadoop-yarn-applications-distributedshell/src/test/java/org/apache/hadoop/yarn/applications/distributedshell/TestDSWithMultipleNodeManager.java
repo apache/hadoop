@@ -25,20 +25,15 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,13 +56,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.Resourc
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test for Distributed Shell With Multiple Node Managers.
  * Parameter 0 tests with Single Node Placement and
  * parameter 1 tests with Multiple Node Placement.
  */
-@RunWith(value = Parameterized.class)
+
+@Timeout(160)
 public class TestDSWithMultipleNodeManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestDSWithMultipleNodeManager.class);
@@ -75,21 +73,17 @@ public class TestDSWithMultipleNodeManager {
   private static final int NUM_NMS = 2;
   private static final String POLICY_CLASS_NAME =
       ResourceUsageMultiNodeLookupPolicy.class.getName();
-  private final Boolean multiNodePlacementEnabled;
-  @Rule
-  public TestName name = new TestName();
-  @Rule
-  public Timeout globalTimeout =
-      new Timeout(DistributedShellBaseTest.TEST_TIME_OUT,
-          TimeUnit.MILLISECONDS);
+  private Boolean multiNodePlacementEnabled;
+
   private DistributedShellBaseTest distShellTest;
   private Client dsClient;
 
-  public TestDSWithMultipleNodeManager(Boolean multiNodePlacementEnabled) {
-    this.multiNodePlacementEnabled = multiNodePlacementEnabled;
+  public void initTestDSWithMultipleNodeManager(
+      Boolean pMultiNodePlacementEnabled, TestInfo testInfo) throws Exception {
+    this.multiNodePlacementEnabled = pMultiNodePlacementEnabled;
+    setup(testInfo);
   }
 
-  @Parameterized.Parameters
   public static Collection<Boolean> getParams() {
     return Arrays.asList(false, true);
   }
@@ -116,24 +110,23 @@ public class TestDSWithMultipleNodeManager {
     return conf;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupUnitTests() throws Exception {
     TestDSTimelineV10.setupUnitTests();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownUnitTests() throws Exception {
     TestDSTimelineV10.tearDownUnitTests();
   }
 
-  @Before
-  public void setup() throws Exception {
+  public void setup(TestInfo testInfo) throws Exception {
     distShellTest = new TestDSTimelineV10();
     distShellTest.setupInternal(NUM_NMS,
-        getConfiguration(multiNodePlacementEnabled));
+        getConfiguration(multiNodePlacementEnabled), testInfo.getDisplayName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (dsClient != null) {
       dsClient.sendStopSignal();
@@ -176,8 +169,11 @@ public class TestDSWithMultipleNodeManager {
     labelsMgr.addLabelsToNode(ImmutableMap.of(nodeIds[1], labels));
   }
 
-  @Test
-  public void testDSShellWithNodeLabelExpression() throws Exception {
+  @MethodSource("getParams")
+  @ParameterizedTest
+  public void testDSShellWithNodeLabelExpression(Boolean pMultiNodePlacementEnabled,
+      TestInfo testInfo) throws Exception {
+    initTestDSWithMultipleNodeManager(pMultiNodePlacementEnabled, testInfo);
     NMContainerMonitor containerMonitorRunner = null;
     initializeNodeLabels();
 
@@ -188,7 +184,8 @@ public class TestDSWithMultipleNodeManager {
 
       // Submit a job which will sleep for 60 sec
       String[] args =
-          DistributedShellBaseTest.createArguments(() -> generateAppName(),
+          DistributedShellBaseTest.createArguments(() ->
+              generateAppName(distShellTest.getMethodName(testInfo)),
               "--num_containers",
               "4",
               "--shell_command",
@@ -211,7 +208,7 @@ public class TestDSWithMultipleNodeManager {
       dsClient =
           new Client(
               new Configuration(distShellTest.getYarnClusterConfiguration()));
-      Assert.assertTrue(dsClient.init(args));
+      assertTrue(dsClient.init(args));
       LOG.info("Running DS Client");
       boolean result = dsClient.run();
       LOG.info("Client run completed. Result={}", result);
@@ -222,9 +219,9 @@ public class TestDSWithMultipleNodeManager {
       int[] maxRunningContainersOnNMs =
           containerMonitorRunner.getMaxRunningContainersReport();
       // Check no container allocated on NM[0]
-      Assert.assertEquals(0, maxRunningContainersOnNMs[0]);
+      assertEquals(0, maxRunningContainersOnNMs[0]);
       // Check there are some containers allocated on NM[1]
-      Assert.assertTrue(maxRunningContainersOnNMs[1] > 0);
+      assertTrue(maxRunningContainersOnNMs[1] > 0);
     } finally {
       if (containerMonitorRunner != null) {
         containerMonitorRunner.stopMonitoring();
@@ -233,12 +230,16 @@ public class TestDSWithMultipleNodeManager {
     }
   }
 
-  @Test
-  public void testDistributedShellWithPlacementConstraint()
+  @MethodSource("getParams")
+  @ParameterizedTest
+  public void testDistributedShellWithPlacementConstraint(
+      Boolean pMultiNodePlacementEnabled, TestInfo testInfo)
       throws Exception {
+    initTestDSWithMultipleNodeManager(pMultiNodePlacementEnabled, testInfo);
     NMContainerMonitor containerMonitorRunner = null;
     String[] args =
-        DistributedShellBaseTest.createArguments(() -> generateAppName(),
+        DistributedShellBaseTest.createArguments(() ->
+            generateAppName(distShellTest.getMethodName(testInfo)),
             "1",
             "--shell_command",
             DistributedShellBaseTest.getSleepCommand(15),
@@ -253,7 +254,7 @@ public class TestDSWithMultipleNodeManager {
       dsClient =
           new Client(
               new Configuration(distShellTest.getYarnClusterConfiguration()));
-      Assert.assertTrue(dsClient.init(args));
+      assertTrue(dsClient.init(args));
       LOG.info("Running DS Client");
       boolean result = dsClient.run();
       LOG.info("Client run completed. Result={}", result);
@@ -276,8 +277,8 @@ public class TestDSWithMultipleNodeManager {
 
       int[] maxRunningContainersOnNMs =
           containerMonitorRunner.getMaxRunningContainersReport();
-      Assert.assertEquals(expectedNMsCount[0], maxRunningContainersOnNMs[0]);
-      Assert.assertEquals(expectedNMsCount[1], maxRunningContainersOnNMs[1]);
+      assertEquals(expectedNMsCount[0], maxRunningContainersOnNMs[0]);
+      assertEquals(expectedNMsCount[1], maxRunningContainersOnNMs[1]);
     } finally {
       if (containerMonitorRunner != null) {
         containerMonitorRunner.stopMonitoring();
@@ -286,9 +287,12 @@ public class TestDSWithMultipleNodeManager {
     }
   }
 
-  @Test
-  public void testDistributedShellWithAllocationTagNamespace()
+  @MethodSource("getParams")
+  @ParameterizedTest
+  public void testDistributedShellWithAllocationTagNamespace(
+      Boolean pMultiNodePlacementEnabled, TestInfo testInfo)
       throws Exception {
+    initTestDSWithMultipleNodeManager(pMultiNodePlacementEnabled, testInfo);
     NMContainerMonitor containerMonitorRunner = null;
     Client clientB = null;
     YarnClient yarnClient = null;
@@ -339,7 +343,7 @@ public class TestDSWithMultipleNodeManager {
           getNodeId();
       NodeId nodeB = distShellTest.getNodeManager(1).getNMContext().
           getNodeId();
-      Assert.assertEquals(2, (expectedNMCounts[0] + expectedNMCounts[1]));
+      assertEquals(2, (expectedNMCounts[0] + expectedNMCounts[1]));
       if (expectedNMCounts[0] != expectedNMCounts[1]) {
         taskContainerNodeIdA = masterContainerNodeIdARef.get();
       } else {
@@ -351,7 +355,7 @@ public class TestDSWithMultipleNodeManager {
           new Client(
               new Configuration(distShellTest.getYarnClusterConfiguration()));
       clientB.init(argsB);
-      Assert.assertTrue(clientB.run());
+      assertTrue(clientB.run());
       containerMonitorRunner.stopMonitoring();
       apps = distShellTest.getResourceManager().getRMContext().getRMApps();
       Iterator<RMApp> it = apps.values().iterator();
@@ -379,8 +383,8 @@ public class TestDSWithMultipleNodeManager {
       }
       int[] maxRunningContainersOnNMs =
           containerMonitorRunner.getMaxRunningContainersReport();
-      Assert.assertEquals(expectedNMCounts[0], maxRunningContainersOnNMs[0]);
-      Assert.assertEquals(expectedNMCounts[1], maxRunningContainersOnNMs[1]);
+      assertEquals(expectedNMCounts[0], maxRunningContainersOnNMs[0]);
+      assertEquals(expectedNMCounts[1], maxRunningContainersOnNMs[1]);
 
       try {
         yarnClient = YarnClient.createYarnClient();
@@ -406,12 +410,12 @@ public class TestDSWithMultipleNodeManager {
     }
   }
 
-  protected String generateAppName() {
-    return generateAppName(null);
+  protected String generateAppName(String name) {
+    return generateAppName(name, null);
   }
 
-  protected String generateAppName(String postFix) {
-    return name.getMethodName().replaceFirst("test", "")
+  protected String generateAppName(String name, String postFix) {
+    return name.replaceFirst("test", "")
         .concat(postFix == null ? "" : "-" + postFix);
   }
 

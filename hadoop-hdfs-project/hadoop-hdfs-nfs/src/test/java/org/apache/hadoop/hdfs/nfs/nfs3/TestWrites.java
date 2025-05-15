@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -53,9 +55,7 @@ import org.apache.hadoop.oncrpc.security.SecurityHandler;
 import org.apache.hadoop.security.ShellBasedIdMapping;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
 
 public class TestWrites {
   @Test
@@ -77,7 +77,7 @@ public class TestWrites {
         request.getStableHow(), request.getData(), null, 1, false,
         WriteCtx.DataState.NO_DUMP);
 
-    Assert.assertTrue(writeCtx1.getData().array().length == originalCount);
+    assertTrue(writeCtx1.getData().array().length == originalCount);
 
     // Now change the write request
     OpenFileCtx.alterWriteRequest(request, 12);
@@ -89,12 +89,12 @@ public class TestWrites {
 
     int position = appendedData.position();
     int limit = appendedData.limit();
-    Assert.assertTrue(position == 12);
-    Assert.assertTrue(limit - position == 8);
-    Assert.assertTrue(appendedData.get(position) == (byte) 12);
-    Assert.assertTrue(appendedData.get(position + 1) == (byte) 13);
-    Assert.assertTrue(appendedData.get(position + 2) == (byte) 14);
-    Assert.assertTrue(appendedData.get(position + 7) == (byte) 19);
+    assertTrue(position == 12);
+    assertTrue(limit - position == 8);
+    assertTrue(appendedData.get(position) == (byte) 12);
+    assertTrue(appendedData.get(position + 1) == (byte) 13);
+    assertTrue(appendedData.get(position + 2) == (byte) 14);
+    assertTrue(appendedData.get(position + 7) == (byte) 19);
 
     // Test current file write offset is at boundaries
     buffer.position(0);
@@ -107,10 +107,10 @@ public class TestWrites {
     appendedData = writeCtx3.getData();
     position = appendedData.position();
     limit = appendedData.limit();
-    Assert.assertTrue(position == 1);
-    Assert.assertTrue(limit - position == 19);
-    Assert.assertTrue(appendedData.get(position) == (byte) 1);
-    Assert.assertTrue(appendedData.get(position + 18) == (byte) 19);
+    assertTrue(position == 1);
+    assertTrue(limit - position == 19);
+    assertTrue(appendedData.get(position) == (byte) 1);
+    assertTrue(appendedData.get(position + 18) == (byte) 19);
 
     // Reset buffer position before test another boundary
     buffer.position(0);
@@ -123,9 +123,9 @@ public class TestWrites {
     appendedData = writeCtx4.getData();
     position = appendedData.position();
     limit = appendedData.limit();
-    Assert.assertTrue(position == 19);
-    Assert.assertTrue(limit - position == 1);
-    Assert.assertTrue(appendedData.get(position) == (byte) 19);
+    assertTrue(position == 19);
+    assertTrue(limit - position == 1);
+    assertTrue(appendedData.get(position) == (byte) 19);
   }
 
   @Test
@@ -133,10 +133,10 @@ public class TestWrites {
   // includes COMMIT_FINISHED, COMMIT_WAIT, COMMIT_INACTIVE_CTX,
   // COMMIT_INACTIVE_WITH_PENDING_WRITE, COMMIT_ERROR, and COMMIT_DO_SYNC.
   public void testCheckCommit() throws IOException {
-    DFSClient dfsClient = Mockito.mock(DFSClient.class);
+    DFSClient dfsClient = mock(DFSClient.class);
     Nfs3FileAttributes attr = new Nfs3FileAttributes();
-    HdfsDataOutputStream fos = Mockito.mock(HdfsDataOutputStream.class);
-    Mockito.when(fos.getPos()).thenReturn((long) 0);
+    HdfsDataOutputStream fos = mock(HdfsDataOutputStream.class);
+    when(fos.getPos()).thenReturn((long) 0);
 
     NfsConfiguration conf = new NfsConfiguration();
     conf.setBoolean(NfsConfigKeys.LARGE_FILE_UPLOAD, false);
@@ -147,62 +147,62 @@ public class TestWrites {
 
     // Test inactive open file context
     ctx.setActiveStatusForTest(false);
-    Channel ch = Mockito.mock(Channel.class);
+    Channel ch = mock(Channel.class);
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_CTX);
+    assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_CTX);
 
     ctx.getPendingWritesForTest().put(new OffsetRange(5, 10),
         new WriteCtx(null, 0, 0, 0, null, null, null, 0, false, null));
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_WITH_PENDING_WRITE);
+    assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_WITH_PENDING_WRITE);
 
     // Test request with non zero commit offset
     ctx.setActiveStatusForTest(true);
-    Mockito.when(fos.getPos()).thenReturn((long) 10);
+    when(fos.getPos()).thenReturn((long) 10);
     ctx.setNextOffsetForTest(10);
     COMMIT_STATUS status = ctx.checkCommitInternal(5, null, 1, attr, false);
-    Assert.assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
+    assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
     // Do_SYNC state will be updated to FINISHED after data sync
     ret = ctx.checkCommit(dfsClient, 5, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
+    assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
     
     status = ctx.checkCommitInternal(10, ch, 1, attr, false);
-    Assert.assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
+    assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
     ret = ctx.checkCommit(dfsClient, 10, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
+    assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
 
     ConcurrentNavigableMap<Long, CommitCtx> commits = ctx
         .getPendingCommitsForTest();
-    Assert.assertTrue(commits.size() == 0);
+    assertTrue(commits.size() == 0);
     ret = ctx.checkCommit(dfsClient, 11, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_WAIT);
-    Assert.assertTrue(commits.size() == 1);
+    assertTrue(ret == COMMIT_STATUS.COMMIT_WAIT);
+    assertTrue(commits.size() == 1);
     long key = commits.firstKey();
-    Assert.assertTrue(key == 11);
+    assertTrue(key == 11);
 
     // Test request with zero commit offset
     commits.remove(new Long(11));
     // There is one pending write [5,10]
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_WAIT);
-    Assert.assertTrue(commits.size() == 1);
+    assertTrue(ret == COMMIT_STATUS.COMMIT_WAIT);
+    assertTrue(commits.size() == 1);
     key = commits.firstKey();
-    Assert.assertTrue(key == 9);
+    assertTrue(key == 9);
 
     // Empty pending writes
     ctx.getPendingWritesForTest().remove(new OffsetRange(5, 10));
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
+    assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
   }
   
   @Test
   // Validate all the commit check return codes OpenFileCtx.COMMIT_STATUS with
   // large file upload option.
   public void testCheckCommitLargeFileUpload() throws IOException {
-    DFSClient dfsClient = Mockito.mock(DFSClient.class);
+    DFSClient dfsClient = mock(DFSClient.class);
     Nfs3FileAttributes attr = new Nfs3FileAttributes();
-    HdfsDataOutputStream fos = Mockito.mock(HdfsDataOutputStream.class);
-    Mockito.when(fos.getPos()).thenReturn((long) 0);
+    HdfsDataOutputStream fos = mock(HdfsDataOutputStream.class);
+    when(fos.getPos()).thenReturn((long) 0);
 
     NfsConfiguration conf = new NfsConfiguration();
     conf.setBoolean(NfsConfigKeys.LARGE_FILE_UPLOAD, true);
@@ -213,66 +213,66 @@ public class TestWrites {
 
     // Test inactive open file context
     ctx.setActiveStatusForTest(false);
-    Channel ch = Mockito.mock(Channel.class);
+    Channel ch = mock(Channel.class);
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_CTX);
+    assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_CTX);
 
     ctx.getPendingWritesForTest().put(new OffsetRange(10, 15),
         new WriteCtx(null, 0, 0, 0, null, null, null, 0, false, null));
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_WITH_PENDING_WRITE);
+    assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_WITH_PENDING_WRITE);
 
     // Test request with non zero commit offset
     ctx.setActiveStatusForTest(true);
-    Mockito.when(fos.getPos()).thenReturn((long) 8);
+    when(fos.getPos()).thenReturn((long) 8);
     ctx.setNextOffsetForTest(10);
     COMMIT_STATUS status = ctx.checkCommitInternal(5, null, 1, attr, false);
-    Assert.assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
+    assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
     // Do_SYNC state will be updated to FINISHED after data sync
     ret = ctx.checkCommit(dfsClient, 5, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
+    assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
     
     // Test commit sequential writes
     status = ctx.checkCommitInternal(10, ch, 1, attr, false);
-    Assert.assertTrue(status == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
+    assertTrue(status == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
     ret = ctx.checkCommit(dfsClient, 10, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
+    assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
 
     // Test commit non-sequential writes
     ConcurrentNavigableMap<Long, CommitCtx> commits = ctx
         .getPendingCommitsForTest();
-    Assert.assertTrue(commits.size() == 1);
+    assertTrue(commits.size() == 1);
     ret = ctx.checkCommit(dfsClient, 16, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_SUCCESS);
-    Assert.assertTrue(commits.size() == 1);
+    assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_SUCCESS);
+    assertTrue(commits.size() == 1);
     
     // Test request with zero commit offset
     commits.remove(new Long(10));
     // There is one pending write [10,15]
     ret = ctx.checkCommitInternal(0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
+    assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
     
     ret = ctx.checkCommitInternal(9, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
-    Assert.assertTrue(commits.size() == 2);
+    assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
+    assertTrue(commits.size() == 2);
 
     // Empty pending writes. nextOffset=10, flushed pos=8
     ctx.getPendingWritesForTest().remove(new OffsetRange(10, 15));
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
+    assertTrue(ret == COMMIT_STATUS.COMMIT_SPECIAL_WAIT);
     
     // Empty pending writes
     ctx.setNextOffsetForTest((long) 8); // flushed pos = 8
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
+    assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
     
   }
   
   @Test
   public void testCheckCommitAixCompatMode() throws IOException {
-    DFSClient dfsClient = Mockito.mock(DFSClient.class);
+    DFSClient dfsClient = mock(DFSClient.class);
     Nfs3FileAttributes attr = new Nfs3FileAttributes();
-    HdfsDataOutputStream fos = Mockito.mock(HdfsDataOutputStream.class);
+    HdfsDataOutputStream fos = mock(HdfsDataOutputStream.class);
 
     NfsConfiguration conf = new NfsConfiguration();
     conf.setBoolean(NfsConfigKeys.LARGE_FILE_UPLOAD, false);
@@ -282,18 +282,18 @@ public class TestWrites {
     
     // Test fall-through to pendingWrites check in the event that commitOffset
     // is greater than the number of bytes we've so far flushed.
-    Mockito.when(fos.getPos()).thenReturn((long) 2);
+    when(fos.getPos()).thenReturn((long) 2);
     COMMIT_STATUS status = ctx.checkCommitInternal(5, null, 1, attr, false);
-    Assert.assertTrue(status == COMMIT_STATUS.COMMIT_FINISHED);
+    assertTrue(status == COMMIT_STATUS.COMMIT_FINISHED);
     
     // Test the case when we actually have received more bytes than we're trying
     // to commit.
     ctx.getPendingWritesForTest().put(new OffsetRange(0, 10),
         new WriteCtx(null, 0, 0, 0, null, null, null, 0, false, null));
-    Mockito.when(fos.getPos()).thenReturn((long) 10);
+    when(fos.getPos()).thenReturn((long) 10);
     ctx.setNextOffsetForTest((long)10);
     status = ctx.checkCommitInternal(5, null, 1, attr, false);
-    Assert.assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
+    assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
   }
 
   @Test
@@ -301,10 +301,10 @@ public class TestWrites {
   // includes COMMIT_FINISHED, COMMIT_WAIT, COMMIT_INACTIVE_CTX,
   // COMMIT_INACTIVE_WITH_PENDING_WRITE, COMMIT_ERROR, and COMMIT_DO_SYNC.
   public void testCheckCommitFromRead() throws IOException {
-    DFSClient dfsClient = Mockito.mock(DFSClient.class);
+    DFSClient dfsClient = mock(DFSClient.class);
     Nfs3FileAttributes attr = new Nfs3FileAttributes();
-    HdfsDataOutputStream fos = Mockito.mock(HdfsDataOutputStream.class);
-    Mockito.when(fos.getPos()).thenReturn((long) 0);
+    HdfsDataOutputStream fos = mock(HdfsDataOutputStream.class);
+    when(fos.getPos()).thenReturn((long) 0);
     NfsConfiguration config = new NfsConfiguration();
 
     config.setBoolean(NfsConfigKeys.LARGE_FILE_UPLOAD, false);
@@ -318,7 +318,7 @@ public class TestWrites {
     
     // Test inactive open file context
     ctx.setActiveStatusForTest(false);
-    Channel ch = Mockito.mock(Channel.class);
+    Channel ch = mock(Channel.class);
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, true);
     assertEquals( COMMIT_STATUS.COMMIT_INACTIVE_CTX, ret);
     assertEquals(Nfs3Status.NFS3_OK, wm.commitBeforeRead(dfsClient, h, 0));
@@ -331,7 +331,7 @@ public class TestWrites {
     
     // Test request with non zero commit offset
     ctx.setActiveStatusForTest(true);
-    Mockito.when(fos.getPos()).thenReturn((long) 10);
+    when(fos.getPos()).thenReturn((long) 10);
     ctx.setNextOffsetForTest((long)10);
     COMMIT_STATUS status = ctx.checkCommitInternal(5, ch, 1, attr, false);
     assertEquals(COMMIT_STATUS.COMMIT_DO_SYNC, status);
@@ -371,10 +371,10 @@ public class TestWrites {
   @Test
   // Validate all the commit check return codes OpenFileCtx.COMMIT_STATUS with large file upload option
   public void testCheckCommitFromReadLargeFileUpload() throws IOException {
-    DFSClient dfsClient = Mockito.mock(DFSClient.class);
+    DFSClient dfsClient = mock(DFSClient.class);
     Nfs3FileAttributes attr = new Nfs3FileAttributes();
-    HdfsDataOutputStream fos = Mockito.mock(HdfsDataOutputStream.class);
-    Mockito.when(fos.getPos()).thenReturn((long) 0);
+    HdfsDataOutputStream fos = mock(HdfsDataOutputStream.class);
+    when(fos.getPos()).thenReturn((long) 0);
     NfsConfiguration config = new NfsConfiguration();
 
     config.setBoolean(NfsConfigKeys.LARGE_FILE_UPLOAD, true);
@@ -388,7 +388,7 @@ public class TestWrites {
     
     // Test inactive open file context
     ctx.setActiveStatusForTest(false);
-    Channel ch = Mockito.mock(Channel.class);
+    Channel ch = mock(Channel.class);
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, true);
     assertEquals( COMMIT_STATUS.COMMIT_INACTIVE_CTX, ret);
     assertEquals(Nfs3Status.NFS3_OK, wm.commitBeforeRead(dfsClient, h, 0));
@@ -401,7 +401,7 @@ public class TestWrites {
     
     // Test request with non zero commit offset
     ctx.setActiveStatusForTest(true);
-    Mockito.when(fos.getPos()).thenReturn((long) 6);
+    when(fos.getPos()).thenReturn((long) 6);
     ctx.setNextOffsetForTest((long)10);
     COMMIT_STATUS status = ctx.checkCommitInternal(5, ch, 1, attr, false);
     assertEquals(COMMIT_STATUS.COMMIT_DO_SYNC, status);
@@ -463,8 +463,8 @@ public class TestWrites {
     DFSClient client = null;
     MiniDFSCluster cluster = null;
     RpcProgramNfs3 nfsd;
-    SecurityHandler securityHandler = Mockito.mock(SecurityHandler.class);
-    Mockito.when(securityHandler.getUser()).thenReturn(
+    SecurityHandler securityHandler = mock(SecurityHandler.class);
+    when(securityHandler.getUser()).thenReturn(
         System.getProperty("user.name"));
     String currentUser = System.getProperty("user.name");
     config.set(
@@ -572,8 +572,8 @@ public class TestWrites {
     RpcProgramNfs3 nfsd;
     final int bufSize = 32;
     final int numOOO = 3;
-    SecurityHandler securityHandler = Mockito.mock(SecurityHandler.class);
-    Mockito.when(securityHandler.getUser()).thenReturn(
+    SecurityHandler securityHandler = mock(SecurityHandler.class);
+    when(securityHandler.getUser()).thenReturn(
         System.getProperty("user.name"));
     String currentUser = System.getProperty("user.name");
     config.set(
@@ -649,8 +649,8 @@ public class TestWrites {
     MiniDFSCluster cluster = null;
     RpcProgramNfs3 nfsd;
     final int bufSize = 32;
-    SecurityHandler securityHandler = Mockito.mock(SecurityHandler.class);
-    Mockito.when(securityHandler.getUser()).thenReturn(
+    SecurityHandler securityHandler = mock(SecurityHandler.class);
+    when(securityHandler.getUser()).thenReturn(
         System.getProperty("user.name"));
     String currentUser = System.getProperty("user.name");
     config.set(
@@ -736,10 +736,10 @@ public class TestWrites {
 
   @Test
   public void testCheckSequential() throws IOException {
-    DFSClient dfsClient = Mockito.mock(DFSClient.class);
+    DFSClient dfsClient = mock(DFSClient.class);
     Nfs3FileAttributes attr = new Nfs3FileAttributes();
-    HdfsDataOutputStream fos = Mockito.mock(HdfsDataOutputStream.class);
-    Mockito.when(fos.getPos()).thenReturn((long) 0);
+    HdfsDataOutputStream fos = mock(HdfsDataOutputStream.class);
+    when(fos.getPos()).thenReturn((long) 0);
     NfsConfiguration config = new NfsConfiguration();
 
     config.setBoolean(NfsConfigKeys.LARGE_FILE_UPLOAD, false);

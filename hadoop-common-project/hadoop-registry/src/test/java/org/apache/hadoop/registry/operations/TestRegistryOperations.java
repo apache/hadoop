@@ -31,7 +31,7 @@ import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
 import org.apache.hadoop.registry.client.types.RegistryPathStatus;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,19 +108,25 @@ public class TestRegistryOperations extends AbstractRegistryTest {
     operations.delete(PARENT_PATH, true);
   }
 
-  @Test(expected = PathNotFoundException.class)
+  @Test
   public void testStatEmptyPath() throws Throwable {
-    operations.stat(ENTRY_PATH);
+    assertThrows(PathNotFoundException.class, () -> {
+      operations.stat(ENTRY_PATH);
+    });
   }
 
-  @Test(expected = PathNotFoundException.class)
+  @Test
   public void testLsEmptyPath() throws Throwable {
-    operations.list(PARENT_PATH);
+    assertThrows(PathNotFoundException.class, () -> {
+      operations.list(PARENT_PATH);
+    });
   }
 
-  @Test(expected = PathNotFoundException.class)
+  @Test
   public void testResolveEmptyPath() throws Throwable {
-    operations.resolve(ENTRY_PATH);
+    assertThrows(PathNotFoundException.class, () -> {
+      operations.resolve(ENTRY_PATH);
+    });
   }
 
   @Test
@@ -171,12 +177,14 @@ public class TestRegistryOperations extends AbstractRegistryTest {
 
   }
 
-  @Test(expected = PathNotFoundException.class)
+  @Test
   public void testPutNoParent2() throws Throwable {
-    ServiceRecord record = new ServiceRecord();
-    record.set(YarnRegistryAttributes.YARN_ID, "testPutNoParent");
-    String path = "/path/without/parent";
-    operations.bind(path, record, 0);
+    assertThrows(PathNotFoundException.class, () -> {
+      ServiceRecord record = new ServiceRecord();
+      record.set(YarnRegistryAttributes.YARN_ID, "testPutNoParent");
+      String path = "/path/without/parent";
+      operations.bind(path, record, 0);
+    });
   }
 
   @Test
@@ -281,7 +289,7 @@ public class TestRegistryOperations extends AbstractRegistryTest {
 
     // listings now
     List<String> list = operations.list(path);
-    assertEquals("Wrong no. of children", 2, list.size());
+    assertEquals(2, list.size(), "Wrong no. of children");
     // there's no order here, so create one
     Map<String, String> names = new HashMap<String, String>();
     String entries = "";
@@ -289,14 +297,14 @@ public class TestRegistryOperations extends AbstractRegistryTest {
       names.put(child, child);
       entries += child + " ";
     }
-    assertTrue("No 'r1' in " + entries,
-        names.containsKey("r1"));
-    assertTrue("No 'r2' in " + entries,
-        names.containsKey("r2"));
+    assertTrue(
+        names.containsKey("r1"), "No 'r1' in " + entries);
+    assertTrue(
+        names.containsKey("r2"), "No 'r2' in " + entries);
 
     Map<String, RegistryPathStatus> stats =
         RegistryUtils.statChildren(operations, path);
-    assertEquals("Wrong no. of children", 2, stats.size());
+    assertEquals(2, stats.size(), "Wrong no. of children");
     assertEquals(r1stat, stats.get("r1"));
     assertEquals(r2stat, stats.get("r2"));
   }
@@ -322,7 +330,7 @@ public class TestRegistryOperations extends AbstractRegistryTest {
         RegistryUtils.homePathForUser("hbase/localhost@HADOOP.APACHE.ORG"),
         true);
     home = RegistryUtils.homePathForUser("ADMINISTRATOR/127.0.0.1");
-    assertTrue("No 'administrator' in " + home, home.contains("administrator"));
+    assertTrue(home.contains("administrator"), "No 'administrator' in " + home);
     operations.mknode(
         home,
         true);

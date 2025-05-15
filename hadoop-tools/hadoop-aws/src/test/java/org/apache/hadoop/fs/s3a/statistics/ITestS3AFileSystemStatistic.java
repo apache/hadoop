@@ -31,6 +31,8 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
+
 public class ITestS3AFileSystemStatistic extends AbstractS3ATestBase {
 
   private static final int ONE_KB = 1024;
@@ -42,6 +44,10 @@ public class ITestS3AFileSystemStatistic extends AbstractS3ATestBase {
    */
   @Test
   public void testBytesReadWithStream() throws IOException {
+    // Analytics accelerator currently does not support IOStatistics, this will be added as
+    // part of https://issues.apache.org/jira/browse/HADOOP-19364
+    skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
+        "Analytics Accelerator currently does not support stream statistics");
     S3AFileSystem fs = getFileSystem();
     Path filePath = path(getMethodName());
     byte[] oneKbBuf = new byte[ONE_KB];

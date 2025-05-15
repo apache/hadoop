@@ -22,6 +22,9 @@ import java.io.IOException;
 import java.util.Set;
 
 import javax.annotation.Nullable;
+import javax.inject.Named;
+import javax.inject.Singleton;
+import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DefaultValue;
@@ -42,6 +45,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
@@ -80,26 +84,32 @@ import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.WebApp;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.google.inject.Inject;
 
+@Singleton
 @Path("/ws/v1/history")
 public class HsWebServices extends WebServices {
   private final HistoryContext ctx;
   private WebApp webapp;
   private LogServlet logServlet;
+  private boolean mrAclsEnabled;
 
-  private @Context HttpServletResponse response;
-  @Context UriInfo uriInfo;
+  @Context
+  private HttpServletResponse response;
+
+  @Context
+  private UriInfo uriInfo;
 
   @Inject
-  public HsWebServices(final HistoryContext ctx,
-      final Configuration conf,
-      final WebApp webapp,
-      @Nullable ApplicationClientProtocol appBaseProto) {
+  public HsWebServices(
+      final @Named("ctx") HistoryContext ctx,
+      final @Named("conf") Configuration conf,
+      final @Named("hsWebApp") WebApp webapp,
+      final @Named("appClient") @Nullable ApplicationClientProtocol appBaseProto) {
     super(appBaseProto);
     this.ctx = ctx;
     this.webapp = webapp;
     this.logServlet = new LogServlet(conf, this);
+    this.mrAclsEnabled = conf.getBoolean(MRConfig.MR_ACLS_ENABLED, false);
   }
 
   private boolean hasAccess(Job job, HttpServletRequest request) {
@@ -114,6 +124,11 @@ public class HsWebServices extends WebServices {
   private void checkAccess(Job job, HttpServletRequest request) {
     if (!hasAccess(job, request)) {
       throw new WebApplicationException(Status.UNAUTHORIZED);
+    }
+  }
+  private void checkAccess(String containerIdStr, HttpServletRequest hsr) {
+    if (mrAclsEnabled) {
+      checkAccess(AMWebServices.getJobFromContainerIdString(containerIdStr, ctx), hsr);
     }
   }
 
@@ -434,7 +449,8 @@ public class HsWebServices extends WebServices {
    */
   @GET
   @Path("/remote-log-dir")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + ";" + JettyUtils.UTF_8 })
   public Response getRemoteLogDirPath(@Context HttpServletRequest req,
       @QueryParam(YarnWebServiceParams.REMOTE_USER) String user,
       @QueryParam(YarnWebServiceParams.APP_ID) String appIdStr)
@@ -489,7 +505,8 @@ public class HsWebServices extends WebServices {
 
   @GET
   @Path("/containers/{containerid}/logs")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + ";" + JettyUtils.UTF_8})
   @InterfaceAudience.Public
   @InterfaceStability.Unstable
   public Response getContainerLogs(@Context HttpServletRequest hsr,
@@ -500,7 +517,7 @@ public class HsWebServices extends WebServices {
       @QueryParam(YarnWebServiceParams.MANUAL_REDIRECTION)
       @DefaultValue("false") boolean manualRedirection) {
     init();
-
+    checkAccess(containerIdStr, hsr);
     WrappedLogMetaRequest.Builder logMetaRequestBuilder =
         LogServlet.createRequestFromContainerId(containerIdStr);
 
@@ -527,6 +544,7 @@ public class HsWebServices extends WebServices {
       @QueryParam(YarnWebServiceParams.MANUAL_REDIRECTION)
       @DefaultValue("false") boolean manualRedirection) {
     init();
+    checkAccess(containerIdStr, req);
     return logServlet.getLogFile(req, containerIdStr, filename, format, size,
         nmId, redirectedFromNode, null, manualRedirection);
   }
@@ -537,7 +555,12 @@ public class HsWebServices extends WebServices {
   }
 
   @VisibleForTesting
-  void setLogServlet(LogServlet logServlet) {
+  public void setLogServlet(LogServlet logServlet) {
     this.logServlet = logServlet;
+  }
+
+  @VisibleForTesting
+  public void setHttpServletResponse(HttpServletResponse resp) {
+    this.response = resp;
   }
 }

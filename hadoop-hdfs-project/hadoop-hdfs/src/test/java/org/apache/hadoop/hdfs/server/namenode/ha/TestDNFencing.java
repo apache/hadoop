@@ -50,8 +50,10 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
@@ -568,13 +570,13 @@ public class TestDNFencing {
   }
 
   private void doMetasave(NameNode nn2) {
-    nn2.getNamesystem().writeLock();
+    nn2.getNamesystem().writeLock(RwLockMode.BM);
     try {
       PrintWriter pw = new PrintWriter(System.err);
       nn2.getNamesystem().getBlockManager().metaSave(pw);
       pw.flush();
     } finally {
-      nn2.getNamesystem().writeUnlock();
+      nn2.getNamesystem().writeUnlock(RwLockMode.BM, "metaSave");
     }
   }
 
@@ -596,9 +598,13 @@ public class TestDNFencing {
       throws IOException {
     int count = 0;
     for (DataNode dn : cluster.getDataNodes()) {
-      if (DataNodeTestUtils.getFSDataset(dn).getStoredBlock(
-          block.getBlockPoolId(), block.getBlockId()) != null) {
-        count++;
+      try {
+        if (DataNodeTestUtils.getFSDataset(dn).getStoredBlock(
+            block.getBlockPoolId(), block.getBlockId()) != null) {
+          count++;
+        }
+      } catch (ReplicaNotFoundException e) {
+        continue;
       }
     }
     return count;

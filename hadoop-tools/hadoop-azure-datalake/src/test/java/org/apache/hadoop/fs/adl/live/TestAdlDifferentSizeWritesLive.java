@@ -23,13 +23,10 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.adl.common.Parallelized;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -39,19 +36,21 @@ import java.util.Random;
 import java.util.UUID;
 
 import static org.apache.hadoop.fs.adl.AdlConfKeys.WRITE_BUFFER_SIZE_KEY;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Verify data integrity with different data sizes with buffer size.
  */
-@RunWith(Parallelized.class)
 public class TestAdlDifferentSizeWritesLive {
   private static Random rand = new Random();
   private int totalSize;
   private int chunkSize;
 
-  public TestAdlDifferentSizeWritesLive(int totalSize, int chunkSize) {
-    this.totalSize = totalSize;
-    this.chunkSize = chunkSize;
+  public void initTestAdlDifferentSizeWritesLive(int pTotalSize, int pChunkSize) {
+    this.totalSize = pTotalSize;
+    this.chunkSize = pChunkSize;
   }
 
   public static byte[] getRandomByteArrayData(int size) {
@@ -60,8 +59,6 @@ public class TestAdlDifferentSizeWritesLive {
     return b;
   }
 
-  @Parameterized.Parameters(name = "{index}: Data Size [{0}] ; Chunk Size "
-      + "[{1}]")
   public static Collection testDataForIntegrityTest() {
     return Arrays.asList(
         new Object[][] {{4 * 1024, 1 * 1024}, {4 * 1024, 7 * 1024},
@@ -71,7 +68,7 @@ public class TestAdlDifferentSizeWritesLive {
             {10 * 1024, 8 * 1024}});
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void cleanUpParent() throws IOException, URISyntaxException {
     if (AdlStorageConfiguration.isContractTestEnabled()) {
       Path path = new Path("/test/dataIntegrityCheck/");
@@ -80,14 +77,15 @@ public class TestAdlDifferentSizeWritesLive {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
-    org.junit.Assume
-        .assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
+    assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
   }
 
-  @Test
-  public void testDataIntegrity() throws IOException {
+  @MethodSource("testDataForIntegrityTest")
+  @ParameterizedTest(name = "{index}: Data Size [{0}] ; Chunk Size [{1}]")
+  public void testDataIntegrity(int pTotalSize, int pChunkSize) throws IOException {
+    initTestAdlDifferentSizeWritesLive(pTotalSize, pChunkSize);
     Path path = new Path(
         "/test/dataIntegrityCheck/" + UUID.randomUUID().toString());
     FileSystem fs = null;
@@ -117,7 +115,7 @@ public class TestAdlDifferentSizeWritesLive {
     FSDataInputStream in = fs.open(path);
     in.readFully(0, actualData);
     in.close();
-    Assert.assertArrayEquals(expectedData, actualData);
-    Assert.assertTrue(fs.delete(path, true));
+    assertArrayEquals(expectedData, actualData);
+    assertTrue(fs.delete(path, true));
   }
 }

@@ -569,7 +569,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
                                    Path... inputPaths) throws IOException {
     Configuration conf = job.getConfiguration();
     Path path = inputPaths[0].getFileSystem(conf).makeQualified(inputPaths[0]);
-    StringBuffer str = new StringBuffer(StringUtils.escapeString(path.toString()));
+    StringBuilder str = new StringBuilder(StringUtils.escapeString(path.toString()));
     for(int i = 1; i < inputPaths.length;i++) {
       str.append(StringUtils.COMMA_STR);
       path = inputPaths[i].getFileSystem(conf).makeQualified(inputPaths[i]);

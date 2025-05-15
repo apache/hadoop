@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hdfs.qjournal.protocolPB;
 
+import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.StorageInfoProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocolProtos;
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -73,6 +75,18 @@ public class InterQJournalProtocolTranslatorPB implements ProtocolMetaInterface,
     }
     return ipc(() -> rpcProxy.getEditLogManifestFromJournal(NULL_CONTROLLER,
         req.build()));
+  }
+
+  @Override
+  public StorageInfoProto getStorageInfo(String jid, String nameServiceId)
+      throws IOException {
+    InterQJournalProtocolProtos.GetStorageInfoRequestProto.Builder req =
+        InterQJournalProtocolProtos.GetStorageInfoRequestProto.newBuilder()
+            .setJid(convertJournalId(jid));
+    if (nameServiceId != null) {
+      req.setNameServiceId(nameServiceId);
+    }
+    return ipc(() -> rpcProxy.getStorageInfo(NULL_CONTROLLER, req.build()));
   }
 
   private QJournalProtocolProtos.JournalIdProto convertJournalId(String jid) {

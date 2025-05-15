@@ -1630,7 +1630,9 @@ public class DFSUtil {
             getPassword(sslConf, DFS_SERVER_HTTPS_TRUSTSTORE_PASSWORD_KEY),
             sslConf.get("ssl.server.truststore.type", "jks"))
         .excludeCiphers(
-            sslConf.get("ssl.server.exclude.cipher.list"));
+            sslConf.get("ssl.server.exclude.cipher.list"))
+        .includeCiphers(
+            sslConf.get("ssl.server.include.cipher.list"));
   }
 
   /**
@@ -1736,11 +1738,11 @@ public class DFSUtil {
   }
 
   /**
-   * Return a HttpServer.Builder that the journalnode / namenode / secondary
+   * Return a HttpServer.Builder that the journalnode / namenode / secondary / router / balancer
    * namenode can use to initialize their HTTP / HTTPS server.
    *
    */
-  public static HttpServer2.Builder httpServerTemplateForNNAndJN(
+  public static HttpServer2.Builder getHttpServerTemplate(
       Configuration conf, final InetSocketAddress httpAddr,
       final InetSocketAddress httpsAddr, String name, String spnegoUserNameKey,
       String spnegoKeytabFileKey) throws IOException {

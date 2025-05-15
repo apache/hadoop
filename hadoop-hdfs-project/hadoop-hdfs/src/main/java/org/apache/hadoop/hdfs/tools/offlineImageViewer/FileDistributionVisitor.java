@@ -28,20 +28,20 @@ import org.apache.hadoop.util.StringUtils;
  * <h3>Description.</h3>
  * This is the tool for analyzing file sizes in the namespace image.
  * In order to run the tool one should define a range of integers
- * <tt>[0, maxSize]</tt> by specifying <tt>maxSize</tt> and a <tt>step</tt>.
- * The range of integers is divided into segments of size <tt>step</tt>: 
- * <tt>[0, s<sub>1</sub>, ..., s<sub>n-1</sub>, maxSize]</tt>,
+ * <code>[0, maxSize]</code> by specifying <code>maxSize</code> and a <code>step</code>.
+ * The range of integers is divided into segments of size <code>step</code>: 
+ * <code>[0, s<sub>1</sub>, ..., s<sub>n-1</sub>, maxSize]</code>,
  * and the visitor calculates how many files in the system fall into 
- * each segment <tt>[s<sub>i-1</sub>, s<sub>i</sub>)</tt>. 
- * Note that files larger than <tt>maxSize</tt> always fall into 
+ * each segment <code>[s<sub>i-1</sub>, s<sub>i</sub>)</code>. 
+ * Note that files larger than <code>maxSize</code> always fall into 
  * the very last segment.
  * 
  * <h3>Input.</h3>
  * <ul>
- * <li><tt>filename</tt> specifies the location of the image file;</li>
- * <li><tt>maxSize</tt> determines the range <tt>[0, maxSize]</tt> of files
+ * <li><code>filename</code> specifies the location of the image file;</li>
+ * <li><code>maxSize</code> determines the range <code>[0, maxSize]</code> of files
  * sizes considered by the visitor;</li>
- * <li><tt>step</tt> the range is divided into segments of size step.</li>
+ * <li><code>step</code> the range is divided into segments of size step.</li>
  * </ul>
  *
  * <h3>Output.</h3>

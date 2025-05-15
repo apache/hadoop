@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,6 +31,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response.Status;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -43,32 +45,27 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
-import com.sun.jersey.api.client.ClientResponse.Status;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /* Just a simple test class to ensure that the RM handles the static web user
  * correctly for secure and un-secure modes
  * 
  */
-@RunWith(Parameterized.class)
 public class TestRMWebappAuthentication {
 
   private static MockRM rm;
   private static Configuration simpleConf;
   private static Configuration kerberosConf;
 
-  private static final File testRootDir = new File("target",
+  private static File testRootDir = new File("target",
     TestRMWebServicesDelegationTokenAuthentication.class.getName() + "-root");
-  private static File httpSpnegoKeytabFile = new File(
-    KerberosTestUtils.getKeytabFile());
+  private static File httpSpnegoKeytabFile = new File(KerberosTestUtils.getKeytabFile());
 
   private static boolean miniKDCStarted = false;
   private static MiniKdc testMiniKDC;
@@ -93,28 +90,26 @@ public class TestRMWebappAuthentication {
     kerberosConf.setBoolean("mockrm.webapp.enabled", true);
   }
 
-  @Parameters
   public static Collection params() {
-    return Arrays.asList(new Object[][] { { 1, simpleConf },
-        { 2, kerberosConf } });
+    return Arrays.asList(new Object[][]{{1, simpleConf},
+        {2, kerberosConf}});
   }
 
-  public TestRMWebappAuthentication(int run, Configuration conf) {
-    super();
+  public void initTestRMWebappAuthentication(int run, Configuration conf) {
     setupAndStartRM(conf);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() {
     try {
       testMiniKDC = new MiniKdc(MiniKdc.createConf(), testRootDir);
       setupKDC();
     } catch (Exception e) {
-      assertTrue("Couldn't create MiniKDC", false);
+      assertTrue(false, "Couldn't create MiniKDC");
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (testMiniKDC != null) {
       testMiniKDC.stop();
@@ -142,9 +137,10 @@ public class TestRMWebappAuthentication {
   // ensure that in a non-secure cluster users can access
   // the web pages as earlier and submit apps as anonymous
   // user or by identifying themselves
-  @Test
-  public void testSimpleAuth() throws Exception {
-
+  @MethodSource("params")
+  @ParameterizedTest
+  public void testSimpleAuth(int run, Configuration conf) throws Exception {
+    initTestRMWebappAuthentication(run, conf);
     rm.start();
 
     // ensure users can access web pages
@@ -202,10 +198,10 @@ public class TestRMWebappAuthentication {
       assertEquals(Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
     }
 
-    requestBody = "{ \"state\": \"KILLED\"}";
-    url =
-        new URL(
-          "http://localhost:8088/ws/v1/cluster/apps/application_123_0/state");
+    AppState appState = new AppState();
+    appState.setState("KILLED");
+    requestBody = toJson(appState, AppState.class);
+    url = new URL("http://localhost:8088/ws/v1/cluster/apps/application_123_0/state");
     conn = (HttpURLConnection) url.openConnection();
     TestRMWebServicesDelegationTokenAuthentication.setupConn(conn, "PUT",
       "application/json", requestBody);

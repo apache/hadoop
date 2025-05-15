@@ -21,7 +21,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Constructor;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -46,10 +45,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.net.SocketFactory;
 
-import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
-import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
-
 import org.apache.commons.net.util.SubnetUtils;
 import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -58,9 +53,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.dynamic.DynConstructors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,9 +82,9 @@ public class NetUtils {
   /**
    * Get the socket factory for the given class according to its
    * configuration parameter
-   * <tt>hadoop.rpc.socket.factory.class.&lt;ClassName&gt;</tt>. When no
+   * <code>hadoop.rpc.socket.factory.class.&lt;ClassName&gt;</code>. When no
    * such parameter exists then fall back on the default socket factory as
-   * configured by <tt>hadoop.rpc.socket.factory.class.default</tt>. If
+   * configured by <code>hadoop.rpc.socket.factory.class.default</code>. If
    * this default socket factory is not configured, then fall back on the JVM
    * default socket factory.
    * 
@@ -111,7 +110,7 @@ public class NetUtils {
 
   /**
    * Get the default socket factory as specified by the configuration
-   * parameter <tt>hadoop.rpc.socket.factory.default</tt>
+   * parameter <code>hadoop.rpc.socket.factory.default</code>
    * 
    * @param conf the configuration
    * @return the default socket factory as specified in the configuration or
@@ -941,10 +940,59 @@ public class NetUtils {
 
       }
     } catch (IOException ex) {
-      return (IOException) new IOException("Failed on local exception: "
-          + exception + "; Host Details : "
-          + getHostDetailsAsString(destHost, destPort, localHost))
-          .initCause(exception);
+      try {
+        return new IOException("Failed on local exception: "
+            + exception + "; Host Details : "
+            + getHostDetailsAsString(destHost, destPort, localHost), exception);
+      } catch (Exception ignore) {
+        // in worst case, return the original exception
+        return exception;
+      }
+    }
+  }
+
+  /**
+   * Return an @{@link IOException} of the same type as the input exception but with
+   * a modified exception message that includes the node name.
+   *
+   * @param ioe existing exception.
+   * @param nodeName name of the node.
+   * @return IOException
+   */
+  public static IOException addNodeNameToIOException(final IOException ioe, final String nodeName) {
+    try {
+      final Throwable cause = ioe.getCause();
+      IOException newIoe = null;
+      if (cause != null) {
+        try {
+          DynConstructors.Ctor<? extends IOException> ctor =
+              new DynConstructors.Builder()
+                  .impl(ioe.getClass(), String.class, Throwable.class)
+                  .buildChecked();
+          newIoe = ctor.newInstance(nodeName + ": " + ioe.getMessage(), cause);
+        } catch (NoSuchMethodException e) {
+          // no matching constructor - try next approach below
+        }
+      }
+      if (newIoe == null) {
+        DynConstructors.Ctor<? extends IOException> ctor =
+            new DynConstructors.Builder()
+                .impl(ioe.getClass(), String.class)
+                .buildChecked();
+        newIoe = ctor.newInstance(nodeName + ": " + ioe.getMessage());
+        if (cause != null) {
+          try {
+            newIoe.initCause(cause);
+          } catch (Exception e) {
+            // Unable to initCause. Ignore the exception.
+          }
+        }
+      }
+      newIoe.setStackTrace(ioe.getStackTrace());
+      return newIoe;
+    } catch (Exception e) {
+      // Unable to create new exception. Return the original exception.
+      return ioe;
     }
   }
 
@@ -957,9 +1005,22 @@ public class NetUtils {
       T exception, String msg) throws T {
     Class<? extends Throwable> clazz = exception.getClass();
     try {
-      Constructor<? extends Throwable> ctor = clazz.getConstructor(String.class);
-      Throwable t = ctor.newInstance(msg);
-      return (T)(t.initCause(exception));
+      try {
+        DynConstructors.Ctor<T> ctor =
+            new DynConstructors.Builder()
+                .impl(clazz, String.class, Throwable.class)
+                .buildChecked();
+        return ctor.newInstance(msg, exception);
+      } catch (NoSuchMethodException e) {
+        // no matching constructor - try next approach below
+      }
+      DynConstructors.Ctor<T> ctor =
+          new DynConstructors.Builder()
+              .impl(clazz, String.class)
+              .buildChecked();
+      T newException = ctor.newInstance(msg);
+      newException.initCause(exception);
+      return newException;
     } catch (NoSuchMethodException e) {
       return exception;
     } catch (Throwable e) {
@@ -1114,7 +1175,7 @@ public class NetUtils {
 
   /**
    * Return an @{@link InetAddress} to bind to. If bindWildCardAddress is true
-   * than returns null.
+   * then returns null.
    *
    * @param localAddr local addr.
    * @param bindWildCardAddress bind wildcard address.

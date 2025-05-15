@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -32,7 +34,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -85,8 +87,7 @@ public class TestFileStatus {
     int iterator = 0;
     for (FileStatus fs : tests) {
       dest.readFields(in);
-      assertEquals("Different FileStatuses in iteration " + iterator,
-          dest, fs);
+      assertEquals(dest, fs, "Different FileStatuses in iteration " + iterator);
       iterator++;
     }
   }

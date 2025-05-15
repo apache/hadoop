@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -51,9 +53,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeLabelsUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
@@ -66,7 +68,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
   
   RMNodeLabelsManager mgr;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -173,7 +175,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
       String label) {
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
     CSQueue queue = scheduler.getQueue(queueName);
-    Assert.assertEquals(memory, queue.getQueueResourceUsage().getUsed(label)
+    assertEquals(memory, queue.getQueueResourceUsage().getUsed(label)
         .getMemorySize());
   }
 
@@ -182,7 +184,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     float epsillon = 0.0001f;
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
     CSQueue queue = scheduler.getQueue(queueName);
-    Assert.assertEquals((float)capacity/total,
+    assertEquals((float)capacity/total,
         queue.getQueueCapacities().getUsedCapacity(label), epsillon);
   }
 
@@ -190,7 +192,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
       String label) {
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
     CSQueue queue = scheduler.getQueue(queueName);
-    Assert.assertEquals(memory, queue.getQueueResourceUsage().getAMUsed(label)
+    assertEquals(memory, queue.getQueueResourceUsage().getAMUsed(label)
         .getMemorySize());
   }
 
@@ -199,11 +201,12 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
     LeafQueue queue = (LeafQueue) scheduler.getQueue(queueName);
     UsersManager.User user = queue.getUser(userName);
-    Assert.assertEquals(memory,
+    assertEquals(memory,
         user.getResourceUsage().getUsed(partition).getMemorySize());
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testRequestContainerAfterNodePartitionUpdated()
       throws Exception {
     // set node -> label
@@ -245,9 +248,9 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     ApplicationResourceUsageReport appResourceUsageReport =
         rm.getResourceScheduler().getAppResourceUsageReport(
             am1.getApplicationAttemptId());
-    Assert.assertEquals(1024, appResourceUsageReport.getUsedResources()
+    assertEquals(1024, appResourceUsageReport.getUsedResources()
         .getMemorySize());
-    Assert.assertEquals(1, appResourceUsageReport.getUsedResources()
+    assertEquals(1, appResourceUsageReport.getUsedResources()
         .getVirtualCores());
     // request a container.
     am1.allocate("*", GB, 1, new ArrayList<ContainerId>(), "x");
@@ -256,9 +259,9 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     appResourceUsageReport =
         rm.getResourceScheduler().getAppResourceUsageReport(
             am1.getApplicationAttemptId());
-    Assert.assertEquals(2048, appResourceUsageReport.getUsedResources()
+    assertEquals(2048, appResourceUsageReport.getUsedResources()
         .getMemorySize());
-    Assert.assertEquals(2, appResourceUsageReport.getUsedResources()
+    assertEquals(2, appResourceUsageReport.getUsedResources()
         .getVirtualCores());
     LeafQueue queue =
         (LeafQueue) ((CapacityScheduler) rm.getResourceScheduler())
@@ -267,8 +270,8 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     for (UserInfo userInfo : users) {
       if (userInfo.getUsername().equals("user")) {
         ResourceInfo resourcesUsed = userInfo.getResourcesUsed();
-        Assert.assertEquals(2048, resourcesUsed.getMemorySize());
-        Assert.assertEquals(2, resourcesUsed.getvCores());
+        assertEquals(2048, resourcesUsed.getMemorySize());
+        assertEquals(2, resourcesUsed.getvCores());
       }
     }
     rm.stop();
@@ -320,7 +323,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     am1.allocate("*", GB, 1, new ArrayList<ContainerId>(), "x");
     containerId1 = ContainerId.newContainerId(am1.getApplicationAttemptId(), 1);
     containerId2 = ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
-    Assert.assertTrue(rm.waitForState(nm1, containerId2,
+    assertTrue(rm.waitForState(nm1, containerId2,
         RMContainerState.ALLOCATED));
     
     // check used resource:
@@ -349,9 +352,9 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     checkUsedResource(rm, "root", 1024);
     checkUserUsedResource(rm, "a", "user", "x", 0);
     checkUserUsedResource(rm, "a", "user", "z", 1024);
-    Assert.assertEquals(0,
+    assertEquals(0,
         app.getAppAttemptResourceUsage().getUsed("x").getMemorySize());
-    Assert.assertEquals(1024,
+    assertEquals(1024,
         app.getAppAttemptResourceUsage().getUsed("z").getMemorySize());
     
     // change h1's label to y
@@ -374,11 +377,11 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     checkUserUsedResource(rm, "a", "user", "x", 0);
     checkUserUsedResource(rm, "a", "user", "y", 1024);
     checkUserUsedResource(rm, "a", "user", "z", 0);
-    Assert.assertEquals(0,
+    assertEquals(0,
         app.getAppAttemptResourceUsage().getUsed("x").getMemorySize());
-    Assert.assertEquals(1024,
+    assertEquals(1024,
         app.getAppAttemptResourceUsage().getUsed("y").getMemorySize());
-    Assert.assertEquals(0,
+    assertEquals(0,
         app.getAppAttemptResourceUsage().getUsed("z").getMemorySize());
     
     // change h1's label to no label
@@ -404,13 +407,13 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     checkUserUsedResource(rm, "a", "user", "y", 0);
     checkUserUsedResource(rm, "a", "user", "z", 0);
     checkUserUsedResource(rm, "a", "user", "", 2048);
-    Assert.assertEquals(0,
+    assertEquals(0,
         app.getAppAttemptResourceUsage().getUsed("x").getMemorySize());
-    Assert.assertEquals(0,
+    assertEquals(0,
         app.getAppAttemptResourceUsage().getUsed("y").getMemorySize());
-    Assert.assertEquals(0,
+    assertEquals(0,
         app.getAppAttemptResourceUsage().getUsed("z").getMemorySize());
-    Assert.assertEquals(2048,
+    assertEquals(2048,
         app.getAppAttemptResourceUsage().getUsed("").getMemorySize());
 
     // Finish the two containers, we should see used resource becomes 0
@@ -443,7 +446,8 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     rm.close();
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testMoveApplicationWithLabel() throws Exception {
     // set node -> label
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(
@@ -500,9 +504,9 @@ public class TestCapacitySchedulerNodeLabelUpdate {
       fail("Should throw exception since target queue doesnt have "
           + "required labels");
     } catch (Exception e) {
-      Assert.assertTrue("Yarn Exception should be thrown",
-          e instanceof YarnException);
-      Assert.assertEquals("Specified queue=root.a.a2 can't satisfy "
+      assertTrue(e instanceof YarnException,
+          "Yarn Exception should be thrown");
+      assertEquals("Specified queue=root.a.a2 can't satisfy "
           + "following apps label expressions =[x] accessible "
           + "node labels =[y]", e.getMessage());
     }
@@ -518,7 +522,8 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     rm.stop();
   }
 
-  @Test (timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testComplexResourceUsageWhenNodeUpdatesPartition()
       throws Exception {
     /*
@@ -575,12 +580,12 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     am1.allocate("*", GB, 1, new ArrayList<ContainerId>(), "x");
     ContainerId containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
-    Assert.assertTrue(rm.waitForState(nm1, containerId,
+    assertTrue(rm.waitForState(nm1, containerId,
         RMContainerState.ALLOCATED));
     am1.allocate("*", GB, 1, new ArrayList<ContainerId>());
     containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 3);
-    Assert.assertTrue(rm.waitForState(nm2, containerId,
+    assertTrue(rm.waitForState(nm2, containerId,
         RMContainerState.ALLOCATED));
     
     // app2
@@ -599,7 +604,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     am2.allocate("*", GB, 2, new ArrayList<ContainerId>(), "x");
     containerId =
         ContainerId.newContainerId(am2.getApplicationAttemptId(), 3);
-    Assert.assertTrue(rm.waitForState(nm1, containerId,
+    assertTrue(rm.waitForState(nm1, containerId,
         RMContainerState.ALLOCATED));
     
     // check used resource:
@@ -628,17 +633,17 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     checkUserUsedResource(rm, "a", "u2", "x", 0 * GB);
     checkUserUsedResource(rm, "a", "u2", "z", 2 * GB);
     checkUserUsedResource(rm, "a", "u2", "", 1 * GB);
-    Assert.assertEquals(0,
+    assertEquals(0,
         application1.getAppAttemptResourceUsage().getUsed("x").getMemorySize());
-    Assert.assertEquals(1 * GB,
+    assertEquals(1 * GB,
         application1.getAppAttemptResourceUsage().getUsed("z").getMemorySize());
-    Assert.assertEquals(2 * GB,
+    assertEquals(2 * GB,
         application1.getAppAttemptResourceUsage().getUsed("").getMemorySize());
-    Assert.assertEquals(0,
+    assertEquals(0,
         application2.getAppAttemptResourceUsage().getUsed("x").getMemorySize());
-    Assert.assertEquals(2 * GB,
+    assertEquals(2 * GB,
         application2.getAppAttemptResourceUsage().getUsed("z").getMemorySize());
-    Assert.assertEquals(1 * GB,
+    assertEquals(1 * GB,
         application2.getAppAttemptResourceUsage().getUsed("").getMemorySize());
 
     rm.close();
@@ -687,7 +692,8 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     rm.stop();
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testAMResourceUsageWhenNodeUpdatesPartition()
       throws Exception {
     // set node -> label
@@ -732,7 +738,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     am1.allocate("*", GB, 1, new ArrayList<ContainerId>(), "x");
     ContainerId.newContainerId(am1.getApplicationAttemptId(), 1);
     containerId2 = ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
-    Assert.assertTrue(rm.waitForState(nm1, containerId2,
+    assertTrue(rm.waitForState(nm1, containerId2,
         RMContainerState.ALLOCATED));
 
     // check used resource:
@@ -755,9 +761,9 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     checkAMUsedResource(rm, "a", 1024, "z");
     checkUserUsedResource(rm, "a", "user", "x", 0);
     checkUserUsedResource(rm, "a", "user", "z", 2048);
-    Assert.assertEquals(0,
+    assertEquals(0,
         app.getAppAttemptResourceUsage().getAMUsed("x").getMemorySize());
-    Assert.assertEquals(1024,
+    assertEquals(1024,
         app.getAppAttemptResourceUsage().getAMUsed("z").getMemorySize());
 
     // change h1's label to no label
@@ -774,17 +780,18 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     checkUserUsedResource(rm, "a", "user", "x", 0);
     checkUserUsedResource(rm, "a", "user", "z", 0);
     checkUserUsedResource(rm, "a", "user", "", 2048);
-    Assert.assertEquals(0,
+    assertEquals(0,
         app.getAppAttemptResourceUsage().getAMUsed("x").getMemorySize());
-    Assert.assertEquals(0,
+    assertEquals(0,
         app.getAppAttemptResourceUsage().getAMUsed("z").getMemorySize());
-    Assert.assertEquals(1024,
+    assertEquals(1024,
         app.getAppAttemptResourceUsage().getAMUsed("").getMemorySize());
 
     rm.close();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testBlacklistAMDisableLabel() throws Exception {
     conf.setBoolean(YarnConfiguration.AM_SCHEDULING_NODE_BLACKLISTING_ENABLED,
         true);
@@ -836,13 +843,13 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     appAttempt.getAMBlacklistManager().addNode("h1");
     ResourceBlacklistRequest blacklistUpdates =
         appAttempt.getAMBlacklistManager().getBlacklistUpdates();
-    Assert.assertEquals(1, blacklistUpdates.getBlacklistAdditions().size());
-    Assert.assertEquals(0, blacklistUpdates.getBlacklistRemovals().size());
+    assertEquals(1, blacklistUpdates.getBlacklistAdditions().size());
+    assertEquals(0, blacklistUpdates.getBlacklistRemovals().size());
     // Adding second node from default parition
     appAttempt.getAMBlacklistManager().addNode("h8");
     blacklistUpdates = appAttempt.getAMBlacklistManager().getBlacklistUpdates();
-    Assert.assertEquals(0, blacklistUpdates.getBlacklistAdditions().size());
-    Assert.assertEquals(2, blacklistUpdates.getBlacklistRemovals().size());
+    assertEquals(0, blacklistUpdates.getBlacklistAdditions().size());
+    assertEquals(2, blacklistUpdates.getBlacklistRemovals().size());
 
     // Submission in label x
     MockRMAppSubmissionData data1 =
@@ -859,21 +866,21 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     appAttemptlabelx.getAMBlacklistManager().addNode("h2");
     ResourceBlacklistRequest blacklistUpdatesOnx =
         appAttemptlabelx.getAMBlacklistManager().getBlacklistUpdates();
-    Assert.assertEquals(1, blacklistUpdatesOnx.getBlacklistAdditions().size());
-    Assert.assertEquals(0, blacklistUpdatesOnx.getBlacklistRemovals().size());
+    assertEquals(1, blacklistUpdatesOnx.getBlacklistAdditions().size());
+    assertEquals(0, blacklistUpdatesOnx.getBlacklistRemovals().size());
     // Adding second node from default parition
     appAttemptlabelx.getAMBlacklistManager().addNode("h3");
     blacklistUpdatesOnx =
         appAttempt.getAMBlacklistManager().getBlacklistUpdates();
-    Assert.assertEquals(0, blacklistUpdatesOnx.getBlacklistAdditions().size());
-    Assert.assertEquals(2, blacklistUpdatesOnx.getBlacklistRemovals().size());
+    assertEquals(0, blacklistUpdatesOnx.getBlacklistAdditions().size());
+    assertEquals(2, blacklistUpdatesOnx.getBlacklistRemovals().size());
 
     rm.close();
   }
 
   private void checkAMResourceLimit(MockRM rm, String queuename, int memory,
       String label) throws InterruptedException {
-    Assert.assertEquals(memory,
+    assertEquals(memory,
         waitForResourceUpdate(rm, queuename, memory, label, 3000L));
   }
 
@@ -944,24 +951,24 @@ public class TestCapacitySchedulerNodeLabelUpdate {
 
     // Ensure that cluster node tracker is updated with correct set of node
     // after Node registration.
-    Assert.assertEquals(2,
+    assertEquals(2,
         cs.getNodeTracker().getNodesPerPartition("x").size());
-    Assert.assertEquals(1, cs.getNodeTracker().getNodesPerPartition("").size());
+    assertEquals(1, cs.getNodeTracker().getNodesPerPartition("").size());
 
     rm.unRegisterNode(nm1);
     rm.registerNode("h4:1234", 8000);
 
     // Ensure that cluster node tracker is updated with correct set of node
     // after new Node registration and old node label change.
-    Assert.assertEquals(1,
+    assertEquals(1,
         cs.getNodeTracker().getNodesPerPartition("x").size());
-    Assert.assertEquals(2, cs.getNodeTracker().getNodesPerPartition("").size());
+    assertEquals(2, cs.getNodeTracker().getNodesPerPartition("").size());
 
     mgr.replaceLabelsOnNode(
         ImmutableMap.of(NodeId.newInstance("h2", 1234), toSet("")));
 
     // Last node with label x is replaced by CLI or REST.
-    Assert.assertEquals(0,
+    assertEquals(0,
         waitForNodeLabelSchedulerEventUpdate(rm, "x", 0, 3000L));
     rm.stop();
   }

@@ -24,8 +24,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test that streaming consumes stderr from the streaming process
@@ -82,7 +82,7 @@ public class TestStreamingStderr
 
     StreamJob job = new StreamJob(genArgs(input, output, preLines, duringLines, postLines), mayExit);
     returnStatus = job.go();
-    assertEquals("StreamJob success", 0, returnStatus);
+    assertEquals(0, returnStatus, "StreamJob success");
   }
 
   // This test will fail by blocking forever if the stderr isn't

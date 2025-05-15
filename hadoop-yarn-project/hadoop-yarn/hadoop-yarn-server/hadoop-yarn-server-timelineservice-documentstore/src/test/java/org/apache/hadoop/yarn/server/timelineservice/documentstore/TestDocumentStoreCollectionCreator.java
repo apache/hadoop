@@ -24,26 +24,26 @@ import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.do
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.lib.DocumentStoreFactory;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.writer.DocumentStoreWriter;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.writer.DummyDocumentStoreWriter;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.ArgumentMatchers;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
 /**
  * Test case for ${@link DocumentStoreCollectionCreator}.
  */
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(DocumentStoreFactory.class)
+@ExtendWith(MockitoExtension.class)
 public class TestDocumentStoreCollectionCreator {
 
   private final DocumentStoreWriter<TimelineDocument> documentStoreWriter = new
       DummyDocumentStoreWriter<>();
   private final Configuration conf = new Configuration();
 
-  @Before
+  @BeforeEach
   public void setUp() throws YarnException {
     conf.set(DocumentStoreUtils.TIMELINE_SERVICE_DOCUMENTSTORE_DATABASE_NAME,
         "TestDB");
@@ -51,9 +51,8 @@ public class TestDocumentStoreCollectionCreator {
         "https://localhost:443");
     conf.set(DocumentStoreUtils.TIMELINE_SERVICE_COSMOSDB_MASTER_KEY,
         "1234567");
-    PowerMockito.mockStatic(DocumentStoreFactory.class);
-    PowerMockito.when(DocumentStoreFactory.createDocumentStoreWriter(
-        ArgumentMatchers.any(Configuration.class)))
+    mockStatic(DocumentStoreFactory.class);
+    when(DocumentStoreFactory.createDocumentStoreWriter(any(Configuration.class)))
         .thenReturn(documentStoreWriter);
   }
 

@@ -20,11 +20,11 @@ package org.apache.hadoop.util;
 
 import static org.apache.hadoop.util.ApplicationClassLoader.constructUrlsFromClasspath;
 import static org.apache.hadoop.util.ApplicationClassLoader.isSystemClass;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -39,8 +39,8 @@ import java.util.zip.ZipEntry;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
 
@@ -48,7 +48,7 @@ public class TestApplicationClassLoader {
   
   private static File testDir = GenericTestUtils.getTestDir("appclassloader");
   
-  @Before
+  @BeforeEach
   public void setUp() {
     FileUtil.fullyDelete(testDir);
     testDir.mkdirs();
@@ -57,17 +57,17 @@ public class TestApplicationClassLoader {
   @Test
   public void testConstructUrlsFromClasspath() throws Exception {
     File file = new File(testDir, "file");
-    assertTrue("Create file", file.createNewFile());
+    assertTrue(file.createNewFile(), "Create file");
 
     File dir = new File(testDir, "dir");
-    assertTrue("Make dir", dir.mkdir());
+    assertTrue(dir.mkdir(), "Make dir");
 
     File jarsDir = new File(testDir, "jarsdir");
-    assertTrue("Make jarsDir", jarsDir.mkdir());
+    assertTrue(jarsDir.mkdir(), "Make jarsDir");
     File nonJarFile = new File(jarsDir, "nonjar");
-    assertTrue("Create non-jar file", nonJarFile.createNewFile());
+    assertTrue(nonJarFile.createNewFile(), "Create non-jar file");
     File jarFile = new File(jarsDir, "a.jar");
-    assertTrue("Create jar file", jarFile.createNewFile());
+    assertTrue(jarFile.createNewFile(), "Create jar file");
 
     File nofile = new File(testDir, "nofile");
     // don't create nofile
@@ -130,11 +130,11 @@ public class TestApplicationClassLoader {
     ClassLoader appClassloader = new ApplicationClassLoader(
         new URL[] { testJar }, currentClassLoader, null);
 
-    assertNull("Resource should be null for current classloader",
-        currentClassLoader.getResourceAsStream("resource.txt"));
+    assertNull(currentClassLoader.getResourceAsStream("resource.txt"),
+        "Resource should be null for current classloader");
 
     InputStream in = appClassloader.getResourceAsStream("resource.txt");
-    assertNotNull("Resource should not be null for app classloader", in);
+    assertNotNull(in, "Resource should not be null for app classloader");
     assertEquals("hello", IOUtils.toString(in, StandardCharsets.UTF_8));
   }
   

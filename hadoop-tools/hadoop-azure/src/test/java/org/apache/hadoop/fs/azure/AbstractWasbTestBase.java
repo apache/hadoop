@@ -21,8 +21,8 @@ package org.apache.hadoop.fs.azure;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.io.IOUtils;
 
-import static org.junit.Assume.assumeNotNull;
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.*;
 
 /**
@@ -49,14 +48,14 @@ public abstract class AbstractWasbTestBase extends AbstractWasbTestWithTimeout
   protected NativeAzureFileSystem fs;
   protected AzureBlobStorageTestAccount testAccount;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     AzureBlobStorageTestAccount account = createTestAccount();
-    assumeNotNull("test account", account);
+    assumeNotNull(account, "test account");
     bindToTestAccount(account);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     describe("closing test account and filesystem");
     testAccount = cleanupTestAccount(testAccount);

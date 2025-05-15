@@ -56,7 +56,7 @@ import static org.apache.hadoop.log.LogThrottlingHelper.LogAction;
  * to be true, metrics will be emitted into the FSNamesystem metrics registry
  * for each operation which acquires this lock indicating how long the operation
  * held the lock for. These metrics have names of the form
- * FSN(Read|Write)LockNanosOperationName, where OperationName denotes the name
+ * ${LockName}(Read|Write)LockNanosOperationName, where OperationName denotes the name
  * of the operation that initiated the lock hold (this will be OTHER for certain
  * uncategorized operations) and they export the hold time values in
  * nanoseconds. Note that if a thread dies, metrics produced after the
@@ -64,9 +64,10 @@ import static org.apache.hadoop.log.LogThrottlingHelper.LogAction;
  * {@link MutableRatesWithAggregation}. However since threads are re-used
  * between operations this should not generally be an issue.
  */
-class FSNamesystemLock {
+public class FSNamesystemLock {
   @VisibleForTesting
   protected ReentrantReadWriteLock coarseLock;
+  private final String lockName;
 
   private volatile boolean metricsEnabled;
   private final MutableRatesWithAggregation detailedHoldTimeMetrics;
@@ -123,23 +124,26 @@ class FSNamesystemLock {
 
   @VisibleForTesting
   static final String OP_NAME_OTHER = "OTHER";
-  private static final String READ_LOCK_METRIC_PREFIX = "FSNReadLock";
-  private static final String WRITE_LOCK_METRIC_PREFIX = "FSNWriteLock";
+  private final String readLockMetricPrefix;
+  private final String writeLockMetricPrefix;
   private static final String LOCK_METRIC_SUFFIX = "Nanos";
 
   private static final String OVERALL_METRIC_NAME = "Overall";
 
-  FSNamesystemLock(Configuration conf,
+  public FSNamesystemLock(Configuration conf, String lockName,
       MutableRatesWithAggregation detailedHoldTimeMetrics) {
-    this(conf, detailedHoldTimeMetrics, new Timer());
+    this(conf, lockName, detailedHoldTimeMetrics, new Timer());
   }
 
   @VisibleForTesting
-  FSNamesystemLock(Configuration conf,
+  FSNamesystemLock(Configuration conf, String lockName,
       MutableRatesWithAggregation detailedHoldTimeMetrics, Timer timer) {
+    this.lockName = lockName;
+    this.readLockMetricPrefix = this.lockName + "ReadLock";
+    this.writeLockMetricPrefix = this.lockName + "WriteLock";
     boolean fair = conf.getBoolean(DFS_NAMENODE_FSLOCK_FAIR_KEY,
         DFS_NAMENODE_FSLOCK_FAIR_DEFAULT);
-    FSNamesystem.LOG.info("fsLock is fair: " + fair);
+    FSNamesystem.LOG.info("{}Lock is fair: {}.", this.lockName, fair);
     this.coarseLock = new ReentrantReadWriteLock(fair);
     this.timer = timer;
 
@@ -157,8 +161,8 @@ class FSNamesystemLock {
     this.metricsEnabled = conf.getBoolean(
         DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY,
         DFS_NAMENODE_LOCK_DETAILED_METRICS_DEFAULT);
-    FSNamesystem.LOG.info("Detailed lock hold time metrics enabled: " +
-        this.metricsEnabled);
+    FSNamesystem.LOG.info("Detailed lock hold time metrics of {}Lock is {}.",
+        this.lockName, this.metricsEnabled ? "enabled" : "disabled");
     this.detailedHoldTimeMetrics = detailedHoldTimeMetrics;
   }
 
@@ -231,9 +235,9 @@ class FSNamesystemLock {
       LockHeldInfo lockHeldInfo =
           longestReadLockHeldInfo.getAndSet(new LockHeldInfo());
       FSNamesystem.LOG.info(
-          "\tNumber of suppressed read-lock reports: {}"
+          "\tNumber of suppressed read-lock reports of {}Lock is {}"
               + "\n\tLongest read-lock held at {} for {}ms by {}{} via {}",
-          numSuppressedWarnings, Time.formatTime(lockHeldInfo.getStartTimeMs()),
+          this.lockName, numSuppressedWarnings, Time.formatTime(lockHeldInfo.getStartTimeMs()),
           lockHeldInfo.getIntervalMs(), lockHeldInfo.getOpName(),
           lockHeldInfo.getLockReportInfo(), lockHeldInfo.getStackTrace());
     }
@@ -337,10 +341,10 @@ class FSNamesystemLock {
 
     if (logAction.shouldLog()) {
       FSNamesystem.LOG.info(
-          "\tNumber of suppressed write-lock reports: {}"
+          "\tNumber of suppressed write-lock reports of {}Lock is {}"
               + "\n\tLongest write-lock held at {} for {}ms by {}{} via {}"
               + "\n\tTotal suppressed write-lock held time: {}",
-          logAction.getCount() - 1,
+          this.lockName, logAction.getCount() - 1,
           Time.formatTime(lockHeldInfo.getStartTimeMs()),
           lockHeldInfo.getIntervalMs(), lockHeldInfo.getOpName(),
           lockHeldInfo.getLockReportInfo(), lockHeldInfo.getStackTrace(),
@@ -456,8 +460,8 @@ class FSNamesystemLock {
     }
   }
 
-  private static String getMetricName(String operationName, boolean isWrite) {
-    return (isWrite ? WRITE_LOCK_METRIC_PREFIX : READ_LOCK_METRIC_PREFIX) +
+  private String getMetricName(String operationName, boolean isWrite) {
+    return (isWrite ? this.writeLockMetricPrefix : this.readLockMetricPrefix) +
         org.apache.commons.lang3.StringUtils.capitalize(operationName) +
         LOCK_METRIC_SUFFIX;
   }
@@ -487,6 +491,14 @@ class FSNamesystemLock {
   @VisibleForTesting
   public long getWriteLockReportingThresholdMs() {
     return writeLockReportingThresholdMs;
+  }
+
+  public void setLockForTests(ReentrantReadWriteLock lock) {
+    this.coarseLock = lock;
+  }
+
+  public ReentrantReadWriteLock getLockForTests() {
+    return this.coarseLock;
   }
 
   /**

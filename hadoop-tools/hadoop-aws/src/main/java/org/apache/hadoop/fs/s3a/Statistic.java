@@ -65,6 +65,38 @@ public enum Statistic {
       "GET request.",
       TYPE_DURATION),
 
+  /* Http error responses */
+  HTTP_RESPONSE_400(
+      StoreStatisticNames.HTTP_RESPONSE_400,
+      "400 response.",
+      TYPE_COUNTER),
+
+  HTTP_RESPONSE_429(
+      StoreStatisticNames.HTTP_RESPONSE_429,
+      "429 response.",
+      TYPE_COUNTER),
+
+  HTTP_RESPONSE_4XX(
+      StoreStatisticNames.HTTP_RESPONSE_4XX,
+      "4XX response.",
+      TYPE_COUNTER),
+
+  HTTP_RESPONSE_500(
+      StoreStatisticNames.HTTP_RESPONSE_500,
+      "500 response.",
+      TYPE_COUNTER),
+
+  HTTP_RESPONSE_503(
+      StoreStatisticNames.HTTP_RESPONSE_503,
+      "503 response.",
+      TYPE_COUNTER),
+
+  HTTP_RESPONSE_5XX(
+      StoreStatisticNames.HTTP_RESPONSE_5XX,
+      "5XX response.",
+      TYPE_COUNTER),
+
+
   /* FileSystem Level statistics */
 
   FILESYSTEM_INITIALIZATION(
@@ -76,6 +108,12 @@ public enum Statistic {
       "Filesystem close",
       TYPE_DURATION),
 
+  CONDITIONAL_CREATE(StoreStatisticNames.CONDITIONAL_CREATE,
+          "Count of successful conditional create operations.",
+          TYPE_COUNTER),
+  CONDITIONAL_CREATE_FAILED(StoreStatisticNames.CONDITIONAL_CREATE_FAILED,
+          "Count of failed conditional create operations.",
+          TYPE_COUNTER),
   DIRECTORIES_CREATED("directories_created",
       "Total number of directories created through the object store.",
       TYPE_COUNTER),
@@ -280,12 +318,20 @@ public enum Statistic {
       StoreStatisticNames.OBJECT_PUT_BYTES_PENDING,
       "number of bytes queued for upload/being actively uploaded",
       TYPE_GAUGE),
+  STREAM_LEAKS(
+      StreamStatisticNames.STREAM_LEAKS,
+      "Streams detected as not closed safely",
+      TYPE_COUNTER),
   STREAM_READ_ABORTED(
       StreamStatisticNames.STREAM_READ_ABORTED,
       "Count of times the TCP stream was aborted",
       TYPE_COUNTER),
 
   /* Stream Reads */
+  STREAM_READ_ANALYTICS_OPENED(
+      StreamStatisticNames.STREAM_READ_ANALYTICS_OPENED,
+      "Total count of times an analytics input stream to object store data was opened",
+      TYPE_COUNTER),
   STREAM_READ_BYTES(
       StreamStatisticNames.STREAM_READ_BYTES,
       "Bytes read from an input stream in read() calls",
@@ -306,6 +352,10 @@ public enum Statistic {
       StreamStatisticNames.STREAM_READ_CLOSE_OPERATIONS,
       "Total count of times an attempt to close an input stream was made",
       TYPE_COUNTER),
+  ANALYTICS_STREAM_FACTORY_CLOSED(
+          "analytics_stream_factory_closed",
+          "Count of times the analytics stream factory was closed",
+          TYPE_COUNTER),
   STREAM_READ_EXCEPTIONS(
       StreamStatisticNames.STREAM_READ_EXCEPTIONS,
       "Count of exceptions raised during input stream reads",

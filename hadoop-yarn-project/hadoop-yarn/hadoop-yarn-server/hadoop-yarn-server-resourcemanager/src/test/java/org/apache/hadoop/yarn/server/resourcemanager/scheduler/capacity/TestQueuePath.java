@@ -18,9 +18,15 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,34 +47,34 @@ public class TestQueuePath {
 
   @Test
   public void testCreation() {
-    Assert.assertEquals(TEST_QUEUE, TEST_QUEUE_PATH.getFullPath());
-    Assert.assertEquals("root.level_1.level_2", TEST_QUEUE_PATH.getParent());
-    Assert.assertEquals("level_3", TEST_QUEUE_PATH.getLeafName());
+    assertEquals(TEST_QUEUE, TEST_QUEUE_PATH.getFullPath());
+    assertEquals("root.level_1.level_2", TEST_QUEUE_PATH.getParent());
+    assertEquals("level_3", TEST_QUEUE_PATH.getLeafName());
 
-    Assert.assertNull(ROOT_PATH.getParent());
+    assertNull(ROOT_PATH.getParent());
 
     QueuePath appendedPath = TEST_QUEUE_PATH.createNewLeaf("level_4");
-    Assert.assertEquals(TEST_QUEUE + CapacitySchedulerConfiguration.DOT
+    assertEquals(TEST_QUEUE + CapacitySchedulerConfiguration.DOT
         + "level_4", appendedPath.getFullPath());
-    Assert.assertEquals("root.level_1.level_2.level_3", appendedPath.getParent());
-    Assert.assertEquals("level_4", appendedPath.getLeafName());
+    assertEquals("root.level_1.level_2.level_3", appendedPath.getParent());
+    assertEquals("level_4", appendedPath.getLeafName());
   }
 
   @Test
   public void testEmptyPart() {
-    Assert.assertTrue(QUEUE_PATH_WITH_EMPTY_PART.hasEmptyPart());
-    Assert.assertTrue(QUEUE_PATH_WITH_EMPTY_LEAF.hasEmptyPart());
-    Assert.assertFalse(TEST_QUEUE_PATH.hasEmptyPart());
+    assertTrue(QUEUE_PATH_WITH_EMPTY_PART.hasEmptyPart());
+    assertTrue(QUEUE_PATH_WITH_EMPTY_LEAF.hasEmptyPart());
+    assertFalse(TEST_QUEUE_PATH.hasEmptyPart());
   }
 
   @Test
   public void testNullPath() {
     QueuePath queuePathWithNullPath = new QueuePath(null);
 
-    Assert.assertNull(queuePathWithNullPath.getParent());
-    Assert.assertEquals("", queuePathWithNullPath.getLeafName());
-    Assert.assertEquals("", queuePathWithNullPath.getFullPath());
-    Assert.assertFalse(queuePathWithNullPath.isRoot());
+    assertNull(queuePathWithNullPath.getParent());
+    assertEquals("", queuePathWithNullPath.getLeafName());
+    assertEquals("", queuePathWithNullPath.getFullPath());
+    assertFalse(queuePathWithNullPath.isRoot());
   }
 
   @Test
@@ -78,17 +84,17 @@ public class TestQueuePath {
         QUEUE_PATH_WITH_EMPTY_PART.iterator());
     List<String> rootPathCollection = ImmutableList.copyOf(ROOT_PATH.iterator());
 
-    Assert.assertEquals(4, queuePathCollection.size());
-    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT, queuePathCollection.get(0));
-    Assert.assertEquals("level_3", queuePathCollection.get(3));
+    assertEquals(4, queuePathCollection.size());
+    assertEquals(CapacitySchedulerConfiguration.ROOT, queuePathCollection.get(0));
+    assertEquals("level_3", queuePathCollection.get(3));
 
-    Assert.assertEquals(3, queuePathWithEmptyPartCollection.size());
-    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT,
+    assertEquals(3, queuePathWithEmptyPartCollection.size());
+    assertEquals(CapacitySchedulerConfiguration.ROOT,
         queuePathWithEmptyPartCollection.get(0));
-    Assert.assertEquals("level_2", queuePathWithEmptyPartCollection.get(2));
+    assertEquals("level_2", queuePathWithEmptyPartCollection.get(2));
 
-    Assert.assertEquals(1, rootPathCollection.size());
-    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT, rootPathCollection.get(0));
+    assertEquals(1, rootPathCollection.size());
+    assertEquals(CapacitySchedulerConfiguration.ROOT, rootPathCollection.get(0));
   }
 
   @Test
@@ -98,18 +104,18 @@ public class TestQueuePath {
         QUEUE_PATH_WITH_EMPTY_PART.reverseIterator());
     List<String> rootPathCollection = ImmutableList.copyOf(ROOT_PATH.reverseIterator());
 
-    Assert.assertEquals(4, queuePathCollection.size());
-    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT,
+    assertEquals(4, queuePathCollection.size());
+    assertEquals(CapacitySchedulerConfiguration.ROOT,
         queuePathCollection.get(3));
-    Assert.assertEquals(TEST_QUEUE, queuePathCollection.get(0));
+    assertEquals(TEST_QUEUE, queuePathCollection.get(0));
 
-    Assert.assertEquals(3, queuePathWithEmptyPartCollection.size());
-    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT,
+    assertEquals(3, queuePathWithEmptyPartCollection.size());
+    assertEquals(CapacitySchedulerConfiguration.ROOT,
         queuePathWithEmptyPartCollection.get(2));
-    Assert.assertEquals("root..level_2", queuePathWithEmptyPartCollection.get(0));
+    assertEquals("root..level_2", queuePathWithEmptyPartCollection.get(0));
 
-    Assert.assertEquals(1, rootPathCollection.size());
-    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT,
+    assertEquals(1, rootPathCollection.size());
+    assertEquals(CapacitySchedulerConfiguration.ROOT,
         rootPathCollection.get(0));
   }
 
@@ -121,33 +127,33 @@ public class TestQueuePath {
     QueuePath empty = new QueuePath("");
     QueuePath emptySame = new QueuePath("");
 
-    Assert.assertEquals(queuePath, queuePathSame);
-    Assert.assertEquals(empty, emptySame);
-    Assert.assertNotEquals(null, queuePath);
+    assertEquals(queuePath, queuePathSame);
+    assertEquals(empty, emptySame);
+    assertNotEquals(null, queuePath);
   }
 
   @Test
   public void testInvalidPath() {
-    Assert.assertFalse(TEST_QUEUE_PATH.isInvalid());
-    Assert.assertFalse(ROOT_PATH.isInvalid());
-    Assert.assertTrue(EMPTY_PATH.isInvalid());
-    Assert.assertTrue(new QueuePath("invalidPath").isInvalid());
+    assertFalse(TEST_QUEUE_PATH.isInvalid());
+    assertFalse(ROOT_PATH.isInvalid());
+    assertTrue(EMPTY_PATH.isInvalid());
+    assertTrue(new QueuePath("invalidPath").isInvalid());
   }
 
   @Test
   public void testGetParentObject() {
-    Assert.assertEquals(new QueuePath("root.level_1.level_2"),
+    assertEquals(new QueuePath("root.level_1.level_2"),
         TEST_QUEUE_PATH.getParentObject());
-    Assert.assertEquals(ROOT_PATH, new QueuePath("root.level_1").getParentObject());
-    Assert.assertNull(ROOT_PATH.getParentObject());
+    assertEquals(ROOT_PATH, new QueuePath("root.level_1").getParentObject());
+    assertNull(ROOT_PATH.getParentObject());
   }
 
   @Test
   public void testGetPathComponents() {
-    Assert.assertArrayEquals(TEST_QUEUE_PATH.getPathComponents(),
+    assertArrayEquals(TEST_QUEUE_PATH.getPathComponents(),
         new String[] {"root", "level_1", "level_2", "level_3"});
-    Assert.assertArrayEquals(ROOT_PATH.getPathComponents(), new String[] {"root"});
-    Assert.assertArrayEquals(EMPTY_PATH.getPathComponents(), new String[] {""});
+    assertArrayEquals(ROOT_PATH.getPathComponents(), new String[] {"root"});
+    assertArrayEquals(EMPTY_PATH.getPathComponents(), new String[] {""});
   }
 
   @Test
@@ -161,7 +167,7 @@ public class TestQueuePath {
     List<QueuePath> wildcardedPaths = TEST_QUEUE_PATH
         .getWildcardedQueuePaths(maxAutoCreatedQueueDepth);
 
-    Assert.assertEquals(expectedPaths, wildcardedPaths);
+    assertEquals(expectedPaths, wildcardedPaths);
   }
 
   @Test
@@ -176,7 +182,7 @@ public class TestQueuePath {
     List<QueuePath> wildcardedPaths = TEST_QUEUE_PATH
         .getWildcardedQueuePaths(maxAutoCreatedQueueDepth);
 
-    Assert.assertEquals(expectedPaths, wildcardedPaths);
+    assertEquals(expectedPaths, wildcardedPaths);
   }
 
   @Test
@@ -192,7 +198,7 @@ public class TestQueuePath {
     List<QueuePath> wildcardedPaths = TEST_QUEUE_PATH
         .getWildcardedQueuePaths(maxAutoCreatedQueueDepth);
 
-    Assert.assertEquals(expectedPaths, wildcardedPaths);
+    assertEquals(expectedPaths, wildcardedPaths);
   }
 
   @Test
@@ -208,7 +214,7 @@ public class TestQueuePath {
     List<QueuePath> wildcardedPaths = TEST_QUEUE_PATH
         .getWildcardedQueuePaths(maxAutoCreatedQueueDepth);
 
-    Assert.assertEquals(expectedPaths, wildcardedPaths);
+    assertEquals(expectedPaths, wildcardedPaths);
   }
 
   @Test
@@ -220,6 +226,6 @@ public class TestQueuePath {
 
     List<QueuePath> wildcardedPaths = ROOT_PATH.getWildcardedQueuePaths(maxAutoCreatedQueueDepth);
 
-    Assert.assertEquals(expectedPaths, wildcardedPaths);
+    assertEquals(expectedPaths, wildcardedPaths);
   }
 }

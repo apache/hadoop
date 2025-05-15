@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.metrics2.sink;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -38,7 +38,8 @@ import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.impl.MetricsRecordImpl;
 import org.apache.hadoop.metrics2.impl.MsInfo;
 import org.apache.hadoop.metrics2.sink.StatsDSink.StatsD;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestStatsDMetrics {
 
@@ -51,7 +52,8 @@ public class TestStatsDMetrics {
     return metric;
   }
 
-  @Test(timeout=3000)
+  @Test
+  @Timeout(value = 3)
   public void testPutMetrics() throws IOException, IllegalAccessException {
     final StatsDSink sink = new StatsDSink();
     List<MetricsTag> tags = new ArrayList<MetricsTag>();
@@ -76,17 +78,17 @@ public class TestStatsDMetrics {
 
       String result =new String(p.getData(), 0, p.getLength(),
           StandardCharsets.UTF_8);
-      assertTrue(
-          "Received data did not match data sent",
-          result.equals("host.process.jvm.Context.foo1:1.25|c") ||
-          result.equals("host.process.jvm.Context.foo2:2.25|g"));
+      assertTrue(result.equals("host.process.jvm.Context.foo1:1.25|c") ||
+          result.equals("host.process.jvm.Context.foo2:2.25|g"),
+          "Received data did not match data sent");
 
     } finally {
       sink.close();
     }
   }
 
-  @Test(timeout=3000)
+  @Test
+  @Timeout(value = 3)
   public void testPutMetrics2() throws IOException, IllegalAccessException {
     StatsDSink sink = new StatsDSink();
     List<MetricsTag> tags = new ArrayList<MetricsTag>();
@@ -111,9 +113,9 @@ public class TestStatsDMetrics {
       String result =
           new String(p.getData(), 0, p.getLength(), StandardCharsets.UTF_8);
 
-      assertTrue("Received data did not match data sent",
-          result.equals("process.jvm.Context.foo1:1|c") ||
-          result.equals("process.jvm.Context.foo2:2|g"));
+      assertTrue(result.equals("process.jvm.Context.foo1:1|c") ||
+          result.equals("process.jvm.Context.foo2:2|g"),
+          "Received data did not match data sent");
     } finally {
       sink.close();
     }

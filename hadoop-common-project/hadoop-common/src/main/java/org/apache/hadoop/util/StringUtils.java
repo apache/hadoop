@@ -245,7 +245,7 @@ public class StringUtils {
   /**
    * @param str
    *          The string array to be parsed into an URI array.
-   * @return <tt>null</tt> if str is <tt>null</tt>, else the URI array
+   * @return <code>null</code> if str is <code>null</code>, else the URI array
    *         equivalent to str.
    * @throws IllegalArgumentException
    *           If any string in str violates RFC&nbsp;2396.
@@ -1334,7 +1334,7 @@ public class StringUtils {
 
       int inputLineLength = str.length();
       int offset = 0;
-      StringBuffer wrappedLine = new StringBuffer(inputLineLength + 32);
+      StringBuilder wrappedLine = new StringBuilder(inputLineLength + 32);
 
       while(inputLineLength - offset > wrapLength) {
         if(str.charAt(offset) == 32) {
@@ -1366,5 +1366,15 @@ public class StringUtils {
       wrappedLine.append(str.substring(offset));
       return wrappedLine.toString();
     }
+  }
+
+  /**
+   * Checks whether the given string is not {@code null} and has a length greater than zero.
+   *
+   * @param str the string to check
+   * @return {@code true} if the string is not {@code null} and not empty; {@code false} otherwise
+   */
+  public static boolean hasLength(String str) {
+    return str != null && !str.isEmpty();
   }
 }

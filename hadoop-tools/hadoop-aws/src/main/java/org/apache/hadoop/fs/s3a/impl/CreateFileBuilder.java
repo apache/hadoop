@@ -21,9 +21,9 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 
 import org.apache.hadoop.conf.Configuration;
@@ -33,11 +33,22 @@ import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags;
 import org.apache.hadoop.util.Progressable;
 
+import static java.util.Objects.requireNonNull;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG;
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONTENT_TYPE;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_HEADER;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.CONTENT_TYPE;
+import static org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags.ConditionalOverwrite;
+import static org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags.ConditionalOverwriteEtag;
+import static org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags.CreateMultipart;
+import static org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags.Performance;
+import static org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags.Recursive;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CREATE_FILE_KEYS;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
  * Builder used in create file; takes a callback to the operation
@@ -63,19 +74,25 @@ public class CreateFileBuilder extends
    * Classic create file option set: overwriting.
    */
   public static final CreateFileOptions OPTIONS_CREATE_FILE_OVERWRITE =
-      new CreateFileOptions(CREATE_OVERWRITE_FLAGS, true, false, null);
+      new CreateFileOptions(CREATE_OVERWRITE_FLAGS,
+          EnumSet.of(Recursive),
+          null, null);
 
   /**
    * Classic create file option set: no overwrite.
    */
   public static final CreateFileOptions OPTIONS_CREATE_FILE_NO_OVERWRITE =
-      new CreateFileOptions(CREATE_NO_OVERWRITE_FLAGS, true, false, null);
+      new CreateFileOptions(CREATE_NO_OVERWRITE_FLAGS,
+          EnumSet.of(Recursive),
+          null, null);
 
   /**
    * Performance create options.
    */
   public static final CreateFileOptions OPTIONS_CREATE_FILE_PERFORMANCE =
-      new CreateFileOptions(CREATE_OVERWRITE_FLAGS, true, true, null);
+      new CreateFileOptions(CREATE_OVERWRITE_FLAGS,
+          EnumSet.of(Performance,Recursive),
+          null, null);
 
   /**
    * Callback interface.
@@ -109,27 +126,36 @@ public class CreateFileBuilder extends
     final Configuration options = getOptions();
     final Map<String, String> headers = new HashMap<>();
     final Set<String> mandatoryKeys = getMandatoryKeys();
-    final Set<String> keysToValidate = new HashSet<>();
+    final EnumSet<WriteObjectFlags> createFileSwitches = EnumSet.noneOf(
+        WriteObjectFlags.class);
 
     // pick up all headers from the mandatory list and strip them before
     // validating the keys
+
+    // merge the config lists
+
     String headerPrefix = FS_S3A_CREATE_HEADER + ".";
     final int prefixLen = headerPrefix.length();
-    mandatoryKeys.stream().forEach(key -> {
-      if (key.startsWith(headerPrefix) && key.length() > prefixLen) {
-        headers.put(key.substring(prefixLen), options.get(key));
-      } else {
-        keysToValidate.add(key);
-      }
-    });
+
+    final Set<String> keysToValidate = mandatoryKeys.stream()
+        .filter(key -> !key.startsWith(headerPrefix))
+        .collect(Collectors.toSet());
 
     rejectUnknownMandatoryKeys(keysToValidate, CREATE_FILE_KEYS, "for " + path);
 
-    // and add any optional headers
-    getOptionalKeys().stream()
-        .filter(key -> key.startsWith(headerPrefix) && key.length() > prefixLen)
-        .forEach(key -> headers.put(key.substring(prefixLen), options.get(key)));
+    // look for headers
 
+    for (Map.Entry<String, String> option : options) {
+      String key = option.getKey();
+      if (key.startsWith(headerPrefix) && key.length() > prefixLen) {
+        headers.put(key.substring(prefixLen), option.getValue());
+      }
+    }
+
+    // and add the mimetype
+    if (options.get(FS_OPTION_CREATE_CONTENT_TYPE, null) != null)  {
+      headers.put(CONTENT_TYPE, options.get(FS_OPTION_CREATE_CONTENT_TYPE, null));
+    }
 
     EnumSet<CreateFlag> flags = getFlags();
     if (flags.contains(CreateFlag.APPEND)) {
@@ -142,13 +168,32 @@ public class CreateFileBuilder extends
           "Must specify either create or overwrite");
     }
 
-    final boolean performance =
-        options.getBoolean(Constants.FS_S3A_CREATE_PERFORMANCE, false);
+    // build the other switches
+    if (isRecursive()) {
+      createFileSwitches.add(Recursive);
+    }
+    if (Performance.isEnabled(options)) {
+      createFileSwitches.add(Performance);
+    }
+    if (CreateMultipart.isEnabled(options)) {
+      createFileSwitches.add(CreateMultipart);
+    }
+    if (ConditionalOverwrite.isEnabled(options)) {
+      createFileSwitches.add(ConditionalOverwrite);
+    }
+    // etag is a string so is checked for then extracted.
+    final String etag = options.get(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG, null);
+    if (etag != null) {
+      createFileSwitches.add(ConditionalOverwriteEtag);
+    }
+
     return callbacks.createFileFromBuilder(
         path,
         getProgress(),
-        new CreateFileOptions(flags, isRecursive(), performance, headers));
-
+        new CreateFileOptions(flags,
+            createFileSwitches,
+            etag,
+            headers));
   }
 
   /**
@@ -209,14 +254,14 @@ public class CreateFileBuilder extends
     private final EnumSet<CreateFlag> flags;
 
     /**
-     * create parent dirs?
+     * Create File switches.
      */
-    private final boolean recursive;
+    private final EnumSet<WriteObjectFlags> writeObjectFlags;
 
     /**
-     * performance flag.
+     * Etag. Only used if the create file switches enable it.
      */
-    private final boolean performance;
+    private final String etag;
 
     /**
      * Headers; may be null.
@@ -225,18 +270,22 @@ public class CreateFileBuilder extends
 
     /**
      * @param flags creation flags
-     * @param recursive create parent dirs?
-     * @param performance performance flag
+     * @param writeObjectFlags Create File switches.
+     * @param etag ETag, used only if enabled by switches
      * @param headers nullable header map.
      */
     public CreateFileOptions(
         final EnumSet<CreateFlag> flags,
-        final boolean recursive,
-        final boolean performance,
+        final EnumSet<WriteObjectFlags> writeObjectFlags,
+        final String etag,
         final Map<String, String> headers) {
-      this.flags = flags;
-      this.recursive = recursive;
-      this.performance = performance;
+      this.flags = requireNonNull(flags);
+      this.writeObjectFlags = requireNonNull(writeObjectFlags);
+      if (writeObjectFlags().contains(ConditionalOverwriteEtag)) {
+        checkArgument(!isEmpty(etag),
+            "etag overwrite is enabled but the etag string is null/empty");
+      }
+      this.etag = etag;
       this.headers = headers;
     }
 
@@ -244,8 +293,7 @@ public class CreateFileBuilder extends
     public String toString() {
       return "CreateFileOptions{" +
           "flags=" + flags +
-          ", recursive=" + recursive +
-          ", performance=" + performance +
+          ", writeObjectFlags=" + writeObjectFlags +
           ", headers=" + headers +
           '}';
     }
@@ -255,15 +303,35 @@ public class CreateFileBuilder extends
     }
 
     public boolean isRecursive() {
-      return recursive;
+      return isSet(Recursive);
     }
 
     public boolean isPerformance() {
-      return performance;
+      return isSet(Performance);
+    }
+
+    public boolean isConditionalOverwrite() {
+      return isSet(ConditionalOverwrite);
+    }
+
+    public boolean isConditionalOverwriteEtag() {
+      return isSet(ConditionalOverwriteEtag);
+    }
+
+    public boolean isSet(WriteObjectFlags val) {
+      return writeObjectFlags().contains(val);
     }
 
     public Map<String, String> getHeaders() {
       return headers;
+    }
+
+    public String etag() {
+      return etag;
+    }
+
+    public EnumSet<WriteObjectFlags> writeObjectFlags() {
+      return writeObjectFlags;
     }
   }
 

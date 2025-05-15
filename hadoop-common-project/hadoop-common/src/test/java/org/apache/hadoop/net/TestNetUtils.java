@@ -17,7 +17,15 @@
  */
 package org.apache.hadoop.net;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -37,6 +45,7 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.ZipException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -47,10 +56,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Shell;
 
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -145,7 +153,7 @@ public class TestNetUtils {
     if (withChannel) {
       s = NetUtils.getDefaultSocketFactory(new Configuration())
           .createSocket();
-      Assume.assumeNotNull(s.getChannel());
+      assumeTrue(s.getChannel() != null);
     } else {
       s = new Socket();
       assertNull(s.getChannel());
@@ -193,8 +201,8 @@ public class TestNetUtils {
     long durationNano = System.nanoTime() - startNanos;
     long millis = TimeUnit.MILLISECONDS.convert(
         durationNano, TimeUnit.NANOSECONDS);
-    assertTrue("Expected " + expectedMillis + "ms, but took " + millis,
-        Math.abs(millis - expectedMillis) < TIME_FUDGE_MILLIS);
+    assertTrue(Math.abs(millis - expectedMillis) < TIME_FUDGE_MILLIS,
+        "Expected " + expectedMillis + "ms, but took " + millis);
   }
   
   /**
@@ -209,10 +217,12 @@ public class TestNetUtils {
     assertNull(NetUtils.getLocalInetAddress(null));
   }
 
-  @Test(expected=UnknownHostException.class)
+  @Test
   public void testVerifyHostnamesException() throws UnknownHostException {
-    String[] names = {"valid.host.com", "1.com", "invalid host here"};
-    NetUtils.verifyHostnames(names);
+    assertThrows(UnknownHostException.class, ()->{
+      String[] names = {"valid.host.com", "1.com", "invalid host here"};
+      NetUtils.verifyHostnames(names);
+    });
   }  
 
   @Test
@@ -440,7 +450,7 @@ public class TestNetUtils {
   }
 
   private String extractExceptionMessage(Exception e) throws Throwable {
-    assertNotNull("Null Exception", e);
+    assertNotNull(e, "Null Exception");
     String message = e.getMessage();
     if (message == null) {
       throw new AssertionError("Empty text in exception " + e)
@@ -463,7 +473,7 @@ public class TestNetUtils {
   private IOException verifyExceptionClass(IOException e,
                                            Class expectedClass)
       throws Throwable {
-    assertNotNull("Null Exception", e);
+    assertNotNull(e, "Null Exception");
     IOException wrapped = NetUtils.wrapException("desthost", DEST_PORT,
          "localhost", LOCAL_PORT, e);
     LOG.info(wrapped.toString(), wrapped);
@@ -478,12 +488,12 @@ public class TestNetUtils {
   static NetUtilsTestResolver resolver;
   static Configuration config;
   
-  @BeforeClass
+  @BeforeAll
   public static void setupResolver() {
     resolver = NetUtilsTestResolver.install();
   }
   
-  @Before
+  @BeforeEach
   public void resetResolver() {
     resolver.reset();
     config = new Configuration();
@@ -729,7 +739,7 @@ public class TestNetUtils {
     try {
       InetAddress.getByName(oneHost);
     } catch (UnknownHostException e) {
-      Assume.assumeTrue("Network not resolving "+ oneHost, false);
+      assumeTrue(false, "Network not resolving " + oneHost);
     }
     List<String> hosts = Arrays.asList("127.0.0.1",
         "localhost", oneHost, "UnknownHost123");
@@ -737,17 +747,17 @@ public class TestNetUtils {
     String summary = "original [" + StringUtils.join(hosts, ", ") + "]"
         + " normalized [" + StringUtils.join(normalizedHosts, ", ") + "]";
     // when ipaddress is normalized, same address is expected in return
-    assertEquals(summary, hosts.get(0), normalizedHosts.get(0));
+    assertEquals(hosts.get(0), normalizedHosts.get(0), summary);
     // for normalizing a resolvable hostname, resolved ipaddress is expected in return
-    assertFalse("Element 1 equal "+ summary,
-        normalizedHosts.get(1).equals(hosts.get(1)));
-    assertEquals(summary, hosts.get(0), normalizedHosts.get(1));
+    assertFalse(normalizedHosts.get(1).equals(hosts.get(1)),
+        "Element 1 equal "+ summary);
+    assertEquals(hosts.get(0), normalizedHosts.get(1), summary);
     // this address HADOOP-8372: when normalizing a valid resolvable hostname start with numeric, 
     // its ipaddress is expected to return
-    assertFalse("Element 2 equal " + summary,
-        normalizedHosts.get(2).equals(hosts.get(2)));
+    assertFalse(normalizedHosts.get(2).equals(hosts.get(2)),
+        "Element 2 equal " + summary);
     // return the same hostname after normalizing a irresolvable hostname.
-    assertEquals(summary, hosts.get(3), normalizedHosts.get(3));
+    assertEquals(hosts.get(3), normalizedHosts.get(3), summary);
   }
   
   @Test
@@ -793,9 +803,57 @@ public class TestNetUtils {
         .bindToLocalAddress(NetUtils.getLocalInetAddress("127.0.0.1"), true));
   }
 
+  public static class WrappedIOException extends IOException {
+    public WrappedIOException(String msg, Throwable cause) {
+      super(msg, cause);
+    }
+  }
+
+  private static class PrivateIOException extends IOException {
+    PrivateIOException(String msg, Throwable cause) {
+      super(msg, cause);
+    }
+  }
+
+  @Test
+  public void testAddNodeNameToIOException() {
+    IOException e0 = new IOException("test123");
+    assertNullCause(e0);
+    IOException new0 = NetUtils.addNodeNameToIOException(e0, "node123");
+    assertNullCause(new0);
+    assertEquals("node123: test123", new0.getMessage());
+
+    IOException e1 = new IOException("test456", new IllegalStateException("deliberate"));
+    IOException new1 = NetUtils.addNodeNameToIOException(e1, "node456");
+    assertSame(e1.getCause(), new1.getCause());
+    assertEquals("node456: test456", new1.getMessage());
+
+    ZipException e2 = new ZipException("test789");
+    assertNullCause(e2);
+    IOException new2 = NetUtils.addNodeNameToIOException(e2, "node789");
+    assertNullCause(new2);
+    assertEquals("node789: test789", new2.getMessage());
+
+    WrappedIOException e3 = new WrappedIOException("test987",
+        new IllegalStateException("deliberate"));
+    IOException new3 = NetUtils.addNodeNameToIOException(e3, "node987");
+    assertSame(e3.getCause(), new3.getCause());
+    assertEquals("node987: test987", new3.getMessage());
+
+    // addNodeNameToIOException will return the original exception if the class is not accessible
+    PrivateIOException e4 = new PrivateIOException("test654",
+        new IllegalStateException("deliberate"));
+    IOException new4 = NetUtils.addNodeNameToIOException(e4, "node654");
+    assertSame(e4, new4);
+  }
+
   private <T> void assertBetterArrayEquals(T[] expect, T[]got) {
     String expectStr = StringUtils.join(expect, ", ");
     String gotStr = StringUtils.join(got, ", ");
     assertEquals(expectStr, gotStr);
+  }
+
+  private void assertNullCause(Exception e) {
+    assertNull(e.getCause(), "Expected exception to have null cause");
   }
 }

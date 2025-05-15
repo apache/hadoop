@@ -25,14 +25,15 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.aliyun.oss.AliyunOSSTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.EnumSet;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * OSS tests through the {@link FileContext} API.
@@ -40,13 +41,13 @@ import static org.junit.Assert.assertTrue;
 public class TestOSS {
   private FileContext fc;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
     fc = AliyunOSSTestUtils.createTestFileContext(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (fc != null) {
       fc.delete(getTestPath(), true);
@@ -61,16 +62,17 @@ public class TestOSS {
   public void testOSSStatus() throws Exception {
     FsStatus fsStatus = fc.getFsStatus(null);
     assertNotNull(fsStatus);
-    assertTrue("Used capacity should be positive: " + fsStatus.getUsed(),
-        fsStatus.getUsed() >= 0);
-    assertTrue("Remaining capacity should be positive: " + fsStatus
-        .getRemaining(),
-        fsStatus.getRemaining() >= 0);
-    assertTrue("Capacity should be positive: " + fsStatus.getCapacity(),
-        fsStatus.getCapacity() >= 0);
+    assertTrue(
+        fsStatus.getUsed() >= 0, "Used capacity should be positive: " + fsStatus.getUsed());
+    assertTrue(
+        fsStatus.getRemaining() >= 0, "Remaining capacity should be positive: " + fsStatus
+        .getRemaining());
+    assertTrue(
+        fsStatus.getCapacity() >= 0, "Capacity should be positive: " + fsStatus.getCapacity());
   }
 
-  @Test(timeout = 90000L)
+  @Test
+  @Timeout(90)
   public void testOSSCreateFileInSubDir() throws Exception {
     Path dirPath = getTestPath();
     fc.mkdir(dirPath, FileContext.DIR_DEFAULT_PERM, true);

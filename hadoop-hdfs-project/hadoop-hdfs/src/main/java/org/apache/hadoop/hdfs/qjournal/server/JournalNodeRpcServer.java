@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.qjournal.server;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.StorageInfoProto;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.slf4j.Logger;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -71,14 +72,14 @@ public class JournalNodeRpcServer implements QJournalProtocol,
 
   JournalNodeRpcServer(Configuration conf, JournalNode jn) throws IOException {
     this.jn = jn;
-    
+
     Configuration confCopy = new Configuration(conf);
-    
+
     // Ensure that nagling doesn't kick in, which could cause latency issues.
     confCopy.setBoolean(
         CommonConfigurationKeysPublic.IPC_SERVER_TCPNODELAY_KEY,
         true);
-    
+
     InetSocketAddress addr = getAddress(confCopy);
     String bindHost = conf.getTrimmed(DFS_JOURNALNODE_RPC_BIND_HOST_KEY, null);
     if (bindHost == null) {
@@ -104,7 +105,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
     this.handlerCount = confHandlerCount;
     LOG.info("The number of JournalNodeRpcServer handlers is {}.",
         this.handlerCount);
-    
+
     this.server = new RPC.Builder(confCopy)
         .setProtocol(QJournalProtocolPB.class)
         .setInstance(service)
@@ -149,15 +150,15 @@ public class JournalNodeRpcServer implements QJournalProtocol,
   public InetSocketAddress getAddress() {
     return server.getListenerAddress();
   }
-  
+
   void join() throws InterruptedException {
     this.server.join();
   }
-  
+
   void stop() {
     this.server.stop();
   }
-  
+
   static InetSocketAddress getAddress(Configuration conf) {
     String addr = conf.get(
         DFSConfigKeys.DFS_JOURNALNODE_RPC_ADDRESS_KEY,
@@ -211,7 +212,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
     jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
        .journal(reqInfo, segmentTxId, firstTxnId, numTxns, records);
   }
-  
+
   @Override
   public void heartbeat(RequestInfo reqInfo) throws IOException {
     jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
@@ -245,15 +246,22 @@ public class JournalNodeRpcServer implements QJournalProtocol,
       String jid, String nameServiceId,
       long sinceTxId, boolean inProgressOk)
       throws IOException {
-    
+
     RemoteEditLogManifest manifest = jn.getOrCreateJournal(jid, nameServiceId)
         .getEditLogManifest(sinceTxId, inProgressOk);
-    
+
     return GetEditLogManifestResponseProto.newBuilder()
         .setManifest(PBHelper.convert(manifest))
         .setHttpPort(jn.getBoundHttpAddress().getPort())
         .setFromURL(jn.getHttpServerURI())
         .build();
+  }
+
+  @Override
+  public StorageInfoProto getStorageInfo(String jid,
+      String nameServiceId) throws IOException {
+    StorageInfo storage = jn.getOrCreateJournal(jid, nameServiceId).getStorage();
+    return PBHelper.convert(storage);
   }
 
   @Override

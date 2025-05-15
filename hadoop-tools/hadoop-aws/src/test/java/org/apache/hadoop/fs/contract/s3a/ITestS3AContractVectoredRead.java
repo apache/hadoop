@@ -56,12 +56,18 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_PARQUET;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_VECTOR;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.range;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoolPostRead;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
+import static org.apache.hadoop.io.Sizes.S_1M;
+import static org.apache.hadoop.io.Sizes.S_4K;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.apache.hadoop.test.MoreAsserts.assertEqual;
 
@@ -81,6 +87,17 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf);
+  }
+
+  /**
+   * Analytics Accelerator Library for Amazon S3 does not support Vectored Reads.
+   * @throws Exception
+   */
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    skipIfAnalyticsAcceleratorEnabled(getContract().getConf(),
+        "Analytics Accelerator does not support vectored reads");
   }
 
   /**
@@ -138,13 +155,13 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
   public void testMinSeekAndMaxSizeConfigsPropagation() throws Exception {
     Configuration conf = getFileSystem().getConf();
     S3ATestUtils.removeBaseAndBucketOverrides(conf,
-            Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE,
-            Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE);
+            AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE,
+            AWS_S3_VECTOR_READS_MIN_SEEK_SIZE);
     S3ATestUtils.disableFilesystemCaching(conf);
     final int configuredMinSeek = 2 * 1024;
     final int configuredMaxSize = 10 * 1024 * 1024;
-    conf.set(Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE, "2K");
-    conf.set(Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE, "10M");
+    conf.set(AWS_S3_VECTOR_READS_MIN_SEEK_SIZE, "2K");
+    conf.set(AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE, "10M");
     try (S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf)) {
       try (FSDataInputStream fis = openVectorFile(fs)) {
         int newMinSeek = fis.minSeekForVectorReads();
@@ -161,8 +178,8 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
   public void testMinSeekAndMaxSizeDefaultValues() throws Exception {
     Configuration conf = getFileSystem().getConf();
     S3ATestUtils.removeBaseAndBucketOverrides(conf,
-            Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE,
-            Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE);
+            AWS_S3_VECTOR_READS_MIN_SEEK_SIZE,
+            AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE);
     try (S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf)) {
       try (FSDataInputStream fis = openVectorFile(fs)) {
         int minSeek = fis.minSeekForVectorReads();
@@ -233,7 +250,8 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
           fs.openFile(path(VECTORED_READ_FILE_NAME))
               .withFileStatus(fileStatus)
               .opt(FS_OPTION_OPENFILE_READ_POLICY,
-                  FS_OPTION_OPENFILE_READ_POLICY_VECTOR)
+                  FS_OPTION_OPENFILE_READ_POLICY_PARQUET
+                      + ", " + FS_OPTION_OPENFILE_READ_POLICY_VECTOR)
               .build();
       try (FSDataInputStream in = builder.get()) {
         in.readVectored(fileRanges, getAllocate());
@@ -398,16 +416,25 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
     }
   }
 
+  /**
+   * Create a test fs with no readahead.
+   * The vector IO ranges are set to the original small values,
+   * so ranges on small files are not coalesced.
+   * @return a filesystem
+   * @throws IOException failure to instantiate.
+   */
   private S3AFileSystem getTestFileSystemWithReadAheadDisabled() throws IOException {
     Configuration conf = getFileSystem().getConf();
     // also resetting the min seek and max size values is important
     // as this same test suite has test which overrides these params.
     S3ATestUtils.removeBaseAndBucketOverrides(conf,
             Constants.READAHEAD_RANGE,
-            Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE,
-            Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE);
+            AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE,
+            AWS_S3_VECTOR_READS_MIN_SEEK_SIZE);
     S3ATestUtils.disableFilesystemCaching(conf);
     conf.setInt(Constants.READAHEAD_RANGE, 0);
+    conf.setInt(AWS_S3_VECTOR_READS_MIN_SEEK_SIZE, S_4K);
+    conf.setInt(AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE, S_1M);
     return S3ATestUtils.createTestFileSystem(conf);
   }
 }

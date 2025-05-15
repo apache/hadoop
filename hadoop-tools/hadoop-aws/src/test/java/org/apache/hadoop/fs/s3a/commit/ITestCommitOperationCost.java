@@ -40,11 +40,11 @@ import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.apache.hadoop.fs.s3a.Statistic.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MAGIC_FILES_CREATED;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MAGIC_MARKER_PUT;
 import static org.apache.hadoop.fs.s3a.Statistic.DIRECTORIES_CREATED;
-import static org.apache.hadoop.fs.s3a.Statistic.FAKE_DIRECTORIES_DELETED;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUEST;
@@ -64,8 +64,6 @@ import static org.apache.hadoop.util.functional.RemoteIterators.toList;
 /**
  * Assert cost of commit operations;
  * <ol>
- *   <li>Even on marker deleting filesystems,
- *       operations under magic dirs do not trigger marker deletion.</li>
  *   <li>Loading pending files from FileStatus entries skips HEAD checks.</li>
  *   <li>Mkdir under magic dirs doesn't check ancestor or dest type</li>
  * </ol>
@@ -79,13 +77,6 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
    * Helper for the tests.
    */
   private CommitterTestHelper testHelper;
-
-  /**
-   * Create with markers kept, always.
-   */
-  public ITestCommitOperationCost() {
-    super(false);
-  }
 
   @Override
   public void setup() throws Exception {
@@ -122,37 +113,12 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
     return ioStatisticsToPrettyString(getFileSystem().getIOStatistics());
   }
 
-  @Test
-  public void testMagicMkdir() throws Throwable {
-    describe("Mkdirs 'MAGIC PATH' always skips dir marker deletion");
-    S3AFileSystem fs = getFileSystem();
-    Path baseDir = methodPath();
-    // create dest dir marker, always
-    fs.mkdirs(baseDir);
-    Path magicDir = new Path(baseDir, MAGIC_PATH_PREFIX + JOB_ID);
-    verifyMetrics(() -> {
-      fs.mkdirs(magicDir);
-      return fileSystemIOStats();
-    },
-        with(OBJECT_BULK_DELETE_REQUEST, 0),
-        with(OBJECT_DELETE_REQUEST, 0),
-        with(DIRECTORIES_CREATED, 1));
-    verifyMetrics(() -> {
-      fs.delete(magicDir, true);
-      return fileSystemIOStats();
-    },
-        with(OBJECT_BULK_DELETE_REQUEST, 0),
-        with(OBJECT_DELETE_REQUEST, 1),
-        with(DIRECTORIES_CREATED, 0));
-    assertPathExists("parent", baseDir);
-  }
-
   /**
    * When a magic subdir is deleted, parent dirs are not recreated.
    */
   @Test
   public void testMagicMkdirs() throws Throwable {
-    describe("Mkdirs __magic_job-<jobId>/subdir always skips dir marker deletion");
+    describe("Mkdirs __magic_job-<jobId>/subdir always skips dir marker recreation");
     S3AFileSystem fs = getFileSystem();
     Path baseDir = methodPath();
     Path magicDir = new Path(baseDir, MAGIC_PATH_PREFIX + JOB_ID);
@@ -203,6 +169,11 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
   @Test
   public void testCostOfCreatingMagicFile() throws Throwable {
     describe("Files created under magic paths skip existence checks and marker deletes");
+
+    // Analytics accelerator currently does not support IOStatistics, this will be added as
+    // part of https://issues.apache.org/jira/browse/HADOOP-19364
+    skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
+        "Analytics Accelerator currently does not support stream statistics");
     S3AFileSystem fs = getFileSystem();
     Path destFile = methodSubPath("file.txt");
     fs.delete(destFile.getParent(), true);
@@ -223,9 +194,8 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
 
       stream.write("hello".getBytes(StandardCharsets.UTF_8));
 
-      // when closing, there will be no directories deleted
-      // we do expect two PUT requests, because the marker and manifests
-      // are both written
+      // when closing, we expect two PUT requests,
+      // because the marker and manifests are both written
       LOG.info("closing magic stream to {}", magicDest);
       verifyMetrics(() -> {
         stream.close();
@@ -266,7 +236,6 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
           commitOperations.getIOStatistics());
     },
         always(NO_HEAD_OR_LIST),  // no probes for the dest path
-        with(FAKE_DIRECTORIES_DELETED, 0),  // no fake dirs
         with(OBJECT_DELETE_REQUEST, 0)); // no deletes
 
     LOG.info("Final Statistics {}",
@@ -282,6 +251,10 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
   public void testCostOfSavingLoadingPendingFile() throws Throwable {
     describe("Verify costs of saving .pending file under a magic path");
 
+    // Analytics accelerator currently does not support IOStatistics, this will be added as
+    // part of https://issues.apache.org/jira/browse/HADOOP-19364
+    skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
+        "Analytics Accelerator currently does not support stream statistics");
     S3AFileSystem fs = getFileSystem();
     Path partDir = methodSubPath("file.pending");
     Path destFile = new Path(partDir, "file.pending");

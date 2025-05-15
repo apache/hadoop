@@ -21,8 +21,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .queuemanagement.GuaranteedOrZeroCapacityOverTimePolicy;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -30,14 +30,14 @@ import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
     .NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.CSQueueUtils.EPSILON;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestQueueManagementDynamicEditPolicy extends
     TestCapacitySchedulerAutoCreatedQueueBase {
    private QueueManagementDynamicEditPolicy policy = new
        QueueManagementDynamicEditPolicy();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     policy.init(cs.getConfiguration(), cs.getRMContext(), cs);

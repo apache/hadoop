@@ -32,12 +32,8 @@ import org.apache.http.ParseException;
 import org.apache.http.HeaderElement;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
-import org.hamcrest.Description;
-import org.hamcrest.TypeSafeMatcher;
-import org.junit.Assume;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 
@@ -50,6 +46,8 @@ import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_SECU
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.times;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test class to hold all WasbRemoteCallHelper tests.
@@ -67,18 +65,16 @@ public class ITestWasbRemoteCallHelper
     return AzureBlobStorageTestAccount.create(conf);
   }
 
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
     boolean useSecureMode = fs.getConf().getBoolean(KEY_USE_SECURE_MODE, false);
     boolean useAuthorization = fs.getConf()
         .getBoolean(NativeAzureFileSystem.KEY_AZURE_AUTHORIZATION, false);
-    Assume.assumeTrue("Test valid when both SecureMode and Authorization are enabled .. skipping",
-        useSecureMode && useAuthorization);
+    assumeTrue(useSecureMode && useAuthorization,
+        "Test valid when both SecureMode and Authorization are enabled .. skipping");
   }
-
-  @Rule
-  public ExpectedException expectedEx = ExpectedException.none();
 
   /**
    * Test invalid status-code.
@@ -87,18 +83,18 @@ public class ITestWasbRemoteCallHelper
   @Test // (expected = WasbAuthorizationException.class)
   public void testInvalidStatusCode() throws Throwable {
 
-    setupExpectations();
+    assertThrows(WasbAuthorizationException.class, () -> {
+      // set up mocks
+      HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
+      HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
+      Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any()))
+          .thenReturn(mockHttpResponse);
+      Mockito.when(mockHttpResponse.getStatusLine())
+          .thenReturn(newStatusLine(INVALID_HTTP_STATUS_CODE_999));
+      // finished setting up mocks
 
-    // set up mocks
-    HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
-    HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
-    Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any()))
-        .thenReturn(mockHttpResponse);
-    Mockito.when(mockHttpResponse.getStatusLine())
-        .thenReturn(newStatusLine(INVALID_HTTP_STATUS_CODE_999));
-    // finished setting up mocks
-
-    performop(mockHttpClient);
+      performop(mockHttpClient);
+    });
   }
 
   /**
@@ -107,19 +103,17 @@ public class ITestWasbRemoteCallHelper
    */
   @Test // (expected = WasbAuthorizationException.class)
   public void testInvalidContentType() throws Throwable {
-
-    setupExpectations();
-
-    // set up mocks
-    HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
-    HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
-    Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
-    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
-    Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
-        .thenReturn(newHeader("Content-Type", "text/plain"));
-    // finished setting up mocks
-
-    performop(mockHttpClient);
+    assertThrows(WasbAuthorizationException.class, () -> {
+      // set up mocks
+      HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
+      HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
+      Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
+      Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
+      Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
+          .thenReturn(newHeader("Content-Type", "text/plain"));
+      // finished setting up mocks
+      performop(mockHttpClient);
+    });
   }
 
   /**
@@ -129,18 +123,18 @@ public class ITestWasbRemoteCallHelper
   @Test // (expected = WasbAuthorizationException.class)
   public void testMissingContentLength() throws Throwable {
 
-    setupExpectations();
+    assertThrows(WasbAuthorizationException.class, () -> {
+      // set up mocks
+      HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
+      HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
+      Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
+      Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
+      Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
+          .thenReturn(newHeader("Content-Type", "application/json"));
+      // finished setting up mocks
 
-    // set up mocks
-    HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
-    HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
-    Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
-    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
-    Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
-        .thenReturn(newHeader("Content-Type", "application/json"));
-    // finished setting up mocks
-
-    performop(mockHttpClient);
+      performop(mockHttpClient);
+    });
   }
 
   /**
@@ -150,20 +144,19 @@ public class ITestWasbRemoteCallHelper
   @Test // (expected = WasbAuthorizationException.class)
   public void testContentLengthExceedsMax() throws Throwable {
 
-    setupExpectations();
-
-    // set up mocks
-    HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
-    HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
-    Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
-    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
-    Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
-        .thenReturn(newHeader("Content-Type", "application/json"));
-    Mockito.when(mockHttpResponse.getFirstHeader("Content-Length"))
-        .thenReturn(newHeader("Content-Length", "2048"));
-    // finished setting up mocks
-
-    performop(mockHttpClient);
+    assertThrows(WasbAuthorizationException.class, () -> {
+      // set up mocks
+      HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
+      HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
+      Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
+      Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
+      Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
+          .thenReturn(newHeader("Content-Type", "application/json"));
+      Mockito.when(mockHttpResponse.getFirstHeader("Content-Length"))
+          .thenReturn(newHeader("Content-Length", "2048"));
+      // finished setting up mocks
+      performop(mockHttpClient);
+    });
   }
 
   /**
@@ -173,20 +166,20 @@ public class ITestWasbRemoteCallHelper
   @Test // (expected = WasbAuthorizationException.class)
   public void testInvalidContentLengthValue() throws Throwable {
 
-    setupExpectations();
+    assertThrows(WasbAuthorizationException.class, () -> {
+      // set up mocks
+      HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
+      HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
+      Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
+      Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
+      Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
+          .thenReturn(newHeader("Content-Type", "application/json"));
+      Mockito.when(mockHttpResponse.getFirstHeader("Content-Length"))
+          .thenReturn(newHeader("Content-Length", "20abc48"));
+      // finished setting up mocks
 
-    // set up mocks
-    HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
-    HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
-    Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
-    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
-    Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
-        .thenReturn(newHeader("Content-Type", "application/json"));
-    Mockito.when(mockHttpResponse.getFirstHeader("Content-Length"))
-        .thenReturn(newHeader("Content-Length", "20abc48"));
-    // finished setting up mocks
-
-    performop(mockHttpClient);
+      performop(mockHttpClient);
+    });
   }
 
   /**
@@ -225,27 +218,29 @@ public class ITestWasbRemoteCallHelper
   @Test // (expected = WasbAuthorizationException.class)
   public void testMalFormedJSONResponse() throws Throwable {
 
-    expectedEx.expect(WasbAuthorizationException.class);
-    expectedEx.expectMessage("com.fasterxml.jackson.core.JsonParseException: Unexpected end-of-input in FIELD_NAME");
+    String errorMsg =
+        "com.fasterxml.jackson.core.JsonParseException: Unexpected end-of-input in FIELD_NAME";
+    assertThrows(WasbAuthorizationException.class, () -> {
+      // set up mocks
+      HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
 
-    // set up mocks
-    HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
+      HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
+      HttpEntity mockHttpEntity = Mockito.mock(HttpEntity.class);
 
-    HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
-    HttpEntity mockHttpEntity = Mockito.mock(HttpEntity.class);
+      Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
+      Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
+      Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
+          .thenReturn(newHeader("Content-Type", "application/json"));
+      Mockito.when(mockHttpResponse.getFirstHeader("Content-Length"))
+          .thenReturn(newHeader("Content-Length", "1024"));
+      Mockito.when(mockHttpResponse.getEntity()).thenReturn(mockHttpEntity);
+      Mockito.when(mockHttpEntity.getContent())
+          .thenReturn(new ByteArrayInputStream(malformedJsonResponse().getBytes(StandardCharsets.UTF_8)));
+      // finished setting up mocks
 
-    Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
-    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
-    Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
-        .thenReturn(newHeader("Content-Type", "application/json"));
-    Mockito.when(mockHttpResponse.getFirstHeader("Content-Length"))
-        .thenReturn(newHeader("Content-Length", "1024"));
-    Mockito.when(mockHttpResponse.getEntity()).thenReturn(mockHttpEntity);
-    Mockito.when(mockHttpEntity.getContent())
-        .thenReturn(new ByteArrayInputStream(malformedJsonResponse().getBytes(StandardCharsets.UTF_8)));
-    // finished setting up mocks
+      performop(mockHttpClient);
+    }, errorMsg);
 
-    performop(mockHttpClient);
   }
 
   /**
@@ -254,28 +249,28 @@ public class ITestWasbRemoteCallHelper
    */
   @Test // (expected = WasbAuthorizationException.class)
   public void testFailureCodeJSONResponse() throws Throwable {
+    String errorMsg = "Remote authorization service encountered an error Unauthorized";
 
-    expectedEx.expect(WasbAuthorizationException.class);
-    expectedEx.expectMessage("Remote authorization service encountered an error Unauthorized");
+    assertThrows(WasbAuthorizationException.class, () -> {
+      // set up mocks
+      HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
 
-    // set up mocks
-    HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
+      HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
+      HttpEntity mockHttpEntity = Mockito.mock(HttpEntity.class);
 
-    HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
-    HttpEntity mockHttpEntity = Mockito.mock(HttpEntity.class);
-
-    Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
-    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
-    Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
-        .thenReturn(newHeader("Content-Type", "application/json"));
-    Mockito.when(mockHttpResponse.getFirstHeader("Content-Length"))
-        .thenReturn(newHeader("Content-Length", "1024"));
-    Mockito.when(mockHttpResponse.getEntity()).thenReturn(mockHttpEntity);
-    Mockito.when(mockHttpEntity.getContent())
-        .thenReturn(new ByteArrayInputStream(failureCodeJsonResponse().getBytes(StandardCharsets.UTF_8)));
-    // finished setting up mocks
-
-    performop(mockHttpClient);
+      Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
+      Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
+      Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
+          .thenReturn(newHeader("Content-Type", "application/json"));
+      Mockito.when(mockHttpResponse.getFirstHeader("Content-Length"))
+          .thenReturn(newHeader("Content-Length", "1024"));
+      Mockito.when(mockHttpResponse.getEntity()).thenReturn(mockHttpEntity);
+      Mockito.when(mockHttpEntity.getContent())
+          .thenReturn(new ByteArrayInputStream(failureCodeJsonResponse()
+          .getBytes(StandardCharsets.UTF_8)));
+      // finished setting up mocks
+      performop(mockHttpClient);
+    }, errorMsg);
   }
 
   @Test
@@ -408,36 +403,6 @@ public class ITestWasbRemoteCallHelper
           .execute(argThat(new HttpGetForServiceLocal()));
       Mockito.verify(mockHttpClient, times(7)).execute(Mockito.<HttpGet>any());
     }
-  }
-
-  private void setupExpectations() {
-    expectedEx.expect(WasbAuthorizationException.class);
-
-    class MatchesPattern extends TypeSafeMatcher<String> {
-      private String pattern;
-
-      MatchesPattern(String pattern) {
-        this.pattern = pattern;
-      }
-
-      @Override protected boolean matchesSafely(String item) {
-        return item.matches(pattern);
-      }
-
-      @Override public void describeTo(Description description) {
-        description.appendText("matches pattern ").appendValue(pattern);
-      }
-
-      @Override protected void describeMismatchSafely(String item,
-          Description mismatchDescription) {
-        mismatchDescription.appendText("does not match");
-      }
-    }
-
-    expectedEx.expectMessage(new MatchesPattern(
-        "org\\.apache\\.hadoop\\.fs\\.azure\\.WasbRemoteCallException: "
-            + "Encountered error while making remote call to "
-            + "http:\\/\\/localhost1\\/,http:\\/\\/localhost2\\/,http:\\/\\/localhost:8080 retried 6 time\\(s\\)\\."));
   }
 
   private void performop(HttpClient mockHttpClient) throws Throwable {

@@ -23,7 +23,7 @@ import java.util.EnumSet;
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.azure.AbstractWasbTestBase;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;

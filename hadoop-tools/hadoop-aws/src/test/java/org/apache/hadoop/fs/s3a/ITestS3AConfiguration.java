@@ -32,6 +32,7 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.SdkClient;
 import software.amazon.awssdk.core.client.config.SdkClientConfiguration;
 import software.amazon.awssdk.core.client.config.SdkClientOption;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
@@ -42,6 +43,7 @@ import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.model.StsException;
+import software.amazon.encryption.s3.S3EncryptionClient;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -56,6 +58,7 @@ import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.http.HttpStatus;
@@ -73,7 +76,7 @@ import static org.junit.Assert.*;
 /**
  * S3A tests for configuration, especially credentials.
  */
-public class ITestS3AConfiguration {
+public class ITestS3AConfiguration extends AbstractHadoopTestBase {
   private static final String EXAMPLE_ID = "AKASOMEACCESSKEY";
   private static final String EXAMPLE_KEY =
       "RGV0cm9pdCBSZ/WQgY2xl/YW5lZCB1cAEXAMPLE";
@@ -370,6 +373,7 @@ public class ITestS3AConfiguration {
 
     conf = new Configuration();
     skipIfCrossRegionClient(conf);
+    unsetEncryption(conf);
     conf.set(Constants.PATH_STYLE_ACCESS, Boolean.toString(true));
     assertTrue(conf.getBoolean(Constants.PATH_STYLE_ACCESS, false));
 
@@ -411,6 +415,7 @@ public class ITestS3AConfiguration {
   public void testDefaultUserAgent() throws Exception {
     conf = new Configuration();
     skipIfCrossRegionClient(conf);
+    unsetEncryption(conf);
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
     S3Client s3 = getS3Client("User Agent");
@@ -425,6 +430,7 @@ public class ITestS3AConfiguration {
   public void testCustomUserAgent() throws Exception {
     conf = new Configuration();
     skipIfCrossRegionClient(conf);
+    unsetEncryption(conf);
     conf.set(Constants.USER_AGENT_PREFIX, "MyApp");
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
@@ -439,13 +445,17 @@ public class ITestS3AConfiguration {
   @Test
   public void testRequestTimeout() throws Exception {
     conf = new Configuration();
+    skipIfCrossRegionClient(conf);
     // remove the safety check on minimum durations.
     AWSClientConfig.setMinimumOperationDuration(Duration.ZERO);
     try {
       Duration timeout = Duration.ofSeconds(120);
       conf.set(REQUEST_TIMEOUT, timeout.getSeconds() + "s");
       fs = S3ATestUtils.createTestFileSystem(conf);
-      S3Client s3 = getS3Client("Request timeout (ms)");
+      SdkClient s3 = getS3Client("Request timeout (ms)");
+      if (s3 instanceof S3EncryptionClient) {
+        s3 = ((S3EncryptionClient) s3).delegate();
+      }
       SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
           "clientConfiguration");
       Assertions.assertThat(clientConfiguration.option(SdkClientOption.API_CALL_ATTEMPT_TIMEOUT))
@@ -478,9 +488,18 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     conf.unset(Constants.BUFFER_DIR);
     fs = S3ATestUtils.createTestFileSystem(conf);
-    File tmp = fs.createTmpFileForWrite("out-", 1024, conf);
+    File tmp = createTemporaryFileForWriting();
     assertTrue("not found: " + tmp, tmp.exists());
     tmp.delete();
+  }
+
+  /**
+   * Create a temporary file for writing; requires the FS to have been created/initialized.
+   * @return a temporary file
+   * @throws IOException creation issues.
+   */
+  private File createTemporaryFileForWriting() throws IOException {
+    return fs.getS3AInternals().getStore().createTemporaryFileForWriting("out-", 1024, conf);
   }
 
   @Test
@@ -492,9 +511,9 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     conf.set(Constants.BUFFER_DIR, dir1 + ", " + dir2);
     fs = S3ATestUtils.createTestFileSystem(conf);
-    File tmp1 = fs.createTmpFileForWrite("out-", 1024, conf);
+    File tmp1 = createTemporaryFileForWriting();
     tmp1.delete();
-    File tmp2 = fs.createTmpFileForWrite("out-", 1024, conf);
+    File tmp2 = createTemporaryFileForWriting();
     tmp2.delete();
     assertNotEquals("round robin not working",
         tmp1.getParent(), tmp2.getParent());
@@ -570,6 +589,8 @@ public class ITestS3AConfiguration {
     config.set(AWS_REGION, EU_WEST_1);
     disableFilesystemCaching(config);
     fs = S3ATestUtils.createTestFileSystem(config);
+    assumeStoreAwsHosted(fs);
+
 
     S3Client s3Client = getS3Client("testS3SpecificSignerOverride");
 
@@ -632,8 +653,8 @@ public class ITestS3AConfiguration {
    */
   private static void skipIfCrossRegionClient(
       Configuration configuration) {
-    if (configuration.get(ENDPOINT, null) == null
-        && configuration.get(AWS_REGION, null) == null) {
+    if (configuration.getBoolean(AWS_S3_CROSS_REGION_ACCESS_ENABLED,
+        AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT)) {
       skip("Skipping test as cross region client is in use ");
     }
   }

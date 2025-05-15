@@ -21,9 +21,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutput;
@@ -34,9 +34,9 @@ import java.io.IOException;
 
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.TrashOption;
 import static org.apache.hadoop.test.GenericTestUtils.getMethodName;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test TrashProcedure.
@@ -47,7 +47,7 @@ public class TestTrashProcedure {
   private static MiniDFSCluster cluster;
   private static String nnUri;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws IOException {
     conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -55,7 +55,7 @@ public class TestTrashProcedure {
     nnUri = FileSystem.getDefaultUri(conf).toString();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() {
     if (cluster != null) {
       cluster.shutdown();

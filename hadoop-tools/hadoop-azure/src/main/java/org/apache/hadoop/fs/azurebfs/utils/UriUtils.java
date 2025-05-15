@@ -19,6 +19,9 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -29,12 +32,19 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.AND_MARK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EQUAL;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_SAOID;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_SIGNATURE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_SKOID;
@@ -44,6 +54,10 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
  * Utility class to help with Abfs url transformation to blob urls.
  */
 public final class UriUtils {
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      UriUtils.class);
+
   private static final String ABFS_URI_REGEX = "[^.]+\\.dfs\\.(preprod\\.){0,1}core\\.windows\\.net";
   private static final Pattern ABFS_URI_PATTERN = Pattern.compile(ABFS_URI_REGEX);
   private static final Set<String> FULL_MASK_PARAM_KEYS = new HashSet<>(
@@ -167,6 +181,96 @@ public final class UriUtils {
     String maskedQueryString = maskUrlQueryParameters(queryKeyValueList,
         FULL_MASK_PARAM_KEYS, PARTIAL_MASK_PARAM_KEYS, queryString.length());
     return url.toString().replace(queryString, maskedQueryString);
+  }
+
+  /**
+   * Changes Blob Endpoint URL to DFS Endpoint URL.
+   * If original url is not Blob Endpoint URL, it will return the original URL.
+   * @param url to be converted.
+   * @return updated URL
+   * @throws InvalidUriException in case of MalformedURLException.
+   */
+  public static URL changeUrlFromBlobToDfs(URL url) throws InvalidUriException {
+    try {
+      url = new URL(replacedUrl(url.toString(), ABFS_BLOB_DOMAIN_NAME, ABFS_DFS_DOMAIN_NAME));
+    } catch (MalformedURLException ex) {
+      throw new InvalidUriException(url.toString());
+    }
+    return url;
+  }
+
+  /**
+   * Changes DFS Endpoint URL to Blob Endpoint URL.
+   * If original url is not DFS Endpoint URL, it will return the original URL.
+   * @param url to be converted.
+   * @return updated URL
+   * @throws InvalidUriException in case of MalformedURLException.
+   */
+  public static URL changeUrlFromDfsToBlob(URL url) throws InvalidUriException {
+    try {
+      url = new URL(replacedUrl(url.toString(), ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME));
+    } catch (MalformedURLException ex) {
+      throw new InvalidUriException(url.toString());
+    }
+    return url;
+  }
+
+  /**
+   * Replaces the oldString with newString in the baseUrl.
+   * It will extract the account url path to make sure we do not replace any
+   * matching string in blob path or any other part of url
+   * @param baseUrl the url to be updated.
+   * @param oldString the string to be replaced.
+   * @param newString the string to be replaced with.
+   * @return updated URL
+   */
+  private static String replacedUrl(String baseUrl, String oldString, String newString) {
+    int startIndex = baseUrl.toString().indexOf("//") + 2;
+    int endIndex = baseUrl.toString().indexOf("/", startIndex);
+    if (oldString == null || newString == null|| startIndex < 0
+        || endIndex > baseUrl.length() || startIndex > endIndex) {
+      throw new IllegalArgumentException("Invalid input or indices");
+    }
+    StringBuilder sb = new StringBuilder(baseUrl);
+    int targetIndex = sb.indexOf(oldString, startIndex);
+    if (targetIndex == -1 || targetIndex >= endIndex) {
+      return baseUrl; // target not found within the specified range
+    }
+    sb.replace(targetIndex, targetIndex + oldString.length(), newString);
+    return sb.toString();
+  }
+
+  /**
+   * Checks if the key is for a directory in the set of directories.
+   * @param key the key to check.
+   * @param dirSet the set of directories.
+   * @return true if the key is for a directory in the set of directories.
+   */
+  public static boolean isKeyForDirectorySet(String key, Set<String> dirSet) {
+    for (String dir : dirSet) {
+      // Ensure the directory ends with a forward slash
+      if (StringUtils.isNotEmpty(dir)
+          && !dir.endsWith(AbfsHttpConstants.FORWARD_SLASH)) {
+        dir += AbfsHttpConstants.FORWARD_SLASH;
+      }
+      // Return true if the directory is empty or the key starts with the directory
+      if (dir.isEmpty() || key.startsWith(dir)) {
+        return true;
+      }
+
+      try {
+        URI uri = new URI(dir);
+        if (null == uri.getAuthority()) {
+          if (key.startsWith(dir + "/")) {
+            return true;
+          }
+        }
+      } catch (URISyntaxException e) {
+        LOG.info("URI syntax error creating URI for {}", dir);
+      }
+    }
+
+    return false;
   }
 
   private UriUtils() {

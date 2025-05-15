@@ -1120,7 +1120,7 @@ public class TestFSImage {
   }
 
   @Test
-  public void testNoParallelSectionsWithCompressionEnabled()
+  public void testParallelSaveAndLoadWithCompression()
       throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
@@ -1137,16 +1137,21 @@ public class TestFSImage {
           getLatestImageSummary(cluster);
       ArrayList<Section> sections = Lists.newArrayList(
           summary.getSectionsList());
+      Section inodeSection =
+              getSubSectionsOfName(sections, SectionName.INODE).get(0);
+      Section dirSection = getSubSectionsOfName(sections,
+              SectionName.INODE_DIR).get(0);
 
       ArrayList<Section> inodeSubSections =
           getSubSectionsOfName(sections, SectionName.INODE_SUB);
       ArrayList<Section> dirSubSections =
           getSubSectionsOfName(sections, SectionName.INODE_DIR_SUB);
+      // Compression and parallel can be enabled at the same time.
+      assertEquals(4, inodeSubSections.size());
+      assertEquals(4, dirSubSections.size());
 
-      // As compression is enabled, there should be no sub-sections in the
-      // image header
-      assertEquals(0, inodeSubSections.size());
-      assertEquals(0, dirSubSections.size());
+      ensureSubSectionsAlignWithParent(inodeSubSections, inodeSection);
+      ensureSubSectionsAlignWithParent(dirSubSections, dirSection);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

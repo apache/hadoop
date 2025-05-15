@@ -187,4 +187,20 @@ public final class CommonPathCapabilities {
    */
   public static final String BULK_DELETE = "fs.capability.bulk.delete";
 
+  /**
+   * Capability string to probe for block locations returned in {@code LocatedFileStatus}
+   * instances from calls such as {@code getBlockLocations()} and {@code listStatus()}l
+   * to be 'virtual' rather than actual values resolved against a Distributed Filesystem including
+   * HDFS: {@value}.
+   * <p>
+   * Key implications from this path capability being true:
+   * <ol>
+   *   <li>Work can be scheduled anywhere</li>
+   *   <li>Creation of the location list is a low cost-client side operation</li>
+   * </ol>
+   * Implication #2 means there is no performance penalty from use of FileSystem operations which
+   * return lists or iterators of {@code LocatedFileStatus}.
+   */
+  public static final String VIRTUAL_BLOCK_LOCATIONS = "fs.capability.virtual.block.locations";
+
 }

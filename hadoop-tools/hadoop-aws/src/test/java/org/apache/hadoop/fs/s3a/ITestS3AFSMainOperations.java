@@ -31,6 +31,8 @@ import org.apache.hadoop.fs.contract.s3a.S3AContract;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createTestPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.isCreatePerformanceEnabled;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 
 /**
  * S3A Test suite for the FSMainOperationsBaseTest tests.
@@ -46,7 +48,10 @@ public class ITestS3AFSMainOperations extends FSMainOperationsBaseTest {
 
   @Override
   protected FileSystem createFileSystem() throws Exception {
-    contract = new S3AContract(new Configuration());
+    Configuration conf = setPerformanceFlags(
+        new Configuration(),
+        "");
+    contract = new S3AContract(conf);
     contract.init();
     return contract.getTestFileSystem();
   }
@@ -72,6 +77,28 @@ public class ITestS3AFSMainOperations extends FSMainOperationsBaseTest {
   @Ignore("local FS path setup broken")
   public void testCopyToLocalWithUseRawLocalFileSystemOption()
       throws Exception {
+  }
+
+  @Override
+  public void testWriteReadAndDeleteOneAndAHalfBlocks() throws Exception {
+    // Currently analytics accelerator does not support reading of files that have been overwritten.
+    // This is because the analytics accelerator library caches metadata, and when a file is
+    // overwritten, the old metadata continues to be used, until it is removed from the cache over
+    // time. This will be fixed in https://github.com/awslabs/analytics-accelerator-s3/issues/218.
+    skipIfAnalyticsAcceleratorEnabled(this.contract.getConf(),
+        "Analytics Accelerator currently does not support reading of over written files");
+    super.testWriteReadAndDeleteOneAndAHalfBlocks();
+  }
+
+  @Override
+  public void testWriteReadAndDeleteTwoBlocks() throws Exception {
+    // Currently analytics accelerator does not support reading of files that have been overwritten.
+    // This is because the analytics accelerator library caches metadata, and when a file is
+    // overwritten, the old metadata continues to be used, until it is removed from the cache over
+    // time. This will be fixed in https://github.com/awslabs/analytics-accelerator-s3/issues/218.
+    skipIfAnalyticsAcceleratorEnabled(this.contract.getConf(),
+        "Analytics Accelerator currently does not support reading of over written files");
+    super.testWriteReadAndDeleteTwoBlocks();
   }
 
   @Override

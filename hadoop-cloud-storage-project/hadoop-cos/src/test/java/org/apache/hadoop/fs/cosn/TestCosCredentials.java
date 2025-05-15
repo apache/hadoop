@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.cosn;
 import com.qcloud.cos.auth.COSCredentials;
 import com.qcloud.cos.auth.COSCredentialsProvider;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,8 +28,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestCosCredentials {
   private static final Logger LOG =
@@ -76,7 +76,7 @@ public class TestCosCredentials {
       COSCredentialsProvider credentialsProvider =
           CosNUtils.createCosCredentialsProviderSet(uri, configuration);
       COSCredentials cosCredentials = credentialsProvider.getCredentials();
-      assertNotNull("The cos credentials obtained is null.", cosCredentials);
+      assertNotNull(cosCredentials, "The cos credentials obtained is null.");
       if (configuration.get(
           CosNConfigKeys.COSN_CREDENTIALS_PROVIDER).compareToIgnoreCase(
           "org.apache.hadoop.fs.cosn.EnvironmentVariableCredentialsProvider")

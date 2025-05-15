@@ -106,7 +106,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
               JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS,
               JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_PORT);    }
     address = NetUtils.getConnectAddress(address);
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     InetAddress resolved = address.getAddress();
     if (resolved == null || resolved.isAnyLocalAddress() || 
         resolved.isLoopbackAddress()) {

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.collections.list.TreeList;
+import org.apache.commons.collections4.list.TreeList;
 import org.apache.hadoop.ipc.RpcNoSuchMethodException;
 import org.apache.hadoop.net.DomainNameResolver;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;

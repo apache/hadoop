@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -83,7 +84,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.apache.commons.collections.map.UnmodifiableMap;
+import org.apache.commons.collections4.map.UnmodifiableMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -99,6 +100,7 @@ import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProvider.CredentialEntry;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
+import org.apache.hadoop.util.ConfigurationHelper;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringInterner;
@@ -117,7 +119,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 /**
  * Provides access to configuration parameters.
  *
- * <h3 id="Resources">Resources</h3>
+ * <h2 id="Resources">Resources</h2>
  *
  * <p>Configurations are specified by resources. A resource contains a set of
  * name/value pairs as XML data. Each resource is named by either a 
@@ -128,16 +130,16 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  *
  * <p>Unless explicitly turned off, Hadoop by default specifies two 
  * resources, loaded in-order from the classpath: <ol>
- * <li><tt>
+ * <li><code>
  * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
- * core-default.xml</a></tt>: Read-only defaults for hadoop.</li>
- * <li><tt>core-site.xml</tt>: Site-specific configuration for a given hadoop
+ * core-default.xml</a></code>: Read-only defaults for hadoop.</li>
+ * <li><code>core-site.xml</code>: Site-specific configuration for a given hadoop
  * installation.</li>
  * </ol>
  * Applications may add additional resources, which are loaded
  * subsequent to these resources in the order they are added.
  * 
- * <h4 id="FinalParams">Final Parameters</h4>
+ * <h3 id="FinalParams">Final Parameters</h3>
  *
  * <p>Configuration parameters may be declared <i>final</i>. 
  * Once a resource declares a value final, no subsequently-loaded 
@@ -151,9 +153,9 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  *  &lt;/property&gt;</code></pre>
  *
  * Administrators typically define parameters as final in 
- * <tt>core-site.xml</tt> for values that user applications may not alter.
+ * <code>core-site.xml</code> for values that user applications may not alter.
  *
- * <h4 id="VariableExpansion">Variable Expansion</h4>
+ * <h3 id="VariableExpansion">Variable Expansion</h3>
  *
  * <p>Value strings are first processed for <i>variable expansion</i>. The
  * available properties are:<ol>
@@ -183,22 +185,22 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  *  &lt;/property&gt;
  *  </code></pre>
  *
- * <p>When <tt>conf.get("tempdir")</tt> is called, then <tt>${<i>basedir</i>}</tt>
+ * <p>When <code>conf.get("tempdir")</code> is called, then <code>${<i>basedir</i>}</code>
  * will be resolved to another property in this Configuration, while
- * <tt>${<i>user.name</i>}</tt> would then ordinarily be resolved to the value
+ * <code>${<i>user.name</i>}</code> would then ordinarily be resolved to the value
  * of the System property with that name.
- * <p>When <tt>conf.get("otherdir")</tt> is called, then <tt>${<i>env.BASE_DIR</i>}</tt>
- * will be resolved to the value of the <tt>${<i>BASE_DIR</i>}</tt> environment variable.
- * It supports <tt>${<i>env.NAME:-default</i>}</tt> and <tt>${<i>env.NAME-default</i>}</tt> notations.
- * The former is resolved to "default" if <tt>${<i>NAME</i>}</tt> environment variable is undefined
+ * <p>When <code>conf.get("otherdir")</code> is called, then <code>${<i>env.BASE_DIR</i>}</code>
+ * will be resolved to the value of the <code>${<i>BASE_DIR</i>}</code> environment variable.
+ * It supports <code>${<i>env.NAME:-default</i>}</code> and <code>${<i>env.NAME-default</i>}</code> notations.
+ * The former is resolved to "default" if <code>${<i>NAME</i>}</code> environment variable is undefined
  * or its value is empty.
- * The latter behaves the same way only if <tt>${<i>NAME</i>}</tt> is undefined.
+ * The latter behaves the same way only if <code>${<i>NAME</i>}</code> is undefined.
  * <p>By default, warnings will be given to any deprecated configuration 
  * parameters and these are suppressible by configuring
- * <tt>log4j.logger.org.apache.hadoop.conf.Configuration.deprecation</tt> in
+ * <code>log4j.logger.org.apache.hadoop.conf.Configuration.deprecation</code> in
  * log4j.properties file.
  *
- * <h4 id="Tags">Tags</h4>
+ * <h3 id="Tags">Tags</h3>
  *
  * <p>Optionally we can tag related properties together by using tag
  * attributes. System tags are defined by hadoop.tags.system property. Users
@@ -218,9 +220,9 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  *    &lt;tag&gt;HDFS,SECURITY&lt;/tag&gt;
  *  &lt;/property&gt;
  * </code></pre>
- * <p> Properties marked with tags can be retrieved with <tt>conf
- * .getAllPropertiesByTag("HDFS")</tt> or <tt>conf.getAllPropertiesByTags
- * (Arrays.asList("YARN","SECURITY"))</tt>.</p>
+ * <p> Properties marked with tags can be retrieved with <code>conf
+ * .getAllPropertiesByTag("HDFS")</code> or <code>conf.getAllPropertiesByTags
+ * (Arrays.asList("YARN","SECURITY"))</code>.</p>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -509,9 +511,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         }
       }
       this.deprecatedKeyMap =
-        UnmodifiableMap.decorate(newDeprecatedKeyMap);
+        UnmodifiableMap.unmodifiableMap(newDeprecatedKeyMap);
       this.reverseDeprecatedKeyMap =
-        UnmodifiableMap.decorate(newReverseDeprecatedKeyMap);
+        UnmodifiableMap.unmodifiableMap(newReverseDeprecatedKeyMap);
     }
 
     Map<String, DeprecatedKeyInfo> getDeprecatedKeyMap() {
@@ -574,7 +576,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * It does not override any existing entries in the deprecation map.
    * This is to be used only by the developers in order to add deprecation of
    * keys, and attempts to call this method after loading resources once,
-   * would lead to <tt>UnsupportedOperationException</tt>
+   * would lead to <code>UnsupportedOperationException</code>
    * 
    * If a key is deprecated in favor of multiple keys, they are all treated as 
    * aliases of each other, and setting any one of them resets all the others 
@@ -602,7 +604,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * It does not override any existing entries in the deprecation map.
    * This is to be used only by the developers in order to add deprecation of
    * keys, and attempts to call this method after loading resources once,
-   * would lead to <tt>UnsupportedOperationException</tt>
+   * would lead to <code>UnsupportedOperationException</code>
    * 
    * If you have multiple deprecation entries to add, it is more efficient to
    * use #addDeprecations(DeprecationDelta[] deltas) instead.
@@ -622,7 +624,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * It does not override any existing entries in the deprecation map.
    * This is to be used only by the developers in order to add deprecation of
    * keys, and attempts to call this method after loading resources once,
-   * would lead to <tt>UnsupportedOperationException</tt>
+   * would lead to <code>UnsupportedOperationException</code>
    * 
    * If a key is deprecated in favor of multiple keys, they are all treated as 
    * aliases of each other, and setting any one of them resets all the others 
@@ -646,7 +648,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * It does not override any existing entries in the deprecation map.
    * This is to be used only by the developers in order to add deprecation of
    * keys, and attempts to call this method after loading resources once,
-   * would lead to <tt>UnsupportedOperationException</tt>
+   * would lead to <code>UnsupportedOperationException</code>
    * 
    * If you have multiple deprecation entries to add, it is more efficient to
    * use #addDeprecations(DeprecationDelta[] deltas) instead.
@@ -1784,6 +1786,26 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return null == val
       ? defaultValue
       : Enum.valueOf(defaultValue.getDeclaringClass(), val);
+  }
+
+  /**
+   * Build an enumset from a comma separated list of values.
+   * Case independent.
+   * Special handling of "*" meaning: all values.
+   * @param key key to look for
+   * @param enumClass class of enum
+   * @param ignoreUnknown should unknown values raise an exception?
+   * @return a mutable set of the identified enum values declared in the configuration
+   * @param <E> enumeration type
+   * @throws IllegalArgumentException if one of the entries was unknown and ignoreUnknown is false,
+   *           or there are two entries in the enum which differ only by case.
+   */
+  public <E extends Enum<E>> EnumSet<E> getEnumSet(
+      final String key,
+      final Class<E> enumClass,
+      final boolean ignoreUnknown) throws IllegalArgumentException {
+    final String value = get(key, "");
+    return ConfigurationHelper.parseEnumSet(key, value, enumClass, ignoreUnknown);
   }
 
   enum ParsedTimeDuration {

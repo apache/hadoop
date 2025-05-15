@@ -31,6 +31,7 @@ import org.junit.runners.Parameterized;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.azurebfs.utils.Parallelized;
@@ -77,6 +78,7 @@ public class ITestAzureBlobFileSystemPermission extends AbstractAbfsIntegrationT
 
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(getIsNamespaceEnabled(fs));
+    Assume.assumeTrue(getIngressServiceType() == AbfsServiceType.DFS);
     fs.getConf().set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, DEFAULT_UMASK_VALUE);
     path = new Path(testRoot, UUID.randomUUID().toString());
 
@@ -94,6 +96,7 @@ public class ITestAzureBlobFileSystemPermission extends AbstractAbfsIntegrationT
   public void testFolderPermission() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(getIsNamespaceEnabled(fs));
+    Assume.assumeTrue(getIngressServiceType() == AbfsServiceType.DFS);
     fs.getConf().set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "027");
 
     path = new Path(testRoot, UUID.randomUUID().toString());

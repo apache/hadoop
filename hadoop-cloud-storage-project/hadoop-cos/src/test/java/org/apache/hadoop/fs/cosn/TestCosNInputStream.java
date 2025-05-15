@@ -23,11 +23,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Random;
@@ -43,7 +46,7 @@ public class TestCosNInputStream {
 
   private Path testRootDir;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     Configuration configuration = new Configuration();
     this.fs = CosNTestUtils.createTestFileSystem(configuration);
@@ -51,7 +54,7 @@ public class TestCosNInputStream {
     LOG.info("test root dir: " + this.testRootDir);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (null != this.fs) {
       this.fs.delete(this.testRootDir, true);
@@ -76,9 +79,9 @@ public class TestCosNInputStream {
     for (int i = 0; i != seekTimes; i++) {
       long pos = fileSize / (seekTimes - i) - 1;
       inputStream.seek(pos);
-      assertTrue("expected position at: " +
-              pos + ", but got: " + inputStream.getPos(),
-          inputStream.getPos() == pos);
+      assertTrue(inputStream.getPos() == pos,
+          "expected position at: " +
+          pos + ", but got: " + inputStream.getPos());
       LOG.info("completed seeking at pos: " + inputStream.getPos());
     }
     LOG.info("begin to random position seeking test...");
@@ -87,9 +90,9 @@ public class TestCosNInputStream {
       long pos = Math.abs(random.nextLong()) % fileSize;
       LOG.info("seeking for pos: " + pos);
       inputStream.seek(pos);
-      assertTrue("expected position at: " +
-              pos + ", but got: " + inputStream.getPos(),
-          inputStream.getPos() == pos);
+      assertTrue(inputStream.getPos() == pos,
+          "expected position at: " +
+          pos + ", but got: " + inputStream.getPos());
       LOG.info("completed seeking at pos: " + inputStream.getPos());
     }
   }
@@ -110,16 +113,16 @@ public class TestCosNInputStream {
     Random random = new Random();
     long pos = Math.abs(random.nextLong()) % fileSize;
     inputStream.seek(pos);
-    assertTrue("expected position at: " +
-            pos + ", but got: " + inputStream.getPos(),
-        inputStream.getPos() == pos);
+    assertTrue(inputStream.getPos() == pos,
+        "expected position at: " +
+        pos + ", but got: " + inputStream.getPos());
     LOG.info("completed get pos tests.");
   }
 
   /**
    * Method: seekToNewSource(long targetPos).
    */
-  @Ignore("Not ready yet")
+  @Disabled("Not ready yet")
   public void testSeekToNewSource() throws Exception {
     LOG.info("Currently it is not supported to " +
         "seek the offset in a new source.");
@@ -154,8 +157,9 @@ public class TestCosNInputStream {
 
       if (bytesRead % (1 * Unit.MB) == 0) {
         int available = inputStream.available();
-        assertTrue("expected remaining: " + (fileSize - bytesRead) +
-            " but got: " + available, (fileSize - bytesRead) == available);
+        assertTrue((fileSize - bytesRead) == available,
+            "expected remaining: " + (fileSize - bytesRead) +
+            " but got: " + available);
         LOG.info("Bytes read: " +
             Math.round((double) bytesRead / Unit.MB) + "MB");
       }

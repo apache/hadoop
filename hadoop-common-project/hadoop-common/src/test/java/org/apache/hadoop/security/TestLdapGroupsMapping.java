@@ -22,10 +22,11 @@ import static org.apache.hadoop.security.LdapGroupsMapping.GROUP_SEARCH_FILTER_P
 import static org.apache.hadoop.security.LdapGroupsMapping.LDAP_NUM_ATTEMPTS_KEY;
 import static org.apache.hadoop.security.LdapGroupsMapping.READ_TIMEOUT;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -59,9 +60,9 @@ import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -90,7 +91,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
 
   private static final String TEST_LDAP_URL = "ldap://test";
 
-  @Before
+  @BeforeEach
   public void setupMocks() {
     when(getUserSearchResult().getNameInNamespace()).
         thenReturn(userDN);
@@ -165,7 +166,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
 
     // Check the group filter got resolved and get the desired values.
     List<String> groups = groupsMapping.getGroups(userName);
-    Assert.assertEquals(Arrays.asList(getTestGroups()), groups);
+    assertEquals(Arrays.asList(getTestGroups()), groups);
   }
 
   /**
@@ -190,7 +191,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
         .thenReturn(getUserNames(), getGroupNames());
 
     List<String> groups = groupsMapping.getGroups(userName);
-    Assert.assertEquals(Arrays.asList(getTestGroups()), groups);
+    assertEquals(Arrays.asList(getTestGroups()), groups);
 
     // We should have searched for the username and groups with default base dn
     verify(getContext(), times(1)).search(userBaseDN,
@@ -258,7 +259,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
     // regardless of input
     List<String> groups = groupsMapping.getGroups("some_user");
     
-    Assert.assertEquals(expectedGroups, groups);
+    assertEquals(expectedGroups, groups);
     
     // We should have searched for a user, and then two groups
     verify(getContext(), times(searchTimes)).search(anyString(),
@@ -278,7 +279,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
     List<String> groups = groupsMapping.getGroups("some_user");
 
     // compare lists, ignoring the order
-    Assert.assertEquals(new HashSet<>(expectedGroups), new HashSet<>(groups));
+    assertEquals(new HashSet<>(expectedGroups), new HashSet<>(groups));
 
     // We should have searched for a user, and group
     verify(getContext(), times(searchTimesGroup)).search(anyString(),
@@ -298,7 +299,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
     writer.close();
     
     LdapGroupsMapping mapping = new LdapGroupsMapping();
-    Assert.assertEquals("hadoop",
+    assertEquals("hadoop",
         mapping.extractPassword(secretFile.getPath()));
   }
 
@@ -344,15 +345,15 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
         LdapGroupsMapping.LDAP_KEYSTORE_PASSWORD_KEY).getCredential());
 
     LdapGroupsMapping mapping = new LdapGroupsMapping();
-    Assert.assertEquals("bindpass",
+    assertEquals("bindpass",
         mapping.getPassword(conf, LdapGroupsMapping.BIND_PASSWORD_KEY, ""));
-    Assert.assertEquals("storepass",
+    assertEquals("storepass",
         mapping.getPassword(conf, LdapGroupsMapping.LDAP_KEYSTORE_PASSWORD_KEY,
             ""));
     // let's make sure that a password that doesn't exist returns an
     // empty string as currently expected and used to trigger a call to
     // extract password
-    Assert.assertEquals("", mapping.getPassword(conf,"invalid-alias", ""));
+    assertEquals("", mapping.getPassword(conf, "invalid-alias", ""));
   }
 
   @Test
@@ -387,11 +388,11 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
         bindpassAlias).getCredential());
 
     LdapGroupsMapping mapping = new LdapGroupsMapping();
-    Assert.assertEquals("bindpass",
+    assertEquals("bindpass",
         mapping.getPasswordFromCredentialProviders(conf, bindpassAlias, ""));
 
     // Empty for an invalid alias
-    Assert.assertEquals("", mapping.getPasswordFromCredentialProviders(
+    assertEquals("", mapping.getPasswordFromCredentialProviders(
         conf, "invalid-alias", ""));
   }
 
@@ -402,7 +403,8 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testLdapConnectionTimeout()
       throws IOException, InterruptedException {
     final int connectionTimeoutMs = 3 * 1000; // 3s
@@ -456,7 +458,8 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testLdapReadTimeout() throws IOException, InterruptedException {
     final int readTimeoutMs = 4 * 1000; // 4s
     try (ServerSocket serverSock = new ServerSocket(0)) {
@@ -511,7 +514,8 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
    *
    * @throws Exception
    */
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testSetConf() throws Exception {
     Configuration conf = getBaseConf(TEST_LDAP_URL);
     Configuration mockConf = Mockito.spy(conf);

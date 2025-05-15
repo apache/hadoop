@@ -48,6 +48,16 @@ There are multiple ways to connect to an S3 bucket
 
 The S3A connector supports all these; S3 Endpoints are the primary mechanism used -either explicitly declared or automatically determined from the declared region of the bucket.
 
+The S3A connector supports S3 cross region access via AWS SDK which is enabled by default. This allows users to access S3 buckets in a different region than the one defined in the S3 endpoint/region configuration, as long as they are within the same AWS partition. However, S3 cross-region access can be disabled by:
+```xml
+<property>
+  <name>fs.s3a.cross.region.access.enabled</name>
+  <value>false</value>
+  <description>S3 cross region access</description>
+</property>
+```
+
+
 Not supported:
 * AWS [Snowball](https://aws.amazon.com/snowball/).
 
@@ -140,7 +150,19 @@ If you are working with third party stores, please check [third party stores in 
 
 See [Timeouts](performance.html#timeouts).
 
-### <a name="networking"></a> Low-level Network Options
+### <a name="networking"></a> Low-level Network/Http Options
+
+The S3A connector uses [Apache HttpClient](https://hc.apache.org/index.html) to connect to
+S3 Stores.
+The client is configured to create a pool of HTTP connections with S3, so that once
+the initial set of connections have been made they can be re-used for followup operations.
+
+Core aspects of pool settings are:
+* The pool size is set by `fs.s3a.connection.maximum` -if a process asks for more connections than this then
+  threads will be blocked until they are available.
+* The time blocked before an exception is raised is set in `fs.s3a.connection.acquisition.timeout`.
+* The time an idle connection will be kept in the pool is set by `fs.s3a.connection.idle.time`.
+* The time limit for even a non-idle connection to be kept open is set in `fs.s3a.connection.ttl`.
 
 ```xml
 
@@ -150,6 +172,69 @@ See [Timeouts](performance.html#timeouts).
   <description>Controls the maximum number of simultaneous connections to S3.
     This must be bigger than the value of fs.s3a.threads.max so as to stop
     threads being blocked waiting for new HTTPS connections.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.connection.acquisition.timeout</name>
+  <value>60s</value>
+  <description>
+    Time to wait for an HTTP connection from the pool.
+    Too low: operations fail on a busy process.
+    When high, it isn't obvious that the connection pool is overloaded,
+    simply that jobs are slow.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.connection.request.timeout</name>
+  <value>60s</value>
+  <description>
+    Total time for a single request to take from the HTTP verb to the
+    response from the server.
+    0 means "no limit"
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.connection.part.upload.timeout</name>
+  <value>15m</value>
+  <description>
+    Timeout for uploading all of a small object or a single part
+    of a larger one.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.connection.ttl</name>
+  <value>5m</value>
+  <description>
+    Expiration time of an Http connection from the connection pool:
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.connection.idle.time</name>
+  <value>60s</value>
+  <description>
+    Time for an idle HTTP connection to be kept the HTTP connection
+    pool before being closed.
+    Too low: overhead of creating connections.
+    Too high, risk of stale connections and inability to use the
+    adaptive load balancing of the S3 front end.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.connection.expect.continue</name>
+  <value>true</value>
+  <description>
+    Should PUT requests await a 100 CONTINUE responses before uploading
+    data?
+    This should normally be left alone unless a third party store which
+    does not support it is encountered, or file upload over long
+    distance networks time out.
+    (see HADOOP-19317 as an example)
   </description>
 </property>
 
@@ -474,6 +559,90 @@ If `storediag` doesn't connect to your S3 store, *nothing else will*.
 
 Based on the experience of people who field support calls, here are
 some of the main connectivity issues which cause problems.
+
+### <a name="Not-enough-connections"></a> Connection pool overloaded
+
+If more connections are needed than the HTTP connection pool has,
+then worker threads will block until one is freed.
+
+If the wait exceeds the time set in `fs.s3a.connection.acquisition.timeout`,
+the operation will fail with `"Timeout waiting for connection from pool`.
+
+This may be retried, but time has been lost, which results in slower operations.
+If queries suddenly gets slower as the number of active operations increase,
+then this is a possible cause.
+
+Fixes:
+
+Increase the value of `fs.s3a.connection.maximum`.
+This is the general fix on query engines such as Apache Spark, and Apache Impala
+which run many workers threads simultaneously, and do not keep files open past
+the duration of a single task within a larger query.
+
+It can also surface with applications which deliberately keep files open
+for extended periods.
+These should ideally call `unbuffer()` on the input streams.
+This will free up the connection until another read operation is invoked -yet
+still re-open faster than if `open(Path)` were invoked.
+
+Applications may also be "leaking" http connections by failing to
+`close()` them. This is potentially fatal as eventually the connection pool
+can get exhausted -at which point the program will no longer work.
+
+This can only be fixed in the application code: it is _not_ a bug in
+the S3A filesystem.
+
+1. Applications MUST call `close()` on an input stream when the contents of
+   the file are longer needed.
+2. If long-lived applications eventually fail with unrecoverable
+   `ApiCallTimeout` exceptions, they are not doing so.
+
+To aid in identifying the location of these leaks, when a JVM garbage
+collection releases an unreferenced `S3AInputStream` instance,
+it will log at `WARN` level that it has not been closed,
+listing the file URL, and the thread name + ID of the the thread
+which creating the file.
+The the stack trace of the `open()` call will be logged at `INFO`
+
+```
+2024-11-13 12:48:24,537 [Finalizer] WARN  resource.leaks (LeakReporter.java:close(114)) - Stream not closed while reading s3a://bucket/test/testFinalizer; thread: JUnit-testFinalizer; id: 11
+2024-11-13 12:48:24,537 [Finalizer] INFO  resource.leaks (LeakReporter.java:close(120)) - stack
+java.io.IOException: Stream not closed while reading s3a://bucket/test/testFinalizer; thread: JUnit-testFinalizer; id: 11
+    at org.apache.hadoop.fs.impl.LeakReporter.<init>(LeakReporter.java:101)
+    at org.apache.hadoop.fs.s3a.S3AInputStream.<init>(S3AInputStream.java:257)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.executeOpen(S3AFileSystem.java:1891)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.open(S3AFileSystem.java:1841)
+    at org.apache.hadoop.fs.FileSystem.open(FileSystem.java:997)
+    at org.apache.hadoop.fs.s3a.ITestS3AInputStreamLeakage.testFinalizer(ITestS3AInputStreamLeakage.java:99)
+```
+
+It will also `abort()` the HTTP connection, freeing up space in the connection pool.
+This automated cleanup is _not_ a substitute for applications correctly closing
+input streams -it only happens during garbage collection, and this may not be
+rapid enough to prevent an application running out of connections.
+
+It is possible to stop these warning messages from being logged,
+by restricting the log `org.apache.hadoop.fs.resource.leaks` to
+only log at `ERROR` or above.
+This will also disable error logging for _all other resources whose leaks
+are detected.
+
+```properties
+log4j.logger.org.apache.hadoop.fs.s3a.connection.leaks=ERROR
+```
+
+To disable stack traces without the URI/thread information, set the log level to `WARN`
+
+```properties
+log4j.logger.org.apache.hadoop.fs.s3a.connection.leaks=WARN
+```
+
+This is better for production deployments: leakages are reported but
+stack traces only of relevance to the application developers are
+omitted.
+
+Finally, note that the filesystem and thread context IOStatistic `stream_leaks"` is updated;
+if these statistics are collected then the existence of leakages can be detected.
 
 ### <a name="inconsistent-config"></a> Inconsistent configuration across a cluster
 

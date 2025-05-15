@@ -22,10 +22,11 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Random;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -42,7 +43,7 @@ public class TestGetFileBlockLocations {
   private FileSystem fs;
   private Random random;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = new Configuration();
     Path rootPath = new Path(TEST_ROOT_DIR);
@@ -92,7 +93,7 @@ public class TestGetFileBlockLocations {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     fs.delete(path, true);
     fs.close();

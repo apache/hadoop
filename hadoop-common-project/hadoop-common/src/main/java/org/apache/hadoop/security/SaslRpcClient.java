@@ -39,6 +39,7 @@ import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.auth.kerberos.KerberosPrincipal;
+import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.RealmCallback;
 import javax.security.sasl.RealmChoiceCallback;
 import javax.security.sasl.Sasl;
@@ -681,9 +682,17 @@ public class SaslRpcClient {
           pc = (PasswordCallback) callback;
         } else if (callback instanceof RealmCallback) {
           rc = (RealmCallback) callback;
+        } else if (callback instanceof AuthorizeCallback) {
+          final AuthorizeCallback ac = (AuthorizeCallback) callback;
+          final String authId = ac.getAuthenticationID();
+          final String authzId = ac.getAuthorizationID();
+          ac.setAuthorized(authId.equals(authzId));
+          if (ac.isAuthorized()) {
+            ac.setAuthorizedID(authzId);
+          }
         } else {
           throw new UnsupportedCallbackException(callback,
-              "Unrecognized SASL client callback");
+              "Unrecognized SASL client callback " + callback.getClass());
         }
       }
       if (nc != null) {

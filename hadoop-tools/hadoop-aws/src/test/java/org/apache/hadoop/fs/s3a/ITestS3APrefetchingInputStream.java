@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
-import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.enablePrefetching;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticMaximum;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticGaugeValue;
@@ -52,10 +52,6 @@ import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_P
  * S3AInMemoryInputStream are working as expected.
  */
 public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
-
-  public ITestS3APrefetchingInputStream() {
-    super(true);
-  }
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3APrefetchingInputStream.class);
@@ -77,10 +73,8 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
 
   @Override
   public Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
+    Configuration conf = enablePrefetching(super.createConfiguration());
     S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_BLOCK_SIZE_KEY);
-    conf.setBoolean(PREFETCH_ENABLED_KEY, true);
     conf.setInt(PREFETCH_BLOCK_SIZE_KEY, BLOCK_SIZE);
     return conf;
   }

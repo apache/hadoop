@@ -18,35 +18,33 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
 
 import java.io.IOException;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URL;
 import java.util.List;
 
+import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.reader.TimelineEntityReader;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.DataGeneratorForTest;
-import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
-import org.junit.Assert;
-
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.ClientResponse.Status;
-import com.sun.jersey.api.client.GenericType;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
-import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
-import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 
 /**
  * Test Base for TimelineReaderServer HBase tests.
@@ -60,7 +58,16 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
     util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
     conf.setInt("hfile.format.version", 3);
-    util.startMiniCluster();
+    try {
+      util.startMiniCluster();
+    } catch (Exception e) {
+      // TODO catch InaccessibleObjectException directly once Java 8 support is dropped
+      if (e.getClass().getSimpleName().equals("InaccessibleObjectException")) {
+        assumeTrue(false, "Could not start HBase because of HBASE-29234");
+      } else {
+        throw e;
+      }
+    }
     DataGeneratorForTest.createSchema(util.getConfiguration());
   }
 
@@ -104,24 +111,30 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
       server.start();
       serverPort = server.getWebServerPort();
     } catch (Exception e) {
-      Assert.fail("Web server failed to start");
+      fail("Web server failed to start");
     }
   }
 
   protected Client createClient() {
-    ClientConfig cfg = new DefaultClientConfig();
-    cfg.getClasses().add(YarnJacksonJaxbJsonProvider.class);
-    return new Client(
-        new URLConnectionClientHandler(new DummyURLConnectionFactory()), cfg);
+    final ClientConfig cc = new ClientConfig();
+    cc.connectorProvider(getHttpURLConnectionFactory());
+    return ClientBuilder.newClient(cc)
+        .register(TimelineEntityReader.class)
+        .register(TimelineEntitySetReader.class)
+        .register(TimelineEntityListReader.class)
+        .register(FlowActivityEntityReader.class)
+        .register(FlowRunEntityReader.class)
+        .register(FlowActivityEntitySetReader.class)
+        .register(FlowActivityEntityListReader.class)
+        .register(FlowRunEntitySetReader.class);
   }
 
-  protected ClientResponse getResponse(Client client, URI uri)
+  protected Response getResponse(Client client, URI uri)
       throws Exception {
-    ClientResponse resp =
-        client.resource(uri).accept(MediaType.APPLICATION_JSON)
-            .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    Response resp =
+        client.target(uri).request(MediaType.APPLICATION_JSON).get();
     if (resp == null || resp.getStatusInfo()
-        .getStatusCode() != ClientResponse.Status.OK.getStatusCode()) {
+        .getStatusCode() != HttpURLConnection.HTTP_OK) {
       String msg = "";
       if (resp != null) {
         msg = String.valueOf(resp.getStatusInfo().getStatusCode());
@@ -132,39 +145,37 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
     return resp;
   }
 
-  protected void verifyHttpResponse(Client client, URI uri, Status status) {
-    ClientResponse resp =
-        client.resource(uri).accept(MediaType.APPLICATION_JSON)
-            .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+  protected void verifyHttpResponse(Client client, URI uri, Response.Status status) {
+    Response resp = client.target(uri).request(MediaType.APPLICATION_JSON).get();
     assertNotNull(resp);
-    assertTrue("Response from server should have been " + status,
-        resp.getStatusInfo().getStatusCode() == status.getStatusCode());
-    System.out.println("Response is: " + resp.getEntity(String.class));
+    assertTrue(resp.getStatusInfo().getStatusCode() == status.getStatusCode(),
+        "Response from server should have been " + status);
+    System.out.println("Response is: " + resp.readEntity(String.class));
   }
 
   protected List<FlowActivityEntity> verifyFlowEntites(Client client, URI uri,
       int noOfEntities) throws Exception {
-    ClientResponse resp = getResponse(client, uri);
+    Response resp = getResponse(client, uri);
     List<FlowActivityEntity> entities =
-        resp.getEntity(new GenericType<List<FlowActivityEntity>>() {
+        resp.readEntity(new GenericType<List<FlowActivityEntity>>() {
         });
     assertNotNull(entities);
     assertEquals(noOfEntities, entities.size());
     return entities;
   }
 
-  protected static class DummyURLConnectionFactory
-      implements HttpURLConnectionFactory {
-
-    @Override
-    public HttpURLConnection getHttpURLConnection(final URL url)
-        throws IOException {
-      try {
-        return (HttpURLConnection) url.openConnection();
-      } catch (UndeclaredThrowableException e) {
-        throw new IOException(e.getCause());
-      }
-    }
+  @VisibleForTesting
+  protected HttpUrlConnectorProvider getHttpURLConnectionFactory() {
+    return new HttpUrlConnectorProvider().connectionFactory(
+        url -> {
+          HttpURLConnection conn;
+          try {
+            conn =  (HttpURLConnection) url.openConnection();
+          } catch (Exception e) {
+            throw new IOException(e);
+          }
+          return conn;
+        });
   }
 
   protected static HBaseTestingUtility getHBaseTestingUtility() {

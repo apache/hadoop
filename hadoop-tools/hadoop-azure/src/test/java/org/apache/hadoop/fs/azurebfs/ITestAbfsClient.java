@@ -65,7 +65,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     try {
       AbfsRestOperation op = abfsClient
           .listPath("/", true, LIST_MAX_RESULTS, "===========",
-              getTestTracingContext(fs, true));
+              getTestTracingContext(fs, true), null).getOp();
       Assert.assertTrue(false);
     } catch (AbfsRestOperationException ex) {
       Assert.assertEquals("InvalidQueryParameterValue", ex.getErrorCode().getErrorCode());
@@ -106,9 +106,9 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
       AbfsRestOperation op = getFileSystem().getAbfsClient().listPath(
           directory.toString(), false, getListMaxResults(), null,
-          getTestTracingContext(getFileSystem(), true));
+          getTestTracingContext(getFileSystem(), true), null).getOp();
 
-      List<ListResultEntrySchema> list = op.getResult().getListResultSchema().paths();
+      List<? extends ListResultEntrySchema> list = op.getResult().getListResultSchema().paths();
       String continuationToken = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
 
       if (continuationToken == null) {
@@ -141,9 +141,9 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     AbfsRestOperation op = getFileSystem().getAbfsClient().listPath(
         directory.toString(), false, getListMaxResults(), null,
-        getTestTracingContext(getFileSystem(), true));
+        getTestTracingContext(getFileSystem(), true), null).getOp();
 
-    List<ListResultEntrySchema> list = op.getResult().getListResultSchema().paths();
+    List<? extends ListResultEntrySchema> list = op.getResult().getListResultSchema().paths();
     String continuationToken = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
 
     if (continuationToken == null) {
@@ -175,11 +175,11 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     }
   }
 
-  private List<ListResultEntrySchema> listPath(String directory)
+  private List<? extends ListResultEntrySchema> listPath(String directory)
       throws IOException {
     return getFileSystem().getAbfsClient()
         .listPath(directory, false, getListMaxResults(), null,
-            getTestTracingContext(getFileSystem(), true)).getResult()
+            getTestTracingContext(getFileSystem(), true), null).getOp().getResult()
         .getListResultSchema().paths();
   }
 

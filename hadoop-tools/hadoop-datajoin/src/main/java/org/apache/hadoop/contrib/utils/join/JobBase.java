@@ -143,7 +143,7 @@ public abstract class JobBase implements Mapper, Reducer {
    * 
    */
   protected String getReport() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
 
     Iterator iter = this.longCounters.entrySet().iterator();
     while (iter.hasNext()) {

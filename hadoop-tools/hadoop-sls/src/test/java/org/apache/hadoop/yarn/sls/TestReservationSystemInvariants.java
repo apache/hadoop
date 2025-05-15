@@ -27,10 +27,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.monitor.invariants.Invarian
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.invariants.ReservationInvariantsChecker;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import net.jcip.annotations.NotThreadSafe;
 
@@ -38,11 +37,9 @@ import net.jcip.annotations.NotThreadSafe;
  * This test performs an SLS run enabling a
  * {@code ReservationInvariantsChecker}.
  */
-@RunWith(value = Parameterized.class)
 @NotThreadSafe
 public class TestReservationSystemInvariants extends BaseSLSRunnerTest {
 
-  @Parameters(name = "Testing with: {1}, {0}, (nodeFile {3})")
   public static Collection<Object[]> data() {
     // Test with both schedulers, and all three trace types
     return Arrays.asList(new Object[][] {
@@ -53,10 +50,22 @@ public class TestReservationSystemInvariants extends BaseSLSRunnerTest {
     });
   }
 
-  @Test(timeout = 120000)
-  @SuppressWarnings("all")
-  public void testSimulatorRunning() throws Exception {
+  public void initTestReservationSystemInvariants(String pSchedulerType,
+      String pTraceType, String pTraceLocation, String pNodeFile) {
+    this.schedulerType = pSchedulerType;
+    this.traceType = pTraceType;
+    this.traceLocation = pTraceLocation;
+    this.nodeFile = pNodeFile;
+    setup();
+  }
 
+  @ParameterizedTest(name = "Testing with: {1}, {0}, (nodeFile {3})")
+  @MethodSource("data")
+  @Timeout(value = 120)
+  @SuppressWarnings("all")
+  public void testSimulatorRunning(String pSchedulerType,
+      String pTraceType, String pTraceLocation, String pNodeFile) throws Exception {
+    initTestReservationSystemInvariants(pSchedulerType, pTraceType, pTraceLocation, pNodeFile);
     Configuration conf = new Configuration(false);
     conf.set(YarnConfiguration.RM_SCHEDULER, schedulerType);
     conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);

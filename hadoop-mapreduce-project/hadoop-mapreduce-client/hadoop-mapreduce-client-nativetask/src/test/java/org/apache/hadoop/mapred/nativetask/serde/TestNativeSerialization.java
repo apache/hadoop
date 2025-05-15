@@ -23,8 +23,10 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.nativetask.INativeComparable;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @SuppressWarnings({ "rawtypes" })
 public class TestNativeSerialization {
@@ -36,10 +38,10 @@ public class TestNativeSerialization {
     serialization.register(WritableKey.class.getName(), ComparableKeySerializer.class);
 
     INativeSerializer serializer = serialization.getSerializer(WritableKey.class);
-    Assert.assertEquals(ComparableKeySerializer.class.getName(), serializer.getClass().getName());
+    assertEquals(ComparableKeySerializer.class.getName(), serializer.getClass().getName());
 
     serializer = serialization.getSerializer(WritableValue.class);
-    Assert.assertEquals(DefaultSerializer.class.getName(), serializer.getClass().getName());
+    assertEquals(DefaultSerializer.class.getName(), serializer.getClass().getName());
 
     boolean ioExceptionThrown = false;
     try {
@@ -47,7 +49,7 @@ public class TestNativeSerialization {
     } catch (final IOException e) {
       ioExceptionThrown = true;
     }
-    Assert.assertTrue(ioExceptionThrown);
+    assertTrue(ioExceptionThrown);
   }
 
   public static class WritableKey implements Writable {

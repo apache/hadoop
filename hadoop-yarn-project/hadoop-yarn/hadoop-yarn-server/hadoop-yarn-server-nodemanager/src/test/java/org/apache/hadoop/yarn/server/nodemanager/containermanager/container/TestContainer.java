@@ -17,10 +17,10 @@
 */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.refEq;
@@ -107,8 +107,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreServic
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 
@@ -358,17 +357,17 @@ public class TestContainer {
       ContainerEventType e5 = wc.initStateToEvent.get(s5);
       ContainerState s6 = wc.eventToFinalState.get(e5);
 
-      Assert.assertEquals(ContainerState.LOCALIZING, s2);
-      Assert.assertEquals(ContainerState.SCHEDULED, s3);
-      Assert.assertEquals(ContainerState.RUNNING, s4);
-      Assert.assertEquals(ContainerState.EXITED_WITH_SUCCESS, s5);
-      Assert.assertEquals(ContainerState.DONE, s6);
+      assertEquals(ContainerState.LOCALIZING, s2);
+      assertEquals(ContainerState.SCHEDULED, s3);
+      assertEquals(ContainerState.RUNNING, s4);
+      assertEquals(ContainerState.EXITED_WITH_SUCCESS, s5);
+      assertEquals(ContainerState.DONE, s6);
 
-      Assert.assertEquals(ContainerEventType.INIT_CONTAINER, e1);
-      Assert.assertEquals(ContainerEventType.RESOURCE_LOCALIZED, e2);
-      Assert.assertEquals(ContainerEventType.CONTAINER_LAUNCHED, e3);
-      Assert.assertEquals(ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS, e4);
-      Assert.assertEquals(ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP, e5);
+      assertEquals(ContainerEventType.INIT_CONTAINER, e1);
+      assertEquals(ContainerEventType.RESOURCE_LOCALIZED, e2);
+      assertEquals(ContainerEventType.CONTAINER_LAUNCHED, e3);
+      assertEquals(ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS, e4);
+      assertEquals(ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP, e5);
     }
     finally {
       if (wc != null) {
@@ -586,14 +585,14 @@ public class TestContainer {
       // check container metrics is generated.
       ContainerMetrics containerMetrics =
           ContainerMetrics.forContainer(wc.cId, 1, 5000);
-      Assert.assertEquals(ContainerExitStatus.KILLED_BY_RESOURCEMANAGER,
+      assertEquals(ContainerExitStatus.KILLED_BY_RESOURCEMANAGER,
           containerMetrics.exitCode.value());
-      Assert.assertTrue(containerMetrics.startTime.value() > 0);
-      Assert.assertTrue(containerMetrics.finishTime.value() >=
+      assertTrue(containerMetrics.startTime.value() > 0);
+      assertTrue(containerMetrics.finishTime.value() >=
               containerMetrics.startTime.value());
-      Assert.assertEquals(ContainerEventType.KILL_CONTAINER,
+      assertEquals(ContainerEventType.KILL_CONTAINER,
           wc.initStateToEvent.get(ContainerState.NEW));
-      Assert.assertEquals(ContainerState.DONE,
+      assertEquals(ContainerState.DONE,
           wc.eventToFinalState.get(ContainerEventType.KILL_CONTAINER));
     } finally {
       if (wc != null) {
@@ -879,7 +878,7 @@ public class TestContainer {
       assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
       assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
-      Assert.assertTrue(wc.getDiagnostics().contains(FAKE_LOCALIZATION_ERROR));
+      assertTrue(wc.getDiagnostics().contains(FAKE_LOCALIZATION_ERROR));
     } finally {
       if (wc != null) {
         wc.finished();
@@ -1065,7 +1064,7 @@ public class TestContainer {
           break;
         }
       }
-      Assert.assertEquals(expectedRetries, retryTimes);
+      assertEquals(expectedRetries, retryTimes);
     } finally {
       if (wc != null) {
         wc.finished();
@@ -1097,7 +1096,7 @@ public class TestContainer {
     try {
       wc = new WrappedContainer(25, 314159265358980L, 4345,
           "yak", containerRetryContext);
-      Assert.assertEquals(
+      assertEquals(
           ((ContainerImpl)wc.c).getContainerRetryContext().getRetryInterval(),
           expectedRestartInterval);
     } finally {

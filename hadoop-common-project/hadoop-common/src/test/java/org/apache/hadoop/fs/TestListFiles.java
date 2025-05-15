@@ -25,9 +25,11 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import static org.junit.Assert.*;
-import org.junit.Test;
-import org.junit.BeforeClass;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.event.Level;
 
 /**
@@ -74,7 +76,7 @@ public class TestListFiles {
     FILE3 = new Path(DIR1, "file3");
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void testSetUp() throws Exception {
     fs = FileSystem.getLocal(conf);
     fs.delete(TEST_DIR, true);
@@ -160,18 +162,18 @@ public class TestListFiles {
     itor = fs.listFiles(TEST_DIR, true);
     stat = itor.next();
     assertTrue(stat.isFile());
-    assertTrue("Path " + stat.getPath() + " unexpected",
-      filesToFind.remove(stat.getPath()));
+    assertTrue(filesToFind.remove(stat.getPath()),
+        "Path " + stat.getPath() + " unexpected");
 
     stat = itor.next();
     assertTrue(stat.isFile());
-    assertTrue("Path " + stat.getPath() + " unexpected",
-      filesToFind.remove(stat.getPath()));
+    assertTrue(filesToFind.remove(stat.getPath()),
+        "Path " + stat.getPath() + " unexpected");
 
     stat = itor.next();
     assertTrue(stat.isFile());
-    assertTrue("Path " + stat.getPath() + " unexpected",
-      filesToFind.remove(stat.getPath()));
+    assertTrue(filesToFind.remove(stat.getPath()),
+        "Path " + stat.getPath() + " unexpected");
     assertFalse(itor.hasNext());
     assertTrue(filesToFind.isEmpty());
     

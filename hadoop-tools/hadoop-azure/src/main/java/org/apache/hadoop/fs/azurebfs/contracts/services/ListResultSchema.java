@@ -20,41 +20,20 @@ package org.apache.hadoop.fs.azurebfs.contracts.services;
 
 import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import org.apache.hadoop.classification.InterfaceStability;
-
 /**
  * The ListResultSchema model.
  */
-@InterfaceStability.Evolving
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class ListResultSchema {
+public interface ListResultSchema {
   /**
-   * The paths property.
-   */
-  @JsonProperty(value = "paths")
-  private List<ListResultEntrySchema> paths;
-
-  /**
-   * * Get the paths value.
-   *
+   * Get the paths value.
    * @return the paths value
    */
-  public List<ListResultEntrySchema> paths() {
-    return this.paths;
-  }
+  List<? extends ListResultEntrySchema> paths();
 
   /**
    * Set the paths value.
-   *
    * @param paths the paths value to set
    * @return the ListSchema object itself.
    */
-  public ListResultSchema withPaths(final List<ListResultEntrySchema> paths) {
-    this.paths = paths;
-    return this;
-  }
-
+  ListResultSchema withPaths(List<? extends ListResultEntrySchema> paths);
 }

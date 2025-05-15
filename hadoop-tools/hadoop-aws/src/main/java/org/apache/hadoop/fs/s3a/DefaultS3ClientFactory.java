@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
@@ -36,9 +38,11 @@ import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.auth.spi.scheme.AuthScheme;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
+import software.amazon.awssdk.metrics.LoggingMetricPublisher;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
@@ -56,6 +60,8 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CROSS_REGION_ACCESS_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_DEFAULT_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
@@ -84,6 +90,9 @@ public class DefaultS3ClientFactory extends Configured
   private static final String REQUESTER_PAYS_HEADER_VALUE = "requester";
 
   private static final String S3_SERVICE_NAME = "s3";
+
+  private static final Pattern VPC_ENDPOINT_PATTERN =
+          Pattern.compile("^(?:.+\\.)?([a-z0-9-]+)\\.vpce\\.amazonaws\\.(?:com|com\\.cn)$");
 
   /**
    * Subclasses refer to this.
@@ -153,11 +162,18 @@ public class DefaultS3ClientFactory extends Configured
         .thresholdInBytes(parameters.getMultiPartThreshold())
         .build();
 
-    return configureClientBuilder(S3AsyncClient.builder(), parameters, conf, bucket)
-        .httpClientBuilder(httpClientBuilder)
-        .multipartConfiguration(multipartConfiguration)
-        .multipartEnabled(parameters.isMultipartCopy())
-        .build();
+    S3AsyncClientBuilder s3AsyncClientBuilder =
+            configureClientBuilder(S3AsyncClient.builder(), parameters, conf, bucket)
+                .httpClientBuilder(httpClientBuilder);
+
+    // multipart upload pending with HADOOP-19326.
+    if (!parameters.isClientSideEncryptionEnabled() &&
+        !parameters.isAnalyticsAcceleratorEnabled()) {
+      s3AsyncClientBuilder.multipartConfiguration(multipartConfiguration)
+              .multipartEnabled(parameters.isMultipartCopy());
+    }
+
+    return s3AsyncClientBuilder.build();
   }
 
   @Override
@@ -196,11 +212,19 @@ public class DefaultS3ClientFactory extends Configured
     final ClientOverrideConfiguration.Builder override =
         createClientOverrideConfiguration(parameters, conf);
 
-    S3BaseClientBuilder s3BaseClientBuilder = builder
+    S3BaseClientBuilder<BuilderT, ClientT> s3BaseClientBuilder = builder
         .overrideConfiguration(override.build())
         .credentialsProvider(parameters.getCredentialSet())
         .disableS3ExpressSessionAuth(!parameters.isExpressCreateSession())
         .serviceConfiguration(serviceConfiguration);
+
+    if (LOG.isTraceEnabled()) {
+      // if this log is set to "trace" then we turn on logging of SDK metrics.
+      // The metrics itself will log at info; it is just that reflection work
+      // would be needed to change that setting safely for shaded and unshaded aws artifacts.
+      s3BaseClientBuilder.overrideConfiguration(o ->
+          o.addMetricPublisher(LoggingMetricPublisher.create()));
+    }
 
     if (conf.getBoolean(HTTP_SIGNER_ENABLED, HTTP_SIGNER_ENABLED_DEFAULT)) {
       // use an http signer through an AuthScheme
@@ -264,8 +288,10 @@ public class DefaultS3ClientFactory extends Configured
    * <li>If endpoint is configured via via fs.s3a.endpoint, set it.
    *     If no region is configured, try to parse region from endpoint. </li>
    * <li> If no region is configured, and it could not be parsed from the endpoint,
-   *     set the default region as US_EAST_2 and enable cross region access. </li>
+   *     set the default region as US_EAST_2</li>
    * <li> If configured region is empty, fallback to SDK resolution chain. </li>
+   * <li> S3 cross region is enabled by default irrespective of region or endpoint
+   *      is set or not.</li>
    * </ol>
    *
    * @param builder S3 client builder.
@@ -325,7 +351,6 @@ public class DefaultS3ClientFactory extends Configured
         builder.endpointOverride(endpoint);
         LOG.debug("Setting endpoint to {}", endpoint);
       } else {
-        builder.crossRegionAccessEnabled(true);
         origin = "central endpoint with cross region access";
         LOG.debug("Enabling cross region access for endpoint {}",
             endpointStr);
@@ -338,7 +363,6 @@ public class DefaultS3ClientFactory extends Configured
       // no region is configured, and none could be determined from the endpoint.
       // Use US_EAST_2 as default.
       region = Region.of(AWS_S3_DEFAULT_REGION);
-      builder.crossRegionAccessEnabled(true);
       builder.region(region);
       origin = "cross region access fallback";
     } else if (configuredRegion.isEmpty()) {
@@ -349,8 +373,14 @@ public class DefaultS3ClientFactory extends Configured
       LOG.debug(SDK_REGION_CHAIN_IN_USE);
       origin = "SDK region chain";
     }
-
-    LOG.debug("Setting region to {} from {}", region, origin);
+    boolean isCrossRegionAccessEnabled = conf.getBoolean(AWS_S3_CROSS_REGION_ACCESS_ENABLED,
+        AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT);
+    // s3 cross region access
+    if (isCrossRegionAccessEnabled) {
+      builder.crossRegionAccessEnabled(true);
+    }
+    LOG.debug("Setting region to {} from {} with cross region access {}",
+        region, origin, isCrossRegionAccessEnabled);
   }
 
   /**
@@ -360,7 +390,7 @@ public class DefaultS3ClientFactory extends Configured
    * @param conf config to build the URI from.
    * @return an endpoint uri
    */
-  private static URI getS3Endpoint(String endpoint, final Configuration conf) {
+  protected static URI getS3Endpoint(String endpoint, final Configuration conf) {
 
     boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS);
 
@@ -390,10 +420,19 @@ public class DefaultS3ClientFactory extends Configured
    * @param endpointEndsWithCentral true if the endpoint is configured as central.
    * @return the S3 region, null if unable to resolve from endpoint.
    */
-  private static Region getS3RegionFromEndpoint(final String endpoint,
+  @VisibleForTesting
+  static Region getS3RegionFromEndpoint(final String endpoint,
       final boolean endpointEndsWithCentral) {
 
     if (!endpointEndsWithCentral) {
+      // S3 VPC endpoint parsing
+      Matcher matcher = VPC_ENDPOINT_PATTERN.matcher(endpoint);
+      if (matcher.find()) {
+        LOG.debug("Mapping to VPCE");
+        LOG.debug("Endpoint {} is vpc endpoint; parsing region as {}", endpoint, matcher.group(1));
+        return Region.of(matcher.group(1));
+      }
+
       LOG.debug("Endpoint {} is not the default; parsing", endpoint);
       return AwsHostNameUtils.parseSigningRegion(endpoint, S3_SERVICE_NAME).orElse(null);
     }

@@ -85,7 +85,7 @@ public abstract class DockerCommand {
 
   @Override
   public String toString() {
-    StringBuffer ret = new StringBuffer(this.command);
+    StringBuilder ret = new StringBuilder(this.command);
     for (Map.Entry<String, List<String>> entry : commandArguments.entrySet()) {
       ret.append(" ").append(entry.getKey());
       ret.append("=").append(StringUtils.join(",", entry.getValue()));

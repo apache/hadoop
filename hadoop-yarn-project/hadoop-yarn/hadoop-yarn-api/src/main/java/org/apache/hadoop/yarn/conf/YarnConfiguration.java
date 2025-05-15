@@ -1278,6 +1278,13 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT = 3600;
 
   /**
+   * Enable/disable tracking of unregistered nodes.
+   **/
+  public static final String ENABLE_TRACKING_FOR_UNREGISTERED_NODES =
+      RM_PREFIX + "enable-tracking-for-unregistered-nodes";
+  public static final boolean DEFAULT_ENABLE_TRACKING_FOR_UNREGISTERED_NODES = false;
+
+  /**
    * Period in seconds of the poll timer task inside DecommissioningNodesWatcher
    * to identify and take care of DECOMMISSIONING nodes missing regular heart beat.
    */
@@ -1529,6 +1536,17 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "max-log-aggregation-diagnostics-in-memory";
   public static final int DEFAULT_RM_MAX_LOG_AGGREGATION_DIAGNOSTICS_IN_MEMORY =
       10;
+
+  /**
+   * The configuration key for enabling or disabling the auto-correction of container allocation.
+   */
+  public static final String RM_SCHEDULER_AUTOCORRECT_CONTAINER_ALLOCATION = RM_PREFIX
+      + "scheduler.autocorrect.container.allocation";
+
+  /**
+   * Default value: {@value}.
+   */
+  public static final boolean DEFAULT_RM_SCHEDULER_AUTOCORRECT_CONTAINER_ALLOCATION = false;
 
   /** Whether to enable log aggregation */
   public static final String LOG_AGGREGATION_ENABLED = YARN_PREFIX
@@ -2189,7 +2207,7 @@ public class YarnConfiguration extends Configuration {
       NM_DISK_HEALTH_CHECK_PREFIX + "working-dir-content-accessibility-validation.enabled";
 
   public static final boolean DEFAULT_NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_ENABLED =
-      true;
+      false;
 
   /** The health checker scripts. */
   public static final String NM_HEALTH_CHECK_SCRIPTS =

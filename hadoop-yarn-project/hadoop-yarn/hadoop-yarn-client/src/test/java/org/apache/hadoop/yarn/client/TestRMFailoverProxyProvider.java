@@ -23,8 +23,8 @@ import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -33,9 +33,9 @@ import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
@@ -68,7 +68,7 @@ public class TestRMFailoverProxyProvider {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, YarnException {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER,
@@ -110,23 +110,20 @@ public class TestRMFailoverProxyProvider {
     // Initialize failover proxy provider and get proxy from it.
     fpp.init(conf, mockRMProxy, protocol);
     FailoverProxyProvider.ProxyInfo<Proxy> actualProxy1 = fpp.getProxy();
-    assertEquals(
+    assertEquals(mockProxy1, actualProxy1.proxy,
         "ConfiguredRMFailoverProxyProvider doesn't generate " +
-        "expected proxy",
-        mockProxy1, actualProxy1.proxy);
+        "expected proxy");
 
     // Invoke fpp.getProxy() multiple times and
     // validate the returned proxy is always mockProxy1
     actualProxy1 = fpp.getProxy();
-    assertEquals(
+    assertEquals(mockProxy1, actualProxy1.proxy,
         "ConfiguredRMFailoverProxyProvider doesn't generate " +
-        "expected proxy",
-        mockProxy1, actualProxy1.proxy);
+        "expected proxy");
     actualProxy1 = fpp.getProxy();
-    assertEquals(
+    assertEquals(mockProxy1, actualProxy1.proxy,
         "ConfiguredRMFailoverProxyProvider doesn't generate " +
-        "expected proxy",
-        mockProxy1, actualProxy1.proxy);
+        "expected proxy");
 
     // verify that mockRMProxy.getProxy() is invoked once only.
     verify(mockRMProxy, times(1))
@@ -145,14 +142,14 @@ public class TestRMFailoverProxyProvider {
     // Perform Failover and get proxy again from failover proxy provider
     fpp.performFailover(actualProxy1.proxy);
     FailoverProxyProvider.ProxyInfo<Proxy> actualProxy2 = fpp.getProxy();
-    assertEquals("ConfiguredRMFailoverProxyProvider " +
-        "doesn't generate expected proxy after failover",
-        mockProxy2, actualProxy2.proxy);
+    assertEquals(mockProxy2, actualProxy2.proxy,
+        "ConfiguredRMFailoverProxyProvider " +
+        "doesn't generate expected proxy after failover");
 
     // check the proxy is different with the one we created before.
-    assertNotEquals("ConfiguredRMFailoverProxyProvider " +
-        "shouldn't generate same proxy after failover",
-        actualProxy1.proxy, actualProxy2.proxy);
+    assertNotEquals(actualProxy1.proxy, actualProxy2.proxy,
+        "ConfiguredRMFailoverProxyProvider " +
+        "shouldn't generate same proxy after failover");
 
     // verify that mockRMProxy.getProxy() has been one with each address
     verify(mockRMProxy, times(1))
@@ -175,9 +172,9 @@ public class TestRMFailoverProxyProvider {
     FailoverProxyProvider.ProxyInfo<Proxy> actualProxy3 = fpp.getProxy();
 
     // check the proxy is the same as the one we created before.
-    assertEquals("ConfiguredRMFailoverProxyProvider " +
-        "doesn't generate expected proxy after failover",
-        mockProxy1, actualProxy3.proxy);
+    assertEquals(mockProxy1, actualProxy3.proxy,
+        "ConfiguredRMFailoverProxyProvider " +
+        "doesn't generate expected proxy after failover");
 
     // verify that mockRMProxy.getProxy() has still only been invoked twice
     verify(mockRMProxy, times(1))
@@ -228,23 +225,20 @@ public class TestRMFailoverProxyProvider {
     // Initialize failover proxy provider and get proxy from it.
     fpp.init(conf, mockRMProxy, protocol);
     FailoverProxyProvider.ProxyInfo<Proxy> actualProxy1 = fpp.getProxy();
-    assertEquals(
+    assertEquals(mockProxy1, actualProxy1.proxy,
         "AutoRefreshRMFailoverProxyProvider doesn't generate " +
-        "expected proxy",
-        mockProxy1, actualProxy1.proxy);
+        "expected proxy");
 
     // Invoke fpp.getProxy() multiple times and
     // validate the returned proxy is always mockProxy1
     actualProxy1 = fpp.getProxy();
-    assertEquals(
+    assertEquals(mockProxy1, actualProxy1.proxy,
         "AutoRefreshRMFailoverProxyProvider doesn't generate " +
-        "expected proxy",
-        mockProxy1, actualProxy1.proxy);
+        "expected proxy");
     actualProxy1 = fpp.getProxy();
-    assertEquals(
+    assertEquals(mockProxy1, actualProxy1.proxy,
         "AutoRefreshRMFailoverProxyProvider doesn't generate " +
-        "expected proxy",
-        mockProxy1, actualProxy1.proxy);
+        "expected proxy");
 
     // verify that mockRMProxy.getProxy() is invoked once only.
     verify(mockRMProxy, times(1))
@@ -263,14 +257,14 @@ public class TestRMFailoverProxyProvider {
     // Perform Failover and get proxy again from failover proxy provider
     fpp.performFailover(actualProxy1.proxy);
     FailoverProxyProvider.ProxyInfo<Proxy> actualProxy2 = fpp.getProxy();
-    assertEquals("AutoRefreshRMFailoverProxyProvider " +
-        "doesn't generate expected proxy after failover",
-        mockProxy2, actualProxy2.proxy);
+    assertEquals(mockProxy2, actualProxy2.proxy,
+        "AutoRefreshRMFailoverProxyProvider " +
+        "doesn't generate expected proxy after failover");
 
     // check the proxy is different with the one we created before.
-    assertNotEquals("AutoRefreshRMFailoverProxyProvider " +
-        "shouldn't generate same proxy after failover",
-        actualProxy1.proxy, actualProxy2.proxy);
+    assertNotEquals(actualProxy1.proxy, actualProxy2.proxy,
+        "AutoRefreshRMFailoverProxyProvider " +
+        "shouldn't generate same proxy after failover");
 
     // verify that mockRMProxy.getProxy() has been one with each address
     verify(mockRMProxy, times(1))
@@ -293,9 +287,9 @@ public class TestRMFailoverProxyProvider {
     FailoverProxyProvider.ProxyInfo<Proxy> actualProxy3 = fpp.getProxy();
 
     // check the proxy is the same as the one we created before.
-    assertEquals("ConfiguredRMFailoverProxyProvider " +
-        "doesn't generate expected proxy after failover",
-        mockProxy1, actualProxy3.proxy);
+    assertEquals(mockProxy1, actualProxy3.proxy,
+        "ConfiguredRMFailoverProxyProvider " +
+        "doesn't generate expected proxy after failover");
 
     // verify that mockRMProxy.getProxy() is still only been invoked thrice
     verify(mockRMProxy, times(1))

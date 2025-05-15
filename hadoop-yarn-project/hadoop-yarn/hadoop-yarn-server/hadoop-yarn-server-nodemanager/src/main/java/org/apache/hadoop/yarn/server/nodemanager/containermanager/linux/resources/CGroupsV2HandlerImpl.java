@@ -95,10 +95,22 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
   }
 
   @Override
-  protected Map<String, Set<String>> parsePreConfiguredMountPath() throws IOException {
+  protected Map<String, Set<String>> parsePreConfiguredMountPath() {
     Map<String, Set<String>> controllerMappings = new HashMap<>();
-    controllerMappings.put(this.cGroupsMountConfig.getV2MountPath(),
-        readControllersFile(this.cGroupsMountConfig.getV2MountPath()));
+    try {
+      controllerMappings.put(this.cGroupsMountConfig.getV2MountPath(),
+          readControllersFile(this.cGroupsMountConfig.getV2MountPath()));
+    } catch (IOException e) {
+      // Failing to read the cgroup.controllers file in the preconfigured might mean
+      // that the node is not using cgroup v2, or no cgroup v2 hierarchy is mounted
+      // under the specified path. If the node is using v1 we will fall back to cgroup v1
+      // in ResourceHandlerModule.initializeCGroupHandlers. If the cgroup v2 hierarchy is
+      // not mounted and no cgroup v1 hierarchy is mounted, we will fail to start the NM.
+      LOG.info("Failed to read the cgroup controllers file in the preconfigured directory: {}. " +
+          "The cgroup v2 hierarchy may not be mounted under the specified path, or the node" +
+          " might be using cgroup v1.", this.cGroupsMountConfig.getV2MountPath());
+      LOG.debug("Exception while reading the cgroup.controllers file: ", e);
+    }
     return controllerMappings;
   }
 

@@ -44,6 +44,8 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.test.MetricsAsserts;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -187,6 +189,8 @@ public class TestDataNodeVolumeMetrics {
         + metrics.getFileIoErrorSampleCount());
     LOG.info("fileIoErrorMean : " + metrics.getFileIoErrorMean());
     LOG.info("fileIoErrorStdDev : " + metrics.getFileIoErrorStdDev());
+
+    MetricsAsserts.assertTag("VolumeName", metrics.getVolumeName(), rb);
   }
 
   @Test

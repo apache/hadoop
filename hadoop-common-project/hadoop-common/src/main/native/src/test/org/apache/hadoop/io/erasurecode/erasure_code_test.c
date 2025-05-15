@@ -27,25 +27,27 @@
 #include "erasure_code.h"
 #include "gf_util.h"
 #include "erasure_coder.h"
+#include "dump.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 int main(int argc, char *argv[]) {
-  int i, j;
+  int i, j, k, l;
   char err[256];
   size_t err_len = sizeof(err);
   int chunkSize = 1024;
   int numDataUnits = 6;
   int numParityUnits = 3;
+  int numTotalUnits = numDataUnits + numParityUnits;
   unsigned char** dataUnits;
   unsigned char** parityUnits;
   IsalEncoder* pEncoder;
-  int erasedIndexes[2];
+  int erasedIndexes[3];
   unsigned char* allUnits[MMAX];
   IsalDecoder* pDecoder;
-  unsigned char* decodingOutput[2];
+  unsigned char* decodingOutput[3];
   unsigned char** backupUnits;
 
   if (0 == build_support_erasurecode()) {
@@ -82,6 +84,11 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // Allocate decode output
+  for (i = 0; i < 3; i++) {
+    decodingOutput[i] = malloc(chunkSize);
+  }
+
   pEncoder = (IsalEncoder*)malloc(sizeof(IsalEncoder));
   memset(pEncoder, 0, sizeof(*pEncoder));
   initEncoder(pEncoder, numDataUnits, numParityUnits);
@@ -95,26 +102,53 @@ int main(int argc, char *argv[]) {
   memcpy(allUnits + numDataUnits, parityUnits,
                             numParityUnits * (sizeof (unsigned char*)));
 
-  erasedIndexes[0] = 1;
-  erasedIndexes[1] = 7;
-
-  backupUnits[0] = allUnits[1];
-  backupUnits[1] = allUnits[7];
-
-  allUnits[0] = NULL; // Not to read
-  allUnits[1] = NULL;
-  allUnits[7] = NULL;
-
-  decodingOutput[0] = malloc(chunkSize);
-  decodingOutput[1] = malloc(chunkSize);
-
-  decode(pDecoder, allUnits, erasedIndexes, 2, decodingOutput, chunkSize);
-
-  for (i = 0; i < pDecoder->numErased; i++) {
-    if (0 != memcmp(decodingOutput[i], backupUnits[i], chunkSize)) {
-      fprintf(stderr, "Decoding failed\n\n");
-      dumpDecoder(pDecoder);
-      return -1;
+  for (i = 0; i < numTotalUnits; i++) {
+    for (j = 0; j < numTotalUnits; j++) {
+      for (k = 0; k < numTotalUnits; k++) {
+        int numErased;
+        if (i == j && j == k) {
+          erasedIndexes[0] = i;
+          numErased = 1;
+          backupUnits[0] = allUnits[i];
+          allUnits[i] = NULL;
+        } else if (i == j) {
+          erasedIndexes[0] = i;
+          erasedIndexes[1] = k;
+          numErased = 2;
+          backupUnits[0] = allUnits[i];
+          backupUnits[1] = allUnits[k];
+          allUnits[i] = NULL;
+          allUnits[k] = NULL;
+        } else if (i == k || j == k) {
+          erasedIndexes[0] = i;
+          erasedIndexes[1] = j;
+          numErased = 2;
+          backupUnits[0] = allUnits[i];
+          backupUnits[1] = allUnits[j];
+          allUnits[i] = NULL;
+          allUnits[j] = NULL;
+        } else {
+          erasedIndexes[0] = i;
+          erasedIndexes[1] = j;
+          erasedIndexes[2] = k;
+          numErased = 3;
+          backupUnits[0] = allUnits[i];
+          backupUnits[1] = allUnits[j];
+          backupUnits[2] = allUnits[k];
+          allUnits[i] = NULL;
+          allUnits[j] = NULL;
+          allUnits[k] = NULL;
+        }
+        decode(pDecoder, allUnits, erasedIndexes, numErased, decodingOutput, chunkSize);
+        for (l = 0; l < pDecoder->numErased; l++) {
+          if (0 != memcmp(decodingOutput[l], backupUnits[l], chunkSize)) {
+            printf("Decoding failed\n");
+            dumpDecoder(pDecoder);
+            return -1;
+          }
+          allUnits[erasedIndexes[l]] = backupUnits[l];
+        }
+      }
     }
   }
 

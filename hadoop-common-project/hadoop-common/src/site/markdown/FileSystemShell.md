@@ -37,9 +37,15 @@ See the [Commands Manual](./CommandsManual.html) for generic shell options.
 appendToFile
 ------------
 
-Usage: `hadoop fs -appendToFile <localsrc> ... <dst> `
+Usage: `hadoop fs -appendToFile [-n] <localsrc> ... <dst>`
 
 Append single src, or multiple srcs from local file system to the destination file system. Also reads input from stdin and appends to destination file system.
+
+Options
+
+* The `-n` option represents that use NEW_BLOCK create flag to append file.
+
+Example:
 
 * `hadoop fs -appendToFile localfile /user/hadoop/hadoopfile`
 * `hadoop fs -appendToFile localfile1 localfile2 /user/hadoop/hadoopfile`

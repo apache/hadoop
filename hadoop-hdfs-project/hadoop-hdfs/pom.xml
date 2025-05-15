@@ -93,14 +93,28 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-core</artifactId>
+      <groupId>org.glassfish.jersey.core</groupId>
+      <artifactId>jersey-common</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>com.sun.jersey</groupId>
+      <groupId>org.glassfish.jersey.core</groupId>
       <artifactId>jersey-server</artifactId>
       <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.jersey.inject</groupId>
+      <artifactId>jersey-hk2</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.jersey.media</groupId>
+      <artifactId>jersey-media-json-jettison</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>jakarta.xml.bind</groupId>
+      <artifactId>jakarta.xml.bind-api</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-cli</groupId>
@@ -133,8 +147,8 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>${transient.protobuf2.scope}</scope>
     </dependency>
     <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>javax.servlet-api</artifactId>
+      <groupId>jakarta.servlet</groupId>
+      <artifactId>jakarta.servlet-api</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -166,7 +180,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
+      <artifactId>mockito-inline</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -205,6 +219,10 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>jackson-databind</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.curator</groupId>
       <artifactId>curator-test</artifactId>
       <scope>test</scope>
@@ -222,6 +240,26 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-annotations</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -268,6 +306,9 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
                       filtering="true"/>
                 <copy file="${basedir}/src/main/webapps/proto-web.xml"
                       tofile="${project.build.directory}/webapps/journal/WEB-INF/web.xml"
+                      filtering="true"/>
+                <copy file="${basedir}/src/main/webapps/proto-web.xml"
+                      tofile="${project.build.directory}/webapps/balancer/WEB-INF/web.xml"
                       filtering="true"/>
                 <copy file="${basedir}/src/main/webapps/proto-web.xml"
                       tofile="${project.build.directory}/webapps/nfs3/WEB-INF/web.xml"
@@ -414,6 +455,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/webapps/hdfs/robots.txt</exclude>
             <exclude>src/main/webapps/journal/robots.txt</exclude>
             <exclude>src/main/webapps/secondary/robots.txt</exclude>
+            <exclude>src/main/webapps/balancer/robots.txt</exclude>
             <exclude>src/contrib/**</exclude>
             <exclude>src/site/resources/images/*</exclude>
             <exclude>src/main/webapps/static/bootstrap-3.4.1/**</exclude>
@@ -531,19 +573,29 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       </build>
     </profile>
     <profile>
-      <id>java9</id>
+      <id>jdk1.8</id>
       <activation>
-        <jdk>[9,)</jdk>
+        <jdk>1.8</jdk>
       </activation>
       <build>
         <plugins>
           <plugin>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <configuration>
-              <testExcludes>
-                <testExclude>org/apache/hadoop/hdfs/TestDFSClientFailover.java</testExclude>
-              </testExcludes>
-            </configuration>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>add-source</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>add-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${basedir}/src/main/java8</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
           </plugin>
         </plugins>
       </build>

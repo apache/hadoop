@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.webapp.AppBlock;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.inject.Binder;
 import com.google.inject.Injector;

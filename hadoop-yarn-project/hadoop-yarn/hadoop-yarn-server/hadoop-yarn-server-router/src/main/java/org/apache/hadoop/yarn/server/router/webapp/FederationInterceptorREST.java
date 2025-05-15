@@ -43,7 +43,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
@@ -104,6 +104,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
@@ -452,10 +453,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     try {
       Response response = interceptor.createNewApplication(hsr);
       if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
-        ApplicationId applicationId = ApplicationId.fromString(response.getEntity().toString());
+        NewApplication entity = response.readEntity(NewApplication.class);
+        ApplicationId applicationId = ApplicationId.fromString(entity.getApplicationId());
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_NEW_APP,
             TARGET_WEB_SERVICE, applicationId, subClusterId);
-        return response;
+        return Response.status(Status.OK).entity(entity).build();
       }
     } catch (Exception e) {
       blackList.add(subClusterId);
@@ -1383,8 +1385,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       String groupBy) {
     try {
       // Check the parameters to ensure that the parameters are not empty
-      Validate.checkNotNullAndNotEmpty(nodeId, "nodeId");
-      Validate.checkNotNullAndNotEmpty(groupBy, "groupBy");
+      // Validate.checkNotNullAndNotEmpty(nodeId, "nodeId");
+      // Validate.checkNotNullAndNotEmpty(groupBy, "groupBy");
 
       // Query SubClusterInfo according to id,
       // if the nodeId cannot get SubClusterInfo, an exception will be thrown directly.
@@ -1906,7 +1908,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       ClientMethod remoteMethod = new ClientMethod("addToClusterNodeLabels", argsClasses, args);
       Map<SubClusterInfo, Response> responseInfoMap =
           invokeConcurrent(subClustersActives, remoteMethod, Response.class);
-      StringBuffer buffer = new StringBuffer();
+      StringBuilder buffer = new StringBuilder();
       // SubCluster-0:SUCCESS,SubCluster-1:SUCCESS
       responseInfoMap.forEach((subClusterInfo, response) ->
           buildAppendMsg(subClusterInfo, buffer, response));
@@ -1964,7 +1966,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           new ClientMethod("removeFromClusterNodeLabels", argsClasses, args);
       Map<SubClusterInfo, Response> responseInfoMap =
           invokeConcurrent(subClustersActives, remoteMethod, Response.class);
-      StringBuffer buffer = new StringBuffer();
+      StringBuilder buffer = new StringBuilder();
       // SubCluster-0:SUCCESS,SubCluster-1:SUCCESS
       responseInfoMap.forEach((subClusterInfo, response) ->
           buildAppendMsg(subClusterInfo, buffer, response));
@@ -1993,10 +1995,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * Build Append information.
    *
    * @param subClusterInfo subCluster information.
-   * @param buffer StringBuffer.
+   * @param buffer StringBuilder.
    * @param response response message.
    */
-  private void buildAppendMsg(SubClusterInfo subClusterInfo, StringBuffer buffer,
+  private void buildAppendMsg(SubClusterInfo subClusterInfo, StringBuilder buffer,
       Response response) {
     SubClusterId subClusterId = subClusterInfo.getSubClusterId();
     String state = response != null &&

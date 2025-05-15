@@ -28,16 +28,16 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.Properties;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public abstract class AbstractGlobalPolicyGeneratorTest {
 
@@ -67,7 +67,7 @@ public abstract class AbstractGlobalPolicyGeneratorTest {
   private static Configuration conf;
   private GlobalPolicyGenerator gpg;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeSecureRouterTestClass() throws Exception {
     // Sets up the KDC and Principals.
     setupKDCAndPrincipals();
@@ -116,9 +116,9 @@ public abstract class AbstractGlobalPolicyGeneratorTest {
    * @throws Exception an error occurred.
    */
   public static File createKeytab(String principal, String filename) throws Exception {
-    assertTrue("empty principal", StringUtils.isNotBlank(principal));
-    assertTrue("empty host", StringUtils.isNotBlank(filename));
-    assertNotNull("null KDC", kdc);
+    assertTrue(StringUtils.isNotBlank(principal), "empty principal");
+    assertTrue(StringUtils.isNotBlank(filename), "empty host");
+    assertNotNull(kdc, "null KDC");
     File keytab = new File(kdcWorkDir, filename);
     kdc.createPrincipal(keytab,
         principal,
@@ -133,7 +133,7 @@ public abstract class AbstractGlobalPolicyGeneratorTest {
    * @throws Exception an error occurred.
    */
   public synchronized void startSecureGPG() {
-    assertNull("GPG is already running", gpg);
+    assertNull(gpg, "GPG is already running");
     MemoryFederationStateStore stateStore = new MemoryFederationStateStore();
     stateStore.init(conf);
     FederationStateStoreFacade.getInstance(conf).reinitialize(stateStore, conf);

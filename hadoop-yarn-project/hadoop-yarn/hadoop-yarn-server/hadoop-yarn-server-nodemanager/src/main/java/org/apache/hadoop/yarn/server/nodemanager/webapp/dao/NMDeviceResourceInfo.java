@@ -21,11 +21,16 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp.dao;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.deviceframework.AssignedDevice;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
 import java.util.List;
 
 /**
  * Wrapper class of Device allocation for NMWebServices.
  * */
+@XmlRootElement
+@XmlAccessorType(XmlAccessType.FIELD)
 public class NMDeviceResourceInfo extends NMResourceInfo {
 
   private List<Device> totalDevices;
@@ -35,6 +40,9 @@ public class NMDeviceResourceInfo extends NMResourceInfo {
       List<Device> totalDevices, List<AssignedDevice> assignedDevices) {
     this.assignedDevices = assignedDevices;
     this.totalDevices = totalDevices;
+  }
+
+  public NMDeviceResourceInfo() {
   }
 
   public List<Device> getTotalDevices() {

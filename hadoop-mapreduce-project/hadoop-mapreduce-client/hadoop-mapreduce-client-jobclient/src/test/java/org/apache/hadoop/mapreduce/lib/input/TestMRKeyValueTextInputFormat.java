@@ -41,12 +41,14 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestMRKeyValueTextInputFormat {
   private static final Logger LOG =
@@ -115,8 +117,8 @@ public class TestMRKeyValueTextInputFormat {
           RecordReader<Text, Text> reader = format.createRecordReader(
             splits.get(j), context);
           Class<?> clazz = reader.getClass();
-          assertEquals("reader class is KeyValueLineRecordReader.", 
-            KeyValueLineRecordReader.class, clazz);
+          assertEquals(KeyValueLineRecordReader.class, clazz,
+              "reader class is KeyValueLineRecordReader.");
           MapContext<Text, Text, Text, Text> mcontext = 
             new MapContextImpl<Text, Text, Text, Text>(job.getConfiguration(), 
             context.getTaskAttemptID(), reader, null, null, 
@@ -130,16 +132,16 @@ public class TestMRKeyValueTextInputFormat {
             while (reader.nextKeyValue()) {
               key = reader.getCurrentKey();
               clazz = key.getClass();
-              assertEquals("Key class is Text.", Text.class, clazz);
+              assertEquals(Text.class, clazz, "Key class is Text.");
               value = reader.getCurrentValue();
               clazz = value.getClass();
-              assertEquals("Value class is Text.", Text.class, clazz);
+              assertEquals(Text.class, clazz, "Value class is Text.");
               final int k = Integer.parseInt(key.toString());
               final int v = Integer.parseInt(value.toString());
-              assertEquals("Bad key", 0, k % 2);
-              assertEquals("Mismatched key/value", k / 2, v);
+              assertEquals(0, k % 2, "Bad key");
+              assertEquals(k / 2, v, "Mismatched key/value");
               LOG.debug("read " + v);
-              assertFalse("Key in multiple partitions.", bits.get(v));
+              assertFalse(bits.get(v), "Key in multiple partitions.");
               bits.set(v);
               count++;
             }
@@ -148,7 +150,7 @@ public class TestMRKeyValueTextInputFormat {
             reader.close();
           }
         }
-        assertEquals("Some keys in no partition.", length, bits.cardinality());
+        assertEquals(length, bits.cardinality(), "Some keys in no partition.");
       }
 
     }
@@ -200,7 +202,7 @@ public class TestMRKeyValueTextInputFormat {
 
       // try splitting the file in a variety of sizes
       KeyValueTextInputFormat format = new KeyValueTextInputFormat();
-      assertTrue("KVTIF claims not splittable", format.isSplitable(job, file));
+      assertTrue(format.isSplitable(job, file), "KVTIF claims not splittable");
       for (int i = 0; i < 3; i++) {
         int numSplits = random.nextInt(MAX_LENGTH / 2000) + 1;
         LOG.info("splitting: requesting = " + numSplits);
@@ -231,10 +233,10 @@ public class TestMRKeyValueTextInputFormat {
               value = reader.getCurrentValue();
               final int k = Integer.parseInt(key.toString());
               final int v = Integer.parseInt(value.toString());
-              assertEquals("Bad key", 0, k % 2);
-              assertEquals("Mismatched key/value", k / 2, v);
+              assertEquals(0, k % 2, "Bad key");
+              assertEquals(k / 2, v, "Mismatched key/value");
               LOG.debug("read " + k + "," + v);
-              assertFalse(k + "," + v + " in multiple partitions.",bits.get(v));
+              assertFalse(bits.get(v), k + "," + v + " in multiple partitions.");
               bits.set(v);
               count++;
             }
@@ -247,7 +249,7 @@ public class TestMRKeyValueTextInputFormat {
             reader.close();
           }
         }
-        assertEquals("Some keys in no partition.", length, bits.cardinality());
+        assertEquals(length, bits.cardinality(), "Some keys in no partition.");
       }
 
     }
@@ -262,11 +264,12 @@ public class TestMRKeyValueTextInputFormat {
     LineReader in = makeStream("abcd\u20acbdcd\u20ac");
     Text line = new Text();
     in.readLine(line);
-    assertEquals("readLine changed utf8 characters", 
-                 "abcd\u20acbdcd\u20ac", line.toString());
+    assertEquals("abcd\u20acbdcd\u20ac", line.toString(),
+        "readLine changed utf8 characters");
     in = makeStream("abc\u200axyz");
     in.readLine(line);
-    assertEquals("split on fake newline", "abc\u200axyz", line.toString());
+    assertEquals("abc\u200axyz", line.toString(),
+        "split on fake newline");
   }
 
   @Test
@@ -274,18 +277,18 @@ public class TestMRKeyValueTextInputFormat {
     LineReader in = makeStream("a\nbb\n\nccc\rdddd\r\neeeee");
     Text out = new Text();
     in.readLine(out);
-    assertEquals("line1 length", 1, out.getLength());
+    assertEquals(1, out.getLength(), "line1 length");
     in.readLine(out);
-    assertEquals("line2 length", 2, out.getLength());
+    assertEquals(2, out.getLength(), "line2 length");
     in.readLine(out);
-    assertEquals("line3 length", 0, out.getLength());
+    assertEquals(0, out.getLength(), "line3 length");
     in.readLine(out);
-    assertEquals("line4 length", 3, out.getLength());
+    assertEquals(3, out.getLength(), "line4 length");
     in.readLine(out);
-    assertEquals("line5 length", 4, out.getLength());
+    assertEquals(4, out.getLength(), "line5 length");
     in.readLine(out);
-    assertEquals("line5 length", 5, out.getLength());
-    assertEquals("end of file", 0, in.readLine(out));
+    assertEquals(5, out.getLength(), "line5 length");
+    assertEquals(0, in.readLine(out), "end of file");
   }
   
   private static void writeFile(FileSystem fs, Path name, 
@@ -340,29 +343,27 @@ public class TestMRKeyValueTextInputFormat {
     FileInputFormat.setInputPaths(job, workDir);
     KeyValueTextInputFormat format = new KeyValueTextInputFormat();
     List<InputSplit> splits = format.getSplits(job);
-    assertEquals("compressed splits == 2", 2, splits.size());
+    assertEquals(2, splits.size(), "compressed splits == 2");
     FileSplit tmp = (FileSplit) splits.get(0);
     if (tmp.getPath().getName().equals("part2.txt.gz")) {
       splits.set(0, splits.get(1));
       splits.set(1, tmp);
     }
     List<Text> results = readSplit(format, splits.get(0), job);
-    assertEquals("splits[0] length", 6, results.size());
-    assertEquals("splits[0][0]", "the quick", results.get(0).toString());
-    assertEquals("splits[0][1]", "brown", results.get(1).toString());
-    assertEquals("splits[0][2]", "fox jumped", results.get(2).toString());
-    assertEquals("splits[0][3]", "over", results.get(3).toString());
-    assertEquals("splits[0][4]", " the lazy", results.get(4).toString());
-    assertEquals("splits[0][5]", " dog", results.get(5).toString());
+    assertEquals(6, results.size(), "splits[0] length");
+    assertEquals("the quick", results.get(0).toString(), "splits[0][0]");
+    assertEquals("brown", results.get(1).toString(), "splits[0][1]");
+    assertEquals("fox jumped", results.get(2).toString(), "splits[0][2]");
+    assertEquals("over", results.get(3).toString(), "splits[0][3]");
+    assertEquals(" the lazy", results.get(4).toString(), "splits[0][4]");
+    assertEquals(" dog", results.get(5).toString(), "splits[0][5]");
     results = readSplit(format, splits.get(1), job);
-    assertEquals("splits[1] length", 2, results.size());
-    assertEquals("splits[1][0]", "this is a test", 
-                 results.get(0).toString());    
-    assertEquals("splits[1][1]", "of gzip", 
-                 results.get(1).toString());    
+    assertEquals(2, results.size(), "splits[1] length");
+    assertEquals("this is a test", results.get(0).toString(), "splits[1][0]");
+    assertEquals("of gzip", results.get(1).toString(), "splits[1][1]");
   }
   
-  public static void main(String[] args) throws Exception {
+/*  public static void main(String[] args) throws Exception {
     new TestMRKeyValueTextInputFormat().testFormat();
-  }
+  }*/
 }

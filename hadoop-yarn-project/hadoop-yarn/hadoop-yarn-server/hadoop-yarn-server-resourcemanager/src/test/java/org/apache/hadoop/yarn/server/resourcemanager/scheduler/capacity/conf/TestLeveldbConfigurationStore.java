@@ -31,8 +31,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfigurat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
 
@@ -40,9 +40,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests {@link LeveldbConfigurationStore}.
@@ -57,7 +55,7 @@ public class TestLeveldbConfigurationStore extends
           System.getProperty("java.io.tmpdir")),
       TestLeveldbConfigurationStore.class.getName());
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     FileUtil.fullyDelete(TEST_DIR);
@@ -66,21 +64,22 @@ public class TestLeveldbConfigurationStore extends
     conf.set(YarnConfiguration.RM_SCHEDCONF_STORE_PATH, TEST_DIR.toString());
   }
 
-  @Test(expected = YarnConfStoreVersionIncompatibleException.class)
+  @Test
   public void testIncompatibleVersion() throws Exception {
-    try {
-      confStore.initialize(conf, schedConf, rmContext);
+    assertThrows(YarnConfStoreVersionIncompatibleException.class, ()->{
+      try {
+        confStore.initialize(conf, schedConf, rmContext);
 
-      Version otherVersion = Version.newInstance(1, 1);
-      ((LeveldbConfigurationStore) confStore).storeVersion(otherVersion);
+        Version otherVersion = Version.newInstance(1, 1);
+        ((LeveldbConfigurationStore) confStore).storeVersion(otherVersion);
 
-      assertEquals("The configuration store should have stored the new" +
-              "version.", otherVersion,
-          confStore.getConfStoreVersion());
-      confStore.checkVersion();
-    } finally {
-      confStore.close();
-    }
+        assertEquals(otherVersion, confStore.getConfStoreVersion(),
+            "The configuration store should have stored the new version.");
+        confStore.checkVersion();
+      } finally {
+        confStore.close();
+      }
+    });
   }
 
   @Test
@@ -102,7 +101,7 @@ public class TestLeveldbConfigurationStore extends
         break;
       }
     }
-    assertFalse("Audit Log is not disabled", logKeyPresent);
+    assertFalse(logKeyPresent, "Audit Log is not disabled");
     confStore.close();
   }
 

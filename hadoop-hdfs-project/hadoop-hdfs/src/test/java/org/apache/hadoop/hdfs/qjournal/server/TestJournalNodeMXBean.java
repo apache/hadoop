@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -32,9 +32,9 @@ import javax.management.ObjectName;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.eclipse.jetty.util.ajax.JSON;
 
 /**
@@ -49,7 +49,7 @@ public class TestJournalNodeMXBean {
   private MiniJournalCluster jCluster;
   private JournalNode jn;
   
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     // start 1 journal node
     jCluster = new MiniJournalCluster.Builder(new Configuration()).format(true)
@@ -58,7 +58,7 @@ public class TestJournalNodeMXBean {
     jn = jCluster.getJournalNode(0);
   }
   
-  @After
+  @AfterEach
   public void cleanup() throws IOException {
     if (jCluster != null) {
       jCluster.shutdown();
@@ -105,7 +105,7 @@ public class TestJournalNodeMXBean {
     assertEquals(jn.getClusterIds().size(), clusterId.length);
     assertEquals("mycluster", clusterId[0]);
     long startTime = (long) mbs.getAttribute(mxbeanName, "JNStartedTimeInMillis");
-    assertTrue("JournalNode start time should not be 0", startTime > 0);
+    assertTrue(startTime > 0, "JournalNode start time should not be 0");
     assertEquals(jn.getJNStartedTimeInMillis(), startTime);
     String version = (String) mbs.getAttribute(mxbeanName, "Version");
     assertEquals(jn.getVersion(), version);

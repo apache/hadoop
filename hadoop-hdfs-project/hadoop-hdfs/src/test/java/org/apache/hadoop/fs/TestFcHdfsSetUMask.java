@@ -30,12 +30,15 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class TestFcHdfsSetUMask {
   
@@ -78,7 +81,7 @@ public class TestFcHdfsSetUMask {
   private static final FsPermission WIDE_OPEN_TEST_UMASK = FsPermission
       .createImmutable((short) (0777 ^ 0777));
   
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetupAtBegining()
         throws IOException, LoginException, URISyntaxException  {
     Configuration conf = new HdfsConfiguration();
@@ -91,20 +94,20 @@ public class TestFcHdfsSetUMask {
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void ClusterShutdownAtEnd() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fc.setUMask(WIDE_OPEN_TEST_UMASK);
     fc.mkdir(fileContextTestHelper.getTestRootPath(fc), FileContext.DEFAULT_PERM, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     fc.delete(fileContextTestHelper.getTestRootPath(fc), true);
   }
@@ -165,7 +168,7 @@ public class TestFcHdfsSetUMask {
 
   @Test
   public void testCreateRecursiveWithNonExistingDirClear() throws IOException {
-    // directory permission inherited from parent so this must match the @Before
+    // directory permission inherited from parent so this must match the @BeforeEach
     // set of umask
     testCreateRecursiveWithNonExistingDir(BLANK_TEST_UMASK,
         WIDE_OPEN_PERMISSIONS, BLANK_PERMISSIONS);
@@ -173,7 +176,7 @@ public class TestFcHdfsSetUMask {
 
   @Test
   public void testCreateRecursiveWithNonExistingDirOpen() throws IOException {
-    // directory permission inherited from parent so this must match the @Before
+    // directory permission inherited from parent so this must match the @BeforeEach
     // set of umask
     testCreateRecursiveWithNonExistingDir(WIDE_OPEN_TEST_UMASK,
         WIDE_OPEN_PERMISSIONS, WIDE_OPEN_FILE_PERMISSIONS);
@@ -181,7 +184,7 @@ public class TestFcHdfsSetUMask {
 
   @Test
   public void testCreateRecursiveWithNonExistingDirMiddle() throws IOException {
-    // directory permission inherited from parent so this must match the @Before
+    // directory permission inherited from parent so this must match the @BeforeEach
     // set of umask
     testCreateRecursiveWithNonExistingDir(USER_GROUP_OPEN_TEST_UMASK, 
         WIDE_OPEN_PERMISSIONS, USER_GROUP_OPEN_FILE_PERMISSIONS);
@@ -193,9 +196,9 @@ public class TestFcHdfsSetUMask {
     Path f = fileContextTestHelper.getTestRootPath(fc, "aDir");
     fc.setUMask(umask);
     fc.mkdir(f, FileContext.DEFAULT_PERM, true);
-    Assert.assertTrue(isDir(fc, f));
-    Assert.assertEquals("permissions on directory are wrong",  
-        expectedPerms, fc.getFileStatus(f).getPermission());
+    assertTrue(isDir(fc, f));
+    assertEquals(expectedPerms, fc.getFileStatus(f).getPermission(),
+        "permissions on directory are wrong");
   }
   
   public void testMkdirRecursiveWithNonExistingDir(FsPermission umask,
@@ -204,12 +207,12 @@ public class TestFcHdfsSetUMask {
     Path f = fileContextTestHelper.getTestRootPath(fc, "NonExistant2/aDir");
     fc.setUMask(umask);
     fc.mkdir(f, FileContext.DEFAULT_PERM, true);
-    Assert.assertTrue(isDir(fc, f));
-    Assert.assertEquals("permissions on directory are wrong",  
-        expectedPerms, fc.getFileStatus(f).getPermission());
+    assertTrue(isDir(fc, f));
+    assertEquals(expectedPerms, fc.getFileStatus(f).getPermission(),
+        "permissions on directory are wrong");
     Path fParent = fileContextTestHelper.getTestRootPath(fc, "NonExistant2");
-    Assert.assertEquals("permissions on parent directory are wrong",  
-        expectedParentPerms, fc.getFileStatus(fParent).getPermission());
+    assertEquals(expectedParentPerms, fc.getFileStatus(fParent).getPermission(),
+        "permissions on parent directory are wrong");
   }
 
 
@@ -218,9 +221,9 @@ public class TestFcHdfsSetUMask {
     Path f = fileContextTestHelper.getTestRootPath(fc,"foo");
     fc.setUMask(umask);
     createFile(fc, f);
-    Assert.assertTrue(isFile(fc, f));
-    Assert.assertEquals("permissions on file are wrong",  
-        expectedPerms , fc.getFileStatus(f).getPermission());
+    assertTrue(isFile(fc, f));
+    assertEquals(expectedPerms, fc.getFileStatus(f).getPermission(),
+        "permissions on file are wrong");
   }
   
   
@@ -229,14 +232,14 @@ public class TestFcHdfsSetUMask {
       throws IOException {
     Path f = fileContextTestHelper.getTestRootPath(fc,"NonExisting/foo");
     Path fParent = fileContextTestHelper.getTestRootPath(fc, "NonExisting");
-    Assert.assertFalse(exists(fc, fParent));
+    assertFalse(exists(fc, fParent));
     fc.setUMask(umask);
     createFile(fc, f);
-    Assert.assertTrue(isFile(fc, f));
-    Assert.assertEquals("permissions on file are wrong",  
-        expectedFilePerms, fc.getFileStatus(f).getPermission());
-    Assert.assertEquals("permissions on parent directory are wrong",  
-        expectedDirPerms, fc.getFileStatus(fParent).getPermission());
+    assertTrue(isFile(fc, f));
+    assertEquals(expectedFilePerms, fc.getFileStatus(f).getPermission(),
+        "permissions on file are wrong");
+    assertEquals(expectedDirPerms, fc.getFileStatus(fParent).getPermission(),
+        "permissions on parent directory are wrong");
   }
  
 }

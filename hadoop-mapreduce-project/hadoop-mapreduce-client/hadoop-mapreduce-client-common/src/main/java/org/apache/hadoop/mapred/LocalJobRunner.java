@@ -1027,8 +1027,8 @@ public class LocalJobRunner implements ClientProtocol {
     String taskId = t.getTaskID().toString();
     boolean isCleanup = t.isTaskCleanupTask();
     String user = t.getUser();
-    StringBuffer childMapredLocalDir =
-        new StringBuffer(localDirs[0] + Path.SEPARATOR
+    StringBuilder childMapredLocalDir =
+        new StringBuilder(localDirs[0] + Path.SEPARATOR
             + getLocalTaskDir(user, jobId, taskId, isCleanup));
     for (int i = 1; i < localDirs.length; i++) {
       childMapredLocalDir.append("," + localDirs[i] + Path.SEPARATOR

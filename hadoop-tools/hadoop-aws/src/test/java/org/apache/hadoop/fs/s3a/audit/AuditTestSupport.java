@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
+import org.assertj.core.api.Assumptions;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopAuditManagerS3A;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopAuditor;
@@ -29,6 +32,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_ACCESS_CHECK_FAILURE;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_FAILURE;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_REQUEST_EXECUTION;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_SPAN_CREATION;
+import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.isRejectOutOfSpan;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_INTERCEPTORS;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_SERVICE_CLASSNAME;
@@ -36,6 +40,11 @@ import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.LOGGING_AUDIT_SER
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.NOOP_AUDIT_SERVICE;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_ENABLED;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REJECT_OUT_OF_SPAN_OPERATIONS;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_400;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_4XX;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_500;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_503;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_5XX;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 /**
@@ -105,13 +114,20 @@ public final class AuditTestSupport {
             AUDIT_ACCESS_CHECK_FAILURE.getSymbol(),
             AUDIT_FAILURE.getSymbol(),
             AUDIT_REQUEST_EXECUTION.getSymbol(),
-            AUDIT_SPAN_CREATION.getSymbol())
+            AUDIT_SPAN_CREATION.getSymbol(),
+            HTTP_RESPONSE_400,
+            HTTP_RESPONSE_4XX,
+            HTTP_RESPONSE_500,
+            HTTP_RESPONSE_503,
+            HTTP_RESPONSE_5XX)
         .build();
   }
 
   /**
    * Remove all overridden values for
    * the test bucket/global in the given config.
+   * Note that the rejection flag may be overridden by the
+   * requirements returned by the output stream factory.
    * @param conf configuration to patch
    * @return the configuration.
    */
@@ -123,5 +139,24 @@ public final class AuditTestSupport {
         AUDIT_SERVICE_CLASSNAME,
         AUDIT_ENABLED);
     return conf;
+  }
+
+  /**
+   * Skip a test if the filesystem's audit manager has had them disabled.
+   * @param fs filesystem
+   */
+  public static void requireOutOfSpanOperationsRejected(final S3AFileSystem fs) {
+    Assumptions.assumeThat(outOfSpanOperationAreRejected(fs))
+        .describedAs("Out of span operations rejected")
+        .isTrue();
+  }
+
+  /**
+   * Are Out of Span operations rejected by the filesystem's audit manager?
+   * @param fs filesystem
+   * @return true if out of span calls raise exceptions
+   */
+  private static boolean outOfSpanOperationAreRejected(final S3AFileSystem fs) {
+    return isRejectOutOfSpan(fs.getAuditManager().getConfig());
   }
 }

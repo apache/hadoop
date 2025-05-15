@@ -154,6 +154,14 @@ Here are the full set of configuration options.
 </property>
 
 <property>
+  <name>fs.s3a.assumed.role.external.id</name>
+  <value>arbitrary value, specific by user in AWS console</value>
+  <description>
+    External id for assumed role, it's an optional configuration. "https://aws.amazon.com/cn/blogs/security/how-to-use-external-id-when-granting-access-to-your-aws-resources/"
+  </description>
+</property>
+
+<property>
   <name>fs.s3a.assumed.role.policy</name>
   <value/>
   <description>
@@ -287,13 +295,10 @@ views or operations.
 Particular troublespots are "directory markers" and
 failures of non-atomic operations, particularly `rename()` and `delete()`.
 
-A directory marker such as `/users/` will not be deleted if the user `alice`
-creates a directory `/users/alice` *and* she only has access to `/users/alice`.
-
-When a path or directory is deleted, the parent directory may not exist afterwards.
-In the example above, if `alice` deletes `/users/alice` and there are no
-other entries under `/users/alice`, then the directory marker `/users/` cannot
-be created. The directory `/users` will not exist in listings,
+If `alice` deletes `/users/alice` and there are no
+other entries under `/users/alice`, or a directory marker `/users` then that
+directory marker cannot be created.
+The directory `/users` will not exist in listings,
 `getFileStatus("/users")` or similar.
 
 Rename will fail if it cannot delete the items it has just copied, that is

@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azure;
 import com.microsoft.azure.storage.*;
 import com.microsoft.azure.storage.blob.*;
 import com.microsoft.azure.storage.core.Base64;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +49,7 @@ import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.DEFAULT_STOR
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_LOCAL_SAS_KEY_MODE;
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_SECURE_MODE;
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.verifyWasbAccountNameInConfig;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Helper class to create WASB file systems backed by either a mock in-memory
@@ -212,9 +212,9 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
    * @return
    */
   private boolean wasGeneratedByMe(MetricsRecord currentRecord) {
-    Assert.assertNotNull("null filesystem", fs);
-    Assert.assertNotNull("null filesystemn instance ID",
-        fs.getInstrumentation().getFileSystemInstanceId());
+    assertNotNull(fs, "null filesystem");
+    assertNotNull(fs.getInstrumentation().getFileSystemInstanceId(),
+        "null filesystemn instance ID");
     String myFsId = fs.getInstrumentation().getFileSystemInstanceId().toString();
     for (MetricsTag currentTag : currentRecord.tags()) {
       if (currentTag.name().equalsIgnoreCase("wasbFileSystemId")) {

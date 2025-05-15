@@ -27,10 +27,10 @@ import org.apache.hadoop.mapred.LocalJobRunner;
 import org.apache.hadoop.mapred.YARNRunner;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestClientProtocolProviderImpls {
 
@@ -91,9 +91,9 @@ public class TestClientProtocolProviderImpls {
       fail("Cluster init should fail because of non-existing FileSystem");
     } catch (IOException ioEx) {
       final String stackTrace = StringUtils.stringifyException(ioEx);
-      assertTrue("No root cause detected",
-          stackTrace.contains(UnsupportedFileSystemException.class.getName())
-              && stackTrace.contains("nosuchfs"));
+      assertTrue(stackTrace.contains(
+          UnsupportedFileSystemException.class.getName()) && stackTrace.contains("nosuchfs"),
+          "No root cause detected");
     }
   }
 }

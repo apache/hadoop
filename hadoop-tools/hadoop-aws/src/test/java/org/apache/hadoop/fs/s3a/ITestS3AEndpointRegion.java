@@ -24,9 +24,9 @@ import java.net.UnknownHostException;
 import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Ignore;
 import org.junit.Test;
 import software.amazon.awssdk.awscore.AwsExecutionAttribute;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
@@ -44,14 +44,18 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.Constants.ALLOW_REQUESTER_PAYS;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CROSS_REGION_ACCESS_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.ERROR_ENDPOINT_WITH_FIPS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeStoreAwsHosted;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.DEFAULT_REQUESTER_PAYS_BUCKET_NAME;
 import static org.apache.hadoop.io.IOUtils.closeStream;
@@ -70,6 +74,8 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   private static final String US_EAST_2 = "us-east-2";
 
   private static final String US_WEST_2 = "us-west-2";
+
+  private static final String SA_EAST_1 = "sa-east-1";
 
   private static final String EU_WEST_2 = "eu-west-2";
 
@@ -97,8 +103,14 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
 
   private static final String VPC_ENDPOINT = "vpce-1a2b3c4d-5e6f.s3.us-west-2.vpce.amazonaws.com";
 
+  private static final String CN_VPC_ENDPOINT = "vpce-1a2b3c4d-5e6f.s3.cn-northwest-1.vpce.amazonaws.com.cn";
+
   public static final String EXCEPTION_THROWN_BY_INTERCEPTOR = "Exception thrown by interceptor";
 
+  /**
+   * Text to include in assertions.
+   */
+  private static final AtomicReference<String> EXPECTED_MESSAGE = new AtomicReference<>();
   /**
    * New FS instance which will be closed in teardown.
    */
@@ -294,12 +306,21 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   }
 
   @Test
-  @Ignore("Pending HADOOP-18938. S3A region logic to handle vpce and non standard endpoints")
   public void testWithVPCE() throws Throwable {
     describe("Test with vpc endpoint");
     Configuration conf = getConfiguration();
 
     S3Client client = createS3Client(conf, VPC_ENDPOINT, null, US_WEST_2, false);
+
+    expectInterceptorException(client);
+  }
+
+  @Test
+  public void testWithChinaVPCE() throws Throwable {
+    describe("Test with china vpc endpoint");
+    Configuration conf = getConfiguration();
+
+    S3Client client = createS3Client(conf, CN_VPC_ENDPOINT, null, CN_NORTHWEST_1, false);
 
     expectInterceptorException(client);
   }
@@ -333,6 +354,46 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     newConf.setBoolean(ALLOW_REQUESTER_PAYS, true);
 
     assertRequesterPaysFileExistence(newConf);
+  }
+
+  @Test
+  public void testWithOutCrossRegionAccess() throws Exception {
+    describe("Verify cross region access fails when disabled");
+    // skip the test if the region is sa-east-1
+    skipCrossRegionTest();
+    final Configuration newConf = new Configuration(getConfiguration());
+    removeBaseAndBucketOverrides(newConf,
+        ENDPOINT,
+        AWS_S3_CROSS_REGION_ACCESS_ENABLED,
+        AWS_REGION);
+    // disable cross region access
+    newConf.setBoolean(AWS_S3_CROSS_REGION_ACCESS_ENABLED, false);
+    newConf.set(AWS_REGION, SA_EAST_1);
+    try (S3AFileSystem fs = new S3AFileSystem()) {
+      fs.initialize(getFileSystem().getUri(), newConf);
+      intercept(AWSRedirectException.class,
+          "does not match the AWS region containing the bucket",
+          () -> fs.exists(getFileSystem().getWorkingDirectory()));
+    }
+  }
+
+  @Test
+  public void testWithCrossRegionAccess() throws Exception {
+    describe("Verify cross region access succeed when enabled");
+    // skip the test if the region is sa-east-1
+    skipCrossRegionTest();
+    final Configuration newConf = new Configuration(getConfiguration());
+    removeBaseAndBucketOverrides(newConf,
+        ENDPOINT,
+        AWS_S3_CROSS_REGION_ACCESS_ENABLED,
+        AWS_REGION);
+    // enable cross region access
+    newConf.setBoolean(AWS_S3_CROSS_REGION_ACCESS_ENABLED, true);
+    newConf.set(AWS_REGION, SA_EAST_1);
+    try (S3AFileSystem fs = new S3AFileSystem()) {
+      fs.initialize(getFileSystem().getUri(), newConf);
+      fs.exists(getFileSystem().getWorkingDirectory());
+    }
   }
 
   @Test
@@ -421,6 +482,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Access the test bucket using central endpoint and"
         + " null region, perform file system CRUD operations");
     final Configuration conf = getConfiguration();
+    assumeStoreAwsHosted(getFileSystem());
 
     final Configuration newConf = new Configuration(conf);
 
@@ -428,7 +490,8 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
         newConf,
         ENDPOINT,
         AWS_REGION,
-        FIPS_ENDPOINT);
+        FIPS_ENDPOINT,
+        S3_ENCRYPTION_ALGORITHM);
 
     newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
 
@@ -442,6 +505,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   public void testCentralEndpointAndNullRegionFipsWithCRUD() throws Throwable {
     describe("Access the test bucket using central endpoint and"
         + " null region and fips enabled, perform file system CRUD operations");
+    assumeStoreAwsHosted(getFileSystem());
 
     final String bucketLocation = getFileSystem().getBucketLocation();
     assume("FIPS can be enabled to access buckets from US or Canada endpoints only",
@@ -465,6 +529,16 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     newFS.initialize(getFileSystem().getUri(), newConf);
 
     assertOpsUsingNewFs();
+  }
+
+  /**
+   * Skip the test if the region is null or sa-east-1.
+   */
+  private void skipCrossRegionTest() throws IOException {
+    String region = getFileSystem().getS3AInternals().getBucketMetadata().bucketRegion();
+    if (region == null || SA_EAST_1.equals(region)) {
+      skip("Skipping test since region is null or it is set to sa-east-1");
+    }
   }
 
   private void assertOpsUsingNewFs() throws IOException {
@@ -509,7 +583,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
         .isFalse();
   }
 
-  private final class RegionInterceptor implements ExecutionInterceptor {
+  private static final class RegionInterceptor implements ExecutionInterceptor {
     private final String endpoint;
     private final String region;
     private final boolean isFips;
@@ -524,28 +598,49 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     public void beforeExecution(Context.BeforeExecution context,
         ExecutionAttributes executionAttributes)  {
 
-      if (endpoint != null && !endpoint.endsWith(CENTRAL_ENDPOINT)) {
-        Assertions.assertThat(
-                executionAttributes.getAttribute(AwsExecutionAttribute.ENDPOINT_OVERRIDDEN))
-            .describedAs("Endpoint not overridden").isTrue();
 
-        Assertions.assertThat(
-                executionAttributes.getAttribute(AwsExecutionAttribute.CLIENT_ENDPOINT).toString())
-            .describedAs("There is an endpoint mismatch").isEqualTo("https://" + endpoint);
+      // extract state from the execution attributes.
+      final Boolean endpointOveridden =
+          executionAttributes.getAttribute(AwsExecutionAttribute.ENDPOINT_OVERRIDDEN);
+      final String clientEndpoint =
+          executionAttributes.getAttribute(AwsExecutionAttribute.CLIENT_ENDPOINT).toString();
+      final Boolean fipsEnabled = executionAttributes.getAttribute(
+          AwsExecutionAttribute.FIPS_ENDPOINT_ENABLED);
+      final String reg = executionAttributes.getAttribute(AwsExecutionAttribute.AWS_REGION).
+          toString();
+
+      String state = "SDK beforeExecution callback; "
+          + "endpointOveridden=" + endpointOveridden
+          + "; clientEndpoint=" + clientEndpoint
+          + "; fipsEnabled=" + fipsEnabled
+          + "; region=" + reg;
+
+      if (endpoint != null && !endpoint.endsWith(CENTRAL_ENDPOINT)) {
+        Assertions.assertThat(endpointOveridden)
+            .describedAs("Endpoint not overridden in %s. Client Config=%s",
+                state, EXPECTED_MESSAGE.get())
+            .isTrue();
+
+        Assertions.assertThat(clientEndpoint)
+            .describedAs("There is an endpoint mismatch in %s. Client Config=%s",
+                state, EXPECTED_MESSAGE.get())
+            .isEqualTo("https://" + endpoint);
       } else {
-        Assertions.assertThat(
-                executionAttributes.getAttribute(AwsExecutionAttribute.ENDPOINT_OVERRIDDEN))
-            .describedAs("Endpoint is overridden").isEqualTo(null);
+        Assertions.assertThat(endpointOveridden)
+            .describedAs("Attribute endpointOveridden is null in %s. Client Config=%s",
+                state, EXPECTED_MESSAGE.get())
+            .isEqualTo(false);
       }
 
-      Assertions.assertThat(
-              executionAttributes.getAttribute(AwsExecutionAttribute.AWS_REGION).toString())
-          .describedAs("Incorrect region set").isEqualTo(region);
+      Assertions.assertThat(reg)
+          .describedAs("Incorrect region set in %s. Client Config=%s",
+              state, EXPECTED_MESSAGE.get())
+          .isEqualTo(region);
 
       // verify the fips state matches expectation.
-      Assertions.assertThat(executionAttributes.getAttribute(
-          AwsExecutionAttribute.FIPS_ENDPOINT_ENABLED))
-          .describedAs("Incorrect FIPS flag set in execution attributes")
+      Assertions.assertThat(fipsEnabled)
+          .describedAs("Incorrect FIPS flag set in %s; Client Config=%s",
+              state, EXPECTED_MESSAGE.get())
           .isNotNull()
           .isEqualTo(isFips);
 
@@ -570,6 +665,11 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
       String endpoint, String configuredRegion, String expectedRegion, boolean isFips)
       throws IOException {
 
+    String expected =
+        "endpoint=" + endpoint + "; region=" + configuredRegion
+        + "; expectedRegion=" + expectedRegion + "; isFips=" + isFips;
+    LOG.info("Creating S3 client with {}", expected);
+    EXPECTED_MESSAGE.set(expected);
     List<ExecutionInterceptor> interceptors = new ArrayList<>();
     interceptors.add(new RegionInterceptor(endpoint, expectedRegion, isFips));
 

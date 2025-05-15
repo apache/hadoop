@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
-import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.util.functional.RemoteIterators;
@@ -44,7 +43,6 @@ import org.slf4j.LoggerFactory;
 
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -54,13 +52,12 @@ import java.util.concurrent.Executors;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
+import static org.apache.hadoop.fs.s3a.impl.PutObjectOptions.defaultOptions;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
@@ -228,11 +225,6 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
     final Configuration conf =
             getConfigurationWithConfiguredBatchSize(batchSize);
 
-    removeBaseAndBucketOverrides(conf,
-        DIRECTORY_MARKER_POLICY);
-    // force directory markers = keep to save delete requests on every
-    // file created.
-    conf.set(DIRECTORY_MARKER_POLICY, DIRECTORY_MARKER_POLICY_KEEP);
     S3AFileSystem fs = (S3AFileSystem) FileSystem.get(dir.toUri(), conf);
 
     final List<String> originalListOfFiles = new ArrayList<>();
@@ -258,11 +250,11 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
         originalListOfFiles.add(file.toString());
         PutObjectRequest.Builder putObjectRequestBuilder = requestFactory
             .newPutObjectRequestBuilder(fs.pathToKey(file),
-                null, 0, false);
+                defaultOptions(), 0, false);
         futures.add(submit(executorService,
             () -> writeOperationHelper.putObject(putObjectRequestBuilder.build(),
-                PutObjectOptions.keepingDirs(),
-                new S3ADataBlocks.BlockUploadData(new FailingInputStream()), false, null)));
+                defaultOptions(),
+                new S3ADataBlocks.BlockUploadData(new byte[0], null), null)));
       }
       LOG.info("Waiting for PUTs to complete");
       waitForCompletion(futures);
@@ -360,16 +352,6 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
       LOG.info("FS statistics {}",
           ioStatisticsToPrettyString(fs.getIOStatistics()));
       fs.close();
-    }
-  }
-
-  /**
-   * Input stream which always returns -1.
-   */
-  private static final class FailingInputStream  extends InputStream {
-    @Override
-    public int read() throws IOException {
-      return -1;
     }
   }
 

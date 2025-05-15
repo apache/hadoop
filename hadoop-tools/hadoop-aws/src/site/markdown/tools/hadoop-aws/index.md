@@ -23,12 +23,12 @@
 
 ###  <a name="directory-marker-compatibility"></a> Directory Marker Compatibility
 
-This release does not delete directory markers when creating
+This release never delete directory markers when creating
 files or directories underneath.
 This is incompatible with versions of the Hadoop S3A client released
 before 2021.
 
-Consult [Controlling the S3A Directory Marker Behavior](directory_markers.html) for
+Consult [S3A and Directory Markers](directory_markers.html) for
 full details.
 
 ## <a name="documents"></a> Documents
@@ -40,7 +40,7 @@ full details.
 * [Working with Third-party S3 Stores](./third_party_stores.html)
 * [Troubleshooting](./troubleshooting_s3a.html)
 * [Prefetching](./prefetching.html)
-* [Controlling the S3A Directory Marker Behavior](directory_markers.html).
+* [S3A and Directory Markers](directory_markers.html).
 * [Auditing](./auditing.html).
 * [Committing work to S3 with the "S3A Committers"](./committers.html)
 * [S3A Committers Architecture](./committer_architecture.html)
@@ -77,7 +77,7 @@ and compatible implementations.
 
 * Directly reads and writes S3 objects.
 * Compatible with standard S3 clients.
-* Compatible with files created by the older `s3n://` client and Amazon EMR's `s3://` client.
+* Compatible with files created by Amazon EMR's `s3://` client (EMRFS).
 * Supports partitioned uploads for many-GB objects.
 * Offers a high-performance random IO mode for working with columnar data such
 as Apache ORC and Apache Parquet files.
@@ -626,6 +626,15 @@ Here are some the S3A properties for use in production.
 </property>
 
 <property>
+    <name>fs.s3a.encryption.context</name>
+    <description>Specific encryption context to use if fs.s3a.encryption.algorithm
+      has been set to 'SSE-KMS' or 'DSSE-KMS'. The value of this property is a set
+      of non-secret comma-separated key-value pairs of additional contextual
+      information about the data that are separated by equal operator (=).
+    </description>
+</property>
+
+<property>
   <name>fs.s3a.signing-algorithm</name>
   <description>Override the default signing algorithm so legacy
     implementations can still be used</description>
@@ -914,6 +923,15 @@ Here are some the S3A properties for use in production.
   <description>
     Warn but continue when applications use Syncable.hsync when writing
     to S3A.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.create.checksum.algorithm</name>
+  <description>
+    Indicates the algorithm used to create the checksum for the object
+    to be uploaded to S3. Unset by default. It supports the following values:
+    'CRC32', 'CRC32C', 'SHA1', and 'SHA256'
   </description>
 </property>
 
@@ -1291,6 +1309,11 @@ For a site configuration of:
 
 <property>
   <name>fs.s3a.encryption.key</name>
+  <value>unset</value>
+</property>
+
+<property>
+  <name>fs.s3a.encryption.context</name>
   <value>unset</value>
 </property>
 

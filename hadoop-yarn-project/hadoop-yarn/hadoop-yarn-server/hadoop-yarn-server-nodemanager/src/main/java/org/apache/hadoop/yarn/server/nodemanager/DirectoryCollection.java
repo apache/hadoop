@@ -726,4 +726,9 @@ public class DirectoryCollection {
   public int getGoodDirsDiskUtilizationPercentage() {
     return goodDirsDiskUtilizationPercentage;
   }
+
+  @VisibleForTesting
+  public void setSubAccessibilityValidationEnabled(boolean subAccessibilityValidationEnabled) {
+    this.subAccessibilityValidationEnabled = subAccessibilityValidationEnabled;
+  }
 }

@@ -23,14 +23,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -84,37 +82,37 @@ public class TestFSTreeWalk {
    * Verify ACL enabled TreeWalk iterator throws an error if the external file
    * system does not support ACLs.
    */
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void testACLNotSupported() throws Exception {
-    Configuration conf = new Configuration();
-    conf.setBoolean(DFSConfigKeys.DFS_PROVIDED_ACLS_IMPORT_ENABLED, true);
-
-    FileSystem fs = mock(FileSystem.class);
-    when(fs.getAclStatus(any())).thenThrow(new UnsupportedOperationException());
-    Path root = mock(Path.class);
-    when(root.getFileSystem(conf)).thenReturn(fs);
-    FileStatus rootFileStatus = new FileStatus(0, true, 0, 0, 1, root);
-    when(fs.getFileStatus(root)).thenReturn(rootFileStatus);
-
-    FSTreeWalk fsTreeWalk = new FSTreeWalk(root, conf);
-    TreeWalk.TreeIterator iter = fsTreeWalk.iterator();
-    fail("Unexpected successful creation of iter: " + iter);
+    assertThrows(UnsupportedOperationException.class, () -> {
+      Configuration conf = new Configuration();
+      conf.setBoolean(DFSConfigKeys.DFS_PROVIDED_ACLS_IMPORT_ENABLED, true);
+      FileSystem fs = mock(FileSystem.class);
+      when(fs.getAclStatus(any())).thenThrow(new UnsupportedOperationException());
+      Path root = mock(Path.class);
+      when(root.getFileSystem(conf)).thenReturn(fs);
+      FileStatus rootFileStatus = new FileStatus(0, true, 0, 0, 1, root);
+      when(fs.getFileStatus(root)).thenReturn(rootFileStatus);
+      FSTreeWalk fsTreeWalk = new FSTreeWalk(root, conf);
+      TreeWalk.TreeIterator iter = fsTreeWalk.iterator();
+      fail("Unexpected successful creation of iter: " + iter);
+    });
   }
 
   /**
    * Verify creation of INode for ACL enabled TreePath throws an error.
    */
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void testToINodeACLNotSupported() throws Exception {
-    BlockResolver blockResolver = new FixedBlockResolver();
-    Path root = new Path("/");
-    FileStatus rootFileStatus = new FileStatus(0, false, 0, 0, 1, root);
-
-    AclStatus acls = mock(AclStatus.class);
-    TreePath treePath = new TreePath(rootFileStatus, 1, null, null, acls);
-
-    UGIResolver ugiResolver = mock(UGIResolver.class);
-    when(ugiResolver.getPermissionsProto(null, acls)).thenReturn(1L);
-    treePath.toINode(ugiResolver, blockResolver, null);
+    assertThrows(UnsupportedOperationException.class, () -> {
+      BlockResolver blockResolver = new FixedBlockResolver();
+      Path root = new Path("/");
+      FileStatus rootFileStatus = new FileStatus(0, false, 0, 0, 1, root);
+      AclStatus acls = mock(AclStatus.class);
+      TreePath treePath = new TreePath(rootFileStatus, 1, null, null, acls);
+      UGIResolver ugiResolver = mock(UGIResolver.class);
+      when(ugiResolver.getPermissionsProto(null, acls)).thenReturn(1L);
+      treePath.toINode(ugiResolver, blockResolver, null);
+    });
   }
 }

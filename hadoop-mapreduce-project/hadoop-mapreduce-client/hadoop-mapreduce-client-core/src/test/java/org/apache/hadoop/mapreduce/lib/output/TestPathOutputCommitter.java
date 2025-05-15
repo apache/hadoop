@@ -21,8 +21,8 @@ package org.apache.hadoop.mapreduce.lib.output;
 import java.io.IOException;
 import java.net.URI;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -44,7 +44,7 @@ import org.apache.hadoop.security.Credentials;
 /**
  * Test the path output committer binding to FileOutputFormat.
  */
-public class TestPathOutputCommitter extends Assert {
+public class TestPathOutputCommitter extends Assertions {
 
   @Test
   public void testFileOutputCommitterOverrride() throws Throwable {

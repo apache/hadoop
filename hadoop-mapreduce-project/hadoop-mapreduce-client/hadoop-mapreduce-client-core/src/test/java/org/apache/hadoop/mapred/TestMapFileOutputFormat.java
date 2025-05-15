@@ -18,14 +18,14 @@
 
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.MapFile.Reader;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 public class TestMapFileOutputFormat {
@@ -38,10 +38,10 @@ public class TestMapFileOutputFormat {
     Reader reader = Mockito.mock(Reader.class);
     Reader[] readers = new Reader[]{reader};
     outputFormat.getEntry(readers, new MyPartitioner(), new Text(), new Text());
-    assertTrue(!MyPartitioner.isGetPartitionCalled());
+    assertFalse(MyPartitioner.isGetPartitionCalled());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     MyPartitioner.setGetPartitionCalled(false);
   }

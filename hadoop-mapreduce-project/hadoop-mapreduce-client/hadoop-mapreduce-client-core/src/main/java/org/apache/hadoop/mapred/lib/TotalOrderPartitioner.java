@@ -43,7 +43,7 @@ public class TotalOrderPartitioner<K ,V>
 
   /**
    * Set the path to the SequenceFile storing the sorted partition keyset.
-   * It must be the case that for <tt>R</tt> reduces, there are <tt>R-1</tt>
+   * It must be the case that for <code>R</code> reduces, there are <code>R-1</code>
    * keys in the SequenceFile.
    * @deprecated Use 
    * {@link #setPartitionFile(Configuration, Path)}

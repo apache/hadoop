@@ -17,26 +17,40 @@
  */
 package org.apache.hadoop.fs.azurebfs.utils;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
-
 import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FILE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SCHEME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SECURE_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONTAINER_PREFIX;
 
 /**
  * Some Utils for ABFS tests.
  */
-public final class AbfsTestUtils extends AbstractAbfsIntegrationTest{
+public final class AbfsTestUtils extends AbstractAbfsIntegrationTest {
     private static final Logger LOG =
             LoggerFactory.getLogger(AbfsTestUtils.class);
+
+  private static final int TOTAL_THREADS_IN_POOL = 5;
 
   public AbfsTestUtils() throws Exception {
     super();
@@ -81,5 +95,41 @@ public final class AbfsTestUtils extends AbstractAbfsIntegrationTest{
       }
     }
     LOG.info("Deleted {} test containers", count);
+  }
+
+    /**
+     * Turn off FS Caching: use if a filesystem with different options from
+     * the default is required.
+     * @param conf configuration to patch
+     */
+    public static void disableFilesystemCaching(Configuration conf) {
+        // Disabling cache to make sure new configs are picked up.
+        conf.setBoolean(String.format("fs.%s.impl.disable.cache", ABFS_SCHEME), true);
+        conf.setBoolean(String.format("fs.%s.impl.disable.cache", ABFS_SECURE_SCHEME), true);
+    }
+
+  /**
+   * Helper method to create files in the given directory.
+   *
+   * @param fs The AzureBlobFileSystem instance to use for file creation.
+   * @param path The source path (directory).
+   * @param numFiles The number of files to create.
+   * @throws ExecutionException, InterruptedException If an error occurs during file creation.
+   */
+  public static void createFiles(AzureBlobFileSystem fs, Path path, int numFiles)
+      throws ExecutionException, InterruptedException {
+    ExecutorService executorService =
+        Executors.newFixedThreadPool(TOTAL_THREADS_IN_POOL);
+    List<Future> futures = new ArrayList<>();
+    for (int i = 0; i < numFiles; i++) {
+      final int iter = i;
+      Future future = executorService.submit(() ->
+          fs.create(new Path(path, FILE + iter + ".txt")));
+      futures.add(future);
+    }
+    for (Future future : futures) {
+      future.get();
+    }
+    executorService.shutdown();
   }
 }

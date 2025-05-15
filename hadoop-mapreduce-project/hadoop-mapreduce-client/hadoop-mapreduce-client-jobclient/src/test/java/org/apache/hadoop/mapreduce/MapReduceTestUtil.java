@@ -97,7 +97,7 @@ public class MapReduceTestUtil {
   public static String generateRandomLine() {
     long r = rand.nextLong() % 7;
     long n = r + 20;
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     for (int i = 0; i < n; i++) {
       sb.append(generateRandomWord()).append(" ");
     }
@@ -401,7 +401,7 @@ public class MapReduceTestUtil {
   public static String readOutput(Path outDir, Configuration conf) 
       throws IOException {
     FileSystem fs = outDir.getFileSystem(conf);
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     Path[] fileList = FileUtil.stat2Paths(fs.listStatus(outDir,
            new Utils.OutputFileUtils.OutputFilesFilter()));
@@ -436,7 +436,7 @@ public class MapReduceTestUtil {
       org.apache.hadoop.mapred.TaskAttemptID taskId, boolean isCleanup)
       throws IOException {
     // string buffer to store task log
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
     int res;
 
     // reads the whole tasklog into inputstream

@@ -29,9 +29,11 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.rules.Timeout;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.impl.S3AEncryption;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
+import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.*;
@@ -48,6 +50,9 @@ public class TestSSEConfiguration extends Assert {
   /** Bucket to use for per-bucket options. */
   public static final String BUCKET = "dataset-1";
 
+  /** Valid set of key/value pairs for the encryption context. */
+  private static final String VALID_ENCRYPTION_CONTEXT = "key1=value1, key2=value2, key3=value3";
+
   @Rule
   public Timeout testTimeout = new Timeout(
       S3ATestConstants.S3A_TEST_TIMEOUT
@@ -58,41 +63,41 @@ public class TestSSEConfiguration extends Assert {
 
   @Test
   public void testSSECNoKey() throws Throwable {
-    assertGetAlgorithmFails(SSE_C_NO_KEY_ERROR, SSE_C.getMethod(), null);
+    assertGetAlgorithmFails(SSE_C_NO_KEY_ERROR, SSE_C.getMethod(), null, null);
   }
 
   @Test
   public void testSSECBlankKey() throws Throwable {
-    assertGetAlgorithmFails(SSE_C_NO_KEY_ERROR, SSE_C.getMethod(), "");
+    assertGetAlgorithmFails(SSE_C_NO_KEY_ERROR, SSE_C.getMethod(), "", null);
   }
 
   @Test
   public void testSSECGoodKey() throws Throwable {
-    assertEquals(SSE_C, getAlgorithm(SSE_C, "sseckey"));
+    assertEquals(SSE_C, getAlgorithm(SSE_C, "sseckey", null));
   }
 
   @Test
   public void testKMSGoodKey() throws Throwable {
-    assertEquals(SSE_KMS, getAlgorithm(SSE_KMS, "kmskey"));
+    assertEquals(SSE_KMS, getAlgorithm(SSE_KMS, "kmskey", null));
   }
 
   @Test
   public void testAESKeySet() throws Throwable {
     assertGetAlgorithmFails(SSE_S3_WITH_KEY_ERROR,
-        SSE_S3.getMethod(), "setkey");
+        SSE_S3.getMethod(), "setkey", null);
   }
 
   @Test
   public void testSSEEmptyKey() {
     // test the internal logic of the test setup code
-    Configuration c = buildConf(SSE_C.getMethod(), "");
+    Configuration c = buildConf(SSE_C.getMethod(), "", null);
     assertEquals("", getS3EncryptionKey(BUCKET, c));
   }
 
   @Test
   public void testSSEKeyNull() throws Throwable {
     // test the internal logic of the test setup code
-    final Configuration c = buildConf(SSE_C.getMethod(), null);
+    final Configuration c = buildConf(SSE_C.getMethod(), null, null);
     assertEquals("", getS3EncryptionKey(BUCKET, c));
 
     intercept(IOException.class, SSE_C_NO_KEY_ERROR,
@@ -147,28 +152,30 @@ public class TestSSEConfiguration extends Assert {
   }
 
   /**
-   * Assert that the exception text from {@link #getAlgorithm(String, String)}
+   * Assert that the exception text from {@link #getAlgorithm(String, String, String)}
    * is as expected.
    * @param expected expected substring in error
    * @param alg algorithm to ask for
    * @param key optional key value
+   * @param context optional encryption context value
    * @throws Exception anything else which gets raised
    */
   public void assertGetAlgorithmFails(String expected,
-      final String alg, final String key) throws Exception {
+      final String alg, final String key, final String context) throws Exception {
     intercept(IOException.class, expected,
-        () -> getAlgorithm(alg, key));
+        () -> getAlgorithm(alg, key, context));
   }
 
   private S3AEncryptionMethods getAlgorithm(S3AEncryptionMethods algorithm,
-      String key)
+      String key,
+      String encryptionContext)
       throws IOException {
-    return getAlgorithm(algorithm.getMethod(), key);
+    return getAlgorithm(algorithm.getMethod(), key, encryptionContext);
   }
 
-  private S3AEncryptionMethods getAlgorithm(String algorithm, String key)
+  private S3AEncryptionMethods getAlgorithm(String algorithm, String key, String encryptionContext)
       throws IOException {
-    return getEncryptionAlgorithm(BUCKET, buildConf(algorithm, key));
+    return getEncryptionAlgorithm(BUCKET, buildConf(algorithm, key, encryptionContext));
   }
 
   /**
@@ -176,10 +183,11 @@ public class TestSSEConfiguration extends Assert {
    * and key.
    * @param algorithm  algorithm to use, may be null
    * @param key key, may be null
+   * @param encryptionContext encryption context, may be null
    * @return the new config.
    */
   @SuppressWarnings("deprecation")
-  private Configuration buildConf(String algorithm, String key) {
+  private Configuration buildConf(String algorithm, String key, String encryptionContext) {
     Configuration conf = emptyConf();
     if (algorithm != null) {
       conf.set(Constants.S3_ENCRYPTION_ALGORITHM, algorithm);
@@ -192,6 +200,11 @@ public class TestSSEConfiguration extends Assert {
     } else {
       conf.unset(SERVER_SIDE_ENCRYPTION_KEY);
       conf.unset(Constants.S3_ENCRYPTION_KEY);
+    }
+    if (encryptionContext != null) {
+      conf.set(S3_ENCRYPTION_CONTEXT, encryptionContext);
+    } else {
+      conf.unset(S3_ENCRYPTION_CONTEXT);
     }
     return conf;
   }
@@ -306,6 +319,32 @@ public class TestSSEConfiguration extends Assert {
   @Test
   public void testNoEncryptionMethod() throws Throwable {
     assertEquals(NONE, getMethod(" "));
+  }
+
+  @Test
+  public void testGoodEncryptionContext() throws Throwable {
+    assertEquals(SSE_KMS, getAlgorithm(SSE_KMS, "kmskey", VALID_ENCRYPTION_CONTEXT));
+  }
+
+  @Test
+  public void testSSEEmptyEncryptionContext() throws Throwable {
+    // test the internal logic of the test setup code
+    Configuration c = buildConf(SSE_KMS.getMethod(), "kmskey", "");
+    assertEquals("", S3AEncryption.getS3EncryptionContext(BUCKET, c));
+  }
+
+  @Test
+  public void testSSEEncryptionContextNull() throws Throwable {
+    // test the internal logic of the test setup code
+    final Configuration c = buildConf(SSE_KMS.getMethod(), "kmskey", null);
+    assertEquals("", S3AEncryption.getS3EncryptionContext(BUCKET, c));
+  }
+
+  @Test
+  public void testSSEInvalidEncryptionContext() throws Throwable {
+    intercept(IllegalArgumentException.class,
+        StringUtils.STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
+        () -> getAlgorithm(SSE_KMS.getMethod(), "kmskey", "invalid context"));
   }
 
 }

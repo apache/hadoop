@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapterMockitoUtil;
 import org.apache.hadoop.test.MockitoUtil;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
@@ -297,7 +297,8 @@ public class TestSetTimes {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .numDataNodes(0)
       .build();
-    ReentrantReadWriteLock spyLock = NameNodeAdapter.spyOnFsLock(cluster.getNamesystem());
+    ReentrantReadWriteLock spyLock =
+        NameNodeAdapterMockitoUtil.spyOnFsLock(cluster.getNamesystem());
     try {
       // Create empty file in the FSN.
       Path p = new Path("/empty-file");

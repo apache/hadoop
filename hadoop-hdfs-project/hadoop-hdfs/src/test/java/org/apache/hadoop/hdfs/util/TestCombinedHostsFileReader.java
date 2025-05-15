@@ -30,10 +30,10 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
+import org.mockito.MockitoAnnotations;
 
 /**
  * Test for JSON based HostsFileReader.
@@ -56,7 +56,7 @@ public class TestCombinedHostsFileReader {
 
   @Before
   public void setUp() throws Exception {
-    callable = Mockito.mock(Callable.class);
+    MockitoAnnotations.initMocks(this);
   }
 
   @After

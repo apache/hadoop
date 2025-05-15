@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.nio.file.FileSystemException;
 
@@ -34,15 +32,13 @@ import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.hdfs.nfs.mount.Mountd;
 import org.apache.hadoop.hdfs.nfs.mount.RpcProgramMountd;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestExportsTable {
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
- 
   @Test
   public void testHdfsExportPoint() throws IOException {
     NfsConfiguration config = new NfsConfiguration();
@@ -224,13 +220,13 @@ public class TestExportsTable {
       ConfigUtil.addLink(config, clusterName, "/hdfs2",
           hdfs2.makeQualified(base2).toUri());
 
-      exception.expect(FileSystemException.class);
-      exception.
-          expectMessage("Only HDFS is supported as underlyingFileSystem, "
-              + "fs scheme:viewfs");
-      // Start nfs
-      final Nfs3 nfsServer = new Nfs3(config);
-      nfsServer.startServiceInternal(false);
+      FileSystemException fileSystemException = assertThrows(FileSystemException.class, () -> {
+        // Start nfs
+        final Nfs3 nfsServer = new Nfs3(config);
+        nfsServer.startServiceInternal(false);
+      });
+      assertTrue(fileSystemException.getMessage().
+          contains("Only HDFS is supported as underlyingFileSystem, fs scheme:viewfs"));
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -292,13 +288,14 @@ public class TestExportsTable {
       config.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
           FsConstants.LOCAL_FS_URI.toString());
 
-      exception.expect(FileSystemException.class);
-      exception.
-          expectMessage("Only HDFS is supported as underlyingFileSystem, "
-              + "fs scheme:file");
-      // Start nfs
-      final Nfs3 nfsServer = new Nfs3(config);
-      nfsServer.startServiceInternal(false);
+      FileSystemException fileSystemException =
+          assertThrows(FileSystemException.class, () -> {
+            // Start nfs
+            final Nfs3 nfsServer = new Nfs3(config);
+            nfsServer.startServiceInternal(false);
+          });
+      assertTrue(fileSystemException.getMessage().
+          contains("Only HDFS is supported as underlyingFileSystem, fs scheme:file"));
     } finally {
       if (cluster != null) {
         cluster.shutdown();

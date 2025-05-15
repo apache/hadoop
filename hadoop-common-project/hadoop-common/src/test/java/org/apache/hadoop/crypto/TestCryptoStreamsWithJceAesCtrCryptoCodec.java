@@ -19,14 +19,14 @@ package org.apache.hadoop.crypto;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestCryptoStreamsWithJceAesCtrCryptoCodec extends 
     TestCryptoStreams {
 
-  @BeforeClass
+  @BeforeAll
   public static void init() {
     Configuration conf = new Configuration();
     conf.set(

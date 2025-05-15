@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,16 +51,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppR
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.slf4j.event.Level;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestContainerResourceUsage {
 
   private YarnConfiguration conf;
 
-  @Before
+  @BeforeEach
   public void setup() throws UnknownHostException {
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
     conf = new YarnConfiguration();
@@ -65,11 +69,12 @@ public class TestContainerResourceUsage {
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
   }
 
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testUsageWithOneAttemptAndOneContainer() throws Exception {
     MockRM rm = new MockRM(conf);
     rm.start();
@@ -81,14 +86,12 @@ public class TestContainerResourceUsage {
     RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm);
 
     RMAppMetrics rmAppMetrics = app0.getRMAppMetrics();
-    Assert.assertTrue(
+    assertTrue(rmAppMetrics.getMemorySeconds() == 0,
         "Before app submittion, memory seconds should have been 0 but was "
-                          + rmAppMetrics.getMemorySeconds(),
-        rmAppMetrics.getMemorySeconds() == 0);
-    Assert.assertTrue(
+        + rmAppMetrics.getMemorySeconds());
+    assertTrue(rmAppMetrics.getVcoreSeconds() == 0,
         "Before app submission, vcore seconds should have been 0 but was "
-                          + rmAppMetrics.getVcoreSeconds(),
-        rmAppMetrics.getVcoreSeconds() == 0);
+        + rmAppMetrics.getVcoreSeconds());
 
     RMAppAttempt attempt0 = app0.getCurrentAppAttempt();
 
@@ -109,29 +112,28 @@ public class TestContainerResourceUsage {
     }
 
     rmAppMetrics = app0.getRMAppMetrics();
-    Assert.assertTrue(
+    assertTrue(rmAppMetrics.getMemorySeconds() > 0,
         "While app is running, memory seconds should be >0 but is "
-            + rmAppMetrics.getMemorySeconds(),
-        rmAppMetrics.getMemorySeconds() > 0);
-    Assert.assertTrue(
+        + rmAppMetrics.getMemorySeconds());
+    assertTrue(rmAppMetrics.getVcoreSeconds() > 0,
         "While app is running, vcore seconds should be >0 but is "
-            + rmAppMetrics.getVcoreSeconds(),
-        rmAppMetrics.getVcoreSeconds() > 0);
+        + rmAppMetrics.getVcoreSeconds());
 
     MockRM.finishAMAndVerifyAppState(app0, rm, nm, am0);
 
     AggregateAppResourceUsage ru = calculateContainerResourceMetrics(rmContainer);
     rmAppMetrics = app0.getRMAppMetrics();
 
-    Assert.assertEquals("Unexpected MemorySeconds value",
-        ru.getMemorySeconds(), rmAppMetrics.getMemorySeconds());
-    Assert.assertEquals("Unexpected VcoreSeconds value",
-        ru.getVcoreSeconds(), rmAppMetrics.getVcoreSeconds());
+    assertEquals(ru.getMemorySeconds(), rmAppMetrics.getMemorySeconds(),
+        "Unexpected MemorySeconds value");
+    assertEquals(ru.getVcoreSeconds(), rmAppMetrics.getVcoreSeconds(),
+        "Unexpected VcoreSeconds value");
 
     rm.stop();
   }
 
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testUsageWithMultipleContainersAndRMRestart() throws Exception {
     // Set max attempts to 1 so that when the first attempt fails, the app
     // won't try to start a new one.
@@ -223,12 +225,12 @@ public class TestContainerResourceUsage {
     }
 
     RMAppMetrics metricsBefore = app0.getRMAppMetrics();
-    Assert.assertEquals("Unexpected MemorySeconds value",
-        memorySeconds, metricsBefore.getMemorySeconds());
-    Assert.assertEquals("Unexpected VcoreSeconds value",
-        vcoreSeconds, metricsBefore.getVcoreSeconds());
-    Assert.assertEquals("Unexpected totalAllocatedContainers value",
-        NUM_CONTAINERS + 1, metricsBefore.getTotalAllocatedContainers());
+    assertEquals(memorySeconds, metricsBefore.getMemorySeconds(),
+        "Unexpected MemorySeconds value");
+    assertEquals(vcoreSeconds, metricsBefore.getVcoreSeconds(),
+        "Unexpected VcoreSeconds value");
+    assertEquals(NUM_CONTAINERS + 1, metricsBefore.getTotalAllocatedContainers(),
+        "Unexpected totalAllocatedContainers value");
 
     // create new RM to represent RM restart. Load up the state store.
     MockRM rm1 = new MockRM(conf, memStore);
@@ -238,13 +240,14 @@ public class TestContainerResourceUsage {
 
     // Compare container resource usage metrics from before and after restart.
     RMAppMetrics metricsAfter = app0After.getRMAppMetrics();
-    Assert.assertEquals("Vcore seconds were not the same after RM Restart",
-        metricsBefore.getVcoreSeconds(), metricsAfter.getVcoreSeconds());
-    Assert.assertEquals("Memory seconds were not the same after RM Restart",
-        metricsBefore.getMemorySeconds(), metricsAfter.getMemorySeconds());
-    Assert.assertEquals("TotalAllocatedContainers was not the same after " +
-        "RM Restart", metricsBefore.getTotalAllocatedContainers(),
-        metricsAfter.getTotalAllocatedContainers());
+    assertEquals(metricsBefore.getVcoreSeconds(), metricsAfter.getVcoreSeconds(),
+        "Vcore seconds were not the same after RM Restart");
+    assertEquals(metricsBefore.getMemorySeconds(), metricsAfter.getMemorySeconds(),
+        "Memory seconds were not the same after RM Restart");
+    assertEquals(metricsBefore.getTotalAllocatedContainers(),
+        metricsAfter.getTotalAllocatedContainers(),
+        "TotalAllocatedContainers was not the same after " +
+        "RM Restart");
 
     rm0.stop();
     rm0.close();
@@ -252,12 +255,14 @@ public class TestContainerResourceUsage {
     rm1.close();
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testUsageAfterAMRestartWithMultipleContainers() throws Exception {
     amRestartTests(false);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testUsageAfterAMRestartKeepContainers() throws Exception {
     amRestartTests(true);
   }
@@ -339,9 +344,9 @@ public class TestContainerResourceUsage {
           vcoreSeconds += ru.getVcoreSeconds();
         } else {
           // The remaining container should be RUNNING.
-          Assert.assertTrue("After first attempt failed, remaining container "
-                        + "should still be running. ",
-                        c.getContainerState().equals(ContainerState.RUNNING));
+          assertTrue(c.getContainerState().equals(ContainerState.RUNNING),
+              "After first attempt failed, remaining container "
+              + "should still be running. ");
         }
       }
     } else {
@@ -360,7 +365,7 @@ public class TestContainerResourceUsage {
 
     // assert this is a new AM.
     RMAppAttempt attempt2 = app.getCurrentAppAttempt();
-    Assert.assertFalse(attempt2.getAppAttemptId()
+    assertFalse(attempt2.getAppAttemptId()
                                .equals(am0.getApplicationAttemptId()));
 
     rm.waitForState(attempt2.getAppAttemptId(), RMAppAttemptState.SCHEDULED);
@@ -408,10 +413,10 @@ public class TestContainerResourceUsage {
     
     RMAppMetrics rmAppMetrics = app.getRMAppMetrics();
 
-    Assert.assertEquals("Unexpected MemorySeconds value",
-        memorySeconds, rmAppMetrics.getMemorySeconds());
-    Assert.assertEquals("Unexpected VcoreSeconds value",
-        vcoreSeconds, rmAppMetrics.getVcoreSeconds());
+    assertEquals(memorySeconds, rmAppMetrics.getMemorySeconds(),
+        "Unexpected MemorySeconds value");
+    assertEquals(vcoreSeconds, rmAppMetrics.getVcoreSeconds(),
+        "Unexpected VcoreSeconds value");
 
     rm.stop();
     return;

@@ -21,6 +21,7 @@ package org.apache.hadoop.tools;
 import java.io.IOException;
 import java.util.Random;
 
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -140,9 +141,7 @@ public class DistCp extends Configured implements Tool {
     
     try {
       context = new DistCpContext(OptionsParser.parse(argv));
-      checkSplitLargeFile();
-      setTargetPathExists();
-      LOG.info("Input Options: " + context);
+      LOG.info("Input Options: {}", context);
     } catch (Throwable e) {
       LOG.error("Invalid arguments: ", e);
       System.err.println("Invalid arguments: " + e.getMessage());
@@ -152,7 +151,7 @@ public class DistCp extends Configured implements Tool {
 
     Job job = null;
     try {
-      job = execute();
+      job = execute(true);
     } catch (InvalidInputException e) {
       LOG.error("Invalid input: ", e);
       return DistCpConstants.INVALID_ARGUMENT;
@@ -169,7 +168,7 @@ public class DistCp extends Configured implements Tool {
       LOG.error("Exception encountered ", e);
       return DistCpConstants.UNKNOWN_ERROR;
     } finally {
-      //Blocking distcp so close the job after its done
+      // Blocking distcp so close the job after it's done
       if (job != null && context.shouldBlock()) {
         try {
           job.close();
@@ -182,14 +181,30 @@ public class DistCp extends Configured implements Tool {
   }
 
   /**
-   * Implements the core-execution. Creates the file-list for copy,
-   * and launches the Hadoop-job, to do the copy.
+   * Original entrypoint of a distcp job. Calls {@link DistCp#execute(boolean)}
+   * without doing extra context checks and setting some configs.
    * @return Job handle
-   * @throws Exception
+   * @throws Exception when fails to submit distcp job or distcp job fails
    */
   public Job execute() throws Exception {
+    return execute(false);
+  }
+
+  /**
+   * Implements the core-execution. Creates the file-list for copy,
+   * and launches the Hadoop-job, to do the copy.
+   * @param extraContextChecks if true, does extra context checks and sets some configs.
+   * @return Job handle
+   * @throws Exception when fails to submit distcp job or distcp job fails, or context checks fail
+   */
+  public Job execute(boolean extraContextChecks) throws Exception {
     Preconditions.checkState(context != null,
         "The DistCpContext should have been created before running DistCp!");
+    if (extraContextChecks) {
+      checkSplitLargeFile();
+      setTargetPathExists();
+    }
+
     Job job = createAndSubmitJob();
 
     if (context.shouldBlock()) {
@@ -457,7 +472,7 @@ public class DistCp extends Configured implements Tool {
       LOG.error("Couldn't complete DistCp operation: ", e);
       exitCode = DistCpConstants.UNKNOWN_ERROR;
     }
-    System.exit(exitCode);
+    ExitUtil.terminate(exitCode);
   }
 
   /**

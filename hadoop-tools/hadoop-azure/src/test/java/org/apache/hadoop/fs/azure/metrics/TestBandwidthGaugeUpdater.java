@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.fs.azure.metrics;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestBandwidthGaugeUpdater {
   @Test
@@ -42,10 +42,9 @@ public class TestBandwidthGaugeUpdater {
         new Date(), 200);
     updater.triggerUpdate(true);
     long currentBytes = AzureMetricsTestUtil.getCurrentBytesWritten(instrumentation);
-    assertTrue(
+    assertTrue(currentBytes > 18 && currentBytes < 22,
         "We expect around (200/10 = 20) bytes written as the gauge value." +
-        "Got " + currentBytes,
-        currentBytes > 18 && currentBytes < 22);
+        "Got " + currentBytes);
     updater.close();
   }
 

@@ -374,6 +374,14 @@ public class OpportunisticContainerAllocatorAMService
   }
 
   @Override
+  protected void serviceStart() throws Exception {
+    if (this.nodeMonitor != null) {
+      this.nodeMonitor.start();
+    }
+    super.serviceStart();
+  }
+
+  @Override
   protected void serviceStop() throws Exception {
     if (nodeMonitor != null) {
       nodeMonitor.stop();

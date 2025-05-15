@@ -35,6 +35,9 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
 
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_SENT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
@@ -383,6 +386,7 @@ public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
         .get(SEND_REQUESTS.getStatName());
     long expectedBytesSent = fs.getInstrumentationMap()
         .get(BYTES_SENT.getStatName());
+    AbfsClient client = fs.getAbfsStore().getClientHandler().getIngressClient();
 
     while (testIteration > 0) {
       // trigger recurringWriteSize appends over numOfWrites
@@ -426,7 +430,9 @@ public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
           ? 1 // 1 append (with flush and close param)
           : (wasDataPendingToBeWrittenToServer)
               ? 2 // 1 append + 1 flush (with close)
-              : 1); // 1 flush (with close)
+              : (recurringWriteSize == 0 && client instanceof AbfsBlobClient)
+                  ? 0 // no flush or close on prefix mode blob
+                  : 1); //1 flush (with close) // 1 flush (with close)
 
       expectedTotalRequestsMade += totalAppendFlushCalls;
       expectedRequestsMadeWithData += totalAppendFlushCalls;
@@ -445,10 +451,19 @@ public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
 
       testIteration--;
     }
+    /**
+     * Above test iteration loop executes one  of the below two patterns
+     * 1. Append + Close (triggers flush)
+     * 2. Append + Flush
+     * For both patters PutBlockList is complete in the iteration loop itself
+     * Hence with PrefixMode Blob, below close won't trigger any network call
+     */
 
     opStream.close();
-    expectedTotalRequestsMade += 1;
-    expectedRequestsMadeWithData += 1;
+    if (client instanceof AbfsDfsClient) {
+      expectedTotalRequestsMade += 1;
+      expectedRequestsMadeWithData += 1;
+    }
     // no change in expectedBytesSent
     assertOpStats(fs.getInstrumentationMap(), expectedTotalRequestsMade, expectedRequestsMadeWithData, expectedBytesSent);
 

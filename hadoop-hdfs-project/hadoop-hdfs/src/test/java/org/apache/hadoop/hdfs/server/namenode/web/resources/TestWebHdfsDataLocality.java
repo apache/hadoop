@@ -196,7 +196,7 @@ public class TestWebHdfsDataLocality {
       //For GETFILECHECKSUM, OPEN and APPEND,
       //the chosen datanode must be different with exclude nodes.
 
-      StringBuffer sb = new StringBuffer();
+      StringBuilder sb = new StringBuilder();
       for (int i = 0; i < 2; i++) {
         sb.append(locations[i].getXferAddr());
         { // test GETFILECHECKSUM

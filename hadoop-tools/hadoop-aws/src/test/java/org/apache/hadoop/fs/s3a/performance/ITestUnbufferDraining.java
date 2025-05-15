@@ -48,11 +48,11 @@ import static org.apache.hadoop.fs.s3a.Constants.ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.MAX_ERROR_RETRIES;
-import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disablePrefetching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.setDurationAsSeconds;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
@@ -96,16 +96,9 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
    */
   private FileSystem brittleFS;
 
-  /**
-   * Create with markers kept, always.
-   */
-  public ITestUnbufferDraining() {
-    super(false);
-  }
-
   @Override
   public Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
+    Configuration conf = disablePrefetching(super.createConfiguration());
     removeBaseAndBucketOverrides(conf,
         ASYNC_DRAIN_THRESHOLD,
         CHECKSUM_VALIDATION,
@@ -113,7 +106,6 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
         INPUT_FADVISE,
         MAX_ERROR_RETRIES,
         MAXIMUM_CONNECTIONS,
-        PREFETCH_ENABLED_KEY,
         READAHEAD_RANGE,
         REQUEST_TIMEOUT,
         RETRY_LIMIT,
@@ -125,7 +117,6 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
   @Override
   public void setup() throws Exception {
     super.setup();
-
     // now create a new FS with minimal http capacity and recovery
     // a separate one is used to avoid test teardown suffering
     // from the lack of http connections and short timeouts.

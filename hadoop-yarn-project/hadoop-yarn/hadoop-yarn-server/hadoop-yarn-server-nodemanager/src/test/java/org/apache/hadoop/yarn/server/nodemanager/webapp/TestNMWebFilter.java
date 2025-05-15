@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -34,10 +34,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -50,7 +47,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Basic sanity Tests for NMWebFilter.
@@ -61,7 +59,8 @@ public class TestNMWebFilter {
   private static final String LOG_SERVER_URI = "log-server:1999/logs";
   private static final String USER = "testUser";
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testRedirection() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(
         System.currentTimeMillis(), 1);
@@ -91,17 +90,11 @@ public class TestNMWebFilter {
 
     HttpServletResponseForTest response = new HttpServletResponseForTest();
     // dummy filter
-    FilterChain chain = new FilterChain() {
-      @Override
-      public void doFilter(ServletRequest servletRequest,
-          ServletResponse servletResponse) throws IOException,
-          ServletException {
-        // Do Nothing
-      }
+    FilterChain chain = (servletRequest, servletResponse) -> {
+      // Do Nothing
     };
 
-    String uri = "testNM:8042/node/containerlogs/"
-            + containerId.toString() + "/" + USER;
+    String uri = "testNM:8042/node/containerlogs/" + containerId + "/" + USER;
     HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getRequestURI()).thenReturn(uri);
     testFilter.doFilter(request, response, chain);
@@ -113,7 +106,7 @@ public class TestNMWebFilter {
     assertTrue(redirect.contains(USER));
 
     String logType = "syslog";
-    uri = "testNM:8042/node/containerlogs/" + containerId.toString()
+    uri = "testNM:8042/node/containerlogs/" + containerId
         + "/" + USER + "/" + logType + "/?start=10";
     HttpServletRequest request2 = mock(HttpServletRequest.class);
     when(request2.getRequestURI()).thenReturn(uri);

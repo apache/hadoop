@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
-
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,8 +29,8 @@ import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.fs.shell.CommandFormat.NotEnoughArgumentsException;
 import org.apache.hadoop.fs.shell.CommandFormat.TooManyArgumentsException;
 import org.apache.hadoop.fs.shell.CommandFormat.UnknownOptionException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests the command line parsing
@@ -41,7 +40,7 @@ public class TestCommandFormat {
   private static List<String> expectedArgs;
   private static Set<String> expectedOpts;
   
-  @Before
+  @BeforeEach
   public void setUp() {
     args = new ArrayList<>();
     expectedOpts = new HashSet<>();
