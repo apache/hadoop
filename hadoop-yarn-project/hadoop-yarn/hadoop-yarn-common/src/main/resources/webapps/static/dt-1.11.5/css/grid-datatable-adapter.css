@@ -1,0 +1,363 @@
+/**
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
+table.dataTable {
+  width: 100%;
+  margin: 0 auto;
+  clear: both;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* DataTable wrapper */
+.dataTables_wrapper {
+  position: relative;
+  clear: both;
+  *zoom: 1;
+  zoom: 1;
+  border: 1px solid #aaaaaa;
+}
+
+/* Header styling - preserved from original */
+table.dataTable thead th,
+table.dataTable thead td,
+.gridjs-table th {
+  font-weight: bold;
+  padding: 10px 18px;
+  border-bottom: 1px solid #111111;
+  border-top: 1px solid #aaaaaa;
+  border-bottom: 1px solid #aaaaaa;
+  border-right: 1px solid #aaaaaa;
+  background-color: #e6e6e6;
+  color: #555555;
+}
+
+table.dataTable thead th:last-child,
+table.dataTable thead td:last-child,
+.gridjs-table th:last-child {
+  border-right: none;
+}
+
+table.dataTable thead th:active,
+table.dataTable thead td:active {
+  outline: none;
+}
+
+/* Footer styling from original */
+table.dataTable tfoot th,
+table.dataTable tfoot td {
+  padding: 10px 18px 6px 18px;
+  border-top: 1px solid #111111;
+}
+
+/* Sorting indicators - use image files */
+table.dataTable thead .sorting,
+table.dataTable thead .sorting_asc,
+table.dataTable thead .sorting_desc,
+.gridjs-table th.gridjs-th {
+  cursor: pointer;
+  *cursor: hand;
+  background-repeat: no-repeat;
+  background-position: center right;
+}
+
+.gridjs-table th.gridjs-th-sort.gridjs-th-sort-asc:after {
+  content: "▴";
+  position: absolute;
+  right: 8px;
+}
+
+.gridjs-table th.gridjs-th-sort.gridjs-th-sort-desc:after {
+  content: "▾";
+  position: absolute;
+  right: 8px;
+}
+
+/* Row styling from original */
+table.dataTable tbody tr,
+.gridjs-table tbody tr {
+  background-color: white;
+}
+
+table.dataTable tbody tr.selected,
+.gridjs-table tbody tr.selected {
+  background-color: #b0bed9;
+}
+
+table.dataTable tbody th,
+table.dataTable tbody td,
+.gridjs-table tbody td {
+  padding: 8px 10px;
+}
+
+/* Row borders from original */
+table.dataTable.row-border tbody th,
+table.dataTable.row-border tbody td,
+table.dataTable.display tbody th,
+table.dataTable.display tbody td {
+  border-top: 1px solid #dddddd;
+}
+
+table.dataTable.row-border tbody tr:first-child th,
+table.dataTable.row-border tbody tr:first-child td,
+table.dataTable.display tbody tr:first-child th,
+table.dataTable.display tbody tr:first-child td {
+  border-top: none;
+}
+
+/* Table borders from original */
+table.dataTable.no-footer,
+.gridjs-table {
+  border-bottom: 1px solid #111111;
+}
+
+/* Length menu and filter styling from original */
+.dataTables_wrapper .dataTables_length,
+.dataTables_length {
+  float: left;
+  width: 50%;
+  height: 27px;
+  box-sizing: border-box;
+  padding: 5px;
+  background-color: #cccccc;
+}
+
+.dataTables_wrapper .dataTables_filter,
+.gridjs-search {
+  float: right;
+  text-align: right;
+  width: 50%;
+  height: 27px;
+  box-sizing: border-box;
+  padding: 5px;
+  background-color: #cccccc;
+}
+
+.dataTables_wrapper .dataTables_filter input,
+.gridjs-search input {
+  margin-left: 0.5em;
+}
+
+/* Info and pagination styling from original */
+.dataTables_wrapper .dataTables_info,
+.gridjs-summary {
+  clear: both;
+  float: left;
+  padding-top: 0.755em;
+  color: #333333;
+  width: 50%;
+  text-align: left;
+}
+
+.dataTables_wrapper .dataTables_paginate,
+.gridjs-pagination {
+  float: right;
+  text-align: right;
+  padding-top: 0.25em;
+  width: 50%;
+}
+
+/* Pagination buttons from original */
+.dataTables_wrapper .dataTables_paginate .paginate_button,
+.gridjs-pagination button {
+  box-sizing: border-box;
+  display: inline-block;
+  min-width: 1.5em;
+  padding: 0.5em 1em;
+  margin-left: 2px;
+  text-align: center;
+  text-decoration: none !important;
+  cursor: pointer;
+  *cursor: hand;
+  color: #333333 !important;
+  border: 1px solid transparent;
+  border-radius: 2px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.gridjs-pagination button.gridjs-current {
+  color: #333333 !important;
+  border: 1px solid #979797;
+  background-color: white;
+  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, white), color-stop(100%, gainsboro));
+  background: -webkit-linear-gradient(top, white 0%, gainsboro 100%);
+  background: -moz-linear-gradient(top, white 0%, gainsboro 100%);
+  background: -ms-linear-gradient(top, white 0%, gainsboro 100%);
+  background: -o-linear-gradient(top, white 0%, gainsboro 100%);
+  background: linear-gradient(to bottom, white 0%, gainsboro 100%);
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover,
+.gridjs-pagination button:hover:not(.gridjs-current):not(.gridjs-spread) {
+  color: white !important;
+  border: 1px solid #111111;
+  background-color: #585858;
+  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #585858), color-stop(100%, #111111));
+  background: -webkit-linear-gradient(top, #585858 0%, #111111 100%);
+  background: -moz-linear-gradient(top, #585858 0%, #111111 100%);
+  background: -ms-linear-gradient(top, #585858 0%, #111111 100%);
+  background: -o-linear-gradient(top, #585858 0%, #111111 100%);
+  background: linear-gradient(to bottom, #585858 0%, #111111 100%);
+}
+
+/* Disabled buttons from original */
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled,
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover,
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled:active {
+  cursor: default;
+  color: #666 !important;
+  border: 1px solid transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Active buttons from original */
+.dataTables_wrapper .dataTables_paginate .paginate_button:active,
+.gridjs-pagination button:active {
+  outline: none;
+  background-color: #2b2b2b;
+  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #2b2b2b), color-stop(100%, #0c0c0c));
+  background: -webkit-linear-gradient(top, #2b2b2b 0%, #0c0c0c 100%);
+  background: -moz-linear-gradient(top, #2b2b2b 0%, #0c0c0c 100%);
+  background: -ms-linear-gradient(top, #2b2b2b 0%, #0c0c0c 100%);
+  background: -o-linear-gradient(top, #2b2b2b 0%, #0c0c0c 100%);
+  background: linear-gradient(to bottom, #2b2b2b 0%, #0c0c0c 100%);
+  box-shadow: inset 0 0 3px #111;
+}
+
+/* Processing indicator from original */
+.dataTables_wrapper .dataTables_processing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 40px;
+  margin-left: -50%;
+  margin-top: -25px;
+  padding-top: 20px;
+  text-align: center;
+  font-size: 1.2em;
+  background-color: white;
+  background: -webkit-gradient(linear, left top, right top, color-stop(0%, rgba(255, 255, 255, 0)), color-stop(25%, rgba(255, 255, 255, 0.9)), color-stop(75%, rgba(255, 255, 255, 0.9)), color-stop(100%, rgba(255, 255, 255, 0)));
+  background: -webkit-linear-gradient(left, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.9) 25%, rgba(255, 255, 255, 0.9) 75%, rgba(255, 255, 255, 0) 100%);
+  background: -moz-linear-gradient(left, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.9) 25%, rgba(255, 255, 255, 0.9) 75%, rgba(255, 255, 255, 0) 100%);
+  background: -ms-linear-gradient(left, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.9) 25%, rgba(255, 255, 255, 0.9) 75%, rgba(255, 255, 255, 0) 100%);
+  background: -o-linear-gradient(left, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.9) 25%, rgba(255, 255, 255, 0.9) 75%, rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.9) 25%, rgba(255, 255, 255, 0.9) 75%, rgba(255, 255, 255, 0) 100%);
+}
+
+/* Grid.js specific overrides to match DataTables */
+.gridjs-container {
+  display: block;
+}
+
+.gridjs-head {
+  background-color: #cccccc;
+}
+
+.gridjs-footer {
+  clear: both;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  border-top: 1px solid #ddd;
+  padding-top: 5px;
+  visibility: visible !important;
+}
+
+/* Table styling for Grid.js */
+table.gridjs-table {
+  width: 100%;
+  margin: 0 auto;
+  clear: both;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Fix visibility of Grid.js elements */
+.gridjs-search,
+.gridjs-pagination,
+.gridjs-footer {
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* Progress bar styles */
+.progress-bar {
+  height: 14px;
+  width: 100%;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.1);
+}
+
+.progress-bar-inner {
+  height: 100%;
+  background-color: #337ab7;
+  border-radius: 4px;
+}
+
+/* History link styling */
+a.history-link {
+  color: #337ab7;
+  text-decoration: none;
+}
+
+a.history-link:hover {
+  text-decoration: underline;
+}
+
+/* Empty table styling */
+.gridjs-empty {
+  text-align: center;
+  padding: 20px;
+}
+
+
+/* Responsive styling from original */
+@media screen and (max-width: 767px) {
+  .dataTables_wrapper .dataTables_info,
+  .dataTables_wrapper .dataTables_paginate,
+  .gridjs-summary,
+  .gridjs-pagination {
+    float: none;
+    text-align: center;
+    width: 100%;
+  }
+
+  .dataTables_wrapper .dataTables_paginate,
+  .gridjs-pagination {
+    margin-top: 0.5em;
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .dataTables_wrapper .dataTables_length,
+  .dataTables_wrapper .dataTables_filter,
+  .gridjs-search {
+    float: none;
+    text-align: center;
+    width: 100%;
+  }
+
+  .dataTables_wrapper .dataTables_filter,
+  .gridjs-search {
+    margin-top: 0.5em;
+  }
+}
+.gridjs-tbody tr:nth-child(even) { background-color: rgba(0, 0, 255, 0.05); }
