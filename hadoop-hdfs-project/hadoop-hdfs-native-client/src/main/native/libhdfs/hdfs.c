@@ -1247,7 +1247,7 @@ static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
                 jReplication, jBlockSize);
     }
     if (jthr) {
-        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+        ret = printExceptionAndFree(env, jthr, NOSTACK_FILE_NOT_FOUND,
             "hdfsOpenFile(%s): FileSystem#%s(%s)", path, method, signature);
         goto done;
     }

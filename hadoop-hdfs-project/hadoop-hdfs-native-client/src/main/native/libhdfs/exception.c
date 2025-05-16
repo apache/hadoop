@@ -189,12 +189,25 @@ int printExceptionAndFreeV(JNIEnv *env, jthrowable exc, int noPrintFlags,
         if (!rootCause) {
             fprintf(stderr, "(unable to get root cause for %s)\n", className);
         } else {
-            fprintf(stderr, "%s", rootCause);
+	    // Trim overly long rootCause message after new-line.
+	    const char *newlnIndex = strchr(rootCause, '\n');
+	    int displayLen = 80;
+	    if (newlnIndex != NULL) {
+	        int newLen = (int) (newlnIndex - rootCause);
+		if (newLen > 10 && newLen < 200) {
+		    // Keep message a reasonable length.
+		    displayLen = newLen;
+		}
+	    }
+            fprintf(stderr, "%.*s\n", displayLen, rootCause);
         }
-        if (!stackTrace) {
-            fprintf(stderr, "(unable to get stack trace for %s)\n", className);
-        } else {
-            fprintf(stderr, "%s", stackTrace);
+        if (!(noPrintFlags & NOSTACK_FILE_NOT_FOUND)) {
+        // Do not print stack for file not found
+            if (!stackTrace) {
+                fprintf(stderr, "(unable to get stack trace for %s)\n", className);
+            } else {
+                fprintf(stderr, "%s", stackTrace);
+            }
         }
     }
 

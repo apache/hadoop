@@ -65,6 +65,7 @@
  */
 #define PRINT_EXC_ALL                           0x00
 #define NOPRINT_EXC_FILE_NOT_FOUND              0x01
+#define NOSTACK_FILE_NOT_FOUND                 0x100
 #define NOPRINT_EXC_ACCESS_CONTROL              0x02
 #define NOPRINT_EXC_UNRESOLVED_LINK             0x04
 #define NOPRINT_EXC_PARENT_NOT_DIRECTORY        0x08
