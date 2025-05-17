@@ -750,17 +750,7 @@ public class MockRM extends ResourceManager {
         YarnConfiguration.OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED,
         YarnConfiguration.DEFAULT_OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED)) {
       return new OpportunisticContainerAllocatorAMService(getRMContext(),
-          scheduler) {
-        @Override
-        protected void serviceStart() {
-          // override to not start rpc handler
-        }
-
-        @Override
-        protected void serviceStop() {
-          // don't do anything
-        }
-      };
+          scheduler);
     }
     return new ApplicationMasterService(getRMContext(), scheduler) {
       @Override

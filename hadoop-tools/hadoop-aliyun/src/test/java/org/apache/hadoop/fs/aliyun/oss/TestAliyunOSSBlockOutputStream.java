@@ -26,11 +26,10 @@ import org.apache.hadoop.fs.aliyun.oss.OSSDataBlocks.ByteBufferBlockFactory;
 import org.apache.hadoop.fs.aliyun.oss.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.IOException;
@@ -48,16 +47,17 @@ import static org.apache.hadoop.fs.aliyun.oss.Constants.FAST_UPLOAD_BYTEBUFFER_D
 import static org.apache.hadoop.fs.aliyun.oss.Constants.MULTIPART_UPLOAD_PART_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.MULTIPART_UPLOAD_PART_SIZE_KEY;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.IO_CHUNK_BUFFER_SIZE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests regular and multi-part upload functionality for
  * AliyunOSSBlockOutputStream.
  */
+@Timeout(30 * 60)
 public class TestAliyunOSSBlockOutputStream {
   private FileSystem fs;
   private static final int PART_SIZE = 1024 * 1024;
@@ -65,10 +65,7 @@ public class TestAliyunOSSBlockOutputStream {
       AliyunOSSTestUtils.generateUniqueTestPath();
   private static final long MEMORY_LIMIT = 10 * 1024 * 1024;
 
-  @Rule
-  public Timeout testTimeout = new Timeout(30 * 60 * 1000);
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(MULTIPART_UPLOAD_PART_SIZE_KEY, PART_SIZE);
@@ -79,7 +76,7 @@ public class TestAliyunOSSBlockOutputStream {
     fs = AliyunOSSTestUtils.createTestFileSystem(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (fs != null) {
       fs.delete(new Path(testRootPath), true);
@@ -237,8 +234,8 @@ public class TestAliyunOSSBlockOutputStream {
         OSSDataBlocks.ByteBufferBlockFactory
             blockFactory = (OSSDataBlocks.ByteBufferBlockFactory)
                 ((AliyunOSSFileSystem)fs).getBlockFactory();
-        assertEquals("outstanding buffers in " + blockFactory,
-            0, blockFactory.getOutstandingBufferCount());
+        assertEquals(0, blockFactory.getOutstandingBufferCount(),
+            "outstanding buffers in " + blockFactory);
       }
     }
     BlockOutputStreamStatistics statistics =
@@ -258,7 +255,7 @@ public class TestAliyunOSSBlockOutputStream {
   public void testDirectoryAllocator() throws Throwable {
     Configuration conf = fs.getConf();
     File tmp = AliyunOSSUtils.createTmpFileForWrite("out-", 1024, conf);
-    assertTrue("not found: " + tmp, tmp.exists());
+    assertTrue(tmp.exists(), "not found: " + tmp);
     tmp.delete();
 
     // tmp should not in DeleteOnExitHook
@@ -268,9 +265,9 @@ public class TestAliyunOSSBlockOutputStream {
       field.setAccessible(true);
       String name = field.getName();
       LinkedHashSet<String> files = (LinkedHashSet<String>)field.get(name);
-      assertTrue("in DeleteOnExitHook", files.isEmpty());
-      assertFalse("in DeleteOnExitHook",
-          (new ArrayList<>(files)).contains(tmp.getPath()));
+      assertTrue(files.isEmpty(), "in DeleteOnExitHook");
+      assertFalse(
+          (new ArrayList<>(files)).contains(tmp.getPath()), "in DeleteOnExitHook");
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -290,8 +287,8 @@ public class TestAliyunOSSBlockOutputStream {
     tmp1.delete();
     File tmp2 = AliyunOSSUtils.createTmpFileForWrite("out-", 1024, conf);
     tmp2.delete();
-    assertNotEquals("round robin not working",
-        tmp1.getParent(), tmp2.getParent());
+    assertNotEquals(tmp1.getParent(), tmp2.getParent(),
+        "round robin not working");
   }
 
   @Test
@@ -301,18 +298,17 @@ public class TestAliyunOSSBlockOutputStream {
       int limit = 128;
       OSSDataBlocks.ByteBufferBlockFactory.ByteBufferBlock block
           = factory.create(1, limit, null);
-      assertEquals("outstanding buffers in " + factory,
-          1, factory.getOutstandingBufferCount());
+      assertEquals(1, factory.getOutstandingBufferCount(),
+          "outstanding buffers in " + factory);
 
       byte[] buffer = ContractTestUtils.toAsciiByteArray("test data");
       int bufferLen = buffer.length;
       block.write(buffer, 0, bufferLen);
       assertEquals(bufferLen, block.dataSize());
-      assertEquals("capacity in " + block,
-          limit - bufferLen, block.remainingCapacity());
-      assertTrue("hasCapacity(64) in " + block, block.hasCapacity(64));
-      assertTrue("No capacity in " + block,
-          block.hasCapacity(limit - bufferLen));
+      assertEquals(limit - bufferLen, block.remainingCapacity(),
+          "capacity in " + block);
+      assertTrue(block.hasCapacity(64), "hasCapacity(64) in " + block);
+      assertTrue(block.hasCapacity(limit - bufferLen), "No capacity in " + block);
 
       // now start the write
       OSSDataBlocks.BlockUploadData blockUploadData = block.startUpload();
@@ -320,18 +316,18 @@ public class TestAliyunOSSBlockOutputStream {
           stream =
           (ByteBufferBlockFactory.ByteBufferBlock.ByteBufferInputStream)
               blockUploadData.getUploadStream();
-      assertTrue("Mark not supported in " + stream, stream.markSupported());
-      assertTrue("!hasRemaining() in " + stream, stream.hasRemaining());
+      assertTrue(stream.markSupported(), "Mark not supported in " + stream);
+      assertTrue(stream.hasRemaining(), "!hasRemaining() in " + stream);
 
       int expected = bufferLen;
-      assertEquals("wrong available() in " + stream,
-          expected, stream.available());
+      assertEquals(expected, stream.available(),
+          "wrong available() in " + stream);
 
       assertEquals('t', stream.read());
       stream.mark(limit);
       expected--;
-      assertEquals("wrong available() in " + stream,
-          expected, stream.available());
+      assertEquals(expected, stream.available(),
+          "wrong available() in " + stream);
 
       // read into a byte array with an offset
       int offset = 5;
@@ -340,8 +336,8 @@ public class TestAliyunOSSBlockOutputStream {
       assertEquals('e', in[offset]);
       assertEquals('s', in[offset + 1]);
       expected -= 2;
-      assertEquals("wrong available() in " + stream,
-          expected, stream.available());
+      assertEquals(expected, stream.available(),
+          "wrong available() in " + stream);
 
       // read to end
       byte[] remainder = new byte[limit];
@@ -353,9 +349,8 @@ public class TestAliyunOSSBlockOutputStream {
       assertEquals(expected, index);
       assertEquals('a', remainder[--index]);
 
-      assertEquals("wrong available() in " + stream,
-          0, stream.available());
-      assertTrue("hasRemaining() in " + stream, !stream.hasRemaining());
+      assertEquals(0, stream.available(), "wrong available() in " + stream);
+      assertTrue(!stream.hasRemaining(), "hasRemaining() in " + stream);
 
       // go the mark point
       stream.reset();
@@ -363,14 +358,14 @@ public class TestAliyunOSSBlockOutputStream {
 
       // when the stream is closed, the data should be returned
       stream.close();
-      assertEquals("outstanding buffers in " + factory,
-          1, factory.getOutstandingBufferCount());
+      assertEquals(1, factory.getOutstandingBufferCount(),
+          "outstanding buffers in " + factory);
       block.close();
-      assertEquals("outstanding buffers in " + factory,
-          0, factory.getOutstandingBufferCount());
+      assertEquals(0, factory.getOutstandingBufferCount(),
+          "outstanding buffers in " + factory);
       stream.close();
-      assertEquals("outstanding buffers in " + factory,
-          0, factory.getOutstandingBufferCount());
+      assertEquals(0, factory.getOutstandingBufferCount(),
+          "outstanding buffers in " + factory);
     }
   }
 

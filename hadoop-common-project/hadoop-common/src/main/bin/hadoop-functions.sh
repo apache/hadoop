@@ -1589,6 +1589,7 @@ function hadoop_finalize_jpms_opts
     hadoop_add_param HADOOP_OPTS open.java.util.zip "--add-opens=java.base/java.util.zip=ALL-UNNAMED"
     hadoop_add_param HADOOP_OPTS open.sun.security.util "--add-opens=java.base/sun.security.util=ALL-UNNAMED"
     hadoop_add_param HADOOP_OPTS open.sun.security.x509 "--add-opens=java.base/sun.security.x509=ALL-UNNAMED"
+    hadoop_add_param HADOOP_OPTS enable.native.access "--enable-native-access=ALL-UNNAMED"
 }
 
 ## @description  Finish Java classpath prior to execution
