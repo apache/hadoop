@@ -194,6 +194,13 @@ public class TestCombinedSystemMetricsPublisher {
       boolean v2Enabled) {
     YarnConfiguration yarnConf = new YarnConfiguration();
 
+    // Always set memory store implementations regardless of whether service is enabled
+    yarnConf.setClass(YarnConfiguration.TIMELINE_SERVICE_STORE,
+            MemoryTimelineStore.class, TimelineStore.class);
+    yarnConf.setClass(YarnConfiguration.TIMELINE_SERVICE_STATE_STORE_CLASS,
+            MemoryTimelineStateStore.class, TimelineStateStore.class);
+
+
     if (v1Enabled || v2Enabled) {
       yarnConf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     } else {
@@ -202,10 +209,6 @@ public class TestCombinedSystemMetricsPublisher {
 
     if (v1Enabled) {
       yarnConf.set(YarnConfiguration.TIMELINE_SERVICE_VERSION, "1.0");
-      yarnConf.setClass(YarnConfiguration.TIMELINE_SERVICE_STORE,
-          MemoryTimelineStore.class, TimelineStore.class);
-      yarnConf.setClass(YarnConfiguration.TIMELINE_SERVICE_STATE_STORE_CLASS,
-          MemoryTimelineStateStore.class, TimelineStateStore.class);
     }
 
     if (v2Enabled) {
@@ -444,7 +447,7 @@ public class TestCombinedSystemMetricsPublisher {
     RMAppAttempt appAttempt = mock(RMAppAttempt.class);
     when(appAttempt.getAppAttemptId()).thenReturn(appAttemptId);
     when(appAttempt.getHost()).thenReturn("test host");
-    when(appAttempt.getRpcPort()).thenReturn(-100);
+    when(appAttempt.getRpcPort()).thenReturn(Integer.valueOf(-100));
     if (!unmanagedAMAttempt) {
       Container container = mock(Container.class);
       when(container.getId())
@@ -465,9 +468,9 @@ public class TestCombinedSystemMetricsPublisher {
     when(rmApp.getApplicationType()).thenReturn("test app type");
     when(rmApp.getUser()).thenReturn("testUser");
     when(rmApp.getQueue()).thenReturn("test queue");
-    when(rmApp.getSubmitTime()).thenReturn(Integer.MAX_VALUE + 1L);
-    when(rmApp.getStartTime()).thenReturn(Integer.MAX_VALUE + 2L);
-    when(rmApp.getFinishTime()).thenReturn(Integer.MAX_VALUE + 3L);
+    when(rmApp.getSubmitTime()).thenReturn(Long.valueOf(Integer.MAX_VALUE + 1L));
+    when(rmApp.getStartTime()).thenReturn(Long.valueOf(Integer.MAX_VALUE + 2L));
+    when(rmApp.getFinishTime()).thenReturn(Long.valueOf(Integer.MAX_VALUE + 3L));
     when(rmApp.getDiagnostics()).thenReturn(
         new StringBuilder("test diagnostics info"));
     RMAppAttempt appAttempt = mock(RMAppAttempt.class);
@@ -478,12 +481,12 @@ public class TestCombinedSystemMetricsPublisher {
         FinalApplicationStatus.UNDEFINED);
     Map<String, Long> resourceMap = new HashMap<>();
     resourceMap
-        .put(ResourceInformation.MEMORY_MB.getName(), (long) Integer.MAX_VALUE);
-    resourceMap.put(ResourceInformation.VCORES.getName(), Long.MAX_VALUE);
+        .put(ResourceInformation.MEMORY_MB.getName(), Long.valueOf((long) Integer.MAX_VALUE));
+    resourceMap.put(ResourceInformation.VCORES.getName(), Long.valueOf(Long.MAX_VALUE));
     Map<String, Long> preemptedMap = new HashMap<>();
     preemptedMap
-        .put(ResourceInformation.MEMORY_MB.getName(), (long) Integer.MAX_VALUE);
-    preemptedMap.put(ResourceInformation.VCORES.getName(), Long.MAX_VALUE);
+        .put(ResourceInformation.MEMORY_MB.getName(), Long.valueOf((long) Integer.MAX_VALUE));
+    preemptedMap.put(ResourceInformation.VCORES.getName(), Long.valueOf(Long.MAX_VALUE));
     when(rmApp.getRMAppMetrics()).thenReturn(
         new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, resourceMap,
             preemptedMap, 0));
