@@ -4848,6 +4848,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         blockManager.getBytesInFuture();
     stats[ClientProtocol.GET_STATS_PENDING_DELETION_BLOCKS_IDX] =
         blockManager.getPendingDeletionBlocksCount();
+    stats[ClientProtocol.GET_STATS_BADLY_DISTRIBUTED_BLOCKS_IDX] =
+        getBadlyDistributedBlocksCount();
+    // GET_STATS_LOW_REDUNDANCY_IDX uses getLowRedundancyBlocksCount() which gives us the count of
+    // all types of low redundancy blocks. GET_STATS_NORMAL_LOW_REDUNDANCY_BLOCKS_IDX will give the count
+    // of normal low redundancy blocks only using getLowRedundancyBlocks().
+    stats[ClientProtocol.GET_STATS_NORMAL_LOW_REDUNDANCY_BLOCKS_IDX] =
+        blockManager.getLowRedundancyBlocks();
     return stats;
   }
 
