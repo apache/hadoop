@@ -118,7 +118,6 @@ public class PrometheusMetricsSink implements MetricsSink {
    *        Exposition formats</a>
    *    </li>
    *  </ul>
-   * </p>
    *
    * @param metricName metricName.
    * @param recordName recordName.
@@ -138,7 +137,7 @@ public class PrometheusMetricsSink implements MetricsSink {
       return normalizeImpl(baseName);
     }
   }
-  
+
   /**
    * Underlying Prometheus normalization implementation.
    * See {@link PrometheusMetricsSink#prometheusName(String, String)} for more information.
