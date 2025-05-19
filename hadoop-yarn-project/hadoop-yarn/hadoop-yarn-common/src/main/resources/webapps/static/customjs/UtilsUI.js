@@ -33,13 +33,13 @@ function accordionJS(parent, selector) {
   });
 }
 
-function getProgressbar(value) {
-  let progressBarHTML = "";
-  progressBarHTML += `<br title="${value}">`;
-  progressBarHTML += `<div class="ui-progressbar ui-widget ui-widget-content ui-corner-all" title="${value}">`;
-  progressBarHTML += `<div class="ui-progressbar ui-widget ui-widget-content ui-corner-all" style="width:${value}"></div>`;
-  progressBarHTML += "</div>";
-  return progressBarHTML;
+function getProgressbar(percent) {
+  return `
+    <br title='${percent}'>
+    <div class='ui-progressbar ui-widget ui-widget-content ui-corner-all' title='${percent}%'>
+      <div class='ui-progressbar-value ui-widget-header ui-corner-left' style='width:${percent}%'> </div>
+    </div>
+  `;
 }
 
 function getTableHeadings(id) {
@@ -54,128 +54,14 @@ function getTableHeadings(id) {
 }
 
 function DataTableHelper(dtSelector, opts, hasDate, headings) {
-  // Add natural sort function from yarn.dt.plugins.js
-  function naturalSort(a, b) {
-    var diff = a.length - b.length;
-    if (diff != 0) {
-      var splitA = a.split("_");
-      var splitB = b.split("_");
-      if (splitA.length != splitB.length) {
-        return a.localeCompare(b);
-      }
-      for (var i=1; i < splitA.length; i++) {
-        var splitdiff = splitA[i].length - splitB[i].length;
-        if (splitdiff != 0) {
-          return splitdiff;
-        }
-        var splitCompare = splitA[i].localeCompare(splitB[i]);
-        if (splitCompare != 0) {
-          return splitCompare;
-        }
-      }
-      return diff;
-    }
-    return a.localeCompare(b);
-  }
-
-  // Add parseHadoopID function from yarn.dt.plugins.js
-  function parseHadoopID(data, type) {
-    if (type === 'display') {
-      return data;
-    }
-    if (!data) return '';
-    var splits = String(data).split('>');
-    if (splits.length === 1) return data;
-    return splits[1].split('<')[0];
-  }
-
-  // Add parseHadoopProgress function from yarn.dt.plugins.js
-  function parseHadoopProgress(data, type) {
-    if (type === 'display') {
-      return data;
-    }
-    //Return the title attribute for 'sort', 'filter', 'type' and undefined
-    if (!data) return '0';
-    var parts = String(data).split("'");
-    return parts.length > 1 ? parts[1] : '0';
-  }
-
-  // Function to parse date values
-  function parseDateVals(data) {
-    return Array.prototype.map.call(data, function (d) {
-      if (d.length > 9) {
-        d[7] = renderHadoopDate(d[7], "display", true);
-        d[8] = renderHadoopDate(d[8], "display", true);
-        d[9] = renderHadoopDate(d[9], "display", true);
-      }
-      return d;
-    });
-  }
-
-  // Progress bar formatter
-  function progressFormatter(cell) {
-    if (cell === undefined || cell === null) return gridjs.html("");
-
-    // Assume cell is a number from 0 to 1 (or 0 to 100)
-    let percentage = parseFloat(cell);
-    if (isNaN(percentage)) return gridjs.html(cell);
-
-    // Convert to percentage if necessary
-    if (percentage <= 1) percentage = percentage * 100;
-
-    return gridjs.html(`
-      <div class="progress-bar">
-        <div class="progress-bar-inner" style="width: ${percentage}%"></div>
-      </div>
-    `);
-  }
-
-  // History link formatter
-  function historyLinkFormatter(cell) {
-    if (cell === "History") {
-      return gridjs.html(`<a href="#" class="history-link">History</a>`);
-    }
-    return gridjs.html(cell || "");
-  }
 
   // Ensure opts.data.data is always defined, even if empty
   opts = opts || {};
   opts.data = opts.data || { data: [] };
-
-  // Handle string data (JSON or JavaScript array notation)
-  if (typeof opts.data === "string") {
-    try {
-      opts.data = { data: eval("(" + opts.data + ")") };
-    } catch (e) {
-      console.error("Error parsing data string:", e);
-      opts.data = { data: [] };
-    }
+  if (!Array.isArray(opts.data.data)) {
+    opts.data.data = [];
   }
 
-  if (typeof opts.data.data === "string") {
-    try {
-      opts.data.data = eval("(" + opts.data.data + ")");
-    } catch (e) {
-      console.error("Error parsing data.data string:", e);
-      opts.data.data = [];
-    }
-  }
-
-if (!Array.isArray(opts.data.data)) {
-  opts.data.data = [];
-}
-
-  // Parse dates if needed
-  if (Array.isArray(opts.data.data) && opts.data.data.length && hasDate) {
-    opts.data.data = parseDateVals(opts.data.data);
-  }
-
-  // Store column headings
-  if (headings) {
-    opts.headings = headings;
-  }
-
-  // Create a wrapper object to return
   var tableAPI = {
     grid: null,
     originalData: JSON.parse(JSON.stringify(opts.data.data || [])),
@@ -198,8 +84,6 @@ if (!Array.isArray(opts.data.data)) {
         // Get first column values
         const aVal = a[0] || '';
         const bVal = b[0] || '';
-
-        // Apply natural sort in descending order by swapping the arguments
         return naturalSort(String(bVal), String(aVal)); // Swap a and b for descending
       });
 
@@ -279,6 +163,74 @@ if (!Array.isArray(opts.data.data)) {
     }
   }
   return this;
+},
+filterByColumn: function(columnIdentifier, value, useRegex = false, smart = true) {
+  if (!this.grid) return this;
+
+  // Get current data
+  let filteredData = [...this.originalData];
+
+  // Determine column index from name or use directly if it's a number
+  let columnIndex = columnIdentifier;
+
+  // If columnIdentifier is a string (column name), find its index
+  if (typeof columnIdentifier === 'string') {
+    // Get column names from grid.js config
+    const columnConfigs = this.grid.config.columns;
+    for (let i = 0; i < columnConfigs.length; i++) {
+      if (columnConfigs[i].name === columnIdentifier) {
+        columnIndex = i;
+        break;
+      }
+    }
+
+    // If column not found, log warning and return
+    if (typeof columnIndex === 'string') {
+      console.warn(`Column "${columnIdentifier}" not found`);
+      return this;
+    }
+  }
+
+  // Filter the data
+  if (value && value.toString().trim() !== '') {
+    filteredData = filteredData.filter(row => {
+      if (!row || !row[columnIndex]) return false;
+
+      const cellValue = String(row[columnIndex] || '');
+
+      // Handle regex filtering
+      if (useRegex) {
+        try {
+          const regex = new RegExp(value);
+          return regex.test(cellValue);
+        } catch (e) {
+          console.warn('Invalid regex pattern:', value);
+          return cellValue.toLowerCase().includes(String(value).toLowerCase());
+        }
+      } else {
+        // Handle normal search
+        if (smart) {
+          // Smart search - tokenize and match all words
+          const tokens = String(value).toLowerCase().split(/\s+/);
+          return tokens.every(token => cellValue.toLowerCase().includes(token));
+        } else {
+          // Simple contains search
+          return cellValue.toLowerCase().includes(String(value).toLowerCase());
+        }
+      }
+    });
+  }
+
+  // Update grid and render
+  this.grid.updateConfig({ data: filteredData });
+  this.grid.forceRender();
+
+  // Update filter info if present
+  if (this.addFilteredInfo) {
+    setTimeout(() => this.addFilteredInfo(), 100);
+  }
+
+  return this;
 }
   };
 
@@ -325,20 +277,20 @@ if (opts && opts.aoColumnDefs) {
 var sortFunctions = {
   // Apply the renderer function for a specific column
   preprocess: function(value, renderer) {
-    if (!renderer) return value;
+  if (!renderer) return value;
 
-    if (renderer === 'parseHadoopID') {
-      return parseHadoopID(value, 'sort');
-    } else if (renderer === 'parseHadoopProgress') {
-      return parseHadoopProgress(value, 'sort');
-    } else if (renderer === 'renderHadoopDate') {
-      return renderHadoopDate(value, 'sort');
-    } else if (renderer === 'renderHadoopElapsedTime') {
-      return renderHadoopElapsedTime(value, 'sort');
-    }
+  if (renderer === 'parseHadoopID') {
+    return parseHadoopID(value, 'sort');
+  } else if (renderer === 'parseHadoopProgress') {
+    return parseHadoopProgress(value, 'sort');
+  } else if (renderer === 'renderHadoopDate') {
+    return renderHadoopDate(value, 'sort');
+  } else if (renderer === 'renderHadoopElapsedTime') {
+    return renderHadoopElapsedTime(value, 'sort');
+  }
 
-    return value;
-  },
+  return value;
+},
 
   // Compare two values based on column type
   compare: function(a, b, colType) {
@@ -434,32 +386,49 @@ function configureColumnSort(columnConfig, index) {
 // STEP 4: Get columns (either from headings or DOM)
 var columns = [];
 
-// Try to extract columns from table headers (this is what's actually being used)
+//extract columns from table headers
 var headerCells = dtElem.querySelectorAll("th");
 if (headerCells && headerCells.length) {
   columns = Array.from(headerCells).map(function (th, index) {
     const headerText = th.textContent.trim();
-
-    // Create basic column config
-    const columnConfig = {
-      name: headerText,
-      hidden: index === 15 || index === 18,
-      sort: true,
-      // search: columnTypes[index] ? columnTypes[index].searchable : true,
-      formatter: function (cell) {
-        // Special formatters based on column name
-        if (headerText.toLowerCase().includes("status")) {
-          return gridjs.html(cell || "");
-        } else if (headerText.toLowerCase().includes("progress")) {
-          return progressFormatter(cell);
-        } else if (headerText === "Progress" || headerText.toLowerCase().includes("percent")) {
-          return progressFormatter(cell);
-        } else if (headerText === "History" || headerText === "Actions") {
-          return historyLinkFormatter(cell);
-        }
-        return gridjs.html(cell || "");
+// Create basic column config
+const columnConfig = {
+  name: headerText,
+  sort: true,
+  search: columnTypes[index] ? columnTypes[index].searchable : true,
+formatter: (cell) => {
+  // Get column configuration
+  const colConfig = columnTypes[index];
+  if (colConfig && typeof colConfig.renderer === 'function') {
+    try {
+      if (colConfig.renderer === parseHadoopProgress) {
+  const progressValue = parseHadoopProgress(cell, 'sort');
+  return gridjs.html(getProgressbar(progressValue));
+}
+      else if (colConfig.renderer === parseHadoopID) {
+        return gridjs.html(parseHadoopID(cell, 'display'));
       }
-    };
+      else if (colConfig.renderer === renderHadoopDate) {
+        return gridjs.html(renderHadoopDate(cell, 'display', true));
+      }
+      else if (colConfig.renderer === renderHadoopElapsedTime) {
+        return gridjs.html(renderHadoopElapsedTime(cell, 'display', true));
+      }
+      // Default case for any other renderers
+      return gridjs.html(colConfig.renderer(cell, 'display', true));
+    } catch (e) {
+      console.error('Error applying renderer:', e);
+      return gridjs.html(cell || "");
+    }
+  }
+  // Special case for History
+  if (cell === "History") {
+    return gridjs.html(`<a href="#" class="history-link">History</a>`);
+  }
+  // Default formatting
+  return gridjs.html(cell || "");
+}
+};
 
     // Apply sort function
     return configureColumnSort(columnConfig, index);
@@ -471,9 +440,6 @@ else if (opts.data.data.length > 0) {
     const columnConfig = {
       name: "Column " + (i + 1),
       sort: true,
-      formatter: function (cell) {
-        return gridjs.html(cell || "");
-      }
     };
 
     // Apply sort function
