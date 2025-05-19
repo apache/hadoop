@@ -80,11 +80,11 @@ RUN powershell zstd -d $Env:TEMP\libopenssl-3.1.2-1-x86_64.pkg.tar.zst -o $Env:T
 RUN powershell mkdir "C:\LibOpenSSL"
 RUN powershell tar -xvf $Env:TEMP\libopenssl-3.1.1-1-x86_64.pkg.tar -C "C:\LibOpenSSL"
 
-# Install libxxhash 0.8.1 needed for rsync 3.2.7.
-RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libxxhash-0.8.1-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libxxhash-0.8.1-1-x86_64.pkg.tar.zst
-RUN powershell zstd -d $Env:TEMP\libxxhash-0.8.1-1-x86_64.pkg.tar.zst -o $Env:TEMP\libxxhash-0.8.1-1-x86_64.pkg.tar
+# Install libxxhash 0.8.3 needed for rsync 3.2.7.
+RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libxxhash-0.8.3-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar.zst
+RUN powershell zstd -d $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar.zst -o $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar
 RUN powershell mkdir "C:\LibXXHash"
-RUN powershell tar -xvf $Env:TEMP\libxxhash-0.8.1-1-x86_64.pkg.tar -C "C:\LibXXHash"
+RUN powershell tar -xvf $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar -C "C:\LibXXHash"
 
 # Install libzstd 1.5.4 needed for rsync 3.2.7.
 RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libzstd-1.5.5-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libzstd-1.5.5-1-x86_64.pkg.tar.zst
