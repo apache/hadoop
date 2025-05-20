@@ -560,7 +560,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     ListResponseData listResponseData = fs.getAbfsStore().getClient().listPath(
         "/testContinuationToken", false, 1, null, getTestTracingContext(fs, true),
-        fs.getAbfsStore().getUri());
+        fs.getAbfsStore().getUri(), false);
 
     Assertions.assertThat(listResponseData.getContinuationToken())
         .describedAs("Continuation Token Should not be null").isNotNull();
@@ -569,7 +569,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     ListResponseData listResponseData1 =  fs.getAbfsStore().getClient().listPath(
         "/testContinuationToken", false, 1, listResponseData.getContinuationToken(), getTestTracingContext(fs, true),
-        fs.getAbfsStore().getUri());
+        fs.getAbfsStore().getUri(), false);
 
     Assertions.assertThat(listResponseData1.getContinuationToken())
         .describedAs("Continuation Token Should be null").isNull();
@@ -589,7 +589,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     intercept(AbfsRestOperationException.class,
         () -> fs.getAbfsStore().getClient().listPath(
             "/testInvalidContinuationToken", false, 1, "invalidToken",
-            getTestTracingContext(fs, true), fs.getAbfsStore().getUri()));
+            getTestTracingContext(fs, true), fs.getAbfsStore().getUri(), false));
   }
 
   @Test
@@ -602,7 +602,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     ListResponseData listResponseData = fs.getAbfsStore().getClient().listPath(
         "/testInvalidContinuationToken", false, 1, "",
-        getTestTracingContext(fs, true), fs.getAbfsStore().getUri());
+        getTestTracingContext(fs, true), fs.getAbfsStore().getUri(), false);
 
     Assertions.assertThat(listResponseData.getContinuationToken())
         .describedAs("Continuation Token Should Not be null").isNotNull();

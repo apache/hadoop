@@ -313,7 +313,7 @@ public class ITestAzureBlobFileSystemDelete extends
       doCallRealMethod().when(mockClient)
               .listPath(Mockito.nullable(String.class), Mockito.anyBoolean(),
                       Mockito.anyInt(), Mockito.nullable(String.class),
-                  Mockito.nullable(TracingContext.class), Mockito.nullable(URI.class));
+                  Mockito.nullable(TracingContext.class), Mockito.nullable(URI.class), eq(false));
       doCallRealMethod().when((AbfsBlobClient) mockClient)
               .listPath(Mockito.nullable(String.class), Mockito.anyBoolean(),
                       Mockito.anyInt(), Mockito.nullable(String.class),
@@ -532,12 +532,12 @@ public class ITestAzureBlobFileSystemDelete extends
               boolean recursive = answer.getArgument(1);
               String continuation = answer.getArgument(3);
               TracingContext context = answer.getArgument(4);
-              return client.listPath(path, recursive, 1, continuation, context, null);
+              return client.listPath(path, recursive, 1, continuation, context, null, false);
             })
             .when(spiedClient)
             .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
                     Mockito.nullable(String.class),
-                    Mockito.any(TracingContext.class), Mockito.nullable(URI.class));
+                    Mockito.any(TracingContext.class), Mockito.nullable(URI.class), eq(false));
     client.deleteBlobPath(new Path("/testDir/dir1"),
             null, getTestTracingContext(fs, true));
     fs.delete(new Path("/testDir/dir1"), true);
@@ -684,7 +684,7 @@ public class ITestAzureBlobFileSystemDelete extends
             })
             .when(spiedClient)
             .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
-                    Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(URI.class));
+                    Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(URI.class), eq(false));
     intercept(AccessDeniedException.class,
             () -> {
               fs.delete(new Path("/src"), true);

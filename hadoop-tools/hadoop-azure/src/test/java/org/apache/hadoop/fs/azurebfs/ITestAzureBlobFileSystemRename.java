@@ -108,6 +108,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcom
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.mockito.ArgumentMatchers.eq;
 
 /**
  * Test rename operation.
@@ -1144,12 +1145,12 @@ public class ITestAzureBlobFileSystemRename extends
           String continuation = answer.getArgument(3);
           TracingContext context = answer.getArgument(4);
           return getFileSystem().getAbfsClient()
-              .listPath(path, recursive, 1, continuation, context, null);
+              .listPath(path, recursive, 1, continuation, context, null, false);
         })
         .when(spiedClient)
         .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
             Mockito.nullable(String.class),
-            Mockito.any(TracingContext.class), Mockito.nullable(URI.class));
+            Mockito.any(TracingContext.class), Mockito.nullable(URI.class), eq(false));
     fs.rename(new Path("/testDir/dir1"), new Path("/testDir/dir2"));
     for (int i = 0; i < 10; i++) {
       Assertions.assertThat(fs.exists(new Path("/testDir/dir2/file" + i)))
@@ -1227,13 +1228,13 @@ public class ITestAzureBlobFileSystemRename extends
             listCallInvocation[0]++;
             return getFileSystem().getAbfsClient().listPath(answer.getArgument(0),
                 answer.getArgument(1), 1,
-                answer.getArgument(3), answer.getArgument(4), answer.getArgument(5));
+                answer.getArgument(3), answer.getArgument(4), answer.getArgument(5), answer.getArgument(6));
           }
           return answer.callRealMethod();
         })
         .when(spiedClient)
         .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
-            Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(URI.class));
+            Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(URI.class), eq(false));
     intercept(AccessDeniedException.class,
         () -> {
           fs.rename(new Path("/src"), new Path("/dst"));

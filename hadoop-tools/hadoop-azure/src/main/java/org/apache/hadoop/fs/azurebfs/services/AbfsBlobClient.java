@@ -350,12 +350,6 @@ public class AbfsBlobClient extends AbfsClient {
    */
   @Override
   public ListResponseData listPath(final String relativePath, final boolean recursive,
-      final int listMaxResults, final String continuation, TracingContext tracingContext, URI uri) throws IOException {
-    return listPath(relativePath, recursive, listMaxResults, continuation, tracingContext, uri, true);
-  }
-
-  @Override
-  public ListResponseData listPath(final String relativePath, final boolean recursive,
       final int listMaxResults, final String continuation, TracingContext tracingContext, URI uri, boolean is404CheckRequired)
       throws AzureBlobFileSystemException {
 
@@ -405,7 +399,7 @@ public class AbfsBlobClient extends AbfsClient {
       }
     }
 
-    if (isEmptyListResults(listResponseData) && is404CheckRequired) {
+    if (is404CheckRequired && isEmptyListResults(listResponseData)) {
       // If the list operation returns no paths, we need to check if the path is a file.
       // If it is a file, we need to return the file in the list.
       // If it is a non-existing path, we need to throw a FileNotFoundException.
@@ -2053,8 +2047,14 @@ public class AbfsBlobClient extends AbfsClient {
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     // This method is only called internally to determine state of a path
     // and hence don't need identity transformation to happen.
-    ListResponseData listResponseData = listPath(path, false, 1, null, tracingContext, null, false);
-    return !isEmptyListResults(listResponseData);
+    String continuationToken = null;
+    List<FileStatus> fileStatusList = new ArrayList<>();
+    do {
+      ListResponseData listResponseData = listPath(path, false, 1, null, tracingContext, null, false);
+      fileStatusList.addAll(listResponseData.getFileStatusList());
+      continuationToken = listResponseData.getContinuationToken();
+    } while (StringUtils.isNotEmpty(continuationToken));
+    return !fileStatusList.isEmpty();
   }
 
   /**
