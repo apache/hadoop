@@ -68,6 +68,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDeleted;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -690,7 +691,7 @@ public class ITestAzureBlobFileSystemDelete extends
             });
     Mockito.verify(spiedClient, Mockito.times(1))
             .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
-                    Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(URI.class));
+                    Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(URI.class), eq(false));
   }
 
   /**

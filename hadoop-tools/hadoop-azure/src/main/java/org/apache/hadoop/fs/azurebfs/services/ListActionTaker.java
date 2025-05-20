@@ -239,7 +239,7 @@ public abstract class ListActionTaker {
       op = getAbfsClient().listPath(path.toUri().getPath(),
           true,
           queueAvailableSizeForProduction, continuationToken,
-          tracingContext, null).getOp();
+          tracingContext, null, false).getOp();
     } catch (AzureBlobFileSystemException ex) {
       throw ex;
     } catch (IOException ex) {
