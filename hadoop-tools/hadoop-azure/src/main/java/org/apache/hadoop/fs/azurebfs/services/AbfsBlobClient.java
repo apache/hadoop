@@ -51,6 +51,7 @@ import org.xml.sax.SAXException;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.Path;
@@ -77,6 +78,7 @@ import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
+import org.apache.hadoop.fs.azurebfs.utils.ListUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
@@ -352,9 +354,11 @@ public class AbfsBlobClient extends AbfsClient {
     return listPath(relativePath, recursive, listMaxResults, continuation, tracingContext, uri, true);
   }
 
+  @Override
   public ListResponseData listPath(final String relativePath, final boolean recursive,
       final int listMaxResults, final String continuation, TracingContext tracingContext, URI uri, boolean is404CheckRequired)
       throws AzureBlobFileSystemException {
+
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -431,6 +435,31 @@ public class AbfsBlobClient extends AbfsClient {
     return listResponseData;
   }
 
+
+  @Override
+  public List<FileStatus> postListProcessing(String relativePath, List<FileStatus> fileStatuses,
+      TracingContext tracingContext, URI uri) throws AzureBlobFileSystemException {
+    List<FileStatus> rectifiedFileStatuses = new ArrayList<>();
+    if (fileStatuses.isEmpty() && !relativePath.equals(ROOT_PATH)) {
+      // If the list operation returns no paths, we need to check if the path is a file.
+      // If it is a file, we need to return the file in the list.
+      // If it is a non-existing path, we need to throw a FileNotFoundException.
+      // Root Always exists as directory. It can be an empty listing.
+      AbfsRestOperation pathStatus = this.getPathStatus(relativePath, tracingContext, null, false);
+      BlobListResultSchema listResultSchema = getListResultSchemaFromPathStatus(relativePath, pathStatus);
+      LOG.debug("ListStatus attempted on a file path. Returning file status.");
+      for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
+        rectifiedFileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
+      }
+    } else {
+      rectifiedFileStatuses.addAll(ListUtils.getUniqueListResult(fileStatuses));
+      LOG.debug(
+          "ListBlob API returned a total of {} elements including duplicates."
+              + "Number of unique Elements are {}", fileStatuses.size(),
+          rectifiedFileStatuses.size());
+    }
+    return rectifiedFileStatuses;
+  }
   /**
    * Filter the paths for which no rename redo operation is performed.
    * Update BlobListResultSchema path with filtered entries.

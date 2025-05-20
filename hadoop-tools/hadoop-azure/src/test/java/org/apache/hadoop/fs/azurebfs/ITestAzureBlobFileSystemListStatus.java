@@ -180,12 +180,12 @@ public class ITestAzureBlobFileSystemListStatus extends
     Mockito.verify(spiedClient, times(1)).listPath(
         "/", false,
         spiedFs.getAbfsStore().getAbfsConfiguration().getListMaxResults(),
-        null, spiedTracingContext, spiedFs.getAbfsStore().getUri());
+        null, spiedTracingContext, spiedFs.getAbfsStore().getUri(), false);
     // 2. With continuation token
     Mockito.verify(spiedClient, times(1)).listPath(
         "/", false,
         spiedFs.getAbfsStore().getAbfsConfiguration().getListMaxResults(),
-        TEST_CONTINUATION_TOKEN, spiedTracingContext, spiedFs.getAbfsStore().getUri());
+        TEST_CONTINUATION_TOKEN, spiedTracingContext, spiedFs.getAbfsStore().getUri(), false);
 
     // Assert that none of the API calls used the same tracing header.
     Mockito.verify(spiedTracingContext, times(0)).constructHeader(any(), any(), any());
@@ -593,7 +593,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     // Assert that client.listPath was called 11 times.
     // This will assert server returned 11 entries in total.
     Mockito.verify(client, Mockito.times(TOTAL_NUMBER_OF_PATHS))
-        .listPath(eq(ROOT_PATH), eq(false), eq(1), any(), any(), any());
+        .listPath(eq(ROOT_PATH), eq(false), eq(1), any(), any(), any(), eq(false));
 
     // Assert that after duplicate removal, only 7 unique entries are returned.
     Assertions.assertThat(fileStatuses.length)

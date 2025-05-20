@@ -45,6 +45,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -346,6 +347,20 @@ public class AbfsDfsClient extends AbfsClient {
     ListResponseData listResponseData = parseListPathResults(op.getResult(), uri);
     listResponseData.setOp(op);
     return listResponseData;
+  }
+
+  @Override
+  public ListResponseData listPath(final String relativePath, final boolean recursive,
+      final int listMaxResults, final String continuation, TracingContext tracingContext,
+      URI uri, boolean is404CheckRequired) throws IOException {
+    return listPath(relativePath, recursive,
+        listMaxResults, continuation, tracingContext, uri);
+  }
+
+  @Override
+  public List<FileStatus> postListProcessing(String relativePath, List<FileStatus> fileStatuses,
+      TracingContext tracingContext, URI uri) throws AzureBlobFileSystemException {
+    return fileStatuses;
   }
 
   /**

@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -523,6 +524,12 @@ public abstract class AbfsClient implements Closeable {
    */
   public abstract ListResponseData listPath(String relativePath, boolean recursive,
       int listMaxResults, String continuation, TracingContext tracingContext, URI uri) throws IOException;
+
+  public abstract ListResponseData listPath(String relativePath, boolean recursive,
+      int listMaxResults, String continuation, TracingContext tracingContext, URI uri, boolean is404CheckRequired) throws IOException;
+
+  public abstract List<FileStatus> postListProcessing(String relativePath,
+      List<FileStatus> fileStatuses, TracingContext tracingContext, URI uri) throws AzureBlobFileSystemException;
 
   /**
    * Retrieves user-defined metadata on filesystem.
