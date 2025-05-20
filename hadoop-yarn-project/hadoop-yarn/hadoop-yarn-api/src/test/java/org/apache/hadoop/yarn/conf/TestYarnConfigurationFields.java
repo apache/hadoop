@@ -236,6 +236,7 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
         YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_INTERVAL_MS_TEMPLATE);
     configurationPropsToSkipCompare.add(YarnConfiguration.NM_AUX_SERVICE_REMOTE_CLASSPATH);
     configurationPropsToSkipCompare.add(YarnConfiguration.LINUX_CONTAINER_RUNTIME_CLASS_FMT);
+    configurationPropsToSkipCompare.add(YarnConfiguration.PROXY_ADDRESS_PATTERN);
   }
 
   /**

@@ -2977,6 +2977,12 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_PROXY_ADDRESS =
     "0.0.0.0:" + DEFAULT_PROXY_PORT;
 
+  /** A regex pattern that matches the proxy's hostname.
+   * Used in AmIpFilter, if not set, reverse DNS hostname-based filtering will not be performed.
+   */
+  public static final String PROXY_ADDRESS_PATTERN =
+    PROXY_ADDRESS + ".pattern";
+
   /** Binding address for the web proxy. */
   public static final String PROXY_BIND_HOST =
       PROXY_PREFIX + "bind-host";

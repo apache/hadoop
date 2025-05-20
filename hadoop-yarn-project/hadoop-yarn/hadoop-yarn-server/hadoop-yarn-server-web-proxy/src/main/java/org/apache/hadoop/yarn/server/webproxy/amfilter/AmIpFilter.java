@@ -20,8 +20,11 @@ package org.apache.hadoop.yarn.server.webproxy.amfilter;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
 import org.slf4j.Logger;
@@ -30,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -47,6 +51,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 @Public
 public class AmIpFilter implements Filter {
@@ -69,10 +74,15 @@ public class AmIpFilter implements Filter {
   private long lastUpdate;
   @VisibleForTesting
   Map<String, String> proxyUriBases;
+  Pattern proxyHostPattern = null;
   String rmUrls[] = null;
 
   @Override
   public void init(FilterConfig conf) throws ServletException {
+    Configuration config = loadConfiguration(conf);
+    YarnConfiguration yarnConf = (config instanceof YarnConfiguration) ?
+            (YarnConfiguration) config : new YarnConfiguration(config);
+
     // Maintain for backwards compatibility
     if (conf.getInitParameter(PROXY_HOST) != null
         && conf.getInitParameter(PROXY_URI_BASE) != null) {
@@ -93,6 +103,10 @@ public class AmIpFilter implements Filter {
         } catch(MalformedURLException e) {
           LOG.warn("{} does not appear to be a valid URL", proxyUriBase, e);
         }
+      }
+      String proxyHostPatternStr = yarnConf.get(YarnConfiguration.PROXY_ADDRESS_PATTERN, "");
+      if (proxyHostPatternStr != null && !proxyHostPatternStr.isEmpty()) {
+        proxyHostPattern = Pattern.compile(proxyHostPatternStr);
       }
     }
 
@@ -125,6 +139,62 @@ public class AmIpFilter implements Filter {
     }
   }
 
+  private Boolean filterByProxyAddress(String proxyAddress) throws ServletException {
+    if (proxyAddress == null) {
+      return false;
+    }
+
+    if (getProxyAddresses().contains(proxyAddress)) {
+        return true;
+    } else if (proxyHostPattern != null) {
+      try {
+        String hostName = InetAddress.getByName(proxyAddress).getCanonicalHostName();
+        return proxyHostPattern.matcher(hostName).matches();
+      } catch (UnknownHostException e) {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Helper method to load configuration using the hybrid approach.
+   * Tries ServletContext first, then falls back to loading default config.
+   */
+  private Configuration loadConfiguration(FilterConfig filterConf) throws ServletException {
+    Configuration config = null;
+    ServletContext context = filterConf.getServletContext();
+
+    if (context != null) {
+      Object contextAttr = context.getAttribute(HttpServer2.CONF_CONTEXT_ATTRIBUTE); // "hadoop.conf"
+      if (contextAttr instanceof Configuration) {
+        config = (Configuration) contextAttr;
+        LOG.info("Retrieved Configuration from ServletContext attribute '{}'.", HttpServer2.CONF_CONTEXT_ATTRIBUTE);
+      } else if (contextAttr != null) {
+        LOG.warn("ServletContext attribute '{}' found, but it is not an instance of Configuration (Actual type: {}).",
+                HttpServer2.CONF_CONTEXT_ATTRIBUTE, contextAttr.getClass().getName());
+      }
+    } else {
+      LOG.warn("ServletContext is null during AmIpFilter init.");
+    }
+
+    // If config is still null (not found or wrong type in context), load default
+    if (config == null) {
+      LOG.warn("Could not retrieve valid Configuration from ServletContext. " +
+              "Attempting to load default configuration from classpath. " +
+              "Note: This might not reflect job-specific overrides.");
+      try {
+        config = new YarnConfiguration(); // Load defaults (yarn-default, yarn-site, core-site etc.)
+        LOG.info("Successfully loaded default YarnConfiguration from classpath as fallback.");
+      } catch (Exception e) {
+        LOG.error("Failed to load default YarnConfiguration from classpath.", e);
+        throw new ServletException("Failed to obtain Hadoop/YARN configuration for AmIpFilter.", e);
+      }
+    }
+    return config;
+  }
+
+
   @Override
   public void destroy() {
     //Empty
@@ -140,7 +210,7 @@ public class AmIpFilter implements Filter {
 
     LOG.debug("Remote address for request is: {}", httpReq.getRemoteAddr());
 
-    if (!getProxyAddresses().contains(httpReq.getRemoteAddr())) {
+    if (!filterByProxyAddress(httpReq.getRemoteAddr())) {
       StringBuilder redirect = new StringBuilder(findRedirectUrl());
 
       redirect.append(httpReq.getRequestURI());
