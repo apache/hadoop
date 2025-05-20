@@ -120,21 +120,20 @@ public class JQueryUI extends HtmlBlock {
           "\"fnStateLoad\": function (oSettings) { " +
             "return JSON.parse( sessionStorage.getItem(oSettings.sTableId) );}, ";
 
-    String dtJS = "";
+    StringBuilder dtJSBuilder = new StringBuilder();
     for (String id : split($(DATATABLES_ID))) {
       if (Html.isValidId(id)) {
         String init = $(initID(DATATABLES, id));
         if (init.isEmpty()) {
           init = defaultInit;
         }
-        dtJS = id + "TableData = [];";
-        // for inserting stateSaveInit
+        dtJSBuilder.append(id).append("TableData = [];");
         int pos = init.indexOf('{') + 1;
-        init = new StringBuffer(init).insert(pos, stateSaveInit).toString();
-        dtJS = dtJS + "\n" + join("opts = ", init, ";\nelId = \"#", id, "\";");
+        init = new StringBuilder(init).insert(pos, stateSaveInit).toString();
+        dtJSBuilder.append("\n").append(join("opts = ", init, ";\nelId = \"#", id, "\";"));
         String postInit = $(postInitID(DATATABLES, id));
         if(!postInit.isEmpty()) {
-          dtJS = dtJS + "\n" + postInit;
+          dtJSBuilder.append("\n").append(postInit);
         }
       }
     }
@@ -145,12 +144,11 @@ public class JQueryUI extends HtmlBlock {
         init = defaultInit;
       }
       int pos = init.indexOf('{') + 1;
-      init = new StringBuffer(init).insert(pos, stateSaveInit).toString();
-      dtJS = dtJS + "\n" + join("  DataTableHelper('", escapeEcmaScript(selector), "', ", init,
-              ", true);");
-
+      init = new StringBuilder(init).insert(pos, stateSaveInit).toString();
+      dtJSBuilder.append("\n")
+              .append(join("  DataTableHelper('", escapeEcmaScript(selector), "', ", init, ", true);"));
     }
-    return dtJS;
+    return dtJSBuilder.toString();
   }
 
   public static String initID(String name, String id) {
