@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -442,8 +443,15 @@ public final class AWSClientConfig {
       Map<String, String> awsClientCustomHeadersMap =
               S3AUtils.getTrimmedStringCollectionSplitByEquals(conf, configKey);
       awsClientCustomHeadersMap.forEach((header, valueString) -> {
-        List<String> headerValues = Arrays.asList(valueString.split(";"));
-        clientConfig.putHeader(header, headerValues);
+        List<String> headerValues = Arrays.stream(valueString.split(";"))
+                        .map(String::trim)
+                        .filter(v -> !v.isEmpty())
+                        .collect(Collectors.toList());
+        if (!headerValues.isEmpty()) {
+          clientConfig.putHeader(header, headerValues);
+        } else {
+          LOG.warn("Ignoring header '{}' for {} client because no values were provided", header, awsServiceIdentifier);
+        }
       });
       LOG.debug("headers for {} client = {}", awsServiceIdentifier, clientConfig.headers());
     }
