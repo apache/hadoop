@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_LIST_MAX_RESULTS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FS_AZURE_LISTING_ACTION_THREADS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FS_AZURE_PRODUCER_QUEUE_MAX_SIZE;
-import static org.mockito.ArgumentMatchers.eq;
 
 public class TestListActionTaker extends AbstractAbfsTestWithTimeout {
 

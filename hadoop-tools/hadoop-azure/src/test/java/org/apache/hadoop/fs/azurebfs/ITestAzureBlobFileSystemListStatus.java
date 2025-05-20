@@ -378,28 +378,46 @@ public class ITestAzureBlobFileSystemListStatus extends
 
   @Test
   public void testEmptyListingInSubsequentCall() throws IOException {
-    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, true, EMPTY_STRING, true, 1, 0);
-    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, true, EMPTY_STRING, false, 1, 0);
-    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, true, TEST_CONTINUATION_TOKEN, true, 1, 0);
-    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, true, TEST_CONTINUATION_TOKEN, false, 1, 0);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, true, EMPTY_STRING,
+        true, 1, 0);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, true, EMPTY_STRING,
+        false, 1, 0);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, true, TEST_CONTINUATION_TOKEN,
+        true, 1, 0);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, true, TEST_CONTINUATION_TOKEN,
+        false, 1, 0);
 
-    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, EMPTY_STRING, true, 2, 0);
-    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, EMPTY_STRING, false, 2, 1);
-    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, TEST_CONTINUATION_TOKEN, true, 3, 0);
-    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, TEST_CONTINUATION_TOKEN, false, 3, 1);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, EMPTY_STRING,
+        true, 2, 0);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, EMPTY_STRING,
+        false, 2, 1);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, TEST_CONTINUATION_TOKEN,
+        true, 3, 0);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, TEST_CONTINUATION_TOKEN,
+        false, 3, 1);
 
-    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, EMPTY_STRING, true, 1, 1);
-    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, EMPTY_STRING, false, 1, 1);
-    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, TEST_CONTINUATION_TOKEN, true, 1, 1);
-    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, TEST_CONTINUATION_TOKEN, false, 1, 1);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, EMPTY_STRING,
+        true, 1, 1);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, EMPTY_STRING,
+        false, 1, 1);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, TEST_CONTINUATION_TOKEN,
+        true, 1, 1);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, TEST_CONTINUATION_TOKEN,
+        false, 1, 1);
 
-    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, EMPTY_STRING, true, 2, 1);
-    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, EMPTY_STRING, false, 2, 2);
-    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, TEST_CONTINUATION_TOKEN, true, 3, 1);
-    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, TEST_CONTINUATION_TOKEN, false, 3, 2);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, EMPTY_STRING,
+        true, 2, 1);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, EMPTY_STRING,
+        false, 2, 2);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, TEST_CONTINUATION_TOKEN,
+        true, 3, 1);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, TEST_CONTINUATION_TOKEN,
+        false, 3, 2);
   }
 
-  private void testEmptyListingInSubsequentCallInternal(String firstCT, boolean isfirstEmpty, String secondCT, boolean isSecondEmpty, int expectedInvocations, int expectedSize) throws IOException {
+  private void testEmptyListingInSubsequentCallInternal(String firstCT,
+      boolean isfirstEmpty, String secondCT, boolean isSecondEmpty,
+      int expectedInvocations, int expectedSize) throws IOException {
     AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
     AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
     spiedStore.getAbfsConfiguration().setListMaxResults(1);

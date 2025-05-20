@@ -349,9 +349,18 @@ public class AbfsDfsClient extends AbfsClient {
     return listResponseData;
   }
 
+  /**
+   * Non-functional implementation.
+   * Client side handling to remove duplicates not needed in DFSClient.
+   * @param relativePath on which listing was attempted.
+   * @param fileStatuses result of listing operation.
+   * @param tracingContext for tracing the server calls.
+   * @param uri to be used for path conversion.
+   * @return fileStatuses as it is without any processing.
+   */
   @Override
-  public List<FileStatus> postListProcessing(String relativePath, List<FileStatus> fileStatuses,
-      TracingContext tracingContext, URI uri) throws AzureBlobFileSystemException {
+  public List<FileStatus> postListProcessing(String relativePath,
+      List<FileStatus> fileStatuses, TracingContext tracingContext, URI uri){
     return fileStatuses;
   }
 

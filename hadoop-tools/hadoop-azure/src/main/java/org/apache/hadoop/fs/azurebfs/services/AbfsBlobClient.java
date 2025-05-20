@@ -401,7 +401,18 @@ public class AbfsBlobClient extends AbfsClient {
     return listResponseData;
   }
 
-
+  /**
+   * Post-processing of the list operation on Blob endpoint.
+   * There are two client hanlding to be done on list output.
+   * 1. Empty List returned on server could potentially mean path is a file.
+   * 2. There can be duplicates returned from the server for explicit non-empty directory.
+   * @param relativePath relative path to be listed.
+   * @param fileStatuses list of file statuses returned from the server.
+   * @param tracingContext tracing context to trace server calls.
+   * @param uri URI to be used for path conversion.
+   * @return rectified list of file statuses.
+   * @throws AzureBlobFileSystemException if any failure occurs.
+   */
   @Override
   public List<FileStatus> postListProcessing(String relativePath, List<FileStatus> fileStatuses,
       TracingContext tracingContext, URI uri) throws AzureBlobFileSystemException {
@@ -413,11 +424,12 @@ public class AbfsBlobClient extends AbfsClient {
       // If it is a non-existing path, we need to throw a FileNotFoundException.
       AbfsRestOperation pathStatus = this.getPathStatus(relativePath, tracingContext, null, false);
       BlobListResultSchema listResultSchema = getListResultSchemaFromPathStatus(relativePath, pathStatus);
-      LOG.debug("ListStatus attempted on a file path. Returning file status.");
+      LOG.debug("ListStatus attempted on a file path {}. Returning file status.", relativePath);
       for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
         rectifiedFileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
       }
     } else {
+      // Remove duplicates from the non-empty list output only.
       rectifiedFileStatuses.addAll(ListUtils.getUniqueListResult(fileStatuses));
       LOG.debug(
           "ListBlob API returned a total of {} elements including duplicates."

@@ -525,6 +525,15 @@ public abstract class AbfsClient implements Closeable {
   public abstract ListResponseData listPath(String relativePath, boolean recursive,
       int listMaxResults, String continuation, TracingContext tracingContext, URI uri) throws IOException;
 
+  /**
+   * Post-processing of the list operation.
+   * @param relativePath which is used to list the blobs.
+   * @param fileStatuses list of file statuses to be processed.
+   * @param tracingContext for tracing the server calls.
+   * @param uri to be used for the path conversion.
+   * @return list of file statuses to be returned.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract List<FileStatus> postListProcessing(String relativePath,
       List<FileStatus> fileStatuses, TracingContext tracingContext, URI uri) throws AzureBlobFileSystemException;
 
