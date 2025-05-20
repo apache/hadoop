@@ -139,7 +139,7 @@ public class TestListActionTaker extends AbstractAbfsTestWithTimeout {
           return listResponseData;
         }).when(client)
         .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
-            Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(URI.class), eq(false));
+            Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(URI.class));
 
     listActionTaker.listRecursiveAndTakeAction();
   }

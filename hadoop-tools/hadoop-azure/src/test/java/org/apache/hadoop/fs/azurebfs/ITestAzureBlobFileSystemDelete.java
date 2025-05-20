@@ -313,11 +313,11 @@ public class ITestAzureBlobFileSystemDelete extends
       doCallRealMethod().when(mockClient)
               .listPath(Mockito.nullable(String.class), Mockito.anyBoolean(),
                       Mockito.anyInt(), Mockito.nullable(String.class),
-                  Mockito.nullable(TracingContext.class), Mockito.nullable(URI.class), eq(false));
+                  Mockito.nullable(TracingContext.class), Mockito.nullable(URI.class));
       doCallRealMethod().when((AbfsBlobClient) mockClient)
               .listPath(Mockito.nullable(String.class), Mockito.anyBoolean(),
                       Mockito.anyInt(), Mockito.nullable(String.class),
-                      Mockito.nullable(TracingContext.class), Mockito.nullable(URI.class), Mockito.anyBoolean());
+                      Mockito.nullable(TracingContext.class), Mockito.nullable(URI.class));
       doCallRealMethod().when((AbfsBlobClient) mockClient)
               .getPathStatus(Mockito.nullable(String.class), Mockito.nullable(TracingContext.class),
                       Mockito.nullable(ContextEncryptionAdapter.class), Mockito.anyBoolean());
@@ -532,12 +532,12 @@ public class ITestAzureBlobFileSystemDelete extends
               boolean recursive = answer.getArgument(1);
               String continuation = answer.getArgument(3);
               TracingContext context = answer.getArgument(4);
-              return client.listPath(path, recursive, 1, continuation, context, null, false);
+              return client.listPath(path, recursive, 1, continuation, context, null);
             })
             .when(spiedClient)
             .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
                     Mockito.nullable(String.class),
-                    Mockito.any(TracingContext.class), Mockito.nullable(URI.class), eq(false));
+                    Mockito.any(TracingContext.class), Mockito.nullable(URI.class));
     client.deleteBlobPath(new Path("/testDir/dir1"),
             null, getTestTracingContext(fs, true));
     fs.delete(new Path("/testDir/dir1"), true);
@@ -684,14 +684,14 @@ public class ITestAzureBlobFileSystemDelete extends
             })
             .when(spiedClient)
             .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
-                    Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(URI.class), eq(false));
+                    Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(URI.class));
     intercept(AccessDeniedException.class,
             () -> {
               fs.delete(new Path("/src"), true);
             });
     Mockito.verify(spiedClient, Mockito.times(1))
             .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
-                    Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(URI.class), eq(false));
+                    Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(URI.class));
   }
 
   /**

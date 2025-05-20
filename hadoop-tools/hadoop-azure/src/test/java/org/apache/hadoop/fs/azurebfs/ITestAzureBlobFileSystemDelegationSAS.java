@@ -458,7 +458,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
 
     AbfsRestOperation op = client.listPath(
         implicitDir.toString(), false, 2, null,
-        getTestTracingContext(getFileSystem(), false), null, false).getOp();
+        getTestTracingContext(getFileSystem(), false), null).getOp();
     List<? extends ListResultEntrySchema> list = op.getResult()
         .getListResultSchema()
         .paths();

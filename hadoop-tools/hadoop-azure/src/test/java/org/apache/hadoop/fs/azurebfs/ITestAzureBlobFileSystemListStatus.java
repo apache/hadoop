@@ -183,12 +183,12 @@ public class ITestAzureBlobFileSystemListStatus extends
     Mockito.verify(spiedClient, times(1)).listPath(
         "/", false,
         spiedFs.getAbfsStore().getAbfsConfiguration().getListMaxResults(),
-        null, spiedTracingContext, spiedFs.getAbfsStore().getUri(), false);
+        null, spiedTracingContext, spiedFs.getAbfsStore().getUri());
     // 2. With continuation token
     Mockito.verify(spiedClient, times(1)).listPath(
         "/", false,
         spiedFs.getAbfsStore().getAbfsConfiguration().getListMaxResults(),
-        TEST_CONTINUATION_TOKEN, spiedTracingContext, spiedFs.getAbfsStore().getUri(), false);
+        TEST_CONTINUATION_TOKEN, spiedTracingContext, spiedFs.getAbfsStore().getUri());
 
     // Assert that none of the API calls used the same tracing header.
     Mockito.verify(spiedTracingContext, times(0)).constructHeader(any(), any(), any());
@@ -436,12 +436,12 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     Mockito.doReturn(listResponseData1).doReturn(listResponseData2).doReturn(listResponseData3)
         .when(spiedClient).listPath(eq("/testPath"), eq(false), eq(1),
-        any(), any(), any(), eq(false));
+        any(), any(), any());
 
     FileStatus[] list = spiedFs.listStatus(new Path("/testPath"));
 
     Mockito.verify(spiedClient, times(expectedInvocations)).listPath(eq("/testPath"), eq(false), eq(1),
-        any(), any(TracingContext.class), any(), eq(false));
+        any(), any(TracingContext.class), any());
     Assertions.assertThat(list).hasSize(expectedSize);
 
     if (expectedSize == 0) {
@@ -560,7 +560,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     ListResponseData listResponseData = fs.getAbfsStore().getClient().listPath(
         "/testContinuationToken", false, 1, null, getTestTracingContext(fs, true),
-        fs.getAbfsStore().getUri(), false);
+        fs.getAbfsStore().getUri());
 
     Assertions.assertThat(listResponseData.getContinuationToken())
         .describedAs("Continuation Token Should not be null").isNotNull();
@@ -569,7 +569,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     ListResponseData listResponseData1 =  fs.getAbfsStore().getClient().listPath(
         "/testContinuationToken", false, 1, listResponseData.getContinuationToken(), getTestTracingContext(fs, true),
-        fs.getAbfsStore().getUri(), false);
+        fs.getAbfsStore().getUri());
 
     Assertions.assertThat(listResponseData1.getContinuationToken())
         .describedAs("Continuation Token Should be null").isNull();
@@ -589,7 +589,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     intercept(AbfsRestOperationException.class,
         () -> fs.getAbfsStore().getClient().listPath(
             "/testInvalidContinuationToken", false, 1, "invalidToken",
-            getTestTracingContext(fs, true), fs.getAbfsStore().getUri(), false));
+            getTestTracingContext(fs, true), fs.getAbfsStore().getUri()));
   }
 
   @Test
@@ -602,7 +602,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     ListResponseData listResponseData = fs.getAbfsStore().getClient().listPath(
         "/testInvalidContinuationToken", false, 1, "",
-        getTestTracingContext(fs, true), fs.getAbfsStore().getUri(), false);
+        getTestTracingContext(fs, true), fs.getAbfsStore().getUri());
 
     Assertions.assertThat(listResponseData.getContinuationToken())
         .describedAs("Continuation Token Should Not be null").isNotNull();
@@ -667,7 +667,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     // Assert that client.listPath was called 11 times.
     // This will assert server returned 11 entries in total.
     Mockito.verify(client, Mockito.times(TOTAL_NUMBER_OF_PATHS))
-        .listPath(eq(ROOT_PATH), eq(false), eq(1), any(), any(), any(), eq(false));
+        .listPath(eq(ROOT_PATH), eq(false), eq(1), any(), any(), any());
 
     // Assert that after duplicate removal, only 7 unique entries are returned.
     Assertions.assertThat(fileStatuses.length)

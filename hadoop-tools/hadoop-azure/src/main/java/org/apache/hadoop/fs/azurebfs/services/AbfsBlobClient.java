@@ -350,7 +350,7 @@ public class AbfsBlobClient extends AbfsClient {
    */
   @Override
   public ListResponseData listPath(final String relativePath, final boolean recursive,
-      final int listMaxResults, final String continuation, TracingContext tracingContext, URI uri, boolean is404CheckRequired)
+      final int listMaxResults, final String continuation, TracingContext tracingContext, URI uri)
       throws AzureBlobFileSystemException {
 
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
@@ -398,34 +398,6 @@ public class AbfsBlobClient extends AbfsClient {
         listResponseData.setOp(retryListOp);
       }
     }
-
-    if (is404CheckRequired && isEmptyListResults(listResponseData)) {
-      // If the list operation returns no paths, we need to check if the path is a file.
-      // If it is a file, we need to return the file in the list.
-      // If it is a non-existing path, we need to throw a FileNotFoundException.
-      if (relativePath.equals(ROOT_PATH)) {
-        // Root Always exists as directory. It can be an empty listing.
-        return listResponseData;
-      }
-      AbfsRestOperation pathStatus = this.getPathStatus(relativePath, tracingContext, null, false);
-      BlobListResultSchema listResultSchema = getListResultSchemaFromPathStatus(relativePath, pathStatus);
-      LOG.debug("ListBlob attempted on a file path. Returning file status.");
-      List<VersionedFileStatus> fileStatusList = new ArrayList<>();
-      for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
-        fileStatusList.add(getVersionedFileStatusFromEntry(entry, uri));
-      }
-      AbfsRestOperation listOp = getAbfsRestOperation(
-          AbfsRestOperationType.ListBlobs,
-          HTTP_METHOD_GET,
-          url,
-          requestHeaders);
-      listOp.hardSetGetListStatusResult(HTTP_OK, listResultSchema);
-      listResponseData.setFileStatusList(fileStatusList);
-      listResponseData.setContinuationToken(null);
-      listResponseData.setRenamePendingJsonPaths(null);
-      listResponseData.setOp(listOp);
-      return listResponseData;
-    }
     return listResponseData;
   }
 
@@ -434,11 +406,11 @@ public class AbfsBlobClient extends AbfsClient {
   public List<FileStatus> postListProcessing(String relativePath, List<FileStatus> fileStatuses,
       TracingContext tracingContext, URI uri) throws AzureBlobFileSystemException {
     List<FileStatus> rectifiedFileStatuses = new ArrayList<>();
-    if (fileStatuses.isEmpty() && !relativePath.equals(ROOT_PATH)) {
+    if (fileStatuses.isEmpty() && !ROOT_PATH.equals(relativePath)) {
       // If the list operation returns no paths, we need to check if the path is a file.
       // If it is a file, we need to return the file in the list.
+      // If it is a directory or root path, we need to return an empty list.
       // If it is a non-existing path, we need to throw a FileNotFoundException.
-      // Root Always exists as directory. It can be an empty listing.
       AbfsRestOperation pathStatus = this.getPathStatus(relativePath, tracingContext, null, false);
       BlobListResultSchema listResultSchema = getListResultSchemaFromPathStatus(relativePath, pathStatus);
       LOG.debug("ListStatus attempted on a file path. Returning file status.");
@@ -2036,6 +2008,8 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Checks if the listing of the specified path is non-empty.
+   * Since listing is incomplete as long as continuation token is returned by server,
+   * we need to iterate until either we get one entry o continuation token becomes null.
    *
    * @param path The path to be listed.
    * @param tracingContext The tracing context for tracking the operation.
@@ -2049,30 +2023,13 @@ public class AbfsBlobClient extends AbfsClient {
     // and hence don't need identity transformation to happen.
     String continuationToken = null;
     List<FileStatus> fileStatusList = new ArrayList<>();
+    // We need to loop on continuation token until we get an entry or continuation token becomes null.
     do {
-      ListResponseData listResponseData = listPath(path, false, 1, null, tracingContext, null, false);
+      ListResponseData listResponseData = listPath(path, false, 1, null, tracingContext, null);
       fileStatusList.addAll(listResponseData.getFileStatusList());
       continuationToken = listResponseData.getContinuationToken();
-    } while (StringUtils.isNotEmpty(continuationToken));
+    } while (StringUtils.isNotEmpty(continuationToken) && fileStatusList.isEmpty());
     return !fileStatusList.isEmpty();
-  }
-
-  /**
-   * Check if the list call returned empty results without any continuation token.
-   * @param listResponseData The response of listing API from the server.
-   * @return True if empty results without continuation token.
-   */
-  private boolean isEmptyListResults(ListResponseData listResponseData) {
-    AbfsHttpOperation result = listResponseData.getOp().getResult();
-    boolean isEmptyList = result != null && result.getStatusCode() == HTTP_OK && // List Call was successful
-        result.getListResultSchema() != null && // Parsing of list response was successful
-        listResponseData.getFileStatusList().isEmpty() && listResponseData.getRenamePendingJsonPaths().isEmpty() &&// No paths were returned
-        StringUtils.isEmpty(listResponseData.getContinuationToken()); // No continuation token was returned
-    if (isEmptyList) {
-      LOG.debug("List call returned empty results without any continuation token.");
-      return true;
-    }
-    return false;
   }
 
   /**

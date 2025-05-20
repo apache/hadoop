@@ -523,7 +523,7 @@ public abstract class AbfsClient implements Closeable {
    * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
    */
   public abstract ListResponseData listPath(String relativePath, boolean recursive,
-      int listMaxResults, String continuation, TracingContext tracingContext, URI uri, boolean is404CheckRequired) throws IOException;
+      int listMaxResults, String continuation, TracingContext tracingContext, URI uri) throws IOException;
 
   public abstract List<FileStatus> postListProcessing(String relativePath,
       List<FileStatus> fileStatuses, TracingContext tracingContext, URI uri) throws AzureBlobFileSystemException;
