@@ -579,6 +579,8 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
       if (e instanceof NoLocationException
           || e instanceof RouterResolveException) {
         noLocationException[0] = e;
+      } else {
+        throw e;
       }
       return null;
     }, IOException.class);
