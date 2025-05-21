@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -56,7 +57,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.ArrayList; 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -717,8 +718,8 @@ public class TestDiskBalancer {
           getTrimmedStringCollection(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY));
       final String newDirs = oldDirs.get(0);
       LOG.info("Reconfigure newDirs:" + newDirs);
-      Thread reconfigThread = new Thread() {
-        public void run() {
+      SubjectInheritingThread reconfigThread = new SubjectInheritingThread() {
+        public void work() {
           try {
             LOG.info("Waiting for work plan creation!");
             createWorkPlanLatch.await();

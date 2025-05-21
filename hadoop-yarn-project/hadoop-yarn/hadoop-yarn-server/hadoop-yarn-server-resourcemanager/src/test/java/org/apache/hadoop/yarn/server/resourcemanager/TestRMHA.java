@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -515,7 +516,7 @@ public class TestRMHA {
     rm.adminService.transitionToActive(requestInfo);
 
     // 3. Try Transition to standby
-    Thread t = new Thread(new Runnable() {
+    Thread t = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         try {

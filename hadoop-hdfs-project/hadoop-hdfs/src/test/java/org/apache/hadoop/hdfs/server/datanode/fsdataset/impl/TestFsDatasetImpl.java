@@ -84,6 +84,7 @@ import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.FakeTimer;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -648,9 +649,9 @@ public class TestFsDatasetImpl {
     Random random = new Random();
     // Random write block and delete half of them.
     for (int i = 0; i < threadCount; i++) {
-      Thread thread = new Thread() {
+      SubjectInheritingThread thread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           try {
             String bpid = BLOCK_POOL_IDS[random.nextInt(BLOCK_POOL_IDS.length)];
             for (int blockId = 0; blockId < numBlocks; blockId++) {
@@ -931,8 +932,8 @@ public class TestFsDatasetImpl {
     final CountDownLatch blockReportReceivedLatch = new CountDownLatch(1);
     final CountDownLatch volRemoveStartedLatch = new CountDownLatch(1);
     final CountDownLatch volRemoveCompletedLatch = new CountDownLatch(1);
-    class BlockReportThread extends Thread {
-      public void run() {
+    class BlockReportThread extends SubjectInheritingThread {
+      public void work() {
         // Lets wait for the volume remove process to start
         try {
           volRemoveStartedLatch.await();
@@ -946,8 +947,8 @@ public class TestFsDatasetImpl {
       }
     }
 
-    class ResponderThread extends Thread {
-      public void run() {
+    class ResponderThread extends SubjectInheritingThread {
+      public void work() {
         try (ReplicaHandler replica = dataset
             .createRbw(StorageType.DEFAULT, null, eb, false)) {
           LOG.info("CreateRbw finished");
@@ -973,8 +974,8 @@ public class TestFsDatasetImpl {
       }
     }
 
-    class VolRemoveThread extends Thread {
-      public void run() {
+    class VolRemoveThread extends SubjectInheritingThread {
+      public void work() {
         Set<StorageLocation> volumesToRemove = new HashSet<>();
         try {
           volumesToRemove.add(dataset.getVolume(eb).getStorageLocation());

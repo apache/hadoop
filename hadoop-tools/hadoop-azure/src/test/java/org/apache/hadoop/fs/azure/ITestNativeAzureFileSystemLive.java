@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -67,7 +68,7 @@ public class ITestNativeAzureFileSystemLive extends
     for (int i = 0; i < 10; i++) {
       final int threadNumber = i;
       Path src = path("test" + threadNumber);
-      threads.add(new Thread(() -> {
+      threads.add(new SubjectInheritingThread(() -> {
         try {
           latch.await(Long.MAX_VALUE, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
@@ -155,9 +156,9 @@ public class ITestNativeAzureFileSystemLive extends
     // Acquire the lease on the file in a background thread
     final CountDownLatch leaseAttemptComplete = new CountDownLatch(1);
     final CountDownLatch beginningDeleteAttempt = new CountDownLatch(1);
-    Thread t = new Thread() {
+    SubjectInheritingThread t = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         // Acquire the lease and then signal the main test thread.
         SelfRenewingLease lease = null;
         try {

@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 final class ReadBufferManagerV2 extends ReadBufferManager {
 
@@ -213,7 +214,7 @@ final class ReadBufferManagerV2 extends ReadBufferManager {
     private int count = 0;
     @Override
     public Thread newThread(Runnable r) {
-      return new Thread(r, "ReadAheadV2-Thread-" + count++);
+      return new SubjectInheritingThread(r, "ReadAheadV2-Thread-" + count++);
     }
   };
 

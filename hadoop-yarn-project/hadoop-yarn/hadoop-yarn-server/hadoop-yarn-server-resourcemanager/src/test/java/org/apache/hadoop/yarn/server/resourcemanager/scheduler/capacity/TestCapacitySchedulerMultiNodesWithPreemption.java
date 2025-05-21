@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -171,8 +172,8 @@ public class TestCapacitySchedulerMultiNodesWithPreemption {
 
     // Launch AM in a thread and in parallel free the preempted node's
     // unallocated resources in main thread
-    Thread t1 = new Thread() {
-      public void run() {
+    Thread t1 = new SubjectInheritingThread() {
+      public void work() {
         try {
           MockAM am2 = MockRM.launchAM(app2, rm, nm1);
           result.set(true);

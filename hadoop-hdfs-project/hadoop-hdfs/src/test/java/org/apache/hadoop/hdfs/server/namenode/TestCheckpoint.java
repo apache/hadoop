@@ -88,6 +88,7 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.event.Level;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -2611,7 +2612,7 @@ public class TestCheckpoint {
   /**
    * A utility class to perform a checkpoint in a different thread.
    */
-  private static class DoCheckpointThread extends Thread {
+  private static class DoCheckpointThread extends SubjectInheritingThread {
     private final SecondaryNameNode snn;
     private volatile Throwable thrown = null;
     
@@ -2620,7 +2621,7 @@ public class TestCheckpoint {
     }
     
     @Override
-    public void run() {
+    public void work() {
       try {
         snn.doCheckpoint();
       } catch (Throwable t) {

@@ -41,6 +41,7 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -402,7 +403,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
 
     // Create a thread and throw a RTE inside it
     final RuntimeException rte = new RuntimeException("TestRuntimeException");
-    final Thread testThread = new Thread(new Runnable() {
+    final Thread testThread = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         throw rte;
@@ -446,7 +447,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
 
     // Create a thread and throw a RTE inside it
     final RuntimeException rte = new RuntimeException("TestRuntimeException");
-    final Thread testThread = new Thread(new Runnable() {
+    final Thread testThread = new SubjectInheritingThread(new Runnable() {
       @Override public void run() {
         throw rte;
       }

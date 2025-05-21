@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -109,7 +110,7 @@ class FsDatasetAsyncDiskService {
         synchronized (this) {
           thisIndex = counter++;
         }
-        Thread t = new Thread(r);
+        Thread t = new SubjectInheritingThread(r);
         t.setName("Async disk worker #" + thisIndex +
             " for volume " + volume);
         return t;

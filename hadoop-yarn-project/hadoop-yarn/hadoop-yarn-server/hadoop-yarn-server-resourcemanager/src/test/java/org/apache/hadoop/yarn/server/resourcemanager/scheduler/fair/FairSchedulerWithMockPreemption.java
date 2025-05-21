@@ -37,7 +37,7 @@ public class FairSchedulerWithMockPreemption extends FairScheduler {
     }
 
     @Override
-    public void run() {
+    public void work() {
       while (!Thread.interrupted()) {
         try {
           FSAppAttempt app = context.getStarvedApps().take();

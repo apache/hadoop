@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.service.utils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.ServiceTestUtils;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
@@ -725,9 +726,9 @@ public class TestServiceApiUtil extends ServiceTestUtils {
 
   @Test
   public void testServiceDependencies() {
-    Thread thread = new Thread() {
+    SubjectInheritingThread thread = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         Service service = createExampleApplication();
         Component compa = createComponent("compa");
         Component compb = createComponent("compb");

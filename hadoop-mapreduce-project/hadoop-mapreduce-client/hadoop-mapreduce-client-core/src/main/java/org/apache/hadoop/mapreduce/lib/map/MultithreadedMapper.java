@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.lib.map;
 
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -247,7 +248,7 @@ public class MultithreadedMapper<K1, V1, K2, V2>
     }
   }
 
-  private class MapRunner extends Thread {
+  private class MapRunner extends SubjectInheritingThread {
     private Mapper<K1,V1,K2,V2> mapper;
     private Context subcontext;
     private Throwable throwable;
@@ -269,7 +270,7 @@ public class MultithreadedMapper<K1, V1, K2, V2>
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
         mapper.run(subcontext);
         reader.close();

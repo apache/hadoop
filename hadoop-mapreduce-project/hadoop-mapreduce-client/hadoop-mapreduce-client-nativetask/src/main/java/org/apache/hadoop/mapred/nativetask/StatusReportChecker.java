@@ -22,6 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.mapred.Task.TaskReporter;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,7 +86,7 @@ class StatusReportChecker implements Runnable {
       // init counters used by native side,
       // so they will have correct display name
       initUsedCounters();
-      checker = new Thread(this);
+      checker = new SubjectInheritingThread(this);
       checker.setDaemon(true);
       checker.start();
     }

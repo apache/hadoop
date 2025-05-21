@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.util.ByteArrayManager.ManagerMap;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.jupiter.api.Test;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -226,7 +227,7 @@ public class TestByteArrayManager {
     }
   }
 
-  static class AllocatorThread extends Thread {
+  static class AllocatorThread extends SubjectInheritingThread {
     private final ByteArrayManager bam;
     private final int arrayLength;
     private byte[] array;
@@ -237,7 +238,7 @@ public class TestByteArrayManager {
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
         array = bam.newByteArray(arrayLength);
       } catch (InterruptedException e) {
@@ -333,9 +334,9 @@ public class TestByteArrayManager {
     }
     
     final List<Exception> exceptions = new ArrayList<Exception>();
-    final Thread randomRecycler = new Thread() {
+    final Thread randomRecycler = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         LOG.info("randomRecycler start");
         for(int i = 0; shouldRun(); i++) {
           final int j = ThreadLocalRandom.current().nextInt(runners.length);
@@ -524,7 +525,7 @@ public class TestByteArrayManager {
     
     Thread start(int n) {
       this.n = n;
-      final Thread t = new Thread(this);
+      final Thread t = new SubjectInheritingThread(this);
       t.start();
       return t;
     }
