@@ -403,7 +403,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Post-processing of the list operation on Blob endpoint.
-   * There are two client hanlding to be done on list output.
+   * There are two client handing to be done on list output.
    * 1. Empty List returned on server could potentially mean path is a file.
    * 2. There can be duplicates returned from the server for explicit non-empty directory.
    * @param relativePath relative path to be listed.
@@ -2021,7 +2021,7 @@ public class AbfsBlobClient extends AbfsClient {
   /**
    * Checks if the listing of the specified path is non-empty.
    * Since listing is incomplete as long as continuation token is returned by server,
-   * we need to iterate until either we get one entry o continuation token becomes null.
+   * we need to iterate until either we get one entry or continuation token becomes null.
    *
    * @param path The path to be listed.
    * @param tracingContext The tracing context for tracking the operation.
