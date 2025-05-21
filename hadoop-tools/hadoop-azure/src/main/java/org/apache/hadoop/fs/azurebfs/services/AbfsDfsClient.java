@@ -45,6 +45,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -346,6 +347,21 @@ public class AbfsDfsClient extends AbfsClient {
     ListResponseData listResponseData = parseListPathResults(op.getResult(), uri);
     listResponseData.setOp(op);
     return listResponseData;
+  }
+
+  /**
+   * Non-functional implementation.
+   * Client side handling to remove duplicates not needed in DFSClient.
+   * @param relativePath on which listing was attempted.
+   * @param fileStatuses result of listing operation.
+   * @param tracingContext for tracing the server calls.
+   * @param uri to be used for path conversion.
+   * @return fileStatuses as it is without any processing.
+   */
+  @Override
+  public List<FileStatus> postListProcessing(String relativePath,
+      List<FileStatus> fileStatuses, TracingContext tracingContext, URI uri){
+    return fileStatuses;
   }
 
   /**
