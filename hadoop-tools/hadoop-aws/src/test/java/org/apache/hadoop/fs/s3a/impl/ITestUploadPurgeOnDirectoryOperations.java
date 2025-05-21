@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasPathCapabilities;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MAX_PAGING_KEYS;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_OPERATIONS_PURGE_UPLOADS;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.clearAnyUploads;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createMagicFile;
@@ -127,7 +128,7 @@ public class ITestUploadPurgeOnDirectoryOperations extends AbstractS3ACostTest {
    * @throws IOException listing problem
    */
   private void assertUploadCount(final Path dir, final int expected) throws IOException {
-    Assertions.assertThat(toList(listUploads(dir)))
+    Assertions.assertThat(toList(listUploads(dir, getFileSystem())))
         .describedAs("uploads under %s", dir)
         .hasSize(expected);
   }
@@ -136,14 +137,17 @@ public class ITestUploadPurgeOnDirectoryOperations extends AbstractS3ACostTest {
    * List uploads; use the same APIs that the directory operations use,
    * so implicitly validating them.
    * @param dir directory to list
+   * @param fs
    * @return full list of entries
    * @throws IOException listing problem
    */
-  private RemoteIterator<MultipartUpload> listUploads(Path dir) throws IOException {
-    final S3AFileSystem fs = getFileSystem();
+  private RemoteIterator<MultipartUpload> listUploads(Path dir, S3AFileSystem fs)
+      throws IOException {
     try (AuditSpan ignored = span()) {
       final StoreContext sc = fs.createStoreContext();
-      return fs.listUploadsUnderPrefix(sc, sc.pathToKey(dir));
+      final String prefix = sc.pathToKey(dir);
+      return fs.getStore().getStoreWriter()
+          .listMultipartUploads(sc, prefix, DEFAULT_MAX_PAGING_KEYS);
     }
   }
 }

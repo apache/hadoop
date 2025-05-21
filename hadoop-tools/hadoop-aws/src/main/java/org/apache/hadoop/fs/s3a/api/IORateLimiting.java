@@ -16,17 +16,29 @@
  * limitations under the License.
  */
 
-/**
- * Classes related to writing objects.
- * <p>
- * {@link org.apache.hadoop.fs.s3a.impl.write.StoreWriter} and
- * its implementation {@link org.apache.hadoop.fs.s3a.impl.write.StoreWriterService}
- * export the object model of S3 itself.
- * <p>
- * The {@code Write*} classes bridge from the filesystem APIs to the store, being
- * invoked by filesystem, output stream and committer services.
- */
-@InterfaceAudience.Private
-package org.apache.hadoop.fs.s3a.impl.write;
+package org.apache.hadoop.fs.s3a.api;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import java.time.Duration;
+
+/**
+ * Interface for specific rate limiting of read and write operations.
+ */
+public interface IORateLimiting {
+
+  /**
+   * Acquire write capacity for operations.
+   * This should be done within retry loops.
+   * @param capacity capacity to acquire.
+   * @return time spent waiting for output.
+   */
+  Duration acquireWriteCapacity(int capacity);
+
+  /**
+   * Acquire read capacity for operations.
+   * This should be done within retry loops.
+   * @param capacity capacity to acquire.
+   * @return time spent waiting for output.
+   */
+  Duration acquireReadCapacity(int capacity);
+
+}

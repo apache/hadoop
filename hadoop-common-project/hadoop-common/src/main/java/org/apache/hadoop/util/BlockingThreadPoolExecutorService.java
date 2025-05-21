@@ -131,21 +131,20 @@ public final class BlockingThreadPoolExecutorService
     slower than enqueueing. */
     final BlockingQueue<Runnable> workQueue =
         new LinkedBlockingQueue<>(waitingTasks + activeTasks);
+    final InnerExecutorRejection rejection = new InnerExecutorRejection();
     ThreadPoolExecutor eventProcessingExecutor =
         new ThreadPoolExecutor(activeTasks, activeTasks, keepAliveTime, unit,
             workQueue, newDaemonThreadFactory(prefixName),
-            new RejectedExecutionHandler() {
-              @Override
-              public void rejectedExecution(Runnable r,
-                  ThreadPoolExecutor executor) {
-                // This is not expected to happen.
-                LOG.error("Could not submit task to executor {}",
-                    executor.toString());
-              }
-            });
+            rejection);
     eventProcessingExecutor.allowCoreThreadTimeOut(true);
-    return new BlockingThreadPoolExecutorService(waitingTasks + activeTasks,
-        eventProcessingExecutor);
+    final BlockingThreadPoolExecutorService service =
+        new BlockingThreadPoolExecutorService(waitingTasks + activeTasks,
+            eventProcessingExecutor);
+    rejection.setDelegate((r, executor) -> {
+      service.shutdown();
+    });
+
+    return service;
   }
 
   /**
@@ -164,5 +163,29 @@ public final class BlockingThreadPoolExecutorService
         .append(", activeCount=").append(getActiveCount())
         .append('}');
     return sb.toString();
+  }
+
+  private static class InnerExecutorRejection implements RejectedExecutionHandler {
+
+    private RejectedExecutionHandler delegate;
+
+    private RejectedExecutionHandler getDelegate() {
+      return delegate;
+    }
+
+    private void setDelegate(final RejectedExecutionHandler delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public void rejectedExecution(Runnable r,
+        ThreadPoolExecutor executor) {
+      // This is not expected to happen.
+      LOG.error("Could not submit task to executor {}",
+          executor.toString());
+      if (getDelegate() != null) {
+        delegate.rejectedExecution(r, executor);
+      }
+    }
   }
 }
