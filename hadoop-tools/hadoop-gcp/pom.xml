@@ -362,6 +362,13 @@
           <effort>Max</effort>
         </configuration>
       </plugin>
+            <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <configuration>
+            <suppressionsLocation>src/config/checkstyle-suppressions.xml</suppressionsLocation>
+          </configuration>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
@@ -413,6 +420,24 @@
     </plugins>
   </build>
 
+<dependencyManagement>
+        <dependencies>
+          <dependency>
+            <!--
+      We're using a specific Protobuf version to ensure compatibility with the
+      Google Cloud Storage (GCS) client. The GCS client often relies on
+      particular Long-Term Support (LTS) versions of Protobuf. When we upgrade
+      the GCS client, we'll likely need to update Protobuf too. To prevent
+      dependency conflicts, Protobuf will be shaded within the GCS connector's
+      fat JAR.
+      -->
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>3.25.5</version>
+        </dependency>
+        </dependencies>
+    </dependencyManagement>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -427,13 +452,12 @@
           <groupId>javax.enterprise</groupId>
           <artifactId>cdi-api</artifactId>
         </exclusion>
+        <!-- Exclude protobuf-java 2.5.0 -->
+        <exclusion>
+          <groupId>com.google.protobuf</groupId>
+          <artifactId>protobuf-java</artifactId>
+        </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-common</artifactId>
-      <scope>test</scope>
-      <type>test-jar</type>
     </dependency>
     <dependency>
       <groupId>org.assertj</groupId>
@@ -459,20 +483,21 @@
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-storage</artifactId>
     </dependency>
-    <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-      <!--
-      We're using a specific Protobuf version to ensure compatibility with the
-      Google Cloud Storage (GCS) client. The GCS client often relies on
-      particular Long-Term Support (LTS) versions of Protobuf. When we upgrade
-      the GCS client, we'll likely need to update Protobuf too. To prevent
-      dependency conflicts, Protobuf will be shaded within the GCS connector's
-      fat JAR.
-      -->
-      <version>3.25.3</version>
+        <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 </project>
 

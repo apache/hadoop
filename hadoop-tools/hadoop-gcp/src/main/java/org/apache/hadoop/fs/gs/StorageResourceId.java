@@ -262,6 +262,8 @@ class StorageResourceId {
    * Parses {@link StorageResourceId} from specified string and generationId.
    */
   static StorageResourceId fromStringPath(String path, long generationId) {
+    checkArgument(path != null, "path must not be null");
+
     Matcher matcher = GCS_PATH_PATTERN.matcher(path);
     checkArgument(matcher.matches(), "'%s' is not a valid GCS object name.", path);
 
