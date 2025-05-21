@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
@@ -418,10 +419,11 @@ public class ITestAzureBlobFileSystemListStatus extends
   private void testEmptyListingInSubsequentCallInternal(String firstCT,
       boolean isfirstEmpty, String secondCT, boolean isSecondEmpty,
       int expectedInvocations, int expectedSize) throws IOException {
+    assumeBlobServiceType();
     AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
     AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
     spiedStore.getAbfsConfiguration().setListMaxResults(1);
-    AbfsClient spiedClient = Mockito.spy(spiedStore.getClient());
+    AbfsBlobClient spiedClient = Mockito.spy(spiedStore.getClientHandler().getBlobClient());
     Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
     Mockito.doReturn(spiedClient).when(spiedStore).getClient();
     spiedFs.mkdirs(new Path("/testPath"));
@@ -458,12 +460,19 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     FileStatus[] list = spiedFs.listStatus(new Path("/testPath"));
 
-    Mockito.verify(spiedClient, times(expectedInvocations)).listPath(eq("/testPath"), eq(false), eq(1),
+    Mockito.verify(spiedClient, times(expectedInvocations))
+        .listPath(eq("/testPath"), eq(false), eq(1),
         any(), any(TracingContext.class), any());
+    Mockito.verify(spiedClient, times(1))
+        .postListProcessing(eq("/testPath"), any(), any(), any());
     Assertions.assertThat(list).hasSize(expectedSize);
 
     if (expectedSize == 0) {
-      Mockito.verify(spiedClient, times(1)).postListProcessing(eq("/testPath"), any(), any(), any());
+      Mockito.verify(spiedClient, times(1))
+          .getPathStatus(eq("/testPath"), any(), eq(null), eq(false));
+    } else {
+      Mockito.verify(spiedClient, times(0))
+          .getPathStatus(eq("/testPath"), any(), eq(null), eq(false));
     }
   }
 

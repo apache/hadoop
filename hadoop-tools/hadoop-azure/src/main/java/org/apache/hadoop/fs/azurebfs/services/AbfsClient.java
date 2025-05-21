@@ -165,6 +165,8 @@ public abstract class AbfsClient implements Closeable {
   private String clientProvidedEncryptionKey = null;
   private String clientProvidedEncryptionKeySHA = null;
   private final IdentityTransformerInterface identityTransformer;
+  private final String userName;
+  private String primaryUserGroup;
 
   private final String accountName;
   private final AuthType authType;
@@ -306,6 +308,22 @@ public abstract class AbfsClient implements Closeable {
       throw new IOException(e);
     }
     LOG.trace("IdentityTransformer init complete");
+
+    UserGroupInformation userGroupInformation = UserGroupInformation.getCurrentUser();
+    this.userName = userGroupInformation.getShortUserName();
+    LOG.trace("UGI init complete");
+    if (!abfsConfiguration.getSkipUserGroupMetadataDuringInitialization()) {
+      try {
+        this.primaryUserGroup = userGroupInformation.getPrimaryGroupName();
+      } catch (IOException ex) {
+        LOG.error("Failed to get primary group for {}, using user name as primary group name", userName);
+        this.primaryUserGroup = userName;
+      }
+    } else {
+      //Provide a default group name
+      this.primaryUserGroup = userName;
+    }
+    LOG.trace("primaryUserGroup is {}", this.primaryUserGroup);
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
@@ -1786,37 +1804,6 @@ public abstract class AbfsClient implements Closeable {
   }
 
   /**
-   * Get the primary user group name.
-   * @return primary user group name
-   * @throws AzureBlobFileSystemException if unable to get the primary user group
-   */
-  private String getPrimaryUserGroup() throws AzureBlobFileSystemException {
-    if (!getAbfsConfiguration().getSkipUserGroupMetadataDuringInitialization()) {
-      try {
-        return UserGroupInformation.getCurrentUser().getPrimaryGroupName();
-      } catch (IOException ex) {
-        LOG.error("Failed to get primary group for {}, using user name as primary group name",
-            getPrimaryUser());
-      }
-    }
-    //Provide a default group name
-    return getPrimaryUser();
-  }
-
-  /**
-   * Get the primary username.
-   * @return primary username
-   * @throws AzureBlobFileSystemException if unable to get the primary user
-   */
-  private String getPrimaryUser() throws AzureBlobFileSystemException {
-    try {
-      return UserGroupInformation.getCurrentUser().getUserName();
-    } catch (IOException ex) {
-      throw new AbfsDriverException(ex);
-    }
-  }
-
-  /**
    * Creates a VersionedFileStatus object from the ListResultEntrySchema.
    * @param entry ListResultEntrySchema object.
    * @param uri to be used for the path conversion.
@@ -1829,10 +1816,10 @@ public abstract class AbfsClient implements Closeable {
     String owner = null, group = null;
     try{
       if (identityTransformer != null) {
-        owner = identityTransformer.transformIdentityForGetRequest(
-            entry.owner(), true, getPrimaryUser());
-        group = identityTransformer.transformIdentityForGetRequest(
-            entry.group(), false, getPrimaryUserGroup());
+        owner = identityTransformer.transformIdentityForGetRequest(entry.owner(),
+            true, userName);
+        group = identityTransformer.transformIdentityForGetRequest(entry.group(),
+            false, primaryUserGroup);
       }
     } catch (IOException ex) {
       LOG.error("Failed to get owner/group for path {}", entry.name(), ex);
