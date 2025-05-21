@@ -47,6 +47,7 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree.MemInfo;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree.ProcessSmapMemoryInfo;
@@ -75,8 +76,8 @@ public class TestProcfsBasedProcessTree {
 
   private static final int N = 6; // Controls the RogueTask
 
-  private class RogueTaskThread extends Thread {
-    public void run() {
+  private class RogueTaskThread extends SubjectInheritingThread {
+    public void work() {
       try {
         Vector<String> args = new Vector<String>();
         if (isSetsidAvailable()) {

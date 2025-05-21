@@ -100,6 +100,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 
 import org.slf4j.Logger;
@@ -315,10 +316,10 @@ public class FairScheduler extends
    * asynchronous to the node heartbeats.
    */
   @Deprecated
-  private class ContinuousSchedulingThread extends Thread {
+  private class ContinuousSchedulingThread extends SubjectInheritingThread {
 
     @Override
-    public void run() {
+    public void work() {
       while (!Thread.currentThread().isInterrupted()) {
         try {
           continuousSchedulingAttempt();

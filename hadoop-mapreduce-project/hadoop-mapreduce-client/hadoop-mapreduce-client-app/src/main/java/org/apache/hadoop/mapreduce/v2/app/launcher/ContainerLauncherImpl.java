@@ -43,6 +43,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.util.concurrent.HadoopThreadPoolExecutor;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -285,9 +286,9 @@ public class ContainerLauncherImpl extends AbstractService implements
         Integer.MAX_VALUE, 1, TimeUnit.HOURS,
         new LinkedBlockingQueue<Runnable>(),
         tf);
-    eventHandlingThread = new Thread() {
+    eventHandlingThread = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         ContainerLauncherEvent event = null;
         Set<String> allNodes = new HashSet<String>();
 

@@ -31,6 +31,7 @@ import static org.mockito.Mockito.spy;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -800,7 +801,7 @@ public class TestCapacitySchedulerAsyncScheduling {
     rm.close();
   }
 
-  public static class NMHeartbeatThread extends Thread {
+  public static class NMHeartbeatThread extends SubjectInheritingThread {
     private List<MockNM> mockNMS;
     private int interval;
     private volatile boolean shouldStop = false;
@@ -810,7 +811,7 @@ public class TestCapacitySchedulerAsyncScheduling {
       this.interval = interval;
     }
 
-    public void run() {
+    public void work() {
       while (true) {
         if (shouldStop) {
           break;

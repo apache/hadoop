@@ -29,6 +29,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
@@ -226,9 +227,9 @@ public class TestRouterClientRMService extends BaseRouterClientRMTest {
      * ClientTestThread is a thread to simulate a client request to get a
      * ClientRequestInterceptor for the user.
      */
-    class ClientTestThread extends Thread {
+    class ClientTestThread extends SubjectInheritingThread {
       private ClientRequestInterceptor interceptor;
-      @Override public void run() {
+      @Override public void work() {
         try {
           interceptor = pipeline();
         } catch (IOException | InterruptedException e) {

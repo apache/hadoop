@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -70,11 +71,11 @@ public class TestReflectionUtils {
 
   @Test
   public void testThreadSafe() throws Exception {
-    Thread[] th = new Thread[32];
+    SubjectInheritingThread[] th = new SubjectInheritingThread[32];
     for (int i=0; i<th.length; i++) {
-      th[i] = new Thread() {
+      th[i] = new SubjectInheritingThread() {
           @Override
-          public void run() {
+          public void work() {
             try {
               doTestCache();
             } catch (Throwable t) {

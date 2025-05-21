@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1020,9 +1021,9 @@ public abstract class Shell {
 
     // read error and input streams as this would free up the buffers
     // free the error stream buffer
-    Thread errThread = new Thread() {
+    Thread errThread = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           String line = errReader.readLine();
           while((line != null) && !isInterrupted()) {

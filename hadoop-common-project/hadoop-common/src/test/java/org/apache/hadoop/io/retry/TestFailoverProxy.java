@@ -28,6 +28,7 @@ import org.apache.hadoop.io.retry.UnreliableImplementation.TypeOfExceptionToFail
 import org.apache.hadoop.io.retry.UnreliableInterface.UnreliableException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.util.ThreadUtil;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 
 public class TestFailoverProxy {
@@ -252,7 +253,7 @@ public class TestFailoverProxy {
     
   }
   
-  private static class ConcurrentMethodThread extends Thread {
+  private static class ConcurrentMethodThread extends SubjectInheritingThread {
     
     private UnreliableInterface unreliable;
     public String result;
@@ -262,7 +263,7 @@ public class TestFailoverProxy {
     }
     
     @Override
-    public void run() {
+    public void work() {
       try {
         result = unreliable.failsIfIdentifierDoesntMatch("impl2");
       } catch (Exception e) {
@@ -327,9 +328,9 @@ public class TestFailoverProxy {
           RetryPolicies.failoverOnNetworkException(
               RetryPolicies.TRY_ONCE_THEN_FAIL, 10, 1000, 10000));
     
-    new Thread() {
+    new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         ThreadUtil.sleepAtLeastIgnoreInterrupts(millisToSleep);
         impl1.setIdentifier("renamed-impl1");
       }

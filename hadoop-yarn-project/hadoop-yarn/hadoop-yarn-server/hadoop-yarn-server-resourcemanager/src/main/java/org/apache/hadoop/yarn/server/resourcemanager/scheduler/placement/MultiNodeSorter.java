@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -99,7 +100,7 @@ public class MultiNodeSorter<N extends SchedulerNode> extends AbstractService {
     assert !stopped : "starting when already stopped";
     ses = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
       public Thread newThread(Runnable r) {
-        Thread t = new Thread(r);
+        Thread t = new SubjectInheritingThread(r);
         t.setName(getName());
         return t;
       }

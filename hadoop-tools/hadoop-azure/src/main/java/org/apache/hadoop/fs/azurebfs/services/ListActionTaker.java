@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_LIST_MAX_RESULTS;
@@ -151,7 +152,7 @@ public abstract class ListActionTaker {
     Thread producerThread = null;
     try {
       ListBlobQueue listBlobQueue = createListBlobQueue(configuration);
-      producerThread = new Thread(() -> {
+      producerThread = new SubjectInheritingThread(() -> {
         try {
           produceConsumableList(listBlobQueue);
         } catch (AzureBlobFileSystemException e) {

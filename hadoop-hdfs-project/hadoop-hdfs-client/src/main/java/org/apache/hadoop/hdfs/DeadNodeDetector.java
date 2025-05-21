@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -322,12 +323,12 @@ public class DeadNodeDetector extends Daemon {
   @VisibleForTesting
   void startProbeScheduler() {
     probeDeadNodesSchedulerThr =
-            new Thread(new ProbeScheduler(this, ProbeType.CHECK_DEAD));
+            new SubjectInheritingThread(new ProbeScheduler(this, ProbeType.CHECK_DEAD));
     probeDeadNodesSchedulerThr.setDaemon(true);
     probeDeadNodesSchedulerThr.start();
 
     probeSuspectNodesSchedulerThr =
-            new Thread(new ProbeScheduler(this, ProbeType.CHECK_SUSPECT));
+            new SubjectInheritingThread(new ProbeScheduler(this, ProbeType.CHECK_SUSPECT));
     probeSuspectNodesSchedulerThr.setDaemon(true);
     probeSuspectNodesSchedulerThr.start();
   }

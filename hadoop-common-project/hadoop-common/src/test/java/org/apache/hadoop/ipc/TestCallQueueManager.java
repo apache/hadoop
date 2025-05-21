@@ -40,6 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.CallQueueManager.CallQueueOverflowException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -151,7 +152,7 @@ public class TestCallQueueManager {
     int takeAttempts) throws InterruptedException {
 
     Taker taker = new Taker(cq, takeAttempts, -1);
-    Thread t = new Thread(taker);
+    Thread t = new SubjectInheritingThread(taker);
     t.start();
     t.join(100);
 
@@ -164,7 +165,7 @@ public class TestCallQueueManager {
     int putAttempts) throws InterruptedException {
 
     Putter putter = new Putter(cq, putAttempts, -1);
-    Thread t = new Thread(putter);
+    Thread t = new SubjectInheritingThread(putter);
     t.start();
     t.join(100);
 
@@ -277,7 +278,7 @@ public class TestCallQueueManager {
     // Create putters and takers
     for (int i=0; i < 1000; i++) {
       Putter p = new Putter(manager, -1, -1);
-      Thread pt = new Thread(p);
+      Thread pt = new SubjectInheritingThread(p);
       producers.add(p);
       threads.put(p, pt);
 
@@ -286,7 +287,7 @@ public class TestCallQueueManager {
 
     for (int i=0; i < 100; i++) {
       Taker t = new Taker(manager, -1, -1);
-      Thread tt = new Thread(t);
+      Thread tt = new SubjectInheritingThread(t);
       consumers.add(t);
       threads.put(t, tt);
 

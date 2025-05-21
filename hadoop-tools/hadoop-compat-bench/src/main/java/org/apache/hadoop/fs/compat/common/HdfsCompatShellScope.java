@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -367,7 +368,7 @@ public class HdfsCompatShellScope {
     return lines;
   }
 
-  private static final class StreamPrinter extends Thread {
+  private static final class StreamPrinter extends SubjectInheritingThread {
     private final InputStream in;
     private final List<String> lines;
 
@@ -377,7 +378,7 @@ public class HdfsCompatShellScope {
     }
 
     @Override
-    public void run() {
+    public void work() {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(in, StandardCharsets.UTF_8))) {
         String line = br.readLine();

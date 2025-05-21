@@ -69,6 +69,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -1173,7 +1174,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     assertTrue(lastService instanceof NodeStatusUpdater,
         "last service is NOT the node status updater");
 
-    Thread starterThread = new Thread(() -> {
+    Thread starterThread = new SubjectInheritingThread(() -> {
       try {
         nm.start();
       } catch (Throwable e) {

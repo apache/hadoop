@@ -30,6 +30,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.AsyncGetFuture;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -73,7 +74,7 @@ public class TestAsyncIPC {
     Client.setAsynchronousMode(true);
   }
 
-  static class AsyncCaller extends Thread {
+  static class AsyncCaller extends SubjectInheritingThread {
     private Client client;
     private InetSocketAddress server;
     private int count;
@@ -96,7 +97,7 @@ public class TestAsyncIPC {
     }
 
     @Override
-    public void run() {
+    public void work() {
       // In case Thread#Start is called, which will spawn new thread.
       Client.setAsynchronousMode(true);
       for (int i = 0; i < count; i++) {
@@ -154,7 +155,7 @@ public class TestAsyncIPC {
    * For testing the asynchronous calls of the RPC client
    * implemented with CompletableFuture.
    */
-  static class AsyncCompletableFutureCaller extends Thread {
+  static class AsyncCompletableFutureCaller extends SubjectInheritingThread {
     private final Client client;
     private final InetSocketAddress server;
     private final int count;
@@ -171,7 +172,7 @@ public class TestAsyncIPC {
     }
 
     @Override
-    public void run() {
+    public void work() {
       // Set the RPC client to use asynchronous mode.
       Client.setAsynchronousMode(true);
       long startTime = Time.monotonicNow();
@@ -204,7 +205,7 @@ public class TestAsyncIPC {
     }
   }
 
-  static class AsyncLimitlCaller extends Thread {
+  static class AsyncLimitlCaller extends SubjectInheritingThread {
     private Client client;
     private InetSocketAddress server;
     private int count;
@@ -242,7 +243,7 @@ public class TestAsyncIPC {
     }
 
     @Override
-    public void run() {
+    public void work() {
       // in case Thread#Start is called, which will spawn new thread
       Client.setAsynchronousMode(true);
       for (int i = 0; i < count; i++) {

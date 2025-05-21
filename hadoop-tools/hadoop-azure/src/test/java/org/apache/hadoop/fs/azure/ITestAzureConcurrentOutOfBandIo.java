@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 /**
  * Handle OOB IO into a shared container.
@@ -74,7 +75,7 @@ public class ITestAzureConcurrentOutOfBandIo extends AbstractWasbTestBase {
      * Start writing blocks to Azure storage.
      */
     public void startWriting() {
-      runner = new Thread(this); // Create the block writer thread.
+      runner = new SubjectInheritingThread(this); // Create the block writer thread.
       runner.start(); // Start the block writer thread.
     }
 

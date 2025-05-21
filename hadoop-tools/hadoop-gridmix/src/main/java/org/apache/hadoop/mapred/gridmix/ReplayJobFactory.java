@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,14 +65,14 @@ import java.util.concurrent.TimeUnit;
    public void update(Statistics.ClusterStats item) {
    }
 
-   private class ReplayReaderThread extends Thread {
+   private class ReplayReaderThread extends SubjectInheritingThread {
 
     public ReplayReaderThread(String threadName) {
       super(threadName);
     }
 
 
-    public void run() {
+    public void work() {
       try {
         startFlag.await();
         if (Thread.currentThread().isInterrupted()) {

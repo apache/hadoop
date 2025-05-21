@@ -34,6 +34,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -95,7 +96,7 @@ public class TestDataXceiverBackwardsCompat {
           any(StorageType.class), any(String.class), any(ExtendedBlock.class),
           anyBoolean());
 
-      new Thread(new NullServer(port)).start();
+      new SubjectInheritingThread(new NullServer(port)).start();
     }
 
     @Override
