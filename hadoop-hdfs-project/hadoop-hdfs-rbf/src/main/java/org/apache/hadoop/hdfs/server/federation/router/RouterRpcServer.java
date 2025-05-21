@@ -213,6 +213,7 @@ import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolServerSideTranslatorPB;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -2507,7 +2508,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
     @Override
     public Thread newThread(@NonNull Runnable r) {
-      Thread thread = new Thread(r, namePrefix + threadNumber.getAndIncrement());
+      Thread thread = new HadoopThread(r, namePrefix + threadNumber.getAndIncrement());
       thread.setDaemon(true);
       return thread;
     }

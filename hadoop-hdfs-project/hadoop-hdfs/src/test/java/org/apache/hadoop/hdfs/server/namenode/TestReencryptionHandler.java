@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.StopWatch;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.test.Whitebox;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -177,8 +178,8 @@ public class TestReencryptionHandler {
       zst.addTask(mock);
     }
 
-    Thread removeTaskThread = new Thread() {
-      public void run() {
+    HadoopThread removeTaskThread = new HadoopThread() {
+      public void work() {
         try {
           Thread.sleep(3000);
         } catch (InterruptedException ie) {

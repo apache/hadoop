@@ -34,7 +34,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.VersionInfo;
-
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.junit.Test;
 
 import java.lang.management.ManagementFactory;
@@ -105,7 +105,7 @@ public class TestBalancerService {
   }
 
   private Thread newBalancerService(Configuration conf, String[] args) {
-    return new Thread(new Runnable() {
+    return new HadoopThread(new Runnable() {
       @Override
       public void run() {
         Tool cli = new Balancer.Cli();

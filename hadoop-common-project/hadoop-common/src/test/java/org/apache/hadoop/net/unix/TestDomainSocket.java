@@ -47,7 +47,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.unix.DomainSocket.DomainChannel;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
-
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -457,8 +457,8 @@ public class TestDomainSocket {
         new ArrayBlockingQueue<Throwable>(2);
     final DomainSocket serv = (preConnectedSockets != null) ?
       null : DomainSocket.bindAndListen(TEST_PATH);
-    Thread serverThread = new Thread() {
-      public void run(){
+    Thread serverThread = new HadoopThread() {
+      public void work(){
         // Run server
         DomainSocket conn = null;
         try {
@@ -485,8 +485,8 @@ public class TestDomainSocket {
     };
     serverThread.start();
     
-    Thread clientThread = new Thread() {
-      public void run(){
+    HadoopThread clientThread = new HadoopThread() {
+      public void work(){
         try {
           DomainSocket client = preConnectedSockets != null ?
                 preConnectedSockets[1] : DomainSocket.connect(TEST_PATH);
@@ -626,8 +626,8 @@ public class TestDomainSocket {
     for (int i = 0; i < passedFiles.length; i++) {
       passedFds[i] = passedFiles[i].getInputStream().getFD();
     }
-    Thread serverThread = new Thread() {
-      public void run(){
+    Thread serverThread = new HadoopThread() {
+      public void work(){
         // Run server
         DomainSocket conn = null;
         try {
@@ -649,8 +649,8 @@ public class TestDomainSocket {
     };
     serverThread.start();
 
-    Thread clientThread = new Thread() {
-      public void run(){
+    Thread clientThread = new HadoopThread() {
+      public void work(){
         try {
           DomainSocket client = DomainSocket.connect(TEST_PATH);
           OutputStream clientOutputStream = client.getOutputStream();
@@ -783,7 +783,7 @@ public class TestDomainSocket {
         }
       }
     };
-    Thread readerThread = new Thread(reader);
+    Thread readerThread = new HadoopThread(reader);
     readerThread.start();
     socks[0].getOutputStream().write(1);
     socks[0].getOutputStream().write(2);

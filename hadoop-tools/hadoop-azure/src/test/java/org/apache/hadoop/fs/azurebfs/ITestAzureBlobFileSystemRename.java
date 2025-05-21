@@ -69,6 +69,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
 import static java.net.HttpURLConnection.HTTP_CLIENT_TIMEOUT;
@@ -1011,7 +1012,7 @@ public class ITestAzureBlobFileSystemRename extends
         .acquireLease(Mockito.anyString(), Mockito.anyInt(),
             Mockito.nullable(String.class),
             Mockito.any(TracingContext.class));
-    new Thread(() -> {
+    new HadoopThread(() -> {
       while (!leaseAcquired.get()) {}
       try {
         fs.rename(src, dst);
@@ -1061,7 +1062,7 @@ public class ITestAzureBlobFileSystemRename extends
       return answer.callRealMethod();
     }).when(client).copyBlob(Mockito.any(Path.class), Mockito.any(Path.class),
         Mockito.nullable(String.class), Mockito.any(TracingContext.class));
-    new Thread(() -> {
+    new HadoopThread(() -> {
       while (!copyInProgress.get()) {}
       try {
         os.write(1);

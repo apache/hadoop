@@ -90,7 +90,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -932,7 +932,7 @@ public class UserGroupInformation {
                   new ThreadFactory() {
                     @Override
                     public Thread newThread(Runnable r) {
-                      Thread t = new Thread(r);
+                      Thread t = new HadoopThread(r);
                       t.setDaemon(true);
                       t.setName("TGT Renewer for " + userName);
                       return t;

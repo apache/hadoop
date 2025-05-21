@@ -20,6 +20,7 @@ package org.apache.hadoop.util;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,9 +85,9 @@ public final class ShutdownHookManager {
   static {
     try {
       Runtime.getRuntime().addShutdownHook(
-        new Thread() {
+        new HadoopThread() {
           @Override
-          public void run() {
+          public void work() {
             if (MGR.shutdownInProgress.getAndSet(true)) {
               LOG.info("Shutdown process invoked a second time: ignoring");
               return;

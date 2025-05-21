@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils.NanoTimer;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.test.tags.ScaleTest;
-
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -135,7 +135,7 @@ public class ITestS3AConcurrentOps extends S3AScaleTestBase {
           private AtomicInteger count = new AtomicInteger(0);
 
           public Thread newThread(Runnable r) {
-            return new Thread(r,
+            return new HadoopThread(r,
                 "testParallelRename" + count.getAndIncrement());
           }
         });

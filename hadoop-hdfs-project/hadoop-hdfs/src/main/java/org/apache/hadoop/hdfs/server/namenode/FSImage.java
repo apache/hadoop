@@ -76,7 +76,7 @@ import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
-
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Preconditions;
 
@@ -1247,7 +1247,7 @@ public class FSImage implements Closeable {
              = storage.dirIterator(NameNodeDirType.IMAGE); it.hasNext();) {
         StorageDirectory sd = it.next();
         FSImageSaver saver = new FSImageSaver(ctx, sd, nnf);
-        Thread saveThread = new Thread(saver, saver.toString());
+        Thread saveThread = new HadoopThread(saver, saver.toString());
         saveThreads.add(saveThread);
         saveThread.start();
       }

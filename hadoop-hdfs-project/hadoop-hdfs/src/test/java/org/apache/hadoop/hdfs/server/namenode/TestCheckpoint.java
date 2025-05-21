@@ -88,6 +88,7 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Before;
@@ -2622,7 +2623,7 @@ public class TestCheckpoint {
   /**
    * A utility class to perform a checkpoint in a different thread.
    */
-  private static class DoCheckpointThread extends Thread {
+  private static class DoCheckpointThread extends HadoopThread {
     private final SecondaryNameNode snn;
     private volatile Throwable thrown = null;
     
@@ -2631,7 +2632,7 @@ public class TestCheckpoint {
     }
     
     @Override
-    public void run() {
+    public void work() {
       try {
         snn.doCheckpoint();
       } catch (Throwable t) {

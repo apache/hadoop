@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.junit.After;
 import org.junit.Before;
@@ -223,7 +224,7 @@ public class TestListOpenFiles {
       final AtomicBoolean failoverCompleted = new AtomicBoolean(false);
       final AtomicBoolean listOpenFilesError = new AtomicBoolean(false);
       final int listingIntervalMsec = 250;
-      Thread clientThread = new Thread(new Runnable() {
+      Thread clientThread = new HadoopThread(new Runnable() {
         @Override
         public void run() {
           while(!failoverCompleted.get()) {

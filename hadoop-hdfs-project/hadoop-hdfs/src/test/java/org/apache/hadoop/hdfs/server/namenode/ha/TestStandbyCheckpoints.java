@@ -53,6 +53,7 @@ import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ThreadUtil;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.log4j.spi.LoggingEvent;
 import org.junit.After;
 import org.junit.Before;
@@ -550,9 +551,9 @@ public class TestStandbyCheckpoints {
     ThreadUtil.sleepAtLeastIgnoreInterrupts(1000);
     
     // Perform an RPC that needs to take the write lock.
-    Thread t = new Thread() {
+    HadoopThread t = new HadoopThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           nns[1].getRpcServer().restoreFailedStorage("false");
         } catch (IOException e) {

@@ -29,6 +29,7 @@ import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.FakeTimer;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -268,9 +269,9 @@ public class TestFSNamesystemLock {
     // Track but do not Report if it's held for a long time when re-entering
     // read lock but time since last report does not exceed the suppress
     // warning interval
-    Thread tLong = new Thread() {
+    HadoopThread tLong = new HadoopThread() {
       @Override
-      public void run() {
+      public void work() {
         fsnLock.readLock();
         // Add one lock hold which is the longest, but occurs under a different
         // stack trace, to ensure this is the one that gets logged

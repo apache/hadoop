@@ -27,6 +27,7 @@ import java.util.List;
 
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.mockito.invocation.InvocationOnMock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -552,9 +553,9 @@ public class TestFileAppend3  {
     DFSClientAdapter.setDFSClient(fs, spyClient);
 
     // Create two threads for doing appends to the same file.
-    Thread worker1 = new Thread() {
+    HadoopThread worker1 = new HadoopThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           doSmallAppends(file, fs, 20);
         } catch (IOException e) {
@@ -562,9 +563,9 @@ public class TestFileAppend3  {
       }
     };
 
-    Thread worker2 = new Thread() {
+    HadoopThread worker2 = new HadoopThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           doSmallAppends(file, fs, 20);
         } catch (IOException e) {

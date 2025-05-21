@@ -91,6 +91,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.RetryCache.CacheEntry;
 import org.apache.hadoop.util.LightWeightCache;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -1309,9 +1310,9 @@ public class TestRetryCacheWithHA {
     // set DummyRetryInvocationHandler#block to true
     DummyRetryInvocationHandler.block.set(true);
     
-    new Thread() {
+    new HadoopThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           op.invoke();
           Object result = op.getResult();
