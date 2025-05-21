@@ -48,6 +48,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -1749,9 +1750,9 @@ public class ContainerImpl implements Container {
         container.sendRelaunchEvent();
       } else {
         // wait for some time, then send launch event
-        new Thread() {
+        new SubjectInheritingThread() {
           @Override
-          public void run() {
+          public void work() {
             try {
               Thread.sleep(retryInterval);
               container.sendRelaunchEvent();

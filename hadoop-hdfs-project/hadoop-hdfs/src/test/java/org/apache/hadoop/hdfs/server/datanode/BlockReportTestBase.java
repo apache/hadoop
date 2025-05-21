@@ -70,6 +70,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -915,7 +916,7 @@ public abstract class BlockReportTestBase {
     return ret;
   }
 
-  private class BlockChecker extends Thread {
+  private class BlockChecker extends SubjectInheritingThread {
     final Path filePath;
 
     public BlockChecker(final Path filePath) {
@@ -923,7 +924,7 @@ public abstract class BlockReportTestBase {
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
         startDNandWait(filePath, true);
       } catch (Exception e) {

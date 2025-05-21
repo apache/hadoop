@@ -33,6 +33,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -1023,12 +1024,12 @@ public class TestUserGroupInformation {
       }});
   }
 
-  static class GetTokenThread extends Thread {
+  static class GetTokenThread extends SubjectInheritingThread {
     boolean runThread = true;
     volatile ConcurrentModificationException cme = null;
 
     @Override
-    public void run() {
+    public void work() {
       while(runThread) {
         try {
           UserGroupInformation.getCurrentUser().getCredentials();

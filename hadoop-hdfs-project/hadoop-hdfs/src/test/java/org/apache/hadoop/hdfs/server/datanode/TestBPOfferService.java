@@ -87,6 +87,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -337,7 +338,7 @@ public class TestBPOfferService {
       });
 
       countBlockReportItems(FAKE_BLOCK, mockNN1, blocks);
-      addNewBlockThread = new Thread(() -> {
+      addNewBlockThread = new SubjectInheritingThread(() -> {
         for (int i = 0; i < totalTestBlocks; i++) {
           SimulatedFSDataset fsDataset = (SimulatedFSDataset) mockFSDataset;
           SimulatedStorage simulatedStorage = fsDataset.getStorages().get(0);

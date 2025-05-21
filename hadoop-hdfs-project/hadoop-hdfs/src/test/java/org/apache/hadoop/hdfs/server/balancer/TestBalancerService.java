@@ -34,6 +34,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -106,7 +107,7 @@ public class TestBalancerService {
   }
 
   private Thread newBalancerService(Configuration conf, String[] args) {
-    return new Thread(new Runnable() {
+    return new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         Tool cli = new Balancer.Cli();

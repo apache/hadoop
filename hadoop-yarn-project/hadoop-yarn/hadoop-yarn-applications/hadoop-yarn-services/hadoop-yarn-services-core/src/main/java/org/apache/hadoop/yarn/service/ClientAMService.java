@@ -26,6 +26,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -154,9 +155,9 @@ public class ClientAMService extends AbstractService
 
     // Stop the service in 2 seconds delay to make sure this rpc call is completed.
     // shutdown hook will be executed which will stop AM gracefully.
-    Thread thread = new Thread() {
+    Thread thread = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           Thread.sleep(2000);
           ExitUtil.terminate(0);

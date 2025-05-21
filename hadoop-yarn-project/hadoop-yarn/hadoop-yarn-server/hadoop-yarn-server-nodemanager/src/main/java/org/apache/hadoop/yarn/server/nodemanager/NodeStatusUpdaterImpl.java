@@ -44,6 +44,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionUtil;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -329,7 +330,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       try {
         statusUpdater.join();
         registerWithRM();
-        statusUpdater = new Thread(statusUpdaterRunnable, "Node Status Updater");
+        statusUpdater = new SubjectInheritingThread(statusUpdaterRunnable, "Node Status Updater");
         this.isStopped = false;
         statusUpdater.start();
         LOG.info("NodeStatusUpdater thread is reRegistered and restarted");
@@ -828,7 +829,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   protected void startStatusUpdater() {
     statusUpdaterRunnable = new StatusUpdaterRunnable();
     statusUpdater =
-        new Thread(statusUpdaterRunnable, "Node Status Updater");
+        new SubjectInheritingThread(statusUpdaterRunnable, "Node Status Updater");
     statusUpdater.start();
   }
 

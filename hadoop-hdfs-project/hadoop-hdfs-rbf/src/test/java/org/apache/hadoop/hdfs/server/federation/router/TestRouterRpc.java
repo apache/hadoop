@@ -152,6 +152,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 /**
  * The the RPC interface of the {@link Router} implemented by
@@ -2393,7 +2394,7 @@ public class TestRouterRpc {
     String dirPath = "/test";
 
     // The reason we start this child thread is that CallContext use InheritableThreadLocal.
-    Thread t1 = new Thread(() -> {
+    SubjectInheritingThread t1 = new SubjectInheritingThread(() -> {
       // Set flag async:true.
       CallerContext.setCurrent(
           new CallerContext.Builder("async:true").build());

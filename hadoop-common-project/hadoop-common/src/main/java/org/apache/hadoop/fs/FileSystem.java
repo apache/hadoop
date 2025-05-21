@@ -81,6 +81,7 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.tracing.TraceScope;
 import org.apache.hadoop.util.Preconditions;
@@ -4087,7 +4088,7 @@ public abstract class FileSystem extends Configured
     static {
       STATS_DATA_REF_QUEUE = new ReferenceQueue<>();
       // start a single daemon cleaner thread
-      STATS_DATA_CLEANER = new Thread(new StatisticsDataReferenceCleaner());
+      STATS_DATA_CLEANER = new SubjectInheritingThread(new StatisticsDataReferenceCleaner());
       STATS_DATA_CLEANER.
           setName(StatisticsDataReferenceCleaner.class.getName());
       STATS_DATA_CLEANER.setDaemon(true);

@@ -324,7 +324,7 @@ public class TestRouterMountTableCacheRefresh {
               String adminAddress) {
             return new MountTableRefresherThread(null, adminAddress) {
               @Override
-              public void run() {
+              public void work() {
                 try {
                   // Sleep 1 minute
                   Thread.sleep(60000);

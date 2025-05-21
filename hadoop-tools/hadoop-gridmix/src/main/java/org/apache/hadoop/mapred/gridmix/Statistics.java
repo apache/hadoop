@@ -28,6 +28,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -216,13 +217,13 @@ public class Statistics implements Component<Statistics.JobStats> {
     statistics.start();
   }
 
-  private class StatCollector extends Thread {
+  private class StatCollector extends SubjectInheritingThread {
 
     StatCollector() {
       super("StatsCollectorThread");
     }
 
-    public void run() {
+    public void work() {
       try {
         startFlag.await();
         if (Thread.currentThread().isInterrupted()) {

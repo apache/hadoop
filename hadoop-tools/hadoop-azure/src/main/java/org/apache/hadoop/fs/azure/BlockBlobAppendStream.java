@@ -44,6 +44,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.fs.FSExceptionMessages;
@@ -821,7 +822,7 @@ public class BlockBlobAppendStream extends OutputStream implements Syncable,
 
     @Override
     public Thread newThread(Runnable r) {
-      Thread t = new Thread(r);
+      Thread t = new SubjectInheritingThread(r);
       t.setName(String.format("%s-%d", THREAD_ID_PREFIX,
           threadSequenceNumber.getAndIncrement()));
       return t;

@@ -72,6 +72,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,7 +115,7 @@ public class LocalJobRunner implements ClientProtocol {
         this, protocol, clientVersion, clientMethodsHash);
   }
 
-  private class Job extends Thread implements TaskUmbilicalProtocol {
+  private class Job extends SubjectInheritingThread implements TaskUmbilicalProtocol {
     // The job directory on the system: JobClient places job configurations here.
     // This is analogous to JobTracker's system directory.
     private Path systemJobDir;
@@ -521,7 +522,7 @@ public class LocalJobRunner implements ClientProtocol {
     }
 
     @Override
-    public void run() {
+    public void work() {
       JobID jobId = profile.getJobID();
       JobContext jContext = new JobContextImpl(job, jobId);
       

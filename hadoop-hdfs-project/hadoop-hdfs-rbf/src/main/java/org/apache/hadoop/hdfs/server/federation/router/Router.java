@@ -59,6 +59,7 @@ import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -391,9 +392,9 @@ public class Router extends CompositeService implements
    * Shutdown the router.
    */
   public void shutDown() {
-    new Thread() {
+    new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         Router.this.stop();
       }
     }.start();

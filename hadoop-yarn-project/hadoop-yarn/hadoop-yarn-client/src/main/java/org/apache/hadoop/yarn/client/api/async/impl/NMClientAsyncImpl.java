@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.state.StateMachineFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,7 +74,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
 
   protected ThreadPoolExecutor threadPool;
   protected int maxThreadPoolSize;
-  protected Thread eventDispatcherThread;
+  protected SubjectInheritingThread eventDispatcherThread;
   protected AtomicBoolean stopped = new AtomicBoolean(false);
   protected BlockingQueue<ContainerEvent> events =
       new LinkedBlockingQueue<ContainerEvent>();
@@ -151,9 +152,9 @@ public class NMClientAsyncImpl extends NMClientAsync {
     threadPool = new ThreadPoolExecutor(initSize, Integer.MAX_VALUE, 1,
         TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>(), tf);
 
-    eventDispatcherThread = new Thread() {
+    eventDispatcherThread = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         ContainerEvent event = null;
         Set<String> allNodes = new HashSet<String>();
 
