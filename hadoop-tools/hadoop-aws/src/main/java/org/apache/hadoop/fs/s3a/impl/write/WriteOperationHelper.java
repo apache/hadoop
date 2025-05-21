@@ -16,16 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a;
+package org.apache.hadoop.fs.s3a.impl.write;
 
 import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
@@ -43,18 +41,20 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.s3a.Invoker;
+import org.apache.hadoop.fs.s3a.Retries;
+import org.apache.hadoop.fs.s3a.S3ADataBlocks;
+import org.apache.hadoop.fs.s3a.S3ARetryPolicy;
+import org.apache.hadoop.fs.s3a.WriteOperations;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
-import org.apache.hadoop.fs.s3a.impl.StoreContext;
-import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
-import static org.apache.hadoop.util.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.store.audit.AuditingFunctions.withinAuditSpan;
 
@@ -81,7 +81,7 @@ import static org.apache.hadoop.fs.store.audit.AuditingFunctions.withinAuditSpan
  * This API is for internal use only.
  * Span scoping: This helper is instantiated with span; it will be used
  * before operations which query/update S3
- *
+ * <p>
  * History
  * <pre>
  * - A nested class in S3AFileSystem
@@ -89,6 +89,7 @@ import static org.apache.hadoop.fs.store.audit.AuditingFunctions.withinAuditSpan
  * - [HADOOP-13786] A separate class, single instance in S3AFS
  * - [HDFS-13934] Split into interface and implementation
  * - [HADOOP-15711] Adds audit tracking; one instance per use.
+ * - [HADOOP-19569] Bond to S3AStore services, removing all use of S3AFS.
  * </pre>
  */
 @InterfaceAudience.Private
@@ -96,11 +97,6 @@ import static org.apache.hadoop.fs.store.audit.AuditingFunctions.withinAuditSpan
 public class WriteOperationHelper implements WriteOperations {
   private static final Logger LOG =
       LoggerFactory.getLogger(WriteOperationHelper.class);
-
-  /**
-   * Owning filesystem.
-   */
-  private final S3AFileSystem owner;
 
   /**
    * Invoker for operations; uses the S3A retry policy and calls int
@@ -115,16 +111,6 @@ public class WriteOperationHelper implements WriteOperations {
   private final String bucket;
 
   /**
-   * statistics context.
-   */
-  private final S3AStatisticsContext statisticsContext;
-
-  /**
-   * Store Context; extracted from owner.
-   */
-  private final StoreContext storeContext;
-
-  /**
    * Source of Audit spans.
    */
   private final AuditSpanSource auditSpanSource;
@@ -132,7 +118,7 @@ public class WriteOperationHelper implements WriteOperations {
   /**
    * Audit Span.
    */
-  private AuditSpan auditSpan;
+  private final AuditSpan auditSpan;
 
   /**
    * Factory for AWS requests.
@@ -142,34 +128,26 @@ public class WriteOperationHelper implements WriteOperations {
   /**
    * WriteOperationHelper callbacks.
    */
-  private final WriteOperationHelperCallbacks writeOperationHelperCallbacks;
+  private final WriteOperationHelperCallbacks callbacks;
 
   /**
    * Constructor.
-   * @param owner owner FS creating the helper
-   * @param conf Configuration object
-   * @param statisticsContext statistics context
    * @param auditSpanSource source of spans
    * @param auditSpan span to activate
-   * @param writeOperationHelperCallbacks callbacks used by writeOperationHelper
+   * @param callbacks callbacks used by writeOperationHelper
    */
-  protected WriteOperationHelper(S3AFileSystem owner,
-      Configuration conf,
-      S3AStatisticsContext statisticsContext,
+  protected WriteOperationHelper(
       final AuditSpanSource auditSpanSource,
       final AuditSpan auditSpan,
-      final WriteOperationHelperCallbacks writeOperationHelperCallbacks) {
-    this.owner = owner;
-    this.invoker = new Invoker(new S3ARetryPolicy(conf),
+      final WriteOperationHelperCallbacks callbacks) {
+    this.conf = requireNonNull(callbacks.getConf());
+    this.invoker = new Invoker(new S3ARetryPolicy(this.conf),
         this::operationRetried);
-    this.conf = conf;
-    this.statisticsContext = statisticsContext;
-    this.storeContext = owner.createStoreContext();
-    this.bucket = owner.getBucket();
-    this.auditSpanSource = auditSpanSource;
-    this.auditSpan = checkNotNull(auditSpan);
-    this.requestFactory = owner.getRequestFactory();
-    this.writeOperationHelperCallbacks = writeOperationHelperCallbacks;
+    this.bucket = requireNonNull(callbacks.getBucket());
+    this.auditSpanSource = requireNonNull(auditSpanSource);
+    this.auditSpan = requireNonNull(auditSpan);
+    this.requestFactory = requireNonNull(callbacks.getRequestFactory());
+    this.callbacks = callbacks;
   }
 
   /**
@@ -183,7 +161,7 @@ public class WriteOperationHelper implements WriteOperations {
       boolean idempotent) {
     LOG.info("{}: Retried {}: {}", text, retries, ex.toString());
     LOG.debug("Stack", ex);
-    owner.operationRetried(text, ex, retries, idempotent);
+    callbacks.operationRetried(text, ex, retries, idempotent);
   }
 
   /**
@@ -280,7 +258,7 @@ public class WriteOperationHelper implements WriteOperations {
             final CreateMultipartUploadRequest.Builder initiateMPURequestBuilder =
                 getRequestFactory().newMultipartUploadRequestBuilder(
                     destKey, options);
-            return owner.initiateMultipartUpload(initiateMPURequestBuilder.build())
+            return callbacks.initiateMultipartUpload(initiateMPURequestBuilder.build())
                 .uploadId();
           });
     }
@@ -320,7 +298,7 @@ public class WriteOperationHelper implements WriteOperations {
           () -> {
             final CompleteMultipartUploadRequest.Builder requestBuilder =
                 getRequestFactory().newCompleteMultipartUploadRequestBuilder(destKey, uploadId, partETags, putOptions);
-            return writeOperationHelperCallbacks.completeMultipartUpload(requestBuilder.build());
+            return callbacks.completeMultipartUpload(requestBuilder.build());
           });
       return uploadResult;
     }
@@ -351,8 +329,8 @@ public class WriteOperationHelper implements WriteOperations {
       AtomicInteger errorCount,
       PutObjectOptions putOptions)
       throws IOException {
-    checkNotNull(uploadId);
-    checkNotNull(partETags);
+    requireNonNull(uploadId);
+    requireNonNull(partETags);
     LOG.debug("Completing multipart upload {} with {} parts",
         uploadId, partETags.size());
     return finalizeMultipartUpload(destKey,
@@ -383,14 +361,14 @@ public class WriteOperationHelper implements WriteOperations {
           true,
           retrying,
           withinAuditSpan(getAuditSpan(), () ->
-              owner.abortMultipartUpload(
+              callbacks.abortMultipartUpload(
                   destKey, uploadId)));
     } else {
       // single pass attempt.
       once("Aborting multipart upload ID " + uploadId,
           destKey,
           withinAuditSpan(getAuditSpan(), () ->
-              owner.abortMultipartUpload(
+              callbacks.abortMultipartUpload(
                   destKey,
                   uploadId)));
     }
@@ -407,7 +385,7 @@ public class WriteOperationHelper implements WriteOperations {
       throws FileNotFoundException, IOException {
     invoker.retry("Aborting multipart commit", upload.key(), true,
         withinAuditSpan(getAuditSpan(),
-            () -> owner.abortMultipartUpload(upload)));
+            () -> callbacks.abortMultipartUpload(upload)));
   }
 
 
@@ -441,7 +419,7 @@ public class WriteOperationHelper implements WriteOperations {
   public List<MultipartUpload> listMultipartUploads(final String prefix)
       throws IOException {
     activateAuditSpan();
-    return owner.listMultipartUploads(prefix);
+    return callbacks.listMultipartUploads(prefix);
   }
 
   /**
@@ -519,7 +497,7 @@ public class WriteOperationHelper implements WriteOperations {
       DurationTrackerFactory durationTrackerFactory)
       throws IOException {
     return retry("Writing Object", putObjectRequest.key(), true, withinAuditSpan(getAuditSpan(),
-        () -> owner.putObjectDirect(putObjectRequest, putOptions, uploadData,
+        () -> callbacks.putObjectDirect(putObjectRequest, putOptions, uploadData,
             durationTrackerFactory)));
   }
 
@@ -534,9 +512,7 @@ public class WriteOperationHelper implements WriteOperations {
   public void revertCommit(String destKey) throws IOException {
     once("revert commit", destKey,
         withinAuditSpan(getAuditSpan(), () -> {
-          Path destPath = owner.keyToQualifiedPath(destKey);
-          owner.deleteObjectAtPath(destPath,
-              destKey, true);
+          callbacks.deleteObjectAtPath(destKey, true);
         }));
   }
 
@@ -560,8 +536,8 @@ public class WriteOperationHelper implements WriteOperations {
       List<CompletedPart> partETags,
       long length)
       throws IOException {
-    checkNotNull(uploadId);
-    checkNotNull(partETags);
+    requireNonNull(uploadId);
+    requireNonNull(partETags);
     LOG.debug("Completing multipart upload {} with {} parts",
         uploadId, partETags.size());
     return finalizeMultipartUpload(destKey,
@@ -589,7 +565,7 @@ public class WriteOperationHelper implements WriteOperations {
         request.key(),
         true,
         withinAuditSpan(getAuditSpan(),
-            () -> writeOperationHelperCallbacks.uploadPart(request,
+            () -> callbacks.uploadPart(request,
                 body,
                 durationTrackerFactory)));
   }
@@ -612,7 +588,7 @@ public class WriteOperationHelper implements WriteOperations {
 
   @Override
   public void incrementWriteOperations() {
-    owner.incrementWriteOperations();
+    callbacks.incrementWriteOperations();
   }
 
   /**
@@ -629,41 +605,6 @@ public class WriteOperationHelper implements WriteOperations {
    */
   public RequestFactory getRequestFactory() {
     return requestFactory;
-  }
-
-  /***
-   * Callbacks for writeOperationHelper.
-   */
-  public interface WriteOperationHelperCallbacks {
-
-    /**
-     * Initiates a complete multi-part upload request.
-     * @param request Complete multi-part upload request
-     * @return completeMultipartUploadResult
-     */
-    @Retries.OnceRaw
-    CompleteMultipartUploadResponse completeMultipartUpload(
-        CompleteMultipartUploadRequest request);
-
-    /**
-     * Upload part of a multi-partition file.
-     * Increments the write and put counters.
-     * <i>Important: this call does not close any input stream in the body.</i>
-     * <p>
-     * Retry Policy: none.
-     * @param durationTrackerFactory duration tracker factory for operation
-     * @param request the upload part request.
-     * @param body the request body.
-     * @return the result of the operation.
-     * @throws AwsServiceException on problems
-     * @throws UncheckedIOException failure to instantiate the s3 client
-     */
-    @Retries.OnceRaw
-    UploadPartResponse uploadPart(
-        UploadPartRequest request,
-        RequestBody body,
-        DurationTrackerFactory durationTrackerFactory)
-        throws AwsServiceException, UncheckedIOException;
   }
 
 }

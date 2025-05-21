@@ -24,24 +24,15 @@ import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CancellationException;
 
-import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.UploadPartRequest;
-import software.amazon.awssdk.services.s3.model.UploadPartResponse;
-import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -52,12 +43,16 @@ import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.impl.ClientManager;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteException;
+import org.apache.hadoop.fs.s3a.impl.write.StoreWriterService;
+import org.apache.hadoop.fs.s3a.impl.write.StoreWriter;
 import org.apache.hadoop.fs.s3a.impl.S3AFileSystemOperations;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamFactory;
+import org.apache.hadoop.fs.s3a.impl.write.WriteOperationHelperCallbacks;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.s3a.api.IORateLimiting;
 import org.apache.hadoop.service.Service;
 
 /**
@@ -77,6 +72,7 @@ import org.apache.hadoop.service.Service;
 @InterfaceStability.Unstable
 public interface S3AStore extends
     ClientManager,
+    IORateLimiting,
     IOStatisticsSource,
     ObjectInputStreamFactory,
     PathCapabilities,
@@ -98,15 +94,74 @@ public interface S3AStore extends
    */
   Duration acquireReadCapacity(int capacity);
 
+  /**
+   * Create a new store context.
+   * @return a new store context.
+   */
+  StoreContext createStoreContext();
+
   StoreContext getStoreContext();
 
   DurationTrackerFactory getDurationTrackerFactory();
+
+  S3AInstrumentation getInstrumentation();
 
   S3AStatisticsContext getStatisticsContext();
 
   RequestFactory getRequestFactory();
 
   ClientManager clientManager();
+
+  /**
+   * Get the store writer operations.
+   * @return an instance of StoreWriterService.
+   */
+  default StoreWriterService getStoreWriter() {
+    return lookupService(StoreWriter.STORE_WRITER, StoreWriterService.class);
+  }
+
+  /**
+   * Look up a service by name, validate its classtype and then return the cast value.
+   * This allows for the lookup of any registered service within the store, if the name
+   * and type is known.
+   * @param name service name
+   * @param serviceClass service class.
+   * @return the class
+   * @param <S> type of service
+   * @throws IllegalStateException if the service is not found or the class type is wrong.
+   */
+  <S extends Service> S lookupService(String name, Class<S> serviceClass);
+
+  /**
+   * Decrement a gauge by a specific value.
+   * @param statistic The operation to decrement
+   * @param count the count to decrement
+   */
+  void decrementGauge(Statistic statistic, long count);
+
+  /**
+   * Increment a gauge by a specific value.
+   * @param statistic The operation to increment
+   * @param count the count to increment
+   */
+  void incrementGauge(Statistic statistic, long count);
+
+  /**
+   * Callback when an operation was retried.
+   * Increments the statistics of ignored errors or throttled requests,
+   * depending up on the exception class.
+   * @param ex exception.
+   */
+  void operationRetried(Exception ex);
+
+  /**
+   * Callback from {@link Invoker} when an operation is retried.
+   * @param text text of the operation
+   * @param ex exception
+   * @param retries number of retries
+   * @param idempotent is the method idempotent
+   */
+  void operationRetried(String text, Exception ex, int retries, boolean idempotent);
 
   /**
    * Increment read operations.
@@ -148,7 +203,7 @@ public interface S3AStore extends
 
   /**
    * Given a possibly null duration tracker factory, return a non-null
-   * one for use in tracking durations -either that or the FS tracker
+   * one for use in tracking durations -either that or the store tracker
    * itself.
    *
    * @param factory factory.
@@ -207,10 +262,11 @@ public interface S3AStore extends
    * @throws SdkException problems working with S3
    * @throws IllegalArgumentException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
+   * @throws UncheckedIOException from invocation operations
    */
   @Retries.RetryRaw
   Map.Entry<Duration, Optional<DeleteObjectResponse>> deleteObject(
-      DeleteObjectRequest request) throws SdkException;
+      DeleteObjectRequest request) throws SdkException, UncheckedIOException;
 
   /**
    * Performs a HEAD request on an S3 object to retrieve its metadata.
@@ -246,76 +302,20 @@ public interface S3AStore extends
       long end) throws IOException;
 
   /**
-   * Upload part of a multi-partition file.
-   * Increments the write and put counters.
-   * <i>Important: this call does not close any input stream in the body.</i>
-   * <p>
-   * Retry Policy: none.
-   * @param durationTrackerFactory duration tracker factory for operation
-   * @param request the upload part request.
-   * @param body the request body.
-   * @return the result of the operation.
-   * @throws AwsServiceException on problems
-   * @throws UncheckedIOException failure to instantiate the s3 client
+   * Delete an object after acquiring write capacity.
+   * This call does <i>not</i> create any mock parent entries.
+   * Retry policy: retry untranslated; delete considered idempotent.
+   * @param key key of entry
+   * @param isFile is the path a file (used for instrumentation only)
+   * @throws SdkException problems working with S3
+   * @throws UncheckedIOException from invoker signature only -should not be raised.
    */
-  @Retries.OnceRaw
-  UploadPartResponse uploadPart(
-      UploadPartRequest request,
-      RequestBody body,
-      DurationTrackerFactory durationTrackerFactory)
-      throws AwsServiceException, UncheckedIOException;
+  @Retries.RetryRaw
+  void deleteObjectAtPath(
+      String key,
+      boolean isFile)
+      throws SdkException, UncheckedIOException;
 
-  /**
-   * Start a transfer-manager managed async PUT of an object,
-   * incrementing the put requests and put bytes
-   * counters.
-   * <p>
-   * It does not update the other counters,
-   * as existing code does that as progress callbacks come in.
-   * Byte length is calculated from the file length, or, if there is no
-   * file, from the content length of the header.
-   * <p>
-   * Because the operation is async, any stream supplied in the request
-   * must reference data (files, buffers) which stay valid until the upload
-   * completes.
-   * Retry policy: N/A: the transfer manager is performing the upload.
-   * Auditing: must be inside an audit span.
-   * @param putObjectRequest the request
-   * @param file the file to be uploaded
-   * @param listener the progress listener for the request
-   * @return the upload initiated
-   * @throws IOException if transfer manager creation failed.
-   */
-  @Retries.OnceRaw
-  UploadInfo putObject(
-      PutObjectRequest putObjectRequest,
-      File file,
-      ProgressableProgressListener listener) throws IOException;
-
-  /**
-   * Wait for an upload to complete.
-   * If the upload (or its result collection) failed, this is where
-   * the failure is raised as an AWS exception.
-   * Calls {@link S3AStore#incrementPutCompletedStatistics(boolean, long)}
-   * to update the statistics.
-   * @param key destination key
-   * @param uploadInfo upload to wait for
-   * @return the upload result
-   * @throws IOException IO failure
-   * @throws CancellationException if the wait() was cancelled
-   */
-  @Retries.OnceTranslated
-  CompletedFileUpload waitForUploadCompletion(String key, UploadInfo uploadInfo)
-      throws IOException;
-
-  /**
-   * Complete a multipart upload.
-   * @param request request
-   * @return the response
-   */
-  @Retries.OnceRaw
-  CompleteMultipartUploadResponse completeMultipartUpload(
-      CompleteMultipartUploadRequest request);
 
   /**
    * Get the directory allocator.
@@ -365,5 +365,20 @@ public interface S3AStore extends
 
   /*
    =============== END ObjectInputStreamFactory ===============
+   */
+
+  /*
+   =============== BEGIN WriteOperationHelperCallbacks ===============
+   */
+
+  /**
+   * Create a new instance of the write operation callbacks.
+   * @return a callback instance
+   */
+  WriteOperationHelperCallbacks createWriteOperationHelperCallbacks();
+
+
+  /*
+   =============== END WriteOperationHelperCallbacks ===============
    */
 }

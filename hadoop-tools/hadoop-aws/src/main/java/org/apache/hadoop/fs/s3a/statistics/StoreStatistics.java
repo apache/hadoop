@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-/**
- * Classes related to writing objects.
- */
-@InterfaceAudience.Private
-package org.apache.hadoop.fs.s3a.impl.write;
+package org.apache.hadoop.fs.s3a.statistics;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+/**
+ * Interface for statistics of the S3AStore service.
+ */
+public interface StoreStatistics extends S3AStatisticInterface {
+}

@@ -35,11 +35,9 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
-import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.LocatedFileStatusFetcher;
 import org.apache.hadoop.mapreduce.JobID;
@@ -68,7 +66,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.ToolRunner.run;
 import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
 import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromArray;
-import static org.apache.hadoop.util.functional.RemoteIterators.toList;
 
 /**
  * Test behavior of treewalking when there are pending
@@ -457,31 +454,4 @@ public class ITestTreewalkProblems extends AbstractS3ACostTest {
         .isEqualTo(expected);
   }
 
-  /**
-   * Assert the upload count under a dir is the expected value.
-   * Failure message will include the list of entries.
-   * @param dir dir
-   * @param expected expected count
-   * @throws IOException listing problem
-   */
-  private void assertUploadCount(final Path dir, final int expected) throws IOException {
-    Assertions.assertThat(toList(listUploads(dir)))
-        .describedAs("uploads under %s", dir)
-        .hasSize(expected);
-  }
-
-  /**
-   * List uploads; use the same APIs that the directory operations use,
-   * so implicitly validating them.
-   * @param dir directory to list
-   * @return full list of entries
-   * @throws IOException listing problem
-   */
-  private RemoteIterator<MultipartUpload> listUploads(Path dir) throws IOException {
-    final S3AFileSystem fs = getFileSystem();
-    try (AuditSpan ignored = span()) {
-      final StoreContext sc = fs.createStoreContext();
-      return fs.listUploadsUnderPrefix(sc, sc.pathToKey(dir));
-    }
-  }
 }

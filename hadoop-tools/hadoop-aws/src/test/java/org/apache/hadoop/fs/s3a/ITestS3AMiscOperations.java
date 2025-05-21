@@ -114,7 +114,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
               -1, false);
       putObjectRequestBuilder.contentLength(-1L);
       LambdaTestUtils.intercept(IllegalStateException.class,
-          () -> fs.putObjectDirect(
+          () ->  fs.getStore().getStoreWriter().putObjectDirect(
               putObjectRequestBuilder.build(),
               PutObjectOptions.defaultOptions(),
               new S3ADataBlocks.BlockUploadData("PUT".getBytes(), null),

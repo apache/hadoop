@@ -16,10 +16,29 @@
  * limitations under the License.
  */
 
-/**
- * Classes related to writing objects.
- */
-@InterfaceAudience.Private
-package org.apache.hadoop.fs.s3a.impl.write;
+package org.apache.hadoop.fs.s3a.api;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import java.time.Duration;
+
+/**
+ * Interface for specific rate limiting of read and write operations.
+ */
+public interface IORateLimiting {
+
+  /**
+   * Acquire write capacity for operations.
+   * This should be done within retry loops.
+   * @param capacity capacity to acquire.
+   * @return time spent waiting for output.
+   */
+  Duration acquireWriteCapacity(int capacity);
+
+  /**
+   * Acquire read capacity for operations.
+   * This should be done within retry loops.
+   * @param capacity capacity to acquire.
+   * @return time spent waiting for output.
+   */
+  Duration acquireReadCapacity(int capacity);
+
+}
