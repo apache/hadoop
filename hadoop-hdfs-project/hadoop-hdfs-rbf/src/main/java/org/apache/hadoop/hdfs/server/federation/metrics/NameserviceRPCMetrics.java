@@ -24,6 +24,7 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -55,6 +56,8 @@ public class NameserviceRPCMetrics implements NameserviceRPCMBean {
   private MutableCounterLong proxyOpPermitRejected;
   @Metric("Number of operations accepted to hit a namenode")
   private MutableCounterLong proxyOpPermitAccepted;
+  @Metric("Async Queue Size")
+  private MutableGaugeInt asyncHandlerQueueSize;
 
   public NameserviceRPCMetrics(Configuration conf, String nsId) {
     this.nsId = NAMESERVICE_RPC_METRICS_PREFIX + nsId;
@@ -114,6 +117,10 @@ public class NameserviceRPCMetrics implements NameserviceRPCMBean {
   @Override
   public long getProxyOpPermitAccepted() {
     return proxyOpPermitAccepted.value();
+  }
+
+  public void setAsyncHandlerQueueSize(int size) {
+    asyncHandlerQueueSize.set(size);
   }
 
   /**

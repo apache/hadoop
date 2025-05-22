@@ -57,6 +57,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.Async.warpCompletionException;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncApply;
@@ -172,26 +174,33 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
           " with params " + Arrays.deepToString(params) + " from "
           + router.getRouterId());
     }
-    String nsid = namenodes.get(0).getNameserviceId();
+    String nsId = namenodes.get(0).getNameserviceId();
+    ThreadPoolExecutor executor = router.getRpcServer().getAsyncExecutorForNamespace(nsId);
+    int queueSize = executor.getQueue().size();
     // transfer threadLocalContext to worker threads of executor.
     ThreadLocalContext threadLocalContext = new ThreadLocalContext();
     asyncComplete(null);
-    asyncApplyUseExecutor((AsyncApplyFunction<Object, Object>) o -> {
+    asyncTry(() -> asyncApplyUseExecutor((AsyncApplyFunction<Object, Object>) o -> {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Async invoke method : {}, {}, {}, {}", method.getName(), useObserver,
-            namenodes.toString(), params);
+            namenodes, params);
       }
       threadLocalContext.transfer();
       RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
-      acquirePermit(nsid, ugi, method.getName(), controller);
+      acquirePermit(nsId, ugi, method.getName(), controller);
       invokeMethodAsync(ugi, (List<FederationNamenodeContext>) namenodes,
           useObserver, protocol, method, params);
       asyncFinally(object -> {
-        releasePermit(nsid, ugi, method, controller);
+        releasePermit(nsId, ugi, method, controller);
         return object;
       });
-    }, router.getRpcServer().getAsyncRouterHandlerExecutors().getOrDefault(nsid,
-        router.getRpcServer().getRouterAsyncHandlerDefaultExecutor()));
+    }, executor));
+
+    // Convert RejectedExecutionException to StandbyException since
+    asyncCatch((ret, e) -> {
+      LOG.warn("Async handler queue is full for namespace '{}'. Current queue size: {}", nsId, queueSize);
+      throw new StandbyException("Namespace '" + nsId + "' is overloaded (queue size: " + queueSize + ")");
+      }, RejectedExecutionException.class);
     return null;
   }
 
