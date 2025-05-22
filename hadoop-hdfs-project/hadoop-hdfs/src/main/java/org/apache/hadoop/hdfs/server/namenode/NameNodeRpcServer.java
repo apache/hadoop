@@ -1499,7 +1499,25 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     checkNNStartup();
     namesystem.setBalancerBandwidth(bandwidth);
   }
-  
+
+  /**
+   * Tell all datanodes to reset the bandwidth of the specified type.
+   * @param bandwidth Bandwidth in bytes per second for all datanodes.
+   * @param type DataNode bandwidth type.
+   * @throws IOException
+   */
+  @Override // ClientProtocol
+  public void setDataNodeBandwidth(long bandwidth, String type) throws IOException {
+    if (bandwidth > HdfsServerConstants.MAX_BANDWIDTH_PER_DATANODE) {
+      throw new IllegalArgumentException(
+          "Bandwidth should not exceed maximum limit "
+              + HdfsServerConstants.MAX_BANDWIDTH_PER_DATANODE
+              + " bytes per second");
+    }
+    checkNNStartup();
+    namesystem.setDataNodeBandwidth(bandwidth, type);
+  }
+
   @Override // ClientProtocol
   public ContentSummary getContentSummary(String path) throws IOException {
     checkNNStartup();

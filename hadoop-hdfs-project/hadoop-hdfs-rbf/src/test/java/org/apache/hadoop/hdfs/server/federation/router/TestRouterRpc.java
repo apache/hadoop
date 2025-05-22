@@ -2206,6 +2206,15 @@ public class TestRouterRpc {
   }
 
   @Test
+  public void testSetDataNodeBandwidth() throws Exception {
+    routerProtocol.setDataNodeBandwidth(1000L, "transfer");
+    ArrayList<DataNode> datanodes = cluster.getCluster().getDataNodes();
+    GenericTestUtils.waitFor(() ->  {
+      return datanodes.get(0).getTransferBandwidth() == 1000L;
+    }, 100, 60 * 1000);
+  }
+
+  @Test
   public void testAddClientIpPortToCallerContext() throws IOException {
     GenericTestUtils.LogCapturer auditLog =
         GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);

@@ -426,6 +426,65 @@ public class TestDFSAdminWithHA {
   }
 
   @Test (timeout = 30000)
+  public void testSetDataNodeBandwidth() throws Exception {
+    setUpHaCluster(false);
+    cluster.getDfsCluster().transitionToActive(0);
+
+    int exitCode = admin.run(new String[] {"-setDataNodeBandwidth", "10", "-type", "transfer"});
+    assertEquals(err.toString().trim(), 0, exitCode);
+    String message = "DataNode transfer bandwidth is set to 10";
+    assertOutputMatches(message + newLine);
+  }
+
+  @Test (timeout = 30000)
+  public void testSetDataNodeBandwidthNN1UpNN2Down() throws Exception {
+    setUpHaCluster(false);
+    cluster.getDfsCluster().shutdownNameNode(1);
+    cluster.getDfsCluster().transitionToActive(0);
+    int exitCode = admin.run(new String[] {"-setDataNodeBandwidth", "10", "-type", "transfer"});
+    assertEquals(err.toString().trim(), 0, exitCode);
+    String message = "DataNode transfer bandwidth is set to 10";
+    assertOutputMatches(message + newLine);
+  }
+
+  @Test (timeout = 30000)
+  public void testSetDataNodeBandwidthNN1DownNN2Up() throws Exception {
+    setUpHaCluster(false);
+    cluster.getDfsCluster().shutdownNameNode(0);
+    cluster.getDfsCluster().transitionToActive(1);
+    int exitCode = admin.run(new String[] {"-setDataNodeBandwidth", "10", "-type", "transfer"});
+    assertEquals(err.toString().trim(), 0, exitCode);
+    String message = "DataNode transfer bandwidth is set to 10";
+    assertOutputMatches(message + newLine);
+  }
+
+  @Test
+  public void testSetDataNodeBandwidthNN1DownNN2Down() throws Exception {
+    setUpHaCluster(false);
+    cluster.getDfsCluster().shutdownNameNode(0);
+    cluster.getDfsCluster().shutdownNameNode(1);
+    int exitCode = admin.run(new String[] {"-setDataNodeBandwidth", "10", "-type", "transfer"});
+    assertNotEquals(err.toString().trim(), 0, exitCode);
+    String message = "DataNode transfer bandwidth is set failed." + newLine
+        + ".*" + newLine;
+    assertOutputMatches(message);
+  }
+
+  @Test (timeout = 30000)
+  public void testSetNegativeDataNodeBandwidth() throws Exception {
+    setUpHaCluster(false);
+    int exitCode = admin.run(new String[] {"-setDataNodeBandwidth", "-10", "-type", "transfer"});
+    assertEquals("Negative bandwidth value must fail the command", -1, exitCode);
+  }
+
+  @Test (timeout = 30000)
+  public void testSetErrorTypeDataNodeBandwidth() throws Exception {
+    setUpHaCluster(false);
+    int exitCode = admin.run(new String[] {"-setDataNodeBandwidth", "10", "-type", "errortype"});
+    assertEquals("Bandwidth type should be in <transfer|write|read>", -1, exitCode);
+  }
+
+  @Test (timeout = 30000)
   public void testMetaSave() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().transitionToActive(0);

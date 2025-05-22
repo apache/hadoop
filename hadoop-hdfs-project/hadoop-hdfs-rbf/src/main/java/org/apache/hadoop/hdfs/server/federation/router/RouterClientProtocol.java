@@ -1314,6 +1314,16 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcClient.invokeConcurrent(nss, method, true, false);
   }
 
+  @Override
+  public void setDataNodeBandwidth(long bandwidth, String type) throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
+
+    RemoteMethod method = new RemoteMethod("setDataNodeBandwidth",
+        new Class<?>[] {long.class, String.class}, bandwidth, type);
+    final Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    rpcClient.invokeConcurrent(nss, method, true, false);
+  }
+
   /**
    * Recursively get all the locations for the path.
    * For example, there are some mount points:

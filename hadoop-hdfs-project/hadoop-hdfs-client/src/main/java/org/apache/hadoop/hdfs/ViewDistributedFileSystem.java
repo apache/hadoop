@@ -1058,6 +1058,16 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
   }
 
   @Override
+  public void setDataNodeBandwidth(long bandwidth, String type) throws IOException {
+    if (this.vfs == null) {
+      super.setDataNodeBandwidth(bandwidth, type);
+      return;
+    }
+    checkDefaultDFS(defaultDFS, "setDataNodeBandwidth");
+    defaultDFS.setDataNodeBandwidth(bandwidth, type);
+  }
+
+  @Override
   public String getCanonicalServiceName() {
     if (this.vfs == null) {
       return super.getCanonicalServiceName();

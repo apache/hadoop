@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.protocol.*;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
+import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
@@ -804,6 +805,40 @@ class BPOfferService {
             + dxcs.balanceThrottler.getBandwidth() + " bytes/s "
             + "to: " + bandwidth + " bytes/s.");
         dxcs.balanceThrottler.setBandwidth(bandwidth);
+      }
+      break;
+    case DatanodeProtocol.DNA_DATANODEBANDWIDTHUPDATE:
+      LOG.info("DatanodeCommand action: DNA_DATANODEBANDWIDTHUPDATE");
+      long dnBandwidth =
+          ((DataNodeBandwidthCommand) cmd).getDataNodeBandwidthValue();
+      long oldBandwidth;
+      String type =
+          ((DataNodeBandwidthCommand) cmd).getDataNodeBandwidthType();
+      if (dnBandwidth >= 0) {
+        DataXceiverServer dxcs = dn.getXferServer();
+        if (type.equals("transfer")) {
+          oldBandwidth = dxcs.getTransferThrottler() == null ? 0 :
+              dxcs.getTransferThrottler().getBandwidth();
+          DataTransferThrottler transferThrottler = dnBandwidth == 0 ? null :
+              new DataTransferThrottler(dnBandwidth);
+          dxcs.setTransferThrottler(transferThrottler);
+        } else if (type.equals("write")) {
+          oldBandwidth = dxcs.getWriteThrottler() == null ? 0 :
+              dxcs.getWriteThrottler().getBandwidth();
+          DataTransferThrottler writeThrottler = dnBandwidth == 0 ? null :
+              new DataTransferThrottler(dnBandwidth);
+          dxcs.setWriteThrottler(writeThrottler);
+        } else if (type.equals("read")) {
+          oldBandwidth = dxcs.getReadThrottler() == null ? 0 :
+              dxcs.getReadThrottler().getBandwidth();
+          DataTransferThrottler readThrottler = dnBandwidth == 0 ? null :
+              new DataTransferThrottler(dnBandwidth);
+          dxcs.setReadThrottler(readThrottler);
+        } else {
+          break;
+        }
+        LOG.info("Updated " + type + " throttler bandwidth from "
+            + oldBandwidth + " bytes/s to: " + dnBandwidth + " bytes/s.");
       }
       break;
     case DatanodeProtocol.DNA_ERASURE_CODING_RECONSTRUCTION:

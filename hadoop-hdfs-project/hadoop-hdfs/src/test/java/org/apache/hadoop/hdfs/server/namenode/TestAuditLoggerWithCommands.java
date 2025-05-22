@@ -1043,6 +1043,36 @@ public class TestAuditLoggerWithCommands {
   }
 
   @Test
+  public void testSetDataNodeBandwidth() throws Exception {
+    String auditLogString =
+        ".*allowed=true.*cmd=setDataNodeBandwidth.*";
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    try {
+      fsNamesystem.setDataNodeBandwidth(10, "transfer");
+      verifyAuditLogs(auditLogString);
+    } catch (Exception e) {
+      fail("setDataNodeBandwidth threw exception!");
+    }
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser("theDoctor"));
+    try {
+      fsNamesystem.setDataNodeBandwidth(10, "transfer");
+      fail(
+          "setDataNodeBandwidth should have thrown AccessControlException!");
+    } catch (AccessControlException ace) {
+      auditLogString =
+          ".*allowed=false.*cmd=setDataNodeBandwidth.*";
+      verifyAuditLogs(auditLogString);
+    }
+  }
+
+  @Test
   public void testRefreshNodes() throws Exception {
     String auditLogString =
         ".*allowed=true.*cmd=refreshNodes.*";

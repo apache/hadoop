@@ -193,6 +193,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
   // specified datanode, this value will be set back to 0.
   private long bandwidth;
 
+  private Map<String, Long> throttlers = new HashMap<>();
+
   /** A queue of blocks to be replicated by this datanode */
   private final BlockQueue<BlockTargetPair> replicateBlocks =
       new BlockQueue<>();
@@ -1025,6 +1027,21 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public synchronized void setBalancerBandwidth(long bandwidth) {
     this.bandwidth = bandwidth;
+  }
+
+  /**
+   * @return bandwidth throttlers for this datanode
+   */
+  public synchronized Map<String, Long> getDataNodeBandwidth() {
+    return this.throttlers;
+  }
+
+  /**
+   * @param bandwidth Bandwidth in bytes per second for this datanode
+   * @param type DataNode bandwidth type.
+   */
+  public synchronized void setDataNodeBandwidth(long bandwidth, String type) {
+    this.throttlers.put(type, bandwidth);
   }
 
   @Override

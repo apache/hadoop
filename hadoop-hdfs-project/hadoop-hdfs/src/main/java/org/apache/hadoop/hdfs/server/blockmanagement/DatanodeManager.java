@@ -1974,6 +1974,14 @@ public class DatanodeManager {
       nodeinfo.setBalancerBandwidth(0);
     }
 
+    // check for datanode bandwidth update
+    if (!nodeinfo.getDataNodeBandwidth().isEmpty()) {
+      for (Map.Entry<String, Long> entry : nodeinfo.getDataNodeBandwidth().entrySet()){
+        cmds.add(new DataNodeBandwidthCommand(entry.getValue(), entry.getKey()));
+      }
+      nodeinfo.getDataNodeBandwidth().clear();
+    }
+
     Preconditions.checkNotNull(slowPeerTracker, "slowPeerTracker should not be un-assigned");
 
     if (slowPeerTracker.isSlowPeerTrackerEnabled()) {
@@ -2085,7 +2093,25 @@ public class DatanodeManager {
       }
     }
   }
-  
+
+  /**
+   * Tell all datanodes to reset the bandwidth of the specified type.
+   *
+   * A system administrator can tune the datanode bandwidth dynamically by calling
+   * "dfsadmin -setDataNodeBandwidth newbandwidth -type <transfer|write|read>"
+   *
+   * @param bandwidth Bandwidth in bytes per second for all datanodes.
+   * @param type DataNode bandwidth type.
+   * @throws IOException
+   */
+  public void setDataNodeBandwidth(long bandwidth, String type) throws IOException {
+    synchronized(this) {
+      for (DatanodeDescriptor nodeInfo : datanodeMap.values()) {
+        nodeInfo.setDataNodeBandwidth(bandwidth, type);
+      }
+    }
+  }
+
   public void markAllDatanodesStaleAndSetKeyUpdateIfNeed() {
     LOG.info("Marking all datanodes as stale and schedule update block token if need.");
     synchronized (this) {

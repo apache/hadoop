@@ -4004,7 +4004,31 @@ public class DataNode extends ReconfigurableBase
                        (DataXceiverServer) this.dataXceiverServer.getRunnable();
     return dxcs.balanceThrottler.getBandwidth();
   }
-  
+
+  @VisibleForTesting
+  public long getTransferBandwidth() {
+    if (this.xserver.getTransferThrottler() != null) {
+      return this.xserver.getTransferThrottler().getBandwidth();
+    }
+    return 0;
+  }
+
+  @VisibleForTesting
+  public long getWriteBandwidth() {
+    if (this.xserver.getWriteThrottler() != null) {
+      return this.xserver.getWriteThrottler().getBandwidth();
+    }
+    return 0;
+  }
+
+  @VisibleForTesting
+  public long getReadBandwidth() {
+    if (this.xserver.getReadThrottler() != null) {
+      return this.xserver.getReadThrottler().getBandwidth();
+    }
+    return 0;
+  }
+
   public DNConf getDnConf() {
     return dnConf;
   }

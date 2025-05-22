@@ -1640,6 +1640,11 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   @Override // ClientProtocol
+  public void setDataNodeBandwidth(long bandwidth, String type) throws IOException {
+    clientProto.setDataNodeBandwidth(bandwidth, type);
+  }
+
+  @Override // ClientProtocol
   public ContentSummary getContentSummary(String path) throws IOException {
     return clientProto.getContentSummary(path);
   }

@@ -1142,6 +1142,33 @@ public class TestDFSAdmin {
         new String[]{"-setBalancerBandwidth", "-10m"}));
   }
 
+  @Test
+  public void testSetDataNodeBandwidth() throws Exception {
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+
+    // Test basic case: 10000
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-setDataNodeBandwidth", "10000", "-type", "transfer"}));
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-setDataNodeBandwidth", "10000", "-type", "write"}));
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-setDataNodeBandwidth", "10000", "-type", "read"}));
+
+    Thread.sleep(3 * 1000);
+
+    // verify bandwidth
+    assertEquals(10000, datanode.getTransferBandwidth());
+    assertEquals(10000, datanode.getWriteBandwidth());
+    assertEquals(10000, datanode.getReadBandwidth());
+
+    // Test negative numbers
+    assertEquals(-1, ToolRunner.run(dfsAdmin,
+        new String[]{"-setBalancerBandwidth", "-10000", "-type", "transfer"}));
+    // Test error type
+    assertEquals(-1, ToolRunner.run(dfsAdmin,
+        new String[]{"-setBalancerBandwidth", "10000", "-type", "errorType"}));
+  }
+
   @Test(timeout = 300000L)
   public void testCheckNumOfBlocksInReportCommand() throws Exception {
     DistributedFileSystem dfs = cluster.getFileSystem();

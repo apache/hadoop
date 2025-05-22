@@ -225,6 +225,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SaveNa
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SaveNamespaceResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetBalancerBandwidthRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetBalancerBandwidthResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetDataNodeBandwidthRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetDataNodeBandwidthResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetOwnerRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetOwnerResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetPermissionRequestProto;
@@ -414,6 +416,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
 
   protected static final SetBalancerBandwidthResponseProto VOID_SETBALANCERBANDWIDTH_RESPONSE =
       SetBalancerBandwidthResponseProto.newBuilder().build();
+
+  protected static final SetDataNodeBandwidthResponseProto VOID_SETDATANODEBANDWIDTH_RESPONSE =
+      SetDataNodeBandwidthResponseProto.newBuilder().build();
 
   protected static final SetAclResponseProto VOID_SETACL_RESPONSE =
       SetAclResponseProto.getDefaultInstance();
@@ -1249,6 +1254,18 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       server.setBalancerBandwidth(req.getBandwidth());
       return VOID_SETBALANCERBANDWIDTH_RESPONSE;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public SetDataNodeBandwidthResponseProto setDataNodeBandwidth(
+      RpcController controller, SetDataNodeBandwidthRequestProto req)
+      throws ServiceException {
+    try {
+      server.setDataNodeBandwidth(req.getBandwidth(), req.getType());
+      return VOID_SETDATANODEBANDWIDTH_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);
     }

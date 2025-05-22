@@ -461,6 +461,7 @@ public class DFSAdmin extends FsShell {
       "\t[-getVolumeReport datanode_host:ipc_port]\n" +
     "\t[-deleteBlockPool datanode_host:ipc_port blockpoolId [force]]\n"+
     "\t[-setBalancerBandwidth <bandwidth in bytes per second>]\n" +
+    "\t[-setDataNodeBandwidth <bandwidth in bytes per second> -type <transfer|write|read>]\n" +
     "\t[-getBalancerBandwidth <datanode_host:ipc_port>]\n" +
     "\t[-fetchImage <local directory>]\n" +
     "\t[-allowSnapshot <snapshotDir>]\n" +
@@ -1132,6 +1133,53 @@ public class DFSAdmin extends FsShell {
   }
 
   /**
+   * Command to ask the active namenode to set the datandoe bandwidth.
+   * Usage: hdfs dfsadmin -setDataNodeBandwidth bandwidth -type <transfer|write|read>
+   * @param argv List of of command line parameters.
+   * @param idx The index of the command that is being processed.
+   * @exception IOException
+   */
+  public int setDataNodeBandwidth(String[] argv, int idx) throws IOException {
+
+    long bandwidth;
+    int exitCode = -1;
+    String type;
+    List<String> types = Arrays.asList("transfer", "write", "read");
+
+    try {
+      List<String> args = new ArrayList<>(Arrays.asList(argv));
+      type = StringUtils.popOptionWithArgument("-type", args);;
+      bandwidth = StringUtils.TraditionalBinaryPrefix.string2long(argv[idx]);
+    } catch (Exception e) {
+      System.err.println("Exception: " + e.getMessage());
+      System.err.println("Usage: hdfs dfsadmin"
+          + " [-setDataNodeBandwidth <bandwidth in bytes per second> [-type <transfer|write|read>]]");
+      return exitCode;
+    }
+
+    if (bandwidth < 0) {
+      System.err.println("Bandwidth should be a non-negative integer");
+      return exitCode;
+    }
+
+    if (!types.contains(type)) {
+      System.err.println("Bandwidth type should be in <transfer|write|read>");
+      return exitCode;
+    }
+    DistributedFileSystem dfs = getDFS();
+    try{
+      dfs.setDataNodeBandwidth(bandwidth, type);
+      System.out.println("DataNode " + type + " bandwidth is set to " + bandwidth);
+    } catch (IOException ioe){
+      System.err.println("DataNode " + type + " bandwidth is set failed.");
+      throw ioe;
+    }
+    exitCode = 0;
+
+    return exitCode;
+  }
+
+  /**
    * Command to get balancer bandwidth for the given datanode. Usage: hdfs
    * dfsadmin -getBalancerBandwidth {@literal <datanode_host:ipc_port>}
    * @param argv List of of command line parameters.
@@ -1318,6 +1366,11 @@ public class DFSAdmin extends FsShell {
         "\tduring HDFS block balancing.\n\n" +
         "\t--- NOTE: This value is not persistent on the DataNode.---\n";
 
+    String setDataNodeBandwidth = "-setDataNodeBandwidth <bandwidth>:\n" +
+        "\tChanges the bandwidth of the throttler for each datanode.\n" +
+        "\tThe types of throttlers include transfer, write, and read.\n\n" +
+        "\t--- NOTE: The new value is not persistent on the DataNode.---\n";
+
     String fetchImage = "-fetchImage <local directory>:\n" +
       "\tDownloads the most recent fsimage from the Name Node and saves it in" +
       "\tthe specified local directory.\n";
@@ -1414,6 +1467,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(deleteBlockPool);
     } else if ("setBalancerBandwidth".equals(cmd)) {
       System.out.println(setBalancerBandwidth);
+    } else if ("setDataNodeBandwidth".equals(cmd)) {
+      System.out.println(setDataNodeBandwidth);
     } else if ("getBalancerBandwidth".equals(cmd)) {
       System.out.println(getBalancerBandwidth);
     } else if ("fetchImage".equals(cmd)) {
@@ -1462,6 +1517,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(refreshNamenodes);
       System.out.println(deleteBlockPool);
       System.out.println(setBalancerBandwidth);
+      System.out.println(setDataNodeBandwidth);
       System.out.println(getBalancerBandwidth);
       System.out.println(fetchImage);
       System.out.println(allowSnapshot);
@@ -2353,6 +2409,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-setBalancerBandwidth".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
                   + " [-setBalancerBandwidth <bandwidth in bytes per second>]");
+    } else if ("-setDataNodeBandwidth".equals(cmd)) {
+      System.err.println("Usage: hdfs dfsadmin"
+          + " [-setDataNodeBandwidth <bandwidth in bytes per second> [-type <transfer|write|read>]]");
     } else if ("-getBalancerBandwidth".equalsIgnoreCase(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-getBalancerBandwidth <datanode_host:ipc_port>]");
@@ -2511,6 +2570,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-setDataNodeBandwidth".equals(cmd)) {
+      if (argv.length != 4) {
+        printUsage(cmd);
+        return exitCode;
+      }
     } else if ("-getBalancerBandwidth".equalsIgnoreCase(cmd)) {
       if (argv.length != 2) {
         printUsage(cmd);
@@ -2603,6 +2667,8 @@ public class DFSAdmin extends FsShell {
         exitCode = deleteBlockPool(argv, i);
       } else if ("-setBalancerBandwidth".equals(cmd)) {
         exitCode = setBalancerBandwidth(argv, i);
+      } else if ("-setDataNodeBandwidth".equals(cmd)) {
+        exitCode = setDataNodeBandwidth(argv, i);
       } else if ("-getBalancerBandwidth".equals(cmd)) {
         exitCode = getBalancerBandwidth(argv, i);
       } else if ("-fetchImage".equals(cmd)) {

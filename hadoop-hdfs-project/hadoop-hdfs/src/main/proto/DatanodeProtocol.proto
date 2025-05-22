@@ -60,6 +60,7 @@ message DatanodeCommandProto {
     NullDatanodeCommand = 7;
     BlockIdCommand = 8;
     BlockECReconstructionCommand = 9;
+    DataNodeBandwidthCommand = 10;
   }
 
   required Type cmdType = 1;    // Type of the command
@@ -74,6 +75,7 @@ message DatanodeCommandProto {
   optional RegisterCommandProto registerCmd = 7;
   optional BlockIdCommandProto blkIdCmd = 8;
   optional BlockECReconstructionCommandProto blkECReconstructionCmd = 9;
+  optional DataNodeBandwidthCommandProto bandwidthCmd = 10;
 }
 
 /**
@@ -84,6 +86,17 @@ message BalancerBandwidthCommandProto {
 
   // Maximum bandwidth to be used by datanode for balancing
   required uint64 bandwidth = 1;
+}
+
+/**
+ * Command sent from namenode to datanode to set the
+ * maximum bandwidth.
+ */
+message DataNodeBandwidthCommandProto {
+
+  // Maximum bandwidth to be used by datanode
+  required uint64 bandwidth = 1;
+  required string type = 2;
 }
 
 /**

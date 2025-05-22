@@ -2095,6 +2095,17 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
+   * Requests the namenode to tell all datanodes to reset the bandwidth of the specified type.
+   *
+   * @param bandwidth Bandwidth in bytes per second for all datanodes.
+   * @param type DataNode bandwidth type.
+   * @throws IOException
+   */
+  public void setDataNodeBandwidth(long bandwidth, String type) throws IOException {
+    dfs.setDataNodeBandwidth(bandwidth, type);
+  }
+
+  /**
    * Get a canonical service name for this file system. If the URI is logical,
    * the hostname part of the URI will be returned.
    * @return a service string that uniquely identifies this file system.

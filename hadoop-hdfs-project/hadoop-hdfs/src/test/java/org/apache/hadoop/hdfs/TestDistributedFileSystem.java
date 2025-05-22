@@ -339,6 +339,12 @@ public class TestDistributedFileSystem {
       GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
     }
     try {
+      dfsClient.setDataNodeBandwidth(1000L, "transfer");
+      fail("setDataNodeBandwidth using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
       dfsClient.finalizeUpgrade();
       fail("finalizeUpgrade using a closed filesystem!");
     } catch (IOException ioe) {

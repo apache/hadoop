@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
 import org.apache.hadoop.hdfs.protocol.proto.AliasMapProtocolProtos.KeyValueProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BalancerBandwidthCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DataNodeBandwidthCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockECReconstructionCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockIdCommandProto;
@@ -90,6 +91,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
+import org.apache.hadoop.hdfs.server.protocol.DataNodeBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockIdCommand;
@@ -458,6 +460,8 @@ public class PBHelper {
     switch (proto.getCmdType()) {
     case BalancerBandwidthCommand:
       return PBHelper.convert(proto.getBalancerCmd());
+    case DataNodeBandwidthCommand:
+      return PBHelper.convert(proto.getBandwidthCmd());
     case BlockCommand:
       return PBHelper.convert(proto.getBlkCmd());
     case BlockRecoveryCommand:
@@ -481,6 +485,13 @@ public class PBHelper {
       BalancerBandwidthCommand bbCmd) {
     return BalancerBandwidthCommandProto.newBuilder()
         .setBandwidth(bbCmd.getBalancerBandwidthValue()).build();
+  }
+
+  public static DataNodeBandwidthCommandProto convert(
+      DataNodeBandwidthCommand bbCmd) {
+    return DataNodeBandwidthCommandProto.newBuilder()
+        .setBandwidth(bbCmd.getDataNodeBandwidthValue())
+        .setType(bbCmd.getDataNodeBandwidthType()).build();
   }
 
   public static KeyUpdateCommandProto convert(KeyUpdateCommand cmd) {
@@ -571,6 +582,11 @@ public class PBHelper {
       builder.setCmdType(DatanodeCommandProto.Type.BalancerBandwidthCommand)
           .setBalancerCmd(
               PBHelper.convert((BalancerBandwidthCommand) datanodeCommand));
+      break;
+    case DatanodeProtocol.DNA_DATANODEBANDWIDTHUPDATE:
+      builder.setCmdType(DatanodeCommandProto.Type.DataNodeBandwidthCommand)
+          .setBandwidthCmd(
+              PBHelper.convert((DataNodeBandwidthCommand) datanodeCommand));
       break;
     case DatanodeProtocol.DNA_ACCESSKEYUPDATE:
       builder
@@ -707,6 +723,12 @@ public class PBHelper {
   public static BalancerBandwidthCommand convert(
       BalancerBandwidthCommandProto balancerCmd) {
     return new BalancerBandwidthCommand(balancerCmd.getBandwidth());
+  }
+
+  public static DataNodeBandwidthCommand convert(
+      DataNodeBandwidthCommandProto bandwidthCmd) {
+    return new DataNodeBandwidthCommand(bandwidthCmd.getBandwidth(),
+        bandwidthCmd.getType());
   }
 
   public static ReceivedDeletedBlockInfoProto convert(

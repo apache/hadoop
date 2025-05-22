@@ -5188,6 +5188,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     logAuditEvent(true, operationName, null);
   }
 
+  void setDataNodeBandwidth(long bandwidth, String type) throws IOException {
+    String operationName = "setDataNodeBandwidth-" + type;
+    checkOperation(OperationCategory.WRITE);
+    checkSuperuserPrivilege(operationName);
+    getBlockManager().getDatanodeManager().setDataNodeBandwidth(bandwidth, type);
+    logAuditEvent(true, operationName, null);
+  }
+
   boolean setSafeMode(SafeModeAction action) throws IOException {
     String operationName = action.toString().toLowerCase();
     boolean error = false;

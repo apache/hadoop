@@ -290,4 +290,24 @@ public class TestViewFileSystemOverloadSchemeWithDFSAdmin {
     assertOutMsg("Balancer bandwidth is set to 1000", 0);
     assertEquals(0, ret);
   }
+
+  /**
+   * Tests setDataNodeBandwidth with ViewFSOverloadScheme.
+   */
+  @Test
+  public void testSetDataNodeBandwidth() throws Exception {
+    final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
+    addMountLinks(defaultFSURI.getHost(),
+        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER },
+        new String[] {hdfsTargetPath.toUri().toString(),
+            localTargetDir.toURI().toString() },
+        conf);
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    redirectStream();
+    int ret = ToolRunner.run(dfsAdmin,
+        new String[] {"-fs", defaultFSURI.toString(), "-setDataNodeBandwidth",
+            "1000", "-type", "transfer"});
+    assertOutMsg("DataNode transfer bandwidth is set to 1000", 0);
+    assertEquals(0, ret);
+  }
 }

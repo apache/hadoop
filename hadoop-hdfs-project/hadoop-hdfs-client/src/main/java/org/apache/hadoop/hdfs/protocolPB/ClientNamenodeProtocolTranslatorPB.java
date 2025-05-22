@@ -189,6 +189,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Rollin
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SaveNamespaceRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetBalancerBandwidthRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetDataNodeBandwidthRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetOwnerRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetPermissionRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetQuotaRequestProto;
@@ -974,6 +975,16 @@ public class ClientNamenodeProtocolTranslatorPB implements
             .setBandwidth(bandwidth)
             .build();
     ipc(() -> rpcProxy.setBalancerBandwidth(null, req));
+  }
+
+  @Override
+  public void setDataNodeBandwidth(long bandwidth, String type) throws IOException {
+    SetDataNodeBandwidthRequestProto req =
+        SetDataNodeBandwidthRequestProto.newBuilder()
+            .setBandwidth(bandwidth)
+            .setType(type)
+            .build();
+    ipc(() -> rpcProxy.setDataNodeBandwidth(null, req));
   }
 
   @Override

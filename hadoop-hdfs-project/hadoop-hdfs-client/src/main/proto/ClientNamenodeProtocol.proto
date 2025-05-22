@@ -772,7 +772,15 @@ message SetBalancerBandwidthRequestProto {
   required int64 bandwidth = 1;
 }
 
+message SetDataNodeBandwidthRequestProto {
+  required int64 bandwidth = 1;
+  required string type = 2;
+}
+
 message SetBalancerBandwidthResponseProto { // void response
+}
+
+message SetDataNodeBandwidthResponseProto { // void response
 }
 
 message GetDataEncryptionKeyRequestProto { // no parameters
@@ -999,6 +1007,8 @@ service ClientNamenodeProtocol {
       returns(hadoop.common.CancelDelegationTokenResponseProto);
   rpc setBalancerBandwidth(SetBalancerBandwidthRequestProto)
       returns(SetBalancerBandwidthResponseProto);
+  rpc setDataNodeBandwidth(SetDataNodeBandwidthRequestProto)
+      returns(SetDataNodeBandwidthResponseProto);
   rpc getDataEncryptionKey(GetDataEncryptionKeyRequestProto)
       returns(GetDataEncryptionKeyResponseProto);
   rpc createSnapshot(CreateSnapshotRequestProto)

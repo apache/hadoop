@@ -1051,6 +1051,16 @@ public interface ClientProtocol {
   void setBalancerBandwidth(long bandwidth) throws IOException;
 
   /**
+   * Tell all datanodes to reset the bandwidth of the specified type.
+   *
+   * @param bandwidth Bandwidth in bytes per second for this datanode.
+   * @param type DataNode bandwidth type.
+   * @throws IOException
+   */
+  @Idempotent
+  void setDataNodeBandwidth(long bandwidth, String type) throws IOException;
+
+  /**
    * Get the file info for a specific file or directory.
    * @param src The string representation of the path to the file
    *
