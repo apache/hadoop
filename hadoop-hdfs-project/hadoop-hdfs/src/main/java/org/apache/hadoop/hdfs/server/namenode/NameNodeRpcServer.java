@@ -1504,7 +1504,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
    * Tell all datanodes to reset the bandwidth of the specified type.
    * @param bandwidth Bandwidth in bytes per second for all datanodes.
    * @param type DataNode bandwidth type.
-   * @throws IOException
+   * @throws IOException If an I/O error occurred
    */
   @Override // ClientProtocol
   public void setDataNodeBandwidth(long bandwidth, String type) throws IOException {

@@ -1055,7 +1055,7 @@ public interface ClientProtocol {
    *
    * @param bandwidth Bandwidth in bytes per second for this datanode.
    * @param type DataNode bandwidth type.
-   * @throws IOException
+   * @throws IOException If an I/O error occurred
    */
   @Idempotent
   void setDataNodeBandwidth(long bandwidth, String type) throws IOException;

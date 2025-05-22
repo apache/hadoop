@@ -1930,8 +1930,7 @@ public class DatanodeManager {
       if (!pendingList.isEmpty()) {
         // If the block is deleted, the block size will become
         // BlockCommand.NO_ACK (LONG.MAX_VALUE) . This kind of block we don't
-        // need
-        // to send for replication or reconstruction
+        // need to send for replication or reconstruction
         Iterator<BlockTargetPair> iterator = pendingList.iterator();
         while (iterator.hasNext()) {
           BlockTargetPair cmd = iterator.next();
@@ -1962,9 +1961,7 @@ public class DatanodeManager {
       cmds.add(new BlockCommand(DatanodeProtocol.DNA_INVALIDATE, blockPoolId,
           blks));
     }
-    // cache commands
     addCacheCommands(blockPoolId, nodeinfo, cmds);
-    // key update command
     blockManager.addKeyUpdateCommand(cmds, nodeinfo);
 
     // check for balancer bandwidth update
@@ -1974,7 +1971,6 @@ public class DatanodeManager {
       nodeinfo.setBalancerBandwidth(0);
     }
 
-    // check for datanode bandwidth update
     if (!nodeinfo.getDataNodeBandwidth().isEmpty()) {
       for (Map.Entry<String, Long> entry : nodeinfo.getDataNodeBandwidth().entrySet()){
         cmds.add(new DataNodeBandwidthCommand(entry.getValue(), entry.getKey()));
@@ -2102,7 +2098,7 @@ public class DatanodeManager {
    *
    * @param bandwidth Bandwidth in bytes per second for all datanodes.
    * @param type DataNode bandwidth type.
-   * @throws IOException
+   * @throws IOException If an I/O error occurred
    */
   public void setDataNodeBandwidth(long bandwidth, String type) throws IOException {
     synchronized(this) {

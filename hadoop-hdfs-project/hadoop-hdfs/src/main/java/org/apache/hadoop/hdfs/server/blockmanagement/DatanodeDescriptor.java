@@ -1037,11 +1037,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
-   * @param bandwidth Bandwidth in bytes per second for this datanode
+   * @param dnBandwidth Bandwidth in bytes per second for this datanode
    * @param type DataNode bandwidth type.
    */
-  public synchronized void setDataNodeBandwidth(long bandwidth, String type) {
-    this.throttlers.put(type, bandwidth);
+  public synchronized void setDataNodeBandwidth(long dnBandwidth, String type) {
+    this.throttlers.put(type, dnBandwidth);
   }
 
   @Override

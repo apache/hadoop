@@ -2481,8 +2481,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Requests the namenode to tell all datanodes to use a new bandwidth value.
-   * See {@link ClientProtocol#setDataNodeBandwidth(long, String)}
-   * for more details.
+   * @param bandwidth Bandwidth in bytes per second for this datanode.
+   * @param type DataNode bandwidth type.
+   * @throws IOException If an I/O error occurred
    *
    * @see ClientProtocol#setDataNodeBandwidth(long, String)
    */

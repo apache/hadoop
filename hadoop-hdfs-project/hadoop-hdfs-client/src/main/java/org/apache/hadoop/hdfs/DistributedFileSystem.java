@@ -2088,7 +2088,7 @@ public class DistributedFileSystem extends FileSystem
    * bandwidth to be used by a datanode during balancing.
    *
    * @param bandwidth Balancer bandwidth in bytes per second for all datanodes.
-   * @throws IOException
+   * @throws IOException If an I/O error occurred
    */
   public void setBalancerBandwidth(long bandwidth) throws IOException {
     dfs.setBalancerBandwidth(bandwidth);
