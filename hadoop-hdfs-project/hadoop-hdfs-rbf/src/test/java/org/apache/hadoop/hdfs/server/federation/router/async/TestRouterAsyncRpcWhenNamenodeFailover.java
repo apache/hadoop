@@ -34,7 +34,7 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.trans
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class TestRouterAsyncClientRejectOverload {
+public class TestRouterAsyncRpcWhenNamenodeFailover {
 
   private StateStoreDFSCluster cluster;
 
