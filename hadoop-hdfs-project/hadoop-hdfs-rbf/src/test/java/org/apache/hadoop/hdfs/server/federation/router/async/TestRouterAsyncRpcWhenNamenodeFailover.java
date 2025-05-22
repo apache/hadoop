@@ -67,7 +67,7 @@ public class TestRouterAsyncRpcWhenNamenodeFailover {
     transitionClusterNSToActive(cluster, 0);
 
     String basePath = "/ARR/testGetFileInfo";
-      routerClient.mkdirs(basePath);
+    routerClient.mkdirs(basePath);
     DirectoryListing directoryListing = routerClient.listPaths("/ARR", new byte[0]);
     assertEquals(1, directoryListing.getPartialListing().length);
 
