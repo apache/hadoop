@@ -29,8 +29,11 @@ import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.util.Diff;
 import org.apache.hadoop.hdfs.util.Diff.Container;
 import org.apache.hadoop.hdfs.util.Diff.UndoInfo;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test {@link Diff} with {@link INode}.
@@ -46,7 +49,8 @@ public class TestDiff {
   }
 
   /** Test directory diff. */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testDiff() throws Exception {
     for(int startSize = 0; startSize <= 10000; startSize = nextStep(startSize)) {
       for(int m = 0; m <= 10000; m = nextStep(m)) {
@@ -192,7 +196,7 @@ public class TestDiff {
           final int j = Diff.search(previous, inode.getKey());
           final INode expected = j < 0? null: previous.get(j);
           // must be the same object (equals is not enough)
-          Assert.assertTrue(computed == expected);
+          assertTrue(computed == expected);
         }
 
         {// test accessCurrent
@@ -208,7 +212,7 @@ public class TestDiff {
           final int j = Diff.search(current, inode.getKey());
           final INode expected = j < 0? null: current.get(j);
           // must be the same object (equals is not enough)
-          Assert.assertTrue(computed == expected);
+          assertTrue(computed == expected);
         }
       }
     }
@@ -250,7 +254,7 @@ public class TestDiff {
   static void create(INode inode, final List<INode> current,
       Diff<byte[], INode> diff) {
     final int i = Diff.search(current, inode.getKey());
-    Assert.assertTrue(i < 0);
+    assertTrue(i < 0);
     current.add(-i - 1, inode);
     if (diff != null) {
       //test undo with 1/UNDO_TEST_P probability
@@ -303,7 +307,7 @@ public class TestDiff {
   static void modify(INode inode, final List<INode> current,
       Diff<byte[], INode> diff) {
     final int i = Diff.search(current, inode.getKey());
-    Assert.assertTrue(i >= 0);
+    assertTrue(i >= 0);
     final INodeDirectory oldinode = (INodeDirectory)current.get(i);
     final INodeDirectory newinode = new INodeDirectory(oldinode, false,
       oldinode.getFeatures());
@@ -333,6 +337,6 @@ public class TestDiff {
   }
   
   static void assertDiff(String s, Diff<byte[], INode> diff) {
-    Assert.assertEquals(s, diff.toString());
+    assertEquals(s, diff.toString());
   }
 }
