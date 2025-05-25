@@ -946,14 +946,6 @@
 </property>
 
 <property>
-  <name>io.compression.codec.lzo.buffersize</name>
-  <value>65536</value>
-  <description>
-    Internal buffer size for Lzo compressor/decompressors.
-  </description>
-</property>
-
-<property>
   <name>io.compression.codec.lzo.class</name>
   <value>org.apache.hadoop.io.compress.LzoCodec</value>
   <description>
