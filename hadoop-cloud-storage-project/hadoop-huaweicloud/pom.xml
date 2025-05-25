@@ -29,7 +29,11 @@
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
-    <esdk.version>3.20.4.2</esdk.version>
+    <esdk.version>3.25.5</esdk.version> <!-- NOTE: due to a dependency convergence error caused by esdk-obs-java,
+      the following artifacts needed to be managed in hadoop-project:
+        com.squareup.okio:okio:3.8.0
+        org.jetbrains.kotlin:kotlin-bom:1.9.21
+      Please align (or remove) them when updating esdk.version -->
   </properties>
 
   <profiles>

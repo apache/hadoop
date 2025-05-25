@@ -138,7 +138,7 @@
     <derby.version>10.14.2.0</derby.version>
     <mssql.version>6.2.1.jre7</mssql.version>
     <okhttp3.version>4.11.0</okhttp3.version>
-    <kotlin-stdlib.version>1.6.20</kotlin-stdlib.version>
+    <kotlin.version>1.9.21</kotlin.version> <!-- upgraded to align with esdk-obs-java -->
     <jdom2.version>2.0.6.1</jdom2.version>
     <jna.version>5.2.0</jna.version>
     <gson.version>2.9.0</gson.version>
@@ -245,21 +245,16 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-bom</artifactId>
+        <version>${kotlin.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
         <groupId>com.squareup.okhttp3</groupId>
         <artifactId>mockwebserver</artifactId>
         <version>${okhttp3.version}</version>
-        <scope>test</scope>
-        <exclusions>
-          <exclusion>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib-jdk8</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.jetbrains.kotlin</groupId>
-        <artifactId>kotlin-stdlib-jdk8</artifactId>
-        <version>${kotlin-stdlib.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -2152,6 +2147,14 @@
         <groupId>net.jodah</groupId>
         <artifactId>failsafe</artifactId>
         <version>2.4.4</version>
+      </dependency>
+
+      <dependency>
+        <!-- due to a dependency convergence error caused by esdk-obs-java,
+             referenced in hadoop-cloud-stroage-project/hadoop-huaweicloud. -->
+        <groupId>com.squareup.okio</groupId>
+        <artifactId>okio</artifactId>
+        <version>3.8.0</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
