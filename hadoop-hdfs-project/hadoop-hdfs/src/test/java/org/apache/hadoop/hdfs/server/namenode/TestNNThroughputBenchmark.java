@@ -316,7 +316,7 @@ public class TestNNThroughputBenchmark {
 
   /**
    * This test runs all benchmarks defined in {@link NNThroughputBenchmark}
-   * against a mini QJMHA DFS cluster
+   * against a mini QJMHA DFS cluster.
    */
   @Test(timeout = 120000)
   public void testNNThroughputWithHA() throws Exception {
@@ -330,19 +330,19 @@ public class TestNNThroughputBenchmark {
     cluster.waitActive();
     cluster.transitionToActive(0);
 
-    String NSID = "ns1";
+    String nsId = "ns1";
     conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
-        "hdfs://" + NSID);
-    conf.set(DFSConfigKeys.DFS_NAMESERVICES, NSID);
-    conf.set(DFSConfigKeys.DFS_NAMESERVICE_ID, NSID);
+        "hdfs://" + nsId);
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, nsId);
+    conf.set(DFSConfigKeys.DFS_NAMESERVICE_ID, nsId);
     conf.set(DFSUtil.addKeySuffixes(
-        DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX, NSID), "nn1,nn2");
+        DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX, nsId), "nn1,nn2");
     conf.set(DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY, "nn1");
     conf.set(DFSUtil.addKeySuffixes(
-            DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, NSID, "nn1"),
+            DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nsId, "nn1"),
         cluster.getNameNode(0).getHostAndPort());
     conf.set(DFSUtil.addKeySuffixes(
-            DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, NSID, "nn2"),
+            DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nsId, "nn2"),
         cluster.getNameNode(1).getHostAndPort());
 
     // Reduce the number of retries to speed up the tests.
