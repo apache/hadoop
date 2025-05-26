@@ -20,21 +20,30 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.File;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
 
 public class TestNNThroughputBenchmark {
 
@@ -303,5 +312,53 @@ public class TestNNThroughputBenchmark {
           new String[]{"-op", "create", "-keepResults", "-files", "3",
               "-blockSize", "1m", "-close"});
     }
+  }
+
+  /**
+   * This test runs all benchmarks defined in {@link NNThroughputBenchmark}
+   * against a mini QJMHA DFS cluster.
+   */
+  @Test(timeout = 120000)
+  public void testNNThroughputWithHA() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false);
+    String baseDir = GenericTestUtils.getRandomizedTempPath();
+    MiniQJMHACluster.Builder builder = new MiniQJMHACluster.Builder(conf);
+    builder.getDfsBuilder().numDataNodes(3);
+    MiniQJMHACluster qjmhaCluster = builder.baseDir(baseDir).build();
+    MiniDFSCluster cluster = qjmhaCluster.getDfsCluster();
+    cluster.waitActive();
+    cluster.transitionToActive(0);
+
+    String nsId = "ns1";
+    conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
+        "hdfs://" + nsId);
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, nsId);
+    conf.set(DFSConfigKeys.DFS_NAMESERVICE_ID, nsId);
+    conf.set(DFSUtil.addKeySuffixes(
+        DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX, nsId), "nn1,nn2");
+    conf.set(DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY, "nn1");
+    conf.set(DFSUtil.addKeySuffixes(
+            DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nsId, "nn1"),
+        cluster.getNameNode(0).getHostAndPort());
+    conf.set(DFSUtil.addKeySuffixes(
+            DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nsId, "nn2"),
+        cluster.getNameNode(1).getHostAndPort());
+
+    // Reduce the number of retries to speed up the tests.
+    conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 3);
+    conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_RETRY_INTERVAL_KEY,
+        500);
+    conf.setInt(HdfsClientConfigKeys.Failover.MAX_ATTEMPTS_KEY, 2);
+    conf.setInt(HdfsClientConfigKeys.Retry.MAX_ATTEMPTS_KEY, 2);
+    conf.setInt(HdfsClientConfigKeys.Failover.SLEEPTIME_BASE_KEY, 0);
+    conf.setInt(HdfsClientConfigKeys.Failover.SLEEPTIME_MAX_KEY, 0);
+
+    assertTrue(HAUtil.isHAEnabled(conf, "ns1"));
+
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 16);
+    NNThroughputBenchmark.runBenchmark(conf, new String[] {"-op", "all"});
   }
 }
