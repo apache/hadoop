@@ -194,13 +194,6 @@ public class TestCombinedSystemMetricsPublisher {
       boolean v2Enabled) {
     YarnConfiguration yarnConf = new YarnConfiguration();
 
-    // Always set memory store implementations regardless of whether service is enabled
-    yarnConf.setClass(YarnConfiguration.TIMELINE_SERVICE_STORE,
-            MemoryTimelineStore.class, TimelineStore.class);
-    yarnConf.setClass(YarnConfiguration.TIMELINE_SERVICE_STATE_STORE_CLASS,
-            MemoryTimelineStateStore.class, TimelineStateStore.class);
-
-
     if (v1Enabled || v2Enabled) {
       yarnConf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     } else {
@@ -209,6 +202,10 @@ public class TestCombinedSystemMetricsPublisher {
 
     if (v1Enabled) {
       yarnConf.set(YarnConfiguration.TIMELINE_SERVICE_VERSION, "1.0");
+      yarnConf.setClass(YarnConfiguration.TIMELINE_SERVICE_STORE,
+          MemoryTimelineStore.class, TimelineStore.class);
+      yarnConf.setClass(YarnConfiguration.TIMELINE_SERVICE_STATE_STORE_CLASS,
+          MemoryTimelineStateStore.class, TimelineStateStore.class);
     }
 
     if (v2Enabled) {

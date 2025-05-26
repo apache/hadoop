@@ -119,6 +119,11 @@ RUN powershell pkg-resolver\install-python.ps1
 RUN powershell pkg-resolver\install-pip.ps1
 RUN powershell pip install python-dateutil
 
+## Install the Microsoft Visual C++ 2010 Redistributable to link leveldbjni native library
+RUN powershell -Command Invoke-WebRequest -Uri https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe -OutFile vcredist_x64.exe
+RUN powershell -Command Start-Process -FilePath .\vcredist_x64.exe -ArgumentList '/quiet', '/norestart' -Wait
+RUN powershell -Command Remove-Item vcredist_x64.exe
+
 # Create a user HadoopBuilder with basic privileges and use it for building Hadoop on Windows.
 RUN powershell New-LocalUser -Name 'HadoopBuilder' -Description 'User account for building Apache Hadoop' -Password ([securestring]::new()) -AccountNeverExpires -PasswordNeverExpires
 
