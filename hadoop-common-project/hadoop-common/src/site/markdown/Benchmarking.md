@@ -55,15 +55,15 @@ Following are all the operations supported along with their respective operation
 | OPERATION\_OPTION    | Operation-specific parameters |
 |:---- |:---- |
 |`all` | _options for other operations_ |
-|`create` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-close`] [`-baseDirName /nnThroughputBenchmark`] |
+|`create` | [`-threads 3`] [`-files 10`] [`-blockSize 16`] [`-filesPerDir 4`] [`-close`] [`-baseDirName /nnThroughputBenchmark`] |
 |`mkdirs` | [`-threads 3`] [`-dirs 10`] [`-dirsPerDir 2`] [`-baseDirName /nnThroughputBenchmark`] |
-|`open` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] [`-baseDirName /nnThroughputBenchmark`] |
+|`open` | [`-threads 3`] [`-files 10`] [`-blockSize 16`] [`-filesPerDir 4`] [`-useExisting`] [`-baseDirName /nnThroughputBenchmark`] |
 |`delete` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] [`-baseDirName /nnThroughputBenchmark`] |
 |`append` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] [`-appendNewBlk`] [`-baseDirName /nnThroughputBenchmark`] |
 |`fileStatus` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] [`-baseDirName /nnThroughputBenchmark`] |
 |`rename` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] [`-baseDirName /nnThroughputBenchmark`] |
-|`blockReport` | [`-datanodes 10`] [`-reports 30`] [`-blocksPerReport 100`] [`-blocksPerFile 10`] [`-baseDirName /nnThroughputBenchmark`] |
-|`replication` | [`-datanodes 10`] [`-nodesToDecommission 1`] [`-nodeReplicationLimit 100`] [`-totalBlocks 100`] [`-replication 3`] [`-baseDirName /nnThroughputBenchmark`] |
+|`blockReport` | [`-datanodes 10`] [`-reports 30`] [`-blocksPerReport 100`] [`-blocksPerFile 10`] [`-blockSize 16`] [`-baseDirName /nnThroughputBenchmark`] |
+|`replication` | [`-datanodes 10`] [`-nodesToDecommission 1`] [`-nodeReplicationLimit 100`] [`-totalBlocks 100`] [`-blockSize 16`] [`-replication 3`] [`-baseDirName /nnThroughputBenchmark`] |
 |`clean` | N/A |
 
 ##### Operation Options
