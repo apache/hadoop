@@ -106,6 +106,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   private static final String ACCOUNT_NAME = "bogusAccountName.dfs.core.windows.net";
   private static final String FS_AZURE_USER_AGENT_PREFIX = "Partner Service";
+  private static final String FNS_BLOB_USER_AGENT_IDENTIFIER = "FNS";
   private static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
   private static final String TEST_PATH = "/testfile";
   public static final int REDUCED_RETRY_COUNT = 2;
@@ -353,6 +354,25 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       .doesNotContain(clusterType)
       .describedAs("User-Agent string should contain UNKNOWN as cluster type config is absent")
       .contains(DEFAULT_VALUE_UNKNOWN);
+  }
+
+  @Test
+  // Test to verify that the user agent string for FNS-Blob accounts
+  public void verifyUserAgentForFNSBlob() throws Exception {
+    Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
+    assumeHnsDisabled();
+    Assume.assumeTrue(getAbfsServiceType() == AbfsServiceType.BLOB);
+    final AzureBlobFileSystem fs = getFileSystem(getRawConfiguration());
+    final AbfsConfiguration configuration = fs.getAbfsStore()
+        .getAbfsConfiguration();
+
+    String userAgentStr = getUserAgentString(configuration, false);
+    verifyBasicInfo(userAgentStr);
+    Assertions.assertThat(userAgentStr)
+        .describedAs(
+            "User-Agent string for FNS accounts on Blob endpoint should contain "
+                + FNS_BLOB_USER_AGENT_IDENTIFIER)
+        .contains(FNS_BLOB_USER_AGENT_IDENTIFIER);
   }
 
   public static AbfsClient createTestClientFromCurrentContext(

@@ -58,6 +58,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ApiVersion;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
@@ -152,6 +153,7 @@ public abstract class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
   public static final String ABFS_CLIENT_TIMER_THREAD_NAME = "abfs-timer-client";
+  public static final String FNS_BLOB_USER_AGENT_IDENTIFIER = "FNS";
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
@@ -1318,6 +1320,12 @@ public abstract class AbfsClient implements Closeable {
     sb.append(abfsConfiguration.getClusterName());
     sb.append(FORWARD_SLASH);
     sb.append(abfsConfiguration.getClusterType());
+
+    // Add a unique identifier in FNS-Blob user agent string
+    if(!getIsNamespaceEnabled() && abfsConfiguration.getFsConfiguredServiceType() == AbfsServiceType.BLOB){
+      sb.append(SEMICOLON).append(SINGLE_WHITE_SPACE);
+      sb.append(FNS_BLOB_USER_AGENT_IDENTIFIER);
+    }
 
     sb.append(")");
 
