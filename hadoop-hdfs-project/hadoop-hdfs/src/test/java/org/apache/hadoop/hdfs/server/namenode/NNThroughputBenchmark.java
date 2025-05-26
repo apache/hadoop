@@ -38,9 +38,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportReplica;
@@ -1714,14 +1715,14 @@ public class NNThroughputBenchmark implements Tool {
       } else {
         DistributedFileSystem dfs = (DistributedFileSystem)
             FileSystem.get(getConf());
-        nameNodeProto = DFSTestUtil.getNamenodeProtocolProxy(config, nnUri,
-            UserGroupInformation.getCurrentUser());
+        nameNodeProto = NameNodeProxies.createProxy(config, nnUri,
+            NamenodeProtocol.class).getProxy();
         clientProto = dfs.getClient().getNamenode();
-        InetSocketAddress nnAddr = DFSUtilClient.getNNAddress(nnUri);
+        InetSocketAddress nnAddr = HAUtil.getAddressOfActive(dfs);
         dataNodeProto = new DatanodeProtocolClientSideTranslatorPB(
             nnAddr, config);
-        refreshUserMappingsProto =
-            DFSTestUtil.getRefreshUserMappingsProtocolProxy(config, nnAddr);
+        refreshUserMappingsProto = NameNodeProxies.createProxy(config, nnUri,
+            RefreshUserMappingsProtocol.class).getProxy();
         getBlockPoolId(dfs);
       }
       // run each benchmark
