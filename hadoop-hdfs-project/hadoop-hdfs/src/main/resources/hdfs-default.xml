@@ -1780,6 +1780,21 @@
 </property>
 
 <property>
+  <name>dfs.datanode.synconclose</name>
+  <value>false</value>
+  <description>
+        If this configuration is enabled, the datanode will instruct the
+        operating system to sync data block files contents to disk when the
+        blockfile is closed.
+
+        This has the benefit of ensuring that data is written to disk
+        immeditately when a block is closed, avoiding the data being held
+        in the operating system cache. This can help data loss in the event
+        of a malfunction such as a power failure.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.failover.max.attempts</name>
   <value>15</value>
   <description>
