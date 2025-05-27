@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
@@ -60,7 +61,9 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.io.EnumSetWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1162,6 +1165,30 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
       }
     });
     return asyncReturn(Path.class);
+  }
+
+  @Override
+  public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
+      throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, true);
+    asyncComplete(this.securityManager.getDelegationToken(renewer));
+    return asyncReturn(Token.class);
+  }
+
+  @Override
+  public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
+      throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, true);
+    asyncComplete(this.securityManager.renewDelegationToken(token));
+    return asyncReturn(Long.class);
+  }
+
+  @Override
+  public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
+      throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, true);
+    this.securityManager.cancelDelegationToken(token);
+    asyncComplete(null);
   }
 
 }

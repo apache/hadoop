@@ -168,7 +168,7 @@ public class RouterClientProtocol implements ClientProtocol {
   /** Snapshot calls. */
   private final RouterSnapshot snapshotProto;
   /** Router security manager to handle token operations. */
-  private RouterSecurityManager securityManager = null;
+  protected RouterSecurityManager securityManager = null;
 
   public RouterClientProtocol(Configuration conf, RouterRpcServer rpcServer) {
     this.rpcServer = rpcServer;
