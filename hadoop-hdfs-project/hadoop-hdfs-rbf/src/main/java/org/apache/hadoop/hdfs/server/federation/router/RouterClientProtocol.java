@@ -168,7 +168,7 @@ public class RouterClientProtocol implements ClientProtocol {
   /** Snapshot calls. */
   private final RouterSnapshot snapshotProto;
   /** Router security manager to handle token operations. */
-  protected RouterSecurityManager securityManager = null;
+  private RouterSecurityManager securityManager = null;
 
   public RouterClientProtocol(Configuration conf, RouterRpcServer rpcServer) {
     this.rpcServer = rpcServer;
@@ -2523,5 +2523,9 @@ public class RouterClientProtocol implements ClientProtocol {
 
   public RouterFederationRename getRbfRename() {
     return rbfRename;
+  }
+
+  public RouterSecurityManager getSecurityManager(){
+    return securityManager;
   }
 }

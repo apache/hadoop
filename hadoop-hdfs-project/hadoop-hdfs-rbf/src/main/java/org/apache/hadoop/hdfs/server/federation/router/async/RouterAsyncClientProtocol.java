@@ -1171,7 +1171,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE, true);
-    asyncComplete(this.securityManager.getDelegationToken(renewer));
+    asyncComplete(getSecurityManager().getDelegationToken(renewer));
     return asyncReturn(Token.class);
   }
 
@@ -1179,7 +1179,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE, true);
-    asyncComplete(this.securityManager.renewDelegationToken(token));
+    asyncComplete(getSecurityManager().renewDelegationToken(token));
     return asyncReturn(Long.class);
   }
 
@@ -1187,7 +1187,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE, true);
-    this.securityManager.cancelDelegationToken(token);
+    getSecurityManager().cancelDelegationToken(token);
     asyncComplete(null);
   }
 
