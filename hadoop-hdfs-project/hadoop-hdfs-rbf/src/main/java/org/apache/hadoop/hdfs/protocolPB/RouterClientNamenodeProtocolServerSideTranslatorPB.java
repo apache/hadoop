@@ -978,43 +978,6 @@ public class RouterClientNamenodeProtocolServerSideTranslatorPB
   }
 
   @Override
-  public GetDelegationTokenResponseProto getDelegationToken(
-      RpcController controller, GetDelegationTokenRequestProto req) {
-    asyncRouterServer(() -> server
-            .getDelegationToken(new Text(req.getRenewer())),
-        token -> {
-          GetDelegationTokenResponseProto.Builder rspBuilder =
-              GetDelegationTokenResponseProto.newBuilder();
-          if (token != null) {
-            rspBuilder.setToken(PBHelperClient.convert(token));
-          }
-          return rspBuilder.build();
-        });
-    return null;
-  }
-
-  @Override
-  public RenewDelegationTokenResponseProto renewDelegationToken(
-      RpcController controller, RenewDelegationTokenRequestProto req) {
-    asyncRouterServer(() -> server.renewDelegationToken(PBHelperClient
-            .convertDelegationToken(req.getToken())),
-        result -> RenewDelegationTokenResponseProto.newBuilder()
-            .setNewExpiryTime(result).build());
-    return null;
-  }
-
-  @Override
-  public CancelDelegationTokenResponseProto cancelDelegationToken(
-      RpcController controller, CancelDelegationTokenRequestProto req) {
-    asyncRouterServer(() -> {
-      server.cancelDelegationToken(PBHelperClient.convertDelegationToken(req
-          .getToken()));
-      return null;
-    }, result -> VOID_CANCELDELEGATIONTOKEN_RESPONSE);
-    return null;
-  }
-
-  @Override
   public SetBalancerBandwidthResponseProto setBalancerBandwidth(
       RpcController controller, SetBalancerBandwidthRequestProto req) {
     asyncRouterServer(() -> {

@@ -89,4 +89,10 @@ public class TestRouterAsyncRpc extends TestRouterRpc {
   public void testConcurrentCallExecutorInitial() {
     assertNull(rndRouter.getRouterRpcClient().getExecutorService());
   }
+
+
+  @Test
+  public void testgetDelegationToken() throws Exception {
+  rndRouter.getFileSystem().getDelegationToken("yarn");
+  }
 }
