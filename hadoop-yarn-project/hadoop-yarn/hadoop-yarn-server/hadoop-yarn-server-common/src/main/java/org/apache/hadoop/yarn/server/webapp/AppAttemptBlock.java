@@ -189,7 +189,8 @@ public class AppAttemptBlock extends HtmlBlock {
     }
     containersTableData.append("]");
     String containersTableScript = "var containersTableData= " + containersTableData +
-            ";\nconst containersDataTable = DataTableHelper('#containers', { data: { data: containersTableData } }, false)";
+            ";\nconst containersDataTable = DataTableHelper('#containers', " +
+            "{ data: { data: containersTableData } }, false)";
     html.script().$type("text/javascript")
       .__(containersTableScript).__();
 

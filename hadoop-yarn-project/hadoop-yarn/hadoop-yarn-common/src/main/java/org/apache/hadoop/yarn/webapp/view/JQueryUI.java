@@ -146,7 +146,11 @@ public class JQueryUI extends HtmlBlock {
       int pos = init.indexOf('{') + 1;
       init = new StringBuilder(init).insert(pos, stateSaveInit).toString();
       dtJSBuilder.append("\n")
-              .append(join("  DataTableHelper('", escapeEcmaScript(selector), "', ", init, ", true);"));
+              .append(join("  DataTableHelper('",
+                      escapeEcmaScript(selector),
+                      "', ",
+                      init,
+                      ", true);"));
     }
     return dtJSBuilder.toString();
   }

@@ -63,28 +63,38 @@ public class NodeLabelsPage extends RmView {
       // Fetch node labels data
       RMNodeLabelsManager nlm = rm.getRMContext().getNodeLabelManager();
       for (RMNodeLabel info : nlm.pullRMNodeLabelsInfo()) {
-        String labelName = info.getLabelName().isEmpty() ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : info.getLabelName();
-        String labelType = info.getIsExclusive() ? "Exclusive Partition" : "Non Exclusive Partition";
+        String labelName = info.getLabelName().isEmpty()
+                ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION
+                : info.getLabelName();
+        String labelType = info.getIsExclusive()
+                ? "Exclusive Partition"
+                : "Non Exclusive Partition";
         int nActiveNMs = info.getNumActiveNMs();
         String totalResource = info.getResource().toFormattedString();
 
         // Append data to JSON string
         nodeLabelsTableData
                 .append("[\"")
-                .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(labelName)))
+                .append(StringEscapeUtils.escapeEcmaScript(
+                        StringEscapeUtils.escapeHtml4(labelName)))
                 .append("\",\"")
-                .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(labelType)))
+                .append(StringEscapeUtils.escapeEcmaScript(
+                        StringEscapeUtils.escapeHtml4(labelType)))
                 .append("\",\"")
                 .append(nActiveNMs)
                 .append("\",\"")
-                .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(totalResource)))
+                .append(StringEscapeUtils.escapeEcmaScript(
+                        StringEscapeUtils.escapeHtml4(totalResource)))
                 .append("\"],\n");
 
         // Generate HTML table rows
         TR<TBODY<TABLE<Hamlet>>> row = tbody.tr().td(labelName).td(labelType);
 
         if (nActiveNMs > 0) {
-          row = row.td().a(url("nodes", "?" + YarnWebParams.NODE_LABEL + "=" + labelName), String.valueOf(nActiveNMs)).__();
+          row = row.td()
+                .a(url("nodes", "?" + YarnWebParams.NODE_LABEL + "=" + labelName),
+                  String.valueOf(nActiveNMs))
+                  .__();
         } else {
           row = row.td(String.valueOf(nActiveNMs));
         }
@@ -93,13 +103,15 @@ public class NodeLabelsPage extends RmView {
       }
 
       if (nodeLabelsTableData.charAt(nodeLabelsTableData.length() - 2) == ',') {
-        nodeLabelsTableData.delete(nodeLabelsTableData.length() - 2, nodeLabelsTableData.length() - 1);
+        nodeLabelsTableData.delete(nodeLabelsTableData.length() - 2,
+                nodeLabelsTableData.length() - 1);
       }
       nodeLabelsTableData.append("]");
 
       // Include DataTables initialization script with the JSON data
       html.script().$type("text/javascript")
-              .__("nodeLabelsTableData=" + nodeLabelsTableData + "\nopts.data = {data: nodeLabelsTableData}" +
+              .__("nodeLabelsTableData=" + nodeLabelsTableData +
+                      "\nopts.data = {data: nodeLabelsTableData}" +
                       "\nnodeLabelsDataTable = DataTableHelper('#nodelabels', opts, false);").__();
 
       tbody.__().__();

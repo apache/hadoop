@@ -180,7 +180,8 @@ public class RMAppBlock extends AppBlock{
     }
     attemptsTableData.append("]");
     String attemptsTableScript = "var attemptsTableData= " + attemptsTableData +
-            ";\nconst attemptsDataTable = DataTableHelper('#attempts', { data: { data: attemptsTableData } }, false)";
+            ";\nconst attemptsDataTable = DataTableHelper('#attempts'," +
+            " { data: { data: attemptsTableData } }, false)";
     html.script().$type("text/javascript")
         .__(attemptsTableScript).__();
 
