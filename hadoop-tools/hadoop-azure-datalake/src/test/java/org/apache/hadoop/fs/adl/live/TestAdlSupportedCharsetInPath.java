@@ -19,16 +19,17 @@
 
 package org.apache.hadoop.fs.adl.live;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.adl.common.Parallelized;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +42,6 @@ import java.util.*;
  * Test supported ASCII, UTF-8 character set supported by Adl storage file
  * system on file/folder operation.
  */
-@RunWith(Parallelized.class)
 public class TestAdlSupportedCharsetInPath {
 
   private static final String TEST_ROOT = "/test/";
@@ -49,11 +49,10 @@ public class TestAdlSupportedCharsetInPath {
       .getLogger(TestAdlSupportedCharsetInPath.class);
   private String path;
 
-  public TestAdlSupportedCharsetInPath(String filePath) {
+  public void initTestAdlSupportedCharsetInPath(String filePath) {
     path = filePath;
   }
 
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> adlCharTestData()
       throws UnsupportedEncodingException {
 
@@ -246,7 +245,7 @@ public class TestAdlSupportedCharsetInPath {
     filePathList.add("bobτ");
   }
 
-  @AfterClass
+  @AfterAll
   public static void testReport() throws IOException, URISyntaxException {
     if (!AdlStorageConfiguration.isContractTestEnabled()) {
       return;
@@ -256,23 +255,22 @@ public class TestAdlSupportedCharsetInPath {
     fs.delete(new Path(TEST_ROOT), true);
   }
 
-  @Test
-  public void testAllowedSpecialCharactersMkdir()
+  @MethodSource("adlCharTestData")
+  @ParameterizedTest(name = "filePath {0}")
+  public void testAllowedSpecialCharactersMkdir(String filePath)
       throws IOException, URISyntaxException {
+    initTestAdlSupportedCharsetInPath(filePath);
     Path parentPath = new Path(TEST_ROOT, UUID.randomUUID().toString() + "/");
     Path specialFile = new Path(parentPath, path);
     FileSystem fs = AdlStorageConfiguration.createStorageConnector();
 
-    Assert.assertTrue("Mkdir failed : " + specialFile, fs.mkdirs(specialFile));
-    Assert.assertTrue("File not Found after Mkdir success" + specialFile,
-        fs.exists(specialFile));
-    Assert.assertTrue("Not listed under parent " + parentPath,
-        contains(fs.listStatus(parentPath),
-            fs.makeQualified(specialFile).toString()));
-    Assert.assertTrue("Delete failed : " + specialFile,
-            fs.delete(specialFile, true));
-    Assert.assertFalse("File still exist after delete " + specialFile,
-        fs.exists(specialFile));
+    assertTrue(fs.mkdirs(specialFile), "Mkdir failed : " + specialFile);
+    assertTrue(fs.exists(specialFile),
+        "File not Found after Mkdir success" + specialFile);
+    assertTrue(contains(fs.listStatus(parentPath),
+        fs.makeQualified(specialFile).toString()), "Not listed under parent " + parentPath);
+    assertTrue(fs.delete(specialFile, true), "Delete failed : " + specialFile);
+    assertFalse(fs.exists(specialFile), "File still exist after delete " + specialFile);
   }
 
   private boolean contains(FileStatus[] statuses, String remotePath) {
@@ -286,49 +284,46 @@ public class TestAdlSupportedCharsetInPath {
     return false;
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
-    org.junit.Assume
-        .assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
+    assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
   }
 
-  @Test
-  public void testAllowedSpecialCharactersRename()
+  @MethodSource("adlCharTestData")
+  @ParameterizedTest(name = "filePath {0}")
+  public void testAllowedSpecialCharactersRename(String filePath)
       throws IOException, URISyntaxException {
-
+    initTestAdlSupportedCharsetInPath(filePath);
     String parentPath = TEST_ROOT + UUID.randomUUID().toString() + "/";
     Path specialFile = new Path(parentPath + path);
     Path anotherLocation = new Path(parentPath + UUID.randomUUID().toString());
     FileSystem fs = AdlStorageConfiguration.createStorageConnector();
 
-    Assert.assertTrue("Could not create " + specialFile.toString(),
-        fs.createNewFile(specialFile));
-    Assert.assertTrue(
-        "Failed to rename " + specialFile.toString() + " --> " + anotherLocation
-            .toString(), fs.rename(specialFile, anotherLocation));
-    Assert.assertFalse("File should not be present after successful rename : "
-        + specialFile.toString(), fs.exists(specialFile));
-    Assert.assertTrue("File should be present after successful rename : "
-        + anotherLocation.toString(), fs.exists(anotherLocation));
-    Assert.assertFalse(
-        "Listed under parent whereas expected not listed : " + parentPath,
-        contains(fs.listStatus(new Path(parentPath)),
-            fs.makeQualified(specialFile).toString()));
+    assertTrue(fs.createNewFile(specialFile),
+        "Could not create " + specialFile.toString());
+    assertTrue(fs.rename(specialFile, anotherLocation),
+        "Failed to rename " + specialFile.toString() + " --> " + anotherLocation.toString());
+    assertFalse(fs.exists(specialFile), "File should not be present after successful rename : "
+        + specialFile.toString());
+    assertTrue(fs.exists(anotherLocation), "File should be present after successful rename : "
+        + anotherLocation.toString());
+    assertFalse(contains(fs.listStatus(new Path(parentPath)),
+        fs.makeQualified(specialFile).toString()),
+        "Listed under parent whereas expected not listed : " + parentPath);
 
-    Assert.assertTrue(
+    assertTrue(fs.rename(anotherLocation, specialFile),
         "Failed to rename " + anotherLocation.toString() + " --> " + specialFile
-            .toString(), fs.rename(anotherLocation, specialFile));
-    Assert.assertTrue(
-        "File should be present after successful rename : " + "" + specialFile
-            .toString(), fs.exists(specialFile));
-    Assert.assertFalse("File should not be present after successful rename : "
-        + anotherLocation.toString(), fs.exists(anotherLocation));
+        .toString());
+    assertTrue(fs.exists(specialFile),
+        "File should be present after successful rename : " + "" + specialFile.toString());
+    assertFalse(fs.exists(anotherLocation),
+        "File should not be present after successful rename : "
+        + anotherLocation.toString());
 
-    Assert.assertTrue("Not listed under parent " + parentPath,
-        contains(fs.listStatus(new Path(parentPath)),
-            fs.makeQualified(specialFile).toString()));
+    assertTrue(contains(fs.listStatus(new Path(parentPath)),
+        fs.makeQualified(specialFile).toString()), "Not listed under parent " + parentPath);
 
-    Assert.assertTrue("Failed to delete " + parentPath,
-        fs.delete(new Path(parentPath), true));
+    assertTrue(fs.delete(new Path(parentPath), true),
+        "Failed to delete " + parentPath);
   }
 }

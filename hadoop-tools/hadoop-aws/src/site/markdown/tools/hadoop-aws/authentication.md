@@ -58,6 +58,9 @@ For more information see [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade
     Comma-separated class names of credential provider classes which implement
     software.amazon.awssdk.auth.credentials.AwsCredentialsProvider.
 
+    org.apache.hadoop.fs.s3a.auth.ProfileAWSCredentialsProvider is not included in
+    the chain by default.
+
     When S3A delegation tokens are not enabled, this list will be used
     to directly authenticate with S3 and other AWS services.
     When S3A Delegation tokens are enabled, depending upon the delegation
@@ -171,6 +174,7 @@ There are a number of AWS Credential Providers inside the `hadoop-aws` JAR:
 | `org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider`     | Anonymous Login                                  |
 | `org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider`  | [Assumed Role credentials](./assumed_roles.html) |
 | `org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider` | EC2/k8s instance credentials                     |
+| `org.apache.hadoop.fs.s3a.auth.ProfileAWSCredentialsProvider`  | Session Credentials in profile file              |
 
 
 There are also many in the Amazon SDKs, with the common ones being as follows
@@ -221,6 +225,25 @@ Note:
 1. For the credentials to be available to applications running in a Hadoop cluster, the
    configuration files MUST be in the `~/.aws/` directory on the local filesystem in
    all hosts in the cluster.
+
+### <a name="auth_simple"></a> Credentials from profile with `ProfileAWSCredentialsProvider`*
+
+This is a non-default provider that fetches credentials from a profile file,
+acting as a Hadoop wrapper around [ProfileCredentialsProvider](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/auth/credentials/ProfileCredentialsProvider.html). The profile file and
+profile name are both resolved as follows.
+
+1. If the configuration setting is specified, that takes priority ( `fs.s3a.auth.profile.file`
+   for profile file and `fs.s3a.auth.profile.name` for profile name).
+2. If a configuration setting is absent, but the environment variable for
+   the setting( `AWS_SHARED_CREDENTIALS_FILE` for profile file and `AWS_PROFILE` for
+   profile name) is defined, then the variable is used.
+3. If neither configuration setting nor environment variable is present, then
+   the values default to `~/.aws/credentials` for the profile file, and `default`
+   for the profile name.
+
+
+*Important*: This profile file must be on every node in the _cluster_.
+If this is not the case, delegation tokens can be used to collect the current credentials and propagate them.
 
 ### <a name="auth_session"></a> Using Session Credentials with `TemporaryAWSCredentialsProvider`
 

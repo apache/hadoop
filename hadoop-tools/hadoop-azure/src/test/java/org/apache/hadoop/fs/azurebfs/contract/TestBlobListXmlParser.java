@@ -101,7 +101,7 @@ public class TestBlobListXmlParser {
         + "<OrMetadata />"
         + "</Blob>"
         + "</Blobs>"
-        + "<NextMarker />"
+        + "<NextMarker>TEST_CONTINUATION_TOKEN</NextMarker>"
         + "</EnumerationResults>";
     BlobListResultSchema listResultSchema = getResultSchema(xmlResponseWithDelimiter);
     List<BlobListResultEntrySchema> paths = listResultSchema.paths();
@@ -110,10 +110,11 @@ public class TestBlobListXmlParser {
     Assertions.assertThat(paths.get(1).isDirectory()).isEqualTo(true);
     Assertions.assertThat(paths.get(2).isDirectory()).isEqualTo(true);
     Assertions.assertThat(paths.get(3).isDirectory()).isEqualTo(false);
+    Assertions.assertThat(listResultSchema.getNextMarker()).isNotNull();
   }
 
   @Test
-  public void testEmptyBlobList() throws Exception {
+  public void testEmptyBlobListNullCT() throws Exception {
     String xmlResponse = ""
         + "<?xml version=\"1.0\" encoding=\"utf-8\"?><"
         + "EnumerationResults ServiceEndpoint=\"https://anujtestfns.blob.core.windows.net/\" ContainerName=\"manualtest\">"
@@ -124,6 +125,43 @@ public class TestBlobListXmlParser {
     BlobListResultSchema listResultSchema = getResultSchema(xmlResponse);
     List<BlobListResultEntrySchema> paths = listResultSchema.paths();
     Assertions.assertThat(paths.size()).isEqualTo(0);
+    Assertions.assertThat(listResultSchema.getNextMarker()).isNull();
+  }
+
+  @Test
+  public void testEmptyBlobListValidCT() throws Exception {
+    String xmlResponse = ""
+        + "<?xml version=\"1.0\" encoding=\"utf-8\"?><"
+        + "EnumerationResults ServiceEndpoint=\"https://anujtestfns.blob.core.windows.net/\" ContainerName=\"manualtest\">"
+        + "<Prefix>abc/</Prefix>"
+        + "<Delimiter>/</Delimiter>"
+        + "<Blobs />"
+        + "<NextMarker>TEST_CONTINUATION_TOKEN</NextMarker>"
+        + "</EnumerationResults>";
+    BlobListResultSchema listResultSchema = getResultSchema(xmlResponse);
+    List<BlobListResultEntrySchema> paths = listResultSchema.paths();
+    Assertions.assertThat(paths.size()).isEqualTo(0);
+    Assertions.assertThat(listResultSchema.getNextMarker()).isNotNull();
+  }
+
+  @Test
+  public void testNonEmptyBlobListNullCT() throws Exception {
+    String xmlResponse = ""
+        + "<?xml version=\"1.0\" encoding=\"utf-8\"?><"
+        + "EnumerationResults ServiceEndpoint=\"https://anujtestfns.blob.core.windows.net/\" ContainerName=\"manualtest\">"
+        + "<Prefix>abc/</Prefix>"
+        + "<Delimiter>/</Delimiter>"
+        + "<Blobs>"
+        + "<BlobPrefix>"
+        + "<Name>bye/</Name>"
+        + "</BlobPrefix>"
+        + "</Blobs>"
+        + "<NextMarker />"
+        + "</EnumerationResults>";
+    BlobListResultSchema listResultSchema = getResultSchema(xmlResponse);
+    List<BlobListResultEntrySchema> paths = listResultSchema.paths();
+    Assertions.assertThat(paths.size()).isEqualTo(1);
+    Assertions.assertThat(listResultSchema.getNextMarker()).isNull();
   }
 
   private static final ThreadLocal<SAXParser> SAX_PARSER_THREAD_LOCAL
