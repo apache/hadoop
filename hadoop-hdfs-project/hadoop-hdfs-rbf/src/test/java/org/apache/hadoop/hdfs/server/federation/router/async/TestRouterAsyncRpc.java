@@ -25,7 +25,6 @@ import org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessPolicy
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.TestRouterRpc;
 import org.apache.hadoop.security.UserGroupInformation;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
