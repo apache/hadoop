@@ -36,8 +36,8 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED = true;
   public static final String USER_HOME_DIRECTORY_PREFIX = "/user";
 
-  public static final int SIXTY_SECONDS = 60_000;
-  public static final int THIRTY_SECONDS = 30_000;
+  public static final int SIXTY_SECONDS = 60;
+  public static final int THIRTY_SECONDS = 30;
   /**
    * Number of bytes in a gigabyte.
    */

@@ -125,20 +125,31 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     // Estimate memory available per processor core
     long memoryPerCoreGB = totalMemoryGB / availableProcessors;
 
+    LOG.debug("Total memory (GB): {}", totalMemoryGB);
+    LOG.debug("Available processors: {}", availableProcessors);
+    LOG.debug("Memory per core (GB): {}", memoryPerCoreGB);
+
     // Determine multiplier based on memory-per-core tiers
     int multiplier;
     if (memoryPerCoreGB <= LOW_MEMORY_THRESHOLD_GB) {
       multiplier = LOW_MEMORY_MULTIPLIER;
+      LOG.debug("Using LOW_MEMORY_MULTIPLIER: {}", multiplier);
     } else if (memoryPerCoreGB <= MEDIUM_MEMORY_THRESHOLD_GB) {
       multiplier = MEDIUM_MEMORY_MULTIPLIER;
+      LOG.debug("Using MEDIUM_MEMORY_MULTIPLIER: {}", multiplier);
     } else if (memoryPerCoreGB <= HIGH_MEMORY_THRESHOLD_GB) {
       multiplier = HIGH_MEMORY_MULTIPLIER;
+      LOG.debug("Using HIGH_MEMORY_MULTIPLIER: {}", multiplier);
     } else {
       multiplier = VERY_HIGH_MEMORY_MULTIPLIER;
+      LOG.debug("Using VERY_HIGH_MEMORY_MULTIPLIER: {}", multiplier);
     }
 
     /* Compute max thread pool size with upper bound safeguard */
-    return availableProcessors * multiplier;
+    int computedMaxPoolSize = availableProcessors * multiplier;
+    LOG.debug("Computed max thread pool size: {}", computedMaxPoolSize);
+
+    return computedMaxPoolSize;
   }
 
   /**
@@ -266,18 +277,25 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       if (cpuUtilization > HIGH_CPU_THRESHOLD) {
         newMaxPoolSize = Math.max(initialPoolSize,
             currentPoolSize - currentPoolSize / 3);
+        LOG.debug("High CPU load detected ({}). Reducing pool size: current={}, new={}",
+            cpuUtilization, currentPoolSize, newMaxPoolSize);
       } else if (cpuUtilization > MEDIUM_CPU_THRESHOLD) {
         newMaxPoolSize = Math.max(initialPoolSize,
             currentPoolSize - currentPoolSize / 5);
+        LOG.debug("Medium CPU load detected ({}). Moderately reducing pool size: current={}, new={}",
+            cpuUtilization, currentPoolSize, newMaxPoolSize);
       } else if (cpuUtilization < LOW_CPU_THRESHOLD) {
         newMaxPoolSize = Math.min(maxThreadPoolSize,
             (int) (currentPoolSize * POOL_SIZE_INCREASE_FACTOR));
+        LOG.debug("Low CPU load detected ({}). Increasing pool size: current={}, new={}",
+            cpuUtilization, currentPoolSize, newMaxPoolSize);
       } else {
         newMaxPoolSize = currentPoolSize;
+        LOG.debug("CPU load within normal range ({}). No change to pool size: current={}",
+            cpuUtilization, currentPoolSize);
       }
-      LOG.debug("Adjusting pool size from " + currentPoolSize + " to "
-          + newMaxPoolSize);
       if (newMaxPoolSize != currentPoolSize) {
+        LOG.debug("Adjusting thread pool size from {} to {}", currentPoolSize, newMaxPoolSize);
         this.adjustThreadPoolSize(newMaxPoolSize);
       }
     } finally {
