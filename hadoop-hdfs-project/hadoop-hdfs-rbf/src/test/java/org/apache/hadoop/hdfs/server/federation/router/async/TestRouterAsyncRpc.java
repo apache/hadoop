@@ -91,11 +91,10 @@ public class TestRouterAsyncRpc extends TestRouterRpc {
     assertNull(rndRouter.getRouterRpcClient().getExecutorService());
   }
 
-
   @Test
   public void testGetDelegationTokenAsyncRpc() throws Exception {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    assertDoesNotThrow(()->{
+    assertDoesNotThrow(() -> {
       rndRouter.getFileSystem().getDelegationToken(ugi.getShortUserName());
     });
   }

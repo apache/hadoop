@@ -2525,7 +2525,7 @@ public class RouterClientProtocol implements ClientProtocol {
     return rbfRename;
   }
 
-  public RouterSecurityManager getSecurityManager(){
+  public RouterSecurityManager getSecurityManager() {
     return securityManager;
   }
 }
