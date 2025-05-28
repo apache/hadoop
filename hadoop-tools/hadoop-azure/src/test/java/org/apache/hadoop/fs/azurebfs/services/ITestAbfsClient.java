@@ -35,6 +35,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
+import org.mockito.stubbing.Stubber;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -801,10 +802,44 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         .when(spiedClient).listPath(eq("/testPath"), eq(false), eq(1),
             any(), any(), any());
 
+    final int[] itr = new int[1];
+    final String[] continuationTokenUsed = new String[3];
+
+    Mockito.doAnswer(invocationOnMock -> {
+      if (itr[0] == 0) {
+        itr[0]++;
+        continuationTokenUsed[0] = invocationOnMock.getArgument(3);
+        return listResponseData1;
+      } else if (itr[0] == 1) {
+        itr[0]++;
+        continuationTokenUsed[1] = invocationOnMock.getArgument(3);
+        return listResponseData2;
+      }
+      continuationTokenUsed[2] = invocationOnMock.getArgument(3);
+      return listResponseData3;
+    }).when(spiedClient).listPath(eq("/testPath"), eq(false), eq(1),
+        any(), any(TracingContext.class), any());
+
     Assertions.assertThat(spiedClient.isNonEmptyDirectory("/testPath",
         Mockito.mock(TracingContext.class)))
         .describedAs("isNonEmptyDirectory in client giving unexpected results")
         .isEqualTo(isNonEmpty);
+
+    Assertions.assertThat(continuationTokenUsed[0])
+        .describedAs("First continuation token used is not as expected")
+        .isNull();
+
+    if (expectedInvocations > 1) {
+      Assertions.assertThat(continuationTokenUsed[1])
+          .describedAs("Second continuation token used is not as expected")
+          .isEqualTo(firstCT);
+    }
+
+    if (expectedInvocations > 2) {
+      Assertions.assertThat(continuationTokenUsed[2])
+          .describedAs("Third continuation token used is not as expected")
+          .isEqualTo(secondCT);
+    }
 
     Mockito.verify(spiedClient, times(expectedInvocations))
         .listPath(eq("/testPath"), eq(false), eq(1),
