@@ -746,18 +746,18 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         true, 2, false);
     testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, true, EMPTY_STRING,
         false, 2, true);
-    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, true, TEST_CONTINUATION_TOKEN,
+    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN + 1, true, TEST_CONTINUATION_TOKEN + 2,
         true, 3, false);
-    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, true, TEST_CONTINUATION_TOKEN,
+    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN + 1, true, TEST_CONTINUATION_TOKEN + 2,
         false, 2, true);
 
     testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, false, EMPTY_STRING,
         true, 1, true);
     testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, false, EMPTY_STRING,
         false, 1, true);
-    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, false, TEST_CONTINUATION_TOKEN,
+    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN + 1, false, TEST_CONTINUATION_TOKEN + 2,
         true, 1, true);
-    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, false, TEST_CONTINUATION_TOKEN,
+    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN + 1, false, TEST_CONTINUATION_TOKEN + 2,
         false, 1, true);
   }
 

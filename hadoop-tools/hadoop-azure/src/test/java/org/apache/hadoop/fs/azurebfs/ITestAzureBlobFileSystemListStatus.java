@@ -391,9 +391,9 @@ public class ITestAzureBlobFileSystemListStatus extends
         true, 2, 0);
     testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, EMPTY_STRING,
         false, 2, 1);
-    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, TEST_CONTINUATION_TOKEN,
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN + 1, true, TEST_CONTINUATION_TOKEN + 2,
         true, 3, 0);
-    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, TEST_CONTINUATION_TOKEN,
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN + 1, true, TEST_CONTINUATION_TOKEN + 2,
         false, 3, 1);
 
     testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, EMPTY_STRING,
@@ -409,9 +409,9 @@ public class ITestAzureBlobFileSystemListStatus extends
         true, 2, 1);
     testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, EMPTY_STRING,
         false, 2, 2);
-    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, TEST_CONTINUATION_TOKEN,
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN + 1, false, TEST_CONTINUATION_TOKEN + 2,
         true, 3, 1);
-    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, TEST_CONTINUATION_TOKEN,
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN + 1, false, TEST_CONTINUATION_TOKEN + 2,
         false, 3, 2);
   }
 
