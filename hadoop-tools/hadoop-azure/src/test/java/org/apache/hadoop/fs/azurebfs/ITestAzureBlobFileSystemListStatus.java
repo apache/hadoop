@@ -468,8 +468,8 @@ public class ITestAzureBlobFileSystemListStatus extends
       }
       continuationTokenUsed[2] = invocationOnMock.getArgument(3);
       return listResponseData3;
-    }).when(spiedClient).listPath(eq("/testPath"), eq(false), eq(1),
-        any(), any(TracingContext.class), any());
+    }).when(spiedClient).listPath(eq("/testPath"), eq(false), eq(1), any(),
+        any(TracingContext.class), any());
 
     FileStatus[] list = spiedFs.listStatus(new Path("/testPath"));
 
