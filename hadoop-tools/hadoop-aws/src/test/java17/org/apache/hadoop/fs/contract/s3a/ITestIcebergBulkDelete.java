@@ -32,12 +32,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Lists;
 import org.apache.iceberg.exceptions.RuntimeIOException;
 import org.apache.iceberg.hadoop.HadoopFileIO;
+import org.apache.iceberg.io.FileInfo;
 
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
@@ -228,16 +228,24 @@ public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
    */
   @Test
   public void testDeleteDirectorySimpleAPI() throws Throwable {
-    LOG.info("Deleting path to directory via deleteFile");
-    Path path = methodPath();
+    final Path base = methodPath();
+    Path path = new Path(base, "subdir");
     Path child = new Path(path, "child+=comple]x");
     final FileSystem fs = getFileSystem();
+    final String pathname = toString(path);
+
     final List<String> filename = stringList(path);
 
     // create a directory and a child underneath
     fs.mkdirs(path);
     final String childname = file(child);
-    final String pathname = toString(path);
+    Assertions.assertThat(listPaths(base))
+        .as("directory should be empty after deletion")
+        .hasSize(1)
+            .element(0)
+                .satisfies(
+                    fileInfo -> fileInfo.location().equals(childname));
+
 
     // Through the HadoopFileIO.deleteFile API.
     // this is rejected by S3A as it is not a file nor an empty directory,
@@ -257,8 +265,9 @@ public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
    */
   @Test
   public void testDeleteFileSimpleAPI() throws Throwable {
-    LOG.info("Deleting file via deleteFile");
-    Path path = methodPath();
+    LOG.info("Deleting file via deleteFile(String)");
+    final Path base = methodPath();
+    Path path = new Path(base, "subdir");
     Path child = new Path(path, "child+=comple]x");
     final FileSystem fs = getFileSystem();
     final List<String> filename = stringList(path);
@@ -272,6 +281,9 @@ public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
     assertDoesNotExist("child should have been deleted", child);
     fileIO.deleteFile(toString(path));
     assertDoesNotExist("empty directory should have been deleted", path);
+    Assertions.assertThat(listPaths(base))
+        .as("directory should be empty after deletion")
+        .isEmpty();
   }
 
   @Test
@@ -315,6 +327,17 @@ public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
    */
   private static String toString(final Path path) {
     return path.toString();
+  }
+
+  /**
+   * List the files under a given path.
+   * Directories are not reported.
+   * @param path path to list
+   * @return the list of files
+   * @throws Throwable any exception raised
+   */
+  private List<FileInfo> listPaths(Path path) throws Throwable {
+    return Lists.newArrayList(fileIO.listPrefix(toString(path)));
   }
 
 }
