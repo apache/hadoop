@@ -1556,10 +1556,16 @@ public final class Constants {
       "fs.s3a.performance.flags";
 
   /**
-   * All performance flags in the enumeration.
+   * All performance flags in the current release: {@value}.
    */
-  public static final String PERFORMANCE_FLAGS =
+  public static final String PERFORMANCE_FLAGS_ALL =
       "create, delete, mkdir, open";
+
+  /**
+   * Wildcard forall performance flags any release: {@value}.
+   */
+  public static final String PERFORMANCE_FLAGS_STAR =
+      "*";
 
   /**
    * Is the create overwrite feature enabled or not?

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -30,66 +29,58 @@ import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.fs.test.formats.AbstractIcebergDeleteTest;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Lists;
 import org.apache.iceberg.exceptions.RuntimeIOException;
 import org.apache.iceberg.hadoop.HadoopFileIO;
-import org.apache.iceberg.io.BulkDeletionFailureException;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathsDoNotExist;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertSuccessfulBulkDelete;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.getFileStatusOrNull;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
-import static org.apache.hadoop.fs.s3a.Constants.PERFORMANCE_FLAGS;
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.FS_S3A_IMPL_DISABLE_CACHE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createFiles;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
-import static org.apache.hadoop.io.wrappedio.WrappedIO.bulkDelete_delete;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test Iceberg Bulk Delete API.
  * <p>
- * Parameterized on Iceberg bulk delete enabled/disabled and
- * s3a multipart delete enabled/disabled.
+ * Parameterized on s3a multipart delete enabled/disabled.
  */
 @RunWith(Parameterized.class)
-public class ITestIcebergBulkDelete extends AbstractIcebergDeleteTest {
+public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(ITestIcebergBulkDelete.class);
 
   /**
-   * Parallelism when using the classic multi-thread bulk delete.
+   * Size of the delete thread pool.
    */
   private static final String ICEBERG_DELETE_FILE_PARALLELISM =
       "iceberg.hadoop.delete-file-parallelism";
-
-  /** Is bulk delete enabled on hadoop runtimes with API support: {@value}. */
-  public static final String ICEBERG_BULK_DELETE_ENABLED = "iceberg.hadoop.bulk.delete.enabled";
 
   private static final int DELETE_PAGE_SIZE = 3;
 
   private static final int DELETE_FILE_COUNT = 7;
 
-  @Parameterized.Parameters(name = "multiobjectdelete-{0}-usebulk-{1}")
+  public static final int ICEBERG_EXECUTORS = 5;
+
+  /**
+   * The HadoopFileIO instance used to perform all Iceberg IO;
+   * created in setup.
+   */
+  private HadoopFileIO fileIO;
+
+  @Parameterized.Parameters(name = "multiobjectdelete-{0}")
   public static Iterable<Object[]> enableMultiObjectDelete() {
     return Arrays.asList(new Object[][]{
-        {true, true},
-        {true, false},
-        {false, true},
-        {false, false}
+        {true},
+        {false}
     });
   }
 
@@ -98,14 +89,8 @@ public class ITestIcebergBulkDelete extends AbstractIcebergDeleteTest {
    */
   private final boolean enableMultiObjectDelete;
 
-  /**
-   * Enable bulk delete in iceberg.
-   */
-  private final boolean useBulk;
-
-  public ITestIcebergBulkDelete(boolean enableMultiObjectDelete, final boolean useBulk) {
+  public ITestIcebergBulkDelete(boolean enableMultiObjectDelete) {
     this.enableMultiObjectDelete = enableMultiObjectDelete;
-    this.useBulk = useBulk;
   }
 
   @Override
@@ -113,8 +98,9 @@ public class ITestIcebergBulkDelete extends AbstractIcebergDeleteTest {
     // close all filesystems.
     FileSystem.closeAllForUGI(UserGroupInformation.getCurrentUser());
 
-    // the create the single new one
+    // then create the single new one
     super.setup();
+    fileIO = createFileIO();
   }
 
   @Override
@@ -125,7 +111,6 @@ public class ITestIcebergBulkDelete extends AbstractIcebergDeleteTest {
         BULK_DELETE_PAGE_SIZE);
     // turn the caching on else every call refreshes the cache
     conf.setBoolean(FS_S3A_IMPL_DISABLE_CACHE, false);
-    conf.setInt(BULK_DELETE_PAGE_SIZE, DELETE_PAGE_SIZE);
 
     // skip this test run if multi-delete is explicitly disabled;
     // this is needed to test against third party stores
@@ -134,39 +119,17 @@ public class ITestIcebergBulkDelete extends AbstractIcebergDeleteTest {
       skipIfNotEnabled(conf, ENABLE_MULTI_DELETE, "multi object delete is disabled");
     }
     conf.setBoolean(ENABLE_MULTI_DELETE, enableMultiObjectDelete);
-    conf.setBoolean(ICEBERG_BULK_DELETE_ENABLED, useBulk);
-    conf.setInt(ICEBERG_DELETE_FILE_PARALLELISM, 5);
-    // speed up file/dir creation
-    conf.set(FS_S3A_PERFORMANCE_FLAGS, PERFORMANCE_FLAGS);
+    conf.setInt(BULK_DELETE_PAGE_SIZE, DELETE_PAGE_SIZE);
+    conf.setInt(ICEBERG_DELETE_FILE_PARALLELISM, ICEBERG_EXECUTORS);
     return conf;
   }
 
-
-  @Override
-  protected AbstractFSContract createContract(Configuration conf) {
-    return new S3AContract(createConfiguration());
-  }
-
-  @Override
-  protected int getExpectedPageSize() {
-    return enableMultiObjectDelete
-        ? 1
-        : DELETE_PAGE_SIZE;
-  }
-
   /**
-   * Create file IO; includes an assert that bulk delete is enabled.
+   * Create file IO for the current filesystem.
    * @return a file iO
    */
   private HadoopFileIO createFileIO() {
-    final Configuration conf = getFileSystem().getConf();
-
-    final HadoopFileIO fileIO = new HadoopFileIO(conf);
-    // assert that bulk delete loaded.
-    Assertions.assertThat(fileIO.isBulkDeleteApiUsed())
-        .describedAs("is HadoopFileIO able to load Hadoop bulk delete")
-        .isEqualTo(useBulk);
-    return fileIO;
+    return new HadoopFileIO(getFileSystem().getConf());
   }
 
   /**
@@ -175,17 +138,62 @@ public class ITestIcebergBulkDelete extends AbstractIcebergDeleteTest {
   @Test
   public void testDeleteSingleFile() throws Throwable {
     Path path = new Path(methodPath(), "../single");
-    try (HadoopFileIO fileIO = createFileIO()) {
-      final List<String> filename = stringList(path);
-      LOG.info("Deleting empty path");
-      fileIO.deleteFiles(filename);
-      // now one file
-      final FileSystem fs = getFileSystem();
-      touch(fs, path);
-      LOG.info("Deleting file at {}", filename);
-      fileIO.deleteFiles(filename);
-      assertPathsDoNotExist(fs, "should have been deleted", path);
-    }
+    final List<String> filename = stringList(path);
+    LOG.info("Deleting empty path");
+    fileIO.deleteFiles(filename);
+    // now one file
+    file(path);
+    LOG.info("Deleting file at {}", filename);
+    fileIO.deleteFiles(filename);
+    assertDoesNotExist("should have been deleted", path);
+  }
+
+  /**
+   * Create a file in the filesystem through the Iceberg FileIO API.
+   * @param path path to create
+   * @return the string representation of the path
+   * @throws Throwable any exception raised
+   */
+  String file(Path path) throws Throwable {
+    final String name = toString(path);
+    fileIO.newOutputFile(name)
+        .createOrOverwrite()
+        .close();
+    return name;
+  }
+
+  /**
+   * Probe for the existence of a file.
+   * @param path path to probe for existence
+   * @return true if a file was found or dir inferred.
+   * @throws Throwable failure
+   */
+  private boolean exists(Path path) throws Throwable {
+    return fileIO.newInputFile(toString(path)).exists();
+  }
+
+  /**
+   * Assert that a path exists.
+   * @param message message to print if the assertion fails
+   * @param path path to check
+   * @throws Throwable any exception raised
+   */
+  private void assertExists(String message, Path path) throws Throwable {
+    Assertions.assertThat(exists(path))
+        .as(message + ": " + path)
+        .isTrue();
+  }
+
+  /**
+   * Assert that a path does not exist.
+   * @param message message to print if the assertion fails
+   * @param path path to check
+   * @throws Throwable any exception raised
+   */
+  private void assertDoesNotExist(String message, Path path) throws Throwable {
+    Assertions.assertThat(exists(path))
+        .as(message + ": " + path)
+        .isFalse();
   }
 
   /**
@@ -194,100 +202,104 @@ public class ITestIcebergBulkDelete extends AbstractIcebergDeleteTest {
    * The classic invocation mechanism reports a failure.
    */
   @Test
-  public void testDeleteDirectory() throws Throwable {
+  public void testBulkDeleteDirectory() throws Throwable {
     Path path = methodPath();
+    Path child = new Path(path, "child+=comple]x");
+    final FileSystem fs = getFileSystem();
+    final List<String> dir = stringList(path);
 
-    try (HadoopFileIO fileIO = createFileIO()) {
-      final List<String> filename = stringList(path);
+    // create a directory and a child underneath
 
-      // create a directory and a child underneath
-      Path child = new Path(path, "child");
-      final FileSystem fs = getFileSystem();
-      fs.mkdirs(path);
-      touch(fs, child);
+    fs.mkdirs(path);
+    final String childname = file(child);
 
-      LOG.info("Deleting path to directory");
-      if (useBulk) {
-        fileIO.deleteFiles(filename);
-      } else {
-        final BulkDeletionFailureException ex =
-            intercept(BulkDeletionFailureException.class, () ->
-                fileIO.deleteFiles(filename));
-        Assertions.assertThat(ex.numberFailedObjects())
-            .describedAs("Failure count in %s", ex)
-            .isEqualTo(1);
-      }
-      // Reported failure or not, the directory is still found
-      assertPathExists("directory was not deleted", path);
-    }
+    LOG.info("Deleting path to directory");
+    fileIO.deleteFiles(dir);
+    // The directory is still found, as is the child.
+    assertExists("directory was unexpectedly deleted", path);
+    assertExists("child was unexpectedly deleted", child);
+
   }
 
   /**
    * A directory is not deleted through the bulk delete API,
-   * it is through the classic single file delete.
-   * The assertions match this behavior.
-   * <p>
-   * Note that the semantics of FileSystem.delete(path, nonrecursive)
-   * have special handling of deleting an empty directory, where
-   * it is allowed (as with unix cli rm), so a child file
-   * is created to force stricter semantics.
+   * but does not report a failure.
+   * The classic invocation mechanism reports a failure.
    */
   @Test
-  public void testDeleteDirectoryDirect() throws Throwable {
-    //Path path = new Path(methodPath(), "../single");
+  public void testDeleteDirectorySimpleAPI() throws Throwable {
+    LOG.info("Deleting path to directory via deleteFile");
     Path path = methodPath();
-    try (HadoopFileIO fileIO = createFileIO()) {
+    Path child = new Path(path, "child+=comple]x");
+    final FileSystem fs = getFileSystem();
+    final List<String> filename = stringList(path);
 
-      // create a directory and a child underneath
-      Path child = new Path(path, "child");
-      final FileSystem fs = getFileSystem();
+    // create a directory and a child underneath
+    fs.mkdirs(path);
+    final String childname = file(child);
+    final String pathname = toString(path);
 
-      fs.mkdirs(path);
-      touch(fs, child);
+    // Through the HadoopFileIO.deleteFile API.
+    // this is rejected by S3A as it is not a file nor an empty directory,
+    intercept(RuntimeIOException.class,
+        "Failed to delete",
+        () -> fileIO.deleteFile(pathname));
 
-      LOG.info("Deleting path to directory via deleteFile");
-      intercept(RuntimeIOException.class, () ->
-      {
-        final String s = toString(path);
-        fileIO.deleteFile(s);
-        final FileStatus st = getFileStatusOrNull(fs, path);
-        return String.format("Expected failure deleting %s but none raised. Path status: %s",
-            path, st);
-      });
-    }
+    assertExists("directory was unexpectedly deleted", path);
+    assertExists("child was unexpectedly deleted", child);
+
+  }
+
+  /**
+   * A directory is not deleted through the bulk delete API,
+   * but does not report a failure.
+   * The classic invocation mechanism reports a failure.
+   */
+  @Test
+  public void testDeleteFileSimpleAPI() throws Throwable {
+    LOG.info("Deleting file via deleteFile");
+    Path path = methodPath();
+    Path child = new Path(path, "child+=comple]x");
+    final FileSystem fs = getFileSystem();
+    final List<String> filename = stringList(path);
+
+    // create a directory and a child underneath
+    fs.mkdirs(path);
+    final String childname = file(child);
+
+    // Through the HadoopFileIO.deleteFile API.
+    fileIO.deleteFile(childname);
+    assertDoesNotExist("child should have been deleted", child);
+    fileIO.deleteFile(toString(path));
+    assertDoesNotExist("empty directory should have been deleted", path);
   }
 
   @Test
   public void testDeleteManyFiles() throws Throwable {
+    LOG.info("Deleting many files via the bulk delete API");
     Path path = methodPath();
     final FileSystem fs = getFileSystem();
     final List<Path> files = createFiles(fs, path, 1, DELETE_FILE_COUNT, 0);
-    try (HadoopFileIO fileIO = createFileIO()) {
-      fileIO.deleteFiles(stringList(files));
-      for (Path p : files) {
-        assertPathDoesNotExist("expected deletion", p);
-      }
+    fileIO.deleteFiles(stringList(files));
+    for (Path p : files) {
+      assertPathDoesNotExist("expected deletion", p);
     }
   }
 
   /**
-   * Use a more complex filename.
-   * This validates that any conversions to URI/string
-   * when passing to an object store is correct.
+   * Convert a list of paths to a list of strings.
+   * @param files files to convert
+   * @return the list of strings
    */
-  @Test
-  public void testDeleteComplexFilename() throws Exception {
-    Path path = new Path(basePath, "child[=comple]x");
-    List<Path> paths = new ArrayList<>();
-    paths.add(path);
-    // bulk delete call doesn't verify if a path exists or not before deleting.
-    assertSuccessfulBulkDelete(bulkDelete_delete(getFileSystem(), basePath, paths));
-  }
-
   public static List<String> stringList(List<Path> files) {
     return files.stream().map(p -> toString(p)).collect(Collectors.toList());
   }
 
+  /**
+   * Convert a single path to a list of strings.
+   * @param path path to convert
+   * @return the list of strings
+   */
   public static List<String> stringList(Path path) {
     return Lists.newArrayList(toString(path));
   }
@@ -304,6 +316,5 @@ public class ITestIcebergBulkDelete extends AbstractIcebergDeleteTest {
   private static String toString(final Path path) {
     return path.toString();
   }
-
 
 }
