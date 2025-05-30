@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 
 import org.slf4j.Logger;
@@ -402,18 +403,29 @@ public class GoogleHadoopFileSystem extends FileSystem {
   }
 
   @Override
-  public boolean mkdirs(final Path path, final FsPermission fsPermission) throws IOException {
-    LOG.trace("mkdirs({})", path);
-    throw new UnsupportedOperationException(path.toString());
-  }
+  public boolean mkdirs(final Path hadoopPath, final FsPermission permission) throws IOException {
+    checkArgument(hadoopPath != null, "hadoopPath must not be null");
 
-//  /**
-//   * Gets the default replication factor.
-//   */
-//  @Override
-//  public short getDefaultReplication() {
-//    return REPLICATION_FACTOR_DEFAULT;
-//  }
+    checkOpen();
+
+    URI gcsPath = getGcsPath(hadoopPath);
+    try {
+      getGcsFs().mkdirs(gcsPath);
+    } catch (java.nio.file.FileAlreadyExistsException faee) {
+      // Need to convert to the Hadoop flavor of FileAlreadyExistsException.
+      throw (FileAlreadyExistsException)
+          new FileAlreadyExistsException(
+              String.format(
+                  "mkdirs(hadoopPath: %s, permission: %s): failed",
+                  hadoopPath, permission))
+              .initCause(faee);
+    }
+    LOG.trace(
+        "mkdirs(hadoopPath: {}, permission: {}): true", hadoopPath, permission);
+    boolean response = true;
+
+    return response;
+  }
 
   @Override
   public FileStatus getFileStatus(final Path path) throws IOException {
@@ -423,9 +435,14 @@ public class GoogleHadoopFileSystem extends FileSystem {
 
     URI gcsPath = getGcsPath(path);
 
-    LOG.trace("getFileStatus(): {}", gcsPath);
-
-    throw new UnsupportedOperationException(path.toString());
+    FileInfo fileInfo = getGcsFs().getFileInfo(gcsPath);
+    if (!fileInfo.exists()) {
+      throw new FileNotFoundException(
+          String.format(
+              "%s not found: %s", fileInfo.isDirectory() ? "Directory" : "File", path));
+    }
+    String userName = getUgiUserName();
+    return getGoogleHadoopFileStatus(fileInfo, userName);
   }
 
   /**
@@ -501,5 +518,28 @@ public class GoogleHadoopFileSystem extends FileSystem {
     URI gcsPath = UriPaths.toDirectory(getGcsPath(hadoopPath));
     workingDirectory = getHadoopPath(gcsPath);
     LOG.trace("setWorkingDirectory(hadoopPath: {}): {}", hadoopPath, workingDirectory);
+  }
+
+
+  private static String getUgiUserName() throws IOException {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    return ugi.getShortUserName();
+  }
+
+  private GoogleHadoopFileStatus getGoogleHadoopFileStatus(FileInfo fileInfo, String userName) {
+    checkNotNull(fileInfo, "fileInfo should not be null");
+    // GCS does not provide modification time. It only provides creation time.
+    // It works for objects because they are immutable once created.
+    GoogleHadoopFileStatus status =
+        new GoogleHadoopFileStatus(
+            fileInfo,
+            getHadoopPath(fileInfo.getPath()),
+            REPLICATION_FACTOR_DEFAULT,
+            defaultBlockSize,
+            reportedPermissions,
+            userName);
+    LOG.trace("getGoogleHadoopFileStatus(path: {}, userName: {}): {}",
+        fileInfo.getPath(), userName, status);
+    return status;
   }
 }
