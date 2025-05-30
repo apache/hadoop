@@ -1322,7 +1322,7 @@ public abstract class AbfsClient implements Closeable {
     sb.append(abfsConfiguration.getClusterType());
 
     // Add a unique identifier in FNS-Blob user agent string
-    if(!getIsNamespaceEnabled() && abfsConfiguration.getFsConfiguredServiceType() == AbfsServiceType.BLOB){
+    if (!getIsNamespaceEnabled() && abfsConfiguration.getFsConfiguredServiceType() == AbfsServiceType.BLOB){
       sb.append(SEMICOLON).append(SINGLE_WHITE_SPACE);
       sb.append(FNS_BLOB_USER_AGENT_IDENTIFIER);
     }

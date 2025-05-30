@@ -357,7 +357,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  // Test to verify that the user agent string for FNS-Blob accounts
+  // Test to verify the unique identifier in user agent string for FNS-Blob accounts
   public void verifyUserAgentForFNSBlob() throws Exception {
     Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
     assumeHnsDisabled();
@@ -373,6 +373,25 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             "User-Agent string for FNS accounts on Blob endpoint should contain "
                 + FNS_BLOB_USER_AGENT_IDENTIFIER)
         .contains(FNS_BLOB_USER_AGENT_IDENTIFIER);
+  }
+
+  @Test
+  // Test to verify that the user agent string for non-FNS-Blob accounts
+  // does not contain the FNS identifier.
+  public void verifyUserAgentForDFS() throws Exception {
+    Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
+    Assume.assumeTrue(getAbfsServiceType() == AbfsServiceType.DFS);
+    final AzureBlobFileSystem fs = getFileSystem(getRawConfiguration());
+    final AbfsConfiguration configuration = fs.getAbfsStore()
+        .getAbfsConfiguration();
+
+    String userAgentStr = getUserAgentString(configuration, false);
+    verifyBasicInfo(userAgentStr);
+    Assertions.assertThat(userAgentStr)
+        .describedAs(
+            "User-Agent string for non-FNS-Blob accounts should not contain"
+                + FNS_BLOB_USER_AGENT_IDENTIFIER)
+        .doesNotContain(FNS_BLOB_USER_AGENT_IDENTIFIER);
   }
 
   public static AbfsClient createTestClientFromCurrentContext(
