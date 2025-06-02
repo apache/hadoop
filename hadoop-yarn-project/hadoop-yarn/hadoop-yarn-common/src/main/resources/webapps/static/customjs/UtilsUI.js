@@ -42,18 +42,7 @@ function getProgressbar(percent) {
   `;
 }
 
-function getTableHeadings(id) {
-  let headings = [];
-  window.addEventListener("DOMContentLoaded", () => {
-    window.removeEventListener("DOMContentLoaded", arguments.callee, false);
-    headings = [].slice.call(document.getElementById(id).tHead.rows[0].cells);
-    return headings.map((x) => {
-      return x.innerText;
-    });
-  });
-}
-
-function DataTableHelper(dtSelector, opts, hasDate, headings) {
+function DataTableHelper(dtSelector, opts, hasDate) {
 
   // Ensure opts.data.data is always defined, even if empty
   opts = opts || {};

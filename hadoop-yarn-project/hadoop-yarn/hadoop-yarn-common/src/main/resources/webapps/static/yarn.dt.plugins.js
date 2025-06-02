@@ -159,6 +159,7 @@ function renderHadoopElapsedTime(data, type, full) {
     return toReturn;
   }
   // 'sort', 'type' and undefined all just use the number
+    return data;
 }
 
 //JSON array element is formatted like

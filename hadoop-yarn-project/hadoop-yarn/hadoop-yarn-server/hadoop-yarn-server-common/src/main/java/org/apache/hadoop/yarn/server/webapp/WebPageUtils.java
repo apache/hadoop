@@ -81,7 +81,7 @@ public class WebPageUtils {
   }
 
   public static String attemptsTableInit() {
-    return tableInit().append(", 'aaData': attemptsTableData")
+    return tableInit().append(", 'data': attemptsTableData")
       .append(", bDeferRender: true").append(", bProcessing: true")
       .append("\n, aoColumnDefs: ").append(getAttemptsTableColumnDefs())
       // Sort by id upon page load
@@ -97,7 +97,7 @@ public class WebPageUtils {
   }
 
   public static String containersTableInit() {
-    return tableInit().append(", 'aaData': containersTableData")
+    return tableInit().append(", 'data': containersTableData")
       .append(", bDeferRender: true").append(", bProcessing: true")
       .append("\n, aoColumnDefs: ").append(getContainersTableColumnDefs())
       // Sort by id upon page load
@@ -111,7 +111,7 @@ public class WebPageUtils {
   }
 
   public static String resourceRequestsTableInit() {
-    return tableInit().append(", 'aaData': resourceRequestsTableData")
+    return tableInit().append(", 'data': resourceRequestsTableData")
         .append(", bDeferRender: true").append(", bProcessing: true}")
         .toString();
   }
