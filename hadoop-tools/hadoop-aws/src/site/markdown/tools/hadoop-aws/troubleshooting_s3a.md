@@ -1218,10 +1218,29 @@ java.io.FileNotFoundException: Completing multi-part upload on fork-5/test/multi
 This can happen when all outstanding uploads have been aborted, including the
 active ones.
 
-If the bucket has a lifecycle policy of deleting multipart uploads, make sure
-that the expiry time of the deletion is greater than that required for all open
-writes to complete the write,
-*and for all jobs using the S3A committers to commit their work.*
+When working with S3A committers and multipart uploads (MPUs), consider these important guidelines:
+
+1. **Bucket Lifecycle Policies:**
+   - If your bucket has a lifecycle policy for deleting multipart uploads
+   - Set the deletion expiry time long enough to:
+     - Complete all open write operations
+     - Allow S3A committers to finish their commit process
+
+2. **Directory Operations and MPUs:**
+   - Setting `fs.s3a.directory.operations.purge.uploads=true` will abort all pending MPUs before directory cleanup
+   - For jobs using S3A committers:
+     - Set `fs.s3a.directory.operations.purge.uploads=false` when directories need to be overwritten before job completion
+     - This prevents accidental abortion of active uploads during the commit phase
+
+
+### S3 Express Store directory object not getting deleted
+
+When working with S3 Express store buckets (unlike standard S3 buckets), follow these steps to purge a directory object:
+
+1. Set `fs.s3a.directory.operations.purge.uploads=true` if you need to delete a directory object that has pending multipart uploads (MPUs).
+
+2. This setting ensures that all pending MPUs are aborted before the directory object is deleted, which is a requirement specific to S3 Express store buckets.
+
 
 ### Application hangs after reading a number of files
 
