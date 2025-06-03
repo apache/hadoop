@@ -42,7 +42,7 @@ public class WebPageUtils {
     // FairSchedulerPage's table is a bit different
     // This is define in RMAppsBlock.COLUMNS for the RM
     return tableInit()
-      .append(", 'aaData': appsTableData")
+      .append(", 'data': appsTableData")
       .append(", bDeferRender: true")
       .append(", bProcessing: true")
       .append("\n, aoColumnDefs: ")
@@ -81,7 +81,7 @@ public class WebPageUtils {
   }
 
   public static String attemptsTableInit() {
-    return tableInit().append(", 'aaData': attemptsTableData")
+    return tableInit().append(", 'data': attemptsTableData")
       .append(", bDeferRender: true").append(", bProcessing: true")
       .append("\n, aoColumnDefs: ").append(getAttemptsTableColumnDefs())
       // Sort by id upon page load
@@ -97,7 +97,7 @@ public class WebPageUtils {
   }
 
   public static String containersTableInit() {
-    return tableInit().append(", 'aaData': containersTableData")
+    return tableInit().append(", 'data': containersTableData")
       .append(", bDeferRender: true").append(", bProcessing: true")
       .append("\n, aoColumnDefs: ").append(getContainersTableColumnDefs())
       // Sort by id upon page load
@@ -111,7 +111,7 @@ public class WebPageUtils {
   }
 
   public static String resourceRequestsTableInit() {
-    return tableInit().append(", 'aaData': resourceRequestsTableData")
+    return tableInit().append(", 'data': resourceRequestsTableData")
         .append(", bDeferRender: true").append(", bProcessing: true}")
         .toString();
   }
@@ -132,7 +132,7 @@ public class WebPageUtils {
     Hamlet.UL<Hamlet.DIV<Hamlet>> enabledTools = null;
 
     if (isToolsEnabled) {
-      tools = section.h3("Tools");
+      tools = section.h3("accordion-parent", "Tools");
       enabledTools = tools.ul().li().a("/conf", "Configuration").__().
           li().a("/logs", "Local logs").__().
           li().a("/stacks", "Server stacks").__().

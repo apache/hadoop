@@ -213,7 +213,7 @@ public class TaskPage extends AppView {
 
   private String attemptsTableInit() {
     return tableInit()
-    .append(", 'aaData': attemptsTableData")
+    .append(", 'data': attemptsTableData")
     .append(", bDeferRender: true")
     .append(", bProcessing: true")
     .append("\n,aoColumnDefs:[\n")

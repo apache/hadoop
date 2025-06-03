@@ -301,7 +301,7 @@ public class HsTaskPage extends HsView {
       type = taskID.getTaskType();
     }
     StringBuilder b = tableInit()
-      .append(", 'aaData': attemptsTableData")
+      .append(", 'data': attemptsTableData")
       .append(", bDeferRender: true")
       .append(", bProcessing: true")
       .append("\n,aoColumnDefs:[\n")
