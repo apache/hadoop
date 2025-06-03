@@ -52,7 +52,7 @@ class AppsPage extends RouterView {
   private String appsTableInit() {
     // id, user, name, queue, starttime, finishtime, state, status, progress, ui
     return tableInit()
-      .append(", 'aaData': appsTableData")
+      .append(", 'data': appsTableData")
       .append(", bDeferRender: true")
       .append(", bProcessing: true")
 

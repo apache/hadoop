@@ -71,7 +71,7 @@ public class HsTasksPage extends HsView {
       type = MRApps.taskType(symbol);
     }
     StringBuilder b = tableInit().
-    append(", 'aaData': tasksTableData")
+    append(", 'data': tasksTableData")
     .append(", bDeferRender: true")
     .append(", bProcessing: true")
 

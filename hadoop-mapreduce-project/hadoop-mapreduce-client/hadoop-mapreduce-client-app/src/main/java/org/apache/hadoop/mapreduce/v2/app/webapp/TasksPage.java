@@ -38,7 +38,7 @@ public class TasksPage extends AppView {
 
   private String tasksTableInit() {
     return tableInit()
-      .append(", 'aaData': tasksTableData")
+      .append(", 'data': tasksTableData")
       .append(", bDeferRender: true")
       .append(", bProcessing: true")
 

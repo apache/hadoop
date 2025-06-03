@@ -95,7 +95,7 @@ public class HsView extends TwoColumnLayout {
    */
   private String jobsTableInit() {
     return tableInit().
-        append(", 'aaData': jobsTableData").
+        append(", 'data': jobsTableData").
         append(", bDeferRender: true").
         append(", bProcessing: true").
 
