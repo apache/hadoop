@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.fs.contract.rawlocal;
 
+import org.junit.Assume;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractAppendTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
@@ -29,4 +32,12 @@ public class TestRawlocalContractAppend extends AbstractContractAppendTest {
     return new RawlocalFSContract(conf);
   }
 
+  @Override
+  public void testRenameFileBeingAppended() throws Throwable {
+    // Renaming a file while its handle is open is not supported on Windows.
+    // Thus, this test should be skipped on Windows.
+    Assume.assumeFalse(Path.WINDOWS);
+
+    super.testRenameFileBeingAppended();
+  }
 }

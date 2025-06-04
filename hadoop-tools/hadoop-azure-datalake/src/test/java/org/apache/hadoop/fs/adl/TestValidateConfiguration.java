@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.adl;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.adl.AdlConfKeys.ADL_BLOCK_SIZE;
 import static org.apache.hadoop.fs.adl.AdlConfKeys
@@ -57,7 +57,7 @@ import static org.apache.hadoop.fs.adl.AdlConfKeys
     .TOKEN_PROVIDER_TYPE_REFRESH_TOKEN;
 import static org.apache.hadoop.fs.adl.AdlConfKeys.WRITE_BUFFER_SIZE_KEY;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.io.FileOutputStream;
