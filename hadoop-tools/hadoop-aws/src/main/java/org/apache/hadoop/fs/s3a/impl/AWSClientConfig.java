@@ -450,7 +450,8 @@ public final class AWSClientConfig {
         if (!headerValues.isEmpty()) {
           clientConfig.putHeader(header, headerValues);
         } else {
-          LOG.warn("Ignoring header '{}' for {} client because no values were provided", header, awsServiceIdentifier);
+          LOG.warn("Ignoring header '{}' for {} client because no values were provided",
+                  header, awsServiceIdentifier);
         }
       });
       LOG.debug("headers for {} client = {}", awsServiceIdentifier, clientConfig.headers());

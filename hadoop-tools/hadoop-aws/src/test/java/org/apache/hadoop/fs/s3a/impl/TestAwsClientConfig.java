@@ -279,7 +279,8 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
 
   /**
    * if {@link org.apache.hadoop.fs.s3a.Constants#CUSTOM_HEADERS_S3} is set,
-   * verify that returned client configuration has desired headers set with whitespaces trimmed for headers and values.
+   * verify that returned client configuration has desired headers set with
+   * whitespaces trimmed for headers and values.
    */
   @Test
   public void testInitRequestHeadersForS3WithWhitespace() throws IOException {
