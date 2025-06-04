@@ -51,10 +51,12 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
 import org.apache.hadoop.fs.azurebfs.services.ListResponseData;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
+import org.apache.hadoop.fs.azurebfs.services.VersionedFileStatus;
 import org.apache.hadoop.fs.azurebfs.utils.DirectoryStateHelper;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
@@ -62,6 +64,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
@@ -373,7 +376,134 @@ public class ITestAzureBlobFileSystemListStatus extends
         + " throw IllegalArgumentException", exceptionThrown);
   }
 
+  @Test
+  public void testEmptyListingInSubsequentCall() throws IOException {
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, true, EMPTY_STRING,
+        true, 1, 0);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, true, EMPTY_STRING,
+        false, 1, 0);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, true, TEST_CONTINUATION_TOKEN,
+        true, 1, 0);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, true, TEST_CONTINUATION_TOKEN,
+        false, 1, 0);
 
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, EMPTY_STRING,
+        true, 2, 0);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, EMPTY_STRING,
+        false, 2, 1);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN + 1, true, TEST_CONTINUATION_TOKEN + 2,
+        true, 3, 0);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN + 1, true, TEST_CONTINUATION_TOKEN + 2,
+        false, 3, 1);
+
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, EMPTY_STRING,
+        true, 1, 1);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, EMPTY_STRING,
+        false, 1, 1);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, TEST_CONTINUATION_TOKEN,
+        true, 1, 1);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, TEST_CONTINUATION_TOKEN,
+        false, 1, 1);
+
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, EMPTY_STRING,
+        true, 2, 1);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, EMPTY_STRING,
+        false, 2, 2);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN + 1, false, TEST_CONTINUATION_TOKEN + 2,
+        true, 3, 1);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN + 1, false, TEST_CONTINUATION_TOKEN + 2,
+        false, 3, 2);
+  }
+
+  private void testEmptyListingInSubsequentCallInternal(String firstCT,
+      boolean isfirstEmpty, String secondCT, boolean isSecondEmpty,
+      int expectedInvocations, int expectedSize) throws IOException {
+    assumeBlobServiceType();
+    AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
+    AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
+    spiedStore.getAbfsConfiguration().setListMaxResults(1);
+    AbfsBlobClient spiedClient = Mockito.spy(spiedStore.getClientHandler().getBlobClient());
+    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
+    Mockito.doReturn(spiedClient).when(spiedStore).getClient();
+    spiedFs.mkdirs(new Path("/testPath"));
+    VersionedFileStatus status1 = new VersionedFileStatus(
+        "owner", "group", null, false, 0, false, 0, 0, 0,
+        new Path("/testPath/file1"), "version", "encryptionContext");
+    VersionedFileStatus status2 = new VersionedFileStatus(
+        "owner", "group", null, false, 0, false, 0, 0, 0,
+        new Path("/testPath/file2"), "version", "encryptionContext");
+
+    List<VersionedFileStatus> mockedList1 = new ArrayList<>();
+    mockedList1.add(status1);
+    List<VersionedFileStatus> mockedList2 = new ArrayList<>();
+    mockedList2.add(status2);
+
+    ListResponseData listResponseData1 = new ListResponseData();
+    listResponseData1.setContinuationToken(firstCT);
+    listResponseData1.setFileStatusList(isfirstEmpty ? new ArrayList<>() : mockedList1);
+    listResponseData1.setOp(Mockito.mock(AbfsRestOperation.class));
+
+    ListResponseData listResponseData2 = new ListResponseData();
+    listResponseData2.setContinuationToken(secondCT);
+    listResponseData2.setFileStatusList(isSecondEmpty ? new ArrayList<>() : mockedList2);
+    listResponseData2.setOp(Mockito.mock(AbfsRestOperation.class));
+
+    ListResponseData listResponseData3 = new ListResponseData();
+    listResponseData3.setContinuationToken(EMPTY_STRING);
+    listResponseData3.setFileStatusList(new ArrayList<>());
+    listResponseData3.setOp(Mockito.mock(AbfsRestOperation.class));
+
+    final int[] itr = new int[1];
+    final String[] continuationTokenUsed = new String[3];
+
+    Mockito.doAnswer(invocationOnMock -> {
+      if (itr[0] == 0) {
+        itr[0]++;
+        continuationTokenUsed[0] = invocationOnMock.getArgument(3);
+        return listResponseData1;
+      } else if (itr[0] == 1) {
+        itr[0]++;
+        continuationTokenUsed[1] = invocationOnMock.getArgument(3);
+        return listResponseData2;
+      }
+      continuationTokenUsed[2] = invocationOnMock.getArgument(3);
+      return listResponseData3;
+    }).when(spiedClient).listPath(eq("/testPath"), eq(false), eq(1),
+        any(), any(TracingContext.class), any());
+
+    FileStatus[] list = spiedFs.listStatus(new Path("/testPath"));
+
+    Mockito.verify(spiedClient, times(expectedInvocations))
+        .listPath(eq("/testPath"), eq(false), eq(1),
+        any(), any(TracingContext.class), any());
+    Mockito.verify(spiedClient, times(1))
+        .postListProcessing(eq("/testPath"), any(), any(), any());
+    Assertions.assertThat(list).hasSize(expectedSize);
+
+    if (expectedSize == 0) {
+      Mockito.verify(spiedClient, times(1))
+          .getPathStatus(eq("/testPath"), any(), eq(null), eq(false));
+    } else {
+      Mockito.verify(spiedClient, times(0))
+          .getPathStatus(eq("/testPath"), any(), eq(null), eq(false));
+    }
+
+    Assertions.assertThat(continuationTokenUsed[0])
+        .describedAs("First continuation token used is not as expected")
+        .isNull();
+
+    if (expectedInvocations > 1) {
+      Assertions.assertThat(continuationTokenUsed[1])
+          .describedAs("Second continuation token used is not as expected")
+          .isEqualTo(firstCT);
+    }
+
+    if (expectedInvocations > 2) {
+      Assertions.assertThat(continuationTokenUsed[2])
+          .describedAs("Third continuation token used is not as expected")
+          .isEqualTo(secondCT);
+    }
+  }
 
   /**
    * Test to verify that listStatus returns the correct file status all types

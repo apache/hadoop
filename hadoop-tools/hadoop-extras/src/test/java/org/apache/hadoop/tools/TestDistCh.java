@@ -38,11 +38,12 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
 import static org.slf4j.LoggerFactory.getLogger;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDistCh {
   {
@@ -77,20 +78,20 @@ public class TestDistCh {
 
     Path createSmallFile(Path dir) throws IOException {
       final Path f = new Path(dir, "f" + ++fcount);
-      Assert.assertTrue(!fs.exists(f));
+      assertTrue(!fs.exists(f));
       final DataOutputStream out = fs.create(f);
       try {
         out.writeBytes("createSmallFile: f=" + f);
       } finally {
         out.close();
       }
-      Assert.assertTrue(fs.exists(f));
+      assertTrue(fs.exists(f));
       return f;
     }
 
     Path mkdir(Path dir) throws IOException {
-      Assert.assertTrue(fs.mkdirs(dir));
-      Assert.assertTrue(fs.getFileStatus(dir).isDirectory());
+      assertTrue(fs.mkdirs(dir));
+      assertTrue(fs.getFileStatus(dir).isDirectory());
       return dir;
     }
     
@@ -193,13 +194,13 @@ public class TestDistCh {
   }
 
   static void checkFileStatus(ChPermissionStatus expected, FileStatus actual) {
-    Assert.assertEquals(expected.getUserName(), actual.getOwner());
-    Assert.assertEquals(expected.getGroupName(), actual.getGroup());
+    assertEquals(expected.getUserName(), actual.getOwner());
+    assertEquals(expected.getGroupName(), actual.getGroup());
     FsPermission perm = expected.getPermission();
     if (actual.isFile() && expected.defaultPerm) {
       perm = perm.applyUMask(UMASK);
     }
-    Assert.assertEquals(perm, actual.getPermission());
+    assertEquals(perm, actual.getPermission());
   }
 
   private static String runLsr(final FsShell shell, String root, int returnvalue
@@ -213,7 +214,7 @@ public class TestDistCh {
     System.setErr(out);
     final String results;
     try {
-      Assert.assertEquals(returnvalue, shell.run(new String[]{"-lsr", root}));
+      assertEquals(returnvalue, shell.run(new String[]{"-lsr", root}));
       results = bytes.toString();
     } finally {
       IOUtils.closeStream(out);

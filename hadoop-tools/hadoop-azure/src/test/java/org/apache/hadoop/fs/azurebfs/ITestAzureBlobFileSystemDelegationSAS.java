@@ -445,8 +445,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   //Test list and delete operation on implicit paths
   public void testListAndDeleteImplicitPaths() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    AbfsBlobClient client = ((AbfsBlobClient) getFileSystem().getAbfsClient());
     assumeBlobServiceType();
+    AbfsBlobClient client = ((AbfsBlobClient) getFileSystem().getAbfsClient());
 
     Path file1 = new Path("/testDir/dir1/file1");
     Path file2 = new Path("/testDir/dir1/file2");
@@ -458,7 +458,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
 
     AbfsRestOperation op = client.listPath(
         implicitDir.toString(), false, 2, null,
-        getTestTracingContext(getFileSystem(), false), null, false).getOp();
+        getTestTracingContext(getFileSystem(), false), null).getOp();
     List<? extends ListResultEntrySchema> list = op.getResult()
         .getListResultSchema()
         .paths();
