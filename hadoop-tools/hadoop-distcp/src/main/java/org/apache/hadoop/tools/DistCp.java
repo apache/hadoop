@@ -21,6 +21,7 @@ package org.apache.hadoop.tools;
 import java.io.IOException;
 import java.util.Random;
 
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -471,7 +472,7 @@ public class DistCp extends Configured implements Tool {
       LOG.error("Couldn't complete DistCp operation: ", e);
       exitCode = DistCpConstants.UNKNOWN_ERROR;
     }
-    System.exit(exitCode);
+    ExitUtil.terminate(exitCode);
   }
 
   /**
