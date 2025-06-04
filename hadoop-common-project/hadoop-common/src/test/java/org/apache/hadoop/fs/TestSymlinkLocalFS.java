@@ -18,10 +18,10 @@
 package org.apache.hadoop.fs;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
@@ -32,7 +32,8 @@ import java.net.URISyntaxException;
 
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test symbolic links using LocalFs.
@@ -105,7 +106,8 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
     super.testStatDanglingLink();
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   /** lstat a non-existant file using a partially qualified path */
   public void testDanglingLinkFilePartQual() throws IOException {
     Path filePartQual = new Path(getScheme()+":///doesNotExist");
@@ -123,7 +125,8 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
     }
   }
   
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   /** Stat and lstat a dangling link */
   public void testDanglingLink() throws IOException {
     assumeNotWindows();
@@ -169,7 +172,8 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
     wrapper.getFileStatus(link);
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   /** 
    * Test getLinkTarget with a partially qualified target. 
    * NB: Hadoop does not support fully qualified URIs for the 
