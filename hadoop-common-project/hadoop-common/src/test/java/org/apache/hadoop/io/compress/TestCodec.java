@@ -673,7 +673,7 @@ public class TestCodec {
     writer.close();
   }
 
-  /*public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws IOException {
     int count = 10000;
     String codecClass = "org.apache.hadoop.io.compress.DefaultCodec";
 
@@ -697,7 +697,7 @@ public class TestCodec {
     int seed = 0;
     // Note that exceptions will propagate out.
     codecTest(conf, seed, count, codecClass);
-  }*/
+  }
 
   @Test
   public void testGzipCompatibility() throws IOException {
