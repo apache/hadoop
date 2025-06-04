@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.FileDescriptor;
 import java.net.URI;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
@@ -425,7 +426,7 @@ public class RawLocalFileSystem extends FileSystem {
           channel.read(buffer, range.getOffset() + buffer.position(), rangeIndex, this);
         } else {
           // Flip the buffer and declare success.
-          buffer.flip();
+          ((Buffer)(buffer)).flip();
           range.getData().complete(buffer);
         }
       }

@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Optional;
@@ -1029,7 +1030,7 @@ public class S3AInputStream extends ObjectInputStream implements CanSetReadahead
     LOG.debug("Start reading {} from {} ", range, getPathStr());
     if (range.getLength() == 0) {
       // a zero byte read.
-      buffer.flip();
+      ((Buffer)(buffer)).flip();
       range.getData().complete(buffer);
       return;
     }
@@ -1092,7 +1093,7 @@ public class S3AInputStream extends ObjectInputStream implements CanSetReadahead
             readByteArray(objectContent, range, tmp, offset, currentLength);
             return null;
           });
-      buffer.flip();
+      ((Buffer)(buffer)).flip();
     } else {
       // there is no use of a temp byte buffer, or buffer.put() calls,
       // so flip() is not needed.
