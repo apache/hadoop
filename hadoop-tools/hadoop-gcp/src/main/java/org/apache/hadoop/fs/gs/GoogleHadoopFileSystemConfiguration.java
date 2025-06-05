@@ -78,4 +78,8 @@ class GoogleHadoopFileSystemConfiguration {
   String getProjectId() {
     return this.projectId;
   }
+
+  public long getMaxListItemsPerCall() {
+    return 5000L; //TODO: Make this configurable
+  }
 }

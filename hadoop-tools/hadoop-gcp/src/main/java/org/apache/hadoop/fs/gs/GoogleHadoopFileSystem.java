@@ -32,7 +32,10 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Ascii;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.DirectoryNotEmptyException;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
@@ -274,7 +277,6 @@ public class GoogleHadoopFileSystem extends FileSystem {
     checkArgument(replication > 0, "replication must be a positive integer: %s", replication);
     checkArgument(blockSize > 0, "blockSize must be a positive integer: %s", blockSize);
 
-    System.out.println(String.format("create(%s)", hadoopPath));
     checkOpen();
 
     LOG.trace("create(hadoopPath: {}, overwrite: {}, bufferSize: {} [ignored])", hadoopPath,
@@ -290,10 +292,32 @@ public class GoogleHadoopFileSystem extends FileSystem {
   }
 
   @Override
-  public FSDataOutputStream createNonRecursive(Path hadoopPath, FsPermission permission,
-      EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
-      Progressable progress) throws IOException {
-    throw new UnsupportedOperationException(hadoopPath.toString());
+  public FSDataOutputStream createNonRecursive(
+      Path hadoopPath,
+      FsPermission permission,
+      EnumSet<CreateFlag> flags,
+      int bufferSize,
+      short replication,
+      long blockSize,
+      Progressable progress)
+      throws IOException {
+    URI gcsPath = getGcsPath(checkNotNull(hadoopPath, "hadoopPath must not be null"));
+    URI parentGcsPath = UriPaths.getParentPath(gcsPath);
+    if (!getGcsFs().getFileInfo(parentGcsPath).exists()) {
+      throw new FileNotFoundException(
+          String.format(
+              "Can not create '%s' file, because parent folder does not exist: %s",
+              gcsPath, parentGcsPath));
+    }
+
+    return create(
+        hadoopPath,
+        permission,
+        flags.contains(CreateFlag.OVERWRITE),
+        bufferSize,
+        replication,
+        blockSize,
+        progress);
   }
 
   @Override
@@ -309,19 +333,57 @@ public class GoogleHadoopFileSystem extends FileSystem {
   }
 
   @Override
-  public boolean delete(final Path path, final boolean recursive) throws IOException {
-    LOG.trace("delete({}, {})", path, recursive);
-    throw new UnsupportedOperationException(path.toString());
-  }
-
-  @Override
-  public FileStatus[] listStatus(final Path path) throws FileNotFoundException, IOException {
-    checkArgument(path != null, "hadoopPath must not be null");
+  public boolean delete(final Path hadoopPath, final boolean recursive) throws IOException {
+    LOG.trace("delete({}, {})", hadoopPath, recursive);
+    checkArgument(hadoopPath != null, "hadoopPath must not be null");
 
     checkOpen();
 
-    LOG.trace("listStatus(hadoopPath: {})", path);
-    throw new UnsupportedOperationException(path.toString());
+    URI gcsPath = getGcsPath(hadoopPath);
+    try {
+      getGcsFs().delete(gcsPath, recursive);
+    } catch (DirectoryNotEmptyException e) {
+      throw e;
+    } catch (IOException e) {
+      if (ApiErrorExtractor.INSTANCE.requestFailure(e)) {
+        throw e;
+      }
+      LOG.trace("delete(hadoopPath: {}, recursive: {}): false [failed]", hadoopPath, recursive, e);
+      return false;
+    }
+
+    LOG.trace("delete(hadoopPath: %s, recursive: %b): true", hadoopPath, recursive);
+    return true;
+  }
+
+  @Override
+  public FileStatus[] listStatus(final Path hadoopPath) throws IOException {
+    checkArgument(hadoopPath != null, "hadoopPath must not be null");
+
+    checkOpen();
+
+    LOG.trace("listStatus(hadoopPath: {})", hadoopPath);
+
+    URI gcsPath = getGcsPath(hadoopPath);
+    List<FileStatus> status;
+
+    try {
+      List<FileInfo> fileInfos = getGcsFs().listFileInfo(gcsPath, ListFileOptions.OBJECTFIELDS);
+      status = new ArrayList<>(fileInfos.size());
+      String userName = getUgiUserName();
+      for (FileInfo fileInfo : fileInfos) {
+        status.add(getFileStatus(fileInfo, userName));
+      }
+    } catch (FileNotFoundException fnfe) {
+      throw (FileNotFoundException)
+          new FileNotFoundException(
+              String.format(
+                  "listStatus(hadoopPath: %s): '%s' does not exist.",
+                  hadoopPath, gcsPath))
+              .initCause(fnfe);
+    }
+
+    return status.toArray(new FileStatus[0]);
   }
 
   /**
@@ -442,7 +504,7 @@ public class GoogleHadoopFileSystem extends FileSystem {
               "%s not found: %s", fileInfo.isDirectory() ? "Directory" : "File", path));
     }
     String userName = getUgiUserName();
-    return getGoogleHadoopFileStatus(fileInfo, userName);
+    return getFileStatus(fileInfo, userName);
   }
 
   /**
@@ -526,20 +588,22 @@ public class GoogleHadoopFileSystem extends FileSystem {
     return ugi.getShortUserName();
   }
 
-  private GoogleHadoopFileStatus getGoogleHadoopFileStatus(FileInfo fileInfo, String userName) {
+  private FileStatus getFileStatus(FileInfo fileInfo, String userName) {
     checkNotNull(fileInfo, "fileInfo should not be null");
     // GCS does not provide modification time. It only provides creation time.
     // It works for objects because they are immutable once created.
-    GoogleHadoopFileStatus status =
-        new GoogleHadoopFileStatus(
-            fileInfo,
-            getHadoopPath(fileInfo.getPath()),
-            REPLICATION_FACTOR_DEFAULT,
-            defaultBlockSize,
-            reportedPermissions,
-            userName);
-    LOG.trace("getGoogleHadoopFileStatus(path: {}, userName: {}): {}",
-        fileInfo.getPath(), userName, status);
+    FileStatus status = new FileStatus(
+        fileInfo.getSize(),
+        fileInfo.isDirectory(),
+        REPLICATION_FACTOR_DEFAULT,
+        defaultBlockSize,
+        fileInfo.getModificationTime(),
+        fileInfo.getModificationTime(),
+        reportedPermissions,
+        userName,
+        userName,
+        getHadoopPath(fileInfo.getPath()));
+    LOG.trace("FileStatus(path: {}, userName: {}): {}", fileInfo.getPath(), userName, status);
     return status;
   }
 }

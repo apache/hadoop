@@ -19,32 +19,57 @@
 package org.apache.hadoop.fs.gs;
 
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
+import static java.util.Comparator.comparing;
+import static org.apache.hadoop.fs.gs.Constants.PATH_DELIMITER;
 import static org.apache.hadoop.fs.gs.Constants.SCHEME;
 
 import com.google.auth.Credentials;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.WritableByteChannel;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.FileAlreadyExistsException;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Provides FS semantics over GCS based on Objects API.
  */
 class GoogleCloudStorageFileSystem {
   private static final Logger LOG = LoggerFactory.getLogger(StorageResourceId.class);
+  // Comparator used for sorting paths.
+  //
+  // For some bulk operations, we need to operate on parent directories before
+  // we operate on their children. To achieve this, we sort paths such that
+  // shorter paths appear before longer paths. Also, we sort lexicographically
+  // within paths of the same length (this is not strictly required but helps when
+  // debugging/testing).
+  @VisibleForTesting
+  static final Comparator<URI> PATH_COMPARATOR =
+      comparing(
+          URI::toString,
+          (as, bs) ->
+              (as.length() == bs.length())
+                  ? as.compareTo(bs)
+                  : Integer.compare(as.length(), bs.length()));
+
+  static final Comparator<FileInfo> FILE_INFO_PATH_COMPARATOR =
+      comparing(FileInfo::getPath, PATH_COMPARATOR);
 
   private static final ListObjectOptions GET_FILE_INFO_LIST_OPTIONS =
       ListObjectOptions.DEFAULT.builder().setIncludePrefix(true).setMaxResults(1).build();
 
   private static final ListObjectOptions LIST_FILE_INFO_LIST_OPTIONS =
       ListObjectOptions.DEFAULT.builder().setIncludePrefix(true).build();
-
 
   // URI of the root path.
   static final URI GCSROOT = URI.create(SCHEME + ":/");
@@ -195,5 +220,158 @@ class GoogleCloudStorageFileSystem {
       // This means that directory object already exist, and we do not need to do anything.
       LOG.trace("mkdirs: {} already exists, ignoring creation failure", resourceId, e);
     }
+  }
+
+  void delete(URI path, boolean recursive) throws IOException {
+    checkNotNull(path, "path should not be null");
+    checkArgument(!path.equals(GCSROOT), "Cannot delete root path (%s)", path);
+
+    FileInfo fileInfo = getFileInfo(path);
+    if (!fileInfo.exists()) {
+      throw new FileNotFoundException("Item not found: " + path);
+    }
+
+    List<FileInfo> itemsToDelete;
+    // Delete sub-items if it is a directory.
+    if (fileInfo.isDirectory()) {
+      itemsToDelete =
+          recursive
+              ? listRecursive(fileInfo.getPath()) // TODO: Get only one result
+              : listDirectory(fileInfo.getPath());
+
+      if (!itemsToDelete.isEmpty() && !recursive) {
+        throw new DirectoryNotEmptyException("Cannot delete a non-empty directory. : " + path);
+      }
+    } else {
+      itemsToDelete = new ArrayList<>();
+    }
+
+    List<FileInfo> bucketsToDelete = new ArrayList<>();
+    (fileInfo.getItemInfo().isBucket() ? bucketsToDelete : itemsToDelete).add(fileInfo);
+
+    deleteObjects(itemsToDelete, bucketsToDelete);
+
+    StorageResourceId parentId =
+        StorageResourceId.fromUriPath(UriPaths.getParentPath(path), true);
+    GoogleCloudStorageItemInfo parentInfo =
+        getFileInfoInternal(parentId, /* inferImplicitDirectories= */ false);
+
+    StorageResourceId resourceId = parentInfo.getResourceId();
+    if (parentInfo.exists()
+        || resourceId.isRoot()
+        || resourceId.isBucket()
+        || PATH_DELIMITER.equals(resourceId.getObjectName())) {
+      return;
+    }
+
+    // TODO: Keep the repair parent step behind a flag
+    gcs.createEmptyObject(parentId);
+  }
+
+  private List<FileInfo> listRecursive(URI prefix) throws IOException {
+    StorageResourceId prefixId = getPrefixId(prefix);
+    List<GoogleCloudStorageItemInfo> itemInfos =
+        gcs.listDirectoryRecursive(prefixId.getBucketName(), prefixId.getObjectName());
+    List<FileInfo> fileInfos = FileInfo.fromItemInfos(itemInfos);
+    fileInfos.sort(FILE_INFO_PATH_COMPARATOR);
+    return fileInfos;
+  }
+
+  private List<FileInfo> listDirectory(URI prefix) throws IOException {
+    StorageResourceId prefixId = getPrefixId(prefix);
+    List<GoogleCloudStorageItemInfo> itemInfos = gcs.listObjectInfo(
+        prefixId.getBucketName(),
+        prefixId.getObjectName(),
+        ListObjectOptions.DEFAULT_FLAT_LIST);
+
+    List<FileInfo> fileInfos = FileInfo.fromItemInfos(itemInfos);
+    fileInfos.sort(FILE_INFO_PATH_COMPARATOR);
+    return fileInfos;
+  }
+
+  private StorageResourceId getPrefixId(URI prefix) {
+    checkNotNull(prefix, "prefix could not be null");
+
+    StorageResourceId prefixId = StorageResourceId.fromUriPath(prefix, true);
+    checkArgument(!prefixId.isRoot(), "prefix must not be global root, got '%s'", prefix);
+
+    return prefixId;
+  }
+
+  private void deleteObjects(
+      List<FileInfo> itemsToDelete, List<FileInfo> bucketsToDelete)
+      throws IOException {
+    LOG.trace("deleteInternalWithFolders; fileSize={} bucketSize={}",
+        itemsToDelete.size(), bucketsToDelete.size());
+    deleteObjects(itemsToDelete);
+    deleteBucket(bucketsToDelete);
+  }
+
+  private void deleteObjects(List<FileInfo> itemsToDelete) throws IOException {
+    // Delete children before their parents.
+    //
+    // Note: we modify the input list, which is ok for current usage.
+    // We should make a copy in case that changes in future.
+    itemsToDelete.sort(FILE_INFO_PATH_COMPARATOR.reversed());
+
+    if (!itemsToDelete.isEmpty()) {
+      List<StorageResourceId> objectsToDelete = new ArrayList<>(itemsToDelete.size());
+      for (FileInfo fileInfo : itemsToDelete) {
+        if (!fileInfo.isInferredDirectory()) {
+          objectsToDelete.add(
+              new StorageResourceId(
+                  fileInfo.getItemInfo().getBucketName(),
+                  fileInfo.getItemInfo().getObjectName(),
+                  fileInfo.getItemInfo().getContentGeneration()));
+        }
+      }
+
+      gcs.deleteObjects(objectsToDelete);
+    }
+  }
+
+  private void deleteBucket(List<FileInfo> bucketsToDelete) throws IOException {
+    if (bucketsToDelete == null || bucketsToDelete.isEmpty()) {
+      return;
+    }
+
+    // TODO: Add support for deleting bucket
+    throw new UnsupportedOperationException("deleteBucket is not supported.");
+  }
+
+  public List<FileInfo> listFileInfo(URI path, ListFileOptions listOptions) throws IOException {
+    checkNotNull(path, "path can not be null");
+    LOG.trace("listStatus(path: {})", path);
+
+    StorageResourceId pathId =
+        StorageResourceId.fromUriPath(path, /* allowEmptyObjectName= */ true);
+
+    if (!pathId.isDirectory()) {
+      GoogleCloudStorageItemInfo pathInfo = gcs.getItemInfo(pathId);
+      if (pathInfo.exists()) {
+        List<FileInfo> listedInfo = new ArrayList<>();
+        listedInfo.add(FileInfo.fromItemInfo(pathInfo));
+
+        return listedInfo;
+      }
+    }
+
+    StorageResourceId dirId = pathId.toDirectoryId();
+    List<GoogleCloudStorageItemInfo> dirItemInfos = dirId.isRoot() ?
+        gcs.listBucketInfo() :
+        gcs.listObjectInfo(
+            dirId.getBucketName(), dirId.getObjectName(), LIST_FILE_INFO_LIST_OPTIONS);
+
+    if (pathId.isStorageObject() && dirItemInfos.isEmpty()) {
+      throw new FileNotFoundException("Item not found: " + path);
+    }
+
+    if (!dirItemInfos.isEmpty() && Objects.equals(dirItemInfos.get(0).getResourceId(), dirId)) {
+      dirItemInfos.remove(0);
+    }
+
+    List<FileInfo> fileInfos = FileInfo.fromItemInfos(dirItemInfos);
+    fileInfos.sort(FILE_INFO_PATH_COMPARATOR);
+    return fileInfos;
   }
 }

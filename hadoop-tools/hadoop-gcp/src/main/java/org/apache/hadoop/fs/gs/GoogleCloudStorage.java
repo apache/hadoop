@@ -287,20 +287,26 @@ class GoogleCloudStorage {
   List<GoogleCloudStorageItemInfo> listObjectInfo(
       String bucketName,
       String objectNamePrefix,
-      ListObjectOptions listOptions) {
-    long maxResults = listOptions.getMaxResults() > 0 ?
-        listOptions.getMaxResults() + (listOptions.isIncludePrefix() ? 0 : 1) :
-        listOptions.getMaxResults();
+      ListObjectOptions listOptions) throws IOException {
+    try {
+      long maxResults = listOptions.getMaxResults() > 0 ?
+          listOptions.getMaxResults() + (listOptions.isIncludePrefix() ? 0 : 1) :
+          listOptions.getMaxResults();
 
-    Storage.BlobListOption[] blobListOptions =
-        getBlobListOptions(objectNamePrefix, listOptions, maxResults);
-    Page<Blob> blobs = storage.list(bucketName, blobListOptions);
-    ListDirectoryResult result = new ListDirectoryResult(maxResults);
-    for (Blob blob : blobs.iterateAll()) {
-      result.add(blob);
+      Storage.BlobListOption[] blobListOptions =
+          getBlobListOptions(objectNamePrefix, listOptions, maxResults);
+      Page<Blob> blobs = storage.list(bucketName, blobListOptions);
+      ListOperationResult result = new ListOperationResult(maxResults);
+      for (Blob blob : blobs.iterateAll()) {
+        result.add(blob);
+      }
+
+      return result.getItems();
+    } catch (StorageException e) {
+      throw new IOException(
+          String.format("listing object '%s' failed.", BlobId.of(bucketName, objectNamePrefix)),
+          e);
     }
-
-    return result.getItems();
   }
 
   private Storage.BlobListOption[] getBlobListOptions(
@@ -368,10 +374,6 @@ class GoogleCloudStorage {
     createEmptyObject(resourceId, EMPTY_OBJECT_CREATE_OPTIONS);
   }
 
-  /**
-   * See {@link GoogleCloudStorage#createEmptyObject(StorageResourceId, CreateObjectOptions)} for
-   * details about expected behavior.
-   */
   void createEmptyObject(StorageResourceId resourceId, CreateObjectOptions options)
       throws IOException {
     checkArgument(
@@ -382,7 +384,7 @@ class GoogleCloudStorage {
     } catch (StorageException e) {
       if (canIgnoreExceptionForEmptyObject(e, resourceId, options)) {
         LOG.info(
-            "Ignoring exception of type %s; verified object already exists with desired state.",
+            "Ignoring exception of type {}; verified object already exists with desired state.",
             e.getClass().getSimpleName());
         LOG.trace("Ignored exception while creating empty object: {}", resourceId, e);
       } else {
@@ -456,7 +458,7 @@ class GoogleCloudStorage {
   }
 
   private void createEmptyObjectInternal(
-      StorageResourceId resourceId, CreateObjectOptions createObjectOptions) {
+      StorageResourceId resourceId, CreateObjectOptions createObjectOptions) throws IOException {
     Map<String, String> rewrittenMetadata = encodeMetadata(createObjectOptions.getMetadata());
 
     List<Storage.BlobTargetOption> blobTargetOptions = new ArrayList<>();
@@ -467,14 +469,18 @@ class GoogleCloudStorage {
       blobTargetOptions.add(Storage.BlobTargetOption.doesNotExist());
     }
 
-    // TODO: Set encryption key and related properties
-    storage.create(
-        BlobInfo.newBuilder(BlobId.of(resourceId.getBucketName(), resourceId.getObjectName()))
-            .setMetadata(rewrittenMetadata)
-            .setContentEncoding(createObjectOptions.getContentEncoding())
-            .setContentType(createObjectOptions.getContentType())
-            .build(),
-        blobTargetOptions.toArray(new Storage.BlobTargetOption[0]));
+    try {
+      // TODO: Set encryption key and related properties
+      storage.create(
+          BlobInfo.newBuilder(BlobId.of(resourceId.getBucketName(), resourceId.getObjectName()))
+              .setMetadata(rewrittenMetadata)
+              .setContentEncoding(createObjectOptions.getContentEncoding())
+              .setContentType(createObjectOptions.getContentType())
+              .build(),
+          blobTargetOptions.toArray(new Storage.BlobTargetOption[0]));
+    } catch (StorageException e) {
+      throw new IOException(String.format("Creating empty object %s failed.", resourceId), e);
+    }
   }
 
   private static Map<String, String> encodeMetadata(Map<String, byte[]> metadata) {
@@ -485,7 +491,99 @@ class GoogleCloudStorage {
     return bytes == null ? null : BaseEncoding.base64().encode(bytes);
   }
 
-  private class ListDirectoryResult {
+  List<GoogleCloudStorageItemInfo> listDirectoryRecursive(String bucketName, String objectName)
+      throws IOException {
+    // TODO: Take delimiter from config
+    // TODO: Set specific fields
+
+    try {
+      Page<Blob> blobs = storage.list(
+          bucketName,
+          Storage.BlobListOption.prefix(objectName));
+
+      List<GoogleCloudStorageItemInfo> result = new ArrayList<>();
+      for (Blob blob : blobs.iterateAll()) {
+        result.add(createItemInfoForBlob(blob));
+      }
+
+      return result;
+    } catch (StorageException e) {
+      throw new IOException(
+          String.format("Listing '%s' failed", BlobId.of(bucketName, objectName)), e);
+    }
+  }
+
+  void deleteObjects(List<StorageResourceId> fullObjectNames) throws IOException {
+    LOG.trace("deleteObjects({})", fullObjectNames);
+
+    if (fullObjectNames.isEmpty()) {
+      return;
+    }
+
+    // Validate that all the elements represent StorageObjects.
+    for (StorageResourceId toDelete : fullObjectNames) {
+      checkArgument(
+          toDelete.isStorageObject(),
+          "Expected full StorageObject names only, got: %s",
+          toDelete);
+    }
+
+    // TODO: Do this concurrently
+    // TODO: There is duplication. fix it
+    for (StorageResourceId toDelete : fullObjectNames) {
+      try {
+        LOG.trace("Deleting Object ({})", toDelete);
+        if (toDelete.hasGenerationId() && toDelete.getGenerationId() != 0) {
+          storage.delete(
+              BlobId.of(toDelete.getBucketName(), toDelete.getObjectName()),
+              Storage.BlobSourceOption.generationMatch(toDelete.getGenerationId()));
+        } else {
+          // TODO: Remove delete without generationId
+          storage.delete(BlobId.of(toDelete.getBucketName(), toDelete.getObjectName()));
+
+          LOG.trace("Deleting Object without generationId ({})", toDelete);
+        }
+      } catch (StorageException e) {
+        throw new IOException(String.format("Deleting resource %s failed.", toDelete), e);
+      }
+    }
+  }
+
+  List<GoogleCloudStorageItemInfo> listBucketInfo() throws IOException {
+    List<Bucket> allBuckets = listBucketsInternal();
+    List<GoogleCloudStorageItemInfo> bucketInfos = new ArrayList<>(allBuckets.size());
+    for (Bucket bucket : allBuckets) {
+      bucketInfos.add(createItemInfoForBucket(new StorageResourceId(bucket.getName()), bucket));
+    }
+    return bucketInfos;
+  }
+
+
+  private List<Bucket> listBucketsInternal() throws IOException {
+    checkNotNull(configuration.getProjectId(), "projectId must not be null");
+    List<Bucket> allBuckets = new ArrayList<>();
+    try {
+      Page<Bucket> buckets =
+          storage.list(
+              Storage.BucketListOption.pageSize(configuration.getMaxListItemsPerCall()),
+              Storage.BucketListOption.fields(
+                  Storage.BucketField.LOCATION,
+                  Storage.BucketField.STORAGE_CLASS,
+                  Storage.BucketField.TIME_CREATED,
+                  Storage.BucketField.UPDATED));
+
+      // Loop to fetch all the items.
+      for (Bucket bucket : buckets.iterateAll()) {
+        allBuckets.add(bucket);
+      }
+    } catch (StorageException e) {
+      throw new IOException(e);
+    }
+    return allBuckets;
+  }
+
+  // Helper class to capture the results of list operation.
+  private class ListOperationResult {
     private final Map<String, Blob> prefixes = new HashMap<>();
     private final List<Blob> objects = new ArrayList<>();
 
@@ -493,7 +591,7 @@ class GoogleCloudStorage {
 
     private final long maxResults;
 
-    ListDirectoryResult(long maxResults) {
+    ListOperationResult(long maxResults) {
       this.maxResults = maxResults;
     }
 
