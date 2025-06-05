@@ -31,12 +31,14 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.yarn.server.nodemanager.DiagnosticJStackService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecord;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecords;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AuxiliaryServicesInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
+import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -269,6 +271,35 @@ public class NMWebServices {
     return new ContainerInfo(this.nmContext, container, uriInfo.getBaseUri()
         .toString(), webapp.name(), hsr.getRemoteUser());
 
+  }
+
+  @GET
+  @Path("/jstack")
+  @Produces({MediaType.TEXT_PLAIN})
+  public Response getNodeJStack() {
+    try {
+      return Response.status(Status.OK)
+              .entity(DiagnosticJStackService.collectNodeJStack())  // Make sure the NodeManager have python3 install
+              .build();
+    } catch (Exception e) {
+      throw new WebAppException("Error collection NodeManager JStack: " + e.getMessage() + ". " +
+              "For more information please check the NodeManager logs.");
+    }
+  }
+
+
+  @GET
+  @Path("/apps/{appid}/jstack")
+  @Produces({MediaType.TEXT_PLAIN})
+  public Response getApplicationJStack(@PathParam("appid") String appId) {
+    try {
+      return Response.status(Status.OK)
+              .entity(DiagnosticJStackService.collectAppJStack(appId)) // Make sure the NodeManager have python3 install
+              .build();
+    } catch (Exception e) {
+      throw new WebAppException("Error collecting Application JStack: " + e.getMessage() + ". " +
+              "For more information please check the NodeManager logs.");
+    }
   }
 
   /**
