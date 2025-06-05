@@ -22,8 +22,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.util.Map;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import org.apache.hadoop.test.HadoopTestBase;
@@ -33,6 +32,7 @@ import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.buildPartHandle
 import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.parsePartHandlePayload;
 import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.extractChecksum;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit test of multipart upload support methods and classes.
@@ -51,9 +51,9 @@ public class TestS3AMultipartUploaderSupport extends HadoopTestBase {
     assertEquals(999, result.getPartNumber());
     assertEquals("tag", result.getEtag());
     assertEquals(1, result.getLen());
-    Assertions.assertThat(result.getChecksumAlgorithm())
+    assertThat(result.getChecksumAlgorithm())
         .describedAs("Checksum algorithm must not be present").isNull();
-    Assertions.assertThat(result.getChecksum())
+    assertThat(result.getChecksum())
         .describedAs("Checksum must not be generated").isNull();
   }
 
@@ -65,9 +65,9 @@ public class TestS3AMultipartUploaderSupport extends HadoopTestBase {
     assertEquals(1, result.getPartNumber());
     assertEquals("11223344", result.getEtag());
     assertEquals(len, result.getLen());
-    Assertions.assertThat(result.getChecksumAlgorithm())
+    assertThat(result.getChecksumAlgorithm())
         .describedAs("Checksum algorithm must not be present").isNull();
-    Assertions.assertThat(result.getChecksum())
+    assertThat(result.getChecksum())
         .describedAs("Checksum must not be generated").isNull();
   }
 
@@ -80,10 +80,10 @@ public class TestS3AMultipartUploaderSupport extends HadoopTestBase {
     assertEquals(999, result.getPartNumber());
     assertEquals("tag", result.getEtag());
     assertEquals(1, result.getLen());
-    Assertions.assertThat(result.getChecksumAlgorithm())
+    assertThat(result.getChecksumAlgorithm())
         .describedAs("Expect the checksum algorithm to be SHA256")
         .isEqualTo("SHA256");
-    Assertions.assertThat(result.getChecksum())
+    assertThat(result.getChecksum())
         .describedAs("Checksum must be set")
         .isEqualTo("checksum");
   }
@@ -135,10 +135,10 @@ public class TestS3AMultipartUploaderSupport extends HadoopTestBase {
         .checksumCRC32("checksum")
         .build();
     final Map.Entry<String, String> checksum = extractChecksum(uploadPartResponse);
-    Assertions.assertThat(checksum.getKey())
+    assertThat(checksum.getKey())
         .describedAs("Expect the checksum algorithm to be CRC32")
         .isEqualTo("CRC32");
-    Assertions.assertThat(checksum.getValue())
+    assertThat(checksum.getValue())
         .describedAs("Checksum must be set")
         .isEqualTo("checksum");
   }
@@ -149,10 +149,10 @@ public class TestS3AMultipartUploaderSupport extends HadoopTestBase {
         .checksumCRC32C("checksum")
         .build();
     final Map.Entry<String, String> checksum = extractChecksum(uploadPartResponse);
-    Assertions.assertThat(checksum.getKey())
+    assertThat(checksum.getKey())
         .describedAs("Expect the checksum algorithm to be CRC32C")
         .isEqualTo("CRC32C");
-    Assertions.assertThat(checksum.getValue())
+    assertThat(checksum.getValue())
         .describedAs("Checksum must be set")
         .isEqualTo("checksum");
   }
@@ -163,10 +163,10 @@ public class TestS3AMultipartUploaderSupport extends HadoopTestBase {
         .checksumSHA1("checksum")
         .build();
     final Map.Entry<String, String> checksum = extractChecksum(uploadPartResponse);
-    Assertions.assertThat(checksum.getKey())
+    assertThat(checksum.getKey())
         .describedAs("Expect the checksum algorithm to be SHA1")
         .isEqualTo("SHA1");
-    Assertions.assertThat(checksum.getValue())
+    assertThat(checksum.getValue())
         .describedAs("Checksum must be set")
         .isEqualTo("checksum");
   }
@@ -177,10 +177,10 @@ public class TestS3AMultipartUploaderSupport extends HadoopTestBase {
         .checksumSHA256("checksum")
         .build();
     final Map.Entry<String, String> checksum = extractChecksum(uploadPartResponse);
-    Assertions.assertThat(checksum.getKey())
+    assertThat(checksum.getKey())
         .describedAs("Expect the checksum algorithm to be SHA256")
         .isEqualTo("SHA256");
-    Assertions.assertThat(checksum.getValue())
+    assertThat(checksum.getValue())
         .describedAs("Checksum must be set")
         .isEqualTo("checksum");
   }

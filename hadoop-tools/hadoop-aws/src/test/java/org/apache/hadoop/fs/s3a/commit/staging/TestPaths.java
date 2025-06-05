@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.commit.staging;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -79,7 +79,7 @@ public class TestPaths extends HadoopTestBase {
   }
 
   private void assertUUIDAdded(String path, String expected) {
-    assertEquals("from " + path, expected, addUUID(path, "UUID"));
+    assertEquals(expected, addUUID(path, "UUID"), "from " + path);
   }
 
   private static final String DATA = UNIT_TEST_EXAMPLE_PATH;

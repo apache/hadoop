@@ -21,11 +21,13 @@ package org.apache.hadoop.io.file.tfile;
 import java.io.IOException;
 
 import org.apache.hadoop.io.file.tfile.Compression.Algorithm;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestTFileLzoCodecsByteArrays extends TestTFileByteArrays {
   /**
    * Test LZO compression codec, using the same test cases as in the ByteArrays.
    */
+  @BeforeEach
   @Override
   public void setUp() throws IOException {
     skip = !(Algorithm.LZO.isSupported());

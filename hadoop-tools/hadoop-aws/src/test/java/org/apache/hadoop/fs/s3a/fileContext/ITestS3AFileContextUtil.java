@@ -17,14 +17,14 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContextUtilBase;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * S3A implementation of FileContextUtilBase.
  */
 public class ITestS3AFileContextUtil extends FileContextUtilBase {
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, Exception {
     Configuration conf = new Configuration();
     fc = S3ATestUtils.createTestFileContext(conf);

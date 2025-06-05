@@ -21,8 +21,8 @@ package org.apache.hadoop.fs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,13 +31,15 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.StringUtils;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * <p>
@@ -52,6 +54,7 @@ import org.junit.rules.Timeout;
  * {@link FileSystem} instance variable.
  * </p>
  */
+@Timeout(30)
 public abstract class FileSystemContractBaseTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(FileSystemContractBaseTest.class);
@@ -59,10 +62,6 @@ public abstract class FileSystemContractBaseTest {
   protected final static String TEST_UMASK = "062";
   protected FileSystem fs;
   protected byte[] data = dataset(getBlockSize() * 2, 0, 255);
-
-  @Rule
-  public Timeout globalTimeout =
-      new Timeout(getGlobalTimeout(), TimeUnit.MILLISECONDS);
 
   /**
    * Get the timeout in milliseconds for each test case.
@@ -72,7 +71,7 @@ public abstract class FileSystemContractBaseTest {
     return 30 * 1000;
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (fs != null) {
       // some cases use this absolute path
@@ -195,7 +194,7 @@ public abstract class FileSystemContractBaseTest {
     assertTrue(fs.mkdirs(testDir));
 
     assertTrue(fs.exists(testDir));
-    assertTrue("Should be a directory", fs.isDirectory(testDir));
+    assertTrue(fs.isDirectory(testDir), "Should be a directory");
     assertFalse(fs.isFile(testDir));
 
     Path parentDir = testDir.getParent();
@@ -365,8 +364,8 @@ public abstract class FileSystemContractBaseTest {
 
     createFile(path);
     
-    assertTrue("Exists", fs.exists(path));
-    assertEquals("Length", data.length, fs.getFileStatus(path).getLen());
+    assertTrue(fs.exists(path), "Exists");
+    assertEquals(data.length, fs.getFileStatus(path).getLen(), "Length");
     
     try {
       fs.create(path, false).close();
@@ -379,27 +378,27 @@ public abstract class FileSystemContractBaseTest {
     out.write(data, 0, data.length);
     out.close();
     
-    assertTrue("Exists", fs.exists(path));
-    assertEquals("Length", data.length, fs.getFileStatus(path).getLen());
+    assertTrue(fs.exists(path), "Exists");
+    assertEquals(data.length, fs.getFileStatus(path).getLen(), "Length");
     
   }
 
   @Test
   public void testWriteInNonExistentDirectory() throws IOException {
     Path path = path("testWriteInNonExistentDirectory/file");
-    assertFalse("Parent exists", fs.exists(path.getParent()));
+    assertFalse(fs.exists(path.getParent()), "Parent exists");
     createFile(path);
     
-    assertTrue("Exists", fs.exists(path));
-    assertEquals("Length", data.length, fs.getFileStatus(path).getLen());
-    assertTrue("Parent exists", fs.exists(path.getParent()));
+    assertTrue(fs.exists(path), "Exists");
+    assertEquals(data.length, fs.getFileStatus(path).getLen(), "Length");
+    assertTrue(fs.exists(path.getParent()), "Parent exists");
   }
 
   @Test
   public void testDeleteNonExistentFile() throws IOException {
     Path path = path("testDeleteNonExistentFile/file");
-    assertFalse("Path exists: " + path, fs.exists(path));
-    assertFalse("No deletion", fs.delete(path, true));
+    assertFalse(fs.exists(path), "Path exists: " + path);
+    assertFalse(fs.delete(path, true), "No deletion");
   }
 
   @Test
@@ -409,11 +408,11 @@ public abstract class FileSystemContractBaseTest {
     Path subdir = path("testDeleteRecursively/subdir");
     
     createFile(file);
-    assertTrue("Created subdir", fs.mkdirs(subdir));
+    assertTrue(fs.mkdirs(subdir), "Created subdir");
     
-    assertTrue("File exists", fs.exists(file));
-    assertTrue("Dir exists", fs.exists(dir));
-    assertTrue("Subdir exists", fs.exists(subdir));
+    assertTrue(fs.exists(file), "File exists");
+    assertTrue(fs.exists(dir), "Dir exists");
+    assertTrue(fs.exists(subdir), "Subdir exists");
     
     try {
       fs.delete(dir, false);
@@ -421,23 +420,23 @@ public abstract class FileSystemContractBaseTest {
     } catch (IOException e) {
       // expected
     }
-    assertTrue("File still exists", fs.exists(file));
-    assertTrue("Dir still exists", fs.exists(dir));
-    assertTrue("Subdir still exists", fs.exists(subdir));
+    assertTrue(fs.exists(file), "File still exists");
+    assertTrue(fs.exists(dir), "Dir still exists");
+    assertTrue(fs.exists(subdir), "Subdir still exists");
     
-    assertTrue("Deleted", fs.delete(dir, true));
-    assertFalse("File doesn't exist", fs.exists(file));
-    assertFalse("Dir doesn't exist", fs.exists(dir));
-    assertFalse("Subdir doesn't exist", fs.exists(subdir));
+    assertTrue(fs.delete(dir, true), "Deleted");
+    assertFalse(fs.exists(file), "File doesn't exist");
+    assertFalse(fs.exists(dir), "Dir doesn't exist");
+    assertFalse(fs.exists(subdir), "Subdir doesn't exist");
   }
 
   @Test
   public void testDeleteEmptyDirectory() throws IOException {
     Path dir = path("testDeleteEmptyDirectory");
     assertTrue(fs.mkdirs(dir));
-    assertTrue("Dir exists", fs.exists(dir));
-    assertTrue("Deleted", fs.delete(dir, false));
-    assertFalse("Dir doesn't exist", fs.exists(dir));
+    assertTrue(fs.exists(dir), "Dir exists");
+    assertTrue(fs.delete(dir, false), "Deleted");
+    assertFalse(fs.exists(dir), "Dir doesn't exist");
   }
 
   @Test
@@ -516,14 +515,14 @@ public abstract class FileSystemContractBaseTest {
     fs.mkdirs(dst.getParent());
     rename(src, dst, true, false, true);
     
-    assertFalse("Nested file1 exists",
-        fs.exists(path(src + "/file1")));
-    assertFalse("Nested file2 exists",
-        fs.exists(path(src + "/subdir/file2")));
-    assertTrue("Renamed nested file1 exists",
-        fs.exists(path(dst + "/file1")));
-    assertTrue("Renamed nested exists",
-        fs.exists(path(dst + "/subdir/file2")));
+    assertFalse(fs.exists(path(src + "/file1")),
+        "Nested file1 exists");
+    assertFalse(fs.exists(path(src + "/subdir/file2")),
+        "Nested file2 exists");
+    assertTrue(fs.exists(path(dst + "/file1")),
+        "Renamed nested file1 exists");
+    assertTrue(fs.exists(path(dst + "/subdir/file2")),
+        "Renamed nested exists");
   }
 
   @Test
@@ -548,16 +547,16 @@ public abstract class FileSystemContractBaseTest {
     final Path dst = path("testRenameDirectoryAsExistingDirectoryNew/newdir");
     fs.mkdirs(dst);
     rename(src, dst, true, false, true);
-    assertTrue("Destination changed",
-        fs.exists(path(dst + "/dir")));
-    assertFalse("Nested file1 exists",
-        fs.exists(path(src + "/file1")));
-    assertFalse("Nested file2 exists",
-        fs.exists(path(src + "/dir/subdir/file2")));
-    assertTrue("Renamed nested file1 exists",
-        fs.exists(path(dst + "/dir/file1")));
-    assertTrue("Renamed nested exists",
-        fs.exists(path(dst + "/dir/subdir/file2")));
+    assertTrue(fs.exists(path(dst + "/dir")),
+        "Destination changed");
+    assertFalse(fs.exists(path(src + "/file1")),
+        "Nested file1 exists");
+    assertFalse(fs.exists(path(src + "/dir/subdir/file2")),
+        "Nested file2 exists");
+    assertTrue(fs.exists(path(dst + "/dir/file1")),
+        "Renamed nested file1 exists");
+    assertTrue(fs.exists(path(dst + "/dir/subdir/file2")),
+        "Renamed nested exists");
   }
 
   @Test
@@ -590,9 +589,9 @@ public abstract class FileSystemContractBaseTest {
   
   protected void rename(Path src, Path dst, boolean renameSucceeded,
       boolean srcExists, boolean dstExists) throws IOException {
-    assertEquals("Rename result", renameSucceeded, fs.rename(src, dst));
-    assertEquals("Source exists", srcExists, fs.exists(src));
-    assertEquals("Destination exists" + dst, dstExists, fs.exists(dst));
+    assertEquals(renameSucceeded, fs.rename(src, dst), "Rename result");
+    assertEquals(srcExists, fs.exists(src), "Source exists");
+    assertEquals(dstExists, fs.exists(dst), "Destination exists" + dst);
   }
 
   /**
@@ -633,27 +632,26 @@ public abstract class FileSystemContractBaseTest {
     String mixedCaseFilename = "testFilesystemIsCaseSensitive";
     Path upper = path(mixedCaseFilename);
     Path lower = path(StringUtils.toLowerCase(mixedCaseFilename));
-    assertFalse("File exists" + upper, fs.exists(upper));
-    assertFalse("File exists" + lower, fs.exists(lower));
+    assertFalse(fs.exists(upper), "File exists" + upper);
+    assertFalse(fs.exists(lower), "File exists" + lower);
     FSDataOutputStream out = fs.create(upper);
     out.writeUTF("UPPER");
     out.close();
     FileStatus upperStatus = fs.getFileStatus(upper);
-    assertTrue("File does not exist" + upper, fs.exists(upper));
+    assertTrue(fs.exists(upper), "File does not exist" + upper);
     //verify the lower-case version of the filename doesn't exist
-    assertFalse("File exists" + lower, fs.exists(lower));
+    assertFalse(fs.exists(lower), "File exists" + lower);
     //now overwrite the lower case version of the filename with a
     //new version.
     out = fs.create(lower);
     out.writeUTF("l");
     out.close();
-    assertTrue("File does not exist" + lower, fs.exists(lower));
+    assertTrue(fs.exists(lower), "File does not exist" + lower);
     //verify the length of the upper file hasn't changed
     FileStatus newStatus = fs.getFileStatus(upper);
-    assertEquals("Expected status:" + upperStatus
-                 + " actual status " + newStatus,
-                 upperStatus.getLen(),
-                 newStatus.getLen()); }
+    assertEquals(upperStatus.getLen(),
+        newStatus.getLen(), "Expected status:" + upperStatus
+        + " actual status " + newStatus); }
 
   /**
    * Asserts that a zero byte file has a status of file and not
@@ -693,7 +691,7 @@ public abstract class FileSystemContractBaseTest {
     fs.getFileStatus(path("/"));
     //this catches overrides of the base exists() method that don't
     //use getFileStatus() as an existence probe
-    assertTrue("FileSystem.exists() fails for root", fs.exists(path("/")));
+    assertTrue(fs.exists(path("/")), "FileSystem.exists() fails for root");
   }
 
   /**
@@ -789,8 +787,8 @@ public abstract class FileSystemContractBaseTest {
     Path parent = testdir.getParent();
     //the outcome here is ambiguous, so is not checked
     fs.rename(testdir, parent);
-    assertEquals("Source exists: " + testdir, true, fs.exists(testdir));
-    assertEquals("Destination exists" + parent, true, fs.exists(parent));
+    assertEquals(true, fs.exists(testdir), "Source exists: " + testdir);
+    assertEquals(true, fs.exists(parent), "Destination exists" + parent);
   }
 
   /**
@@ -855,9 +853,8 @@ public abstract class FileSystemContractBaseTest {
         found = true;
       }
     }
-    assertTrue("Path " + subdir
-               + " not found in directory " + dir + ":" + builder,
-               found);
+    assertTrue(found, "Path " + subdir
+        + " not found in directory " + dir + ":" + builder);
   }
 
   protected void assertListStatusFinds(Path dir, Path subdir)
@@ -871,9 +868,8 @@ public abstract class FileSystemContractBaseTest {
         found = true;
       }
     }
-    assertTrue("Path " + subdir
-               + " not found in directory " + dir + ":" + builder,
-               found);
+    assertTrue(found, "Path " + subdir
+        + " not found in directory " + dir + ":" + builder);
   }
 
 
@@ -884,14 +880,14 @@ public abstract class FileSystemContractBaseTest {
    * @throws IOException IO problems during file operations
    */
   private void assertIsFile(Path filename) throws IOException {
-    assertTrue("Does not exist: " + filename, fs.exists(filename));
+    assertTrue(fs.exists(filename), "Does not exist: " + filename);
     FileStatus status = fs.getFileStatus(filename);
     String fileInfo = filename + "  " + status;
-    assertTrue("Not a file " + fileInfo, status.isFile());
-    assertFalse("File claims to be a symlink " + fileInfo,
-                status.isSymlink());
-    assertFalse("File claims to be a directory " + fileInfo,
-                status.isDirectory());
+    assertTrue(status.isFile(), "Not a file " + fileInfo);
+    assertFalse(status.isSymlink(),
+        "File claims to be a symlink " + fileInfo);
+    assertFalse(status.isDirectory(),
+        "File claims to be a directory " + fileInfo);
   }
 
   /**
@@ -918,8 +914,8 @@ public abstract class FileSystemContractBaseTest {
   protected void writeAndRead(Path path, byte[] src, int len,
                               boolean overwrite,
                               boolean delete) throws IOException {
-    assertTrue("Not enough data in source array to write " + len + " bytes",
-               src.length >= len);
+    assertTrue(src.length >= len,
+        "Not enough data in source array to write " + len + " bytes");
     fs.mkdirs(path.getParent());
 
     FSDataOutputStream out = fs.create(path, overwrite,
@@ -929,8 +925,8 @@ public abstract class FileSystemContractBaseTest {
     out.write(src, 0, len);
     out.close();
 
-    assertTrue("Exists", fs.exists(path));
-    assertEquals("Length", len, fs.getFileStatus(path).getLen());
+    assertTrue(fs.exists(path), "Exists");
+    assertEquals(len, fs.getFileStatus(path).getLen(), "Length");
 
     FSDataInputStream in = fs.open(path);
     byte[] buf = new byte[len];
@@ -978,8 +974,8 @@ public abstract class FileSystemContractBaseTest {
 
     if (delete) {
       boolean deleted = fs.delete(path, false);
-      assertTrue("Deleted", deleted);
-      assertFalse("No longer exists", fs.exists(path));
+      assertTrue(deleted, "Deleted");
+      assertFalse(fs.exists(path), "No longer exists");
     }
   }
 

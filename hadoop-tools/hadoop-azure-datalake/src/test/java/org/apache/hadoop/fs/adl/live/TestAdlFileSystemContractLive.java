@@ -19,12 +19,13 @@
 
 package org.apache.hadoop.fs.adl.live;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
-import org.junit.After;
-import static org.junit.Assume.*;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 
@@ -34,17 +35,17 @@ import java.io.IOException;
 public class TestAdlFileSystemContractLive extends FileSystemContractBaseTest {
   private FileSystem adlStore;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     skipTestCheck();
     adlStore = AdlStorageConfiguration.createStorageConnector();
     if (AdlStorageConfiguration.isContractTestEnabled()) {
       fs = adlStore;
     }
-    assumeNotNull(fs);
+    assumeTrue(fs != null);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (AdlStorageConfiguration.isContractTestEnabled()) {
       cleanup();

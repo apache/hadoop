@@ -19,9 +19,9 @@
 package org.apache.hadoop.fs.azure;
 
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  * Mocked testing of FileSystemContractBaseTest.
@@ -29,7 +29,7 @@ import org.junit.Test;
 public class TestNativeAzureFileSystemContractMocked extends
     FileSystemContractBaseTest {
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fs = AzureBlobStorageTestAccount.createMock().getFileSystem();
   }
@@ -39,27 +39,27 @@ public class TestNativeAzureFileSystemContractMocked extends
    * file system code needs to be modified to make them pass.
    * A separate work item has been opened for this.
    */
-  @Ignore
+  @Disabled
   @Test
   public void testMoveFileUnderParent() throws Throwable {
   }
 
-  @Ignore
+  @Disabled
   @Test
   public void testRenameFileToSelf() throws Throwable {
   }
   
-  @Ignore
+  @Disabled
   @Test
   public void testRenameChildDirForbidden() throws Exception {
   }
   
-  @Ignore
+  @Disabled
   @Test
   public void testMoveDirUnderParent() throws Throwable {
   }
   
-  @Ignore
+  @Disabled
   @Test
   public void testRenameDirToSelf() throws Throwable {
   }
