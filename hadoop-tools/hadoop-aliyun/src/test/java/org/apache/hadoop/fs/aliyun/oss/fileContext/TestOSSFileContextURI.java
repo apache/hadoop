@@ -22,9 +22,9 @@ package org.apache.hadoop.fs.aliyun.oss.fileContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContextURIBase;
 import org.apache.hadoop.fs.aliyun.oss.AliyunOSSTestUtils;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -33,7 +33,7 @@ import java.io.IOException;
  */
 public class TestOSSFileContextURI extends FileContextURIBase {
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, Exception {
     Configuration conf = new Configuration();
     fc1 = AliyunOSSTestUtils.createTestFileContext(conf);
@@ -43,7 +43,7 @@ public class TestOSSFileContextURI extends FileContextURIBase {
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void testFileStatus() throws IOException {
     // test ignored
     // (the statistics tested with this method are not relevant for an OSSFS)

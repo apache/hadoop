@@ -19,14 +19,15 @@
 
 package org.apache.hadoop.fs.adl.live;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DelegateToFileSystem;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextCreateMkdirBaseTest;
 import org.apache.hadoop.fs.FileContextTestHelper;
 import org.apache.hadoop.fs.FileSystem;
-import org.junit.Assume;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 
 import java.net.URI;
 import java.util.UUID;
@@ -38,9 +39,9 @@ public class TestAdlFileContextCreateMkdirLive
     extends FileContextCreateMkdirBaseTest {
   private static final String KEY_FILE_SYSTEM = "test.fs.adl.name";
 
-  @BeforeClass
+  @BeforeAll
   public static void skipTestCheck() {
-    Assume.assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
+    assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
   }
 
   @Override

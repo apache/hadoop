@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsDirectory;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
@@ -72,12 +73,12 @@ public abstract class FileContextCreateMkdirBaseTest {
     return new FileContextTestHelper();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fc.mkdir(getTestRootPath(fc), FileContext.DEFAULT_PERM, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     fc.delete(getTestRootPath(fc), true);
   }
@@ -92,7 +93,7 @@ public abstract class FileContextCreateMkdirBaseTest {
   public void testMkdirNonRecursiveWithExistingDir() throws IOException {
     Path f = getTestRootPath(fc, "aDir");
     fc.mkdir(f, FileContext.DEFAULT_PERM, false);
-    Assert.assertTrue(isDir(fc, f));
+    assertTrue(isDir(fc, f));
   }
   
   @Test
@@ -100,7 +101,7 @@ public abstract class FileContextCreateMkdirBaseTest {
     try {
       fc.mkdir(getTestRootPath(fc,"NonExistant/aDir"),
           FileContext.DEFAULT_PERM, false);
-      Assert.fail("Mkdir with non existing parent dir should have failed");
+      fail("Mkdir with non existing parent dir should have failed");
     } catch (IOException e) {
       // failed As expected
     }
@@ -111,7 +112,7 @@ public abstract class FileContextCreateMkdirBaseTest {
   public void testMkdirRecursiveWithExistingDir() throws IOException {
     Path f = getTestRootPath(fc, "aDir");
     fc.mkdir(f, FileContext.DEFAULT_PERM, true);
-    Assert.assertTrue(isDir(fc, f));
+    assertTrue(isDir(fc, f));
   }
   
   
@@ -119,7 +120,7 @@ public abstract class FileContextCreateMkdirBaseTest {
   public void testMkdirRecursiveWithNonExistingDir() throws IOException {
     Path f = getTestRootPath(fc, "NonExistant2/aDir");
     fc.mkdir(f, FileContext.DEFAULT_PERM, true);
-    Assert.assertTrue(isDir(fc, f));
+    assertTrue(isDir(fc, f));
   }
 
   @Test
@@ -194,14 +195,14 @@ public abstract class FileContextCreateMkdirBaseTest {
   public void testCreateNonRecursiveWithExistingDir() throws IOException {
     Path f = getTestRootPath(fc, "foo");
     createFile(fc, f);
-    Assert.assertTrue(isFile(fc, f));
+    assertTrue(isFile(fc, f));
   }
   
   @Test
   public void testCreateNonRecursiveWithNonExistingDir() {
     try {
       createFileNonRecursive(fc, getTestRootPath(fc, "NonExisting/foo"));
-      Assert.fail("Create with non existing parent dir should have failed");
+      fail("Create with non existing parent dir should have failed");
     } catch (IOException e) {
       // As expected
     }
@@ -212,7 +213,7 @@ public abstract class FileContextCreateMkdirBaseTest {
   public void testCreateRecursiveWithExistingDir() throws IOException {
     Path f = getTestRootPath(fc,"foo");
     createFile(fc, f);
-    Assert.assertTrue(isFile(fc, f));
+    assertTrue(isFile(fc, f));
   }
   
   
@@ -220,7 +221,7 @@ public abstract class FileContextCreateMkdirBaseTest {
   public void testCreateRecursiveWithNonExistingDir() throws IOException {
     Path f = getTestRootPath(fc,"NonExisting/foo");
     createFile(fc, f);
-    Assert.assertTrue(isFile(fc, f));
+    assertTrue(isFile(fc, f));
   }
 
   private Path getTestRootPath(FileContext fc) {

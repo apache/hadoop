@@ -32,11 +32,10 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +47,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * Test Task Pool class.
  * This is pulled straight out of the S3A version.
  */
-@RunWith(Parameterized.class)
 public class TestTaskPool extends HadoopTestBase {
 
   private static final Logger LOG =
@@ -58,7 +56,7 @@ public class TestTaskPool extends HadoopTestBase {
 
   private static final int FAILPOINT = 8;
 
-  private final int numThreads;
+  private int numThreads;
 
   /**
    * Thread pool for task execution.
@@ -89,7 +87,6 @@ public class TestTaskPool extends HadoopTestBase {
    * more checks on single thread than parallel ops.
    * @return a list of parameter tuples.
    */
-  @Parameterized.Parameters(name = "threads={0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {0},
@@ -104,10 +101,10 @@ public class TestTaskPool extends HadoopTestBase {
 
   /**
    * Construct the parameterized test.
-   * @param numThreads number of threads
+   * @param pNumThreads number of threads
    */
-  public TestTaskPool(int numThreads) {
-    this.numThreads = numThreads;
+  public void initTestTaskPool(int pNumThreads) {
+    this.numThreads = pNumThreads;
   }
 
   /**
@@ -118,7 +115,7 @@ public class TestTaskPool extends HadoopTestBase {
     return numThreads > 1;
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     items = IntStream.rangeClosed(1, ITEM_COUNT)
         .mapToObj(i -> new Item(i,
@@ -138,7 +135,7 @@ public class TestTaskPool extends HadoopTestBase {
 
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     if (threadPool != null) {
       threadPool.shutdown();
@@ -166,13 +163,13 @@ public class TestTaskPool extends HadoopTestBase {
   private void assertRun(TaskPool.Builder<Item> builder,
       CounterTask task) throws IOException {
     boolean b = builder.run(task);
-    assertTrue("Run of " + task + " failed", b);
+    assertTrue(b, "Run of " + task + " failed");
   }
 
   private void assertFailed(TaskPool.Builder<Item> builder,
       CounterTask task) throws IOException {
     boolean b = builder.run(task);
-    assertFalse("Run of " + task + " unexpectedly succeeded", b);
+    assertFalse(b, "Run of " + task + " unexpectedly succeeded");
   }
 
   private String itemsToString() {
@@ -180,22 +177,28 @@ public class TestTaskPool extends HadoopTestBase {
         .collect(Collectors.joining("\n")) + "]";
   }
 
-  @Test
-  public void testSimpleInvocation() throws Throwable {
+  @ParameterizedTest(name = "threads={0}")
+  @MethodSource("params")
+  public void testSimpleInvocation(int pNumThreads) throws Throwable {
+    initTestTaskPool(pNumThreads);
     CounterTask t = new CounterTask("simple", 0, Item::commit);
     assertRun(builder(), t);
     t.assertInvoked("", ITEM_COUNT);
   }
 
-  @Test
-  public void testFailNoStoppingSuppressed() throws Throwable {
+  @ParameterizedTest(name = "threads={0}")
+  @MethodSource("params")
+  public void testFailNoStoppingSuppressed(int pNumThreads) throws Throwable {
+    initTestTaskPool(pNumThreads);
     assertFailed(builder().suppressExceptions(), failingTask);
     failingTask.assertInvoked("Continued through operations", ITEM_COUNT);
     items.forEach(Item::assertCommittedOrFailed);
   }
 
-  @Test
-  public void testFailFastSuppressed() throws Throwable {
+  @ParameterizedTest(name = "threads={0}")
+  @MethodSource("params")
+  public void testFailFastSuppressed(int pNumThreads) throws Throwable {
+    initTestTaskPool(pNumThreads);
     assertFailed(builder()
             .suppressExceptions()
             .stopOnFailure(),
@@ -207,8 +210,10 @@ public class TestTaskPool extends HadoopTestBase {
     }
   }
 
-  @Test
-  public void testFailedCallAbortSuppressed() throws Throwable {
+  @ParameterizedTest(name = "threads={0}")
+  @MethodSource("params")
+  public void testFailedCallAbortSuppressed(int pNumThreads) throws Throwable {
+    initTestTaskPool(pNumThreads);
     assertFailed(builder()
             .stopOnFailure()
             .suppressExceptions()
@@ -221,12 +226,14 @@ public class TestTaskPool extends HadoopTestBase {
       items.stream().filter(i -> !i.committed)
           .map(Item::assertAborted);
       items.stream().filter(i -> i.committed)
-          .forEach(i -> assertFalse(i.toString(), i.aborted));
+          .forEach(i -> assertFalse(i.aborted, i.toString()));
     }
   }
 
-  @Test
-  public void testFailedCalledWhenNotStoppingSuppressed() throws Throwable {
+  @ParameterizedTest(name = "threads={0}")
+  @MethodSource("params")
+  public void testFailedCalledWhenNotStoppingSuppressed(int pNumThreads) throws Throwable {
+    initTestTaskPool(pNumThreads);
     assertFailed(builder()
             .suppressExceptions()
             .onFailure(failures),
@@ -236,8 +243,10 @@ public class TestTaskPool extends HadoopTestBase {
     failures.assertInvoked("failure event", 1);
   }
 
-  @Test
-  public void testFailFastCallRevertSuppressed() throws Throwable {
+  @ParameterizedTest(name = "threads={0}")
+  @MethodSource("params")
+  public void testFailFastCallRevertSuppressed(int pNumThreads) throws Throwable {
+    initTestTaskPool(pNumThreads);
     assertFailed(builder()
             .stopOnFailure()
             .revertWith(reverter)
@@ -264,8 +273,10 @@ public class TestTaskPool extends HadoopTestBase {
     failures.assertInvoked("failure event", 1);
   }
 
-  @Test
-  public void testFailSlowCallRevertSuppressed() throws Throwable {
+  @ParameterizedTest(name = "threads={0}")
+  @MethodSource("params")
+  public void testFailSlowCallRevertSuppressed(int pNumThreads) throws Throwable {
+    initTestTaskPool(pNumThreads);
     assertFailed(builder()
             .suppressExceptions()
             .revertWith(reverter)
@@ -287,8 +298,10 @@ public class TestTaskPool extends HadoopTestBase {
     failures.assertInvoked("failure event", 1);
   }
 
-  @Test
-  public void testFailFastExceptions() throws Throwable {
+  @ParameterizedTest(name = "threads={0}")
+  @MethodSource("params")
+  public void testFailFastExceptions(int pNumThreads) throws Throwable {
+    initTestTaskPool(pNumThreads);
     intercept(IOException.class,
         () -> builder()
             .stopOnFailure()
@@ -300,8 +313,10 @@ public class TestTaskPool extends HadoopTestBase {
     }
   }
 
-  @Test
-  public void testFailSlowExceptions() throws Throwable {
+  @ParameterizedTest(name = "threads={0}")
+  @MethodSource("params")
+  public void testFailSlowExceptions(int pNumThreads) throws Throwable {
+    initTestTaskPool(pNumThreads);
     intercept(IOException.class,
         () -> builder()
             .run(failingTask));
@@ -309,8 +324,10 @@ public class TestTaskPool extends HadoopTestBase {
     items.forEach(Item::assertCommittedOrFailed);
   }
 
-  @Test
-  public void testFailFastExceptionsWithAbortFailure() throws Throwable {
+  @ParameterizedTest(name = "threads={0}")
+  @MethodSource("params")
+  public void testFailFastExceptionsWithAbortFailure(int pNumThreads) throws Throwable {
+    initTestTaskPool(pNumThreads);
     CounterTask failFirst = new CounterTask("task", 1, Item::commit);
     CounterTask a = new CounterTask("aborter", 1, Item::abort);
     intercept(IOException.class,
@@ -324,8 +341,10 @@ public class TestTaskPool extends HadoopTestBase {
     }
   }
 
-  @Test
-  public void testFailFastExceptionsWithAbortFailureStopped() throws Throwable {
+  @ParameterizedTest(name = "threads={0}")
+  @MethodSource("params")
+  public void testFailFastExceptionsWithAbortFailureStopped(int pNumThreads) throws Throwable {
+    initTestTaskPool(pNumThreads);
     CounterTask failFirst = new CounterTask("task", 1, Item::commit);
     CounterTask a = new CounterTask("aborter", 1, Item::abort);
     intercept(IOException.class,
@@ -345,8 +364,10 @@ public class TestTaskPool extends HadoopTestBase {
    * The actual ID of the last task has to be picke dup from the
    * failure callback, as in the pool it may be one of any.
    */
-  @Test
-  public void testRevertAllSuppressed() throws Throwable {
+  @ParameterizedTest(name = "threads={0}")
+  @MethodSource("params")
+  public void testRevertAllSuppressed(int pNumThreads) throws Throwable {
+    initTestTaskPool(pNumThreads);
     CounterTask failLast = new CounterTask("task", ITEM_COUNT, Item::commit);
 
     assertFailed(builder()
@@ -417,30 +438,27 @@ public class TestTaskPool extends HadoopTestBase {
     }
 
     public Item assertCommitted() {
-      assertTrue(toString() + " was not committed in\n"
-              + itemsToString(),
-          committed);
+      assertTrue(committed, toString() + " was not committed in\n"
+          + itemsToString());
       return this;
     }
 
     public Item assertCommittedOrFailed() {
-      assertTrue(toString() + " was not committed nor failed in\n"
-              + itemsToString(),
-          committed || failed);
+      assertTrue(committed || failed,
+          toString() + " was not committed nor failed in\n"
+          + itemsToString());
       return this;
     }
 
     public Item assertAborted() {
-      assertTrue(toString() + " was not aborted in\n"
-              + itemsToString(),
-          aborted);
+      assertTrue(aborted, toString() + " was not aborted in\n"
+          + itemsToString());
       return this;
     }
 
     public Item assertReverted() {
-      assertTrue(toString() + " was not reverted in\n"
-              + itemsToString(),
-          reverted);
+      assertTrue(reverted, toString() + " was not reverted in\n"
+          + itemsToString());
       return this;
     }
 
@@ -519,16 +537,15 @@ public class TestTaskPool extends HadoopTestBase {
     }
 
     void assertInvoked(String text, int expected) {
-      assertEquals(toString() + ": " + text, expected, getCount());
+      assertEquals(expected, getCount(), toString() + ": " + text);
     }
 
     void assertInvokedAtLeast(String text, int expected) {
       int actual = getCount();
-      assertTrue(toString() + ": " + text
-              + "-expected " + expected
-              + " invocations, but got " + actual
-              + " in " + itemsToString(),
-          expected <= actual);
+      assertTrue(expected <= actual, toString() + ": " + text
+          + "-expected " + expected
+          + " invocations, but got " + actual
+          + " in " + itemsToString());
     }
 
     @Override

@@ -24,7 +24,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.UUID;
 
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -39,7 +40,8 @@ import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.reset;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 
@@ -47,6 +49,7 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 public class TestStagingPartitionedJobCommit
     extends StagingTestBase.JobCommitterTest<PartitionedStagingCommitter> {
 
+  @BeforeEach
   @Override
   public void setupJob() throws Exception {
     super.setupJob();
@@ -255,8 +258,8 @@ public class TestStagingPartitionedJobCommit
 
     verifyReplaceCommitActions(mockS3);
     verifyDeleted(mockS3, "dateint=20161116/hour=14");
-    assertTrue("Should have aborted",
-        ((PartitionedStagingCommitterForTesting) committer).aborted);
+    assertTrue(((PartitionedStagingCommitterForTesting) committer).aborted,
+        "Should have aborted");
     verifyCompletion(mockS3);
   }
 
