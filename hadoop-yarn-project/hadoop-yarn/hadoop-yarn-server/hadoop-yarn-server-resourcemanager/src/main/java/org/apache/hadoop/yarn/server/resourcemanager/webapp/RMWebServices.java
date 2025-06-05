@@ -137,6 +137,7 @@ import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
+import org.apache.hadoop.yarn.server.resourcemanager.DiagnosticsService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -177,6 +178,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedule
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CommonIssues;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FifoSchedulerInfo;
@@ -223,6 +225,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
+import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
@@ -406,6 +409,42 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public ClusterMetricsInfo getClusterMetricsInfo() {
     initForReadableEndpoints();
     return new ClusterMetricsInfo(this.rm);
+  }
+
+  @GET
+  @Path(RMWSConsts.COMMON_ISSUE_LIST)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Override
+  public CommonIssues getCommonIssueList() {
+    initForReadableEndpoints();
+    try {
+      return DiagnosticsService.listCommonIssues();
+    } catch (Exception e) {
+      throw new WebAppException("Error collecting the common " +
+          "issue types. Error message: " + e.getMessage() + ". " +
+          "For more information please check the ResourceManager logs.");
+    }
+  }
+
+  @GET
+  @Path(RMWSConsts.COMMON_ISSUE_COLLECT)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Override
+  public Response getCommonIssueData(
+      @QueryParam(RMWSConsts.ISSUEID) String issueId,
+      @QueryParam(RMWSConsts.ISSUEARGS) List<String> args) {
+    initForReadableEndpoints();
+    try {
+      return Response.status(Status.OK)
+          .entity(DiagnosticsService.collectIssueData(issueId, args))
+          .build();
+    } catch (Exception e) {
+      throw new WebAppException("Error collecting the selected " +
+          "issue data. Error message: " + e.getMessage() + ". " +
+          "For more information please check the ResourceManager logs.");
+    }
   }
 
   @GET

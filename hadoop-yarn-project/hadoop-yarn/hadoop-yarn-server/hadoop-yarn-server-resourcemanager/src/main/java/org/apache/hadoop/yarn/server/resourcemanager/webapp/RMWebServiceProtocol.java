@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
@@ -47,6 +48,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CommonIssues;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
@@ -111,6 +113,25 @@ public interface RMWebServiceProtocol {
    * @return the cluster metrics information
    */
   ClusterMetricsInfo getClusterMetricsInfo();
+
+  /**
+   * This method retrieves the common diagnosable issue list, and it is
+   * reachable by using {@link RMWSConsts#COMMON_ISSUE_LIST}.
+   *
+   * @return the list of available diagnostic cases
+   */
+  CommonIssues getCommonIssueList();
+
+  /**
+   * This method retrieves the diagnostic information for the selected issue,
+   * and it is reachable by using {@link RMWSConsts#COMMON_ISSUE_COLLECT}.
+   *
+   * @param issueId the selected issue's ID. It is a QueryParam.
+   * @param args the necessary arguments for diagnosing the issue.
+   * It is a QueryParam.
+   * @return the associated diagnostic information to the selected issue
+   */
+  Response getCommonIssueData(String issueId, List<String> args);
 
   /**
    * This method retrieves the current scheduler status, and it is reachable by

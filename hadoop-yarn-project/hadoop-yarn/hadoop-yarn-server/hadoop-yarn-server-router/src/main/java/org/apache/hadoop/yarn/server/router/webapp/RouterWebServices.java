@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -67,6 +68,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CommonIssues;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
@@ -298,6 +300,30 @@ public class RouterWebServices implements RMWebServiceProtocol {
     init();
     RequestInterceptorChainWrapper pipeline = getInterceptorChain(null);
     return pipeline.getRootInterceptor().getClusterMetricsInfo();
+  }
+
+  @GET
+  @Path(RMWSConsts.COMMON_ISSUE_LIST)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Override
+  public CommonIssues getCommonIssueList() {
+    init();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(null);
+    return pipeline.getRootInterceptor().getCommonIssueList();
+  }
+
+  @GET
+  @Path(RMWSConsts.COMMON_ISSUE_COLLECT)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Override
+  public Response getCommonIssueData(
+      @QueryParam(RMWSConsts.ISSUEID) String issueId,
+      @QueryParam(RMWSConsts.ISSUEARGS) List<String> args) {
+    init();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(null);
+    return pipeline.getRootInterceptor().getCommonIssueData(issueId, args);
   }
 
   @GET

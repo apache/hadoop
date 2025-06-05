@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
@@ -42,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CommonIssues;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
@@ -120,6 +122,16 @@ public class PassThroughRESTRequestInterceptor
   @Override
   public ClusterMetricsInfo getClusterMetricsInfo() {
     return getNextInterceptor().getClusterMetricsInfo();
+  }
+
+  @Override
+  public CommonIssues getCommonIssueList() {
+    return getNextInterceptor().getCommonIssueList();
+  }
+
+  @Override
+  public Response getCommonIssueData(String issueId, List<String> args) {
+    return getNextInterceptor().getCommonIssueData(issueId, args);
   }
 
   @Override

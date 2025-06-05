@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -49,6 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CommonIssues;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
@@ -135,6 +137,22 @@ public class DefaultRequestInterceptorREST
         ClusterMetricsInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
         getConf(), client);
+  }
+
+  @Override
+  public CommonIssues getCommonIssueList() {
+    return RouterWebServiceUtil.genericForward(webAppAddress, null,
+        CommonIssues.class, HTTPMethods.GET,
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.COMMON_ISSUE_LIST,
+        null, null, getConf(), client);
+  }
+
+  @Override
+  public Response getCommonIssueData(String issueId, List<String> args) {
+    return RouterWebServiceUtil.genericForward(webAppAddress, null,
+        Response.class, HTTPMethods.GET,
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.COMMON_ISSUE_COLLECT,
+        null, null, getConf(), client);
   }
 
   @Override
