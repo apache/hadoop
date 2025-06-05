@@ -425,16 +425,17 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
     String scRmAdminAddress = "5.6.7.8:7";
     String scWebAppAddress = "127.0.0.1:8080";
     String capabilityJson = "-";
+    long currentTime = Time.now();
 
     SubClusterInfo sc1 =
         SubClusterInfo.newInstance(SubClusterId.newInstance("SC-1"),
         scAmRMAddress, scClientRMAddress, scRmAdminAddress, scWebAppAddress,
-        SubClusterState.SC_RUNNING, Time.now(), capabilityJson);
+        SubClusterState.SC_RUNNING, currentTime, capabilityJson);
 
     SubClusterInfo sc2 =
         SubClusterInfo.newInstance(SubClusterId.newInstance("SC-1"),
         scAmRMAddress, scClientRMAddress, scRmAdminAddress, scWebAppAddress,
-        SubClusterState.SC_RUNNING, Time.now(), capabilityJson);
+        SubClusterState.SC_RUNNING, currentTime, capabilityJson);
 
     assertEquals(sc1, sc2);
   }
