@@ -157,9 +157,9 @@ class GoogleCloudStorageFileSystem {
             resourceId.getBucketName(),
             resourceId.getObjectName(),
             GET_FILE_INFO_LIST_OPTIONS);
-        LOG.info("List for getMetadat returned {}. {}", listDirResult.size(), listDirResult);
+        LOG.trace("List for getMetadata returned {}. {}", listDirResult.size(), listDirResult);
         if (!listDirResult.isEmpty()) {
-          LOG.info("Get metadata for directory returned non empty{}", listDirResult);
+          LOG.trace("Get metadata for directory returned non empty {}", listDirResult);
           return GoogleCloudStorageItemInfo.createInferredDirectory(resourceId.toDirectoryId());
         }
       }
@@ -206,11 +206,8 @@ class GoogleCloudStorageFileSystem {
 
     resourceId = resourceId.toDirectoryId();
 
-    // Before creating a leaf directory we need to check if there are no conflicting files
-    // with the same name as any subdirectory
-//    if (options.isEnsureNoConflictingItems()) {
-//      checkNoFilesConflictingWithDirs(resourceId);
-//    }
+    // TODO: Before creating a leaf directory we need to check if there are no conflicting files
+    // TODO: with the same name as any subdirectory
 
     // Create only a leaf directory because subdirectories will be inferred
     // if leaf directory exists

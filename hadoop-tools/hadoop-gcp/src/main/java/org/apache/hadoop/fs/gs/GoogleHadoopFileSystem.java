@@ -468,6 +468,9 @@ public class GoogleHadoopFileSystem extends FileSystem {
   public boolean mkdirs(final Path hadoopPath, final FsPermission permission) throws IOException {
     checkArgument(hadoopPath != null, "hadoopPath must not be null");
 
+    LOG.trace(
+        "mkdirs(hadoopPath: {}, permission: {}): true", hadoopPath, permission);
+
     checkOpen();
 
     URI gcsPath = getGcsPath(hadoopPath);
@@ -482,11 +485,8 @@ public class GoogleHadoopFileSystem extends FileSystem {
                   hadoopPath, permission))
               .initCause(faee);
     }
-    LOG.trace(
-        "mkdirs(hadoopPath: {}, permission: {}): true", hadoopPath, permission);
-    boolean response = true;
 
-    return response;
+    return true;
   }
 
   @Override

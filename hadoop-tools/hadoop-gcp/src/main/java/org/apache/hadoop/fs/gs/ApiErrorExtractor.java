@@ -57,9 +57,6 @@ class ApiErrorExtractor {
   // These are 400 error codes with "resource 'xyz' is not ready" message.
   // These sometimes happens when create operation is still in-flight but resource
   // representation is already available via get call.
-  // Only explanation I could find for this is described here:
-  //    java/com/google/cloud/cluster/data/cognac/cognac.proto
-  // with an example "because resource is being created in reconciler."
   public static final String RESOURCE_NOT_READY_REASON = "resourceNotReady";
 
   // HTTP 413 with message "Value for field 'foo' is too large".

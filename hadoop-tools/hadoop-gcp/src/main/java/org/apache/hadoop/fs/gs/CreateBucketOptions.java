@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.gs;
 import java.time.Duration;
 
 final class CreateBucketOptions {
-  static final CreateBucketOptions DEFAULT = new Builder().build(); // TODO: Make sure the defaults
+  // TODO: Make sure the defaults have the setting matching the existing connector.
+  static final CreateBucketOptions DEFAULT = new Builder().build();
   private final String location;
   private final String storageClass;
   private final Duration ttl;
