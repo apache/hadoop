@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,9 +45,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.net.NetUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests OfflineImageViewer if the input fsimage has XAttributes
@@ -66,7 +66,7 @@ public class TestOfflineImageViewerForXAttr {
    * structure and store its fsimage location. We only want to generate the
    * fsimage file once and use it for multiple tests.
    */
-  @BeforeClass
+  @BeforeAll
   public static void createOriginalFSImage() throws IOException {
     MiniDFSCluster cluster = null;
     Configuration conf = new Configuration();
@@ -104,7 +104,7 @@ public class TestOfflineImageViewerForXAttr {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void deleteOriginalFSImage() throws IOException {
     if (originalFsimage != null && originalFsimage.exists()) {
       originalFsimage.delete();
@@ -128,10 +128,10 @@ public class TestOfflineImageViewerForXAttr {
 
       String content = IOUtils.toString(connection.getInputStream(), StandardCharsets.UTF_8);
 
-      assertTrue("Missing user.attr1 in response ",
-          content.contains("user.attr1"));
-      assertTrue("Missing user.attr2 in response ",
-          content.contains("user.attr2"));
+      assertTrue(content.contains("user.attr1"),
+          "Missing user.attr1 in response ");
+      assertTrue(content.contains("user.attr2"),
+          "Missing user.attr2 in response ");
 
     }
   }
@@ -153,10 +153,8 @@ public class TestOfflineImageViewerForXAttr {
       assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
       String content = IOUtils.toString(connection.getInputStream(), StandardCharsets.UTF_8);
 
-      assertTrue("Missing user.attr1 in response ",
-          content.contains("user.attr1"));
-      assertTrue("Missing user.attr2 in response ",
-          content.contains("user.attr2"));
+      assertTrue(content.contains("user.attr1"), "Missing user.attr1 in response ");
+      assertTrue(content.contains("user.attr2"), "Missing user.attr2 in response ");
     }
   }
 

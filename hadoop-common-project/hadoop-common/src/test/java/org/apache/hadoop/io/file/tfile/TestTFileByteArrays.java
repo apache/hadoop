@@ -17,13 +17,17 @@
 
 package org.apache.hadoop.io.file.tfile;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.Random;
-
-import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -36,9 +40,9 @@ import org.apache.hadoop.io.file.tfile.TFile.Writer;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Location;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * 
@@ -87,7 +91,7 @@ public class TestTFileByteArrays {
     this.comparator = comparator;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     path = new Path(ROOT, outputFile);
     fs = path.getFileSystem(conf);
@@ -95,7 +99,7 @@ public class TestTFileByteArrays {
     writer = new Writer(out, BLOCK_SIZE, compression, comparator, conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (!skip)
       fs.delete(path, true);
@@ -108,9 +112,9 @@ public class TestTFileByteArrays {
     closeOutput();
 
     Reader reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
-    Assert.assertTrue(reader.isSorted());
+    assertTrue(reader.isSorted());
     Scanner scanner = reader.createScanner();
-    Assert.assertTrue(scanner.atEnd());
+    assertTrue(scanner.atEnd());
     scanner.close();
     reader.close();
   }
@@ -242,7 +246,7 @@ public class TestTFileByteArrays {
     locate(scanner, composeSortedKey(KEY, records1stBlock - 1).getBytes());
     locate(scanner, composeSortedKey(KEY, records1stBlock).getBytes());
     Location locX = locate(scanner, "keyX".getBytes());
-    Assert.assertEquals(scanner.endLocation, locX);
+    assertEquals(scanner.endLocation, locX);
     scanner.close();
     reader.close();
   }
@@ -254,7 +258,7 @@ public class TestTFileByteArrays {
     Reader reader = null;
     try {
       reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
-      Assert.fail("Cannot read before closing the writer.");
+      fail("Cannot read before closing the writer.");
     } catch (IOException e) {
       // noop, expecting exceptions
     } finally {
@@ -279,7 +283,7 @@ public class TestTFileByteArrays {
     // add the same metablock
     try {
       writer.prepareMetaBlock("testX", Compression.Algorithm.GZ.getName());
-      Assert.fail("Cannot create metablocks with the same name.");
+      fail("Cannot create metablocks with the same name.");
     } catch (Exception e) {
       // noop, expecting exceptions
     }
@@ -302,11 +306,11 @@ public class TestTFileByteArrays {
 
     Reader reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
     DataInputStream mb = reader.getMetaBlock("testX");
-    Assert.assertNotNull(mb);
+    assertNotNull(mb);
     mb.close();
     try {
       DataInputStream mbBad = reader.getMetaBlock("testY");
-      Assert.fail("Error on handling non-existent metablocks.");
+      fail("Error on handling non-existent metablocks.");
     } catch (Exception e) {
       // noop, expecting exceptions
     }
@@ -328,7 +332,7 @@ public class TestTFileByteArrays {
     // add more key/value
     try {
       writer.append("keyY".getBytes(), "valueY".getBytes());
-      Assert.fail("Cannot add key/value after start adding meta blocks.");
+      fail("Cannot add key/value after start adding meta blocks.");
     } catch (Exception e) {
       // noop, expecting exceptions
     }
@@ -347,10 +351,10 @@ public class TestTFileByteArrays {
     byte[] vbuf = new byte[BUF_SIZE];
     int vlen = scanner.entry().getValueLength();
     scanner.entry().getValue(vbuf);
-    Assert.assertEquals(new String(vbuf, 0, vlen), VALUE + 0);
+    assertEquals(new String(vbuf, 0, vlen), VALUE + 0);
     try {
       scanner.entry().getValue(vbuf);
-      Assert.fail("Cannot get the value mlutiple times.");
+      fail("Cannot get the value mlutiple times.");
     } catch (Exception e) {
       // noop, expecting exceptions
     }
@@ -367,7 +371,7 @@ public class TestTFileByteArrays {
     out = fs.create(path);
     try {
       writer = new Writer(out, BLOCK_SIZE, "BAD", comparator, conf);
-      Assert.fail("Error on handling invalid compression codecs.");
+      fail("Error on handling invalid compression codecs.");
     } catch (Exception e) {
       // noop, expecting exceptions
       // e.printStackTrace();
@@ -385,7 +389,7 @@ public class TestTFileByteArrays {
     out.close();
     try {
       new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
-      Assert.fail("Error on handling empty files.");
+      fail("Error on handling empty files.");
     } catch (EOFException e) {
       // noop, expecting exceptions
     }
@@ -409,7 +413,7 @@ public class TestTFileByteArrays {
     out.close();
     try {
       new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
-      Assert.fail("Error on handling random files.");
+      fail("Error on handling random files.");
     } catch (IOException e) {
       // noop, expecting exceptions
     }
@@ -437,7 +441,7 @@ public class TestTFileByteArrays {
     try {
       writer.append("keyM".getBytes(), "valueM".getBytes());
       writer.append("keyA".getBytes(), "valueA".getBytes());
-      Assert.fail("Error on handling out of order keys.");
+      fail("Error on handling out of order keys.");
     } catch (Exception e) {
       // noop, expecting exceptions
       // e.printStackTrace();
@@ -452,7 +456,7 @@ public class TestTFileByteArrays {
       return;
     try {
       writer.append("keyX".getBytes(), -1, 4, "valueX".getBytes(), 0, 6);
-      Assert.fail("Error on handling negative offset.");
+      fail("Error on handling negative offset.");
     } catch (Exception e) {
       // noop, expecting exceptions
     }
@@ -469,7 +473,7 @@ public class TestTFileByteArrays {
     Scanner scanner = reader.createScanner();
     try {
       scanner.lowerBound("keyX".getBytes(), -1, 4);
-      Assert.fail("Error on handling negative offset.");
+      fail("Error on handling negative offset.");
     } catch (Exception e) {
       // noop, expecting exceptions
     } finally {
@@ -485,7 +489,7 @@ public class TestTFileByteArrays {
       return;
     try {
       writer.append("keyX".getBytes(), 0, -1, "valueX".getBytes(), 0, 6);
-      Assert.fail("Error on handling negative length.");
+      fail("Error on handling negative length.");
     } catch (Exception e) {
       // noop, expecting exceptions
     }
@@ -502,7 +506,7 @@ public class TestTFileByteArrays {
     Scanner scanner = reader.createScanner();
     try {
       scanner.lowerBound("keyX".getBytes(), 0, -1);
-      Assert.fail("Error on handling negative length.");
+      fail("Error on handling negative length.");
     } catch (Exception e) {
       // noop, expecting exceptions
     } finally {
@@ -525,7 +529,7 @@ public class TestTFileByteArrays {
       // test negative array offset
       try {
         scanner.seekTo("keyY".getBytes(), -1, 4);
-        Assert.fail("Failed to handle negative offset.");
+        fail("Failed to handle negative offset.");
       } catch (Exception e) {
         // noop, expecting exceptions
       }
@@ -533,7 +537,7 @@ public class TestTFileByteArrays {
       // test negative array length
       try {
         scanner.seekTo("keyY".getBytes(), 0, -2);
-        Assert.fail("Failed to handle negative key length.");
+        fail("Failed to handle negative key length.");
       } catch (Exception e) {
         // noop, expecting exceptions
       }
@@ -549,7 +553,7 @@ public class TestTFileByteArrays {
       return;
     long rawDataSize = writeRecords(10 * records1stBlock, false);
     if (!compression.equalsIgnoreCase(Compression.Algorithm.NONE.getName())) {
-      Assert.assertTrue(out.getPos() < rawDataSize);
+      assertTrue(out.getPos() < rawDataSize);
     }
     closeOutput();
   }
@@ -564,7 +568,7 @@ public class TestTFileByteArrays {
 
     try {
       writer = new Writer(out, BLOCK_SIZE, compression, comparator, conf);
-      Assert.fail("Failed to catch file write not at position 0.");
+      fail("Failed to catch file write not at position 0.");
     } catch (Exception e) {
       // noop, expecting exceptions
     }
@@ -620,23 +624,23 @@ public class TestTFileByteArrays {
 
     try {
       for (int nx = 0; nx < count; nx++, scanner.advance()) {
-        Assert.assertFalse(scanner.atEnd());
-        // Assert.assertTrue(scanner.next());
+        assertFalse(scanner.atEnd());
+        // assertTrue(scanner.next());
 
         byte[] kbuf = new byte[BUF_SIZE];
         int klen = scanner.entry().getKeyLength();
         scanner.entry().getKey(kbuf);
-        Assert.assertEquals(new String(kbuf, 0, klen), composeSortedKey(KEY,
+        assertEquals(new String(kbuf, 0, klen), composeSortedKey(KEY,
             nx));
 
         byte[] vbuf = new byte[BUF_SIZE];
         int vlen = scanner.entry().getValueLength();
         scanner.entry().getValue(vbuf);
-        Assert.assertEquals(new String(vbuf, 0, vlen), VALUE + nx);
+        assertEquals(new String(vbuf, 0, vlen), VALUE + nx);
       }
 
-      Assert.assertTrue(scanner.atEnd());
-      Assert.assertFalse(scanner.advance());
+      assertTrue(scanner.atEnd());
+      assertFalse(scanner.advance());
     } finally {
       scanner.close();
       reader.close();
@@ -647,7 +651,7 @@ public class TestTFileByteArrays {
     Reader reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
     Scanner scanner = reader.createScanner();
     scanner.seekTo(composeSortedKey(KEY, recordIndex).getBytes());
-    Assert.assertEquals(blockIndexExpected, scanner.currentLocation
+    assertEquals(blockIndexExpected, scanner.currentLocation
         .getBlockIndex());
     scanner.close();
     reader.close();
@@ -665,12 +669,12 @@ public class TestTFileByteArrays {
       byte[] vbuf = new byte[BUF_SIZE];
       int vlen = scanner.entry().getValueLength();
       scanner.entry().getValue(vbuf);
-      Assert.assertEquals(new String(vbuf, 0, vlen), VALUE + recordIndex);
+      assertEquals(new String(vbuf, 0, vlen), VALUE + recordIndex);
 
       byte[] kbuf = new byte[BUF_SIZE];
       int klen = scanner.entry().getKeyLength();
       scanner.entry().getKey(kbuf);
-      Assert.assertEquals(new String(kbuf, 0, klen), composeSortedKey(KEY,
+      assertEquals(new String(kbuf, 0, klen), composeSortedKey(KEY,
           recordIndex));
     } finally {
       scanner.close();
@@ -690,7 +694,7 @@ public class TestTFileByteArrays {
       byte[] kbuf1 = new byte[BUF_SIZE];
       int klen1 = scanner.entry().getKeyLength();
       scanner.entry().getKey(kbuf1);
-      Assert.assertEquals(new String(kbuf1, 0, klen1), composeSortedKey(KEY,
+      assertEquals(new String(kbuf1, 0, klen1), composeSortedKey(KEY,
           recordIndex));
 
       if (scanner.advance() && !scanner.atEnd()) {
@@ -698,7 +702,7 @@ public class TestTFileByteArrays {
         byte[] kbuf2 = new byte[BUF_SIZE];
         int klen2 = scanner.entry().getKeyLength();
         scanner.entry().getKey(kbuf2);
-        Assert.assertEquals(new String(kbuf2, 0, klen2), composeSortedKey(KEY,
+        assertEquals(new String(kbuf2, 0, klen2), composeSortedKey(KEY,
             recordIndex + 1));
       }
     } finally {
@@ -718,13 +722,13 @@ public class TestTFileByteArrays {
     byte[] vbuf1 = new byte[BUF_SIZE];
     int vlen1 = scanner.entry().getValueLength();
     scanner.entry().getValue(vbuf1);
-    Assert.assertEquals(new String(vbuf1, 0, vlen1), VALUE + recordIndex);
+    assertEquals(new String(vbuf1, 0, vlen1), VALUE + recordIndex);
 
     if (scanner.advance() && !scanner.atEnd()) {
       byte[] vbuf2 = new byte[BUF_SIZE];
       int vlen2 = scanner.entry().getValueLength();
       scanner.entry().getValue(vbuf2);
-      Assert.assertEquals(new String(vbuf2, 0, vlen2), VALUE
+      assertEquals(new String(vbuf2, 0, vlen2), VALUE
           + (recordIndex + 1));
     }
 
@@ -743,17 +747,17 @@ public class TestTFileByteArrays {
     byte[] kbuf1 = new byte[BUF_SIZE];
     int klen1 = scanner.entry().getKeyLength();
     scanner.entry().getKey(kbuf1);
-    Assert.assertEquals(new String(kbuf1, 0, klen1), composeSortedKey(KEY,
+    assertEquals(new String(kbuf1, 0, klen1), composeSortedKey(KEY,
         recordIndex));
 
     klen1 = scanner.entry().getKeyLength();
     scanner.entry().getKey(kbuf1);
-    Assert.assertEquals(new String(kbuf1, 0, klen1), composeSortedKey(KEY,
+    assertEquals(new String(kbuf1, 0, klen1), composeSortedKey(KEY,
         recordIndex));
 
     klen1 = scanner.entry().getKeyLength();
     scanner.entry().getKey(kbuf1);
-    Assert.assertEquals(new String(kbuf1, 0, klen1), composeSortedKey(KEY,
+    assertEquals(new String(kbuf1, 0, klen1), composeSortedKey(KEY,
         recordIndex));
 
     scanner.close();

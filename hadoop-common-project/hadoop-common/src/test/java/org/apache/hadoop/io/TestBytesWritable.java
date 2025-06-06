@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.io;
 
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 /**
@@ -112,26 +112,28 @@ public class TestBytesWritable {
     BytesWritable zeroBuf = new BytesWritable(bytes, bytes.length); // new
     BytesWritable copyBuf = new BytesWritable(bytes); // old
     // using zero copy constructor shouldn't result in a copy
-    assertTrue("copy took place, backing array != array passed to constructor",
-      bytes == zeroBuf.getBytes());
-    assertTrue("length of BW should backing byte array", zeroBuf.getLength() == bytes.length);
-    assertEquals("objects with same backing array should be equal", zeroBuf, copyBuf);
-    assertEquals("string repr of objects with same backing array should be equal", 
-        zeroBuf.toString(), copyBuf.toString());
-    assertTrue("compare order objects with same backing array should be equal", 
-        zeroBuf.compareTo(copyBuf) == 0);
-    assertTrue("hash of objects with same backing array should be equal",
-        zeroBuf.hashCode() == copyBuf.hashCode());
+    assertTrue(bytes == zeroBuf.getBytes(),
+        "copy took place, backing array != array passed to constructor");
+    assertTrue(zeroBuf.getLength() == bytes.length,
+        "length of BW should backing byte array");
+    assertEquals(zeroBuf, copyBuf,
+        "objects with same backing array should be equal");
+    assertEquals(zeroBuf.toString(), copyBuf.toString(),
+        "string repr of objects with same backing array should be equal");
+    assertTrue(zeroBuf.compareTo(copyBuf) == 0,
+        "compare order objects with same backing array should be equal");
+    assertTrue(zeroBuf.hashCode() == copyBuf.hashCode(),
+        "hash of objects with same backing array should be equal");
     
     // ensure expanding buffer is handled correctly
     // for buffers created with zero copy api
     byte[] buffer = new byte[bytes.length * 5];
     zeroBuf.set(buffer, 0, buffer.length); // expand internal buffer
     zeroBuf.set(bytes, 0, bytes.length); // set back to normal contents
-    assertEquals("buffer created with (array, len) has bad contents", 
-        zeroBuf, copyBuf);
-    assertTrue("buffer created with (array, len) has bad length",
-        zeroBuf.getLength() == copyBuf.getLength());
+    assertEquals(zeroBuf, copyBuf,
+        "buffer created with (array, len) has bad contents");
+    assertTrue(zeroBuf.getLength() == copyBuf.getLength(),
+        "buffer created with (array, len) has bad length");
   }
     
   /**
@@ -143,14 +145,16 @@ public class TestBytesWritable {
     byte b = 0x9;
     ByteWritable bw = new ByteWritable();
     bw.set(b);
-    assertTrue("testSetByteWritable error", bw.get() == b);
-    assertTrue("testSetByteWritable error < 0", bw.compareTo(new ByteWritable((byte)0xA)) < 0);
-    assertTrue("testSetByteWritable error > 0", bw.compareTo(new ByteWritable((byte)0x8)) > 0);
-    assertTrue("testSetByteWritable error == 0", bw.compareTo(new ByteWritable((byte)0x9)) == 0);
-    assertTrue("testSetByteWritable equals error !!!", bw.equals(new ByteWritable((byte)0x9)));
-    assertTrue("testSetByteWritable equals error !!!", ! bw.equals(new ByteWritable((byte)0xA)));
-    assertTrue("testSetByteWritable equals error !!!", ! bw.equals(new IntWritable(1)));
-    assertEquals("testSetByteWritable error ", "9", bw.toString());    
+    assertTrue(bw.get() == b, "testSetByteWritable error");
+    assertTrue(bw.compareTo(new ByteWritable((byte)0xA)) < 0, "testSetByteWritable error < 0");
+    assertTrue(bw.compareTo(new ByteWritable((byte)0x8)) > 0, "testSetByteWritable error > 0");
+    assertTrue(bw.compareTo(new ByteWritable((byte)0x9)) == 0, "testSetByteWritable error == 0");
+    assertTrue(bw.equals(new ByteWritable((byte)0x9)), "testSetByteWritable equals error !!!");
+    assertTrue(! bw.equals(new ByteWritable((byte)0xA)),
+        "testSetByteWritable equals error !!!");
+    assertTrue(! bw.equals(new IntWritable(1)),
+        "testSetByteWritable equals error !!!");
+    assertEquals("9", bw.toString(), "testSetByteWritable error ");
   }
   
 }

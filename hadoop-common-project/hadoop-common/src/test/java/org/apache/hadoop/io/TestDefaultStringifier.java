@@ -22,12 +22,12 @@ import java.io.IOException;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestDefaultStringifier {
 
@@ -93,8 +93,8 @@ public class TestDefaultStringifier {
     DefaultStringifier.store(conf,text, keyName);
 
     Text claimedText = DefaultStringifier.load(conf, keyName, Text.class);
-    assertEquals("DefaultStringifier#load() or #store() might be flawed"
-        , text, claimedText);
+    assertEquals(text, claimedText,
+        "DefaultStringifier#load() or #store() might be flawed");
 
   }
 
@@ -114,7 +114,7 @@ public class TestDefaultStringifier {
 
     Integer[] claimedArray = DefaultStringifier.<Integer>loadArray(conf, keyName, Integer.class);
     for (int i = 0; i < array.length; i++) {
-      assertEquals("two arrays are not equal", array[i], claimedArray[i]);
+      assertEquals(array[i], claimedArray[i], "two arrays are not equal");
     }
 
   }
