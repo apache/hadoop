@@ -157,7 +157,8 @@ public class TestViewFileSystemDelegation { //extends ViewFileSystemTestSetup {
     public void setVerifyChecksum(boolean verifyChecksum) {
       this.verifyChecksum = verifyChecksum;
     }
-    
+
+    @Override
     public boolean getVerifyChecksum(){
       return verifyChecksum;
     }

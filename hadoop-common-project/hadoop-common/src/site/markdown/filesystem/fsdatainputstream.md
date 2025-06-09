@@ -647,7 +647,7 @@ For details see [HADOOP-19291](https://issues.apache.org/jira/browse/HADOOP-1929
 For reliable use with older hadoop releases with the API: sort the list of ranges
 and check for overlaps before calling `readVectored()`.
 
-*Direct Buffer Reads*
+#### Direct Buffer Reads
 
 Releases without [HADOOP-19101](https://issues.apache.org/jira/browse/HADOOP-19101)
 _Vectored Read into off-heap buffer broken in fallback implementation_ can read data
@@ -665,8 +665,48 @@ support through an explicit `hasCapability()` probe:
 Stream.hasCapability("in:readvectored")
 ```
 
-Given the HADOOP-18296 problem with `ChecksumFileSystem` and direct buffers, across all releases,
-it is best to avoid using this API in production with direct buffers.
+#### Buffer Slicing
+
+[HADOOP-18296](https://issues.apache.org/jira/browse/HADOOP-18296),
+_Memory fragmentation in ChecksumFileSystem Vectored IO implementation_
+highlights that `ChecksumFileSystem` (which the default implementation of `file://`
+subclasses), may return buffers which are sliced subsets of buffers allocated
+through the `allocate()` function passed in.
+
+This will happen during reads with and without range coalescing.
+
+Checksum verification may be disabled by setting the option
+`file.verify-checksum` to true (Hadoop 3.4.2 and later).
+
+```xml
+<property>
+  <name>file.verify-checksum</name>
+  <value>false</value>
+</property>
+```
+
+(As you would expect, disabling checksum verification means that errors
+reading data may not be detected during the read operation.
+Use with care in production.)
+
+Filesystem instances which spit buffersduring vector read operations
+MUST declare this by returning `true`
+to the path capabilities probe `fs.capability.vectoredio.sliced`,
+and for the open stream in its `hasCapability()` method.
+
+
+The local filesystem will not slice buffers if the checksum file
+of `filename + ".crc"` is not found. This is not declared in the
+filesystem `hasPathCapability(filename, "fs.capability.vectoredio.sliced")`
+call, as no checks for the checksum file are made then.ddddddddddddddddd
+This cannot be relied on in production, but it may be useful when
+testing for buffer recycling with Hadoop releases 3.4.1 and earlier.
+
+*Implementors Notes*
+
+* Don't slice buffers. `ChecksumFileSystem` has to be considered an outlier which
+  needs to be addressed in future.
+* Always free buffers in error handling code paths.
 
 
 ## `void readVectored(List<? extends FileRange> ranges, IntFunction<ByteBuffer> allocate, Consumer<ByteBuffer> release)`
