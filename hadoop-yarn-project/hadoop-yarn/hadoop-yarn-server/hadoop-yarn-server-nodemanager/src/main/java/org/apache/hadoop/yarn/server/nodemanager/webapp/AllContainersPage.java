@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.BODY;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+import org.apache.commons.text.StringEscapeUtils;
 
 import com.google.inject.Inject;
 
@@ -78,30 +79,61 @@ public class AllContainersPage extends NMView {
 
     @Override
     protected void render(Block html) {
-      TBODY<TABLE<BODY<Hamlet>>> tableBody = html.body()
-        .table("#containers")
-          .thead()
-            .tr()
-              .td().__("ContainerId").__()
-              .td().__("ExecutionType").__()
-              .td().__("ContainerState").__()
-              .td().__("logs").__()
-            .__()
-          .__().tbody();
+      TBODY<TABLE<Hamlet>> tbody = html.table("#containers").
+              thead().
+              tr().
+              th(".containerId", "ContainerId").
+              th(".executionType", "ExecutionType").
+              th(".containerState", "ContainerState").
+              th(".logs", "Logs").
+              __().__()
+            .tbody();
+
+      StringBuilder containersTableData = new StringBuilder("[\n");
+      boolean first = true;
+
       for (Entry<ContainerId, Container> entry : this.nmContext
           .getContainers().entrySet()) {
         ContainerInfo info = new ContainerInfo(this.nmContext, entry.getValue());
-        tableBody
-          .tr()
-            .td().a(url("container", info.getId()), info.getId())
-            .__()
-            .td().__(info.getExecutionType()).__()
-            .td().__(info.getState()).__()
-            .td()
-                .a(url(info.getShortLogLink()), "logs").__()
-          .__();
+
+        String containerId = info.getId();
+        String executionType = info.getExecutionType();
+        String containerState = info.getState();
+        String logLink = info.getShortLogLink();
+
+        if (!first) {
+          containersTableData.append(",\n");
+        }
+        first = false;
+
+        containersTableData.append("[\"<a href='")
+                .append(url("container", containerId))
+                .append("'>")
+                .append(StringEscapeUtils.escapeEcmaScript(
+                        StringEscapeUtils.escapeHtml4(containerId)))
+                .append("</a>\",\"")
+                .append(StringEscapeUtils.escapeEcmaScript(
+                        StringEscapeUtils.escapeHtml4(executionType)))
+                .append("\",\"")
+                .append(StringEscapeUtils.escapeEcmaScript(
+                        StringEscapeUtils.escapeHtml4(containerState)))
+                .append("\",\"<a href='")
+                .append(url(logLink))
+                .append("'>logs</a>\"]");
       }
-      tableBody.__().__().__();
+
+      if (containersTableData.charAt(containersTableData.length() - 2) == ',') {
+        containersTableData.delete(containersTableData.length() - 2,
+                containersTableData.length() - 1);
+      }
+      containersTableData.append("]");
+      html.script().$type("text/javascript")
+              .__("containersTableData=" + containersTableData +
+                      "\nopts.data = {data: containersTableData}" +
+                      "\ncontainersDataTable = DataTableHelper('#containers', opts, false);")
+              .__();
+
+      tbody.__().__();
     }
 
   }

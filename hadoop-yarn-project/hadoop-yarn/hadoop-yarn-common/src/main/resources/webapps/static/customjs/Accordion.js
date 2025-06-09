@@ -38,7 +38,6 @@ var Accordion = function (element, options, selector) {
     render();
 
     function render() {
-        el.style.width = "11em";
         el.classList.add("ui-accordion", "ui-widget", "ui-helper-reset");
         [].forEach.call(el.querySelectorAll("." + sel),
             (item, idx) => {

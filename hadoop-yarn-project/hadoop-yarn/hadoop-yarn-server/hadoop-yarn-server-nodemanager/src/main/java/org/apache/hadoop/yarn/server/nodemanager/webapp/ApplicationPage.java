@@ -51,7 +51,8 @@ public class ApplicationPage extends NMView implements YarnWebParams {
   }
 
   private String containersTableInit() {
-    return tableInit().append(",aoColumns:[null]}").toString();
+    return tableInit()
+            .append(", aoColumns:[{ 'mRender': parseHadoopID }]}").toString();
   }
 
   @Override
@@ -94,15 +95,41 @@ public class ApplicationPage extends NMView implements YarnWebParams {
             .__("ApplicationId", info.getId())
             .__("ApplicationState", info.getState())
             .__("User", info.getUser());
-      TABLE<Hamlet> containersListBody = html.__(InfoBlock.class)
+      TABLE<Hamlet> table = html.__(InfoBlock.class)
           .table("#containers");
-      for (String containerIdStr : info.getContainers()) {
-        containersListBody
-               .tr().td()
-                 .a(url("container", containerIdStr), containerIdStr)
-                 .__().__();
-      }
-      containersListBody.__();
+            table.thead().tr()
+                    .th("Container ID").__()
+                    .__();
+            table.__();
+
+            StringBuilder containersTableData = new StringBuilder("[\n");
+            boolean first = true;
+
+            for (String containerIdStr : info.getContainers()) {
+                if (!first) {
+                    containersTableData.append(",\n");
+                }
+                first = false;
+
+                containersTableData
+                 .append("[\"<a href='")
+                 .append(url("container", containerIdStr))
+                 .append("'>")
+                 .append(containerIdStr)
+                 .append("</a>\"]");
+            }
+
+            if (containersTableData.charAt(containersTableData.length() - 2) == ',') {
+                containersTableData.delete(containersTableData.length() - 2,
+                        containersTableData.length() - 1);
+            }
+            containersTableData.append("]");
+
+           html.script().$type("text/javascript")
+            .__("containersTableData=" + containersTableData +
+                    "\nopts.data = {data: containersTableData}" +
+                    "\ncontainersDataTable = DataTableHelper('#containers', opts, false);")
+            .__();
     }
   }
 }

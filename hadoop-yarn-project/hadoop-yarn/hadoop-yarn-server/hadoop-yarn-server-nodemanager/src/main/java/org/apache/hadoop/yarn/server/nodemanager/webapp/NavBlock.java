@@ -23,6 +23,8 @@ import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
 import org.apache.hadoop.yarn.util.Log4jWarningErrorMetricsAppender;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.UL;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
@@ -52,23 +54,21 @@ public class NavBlock extends HtmlBlock implements YarnWebParams {
 	
     String RMWebAppURL =
         WebAppUtils.getResolvedRMWebAppURLWithScheme(this.conf);
-	  Hamlet.DIV<Hamlet> ul = html
-      .div("#nav")
-      .h3().__("ResourceManager").__()
-        .ul()
-          .li().a(RMWebAppURL, "RM Home").__().__()
-      .h3().__("NodeManager").__() // TODO: Problem if no header like this
-        .ul()
-          .li()
-            .a(url("node"), "Node Information").__()
-          .li()
-            .a(url("allApplications"), "List of Applications")
-            .__()
-          .li()
-            .a(url("allContainers"), "List of Containers").__()
-        .__();
+    UL<DIV<Hamlet>> rmSection = html.
+            div("#nav").
+            h3("accordion-parent", "ResourceManager").
+            ul("container").
+            li().a("content", RMWebAppURL, "RM Home").__();
+    UL<DIV<Hamlet>> nmSection = rmSection.
+            __().
+            h3("accordion-parent", "NodeManager").
+            ul("container").
+            li().a("content", url("node"), "Node Information").__().
+            li().a("content", url("allApplications"), "List of Applications").__().
+            li().a("content", url("allContainers"), "List of Containers").__();
 
-    Hamlet.UL<Hamlet.DIV<Hamlet>> tools = WebPageUtils.appendToolSection(ul, conf);
+    DIV<Hamlet> nav = nmSection.__();
+    UL<DIV<Hamlet>> tools = WebPageUtils.appendToolSection(nav, conf);
 
     if (tools == null) {
       return;
