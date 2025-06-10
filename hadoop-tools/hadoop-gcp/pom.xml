@@ -261,6 +261,10 @@
                   <include>com.lmax</include>
                   <include>io.grpc</include>
                   <include>io.opencensus</include>
+                  <include>io.opentelemetry</include>
+                  <include>io.opentelemetry.api</include>
+                  <include>io.opentelemetry.contrib</include>
+                  <include>io.opentelemetry.semconv</include>
                   <include>io.perfmark</include>
                   <include>org.apache.httpcomponents</include>
                   <include>org.threeten:threetenbp</include>
@@ -282,6 +286,7 @@
                     <include>com.google.cloud.hadoop.util.**</include>
                     <include>com.google.cloud.http.**</include>
                     <include>com.google.cloud.monitoring.**</include>
+                    <include>com.google.cloud.opentelemetry.**</include>
                     <include>com.google.cloud.spi.**</include>
                     <include>com.google.cloud.storage.**</include>
                     <include>com.google.common.**</include>
@@ -458,6 +463,12 @@
           <artifactId>protobuf-java</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <scope>test</scope>
+      <type>test-jar</type>
     </dependency>
     <dependency>
       <groupId>org.assertj</groupId>
