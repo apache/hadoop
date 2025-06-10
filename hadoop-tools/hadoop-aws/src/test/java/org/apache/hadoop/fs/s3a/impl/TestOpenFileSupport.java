@@ -25,9 +25,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.assertj.core.api.Assertions;
 import org.assertj.core.api.ObjectAssert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -64,6 +63,7 @@ import static org.apache.hadoop.fs.s3a.S3AInputPolicy.Normal;
 import static org.apache.hadoop.fs.s3a.S3AInputPolicy.Random;
 import static org.apache.hadoop.fs.s3a.S3AInputPolicy.Sequential;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link OpenFileSupport} and the associated
@@ -120,7 +120,7 @@ public class TestOpenFileSupport extends HadoopTestBase {
    */
   private ObjectAssert<OpenFileSupport.OpenFileInformation> assertFileInfo(
       final OpenFileSupport.OpenFileInformation fi) {
-    return Assertions.assertThat(fi)
+    return assertThat(fi)
         .describedAs("File Information %s", fi);
   }
 
@@ -209,21 +209,21 @@ public class TestOpenFileSupport extends HadoopTestBase {
     Configuration conf = conf(FS_OPTION_OPENFILE_READ_POLICY, plist);
     Collection<String> options = conf.getTrimmedStringCollection(
         FS_OPTION_OPENFILE_READ_POLICY);
-    Assertions.assertThat(S3AInputPolicy.getFirstSupportedPolicy(options, null))
+    assertThat(S3AInputPolicy.getFirstSupportedPolicy(options, null))
         .describedAs("Policy from " + plist)
         .isEqualTo(Random);
   }
 
   @Test
   public void testAdaptiveSeekPolicyRecognized() throws Throwable {
-    Assertions.assertThat(S3AInputPolicy.getPolicy("adaptive", null))
+    assertThat(S3AInputPolicy.getPolicy("adaptive", null))
         .describedAs("adaptive")
         .isEqualTo(Normal);
   }
 
   @Test
   public void testUnknownSeekPolicyFallback() throws Throwable {
-    Assertions.assertThat(S3AInputPolicy.getPolicy("unknown", null))
+    assertThat(S3AInputPolicy.getPolicy("unknown", null))
         .describedAs("unknown policy")
         .isNull();
   }
@@ -251,7 +251,7 @@ public class TestOpenFileSupport extends HadoopTestBase {
     };
     for (Object[] mapping : policyMapping) {
       String name = (String) mapping[0];
-      Assertions.assertThat(S3AInputPolicy.getPolicy(name, null))
+      assertThat(S3AInputPolicy.getPolicy(name, null))
           .describedAs("Policy %s", name)
           .isEqualTo(mapping[1]);
     }

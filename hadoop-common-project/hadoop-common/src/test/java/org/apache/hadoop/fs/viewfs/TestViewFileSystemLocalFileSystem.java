@@ -17,11 +17,6 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.IOException;
 import java.net.URI;
 
@@ -32,11 +27,16 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import static org.apache.hadoop.fs.FileSystem.TRASH_PREFIX;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.hadoop.security.UserGroupInformation;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,7 +99,7 @@ public class TestViewFileSystemLocalFileSystem extends ViewFileSystemBaseTest {
       assertTrue(lfs.exists(testFile), testFile + " should exist!");
       final FSDataInputStream fsdis = lfs.open(testFile);
       try {
-        assertEquals(testString, fsdis.readUTF(), "Wrong file content");
+        assertEquals(fsdis.readUTF(), testString, "Wrong file content");
       } finally {
         fsdis.close();
       }

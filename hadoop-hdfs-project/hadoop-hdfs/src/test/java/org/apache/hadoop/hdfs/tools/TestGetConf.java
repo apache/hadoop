@@ -27,11 +27,11 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -56,7 +56,8 @@ import org.apache.hadoop.hdfs.tools.GetConf.CommandHandler;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
@@ -148,10 +149,9 @@ public class TestGetConf {
       int ret = ToolRunner.run(new GetConf(conf, out, out), args);
       out.flush();
       System.err.println("Output: " + o.toString());
-      assertEquals("Expected " + (success?"success":"failure") +
+      assertEquals(success, ret == 0, "Expected " + (success ? "success" : "failure") +
           " for args: " + Joiner.on(" ").join(args) + "\n" +
-          "Output: " + o.toString(),
-          success, ret == 0);
+          "Output: " + o.toString());
       return o.toString();
     } finally {
       o.close();
@@ -249,7 +249,8 @@ public class TestGetConf {
   /**
    * Test empty configuration
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testEmptyConf() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration(false);
     // Verify getting addresses fails
@@ -260,7 +261,7 @@ public class TestGetConf {
     for (Command cmd : Command.values()) {
       String arg = cmd.getName();
       CommandHandler handler = Command.getHandler(arg);
-      assertNotNull("missing handler: " + cmd, handler);
+      assertNotNull(handler, "missing handler: " + cmd);
       if (handler.key != null) {
         // First test with configuration missing the required key
         String[] args = {handler.key};
@@ -272,7 +273,8 @@ public class TestGetConf {
   /**
    * Test invalid argument to the tool
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testInvalidArgument() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     String[] args = {"-invalidArgument"};
@@ -284,7 +286,8 @@ public class TestGetConf {
    * Tests to make sure the returned addresses are correct in case of default
    * configuration with no federation
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testNonFederation() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration(false);
   
@@ -319,7 +322,8 @@ public class TestGetConf {
    * Tests to make sure the returned addresses are correct in case of federation
    * of setup.
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testFederation() throws Exception {
     final int nsCount = 10;
     HdfsConfiguration conf = new HdfsConfiguration(false);
@@ -363,7 +367,8 @@ public class TestGetConf {
    * Tests for journal node addresses.
    * @throws Exception
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testGetJournalNodes() throws Exception {
 
     final int nsCount = 3;
@@ -487,32 +492,39 @@ public class TestGetConf {
   /*
    ** Test for unknown journal node host exception.
   */
-  @Test(expected = UnknownHostException.class, timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testUnknownJournalNodeHost()
       throws URISyntaxException, IOException {
-    String journalsBaseUri = "qjournal://jn1:8020;jn2:8020;jn3:8020";
-    HdfsConfiguration conf = new HdfsConfiguration(false);
-    conf.set(DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
-        journalsBaseUri + "/jndata");
-    DFSUtil.getJournalNodeAddresses(conf);
+    assertThrows(UnknownHostException.class, () -> {
+      String journalsBaseUri = "qjournal://jn1:8020;jn2:8020;jn3:8020";
+      HdfsConfiguration conf = new HdfsConfiguration(false);
+      conf.set(DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
+          journalsBaseUri + "/jndata");
+      DFSUtil.getJournalNodeAddresses(conf);
+    });
   }
 
   /*
    ** Test for malformed journal node urisyntax exception.
   */
-  @Test(expected = URISyntaxException.class, timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testJournalNodeUriError()
       throws URISyntaxException, IOException {
-    final int nsCount = 3;
-    String journalsBaseUri = "qjournal://jn0 :8020;jn1:8020;jn2:8020";
-    setupStaticHostResolution(nsCount, "jn");
-    HdfsConfiguration conf = new HdfsConfiguration(false);
-    conf.set(DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
-        journalsBaseUri + "/jndata");
-    DFSUtil.getJournalNodeAddresses(conf);
+    assertThrows(URISyntaxException.class, () -> {
+      final int nsCount = 3;
+      String journalsBaseUri = "qjournal://jn0 :8020;jn1:8020;jn2:8020";
+      setupStaticHostResolution(nsCount, "jn");
+      HdfsConfiguration conf = new HdfsConfiguration(false);
+      conf.set(DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
+          journalsBaseUri + "/jndata");
+      DFSUtil.getJournalNodeAddresses(conf);
+    });
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testGetSpecificKey() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.set("mykey", " myval ");
@@ -521,7 +533,8 @@ public class TestGetConf {
     assertEquals(String.format("myval%n"), toolResult);
   }
   
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testExtraArgsThrowsError() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.set("mykey", "myval");
@@ -534,7 +547,8 @@ public class TestGetConf {
    * Tests commands other than {@link Command#NAMENODE}, {@link Command#BACKUP},
    * {@link Command#SECONDARY} and {@link Command#NNRPCADDRESSES}
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testTool() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration(false);
     for (Command cmd : Command.values()) {

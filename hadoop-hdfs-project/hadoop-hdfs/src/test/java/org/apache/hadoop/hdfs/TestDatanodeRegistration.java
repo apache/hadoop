@@ -48,6 +48,7 @@ import java.security.Permission;
 import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -79,8 +80,12 @@ public class TestDatanodeRegistration {
   @Test
   public void testDNSLookups() throws Exception {
     MonitorDNS sm = new MonitorDNS();
-    System.setSecurityManager(sm);
-    
+    try {
+      System.setSecurityManager(sm);
+    } catch (UnsupportedOperationException e) {
+      assumeTrue("Test is skipped because SecurityManager cannot be set (JEP 411)", false);
+    }
+
     MiniDFSCluster cluster = null;
     try {
       HdfsConfiguration conf = new HdfsConfiguration();

@@ -26,16 +26,16 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.conf.*;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /** Support for flat files of binary key/value pairs. */
 public class TestArrayFile {
@@ -134,7 +134,7 @@ public class TestArrayFile {
       FileSystem fs = FileSystem.get(conf);
       ArrayFile.Writer writer = new ArrayFile.Writer(conf, fs, TEST_FILE, 
           LongWritable.class, CompressionType.RECORD, defaultProgressable);
-      assertNotNull("testArrayFileIteration error !!!", writer);
+      assertNotNull(writer, "testArrayFileIteration error !!!");
       
       for (int i = 0; i < SIZE; i++)
         writer.append(new LongWritable(i));
@@ -149,15 +149,15 @@ public class TestArrayFile {
         assertThat(nextWritable.get()).isEqualTo(i);
       }
         
-      assertTrue("testArrayFileIteration seek error !!!",
-          reader.seek(new LongWritable(6)));
+      assertTrue(reader.seek(new LongWritable(6)),
+          "testArrayFileIteration seek error !!!");
       nextWritable = (LongWritable) reader.next(nextWritable);
       assertThat(reader.key()).withFailMessage(
           "testArrayFileIteration error !!!").isEqualTo(7);
       assertThat(nextWritable).withFailMessage(
           "testArrayFileIteration error !!!").isEqualTo(new LongWritable(7));
-      assertFalse("testArrayFileIteration error !!!",
-          reader.seek(new LongWritable(SIZE + 5)));
+      assertFalse(reader.seek(new LongWritable(SIZE + 5)),
+          "testArrayFileIteration error !!!");
       reader.close();
     } catch (Exception ex) {
       fail("testArrayFileWriterConstruction error !!!");

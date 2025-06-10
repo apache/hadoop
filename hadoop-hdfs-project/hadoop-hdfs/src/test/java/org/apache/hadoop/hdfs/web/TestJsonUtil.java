@@ -21,6 +21,11 @@ import static org.apache.hadoop.fs.permission.AclEntryScope.*;
 import static org.apache.hadoop.fs.permission.AclEntryType.*;
 import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.EnumSet;
@@ -54,8 +59,7 @@ import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
@@ -107,9 +111,9 @@ public class TestJsonUtil {
     final FileStatus fs2 = toFileStatus(s2, parent);
     System.out.println("s2      = " + s2);
     System.out.println("fs2     = " + fs2);
-    Assert.assertEquals(status.getErasureCodingPolicy(),
+    assertEquals(status.getErasureCodingPolicy(),
         s2.getErasureCodingPolicy());
-    Assert.assertEquals(fstatus, fs2);
+    assertEquals(fstatus, fs2);
   }
 
   /**
@@ -129,7 +133,7 @@ public class TestJsonUtil {
         .isdir(true)
         .build();
 
-    Assert.assertFalse(hdfsFileStatus.isSymlink());
+    assertFalse(hdfsFileStatus.isSymlink());
     LambdaTestUtils.intercept(IOException.class,
         "Path " + hdfsFileStatus.getPath() + " is not a symbolic link",
         () -> hdfsFileStatus.getSymlink());
@@ -151,7 +155,7 @@ public class TestJsonUtil {
         .append("}")
         .toString();
 
-    Assert.assertEquals(expectString, hdfsFileStatus.toString());
+    assertEquals(expectString, hdfsFileStatus.toString());
   }
 
   @Test
@@ -173,7 +177,7 @@ public class TestJsonUtil {
         .path(DFSUtil.string2Bytes("foo"))
         .fileId(HdfsConstants.GRANDFATHER_INODE_ID)
         .build();
-    Assert.assertTrue(status.getErasureCodingPolicy() == null);
+    assertTrue(status.getErasureCodingPolicy() == null);
 
     final FileStatus fstatus = toFileStatus(status, parent);
     System.out.println("status  = " + status);
@@ -186,7 +190,7 @@ public class TestJsonUtil {
     System.out.println("s2      = " + s2);
     System.out.println("fs2     = " + fs2);
 
-    Assert.assertEquals(fstatus, fs2);
+    assertEquals(fstatus, fs2);
   }
   
   @Test
@@ -238,15 +242,15 @@ public class TestJsonUtil {
     response.put("cacheUsed", 321l);
 
     DatanodeInfo di = JsonUtilClient.toDatanodeInfo(response);
-    Assert.assertEquals(name, di.getXferAddr());
+    assertEquals(name, di.getXferAddr());
 
     // The encoded result should contain name, ipAddr and xferPort.
     Map<String, Object> r = JsonUtil.toJsonMap(di);
-    Assert.assertEquals(name, r.get("name"));
-    Assert.assertEquals("127.0.0.1", r.get("ipAddr"));
+    assertEquals(name, r.get("name"));
+    assertEquals("127.0.0.1", r.get("ipAddr"));
     // In this test, it is Integer instead of Long since json was not actually
     // involved in constructing the map.
-    Assert.assertEquals(1004, (int)(Integer)r.get("xferPort"));
+    assertEquals(1004, (int)(Integer)r.get("xferPort"));
 
     // Invalid names
     String[] badNames = {"127.0.0.1", "127.0.0.1:", ":", "127.0.0.1:sweet", ":123"};
@@ -282,8 +286,8 @@ public class TestJsonUtil {
     aclStatusBuilder.addEntries(aclSpec);
     aclStatusBuilder.stickyBit(false);
 
-    Assert.assertEquals("Should be equal", aclStatusBuilder.build(),
-        JsonUtilClient.toAclStatus(json));
+    assertEquals(aclStatusBuilder.build(),
+        JsonUtilClient.toAclStatus(json), "Should be equal");
   }
 
   @Test
@@ -300,7 +304,7 @@ public class TestJsonUtil {
             aclEntry(ACCESS, GROUP, READ_WRITE));
 
     aclStatusBuilder.addEntries(aclSpec);
-    Assert.assertEquals(jsonString,
+    assertEquals(jsonString,
         JsonUtil.toJsonString(aclStatusBuilder.build()));
 
   }
@@ -335,7 +339,7 @@ public class TestJsonUtil {
         .snapshotDirectoryCount(snapshotDirectoryCount)
         .snapshotSpaceConsumed(snapshotSpaceConsumed).build();
 
-    Assert.assertEquals(jsonString, JsonUtil.toJsonString(contentSummary));
+    assertEquals(jsonString, JsonUtil.toJsonString(contentSummary));
   }
 
   @Test
@@ -350,8 +354,8 @@ public class TestJsonUtil {
     List<XAttr> xAttrs = Lists.newArrayList();
     xAttrs.add(xAttr1);
     xAttrs.add(xAttr2);
-    
-    Assert.assertEquals(jsonString, JsonUtil.toJsonString(xAttrs, 
+
+    assertEquals(jsonString, JsonUtil.toJsonString(xAttrs,
         XAttrCodec.HEX));
   }
   
@@ -371,11 +375,11 @@ public class TestJsonUtil {
     Map<String, byte[]> xAttrMap = XAttrHelper.buildXAttrMap(xAttrs);
     Map<String, byte[]> parsedXAttrMap = JsonUtilClient.toXAttrs(json);
     
-    Assert.assertEquals(xAttrMap.size(), parsedXAttrMap.size());
+    assertEquals(xAttrMap.size(), parsedXAttrMap.size());
     Iterator<Entry<String, byte[]>> iter = xAttrMap.entrySet().iterator();
     while(iter.hasNext()) {
       Entry<String, byte[]> entry = iter.next();
-      Assert.assertArrayEquals(entry.getValue(), 
+      assertArrayEquals(entry.getValue(),
           parsedXAttrMap.get(entry.getKey()));
     }
   }
@@ -389,7 +393,7 @@ public class TestJsonUtil {
 
     // Get xattr: user.a2
     byte[] value = JsonUtilClient.getXAttr(json, "user.a2");
-    Assert.assertArrayEquals(XAttrCodec.decodeValue("0x313131"), value);
+    assertArrayEquals(XAttrCodec.decodeValue("0x313131"), value);
   }
 
   @Test
@@ -400,7 +404,7 @@ public class TestJsonUtil {
     SnapshotDiffReportListing parsed =
         JsonUtilClient.toSnapshotDiffReportListing(json);
 
-    assertEquals(report, parsed);
+    assertSnapshotListingEquals(report, parsed);
   }
 
   @Test
@@ -428,43 +432,43 @@ public class TestJsonUtil {
     SnapshotDiffReportListing parsed =
         JsonUtilClient.toSnapshotDiffReportListing(json);
 
-    assertEquals(report, parsed);
+    assertSnapshotListingEquals(report, parsed);
   }
 
-  private void assertEquals(
+  private void assertSnapshotListingEquals(
       SnapshotDiffReportListing expected, SnapshotDiffReportListing actual) {
-    Assert.assertEquals(expected.getLastIndex(), actual.getLastIndex());
-    Assert.assertEquals(expected.getIsFromEarlier(), actual.getIsFromEarlier());
-    assertEquals(expected.getModifyList(), actual.getModifyList());
-    assertEquals(expected.getCreateList(), actual.getCreateList());
-    assertEquals(expected.getDeleteList(), actual.getDeleteList());
-    Assert.assertArrayEquals(expected.getLastPath(), actual.getLastPath());
+    assertEquals(expected.getLastIndex(), actual.getLastIndex());
+    assertEquals(expected.getIsFromEarlier(), actual.getIsFromEarlier());
+    assertEntryListEquals(expected.getModifyList(), actual.getModifyList());
+    assertEntryListEquals(expected.getCreateList(), actual.getCreateList());
+    assertEntryListEquals(expected.getDeleteList(), actual.getDeleteList());
+    assertArrayEquals(expected.getLastPath(), actual.getLastPath());
   }
 
-  private void assertEquals(
+  private void assertEntryListEquals(
       List<DiffReportListingEntry> expected, List<DiffReportListingEntry> actual) {
-    Assert.assertEquals(expected.size(), actual.size());
+    assertEquals(expected.size(), actual.size());
 
     for (int i = 0; i < expected.size(); i++) {
       DiffReportListingEntry a = expected.get(i);
       DiffReportListingEntry b = actual.get(i);
 
-      Assert.assertEquals(a.getFileId(), b.getFileId());
-      Assert.assertEquals(a.getDirId(), b.getDirId());
-      Assert.assertEquals(a.isReference(), b.isReference());
+      assertEquals(a.getFileId(), b.getFileId());
+      assertEquals(a.getDirId(), b.getDirId());
+      assertEquals(a.isReference(), b.isReference());
       if (a.getSourcePath() != null) {
-        Assert.assertArrayEquals(
+        assertArrayEquals(
             DFSUtilClient.byteArray2bytes(a.getSourcePath()),
             DFSUtilClient.byteArray2bytes(b.getSourcePath()));
       } else {
-        Assert.assertArrayEquals(a.getSourcePath(), b.getSourcePath());
+        assertArrayEquals(a.getSourcePath(), b.getSourcePath());
       }
       if (a.getTargetPath() != null) {
-        Assert.assertArrayEquals(
+        assertArrayEquals(
             DFSUtilClient.byteArray2bytes(a.getTargetPath()),
             DFSUtilClient.byteArray2bytes(b.getTargetPath()));
       } else {
-        Assert.assertArrayEquals(a.getTargetPath(), b.getTargetPath());
+        assertArrayEquals(a.getTargetPath(), b.getTargetPath());
       }
     }
   }
@@ -472,7 +476,7 @@ public class TestJsonUtil {
   private void checkDecodeFailure(Map<String, Object> map) {
     try {
       JsonUtilClient.toDatanodeInfo(map);
-      Assert.fail("Exception not thrown against bad input.");
+      fail("Exception not thrown against bad input.");
     } catch (Exception e) {
       // expected
     }

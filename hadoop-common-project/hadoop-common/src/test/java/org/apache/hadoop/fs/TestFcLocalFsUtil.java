@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Test Util for localFs using FileContext API.
@@ -26,7 +26,7 @@ public class TestFcLocalFsUtil extends
   FileContextUtilBase {
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fc = FileContext.getLocalFSFileContext();
     super.setUp();

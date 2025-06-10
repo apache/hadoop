@@ -22,12 +22,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.io.compress.bzip2.BZip2TextFileWriter.BLOCK_SIZE;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public final class TestBZip2TextFileWriter {
 
@@ -36,13 +36,13 @@ public final class TestBZip2TextFileWriter {
   private ByteArrayOutputStream rawOut;
   private BZip2TextFileWriter writer;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     rawOut = new ByteArrayOutputStream();
     writer = new BZip2TextFileWriter(rawOut);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     rawOut = null;
     writer.close();
