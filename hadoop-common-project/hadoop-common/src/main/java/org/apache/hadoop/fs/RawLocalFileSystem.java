@@ -416,8 +416,8 @@ public class RawLocalFileSystem extends FileSystem {
     public void completed(Integer result, Integer rangeIndex) {
       FileRange range = ranges.get(rangeIndex);
       ByteBuffer buffer = buffers[rangeIndex];
-      LOG.debug("Completed read range {} into buffer {} outcome={} remaining={}"
-          , range, System.identityHashCode(buffer), result, buffer.remaining());
+      LOG.debug("Completed read range {} into buffer {} outcome={} remaining={}",
+          range, System.identityHashCode(buffer), result, buffer.remaining());
       if (result == -1) {
         // no data was read back.
         failed(new EOFException("Read past End of File"), rangeIndex);

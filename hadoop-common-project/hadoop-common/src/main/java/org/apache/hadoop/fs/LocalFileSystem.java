@@ -54,7 +54,7 @@ public class LocalFileSystem extends ChecksumFileSystem {
     }
     final boolean checksum = conf.getBoolean(LOCAL_FS_VERIFY_CHECKSUM, true);
     setVerifyChecksum(checksum);
-    LOG.debug("Checksum verification enabled: {}", checksum);
+    LOG.debug("Checksum verification enabled={}", checksum);
 
   }
 

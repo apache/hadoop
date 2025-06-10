@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.impl.TrackingByteBufferPool;
 import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.io.WeakReferencedElasticByteBufferPool;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
@@ -52,13 +53,16 @@ import static java.util.Arrays.asList;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_VECTOR;
+import static org.apache.hadoop.fs.StreamCapabilities.VECTOREDIO_BUFFERS_SLICED;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDatasetEquals;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.range;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoolPostRead;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
-  import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.io.Sizes.S_128K;
+import static org.apache.hadoop.io.Sizes.S_4K;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
@@ -74,7 +78,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractContractVectoredReadTest.class);
 
-  public static final int DATASET_LEN = 64 * 1024;
+  public static final int DATASET_LEN = S_128K;
   protected static final byte[] DATASET = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
   protected static final String VECTORED_READ_FILE_NAME = "vectored_file.txt";
 
@@ -90,6 +94,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
           new WeakReferencedElasticByteBufferPool();
 
   private final String bufferType;
+
+  private final boolean isDirect;
 
   /**
    * Path to the vector file.
@@ -110,7 +116,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
 
   protected AbstractContractVectoredReadTest(String bufferType) {
     this.bufferType = bufferType;
-    final boolean isDirect = !"array".equals(bufferType);
+    this.isDirect = !"array".equals(bufferType);
     this.allocate = size -> pool.getBuffer(isDirect, size);
   }
 
@@ -618,5 +624,61 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
         return "triggered read of " + fileRanges.size() + " ranges" + " against " + in;
       });
     }
+  }
+
+  @Test
+  public void testBufferSlicing() throws Throwable {
+    describe("Test buffer slicing behavior in vectored IO");
+
+    final int numBuffers = 8;
+    final int bufferSize = S_4K;
+    long offset = 0;
+    final List<FileRange> fileRanges = new ArrayList<>();
+    for (int i = 0; i < numBuffers; i++) {
+      fileRanges.add(FileRange.createFileRange(offset, bufferSize));
+      // increment and add a non-binary-aligned gap, so as to force
+      // offsets to be misaligned with possible page sizes.
+      offset += bufferSize + 4000;
+    }
+    TrackingByteBufferPool pool = TrackingByteBufferPool.wrap(getPool());
+    int unknownBuffers = 0;
+    boolean slicing;
+    try (FSDataInputStream in = openVectorFile()) {
+      slicing = in.hasCapability(VECTOREDIO_BUFFERS_SLICED);
+      LOG.info("Slicing is {} for vectored IO with stream {}", slicing, in);
+      in.readVectored(fileRanges, s -> pool.getBuffer(isDirect, s), pool::putBuffer);
+
+      // check that all buffers are from the the pool, unless they are sliced.
+      for (FileRange res : fileRanges) {
+        CompletableFuture<ByteBuffer> data = res.getData();
+        ByteBuffer buffer = awaitFuture(data);
+        Assertions.assertThat(buffer)
+            .describedAs("Buffer must not be null")
+            .isNotNull();
+        Assertions.assertThat(slicing || pool.containsBuffer(buffer))
+            .describedAs("Buffer must be from the pool")
+            .isTrue();
+        try {
+          pool.putBuffer(buffer);
+        } catch (TrackingByteBufferPool.ReleasingUnallocatedByteBufferException e) {
+          // this can happen if the buffer was sliced, as it is not in the pool.
+          if (!slicing) {
+            throw e;
+          }
+          LOG.info("Sliced buffer detected: {}", buffer);
+          unknownBuffers++;
+        }
+      }
+    }
+    try {
+      pool.close();
+    } catch (TrackingByteBufferPool.LeakedByteBufferException e) {
+      if (!slicing) {
+        throw e;
+      }
+      LOG.info("Slicing is enabled; we saw leaked buffers: {} after {} releases of unknown bufferfs",
+          e.getCount(), unknownBuffers);
+    }
+
   }
 }

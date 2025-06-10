@@ -74,6 +74,13 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     validateCheckReadException(testPath, length, smallFileRanges);
   }
 
+  /**
+   * Verify that checksum validation works through vectored reads.
+   * @param testPath path to the file to be tested
+   * @param length length of the file to be created
+   * @param ranges ranges to be read from the file
+   * @throws Exception any exception other than ChecksumException
+   */
   private void validateCheckReadException(Path testPath,
                                           int length,
                                           List<FileRange> ranges) throws Exception {
