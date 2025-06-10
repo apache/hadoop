@@ -154,8 +154,8 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
         fail("Unexpected endpoint");
       }
       String region = getS3AInternals().getBucketLocation();
-      assertEquals(
-          endPointRegion, region, "Endpoint config setting and bucket location differ: ");
+      assertEquals(endPointRegion, region,
+          "Endpoint config setting and bucket location differ: ");
     }
   }
 
@@ -487,6 +487,8 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
 
   @Test
   public void testDirectoryAllocatorDefval() throws Throwable {
+    removeAllocatorContexts();
+    conf = new Configuration();
     final String bucketName = getTestBucketName(conf);
     final String blank = " ";
     conf.set(Constants.BUFFER_DIR, blank);
@@ -494,11 +496,11 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
     try {
       fs = S3ATestUtils.createTestFileSystem(conf);
       final Configuration fsConf = fs.getConf();
-      Assertions.assertThat(fsConf.get(Constants.BUFFER_DIR))
+      assertThat(fsConf.get(Constants.BUFFER_DIR))
           .describedAs("Config option %s", Constants.BUFFER_DIR)
           .isEqualTo(blank);
       File tmp = createTemporaryFileForWriting();
-      assertTrue("not found: " + tmp, tmp.exists());
+      assertTrue(tmp.exists(), "not found: " + tmp);
       tmp.delete();
     } finally {
       removeAllocatorContexts();
@@ -533,7 +535,7 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
     conf.set(format("fs.s3a.bucket.%s.buffer.dir", bucketName), dirs);
     fs = S3ATestUtils.createTestFileSystem(conf);
     final Configuration fsConf = fs.getConf();
-    Assertions.assertThat(fsConf.get(Constants.BUFFER_DIR))
+    assertThat(fsConf.get(Constants.BUFFER_DIR))
         .describedAs("Config option %s", Constants.BUFFER_DIR)
         .isEqualTo(dirs);
     File tmp1 = createTemporaryFileForWriting();
@@ -577,10 +579,10 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
   private static <T> T getField(Object target, Class<T> fieldType,
       String fieldName) throws IllegalAccessException {
     Object obj = FieldUtils.readField(target, fieldName, true);
-    assertNotNull(format(
+    assertNotNull(obj, format(
         "Could not read field named %s in object with class %s.", fieldName,
-        target.getClass().getName()), obj);
-    assertTrue(format(
+        target.getClass().getName()));
+    assertTrue(fieldType.isAssignableFrom(obj.getClass()), format(
         "Unexpected type found for field named %s, expected %s, actual %s.",
         fieldName, fieldType.getName(), obj.getClass().getName()));
     return fieldType.cast(obj);
