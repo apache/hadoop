@@ -34,28 +34,29 @@ class GoogleHadoopFileSystemConfiguration {
    * querying the value. Modifying this value allows one to control how many mappers are used to
    * process a given file.
    */
-  public static final HadoopConfigurationProperty<Long> BLOCK_SIZE =
+  static final HadoopConfigurationProperty<Long> BLOCK_SIZE =
       new HadoopConfigurationProperty<>("fs.gs.block.size", 64 * 1024 * 1024L);
 
   /**
    * Configuration key for GCS project ID. Default value: none
    */
-  public static final HadoopConfigurationProperty<String> GCS_PROJECT_ID =
+  static final HadoopConfigurationProperty<String> GCS_PROJECT_ID =
       new HadoopConfigurationProperty<>("fs.gs.project.id");
 
   /**
    * Configuration key for initial working directory of a GHFS instance. Default value: '/'
    */
-  public static final HadoopConfigurationProperty<String> GCS_WORKING_DIRECTORY =
+  static final HadoopConfigurationProperty<String> GCS_WORKING_DIRECTORY =
       new HadoopConfigurationProperty<>("fs.gs.working.dir", "/");
 
   /**
    * Configuration key for setting write buffer size.
    */
-  public static final HadoopConfigurationProperty<Long> GCS_OUTPUT_STREAM_BUFFER_SIZE =
+  static final HadoopConfigurationProperty<Long> GCS_OUTPUT_STREAM_BUFFER_SIZE =
       new HadoopConfigurationProperty<>("fs.gs.outputstream.buffer.size", 8L * 1024 * 1024);
 
   private final String workingDirectory;
+  private final String projectId;
 
   public int getOutStreamBufferSize() {
     return outStreamBufferSize;
@@ -67,9 +68,18 @@ class GoogleHadoopFileSystemConfiguration {
     this.workingDirectory = GCS_WORKING_DIRECTORY.get(config, config::get);
     this.outStreamBufferSize =
         toIntExact(GCS_OUTPUT_STREAM_BUFFER_SIZE.get(config, config::getLongBytes));
+    this.projectId = GCS_PROJECT_ID.get(config, config::get);
   }
 
   public String getWorkingDirectory() {
     return this.workingDirectory;
+  }
+
+  String getProjectId() {
+    return this.projectId;
+  }
+
+  public long getMaxListItemsPerCall() {
+    return 5000L; //TODO: Make this configurable
   }
 }
