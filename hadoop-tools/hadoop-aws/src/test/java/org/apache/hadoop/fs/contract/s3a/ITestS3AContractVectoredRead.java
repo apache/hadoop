@@ -62,7 +62,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoo
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableAnalyticsAccelerator;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.io.Sizes.S_1M;
@@ -89,14 +89,12 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
   }
 
   /**
-   * Analytics Accelerator Library for Amazon S3 does not support Vectored Reads.
-   * @throws Exception
+   * Create a configuration.
+   * @return a configuration
    */
   @Override
-  public void setup() throws Exception {
-    super.setup();
-    skipIfAnalyticsAcceleratorEnabled(getContract().getConf(),
-        "Analytics Accelerator does not support vectored reads");
+  protected Configuration createConfiguration() {
+    return disableAnalyticsAccelerator(super.createConfiguration());
   }
 
   /**
