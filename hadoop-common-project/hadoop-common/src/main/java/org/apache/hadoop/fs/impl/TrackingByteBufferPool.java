@@ -98,7 +98,8 @@ public final class TrackingByteBufferPool implements ByteBufferPool, AutoCloseab
     }
   }
 
-  public static class LeakDetectorHeapByteBufferPoolException extends RuntimeException {
+  public static class LeakDetectorHeapByteBufferPoolException
+      extends RuntimeException {
 
     private LeakDetectorHeapByteBufferPoolException(String msg) {
       super(msg);

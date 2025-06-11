@@ -676,11 +676,11 @@ through the `allocate()` function passed in.
 This will happen during reads with and without range coalescing.
 
 Checksum verification may be disabled by setting the option
-`file.verify-checksum` to true (Hadoop 3.4.2 and later).
+`fs.file.checksum.verify` to true (Hadoop 3.4.2 and later).
 
 ```xml
 <property>
-  <name>file.verify-checksum</name>
+  <name>fs.file.checksum.verify</name>
   <value>false</value>
 </property>
 ```

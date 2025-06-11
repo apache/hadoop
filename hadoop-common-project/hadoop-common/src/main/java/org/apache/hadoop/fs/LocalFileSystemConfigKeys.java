@@ -48,6 +48,6 @@ public class LocalFileSystemConfigKeys extends CommonConfigurationKeys {
    * <p>
    * {@value}.
    */
-  public static final String LOCAL_FS_VERIFY_CHECKSUM = "file.verify-checksum";
+  public static final String LOCAL_FS_VERIFY_CHECKSUM = "fs.file.checksum.verify";
 }
   

@@ -640,13 +640,13 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       // offsets to be misaligned with possible page sizes.
       offset += bufferSize + 4000;
     }
-    TrackingByteBufferPool pool = TrackingByteBufferPool.wrap(getPool());
+    TrackingByteBufferPool trackerPool = TrackingByteBufferPool.wrap(getPool());
     int unknownBuffers = 0;
     boolean slicing;
     try (FSDataInputStream in = openVectorFile()) {
       slicing = in.hasCapability(VECTOREDIO_BUFFERS_SLICED);
       LOG.info("Slicing is {} for vectored IO with stream {}", slicing, in);
-      in.readVectored(fileRanges, s -> pool.getBuffer(isDirect, s), pool::putBuffer);
+      in.readVectored(fileRanges, s -> trackerPool.getBuffer(isDirect, s), trackerPool::putBuffer);
 
       // check that all buffers are from the the pool, unless they are sliced.
       for (FileRange res : fileRanges) {
@@ -655,11 +655,11 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
         Assertions.assertThat(buffer)
             .describedAs("Buffer must not be null")
             .isNotNull();
-        Assertions.assertThat(slicing || pool.containsBuffer(buffer))
+        Assertions.assertThat(slicing || trackerPool.containsBuffer(buffer))
             .describedAs("Buffer must be from the pool")
             .isTrue();
         try {
-          pool.putBuffer(buffer);
+          trackerPool.putBuffer(buffer);
         } catch (TrackingByteBufferPool.ReleasingUnallocatedByteBufferException e) {
           // this can happen if the buffer was sliced, as it is not in the pool.
           if (!slicing) {
@@ -671,12 +671,13 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       }
     }
     try {
-      pool.close();
+      trackerPool.close();
     } catch (TrackingByteBufferPool.LeakedByteBufferException e) {
       if (!slicing) {
         throw e;
       }
-      LOG.info("Slicing is enabled; we saw leaked buffers: {} after {} releases of unknown bufferfs",
+      LOG.info("Slicing is enabled; we saw leaked buffers: {} after {}"
+              + " releases of unknown buffers",
           e.getCount(), unknownBuffers);
     }
 
