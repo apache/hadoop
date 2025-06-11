@@ -19,15 +19,24 @@
 package org.apache.hadoop.fs.contract.s3a;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.test.tags.IntegrationTest;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.List;
+
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.enableAnalyticsAccelerator;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipForAnyEncryptionExceptSSES3;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 
 /**
  * S3A contract tests for vectored reads with the Analytics stream.
@@ -71,5 +80,29 @@ public class ITestS3AContractAnalyticsStreamVectoredRead extends AbstractContrac
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf);
+  }
+
+  @Override
+  public void testNegativeOffsetRange()  throws Exception {
+    verifyExceptionalVectoredRead(ContractTestUtils.range(-1, 50), IllegalArgumentException.class);
+  }
+
+  @Test
+  public void testReadVectoredWithAALStatsCollection() throws Exception {
+
+    List<FileRange> fileRanges = createSampleNonOverlappingRanges();
+    try (FSDataInputStream in = openVectorFile()){
+      in.readVectored(fileRanges, getAllocate());
+
+      IOStatistics st = in.getIOStatistics();
+
+      // Statistics such as GET requests will be added after IoStats support.
+      verifyStatisticCounterValue(st,
+              StreamStatisticNames.STREAM_READ_ANALYTICS_OPENED, 1);
+
+      verifyStatisticCounterValue(st,
+              StreamStatisticNames.STREAM_READ_VECTORED_OPERATIONS,
+              1);
+    }
   }
 }
