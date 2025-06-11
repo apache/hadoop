@@ -97,7 +97,7 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
   public void setup() throws Exception {
     super.setup();
     skipIfAnalyticsAcceleratorEnabled(getContract().getConf(),
-        "Analytics Accelerator does not support vectored reads");
+        "AAL with readVectored() is tested in ITestS3AContractAnalyticsStreamVectoredRead");
   }
 
   /**
