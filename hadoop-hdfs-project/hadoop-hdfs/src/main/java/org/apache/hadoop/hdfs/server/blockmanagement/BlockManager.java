@@ -117,6 +117,7 @@ import static org.apache.hadoop.hdfs.util.StripedBlockUtil.getInternalBlockLengt
 
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
@@ -1858,17 +1859,26 @@ public class BlockManager implements BlockStatsMXBean {
         expectedRedundancies;
     boolean corruptedDuringWrite = minReplicationSatisfied &&
         b.isCorruptedDuringWrite();
+
+    int countNumOfAvailableNodes = getDatanodeManager()
+        .getNetworkTopology().countNumOfAvailableNodes(NodeBase.ROOT, new HashSet<>());
+    boolean noEnoughNodes = minReplicationSatisfied &&
+                             (numberOfReplicas.liveReplicas()
+                                  + numberOfReplicas.corruptReplicas()) == countNumOfAvailableNodes;
     // case 1: have enough number of usable replicas
     // case 2: corrupted replicas + usable replicas > Replication factor
     // case 3: Block is marked corrupt due to failure while writing. In this
     //         case genstamp will be different than that of valid block.
+    // case 4: Block is marked corrupt not due to failure while writing
+    // and number of replicas == count number of available nodes. 
+    // This means we cannot find node to reconstruction, should delete corrupt replica.
     // In all these cases we can delete the replica.
     // In case 3, rbw block will be deleted and valid block can be replicated.
     // Note NN only becomes aware of corrupt blocks when the block report is sent,
     // this means that by default it can take up to 6 hours for a corrupt block to
     // be invalidated, after which the valid block can be replicated.
     if (hasEnoughLiveReplicas || hasMoreCorruptReplicas
-        || corruptedDuringWrite) {
+        || corruptedDuringWrite || noEnoughNodes) {
       if (b.getStored().isStriped()) {
         // If the block is an EC block, the whole block group is marked
         // corrupted, so if this block is getting deleted, remove the block

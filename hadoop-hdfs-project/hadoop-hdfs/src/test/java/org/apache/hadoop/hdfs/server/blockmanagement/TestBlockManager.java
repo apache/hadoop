@@ -21,6 +21,7 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.LinkedListMultimap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
@@ -94,8 +95,11 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -144,6 +148,7 @@ public class TestBlockManager {
    */
   private static final int NUM_TEST_ITERS = 30;
   private static final int BLOCK_SIZE = 64*1024;
+  private static final int DN_DIRECTORYSCAN_INTERVAL = 10;
   private static final org.slf4j.Logger LOG =
       LoggerFactory.getLogger(TestBlockManager.class);
 
@@ -451,6 +456,71 @@ public class TestBlockManager {
     BlockInfo block = addBlockOnNodes(testIndex, origNodes);
     assertFalse(bm.isNeededReconstruction(block,
         bm.countNodes(block, fsn.isInStartupSafeMode())));
+  }
+  
+  @Test(timeout = 60000)
+  public void testMiniClusterCannotReconstructionWhileReplicaAnomaly() 
+      throws IOException, InterruptedException, TimeoutException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt("dfs.datanode.directoryscan.interval", DN_DIRECTORYSCAN_INTERVAL);
+    conf.setInt("dfs.namenode.replication.interval", 1);
+    conf.setInt("dfs.heartbeat.interval", 1);
+    String src = "/test-reconstruction";
+    Path file = new Path(src);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    try {
+      cluster.waitActive();
+      FSNamesystem fsn = cluster.getNamesystem();
+      BlockManager bm = fsn.getBlockManager();
+      FSDataOutputStream out = null;
+      FileSystem fs = cluster.getFileSystem();
+      try {
+        out = fs.create(file);
+        for (int i = 0; i < 1024 * 1; i++) {
+          out.write(i);
+        }
+        out.hflush();
+      } finally {
+        IOUtils.closeStream(out);
+      }
+      FSDataInputStream in = null;
+      ExtendedBlock oldBlock = null;
+      try {
+        in = fs.open(file);
+        oldBlock = DFSTestUtil.getAllBlocks(in).get(0).getBlock();
+      } finally {
+        IOUtils.closeStream(in);
+      }
+      DataNode dn = cluster.getDataNodes().get(0);
+      String blockPath = dn.getFSDataset().getBlockLocalPathInfo(oldBlock).getBlockPath();
+      String metaBlockPath = dn.getFSDataset().getBlockLocalPathInfo(oldBlock).getMetaPath();
+      Files.write(Paths.get(blockPath), Collections.emptyList());
+      Files.write(Paths.get(metaBlockPath), Collections.emptyList());
+      cluster.restartDataNode(0, true);
+      cluster.waitDatanodeConnectedToActive(dn, 60000);
+      while(!dn.isDatanodeFullyStarted()) {
+        Thread.sleep(1000);
+      }
+      Thread.sleep(DN_DIRECTORYSCAN_INTERVAL * 1000);
+      cluster.triggerBlockReports();
+      BlockInfo bi = bm.getStoredBlock(oldBlock.getLocalBlock());
+      boolean isNeededReconstruction = bm.isNeededReconstruction(bi,
+          bm.countNodes(bi, cluster.getNamesystem().isInStartupSafeMode()));
+      if (isNeededReconstruction) {
+        BlockReconstructionWork reconstructionWork = null;
+        fsn.readLock();
+        try {
+          reconstructionWork = bm.scheduleReconstruction(bi, 3);
+        } finally {
+          fsn.readUnlock();
+        }
+        assertNull(reconstructionWork);
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 
   @Test(timeout = 60000)
