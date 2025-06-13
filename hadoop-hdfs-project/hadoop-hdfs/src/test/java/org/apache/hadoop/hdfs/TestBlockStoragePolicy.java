@@ -1440,14 +1440,14 @@ public class TestBlockStoragePolicy {
       fs.setStoragePolicy(dir, "HOT");
       HdfsFileStatus status = fs.getClient().getFileInfo(file);
       // 5. get file policy, it should be parent policy.
-      assertTrue(
-             status.getStoragePolicy() == HOT, "File storage policy should be HOT");
+      assertTrue(status.getStoragePolicy() == HOT,
+          "File storage policy should be HOT");
       // 6. restart NameNode for reloading edits logs.
       cluster.restartNameNode(true);
       // 7. get file policy, it should be parent policy.
       status = fs.getClient().getFileInfo(file);
-      assertTrue(
-             status.getStoragePolicy() == HOT, "File storage policy should be HOT");
+      assertTrue(status.getStoragePolicy() == HOT,
+          "File storage policy should be HOT");
 
     } finally {
       cluster.shutdown();
