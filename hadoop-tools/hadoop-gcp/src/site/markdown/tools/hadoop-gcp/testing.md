@@ -61,9 +61,9 @@ Example:
 
 ## <a name="running"></a> Running the Tests
 
-After completing the configuration, execute the test run through Maven. 
+After completing the configuration, execute the test run through Maven.
 
-This has to be un from a GCP VM. This limitation will be removed later.
+This has to be run from a GCP VM. This limitation will be removed later.
 
 ```bash
 mvn clean verify
