@@ -33,12 +33,12 @@ import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestCompressionStreamReuse {
   private static final Logger LOG = LoggerFactory
@@ -165,9 +165,8 @@ public class TestCompressionStreamReuse {
       RandomDatum v2 = new RandomDatum();
       k2.readFields(inflateIn);
       v2.readFields(inflateIn);
-      assertTrue(
-          "original and compressed-then-decompressed-output not equal",
-          k1.equals(k2) && v1.equals(v2));
+      assertTrue(k1.equals(k2) && v1.equals(v2),
+          "original and compressed-then-decompressed-output not equal");
     }
     LOG.info("SUCCESS! Completed checking " + count + " records");
   }

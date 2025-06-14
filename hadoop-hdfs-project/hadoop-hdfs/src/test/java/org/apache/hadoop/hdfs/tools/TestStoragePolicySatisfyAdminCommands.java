@@ -34,9 +34,10 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.sps.Context;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.hdfs.server.sps.ExternalSPSContext;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test StoragePolicySatisfy admin commands.
@@ -50,7 +51,7 @@ public class TestStoragePolicySatisfyAdminCommands {
   private DistributedFileSystem dfs = null;
   private StoragePolicySatisfier externalSps = null;
 
-  @Before
+  @BeforeEach
   public void clusterSetUp() throws IOException, URISyntaxException {
     conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
@@ -74,7 +75,7 @@ public class TestStoragePolicySatisfyAdminCommands {
     externalSps.start(StoragePolicySatisfierMode.EXTERNAL);
   }
 
-  @After
+  @AfterEach
   public void clusterShutdown() throws IOException{
     if(dfs != null) {
       dfs.close();
@@ -89,7 +90,8 @@ public class TestStoragePolicySatisfyAdminCommands {
     }
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testStoragePolicySatisfierCommand() throws Exception {
     final String file = "/testStoragePolicySatisfierCommand";
     DFSTestUtil.createFile(dfs, new Path(file), SIZE, REPL, 0);
@@ -110,7 +112,8 @@ public class TestStoragePolicySatisfyAdminCommands {
         dfs);
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testStoragePolicySatisfierCommandWithURI() throws Exception {
     final String file = "/testStoragePolicySatisfierCommandURI";
     DFSTestUtil.createFile(dfs, new Path(file), SIZE, REPL, 0);

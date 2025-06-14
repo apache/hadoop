@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Test the legacy raw Reed-solomon coder implemented in Java.
  */
 public class TestRSLegacyRawCoder extends TestRSRawCoderBase {
 
-  @Before
+  @BeforeEach
   public void setup() {
     this.encoderFactoryClass = RSLegacyRawErasureCoderFactory.class;
     this.decoderFactoryClass = RSLegacyRawErasureCoderFactory.class;

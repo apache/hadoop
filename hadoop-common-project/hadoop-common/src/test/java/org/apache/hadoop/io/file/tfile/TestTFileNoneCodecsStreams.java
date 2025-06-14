@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.io.file.tfile;
 
+import org.junit.jupiter.api.BeforeEach;
+
 import java.io.IOException;
 
 public class TestTFileNoneCodecsStreams extends TestTFileStreams {
   /**
    * Test non-compression codec, using the same test cases as in the ByteArrays.
    */
+  @BeforeEach
   @Override
   public void setUp() throws IOException {
     init(Compression.Algorithm.NONE.getName(), "memcmp");

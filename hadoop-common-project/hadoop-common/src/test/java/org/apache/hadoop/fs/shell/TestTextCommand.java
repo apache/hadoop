@@ -64,7 +64,7 @@ public class TestTextCommand {
       + "{\"station\":\"012650-99999\",\"time\":-655509600000,\"temp\":78}" + SEPARATOR;
 
   private static final String SEQUENCE_FILE_EXPECTED_OUTPUT =
-      "Key1\tValue1" + SEPARATOR + "Key2\tValue2" + SEPARATOR;
+      "Key1\tValue1\nKey2\tValue2\n";
 
   @Rule
   public final Timeout testTimeout = new Timeout(30000);

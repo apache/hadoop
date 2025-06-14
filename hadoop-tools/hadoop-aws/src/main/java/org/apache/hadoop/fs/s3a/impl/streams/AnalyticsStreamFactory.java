@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a.impl.streams;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.s3.analyticsaccelerator.S3SdkObjectClient;
 import software.amazon.s3.analyticsaccelerator.S3SeekableInputStreamConfiguration;
 import software.amazon.s3.analyticsaccelerator.S3SeekableInputStreamFactory;
@@ -40,6 +42,8 @@ import static org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration.populateVe
  *  {@code S3AStore}, if fs.s3a.input.stream.type is set to Analytics.
  */
 public class AnalyticsStreamFactory extends AbstractObjectInputStreamFactory {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AnalyticsStreamFactory.class);
 
   private S3SeekableInputStreamConfiguration seekableInputStreamConfiguration;
   private LazyAutoCloseableReference<S3SeekableInputStreamFactory>  s3SeekableInputStreamFactory;
@@ -98,7 +102,11 @@ public class AnalyticsStreamFactory extends AbstractObjectInputStreamFactory {
 
   @Override
   protected void serviceStop() throws Exception {
-    this.s3SeekableInputStreamFactory.close();
+    try {
+      s3SeekableInputStreamFactory.close();
+    } catch (Exception ignored) {
+      LOG.debug("Ignored exception while closing stream factory", ignored);
+    }
     callbacks().incrementFactoryStatistic(ANALYTICS_STREAM_FACTORY_CLOSED);
     super.serviceStop();
   }

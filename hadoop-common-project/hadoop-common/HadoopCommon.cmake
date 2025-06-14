@@ -145,6 +145,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # Make GNU extensions available.
     hadoop_add_compiler_flags("-D_GNU_SOURCE")
 
+    # using old default behavior on GCC >= 14.0
+    hadoop_add_compiler_flags("-Wno-error=implicit-function-declaration")
+
     # If JVM_ARCH_DATA_MODEL is 32, compile all binaries as 32-bit.
     if(JVM_ARCH_DATA_MODEL EQUAL 32)
         # Force 32-bit code generation on amd64/x86_64, ppc64, sparc64

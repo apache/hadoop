@@ -49,6 +49,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
@@ -63,6 +64,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.http.HttpStatus;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -485,12 +487,29 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
 
   @Test
   public void testDirectoryAllocatorDefval() throws Throwable {
+    removeAllocatorContexts();
     conf = new Configuration();
-    conf.unset(Constants.BUFFER_DIR);
-    fs = S3ATestUtils.createTestFileSystem(conf);
-    File tmp = createTemporaryFileForWriting();
-    assertTrue("not found: " + tmp, tmp.exists());
-    tmp.delete();
+    final String bucketName = getTestBucketName(conf);
+    final String blank = " ";
+    conf.set(Constants.BUFFER_DIR, blank);
+    conf.set(format("fs.s3a.bucket.%s.buffer.dir", bucketName), blank);
+    try {
+      fs = S3ATestUtils.createTestFileSystem(conf);
+      final Configuration fsConf = fs.getConf();
+      Assertions.assertThat(fsConf.get(Constants.BUFFER_DIR))
+          .describedAs("Config option %s", Constants.BUFFER_DIR)
+          .isEqualTo(blank);
+      File tmp = createTemporaryFileForWriting();
+      assertTrue("not found: " + tmp, tmp.exists());
+      tmp.delete();
+    } finally {
+      removeAllocatorContexts();
+    }
+  }
+
+  private static void removeAllocatorContexts() {
+    LocalDirAllocator.removeContext(BUFFER_DIR);
+    LocalDirAllocator.removeContext(HADOOP_TMP_DIR);
   }
 
   /**
@@ -504,13 +523,21 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
 
   @Test
   public void testDirectoryAllocatorRR() throws Throwable {
+    removeAllocatorContexts();
     File dir1 = GenericTestUtils.getRandomizedTestDir();
     File dir2 = GenericTestUtils.getRandomizedTestDir();
     dir1.mkdirs();
     dir2.mkdirs();
     conf = new Configuration();
-    conf.set(Constants.BUFFER_DIR, dir1 + ", " + dir2);
+    final String bucketName = getTestBucketName(conf);
+    final String dirs = dir1 + ", " + dir2;
+    conf.set(Constants.BUFFER_DIR, dirs);
+    conf.set(format("fs.s3a.bucket.%s.buffer.dir", bucketName), dirs);
     fs = S3ATestUtils.createTestFileSystem(conf);
+    final Configuration fsConf = fs.getConf();
+    Assertions.assertThat(fsConf.get(Constants.BUFFER_DIR))
+        .describedAs("Config option %s", Constants.BUFFER_DIR)
+        .isEqualTo(dirs);
     File tmp1 = createTemporaryFileForWriting();
     tmp1.delete();
     File tmp2 = createTemporaryFileForWriting();
@@ -552,10 +579,10 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
   private static <T> T getField(Object target, Class<T> fieldType,
       String fieldName) throws IllegalAccessException {
     Object obj = FieldUtils.readField(target, fieldName, true);
-    assertNotNull(String.format(
+    assertNotNull(format(
         "Could not read field named %s in object with class %s.", fieldName,
         target.getClass().getName()), obj);
-    assertTrue(String.format(
+    assertTrue(format(
         "Unexpected type found for field named %s, expected %s, actual %s.",
         fieldName, fieldType.getName(), obj.getClass().getName()),
         fieldType.isAssignableFrom(obj.getClass()));

@@ -19,11 +19,12 @@
 
 package org.apache.hadoop.fs.adl.live;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
@@ -39,9 +40,9 @@ public class TestAdlFileContextMainOperationsLive
 
   private static final String KEY_FILE_SYSTEM = "test.fs.adl.name";
 
-  @BeforeClass
+  @BeforeAll
   public static void skipTestCheck() {
-    Assume.assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
+    assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
   }
 
   @Override
@@ -81,7 +82,7 @@ public class TestAdlFileContextMainOperationsLive
       // set.
       // The test is failing with NPE on windows platform only, with Linux
       // platform test passes.
-      Assume.assumeTrue(false);
+      assumeTrue(false);
     } else {
       super.testWorkingDirectory();
     }
@@ -89,11 +90,11 @@ public class TestAdlFileContextMainOperationsLive
 
   @Override
   public void testUnsupportedSymlink() throws IOException {
-    Assume.assumeTrue(false);
+    assumeTrue(false);
   }
 
   @Test
   public void testSetVerifyChecksum() throws IOException {
-    Assume.assumeTrue(false);
+    assumeTrue(false);
   }
 }

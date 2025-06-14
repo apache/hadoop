@@ -152,6 +152,13 @@
                       <exclude>io.dropwizard.metrics:metrics-core</exclude>
                       <exclude>org.eclipse.jetty:jetty-servlet</exclude>
                       <exclude>org.eclipse.jetty:jetty-security</exclude>
+                      <!-- Excluding Jetty dependencies to resolve `BanDuplicateClasses` issues caused by
+                       duplicate Jetty classes in `hadoop-client-minicluster` and `hadoop-client-runtime`.
+                       so keeping it here leads to conflicts.
+                      -->
+                      <exclude>org.eclipse.jetty:jetty-util</exclude>
+                      <exclude>org.eclipse.jetty:jetty-server</exclude>
+                      <exclude>org.eclipse.jetty:jetty-continuation</exclude>
                       <exclude>org.ow2.asm:*</exclude>
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>

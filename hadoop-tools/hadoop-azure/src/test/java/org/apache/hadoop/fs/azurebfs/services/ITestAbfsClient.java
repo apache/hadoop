@@ -23,6 +23,7 @@ import java.net.ProtocolException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
@@ -42,6 +43,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.TestAbfsConfigurationFieldsValidation;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
@@ -58,6 +60,7 @@ import org.apache.hadoop.test.ReflectionUtils;
 import org.apache.http.HttpResponse;
 
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static org.apache.hadoop.fs.azurebfs.ITestAzureBlobFileSystemListStatus.TEST_CONTINUATION_TOKEN;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
@@ -75,6 +78,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APN_VERSION;
@@ -728,5 +732,116 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(appendRequestParameters.isExpectHeaderEnabled())
             .describedAs("The expect header is not false")
             .isFalse();
+  }
+
+  @Test
+  public void testIsNonEmptyDirectory() throws IOException {
+    testIsNonEmptyDirectoryInternal(EMPTY_STRING, true, EMPTY_STRING,
+        true, 1, false);
+    testIsNonEmptyDirectoryInternal(EMPTY_STRING, false, EMPTY_STRING,
+        false, 1, true);
+
+    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, true, EMPTY_STRING,
+        true, 2, false);
+    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, true, EMPTY_STRING,
+        false, 2, true);
+    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN + 1, true, TEST_CONTINUATION_TOKEN + 2,
+        true, 3, false);
+    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN + 1, true, TEST_CONTINUATION_TOKEN + 2,
+        false, 2, true);
+
+    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, false, EMPTY_STRING,
+        true, 1, true);
+    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, false, EMPTY_STRING,
+        false, 1, true);
+    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN + 1, false, TEST_CONTINUATION_TOKEN + 2,
+        true, 1, true);
+    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN + 1, false, TEST_CONTINUATION_TOKEN + 2,
+        false, 1, true);
+  }
+
+  private void testIsNonEmptyDirectoryInternal(String firstCT,
+      boolean isfirstEmpty, String secondCT, boolean isSecondEmpty,
+      int expectedInvocations, boolean isNonEmpty) throws IOException {
+
+    assumeBlobServiceType();
+    AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
+    AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
+    AbfsBlobClient spiedClient = Mockito.spy(spiedStore.getClientHandler().getBlobClient());
+    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
+    Mockito.doReturn(spiedClient).when(spiedStore).getClient();
+    VersionedFileStatus status1 = new VersionedFileStatus(
+        "owner", "group", null, false, 0, false, 0, 0, 0,
+        new Path("/testPath/file1"), "version", "encryptionContext");
+    VersionedFileStatus status2 = new VersionedFileStatus(
+        "owner", "group", null, false, 0, false, 0, 0, 0,
+        new Path("/testPath/file2"), "version", "encryptionContext");
+
+    List<VersionedFileStatus> mockedList1 = new ArrayList<>();
+    mockedList1.add(status1);
+    List<VersionedFileStatus> mockedList2 = new ArrayList<>();
+    mockedList2.add(status2);
+
+    ListResponseData listResponseData1 = new ListResponseData();
+    listResponseData1.setContinuationToken(firstCT);
+    listResponseData1.setFileStatusList(isfirstEmpty ? new ArrayList<>() : mockedList1);
+    listResponseData1.setOp(Mockito.mock(AbfsRestOperation.class));
+
+    ListResponseData listResponseData2 = new ListResponseData();
+    listResponseData2.setContinuationToken(secondCT);
+    listResponseData2.setFileStatusList(isSecondEmpty ? new ArrayList<>() : mockedList2);
+    listResponseData2.setOp(Mockito.mock(AbfsRestOperation.class));
+
+    ListResponseData listResponseData3 = new ListResponseData();
+    listResponseData3.setContinuationToken(EMPTY_STRING);
+    listResponseData3.setFileStatusList(new ArrayList<>());
+    listResponseData3.setOp(Mockito.mock(AbfsRestOperation.class));
+
+    Mockito.doReturn(listResponseData1).doReturn(listResponseData2).doReturn(listResponseData3)
+        .when(spiedClient).listPath(eq("/testPath"), eq(false), eq(1),
+            any(), any(), any());
+
+    final int[] itr = new int[1];
+    final String[] continuationTokenUsed = new String[3];
+
+    Mockito.doAnswer(invocationOnMock -> {
+      if (itr[0] == 0) {
+        itr[0]++;
+        continuationTokenUsed[0] = invocationOnMock.getArgument(3);
+        return listResponseData1;
+      } else if (itr[0] == 1) {
+        itr[0]++;
+        continuationTokenUsed[1] = invocationOnMock.getArgument(3);
+        return listResponseData2;
+      }
+      continuationTokenUsed[2] = invocationOnMock.getArgument(3);
+      return listResponseData3;
+    }).when(spiedClient).listPath(eq("/testPath"), eq(false), eq(1),
+        any(), any(TracingContext.class), any());
+
+    Assertions.assertThat(spiedClient.isNonEmptyDirectory("/testPath",
+        Mockito.mock(TracingContext.class)))
+        .describedAs("isNonEmptyDirectory in client giving unexpected results")
+        .isEqualTo(isNonEmpty);
+
+    Assertions.assertThat(continuationTokenUsed[0])
+        .describedAs("First continuation token used is not as expected")
+        .isNull();
+
+    if (expectedInvocations > 1) {
+      Assertions.assertThat(continuationTokenUsed[1])
+          .describedAs("Second continuation token used is not as expected")
+          .isEqualTo(firstCT);
+    }
+
+    if (expectedInvocations > 2) {
+      Assertions.assertThat(continuationTokenUsed[2])
+          .describedAs("Third continuation token used is not as expected")
+          .isEqualTo(secondCT);
+    }
+
+    Mockito.verify(spiedClient, times(expectedInvocations))
+        .listPath(eq("/testPath"), eq(false), eq(1),
+            any(), any(TracingContext.class), any());
   }
 }

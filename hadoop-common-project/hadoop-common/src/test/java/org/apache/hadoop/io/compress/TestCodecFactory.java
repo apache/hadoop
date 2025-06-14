@@ -27,10 +27,10 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestCodecFactory {
 
@@ -139,13 +139,12 @@ public class TestCodecFactory {
   private static void checkCodec(String msg, 
                                  Class expected, CompressionCodec actual) {
     if (expected == null) {
-      assertNull(msg, actual);
+      assertNull(actual, msg);
     } else if (actual == null) {
       fail(msg + " result was null");
     } else {
-      assertEquals(msg + " unexpected codec found",
-              expected.getName(),
-              actual.getClass().getName());
+      assertEquals(expected.getName(),
+          actual.getClass().getName(), msg + " unexpected codec found");
     }
   }
 
@@ -154,9 +153,9 @@ public class TestCodecFactory {
     CompressionCodecFactory factory =
             new CompressionCodecFactory(new Configuration());
     CompressionCodec codec = factory.getCodec(new Path("/tmp/foo.bar"));
-    assertEquals("default factory foo codec", null, codec);
+    assertEquals(null, codec, "default factory foo codec");
     codec = factory.getCodecByClassName(BarCodec.class.getCanonicalName());
-    assertEquals("default factory foo codec", null, codec);
+    assertEquals(null, codec, "default factory foo codec");
     
     codec = factory.getCodec(new Path("/tmp/foo.gz"));
     checkCodec("default factory for .gz", GzipCodec.class, codec);
@@ -204,9 +203,9 @@ public class TestCodecFactory {
     factory = setClasses(new Class[0]);
     // gz, bz2, snappy, lz4 are picked up by service loader, but bar isn't
     codec = factory.getCodec(new Path("/tmp/foo.bar"));
-    assertEquals("empty factory bar codec", null, codec);
+    assertEquals(null, codec, "empty factory bar codec");
     codec = factory.getCodecByClassName(BarCodec.class.getCanonicalName());
-    assertEquals("empty factory bar codec", null, codec);
+    assertEquals(null, codec, "empty factory bar codec");
     
     codec = factory.getCodec(new Path("/tmp/foo.gz"));
     checkCodec("empty factory gz codec", GzipCodec.class, codec);

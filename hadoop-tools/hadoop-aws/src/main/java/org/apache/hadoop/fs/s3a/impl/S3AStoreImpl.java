@@ -57,6 +57,7 @@ import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
 import software.amazon.awssdk.transfer.s3.model.FileUpload;
 import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -287,10 +288,11 @@ public class S3AStoreImpl
    * Initialize dir allocator if not already initialized.
    */
   private void initLocalDirAllocator() {
-    String bufferDir = getConfig().get(BUFFER_DIR) != null
-        ? BUFFER_DIR
-        : HADOOP_TMP_DIR;
-    directoryAllocator = new LocalDirAllocator(bufferDir);
+    String key = BUFFER_DIR;
+    if (StringUtils.isEmpty(getConfig().getTrimmed(key))) {
+      key = HADOOP_TMP_DIR;
+    }
+    directoryAllocator = new LocalDirAllocator(key);
   }
 
   /** Acquire write capacity for rate limiting {@inheritDoc}. */

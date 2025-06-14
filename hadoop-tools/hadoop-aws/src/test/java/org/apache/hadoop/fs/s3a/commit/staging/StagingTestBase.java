@@ -48,10 +48,9 @@ import org.apache.hadoop.fs.s3a.S3AInternals;
 import org.apache.hadoop.fs.s3a.S3AStore;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.mockito.invocation.InvocationOnMock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,9 +82,15 @@ import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.test.HadoopTestBase;
 
-
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 /**
  * Test base for mock tests of staging committers:
@@ -203,8 +208,8 @@ public class StagingTestBase {
       StagingCommitter committer,
       JobContext job,
       ConflictResolution mode) {
-    Assert.assertEquals("Conflict resolution mode in " + committer,
-        mode, committer.getConflictResolutionMode(job, new Configuration()));
+    assertEquals(mode, committer.getConflictResolutionMode(job, new Configuration()),
+        "Conflict resolution mode in " + committer);
   }
 
   public static void pathsExist(FileSystem mockS3, String... children)
@@ -316,7 +321,7 @@ public class StagingTestBase {
      * Setup the mini HDFS cluster.
      * @throws IOException Failure
      */
-    @BeforeClass
+    @BeforeAll
     @SuppressWarnings("deprecation")
     public static void setupHDFS() throws IOException {
       if (hdfs == null) {
@@ -329,7 +334,7 @@ public class StagingTestBase {
     }
 
     @SuppressWarnings("ThrowableNotThrown")
-    @AfterClass
+    @AfterAll
     public static void teardownFS() throws IOException {
       ServiceOperations.stopQuietly(hdfs);
       conf = null;
@@ -357,7 +362,7 @@ public class StagingTestBase {
     private StagingTestBase.ClientErrors errors = null;
     private S3Client mockClient = null;
 
-    @Before
+    @BeforeEach
     public void setupJob() throws Exception {
       this.jobConf = createJobConf();
 
@@ -424,7 +429,7 @@ public class StagingTestBase {
     private TaskAttemptContext tac = null;
     private File tempDir;
 
-    @Before
+    @BeforeEach
     public void setupTask() throws Exception {
       this.jobCommitter = newJobCommitter();
       jobCommitter.setupJob(getJob());
