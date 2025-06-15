@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 
 import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -49,6 +50,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 public class ITestS3ADSSEEncryptionWithDefaultS3Settings extends
         AbstractTestS3AEncryption {
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();

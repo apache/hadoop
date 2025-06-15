@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.contract;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -43,8 +43,8 @@ public abstract class AbstractContractRenameTest extends
     writeDataset(getFileSystem(), renameSrc,
         data, data.length, 1024 * 1024, false);
     boolean rename = rename(renameSrc, renameTarget);
-    assertTrue("rename("+renameSrc+", "+ renameTarget+") returned false",
-        rename);
+    assertTrue(rename,
+        "rename("+renameSrc+", "+ renameTarget+") returned false");
     assertListStatusFinds(getFileSystem(),
         renameTarget.getParent(), renameTarget);
     verifyFileContents(getFileSystem(), renameTarget, data);
@@ -70,7 +70,7 @@ public abstract class AbstractContractRenameTest extends
         // at least one FS only returns false here, if that is the case
         // warn but continue
         getLogger().warn("Rename returned {} renaming a nonexistent file", renamed);
-        assertFalse("Renaming a missing file returned true", renamed);
+        assertFalse(renamed, "Renaming a missing file returned true");
       }
     } catch (FileNotFoundException e) {
       if (renameReturnsFalseOnFailure) {
@@ -105,9 +105,9 @@ public abstract class AbstractContractRenameTest extends
     boolean renameOverwritesDest = isSupported(RENAME_OVERWRITES_DEST);
     boolean renameReturnsFalseOnRenameDestExists =
         isSupported(RENAME_RETURNS_FALSE_IF_DEST_EXISTS);
-    assertFalse(RENAME_OVERWRITES_DEST + " and " +
-        RENAME_RETURNS_FALSE_IF_DEST_EXISTS + " cannot be both supported",
-        renameOverwritesDest && renameReturnsFalseOnRenameDestExists);
+    assertFalse(renameOverwritesDest && renameReturnsFalseOnRenameDestExists,
+        RENAME_OVERWRITES_DEST + " and " +
+        RENAME_RETURNS_FALSE_IF_DEST_EXISTS + " cannot be both supported");
     String expectedTo = "expected rename(" + srcFile + ", " + destFile + ") to ";
 
     boolean destUnchanged = true;
@@ -117,11 +117,10 @@ public abstract class AbstractContractRenameTest extends
       destUnchanged = !renamed;
 
       if (renameOverwritesDest) {
-        assertTrue(expectedTo + "overwrite destination, but got false",
-            renamed);
+        assertTrue(renamed, expectedTo + "overwrite destination, but got false");
       } else if (renameReturnsFalseOnRenameDestExists) {
-        assertFalse(expectedTo + "be rejected with false, but destination " +
-            "was overwritten", renamed);
+        assertFalse(renamed, expectedTo + "be rejected with false, but destination " +
+            "was overwritten");
       } else if (renamed) {
         String destDirLS = generateAndLogErrorListing(srcFile, destFile);
         getLogger().error("dest dir {}", destDirLS);
@@ -133,10 +132,10 @@ public abstract class AbstractContractRenameTest extends
     } catch (FileAlreadyExistsException e) {
       // rename(file, file2) should throw exception iff
       // it neither overwrites nor returns false
-      assertFalse(expectedTo + "overwrite destination, but got exception",
-          renameOverwritesDest);
-      assertFalse(expectedTo + "be rejected with false, but got exception",
-          renameReturnsFalseOnRenameDestExists);
+      assertFalse(renameOverwritesDest,
+          expectedTo + "overwrite destination, but got exception");
+      assertFalse(renameReturnsFalseOnRenameDestExists,
+          expectedTo + "be rejected with false, but got exception");
 
       handleExpectedException(e);
     }
@@ -170,7 +169,7 @@ public abstract class AbstractContractRenameTest extends
     assertIsFile(destFilePath);
     assertIsDirectory(renamedSrc);
     verifyFileContents(fs, destFilePath, destData);
-    assertTrue("rename returned false though the contents were copied", rename);
+    assertTrue(rename, "rename returned false though the contents were copied");
   }
 
   @Test
@@ -348,7 +347,7 @@ public abstract class AbstractContractRenameTest extends
       outcome = "rename raised an exception: " + e;
     }
     assertPathDoesNotExist("after " + outcome, renameTarget);
-    assertFalse(outcome, renamed);
+    assertFalse(renamed, outcome);
     assertPathExists(action, renameSrc);
   }
 

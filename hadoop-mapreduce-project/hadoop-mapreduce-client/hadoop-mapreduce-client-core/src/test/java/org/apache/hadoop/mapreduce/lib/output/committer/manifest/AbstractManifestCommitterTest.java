@@ -36,7 +36,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -309,6 +310,7 @@ public abstract class AbstractManifestCommitterTest
     return enableManifestCommitter(super.createConfiguration());
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
 
@@ -444,7 +446,7 @@ public abstract class AbstractManifestCommitterTest
   /**
    * Make sure there's no thread leakage.
    */
-  @AfterClass
+  @AfterAll
   public static void threadLeakage() {
     THREAD_LEAK_TRACKER.assertNoThreadLeakage();
   }
@@ -452,7 +454,7 @@ public abstract class AbstractManifestCommitterTest
   /**
    * Dump the filesystem statistics after the class.
    */
-  @AfterClass
+  @AfterAll
   public static void dumpFileSystemIOStatistics() {
     LOG.info("Aggregate FileSystem Statistics {}",
         ioStatisticsToPrettyString(FILESYSTEM_IOSTATS));

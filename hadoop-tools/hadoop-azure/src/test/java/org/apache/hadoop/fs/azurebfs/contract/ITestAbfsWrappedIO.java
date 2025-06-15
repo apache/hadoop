@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.contract;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.io.wrappedio.impl.TestWrappedIO;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Test WrappedIO access to ABFS.
@@ -35,6 +36,7 @@ public class ITestAbfsWrappedIO extends TestWrappedIO {
       this.isSecure = binding.isSecureMode();
     }
 
+    @BeforeEach
     @Override
     public void setup() throws Exception {
       binding.setup();

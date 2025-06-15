@@ -27,7 +27,9 @@ import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -168,6 +170,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   /**
    * The setup phase includes creating the test objects.
    */
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -183,6 +186,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    * Teardown deletes the objects created before
    * the superclass does the directory cleanup.
    */
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     if (s3client != null) {
@@ -515,8 +519,8 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     head(srcKey);
     Path dest = markerDir;
     // renamed into the dest dir
-    assertFalse("rename(" + src + ", " + dest + ") should have failed",
-        getFileSystem().rename(src, dest));
+    assertFalse(getFileSystem().rename(src, dest),
+        "rename(" + src + ", " + dest + ") should have failed");
     // source is still there
     assertIsDirectory(src);
     head(srcKey);
@@ -654,7 +658,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    * @param stat status object
    */
   private void assertIsFileAtPath(final Path path, final FileStatus stat) {
-    assertTrue("Is not file " + stat, stat.isFile());
+    assertTrue(stat.isFile(), "Is not file " + stat);
     assertPathEquals(path, stat);
   }
 
@@ -664,8 +668,8 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    * @param stat status object
    */
   private void assertPathEquals(final Path path, final FileStatus stat) {
-    assertEquals("filename is not the expected path :" + stat,
-        path, stat.getPath());
+    assertEquals(path, stat.getPath(),
+        "filename is not the expected path :" + stat);
   }
 
   /**
@@ -719,8 +723,8 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    */
   private void assertRenamed(final Path src, final Path dest)
       throws IOException {
-    assertTrue("rename(" + src + ", " + dest + ") failed",
-        getFileSystem().rename(src, dest));
+    assertTrue(getFileSystem().rename(src, dest),
+        "rename(" + src + ", " + dest + ") failed");
   }
 
   /**

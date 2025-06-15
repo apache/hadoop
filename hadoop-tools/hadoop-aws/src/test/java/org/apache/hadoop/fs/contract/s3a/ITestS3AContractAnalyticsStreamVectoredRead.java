@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.contract.s3a;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.junit.jupiter.api.BeforeEach;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.enableAnalyticsAccelerator;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipForAnyEncryptionExceptSSES3;
@@ -35,8 +36,13 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipForAnyEncryptionExceptSS
  */
 public class ITestS3AContractAnalyticsStreamVectoredRead extends AbstractContractVectoredReadTest {
 
-  public ITestS3AContractAnalyticsStreamVectoredRead(String bufferType) {
-    super(bufferType);
+  public ITestS3AContractAnalyticsStreamVectoredRead() {
+  }
+
+  @BeforeEach
+  @Override
+  public void setup() throws Exception {
+    super.setup();
   }
 
   /**

@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.contract;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +57,7 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
       LoggerFactory.getLogger(AbstractContractRootDirectoryTest.class);
   public static final int OBJECTSTORE_RETRY_TIMEOUT = 30000;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -230,16 +232,16 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
         fs.listLocatedStatus(root));
     String locatedStatusResult = join(locatedStatusList, "\n");
 
-    assertEquals("listStatus(/) vs listLocatedStatus(/) with \n"
-            + "listStatus =" + listStatusResult
-            +" listLocatedStatus = " + locatedStatusResult,
-        statuses.length, locatedStatusList.size());
+    assertEquals(statuses.length,
+        locatedStatusList.size(), "listStatus(/) vs listLocatedStatus(/) with \n"
+        + "listStatus =" + listStatusResult
+        +" listLocatedStatus = " + locatedStatusResult);
     List<LocatedFileStatus> fileList = toList(fs.listFiles(root, false));
     String listFilesResult = join(fileList, "\n");
-    assertTrue("listStatus(/) vs listFiles(/, false) with \n"
-            + "listStatus = " + listStatusResult
-            + "listFiles = " + listFilesResult,
-        fileList.size() <= statuses.length);
+    assertTrue(fileList.size() <= statuses.length,
+        "listStatus(/) vs listFiles(/, false) with \n"
+        + "listStatus = " + listStatusResult
+        + "listFiles = " + listFilesResult);
     List<FileStatus> statusList = (List<FileStatus>) iteratorToList(
             fs.listStatusIterator(root));
     Assertions.assertThat(statusList)

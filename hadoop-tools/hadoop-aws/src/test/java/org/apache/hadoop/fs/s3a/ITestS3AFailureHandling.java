@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteException;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -72,8 +72,8 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
    * @param readResult result
    */
   private void assertIsEOF(String operation, int readResult) {
-    assertEquals("Expected EOF from "+ operation
-        + "; got char " + (char) readResult, -1, readResult);
+    assertEquals(-1, readResult, "Expected EOF from "+ operation
+        + "; got char " + (char) readResult);
   }
 
   @Test
