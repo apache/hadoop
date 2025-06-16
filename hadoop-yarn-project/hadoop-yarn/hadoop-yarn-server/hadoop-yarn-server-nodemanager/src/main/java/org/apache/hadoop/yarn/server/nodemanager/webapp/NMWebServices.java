@@ -275,7 +275,6 @@ public class NMWebServices {
 
   @GET
   @Path("/jstack/{numberOfJStack}")
-  @Produces({MediaType.TEXT_PLAIN})
   public Response getNodeThreadDump(@PathParam("numberOfJStack") String numberOfJStack)
   { // Make sure the NodeManager have python3 install
     try {

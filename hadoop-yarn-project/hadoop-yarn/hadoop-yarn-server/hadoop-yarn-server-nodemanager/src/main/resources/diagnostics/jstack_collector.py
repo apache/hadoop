@@ -78,11 +78,11 @@ def main():
 
     if "app" in sys.argv[0] > 1:
         app_id = sys.argv[1]
-        number_of_jstack= sys.argv[2]
+        number_of_jstack= int(sys.argv[2])
         pids = get_app_pid(app_id)
     else:
         pids = get_nodemanager_pid()
-        number_of_jstack = sys.argv[1]
+        number_of_jstack = int(sys.argv[1])
 
     if not pids:
         print("No active process id in this NodeManager.")
