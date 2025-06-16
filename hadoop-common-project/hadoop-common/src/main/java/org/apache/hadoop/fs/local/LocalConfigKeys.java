@@ -57,6 +57,13 @@ public class LocalConfigKeys extends CommonConfigurationKeys {
       DataChecksum.Type.CRC32;
   public static final String KEY_PROVIDER_URI_DEFAULT = "";
 
+  /**
+   * Verify checksums on read -default is true.
+   * <p>
+   * {@value}.
+   */
+  public static final String LOCAL_FS_VERIFY_CHECKSUM = "fs.file.checksum.verify";
+
   public static FsServerDefaults getServerDefaults() throws IOException {
     return new FsServerDefaults(
         BLOCK_SIZE_DEFAULT,

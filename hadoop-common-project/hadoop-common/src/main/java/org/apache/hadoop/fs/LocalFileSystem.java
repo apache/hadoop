@@ -27,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
-import static org.apache.hadoop.fs.LocalFileSystemConfigKeys.LOCAL_FS_VERIFY_CHECKSUM;
+import static org.apache.hadoop.fs.local.LocalConfigKeys.LOCAL_FS_VERIFY_CHECKSUM;
 
 /****************************************************************
  * Implement the FileSystem API for the checksumed local filesystem.
