@@ -20,15 +20,17 @@
 package org.apache.hadoop.fs.impl;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.io.ByteBufferPool;
+
+import static java.lang.System.identityHashCode;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A wrapper {@link ByteBufferPool} implementation that tracks whether all allocated buffers
@@ -40,7 +42,7 @@ import org.apache.hadoop.io.ByteBufferPool;
  * To be used for testing only.
  * <p>
  * The stacktraces of the allocation are not stored by default because
- * it can significantly decreases the unit test performance.
+ * it can significantly decrease the unit test performance.
  * Configuring this class to log at DEBUG will trigger their collection.
  * @see ByteBufferAllocationStacktraceException
  * <p>
@@ -57,45 +59,6 @@ public final class TrackingByteBufferPool implements ByteBufferPool, AutoCloseab
    */
   public static TrackingByteBufferPool wrap(ByteBufferPool allocator) {
     return new TrackingByteBufferPool(allocator);
-  }
-
-  /**
-   * Key for the tracker map.
-   * This uses the identity hash code of the buffer as the hash code
-   * for the map.
-   */
-  private static class Key {
-
-    private final int hashCode;
-
-    private final ByteBuffer buffer;
-
-    Key(ByteBuffer buffer) {
-      hashCode = System.identityHashCode(buffer);
-      this.buffer = buffer;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      Key key = (Key) o;
-      return this.buffer == key.buffer;
-    }
-
-    @Override
-    public int hashCode() {
-      return hashCode;
-    }
-
-    @Override
-    public String toString() {
-      return buffer.toString();
-    }
   }
 
   public static class LeakDetectorHeapByteBufferPoolException
@@ -166,7 +129,8 @@ public final class TrackingByteBufferPool implements ByteBufferPool, AutoCloseab
 
     private ReleasingUnallocatedByteBufferException(final ByteBuffer b) {
       super(String.format("Releasing a ByteBuffer instance that is not allocated"
-          + " by this buffer pool or already been released: %s size %d", b, b.capacity()));
+          + " by this buffer pool or already been released: %s size %d; hash code %s",
+          b, b.capacity(), identityHashCode(b)));
     }
   }
 
@@ -200,8 +164,8 @@ public final class TrackingByteBufferPool implements ByteBufferPool, AutoCloseab
    * The key maps by the object id of the buffer, and refers to either a common stack trace
    * or one dynamically created for each allocation.
    */
-  private final Map<Key, ByteBufferAllocationStacktraceException> allocated =
-      new HashMap<>();
+  private final Map<ByteBuffer, ByteBufferAllocationStacktraceException> allocated =
+      new IdentityHashMap<>();
 
   /**
    * Wrapped buffer pool.
@@ -253,9 +217,9 @@ public final class TrackingByteBufferPool implements ByteBufferPool, AutoCloseab
     ByteBuffer buffer = allocator.getBuffer(direct, size);
     final ByteBufferAllocationStacktraceException ex =
         ByteBufferAllocationStacktraceException.create();
-    final Key key = new Key(buffer);
-    allocated.put(key, ex);
-    LOG.debug("Creating ByteBuffer:{} size {} {}", key.hashCode(), size, buffer, ex);
+    allocated.put(buffer, ex);
+    LOG.debug("Creating ByteBuffer:{} size {} {}",
+        identityHashCode(buffer), size, buffer, ex);
     return buffer;
   }
 
@@ -268,34 +232,31 @@ public final class TrackingByteBufferPool implements ByteBufferPool, AutoCloseab
    * If the buffer was not allocated by this pool, it throws
    * {@link ReleasingUnallocatedByteBufferException}.
    *
-   * @param b buffer to release
+   * @param buffer buffer to release
    * @throws ReleasingUnallocatedByteBufferException if the buffer was not allocated by this pool
    */
   @Override
-  public synchronized void putBuffer(ByteBuffer b)
+  public synchronized void putBuffer(ByteBuffer buffer)
       throws ReleasingUnallocatedByteBufferException {
 
     bufferReleases.incrementAndGet();
-    Objects.requireNonNull(b);
-    final Key key = new Key(b);
-    LOG.debug("Releasing ByteBuffer: {}: {}", key.hashCode(), b);
-    if (allocated.remove(key) == null) {
-      throw new ReleasingUnallocatedByteBufferException(b);
+    requireNonNull(buffer);
+    LOG.debug("Releasing ByteBuffer: {}: {}", identityHashCode(buffer), buffer);
+    if (allocated.remove(buffer) == null) {
+      throw new ReleasingUnallocatedByteBufferException(buffer);
     }
-    allocator.putBuffer(b);
+    allocator.putBuffer(buffer);
     // Clearing the buffer so subsequent access would probably generate errors
-    b.clear();
+    buffer.clear();
   }
 
   /**
    * Check if the buffer is in the pool.
-   * @param b buffer
+   * @param buffer buffer
    * @return true if the buffer is in the pool
    */
-  public boolean containsBuffer(ByteBuffer b) {
-    Objects.requireNonNull(b);
-    final Key key = new Key(b);
-    return allocated.containsKey(key);
+  public boolean containsBuffer(ByteBuffer buffer) {
+    return allocated.containsKey(requireNonNull(buffer));
   }
 
   /**
@@ -315,8 +276,8 @@ public final class TrackingByteBufferPool implements ByteBufferPool, AutoCloseab
   @Override
   public void close() throws LeakedByteBufferException {
     if (!allocated.isEmpty()) {
-      allocated.keySet().forEach(key ->
-          LOG.warn("Unreleased ByteBuffer {}; {}", key.hashCode(), key));
+      allocated.keySet().forEach(buffer ->
+          LOG.warn("Unreleased ByteBuffer {}; {}", identityHashCode(buffer), buffer));
       LeakedByteBufferException ex = new LeakedByteBufferException(
           allocated.size(),
           allocated.values().iterator().next());

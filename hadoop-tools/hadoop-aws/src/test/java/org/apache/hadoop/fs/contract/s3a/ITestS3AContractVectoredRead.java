@@ -71,7 +71,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.apache.hadoop.test.MoreAsserts.assertEqual;
 
 /**
- * S3A contract tests for vectored reads.
+ * S3A contract tests for vectored reads through the classic input stream.
+ * <p>
  * This is a complex suite as it really is testing the store, so measurements of
  * what IO took place is also performed if the input stream is suitable for this.
  */
