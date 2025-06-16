@@ -274,12 +274,13 @@ public class NMWebServices {
   }
 
   @GET
-  @Path("/jstack")
+  @Path("/jstack/{numberOfJStack}")
   @Produces({MediaType.TEXT_PLAIN})
-  public Response getNodeJStack() {
+  public Response getNodeThreadDump(@PathParam("numberOfJStack") String numberOfJStack)
+  { // Make sure the NodeManager have python3 install
     try {
       return Response.status(Status.OK)
-              .entity(DiagnosticJStackService.collectNodeJStack())  // Make sure the NodeManager have python3 install
+              .entity(DiagnosticJStackService.collectNodeThreadDump(numberOfJStack))
               .build();
     } catch (Exception e) {
       throw new WebAppException("Error collection NodeManager JStack: " + e.getMessage() + ". " +
@@ -289,12 +290,14 @@ public class NMWebServices {
 
 
   @GET
-  @Path("/apps/{appid}/jstack")
+  @Path("/apps/{appid}/jstack/{numberOfJStack}")
   @Produces({MediaType.TEXT_PLAIN})
-  public Response getApplicationJStack(@PathParam("appid") String appId) {
+  public Response getApplicationJStack(@PathParam("appid") String appId,
+                                       @PathParam("numberOfJStack") String numberOfJStack)
+  { // Make sure the NodeManager have python3 install
     try {
       return Response.status(Status.OK)
-              .entity(DiagnosticJStackService.collectAppJStack(appId)) // Make sure the NodeManager have python3 install
+              .entity(DiagnosticJStackService.collectApplicationThreadDump(appId, numberOfJStack))
               .build();
     } catch (Exception e) {
       throw new WebAppException("Error collecting Application JStack: " + e.getMessage() + ". " +

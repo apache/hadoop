@@ -17,7 +17,6 @@
 import subprocess
 import sys
 
-NUMBER_OF_JSTACK = 3
 
 def get_nodemanager_pid():
     results = run_command("ps aux | grep nodemanager | grep -v grep")
@@ -46,11 +45,11 @@ def get_app_pid(app_id):
     return pids
 
 
-def execute_jstack(pids):
+def execute_jstack(pids, number_of_jstack):
     all_jstacks = []
 
     for pid in pids:
-        for i in range(NUMBER_OF_JSTACK):  # Get multiple jstack
+        for i in range(number_of_jstack):  # Get multiple jstack
             jstack_output = run_command("jstack", pid)
             all_jstacks.append("--- JStack iteration-{} for PID: {} ---\n{}".format(i, pid, jstack_output))
 
@@ -76,17 +75,20 @@ def run_command(*argv):
 def main():
 
     # app_id = "application_1748517687882_0013"
-    if len(sys.argv) > 1:
+
+    if "app" in sys.argv[0] > 1:
         app_id = sys.argv[1]
+        number_of_jstack= sys.argv[2]
         pids = get_app_pid(app_id)
     else:
         pids = get_nodemanager_pid()
+        number_of_jstack = sys.argv[1]
 
     if not pids:
         print("No active process id in this NodeManager.")
         sys.exit(0)
 
-    jstacks = execute_jstack(pids)
+    jstacks = execute_jstack(pids, number_of_jstack)
     print(jstacks)  # The Initiated java processBuilder will read this stdout
 
 

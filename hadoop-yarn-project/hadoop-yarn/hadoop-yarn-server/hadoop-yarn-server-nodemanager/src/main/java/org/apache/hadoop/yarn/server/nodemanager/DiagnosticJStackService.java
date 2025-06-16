@@ -50,13 +50,13 @@ public class DiagnosticJStackService {
         }
     }
 
-    public static String collectNodeJStack()
+    public static String collectNodeThreadDump(String numberOfJStack)
             throws Exception {
         if (Shell.WINDOWS) {
             throw new UnsupportedOperationException("Not implemented for Windows");
         }
 
-        ProcessBuilder pb = createProcessBuilder();
+        ProcessBuilder pb = createProcessBuilder(numberOfJStack);
 
         return executeCommand(pb);
 
@@ -64,29 +64,29 @@ public class DiagnosticJStackService {
 
 
 
-    public static String collectAppJStack(String appId)
+    public static String collectApplicationThreadDump(String appId, String numberOfJStack)
             throws Exception {
         if (Shell.WINDOWS) {
             throw new UnsupportedOperationException("Not implemented for Windows.");
         }
-        ProcessBuilder pb = createProcessBuilder(appId);
+        ProcessBuilder pb = createProcessBuilder(appId, numberOfJStack);
 
         LOG.info("Diagnostic process environment: {}", pb.environment());
 
         return executeCommand(pb);
     }
 
-    protected static ProcessBuilder createProcessBuilder() {
+    protected static ProcessBuilder createProcessBuilder(String numberOfJStack) {
         List<String> commandList =
-                new ArrayList<>(Arrays.asList(PYTHON_COMMAND, scriptLocation));
+                new ArrayList<>(Arrays.asList(PYTHON_COMMAND, scriptLocation, numberOfJStack));
 
         return new ProcessBuilder(commandList);
     }
 
 
-    protected static ProcessBuilder createProcessBuilder(String appId) {
+    protected static ProcessBuilder createProcessBuilder(String appId, String numberOfJStack) {
         List<String> commandList =
-                new ArrayList<>(Arrays.asList(PYTHON_COMMAND, scriptLocation, appId));
+                new ArrayList<>(Arrays.asList(PYTHON_COMMAND, scriptLocation, appId, numberOfJStack));
 
         return new ProcessBuilder(commandList);
     }
