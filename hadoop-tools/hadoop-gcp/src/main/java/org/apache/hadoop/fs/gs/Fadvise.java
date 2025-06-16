@@ -1,3 +1,5 @@
+package org.apache.hadoop.fs.gs;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -16,23 +18,6 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.gs;
-
-import javax.annotation.Nonnull;
-
-final class ListFileOptions {
-  static final ListFileOptions OBJECTFIELDS = new ListFileOptions("bucket,name,size,updated");
-
-  static final ListFileOptions DELETE_RENAME_LIST_OPTIONS =
-      new ListFileOptions("bucket,name,generation");
-
-  private final String fields;
-
-  private ListFileOptions(@Nonnull String fields) {
-    this.fields = fields;
-  }
-
-  String getFields() {
-    return fields;
-  }
+enum Fadvise {
+  RANDOM, SEQUENTIAL, AUTO, AUTO_RANDOM
 }
