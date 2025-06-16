@@ -22,12 +22,23 @@ import javax.annotation.Nonnull;
 
 import software.amazon.awssdk.arns.Arn;
 
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Represents an Arn Resource, this can be an accesspoint or bucket.
  */
 public final class ArnResource {
   private final static String S3_ACCESSPOINT_ENDPOINT_FORMAT = "s3-accesspoint.%s.amazonaws.com";
   private final static String S3_OUTPOSTS_ACCESSPOINT_ENDPOINT_FORMAT = "s3-outposts.%s.amazonaws.com";
+  private final static String S3_EXPRESS_ACCESSPOINT_ENDPOINT_FORMAT = "s3express-%s.%s.amazonaws.com";
+  
+  // bucket example: mybucket--usw2-az1--x-s3
+  // access point example: myaccesspoint--usw2-az1--xa-s3
+  public final static Pattern S3_EXPRESS_RESOURCE_FORMAT_REGEX = Pattern.compile(
+    String.format("^(?<apname>[a-z0-9]([a-z0-9\\-]*[a-z0-9])?)--(?<zoneId>[a-z0-9\\-]+)--(?<resource>x|xa)-s3$")
+  );
 
   /**
    * Resource name.
@@ -55,23 +66,33 @@ public final class ArnResource {
   private final String partition;
 
   /**
+   * Service for the resource. Allowed services: s3, s3-outposts, s3express
+   */
+  private final String service;
+
+  /**
    * Because of the different ways an endpoint can be constructed depending on partition we're
    * relying on the AWS SDK to produce the endpoint. In this case we need a region key of the form
    * {@code String.format("accesspoint-%s", awsRegion)}
    */
   private final String accessPointRegionKey;
 
-  private ArnResource(String name, String owner, String region, String partition, String fullArn) {
+  private ArnResource(String name, String owner, String region, String partition, String fullArn, String service) {
     this.name = name;
     this.ownerAccountId = owner;
     this.region = region;
     this.partition = partition;
     this.fullArn = fullArn;
+    this.service = service;
     this.accessPointRegionKey = String.format("accesspoint-%s", region);
   }
 
   private boolean isOutposts(){
     return fullArn.contains("s3-outposts");
+  }
+
+  private boolean isExpress(){
+    return fullArn.contains("s3express");
   }
 
   /**
@@ -107,12 +128,34 @@ public final class ArnResource {
   }
 
   /**
+   * Service for resource.
+   * @return service for resource.
+   */
+  public String getService() {
+    return service;
+  }
+
+  /**
    * Formatted endpoint for the resource.
    * @return resource endpoint.
    */
   public String getEndpoint() {
-    String format = isOutposts() ? S3_OUTPOSTS_ACCESSPOINT_ENDPOINT_FORMAT : S3_ACCESSPOINT_ENDPOINT_FORMAT;
-    return String.format(format, region);
+    String format;
+    if(isExpress()) {
+      Optional<String> zoneId = getZoneIdFromResourceName(name);
+      if(zoneId.isEmpty()) {
+        throw new IllegalArgumentException("Zone ID could not be extracted from S3Express resource name: " + name);
+      }
+
+      format = S3_EXPRESS_ACCESSPOINT_ENDPOINT_FORMAT;
+      return String.format(format, zoneId.get(), region);
+    } else if (isOutposts()) {
+      format = S3_OUTPOSTS_ACCESSPOINT_ENDPOINT_FORMAT;
+      return String.format(format, region);
+    } else {
+      format = S3_ACCESSPOINT_ENDPOINT_FORMAT;
+      return String.format(format, region);
+    }
   }
 
   /**
@@ -134,6 +177,14 @@ public final class ArnResource {
 
     String resourceName = parsed.resource().resource();
     return new ArnResource(resourceName, parsed.accountId().get(), parsed.region().get(),
-        parsed.partition(), arn);
+        parsed.partition(), arn, parsed.service());
+  }
+
+  private static Optional<String> getZoneIdFromResourceName(final String resourceName) {    
+    return Optional.ofNullable(resourceName)
+        .map(name -> {
+            Matcher matcher = S3_EXPRESS_RESOURCE_FORMAT_REGEX.matcher(name);
+            return matcher.matches() ? matcher.group("zoneId") : null;
+        });
   }
 }

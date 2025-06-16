@@ -598,7 +598,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       if (!configuredArn.isEmpty()) {
         accessPoint = ArnResource.accessPointFromArn(configuredArn);
         LOG.info("Using AccessPoint ARN \"{}\" for bucket {}", configuredArn, bucket);
-        bucket = accessPoint.getFullArn();
+
+        // s3express does not support ARNs in requests, but instead takes in access point name as bucket paramater
+        if(accessPoint.getService().equals("s3express")) {
+          bucket = accessPoint.getName();
+        } else {
+          bucket = accessPoint.getFullArn();
+        }
       } else if (conf.getBoolean(AWS_S3_ACCESSPOINT_REQUIRED, false)) {
         LOG.warn("Access Point usage is required because \"{}\" is enabled," +
             " but not configured for the bucket: {}", AWS_S3_ACCESSPOINT_REQUIRED, bucket);
