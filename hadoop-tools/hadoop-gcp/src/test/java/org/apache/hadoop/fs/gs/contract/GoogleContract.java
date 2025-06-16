@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.gs.contract;
 
-import org.apache.hadoop.fs.gs.TestConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
 
@@ -29,12 +28,6 @@ public class GoogleContract extends AbstractBondedFSContract {
   public GoogleContract(Configuration conf) {
     super(conf);
     addConfResource(CONTRACT_XML);
-    conf.set("fs.contract.test.fs.gs", "gs://arunchacko-oss-test-bucket"); // TODO:
-
-    TestConfiguration testConf = TestConfiguration.getInstance();
-    if (testConf.getProjectId() != null) {
-      conf.set("fs.gs.project.id", testConf.getProjectId());
-    }
   }
 
   @Override
