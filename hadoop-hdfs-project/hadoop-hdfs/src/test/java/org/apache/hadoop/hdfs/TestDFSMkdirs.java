@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.*;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
@@ -30,7 +28,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.util.Time;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * This class tests that the DFS command mkdirs only creates valid
@@ -106,10 +108,10 @@ public class TestDFSMkdirs {
       } catch (IOException e) {
         expectedException = e;
       }
-      assertTrue("Create a directory when parent dir exists as file using"
-          + " mkdir() should throw ParentNotDirectoryException ",
-          expectedException != null
-              && expectedException instanceof ParentNotDirectoryException);
+      assertTrue(expectedException != null
+              && expectedException instanceof ParentNotDirectoryException,
+          "Create a directory when parent dir exists as file using"
+              + " mkdir() should throw ParentNotDirectoryException ");
       // Create a dir in a non-exist directory, should fail
       expectedException = null;
       try {
@@ -118,10 +120,10 @@ public class TestDFSMkdirs {
       } catch (IOException e) {
         expectedException = e;
       }
-      assertTrue("Create a directory in a non-exist parent dir using"
-          + " mkdir() should throw FileNotFoundException ",
-          expectedException != null
-              && expectedException instanceof FileNotFoundException);
+      assertTrue(expectedException != null
+              && expectedException instanceof FileNotFoundException,
+          "Create a directory in a non-exist parent dir using"
+              + " mkdir() should throw FileNotFoundException ");
     } finally {
       dfs.close();
       cluster.shutdown();

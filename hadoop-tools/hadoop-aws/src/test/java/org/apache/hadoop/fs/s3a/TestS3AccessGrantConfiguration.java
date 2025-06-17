@@ -23,8 +23,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.assertj.core.api.AbstractStringAssert;
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.awscore.AwsClient;
 import software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsIdentityProvider;
 
@@ -32,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_ENABLED;
+import static org.assertj.core.api.Assertions.assertThat;
 
 
 /**
@@ -114,9 +114,8 @@ public class TestS3AccessGrantConfiguration extends AbstractHadoopTestBase {
       throws IOException, URISyntaxException {
     AwsClient awsClient = getAwsClient(configuration, asyncClient);
     AbstractStringAssert<?> assertion =
-        Assertions
-            .assertThat(S3_ACCESS_GRANTS_EXPECTED_CREDENTIAL_PROVIDER_CLASS)
-            .describedAs(message);
+        assertThat(S3_ACCESS_GRANTS_EXPECTED_CREDENTIAL_PROVIDER_CLASS)
+        .describedAs(message);
     if (shouldMatch) {
       assertion.isEqualTo(getCredentialProviderName(awsClient));
     } else {

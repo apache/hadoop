@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -36,8 +36,9 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +76,7 @@ public class TestCrcCorruption {
 
   private DFSClientFaultInjector faultInjector;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     faultInjector = Mockito.mock(DFSClientFaultInjector.class);
     DFSClientFaultInjector.set(faultInjector);
@@ -86,7 +87,8 @@ public class TestCrcCorruption {
    * create/write. To recover from corruption while writing, at
    * least two replicas are needed.
    */
-  @Test(timeout=50000)
+  @Test
+  @Timeout(value = 50)
   public void testCorruptionDuringWrt() throws Exception {
     Configuration conf = new HdfsConfiguration();
     // Set short retry timeouts so this test runs faster
@@ -174,7 +176,7 @@ public class TestCrcCorruption {
       final String bpid = cluster.getNamesystem().getBlockPoolId();
       List<ReplicaInfo> replicas =
           dn.getFSDataset().getFinalizedBlocks(bpid);
-      assertTrue("Replicas do not exist", !replicas.isEmpty());
+      assertTrue(!replicas.isEmpty(), "Replicas do not exist");
 
       for (int idx = 0; idx < replicas.size(); idx++) {
         ReplicaInfo replica = replicas.get(idx);
@@ -196,8 +198,8 @@ public class TestCrcCorruption {
       // Only one replica is possibly corrupted. The other replica should still
       // be good. Verify.
       //
-      assertTrue("Corrupted replicas not handled properly.",
-                 util.checkFiles(fs, "/srcdat"));
+      assertTrue(util.checkFiles(fs, "/srcdat"),
+          "Corrupted replicas not handled properly.");
       LOG.info("All File still have a valid replica");
 
       //
@@ -250,7 +252,8 @@ public class TestCrcCorruption {
    * there's no infinite loop, but rather it eventually
    * reports the exception to the client.
    */
-  @Test(timeout=300000) // 5 min timeout
+  @Test
+  @Timeout(value = 300)
   public void testEntirelyCorruptFileOneNode() throws Exception {
     doTestEntirelyCorruptFile(1);
   }
@@ -263,7 +266,8 @@ public class TestCrcCorruption {
    * times out, this suggests that the client is retrying
    * indefinitely.
    */
-  @Test(timeout=300000) // 5 min timeout
+  @Test
+  @Timeout(value = 300)
   public void testEntirelyCorruptFileThreeNodes() throws Exception {
     doTestEntirelyCorruptFile(3);
   }
@@ -287,7 +291,7 @@ public class TestCrcCorruption {
 
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, file);
       int blockFilesCorrupted = cluster.corruptBlockOnDataNodes(block);
-      assertEquals("All replicas not corrupted", replFactor, blockFilesCorrupted);
+      assertEquals(replFactor, blockFilesCorrupted, "All replicas not corrupted");
 
       try {
         IOUtils.copyBytes(fs.open(file), new IOUtils.NullOutputStream(), conf,

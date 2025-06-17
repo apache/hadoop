@@ -38,8 +38,8 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,7 +87,7 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
 
   private AuditManagerS3A manager;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     requestFactory = RequestFactoryImpl.builder()
         .withBucket("bucket")
@@ -103,7 +103,7 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
    */
   protected abstract Configuration createConfig();
 
-  @After
+  @AfterEach
   public void teardown() {
     stopQuietly(manager);
   }

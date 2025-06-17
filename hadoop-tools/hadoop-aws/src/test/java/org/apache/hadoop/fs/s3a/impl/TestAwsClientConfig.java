@@ -21,9 +21,8 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.time.Duration;
 import java.util.Arrays;
 
-import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +49,7 @@ import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.createApiConnectionSettings;
 import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.createConnectionSettings;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.enforceMinimumDuration;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link AWSClientConfig}.
@@ -62,7 +62,7 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAwsClientConfig.class);
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     AWSClientConfig.resetMinimumOperationDuration();
   }
@@ -84,13 +84,13 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
     final Duration s10 = Duration.ofSeconds(10);
     final Duration s1 = Duration.ofSeconds(1);
 
-    Assertions.assertThat(enforceMinimumDuration("key", s1, s10))
+    assertThat(enforceMinimumDuration("key", s1, s10))
         .describedAs("10s")
         .isEqualTo(s10);
 
     // and a null check
-    Assertions.assertThat(enforceMinimumDuration("key",
-           s1, null))
+    assertThat(enforceMinimumDuration("key",
+        s1, null))
         .describedAs("10s")
         .isEqualTo(s1);
   }
@@ -112,10 +112,10 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
         conn.getEstablishTimeout());
     assertDuration(SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT_DURATION,
         conn.getSocketTimeout());
-    Assertions.assertThat(conn.getMaxConnections())
+    assertThat(conn.getMaxConnections())
         .describedAs(MAXIMUM_CONNECTIONS)
         .isEqualTo(DEFAULT_MAXIMUM_CONNECTIONS);
-    Assertions.assertThat(conn.isKeepAlive())
+    assertThat(conn.isKeepAlive())
         .describedAs(CONNECTION_KEEPALIVE)
         .isEqualTo(DEFAULT_CONNECTION_KEEPALIVE);
   }
@@ -158,7 +158,7 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
    * @param actual actual duration
    */
   private void assertDuration(String name, Duration expected, Duration actual) {
-    Assertions.assertThat(actual)
+    assertThat(actual)
         .describedAs("Duration of %s", name)
         .isEqualTo(expected);
   }
@@ -172,7 +172,7 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
     conf.set(REQUEST_TIMEOUT, "1h");
     final AWSClientConfig.ClientSettings settings =
         createApiConnectionSettings(conf);
-    Assertions.assertThat(settings.getApiCallTimeout())
+    assertThat(settings.getApiCallTimeout())
         .describedAs("%s in %s", REQUEST_TIMEOUT, settings)
         .isEqualTo(Duration.ofHours(1));
   }
@@ -184,7 +184,7 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
   @Test
   public void testCreateApiConnectionSettingsDefault() {
     final Configuration conf = new Configuration();
-    Assertions.assertThat(conf.get(REQUEST_TIMEOUT))
+    assertThat(conf.get(REQUEST_TIMEOUT))
         .describedAs("Request timeout %s", REQUEST_TIMEOUT)
         .isNull();
 
