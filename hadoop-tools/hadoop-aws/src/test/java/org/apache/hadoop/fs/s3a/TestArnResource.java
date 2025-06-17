@@ -58,10 +58,10 @@ public class TestArnResource extends HadoopTestBase {
       String partition = testPair[1];
 
       ArnResource resource = getArnResourceFrom(partition, "s3", region, MOCK_ACCOUNT, accessPoint);
-      // assertEquals(accessPoint, resource.getName(), "Access Point name does not match");
-      // assertEquals(MOCK_ACCOUNT, resource.getOwnerAccountId(), "Account Id does not match");
-      // assertEquals(region, resource.getRegion(), "Region does not match");
-      // assertEquals("s3", resource.getService(), "Service does not match");
+      assertEquals(accessPoint, resource.getName(), "Access Point name does not match");
+      assertEquals(MOCK_ACCOUNT, resource.getOwnerAccountId(), "Account Id does not match");
+      assertEquals(region, resource.getRegion(), "Region does not match");
+      assertEquals("s3", resource.getService(), "Service does not match");
     }
   }
 
