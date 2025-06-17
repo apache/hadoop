@@ -118,7 +118,7 @@
     <ldap-api.version>2.0.0</ldap-api.version>
 
     <!-- Apache Commons dependencies -->
-    <commons-beanutils.version>1.9.4</commons-beanutils.version>
+    <commons-beanutils.version>1.11.0</commons-beanutils.version>
     <commons-cli.version>1.5.0</commons-cli.version>
     <commons-codec.version>1.15</commons-codec.version>
     <commons-collections.version>3.2.2</commons-collections.version>
