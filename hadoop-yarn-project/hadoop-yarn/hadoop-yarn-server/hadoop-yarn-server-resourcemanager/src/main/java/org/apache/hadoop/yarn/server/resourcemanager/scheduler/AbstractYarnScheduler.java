@@ -692,8 +692,8 @@ public abstract class AbstractYarnScheduler
               request.getCapability());
       int numContainerAllocated = allocatedContainerMap.getOrDefault(containerObjectType,
           Collections.emptyList()).size();
-      if (numContainerAllocated > 0) {
-        int numContainerAsk = request.getNumContainers();
+      int numContainerAsk = request.getNumContainers();
+      if (numContainerAllocated > 0 && numContainerAsk > 0) {
         int updatedContainerRequest = numContainerAsk - numContainerAllocated;
         if (updatedContainerRequest < 0) {
           // add an entry to extra allocated map
