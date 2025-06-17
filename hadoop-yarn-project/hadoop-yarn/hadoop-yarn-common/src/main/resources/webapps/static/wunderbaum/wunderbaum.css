@@ -1,0 +1,554 @@
+@charset "UTF-8";
+/*!
+ * Wunderbaum style sheet (generated from wunderbaum.scss)
+ * Copyright (c) 2021-2025, Martin Wendt. Released under the MIT license.
+ * @VERSION, @DATE (https://github.com/mar10/wunderbaum)
+ */
+:root,
+:host {
+  --wb-font-stack: Helvetica, sans-serif;
+  --wb-error-color: #b5373b;
+  --wb-node-text-color: #56534c;
+  --wb-border-color: #56534c;
+  --wb-bg-highlight-color: #26a0da;
+  --wb-header-color: #dedede;
+  --wb-background-color: #ffffff;
+  --wb-alternate-row-color: #f7f7f7;
+  --wb-alternate-row-color-hover: #f3f3f3;
+  --wb-focus-border-color: #275dc5;
+  --wb-drop-source-color: rgb(211.3703703704, 209.6481481481, 205.6296296296);
+  --wb-drop-target-color: rgb(212.2834645669, 236.2992125984, 247.7165354331);
+  --wb-dim-color: rgb(139.5925925926, 135.037037037, 124.4074074074);
+  --wb-error-background-color: rgb(244.6292372881, 220.8707627119, 221.625);
+  --wb-hover-color: rgb(247.1401574803, 251.5590551181, 253.6598425197);
+  --wb-hover-border-color: rgb(247.1401574803, 251.5590551181, 253.6598425197);
+  --wb-grid-color: #dedede;
+  --wb-active-color: #e5f3fb;
+  --wb-active-cell-color: rgb(125.1417322835, 198.1496062992, 232.8582677165);
+  --wb-active-border-color: #70c0e7;
+  --wb-active-hover-color: #dceff8;
+  --wb-active-hover-border-color: #26a0da;
+  --wb-active-column-color: rgb(247.1401574803, 251.5590551181, 253.6598425197);
+  --wb-active-header-column-color: rgb(196.5, 196.5, 196.5);
+  --wb-active-color-grayscale: #f0f0f0;
+  --wb-active-border-color-grayscale: rgb(171.5, 171.5, 171.5);
+  --wb-active-hover-color-grayscale: #eaeaea;
+  --wb-active-cell-color-grayscale: #b3b3b3;
+  --wb-grid-color-grayscale: #dedede;
+  --wb-filter-dim-color: #dedede;
+  --wb-filter-submatch-color: #868581;
+  --wb-row-outer-height: 22px;
+  --wb-row-inner-height: 20px;
+  --wb-row-padding-y: 1px;
+  --wb-col-padding-x: 2px;
+  --wb-icon-outer-height: 20px;
+  --wb-icon-outer-width: 20px;
+  --wb-icon-height: 16px;
+  --wb-icon-width: 16px;
+  --wb-icon-padding-y: 2px;
+  --wb-icon-padding-x: 2px;
+  --wb-header-height: 22px;
+}
+
+div.wunderbaum * {
+  box-sizing: border-box;
+}
+
+div.wunderbaum {
+  height: 100%;
+  min-height: 4px;
+  background-color: var(--wb-background-color);
+  margin: 0;
+  padding: 0;
+  font-family: var(--wb-font-stack);
+  font-size: 14px;
+  color: var(--wb-node-text-color);
+  border: 2px solid var(--wb-border-color);
+  border-radius: 4px;
+  background-clip: content-box;
+  overflow-x: auto;
+  overflow-y: scroll;
+  /* --- FIXED-COLUMN --- */
+  /* Fixed column must be opaque, i.e. have the bg color set. */
+  /* --- GRID --- */
+  /* --- FILTER --- */
+  /* --- DND --- */
+  /* --- SPECIAL EFFECTS --- */
+  /* Colorize indentation levels. */
+  /* Fade out expanders, when container is not hovered or active */
+  /* Skeleton */
+  /* Auto-hide checkboxes unless selected or hovered */
+}
+div.wunderbaum:focus, div.wunderbaum:focus-within {
+  border-color: var(--wb-focus-border-color);
+}
+div.wunderbaum.wb-disabled {
+  opacity: 0.7;
+  pointer-events: none;
+}
+div.wunderbaum div.wb-list-container {
+  position: relative;
+  min-height: 4px;
+}
+div.wunderbaum div.wb-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  -webkit-user-select: none; /* Safari */
+  user-select: none;
+}
+div.wunderbaum div.wb-header,
+div.wunderbaum div.wb-list-container {
+  overflow: unset;
+}
+div.wunderbaum div.wb-row {
+  position: absolute;
+  width: 100%;
+  height: var(--wb-row-outer-height);
+  line-height: var(--wb-row-outer-height);
+  border: 1px solid transparent;
+}
+div.wunderbaum.wb-fixed-col span.wb-col:first-of-type {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: var(--wb-background-color);
+}
+div.wunderbaum.wb-fixed-col div.wb-header span.wb-col:first-of-type {
+  background-color: var(--wb-header-color);
+}
+div.wunderbaum.wb-fixed-col div.wb-node-list div.wb-row.wb-active span.wb-col:first-of-type, div.wunderbaum.wb-fixed-col div.wb-node-list div.wb-row.wb-selected span.wb-col:first-of-type {
+  background-color: var(--wb-active-color);
+}
+div.wunderbaum.wb-fixed-col div.wb-node-list div.wb-row.wb-active:hover span.wb-col:first-of-type, div.wunderbaum.wb-fixed-col div.wb-node-list div.wb-row.wb-selected:hover span.wb-col:first-of-type {
+  background-color: var(--wb-active-hover-color);
+}
+div.wunderbaum.wb-fixed-col div.wb-node-list div.wb-row:hover span.wb-col:first-of-type {
+  background-color: var(--wb-hover-color);
+}
+div.wunderbaum.wb-fixed-col:not(:focus-within) div.wb-node-list div.wb-row.wb-active span.wb-col:first-of-type, div.wunderbaum.wb-fixed-col:not(:focus-within) div.wb-node-list div.wb-row.wb-selected span.wb-col:first-of-type, div.wunderbaum.wb-fixed-col:not(:focus) div.wb-node-list div.wb-row.wb-active span.wb-col:first-of-type, div.wunderbaum.wb-fixed-col:not(:focus) div.wb-node-list div.wb-row.wb-selected span.wb-col:first-of-type {
+  background-color: var(--wb-active-color-grayscale);
+  border-color: var(--wb-active-border-color-grayscale);
+}
+div.wunderbaum.wb-fixed-col:not(:focus-within) div.wb-node-list div.wb-row.wb-active span.wb-col:first-of-type:hover span.wb-col:first-of-type, div.wunderbaum.wb-fixed-col:not(:focus-within) div.wb-node-list div.wb-row.wb-selected span.wb-col:first-of-type:hover span.wb-col:first-of-type, div.wunderbaum.wb-fixed-col:not(:focus) div.wb-node-list div.wb-row.wb-active span.wb-col:first-of-type:hover span.wb-col:first-of-type, div.wunderbaum.wb-fixed-col:not(:focus) div.wb-node-list div.wb-row.wb-selected span.wb-col:first-of-type:hover span.wb-col:first-of-type {
+  background-color: var(--wb-active-hover-color-grayscale);
+}
+div.wunderbaum:not(:focus-within) div.wb-node-list div.wb-row.wb-active, div.wunderbaum:not(:focus-within) div.wb-node-list div.wb-row.wb-selected, div.wunderbaum:not(:focus) div.wb-node-list div.wb-row.wb-active, div.wunderbaum:not(:focus) div.wb-node-list div.wb-row.wb-selected {
+  background-color: var(--wb-active-color-grayscale);
+  border-color: var(--wb-active-border-color-grayscale);
+}
+div.wunderbaum:not(:focus-within) div.wb-node-list div.wb-row.wb-active:hover, div.wunderbaum:not(:focus-within) div.wb-node-list div.wb-row.wb-selected:hover, div.wunderbaum:not(:focus) div.wb-node-list div.wb-row.wb-active:hover, div.wunderbaum:not(:focus) div.wb-node-list div.wb-row.wb-selected:hover {
+  background-color: var(--wb-active-hover-color-grayscale);
+}
+div.wunderbaum.wb-alternate div.wb-node-list div.wb-row:nth-of-type(even):not(.wb-active):not(.wb-selected) {
+  background-color: var(--wb-alternate-row-color);
+}
+div.wunderbaum.wb-alternate div.wb-node-list div.wb-row:nth-of-type(even):not(.wb-active):not(.wb-selected):hover {
+  background-color: var(--wb-alternate-row-color-hover);
+}
+div.wunderbaum div.wb-node-list div.wb-row:hover {
+  background-color: var(--wb-hover-color);
+}
+div.wunderbaum div.wb-node-list div.wb-row.wb-active, div.wunderbaum div.wb-node-list div.wb-row.wb-selected {
+  background-color: var(--wb-active-color);
+}
+div.wunderbaum div.wb-node-list div.wb-row.wb-active:hover, div.wunderbaum div.wb-node-list div.wb-row.wb-selected:hover {
+  background-color: var(--wb-active-hover-color);
+}
+div.wunderbaum div.wb-node-list div.wb-row.wb-focus:not(.wb-active) {
+  border-style: dotted;
+  border-color: var(--wb-active-border-color);
+}
+div.wunderbaum div.wb-node-list div.wb-row.wb-active {
+  border-style: solid;
+  border-color: var(--wb-active-border-color);
+}
+div.wunderbaum div.wb-node-list div.wb-row.wb-active:hover {
+  border-color: var(--wb-active-hover-border-color);
+}
+div.wunderbaum div.wb-node-list div.wb-row.wb-loading {
+  font-style: italic;
+}
+div.wunderbaum div.wb-node-list div.wb-row.wb-busy,
+div.wunderbaum div.wb-node-list div.wb-row i.wb-busy,
+div.wunderbaum div.wb-node-list div.wb-row .wb-col.wb-busy {
+  font-style: italic;
+  background: repeating-linear-gradient(45deg, transparent, transparent 3.88px, var(--wb-grid-color) 3.88px, var(--wb-grid-color) 7.78px);
+  animation: wb-busy-animation 2s linear infinite;
+}
+div.wunderbaum div.wb-node-list div.wb-row.wb-error, div.wunderbaum div.wb-node-list div.wb-row.wb-status-error {
+  color: var(--wb-error-color);
+}
+div.wunderbaum div.wb-header {
+  position: sticky;
+  height: var(--wb-header-height);
+  border-bottom: 1px solid var(--wb-border-color);
+  padding: 0;
+  background-color: var(--wb-header-color);
+}
+div.wunderbaum div.wb-header span.wb-col {
+  font-weight: bold;
+  overflow: visible;
+}
+div.wunderbaum div.wb-header span.wb-col-title {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+div.wunderbaum div.wb-header span.wb-col-resizer {
+  position: absolute;
+  top: 0;
+  right: -1px;
+  width: 3px;
+  border: none;
+  border-right: 2px solid var(--wb-border-color);
+  height: 100%;
+  -webkit-user-select: none;
+  user-select: none;
+}
+div.wunderbaum div.wb-header span.wb-col-resizer.wb-col-resizer-active {
+  cursor: col-resize;
+}
+div.wunderbaum div.wb-header i.wb-col-icon {
+  float: inline-end;
+  padding-left: 2px;
+}
+div.wunderbaum div.wb-header i.wb-col-icon:hover {
+  cursor: pointer;
+  color: var(--wb-focus-border-color);
+}
+div.wunderbaum span.wb-col {
+  position: absolute;
+  display: inline-block;
+  overflow: hidden;
+  height: var(--wb-row-inner-height);
+  line-height: var(--wb-row-inner-height);
+  padding: 0 var(--wb-col-padding-x);
+  border-right: 1px solid var(--wb-grid-color);
+  white-space: nowrap;
+}
+div.wunderbaum span.wb-col:last-of-type {
+  border-right: none;
+}
+div.wunderbaum span.wb-node {
+  -webkit-user-select: none;
+  user-select: none;
+  /* Fix Bootstrap Icon alignment */
+}
+div.wunderbaum span.wb-node i.wb-checkbox,
+div.wunderbaum span.wb-node i.wb-expander,
+div.wunderbaum span.wb-node i.wb-icon,
+div.wunderbaum span.wb-node i.wb-indent {
+  height: var(--wb-icon-outer-height);
+  width: var(--wb-icon-outer-width);
+  padding: var(--wb-icon-padding-y) var(--wb-icon-padding-x);
+  display: inline-block;
+}
+div.wunderbaum span.wb-node i.wb-expander,
+div.wunderbaum span.wb-node i.wb-icon {
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+div.wunderbaum span.wb-node i.bi::before {
+  vertical-align: baseline;
+}
+div.wunderbaum span.wb-node img.wb-icon {
+  width: var(--wb-icon-width);
+  height: var(--wb-icon-height);
+  padding: var(--wb-icon-padding-y) var(--wb-icon-padding-x);
+}
+div.wunderbaum span.wb-node i.wb-indent::before {
+  content: " ";
+}
+div.wunderbaum span.wb-node i.wb-expander.wb-spin,
+div.wunderbaum span.wb-node i.wb-icon.wb-spin {
+  height: unset;
+  width: unset;
+  padding: 0 3px;
+  animation: wb-spin-animation 2s linear infinite;
+}
+div.wunderbaum span.wb-node span.wb-title {
+  min-width: 1em;
+  vertical-align: top;
+  overflow-x: hidden;
+  display: inline-block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+div.wunderbaum.wb-grid div.wb-header div.wb-row span.wb-col:hover {
+  background-color: var(--wb-active-header-column-color);
+}
+div.wunderbaum.wb-grid.wb-cell-mode div.wb-header div.wb-row span.wb-col.wb-active {
+  background-color: var(--wb-active-hover-color);
+}
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row {
+  border-bottom-color: var(--wb-grid-color);
+}
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row:hover:not(.wb-active):not(.wb-selected) {
+  background-color: var(--wb-hover-color);
+}
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row.wb-active {
+  border-bottom-color: var(--wb-active-border-color);
+}
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col {
+  border-right: 1px solid var(--wb-grid-color);
+}
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col input.wb-input-edit,
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > input[type=color],
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > input[type=date],
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > input[type=datetime],
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > input[type=datetime-local],
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > input[type=email],
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > input[type=month],
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > input[type=number],
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > input[type=password],
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > input[type=search],
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > input[type=tel],
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > input[type=text],
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > input[type=time],
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > input[type=url],
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > input[type=week],
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > select {
+  width: 100%;
+  max-height: var(--wb-row-inner-height);
+  border: none;
+}
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > input:focus,
+div.wunderbaum.wb-grid div.wb-node-list div.wb-row span.wb-col > select:focus {
+  border: 1px dashed #70c0e7;
+}
+div.wunderbaum.wb-grid.wb-cell-mode div.wb-row:not(.wb-colspan).wb-active span.wb-col.wb-active {
+  background-color: var(--wb-active-cell-color-grayscale);
+}
+div.wunderbaum.wb-grid.wb-cell-mode:focus-within div.wb-row:not(.wb-colspan):not(.wb-selected) span.wb-col.wb-active, div.wunderbaum.wb-grid.wb-cell-mode:focus div.wb-row:not(.wb-colspan):not(.wb-selected) span.wb-col.wb-active {
+  background-color: var(--wb-active-column-color);
+}
+div.wunderbaum.wb-grid.wb-cell-mode:focus-within div.wb-row:not(.wb-colspan):not(.wb-selected).wb-active, div.wunderbaum.wb-grid.wb-cell-mode:focus div.wb-row:not(.wb-colspan):not(.wb-selected).wb-active {
+  background-color: var(--wb-active-column-color);
+}
+div.wunderbaum.wb-grid.wb-cell-mode:focus-within div.wb-row:not(.wb-colspan):not(.wb-selected).wb-active span.wb-col.wb-active, div.wunderbaum.wb-grid.wb-cell-mode:focus div.wb-row:not(.wb-colspan):not(.wb-selected).wb-active span.wb-col.wb-active {
+  background-color: var(--wb-active-cell-color);
+}
+div.wunderbaum.wb-grid.wb-alternate div.wb-node-list div.wb-row:nth-of-type(even):not(.wb-active):not(.wb-selected) {
+  background-color: var(--wb-alternate-row-color);
+}
+div.wunderbaum.wb-grid.wb-alternate div.wb-node-list div.wb-row:nth-of-type(even):not(.wb-active):not(.wb-selected):hover {
+  background-color: var(--wb-alternate-row-color-hover);
+}
+div.wunderbaum.wb-grid:not(:focus-within) div.wb-node-list div.wb-row, div.wunderbaum.wb-grid:not(:focus) div.wb-node-list div.wb-row {
+  border-bottom-color: var(--wb-grid-color-grayscale);
+}
+div.wunderbaum.wb-ext-filter-dim div.wb-node-list div.wb-row, div.wunderbaum.wb-ext-filter-hide div.wb-node-list div.wb-row {
+  color: var(--wb-filter-dim-color);
+}
+div.wunderbaum.wb-ext-filter-dim div.wb-node-list div.wb-row.wb-submatch, div.wunderbaum.wb-ext-filter-hide div.wb-node-list div.wb-row.wb-submatch {
+  color: var(--wb-filter-submatch-color);
+}
+div.wunderbaum.wb-ext-filter-dim div.wb-node-list div.wb-row.wb-match, div.wunderbaum.wb-ext-filter-hide div.wb-node-list div.wb-row.wb-match {
+  color: var(--wb-node-text-color);
+}
+div.wunderbaum.wb-ext-filter-hide.wb-ext-filter-hide-expanders div.wb-node-list div.wb-row:not(.wb-submatch) i.wb-expander {
+  visibility: hidden;
+}
+div.wunderbaum div.wb-row.wb-drag-source {
+  opacity: 0.5;
+}
+div.wunderbaum div.wb-row.wb-drag-source .wb-node {
+  background-color: var(--wb-drop-source-color);
+}
+div.wunderbaum div.wb-row.wb-drop-target {
+  overflow: visible;
+}
+div.wunderbaum div.wb-row.wb-drop-target .wb-node {
+  background-color: var(--wb-drop-target-color);
+  overflow: visible;
+}
+div.wunderbaum div.wb-row.wb-drop-target .wb-node .wb-icon {
+  position: relative;
+  overflow: visible;
+}
+div.wunderbaum div.wb-row.wb-drop-target .wb-node .wb-icon::after {
+  position: absolute;
+  z-index: 1000;
+  content: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAQCAMAAABA3o1rAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAACKUExURe/v9/f39+//7+f35+f/79bW5wgIawwYd97e55Tnpc731rjA2d7350LOY1LWa7Xvvf///wAQcyAze97e773vxnuczgA5pQBCpdb33rXvxu//9whjxgBaxlKU1oOz5ABz3gB73tbn99bW1rXe/wCM9xiU997v/97e3gCc/xil/9bv/wic/+/3/wAAALM9X5QAAAAudFJOU////////////////////////////////////////////////////////////wCCj3NVAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAqUlEQVQoU6WQ2w6CMAxA54agsCHq1HlFBREv/f/fs1tHAoaoiedlbXrWtGXwhV8FNqAXuAi4DwkShmE0cgGIcSwCCgkSkrAxpEonot0DhQxJptFsbnOpdNdgsFh6VtYwyqzTmG+oijDY7hr22E4qY7QybeGQe46nsxP0Wwc3Q1GWl+qKec8MlqKubxX+xzV7tkDuD1+3d+heigT2zGx/hCMUeUj4wL8CwAsW1kqCTugMCwAAAABJRU5ErkJggg==);
+  left: 0;
+  top: calc((22px - var(--wb-icon-height)) / 2);
+}
+div.wunderbaum div.wb-row.wb-drop-target.wb-drop-before .wb-node .wb-icon::after,
+div.wunderbaum div.wb-row.wb-drop-target.wb-drop-after .wb-node .wb-icon::after {
+  content: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAQCAMAAACROYkbAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAACNUExURe/v9/f39+//7+f35+f/79bW5wgIawwYd97e55Tnpc731rjA2d7350LOY1LWa7Xvvf///wAQcyAze97e773vxgAAAHuczgA5pQBCpdb33rXvxu//9whjxgBaxlKU1oOz5ABz3gB73tbn99bW1rXe/wCM9xiU997v/97e3gCc/xil/9bv/wic/+/3/wAAAParqS4AAAAvdFJOU/////////////////////////////////////////////////////////////8AWqU49wAAAAlwSFlzAAAOwwAADsMBx2+oZAAAALlJREFUOE/FktsSgiAQhglMS8WstKLzQTM77Ps/XguL16I208cFyzB8/LPAYCC/ErARzcCFx23pBgnGfjAxBYhpKDwq3SBB5DeGWCYz0SUDClIkmgeLpV7HMiNDbrbbYbBaWzbaoKTaJiHfQe5oYLA/NBwxTiyVyqTSghYwox4MTmfL5XozgqxjAtODoizv1QPXPXqgKer6WeH9+Iw9XgF5ve15/Q+6/SQSsE+q8yMcocoREgzg3wKAL4vrpBIKREShAAAAAElFTkSuQmCC);
+  left: 0;
+  top: calc((22px - var(--wb-icon-height)) / 2 - 11px);
+}
+div.wunderbaum div.wb-row.wb-drop-target.wb-drop-after .wb-node .wb-icon::after {
+  top: calc((22px - var(--wb-icon-height)) / 2 + 11px);
+}
+div.wunderbaum.wb-rainbow i.wb-expander:nth-child(4n+1),
+div.wunderbaum.wb-rainbow i.wb-indent:nth-child(4n+1) {
+  background: rgb(255, 255, 201);
+}
+div.wunderbaum.wb-rainbow i.wb-expander:nth-child(4n+2),
+div.wunderbaum.wb-rainbow i.wb-indent:nth-child(4n+2) {
+  background: rgb(218, 255, 218);
+}
+div.wunderbaum.wb-rainbow i.wb-expander:nth-child(4n+3),
+div.wunderbaum.wb-rainbow i.wb-indent:nth-child(4n+3) {
+  background: rgb(255, 217, 254);
+}
+div.wunderbaum.wb-rainbow i.wb-expander:nth-child(4n+4),
+div.wunderbaum.wb-rainbow i.wb-indent:nth-child(4n+4) {
+  background: rgb(204, 250, 250);
+}
+div.wunderbaum.wb-fade-expander i.wb-expander {
+  transition: color 1.5s;
+  color: rgba(86, 83, 76, 0);
+}
+div.wunderbaum.wb-fade-expander div.wb-row.wb-loading i.wb-expander, div.wunderbaum.wb-fade-expander:hover i.wb-expander, div.wunderbaum.wb-fade-expander:focus i.wb-expander, div.wunderbaum.wb-fade-expander:focus-within i.wb-expander,
+div.wunderbaum.wb-fade-expander [class*=wb-statusnode-] i.wb-expander {
+  transition: color 0.6s;
+  color: var(--wb-node-text-color);
+}
+div.wunderbaum div.wb-row.wb-skeleton span.wb-title,
+div.wunderbaum div.wb-row.wb-skeleton i.wb-icon {
+  animation: wb-skeleton-animation 1s linear infinite alternate;
+  border-radius: 0.25em;
+  color: transparent;
+  opacity: 0.7;
+}
+div.wunderbaum.wb-checkbox-auto-hide i.wb-checkbox {
+  visibility: hidden;
+}
+div.wunderbaum.wb-checkbox-auto-hide .wb-row:hover i.wb-checkbox,
+div.wunderbaum.wb-checkbox-auto-hide .wb-row.wb-selected i.wb-checkbox {
+  visibility: unset;
+}
+div.wunderbaum.wb-checkbox-auto-hide:focus .wb-row.wb-active i.wb-checkbox, div.wunderbaum.wb-checkbox-auto-hide:focus-within .wb-row.wb-active i.wb-checkbox {
+  visibility: unset;
+}
+
+/* --- TOOL CLASSES --- */
+a.wb-breadcrumb {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.wb-helper-center {
+  text-align: center;
+}
+
+.wb-helper-disabled {
+  color: var(--wb-dim-color);
+}
+
+.wb-helper-hidden {
+  display: none;
+}
+
+.wb-helper-invalid {
+  color: var(--wb-error-color);
+}
+
+.wb-helper-lazy-expander {
+  color: var(--wb-bg-highlight-color);
+}
+
+.wb-helper-link {
+  cursor: pointer;
+}
+
+.wb-no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+.wb-no-select span.wb-title {
+  -webkit-user-select: contain;
+  user-select: contain;
+}
+
+button.wb-filter-hide {
+  font-weight: bolder;
+}
+
+/* RTL support */
+.wb-helper-start,
+.wb-helper-start > input {
+  text-align: left;
+}
+
+.wb-helper-end,
+.wb-helper-end > input {
+  text-align: right;
+}
+
+.wb-rtl .wb-helper-start,
+.wb-rtl .wb-helper-start > input {
+  text-align: right;
+}
+.wb-rtl .wb-helper-end,
+.wb-rtl .wb-helper-end > input {
+  text-align: left;
+}
+
+i.wb-icon {
+  position: relative;
+}
+i.wb-icon > span.wb-badge {
+  position: absolute;
+  display: inline-block;
+  top: 0;
+  left: -0.6rem;
+  color: white;
+  background-color: var(--wb-bg-highlight-color);
+  padding: 0.2em 0.3rem 0.1em 0.3rem;
+  font-size: 60%;
+  font-weight: 200;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  border-radius: 0.5rem;
+  pointer-events: none;
+}
+
+/* Class 'wb-tristate' is used to mark checkboxes that should toggle like
+ *   indeterminate -> checked -> unchecked -> indeterminate ...
+ */
+.wb-col input[type=checkbox]:indeterminate {
+  color: var(--wb-dim-color);
+  background-color: red;
+}
+
+.wb-col input:invalid {
+  background-color: var(--wb-error-background-color);
+}
+
+.wb-col.wb-invalid {
+  border: 1px dotted var(--wb-error-color);
+}
+
+@keyframes wb-spin-animation {
+  0% {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(1turn);
+  }
+}
+@keyframes wb-skeleton-animation {
+  0% {
+    background-color: hsl(200, 20%, 70%);
+  }
+  100% {
+    background-color: hsl(200, 20%, 95%);
+  }
+}
+@keyframes wb-busy-animation {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 22px;
+  }
+}
+
+/*# sourceMappingURL=wunderbaum.css.map */

@@ -234,42 +234,16 @@ public class FairSchedulerPage extends RmView {
           __(FairSchedulerAppsBlock.class);
     }
   }
-  
-  @Override protected void postHead(Page.HTML<__> html) {
+
+  @Override
+  protected void postHead(Page.HTML<__> html) {
     html.
-      style().$type("text/css").
-        __("#cs { padding: 0.5em 0 1em 0; margin-bottom: 1em; position: relative }",
-          "#cs ul { list-style: none }",
-          "#cs a { font-weight: normal; margin: 2px; position: relative }",
-          "#cs a span { font-weight: normal; font-size: 80% }",
-          "#cs-wrapper .ui-widget-header { padding: 0.2em 0.5em }",
-          ".qstats { font-weight: normal; font-size: 80%; position: absolute }",
-          ".qlegend { font-weight: normal; padding: 0 1em; margin: 1em }",
-          "table.info tr th {width: 50%}").__(). // to center info table
-      script("/static/jt/jquery.jstree.js").
-      script().$type("text/javascript").
-        __("$(function() {",
-          "  $('#cs a span').addClass('ui-corner-all').css('position', 'absolute');",
-          "  $('#cs').bind('loaded.jstree', function (e, data) {",
-          "    var callback = { call:reopenQueryNodes }",
-          "    data.inst.open_node('#pq', callback);",
-          "   }).",
-          "    jstree({",
-          "    core: { animation: 188, html_titles: true },",
-          "    plugins: ['themeroller', 'html_data', 'ui'],",
-          "    themeroller: { item_open: 'ui-icon-minus',",
-          "      item_clsd: 'ui-icon-plus', item_leaf: 'ui-icon-gear'",
-          "    }",
-          "  });",
-          "  $('#cs').bind('select_node.jstree', function(e, data) {",
-          "    var queues = $('.q', data.rslt.obj);",
-          "    var q = '^' + queues.first().text();",
-          "    q += queues.length == 1 ? '$' : '\\\\.';",
-          "    $('#apps').dataTable().fnFilter(q, 4, true);",
-          "  });",
-          "  $('#cs').show();",
-          "});").__().
-        __(SchedulerPageUtil.QueueBlockUtil.class);
+        link().$rel("stylesheet").$href("/static/wunderbaum/wb-scheduler.css").__().
+        link().$rel("stylesheet").$href("/static/bootstrap-icons.css").__().
+        link().$rel("stylesheet").$href("/static/wunderbaum/wunderbaum.css").__().
+        script().$type("text/javascript").$src("/static/wunderbaum/wunderbaum.umd.min.js").__().
+        script().$type("text/javascript").$src("/static/wunderbaum/wb-utils.js").__().
+        script().$type("text/javascript").$src("/static/wunderbaum/wb-fair-scheduler.js").__();
   }
   
   @Override protected Class<? extends SubView> content() {
