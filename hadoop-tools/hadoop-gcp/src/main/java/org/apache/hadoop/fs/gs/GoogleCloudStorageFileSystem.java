@@ -448,8 +448,10 @@ class GoogleCloudStorageFileSystem {
   private void renameObject(URI src, URI dst, FileInfo srcInfo) throws IOException {
     StorageResourceId srcResourceId =
         StorageResourceId.fromUriPath(src, /* allowEmptyObjectName= */ true);
-    StorageResourceId dstResourceId =
-        StorageResourceId.fromUriPath(dst, /* allowEmptyObjectName= */ true, /* generationId= */ 0L);
+    StorageResourceId dstResourceId = StorageResourceId.fromUriPath(
+        dst,
+        /* allowEmptyObjectName= */ true,
+        /* generationId= */ 0L);
 
     if (srcResourceId.getBucketName().equals(dstResourceId.getBucketName())) {
       gcs.move(

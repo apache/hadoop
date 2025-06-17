@@ -182,7 +182,8 @@ class GoogleHadoopFileSystemConfiguration {
     }
 
     if (fileMarkerFilePattern == null) {
-      this.fileMarkerFilePattern =  Pattern.compile("^(.+/)?" + pattern + "$");
+      // Caching the pattern since compile step can be expensive
+      fileMarkerFilePattern =  Pattern.compile("^(.+/)?" + pattern + "$");
     }
 
     return fileMarkerFilePattern;

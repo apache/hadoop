@@ -61,7 +61,6 @@ class GoogleCloudStorageClientReadChannel implements SeekableByteChannel {
 
   // The size of this object generation, in bytes.
   private long objectSize;
-//  private final ErrorTypeExtractor errorExtractor;
   private ContentReadChannel contentReadChannel;
   private boolean gzipEncoded = false;
   private boolean open = true;
