@@ -25,7 +25,6 @@ import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -35,6 +34,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -322,9 +322,9 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
         new ActiveStandbyElectorBasedElectorService(rm);
     try {
       ees.init(myConf);
-      Assertions.fail("expect failure to connect to Zookeeper");
+      fail("expect failure to connect to Zookeeper");
     } catch (ServiceStateException sse) {
-      Assertions.assertTrue(sse.getMessage().contains("ConnectionLoss"));
+      assertTrue(sse.getMessage().contains("ConnectionLoss"));
     }
   }
 

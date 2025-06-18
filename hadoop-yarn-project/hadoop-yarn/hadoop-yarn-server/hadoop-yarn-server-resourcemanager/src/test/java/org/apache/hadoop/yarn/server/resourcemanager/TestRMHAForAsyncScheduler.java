@@ -32,13 +32,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerAsyncScheduling;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.Arrays;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestRMHAForAsyncScheduler extends RMHATestBase {
   private TestCapacitySchedulerAsyncScheduling.NMHeartbeatThread
@@ -116,9 +119,9 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
             HAServiceProtocol.RequestSource.REQUEST_BY_USER);
     rm2.adminService.transitionToStandby(requestInfo);
     rm1.adminService.transitionToActive(requestInfo);
-    Assertions.assertTrue(rm2.getRMContext().getHAServiceState()
+    assertTrue(rm2.getRMContext().getHAServiceState()
         == HAServiceProtocol.HAServiceState.STANDBY);
-    Assertions.assertTrue(rm1.getRMContext().getHAServiceState()
+    assertTrue(rm1.getRMContext().getHAServiceState()
         == HAServiceProtocol.HAServiceState.ACTIVE);
     // check async schedule threads
     checkAsyncSchedulerThreads(Thread.currentThread());
@@ -244,10 +247,10 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
         }
       }
     }
-    Assertions.assertEquals(1, numResourceCommitterService);
-    Assertions.assertEquals(1, numAsyncScheduleThread);
-    Assertions.assertNotNull(asyncScheduleThread);
-    Assertions.assertNotNull(resourceCommitterService);
+    assertEquals(1, numResourceCommitterService);
+    assertEquals(1, numAsyncScheduleThread);
+    assertNotNull(asyncScheduleThread);
+    assertNotNull(resourceCommitterService);
   }
 
 }

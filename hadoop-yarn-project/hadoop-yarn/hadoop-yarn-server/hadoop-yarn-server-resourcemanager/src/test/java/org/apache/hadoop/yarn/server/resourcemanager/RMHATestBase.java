@@ -41,8 +41,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnSched
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public abstract class RMHATestBase extends ClientBaseWithFixes{
@@ -197,9 +198,9 @@ public abstract class RMHATestBase extends ClientBaseWithFixes{
   protected void explicitFailover() throws IOException {
     rm1.adminService.transitionToStandby(requestInfo);
     rm2.adminService.transitionToActive(requestInfo);
-    Assertions.assertTrue(rm1.getRMContext().getHAServiceState()
+    assertTrue(rm1.getRMContext().getHAServiceState()
         == HAServiceState.STANDBY);
-    Assertions.assertTrue(rm2.getRMContext().getHAServiceState()
+    assertTrue(rm2.getRMContext().getHAServiceState()
         == HAServiceState.ACTIVE);
   }
 
@@ -207,16 +208,16 @@ public abstract class RMHATestBase extends ClientBaseWithFixes{
       Configuration confForRM2) throws IOException {
     rm1.init(confForRM1);
     rm1.start();
-    Assertions.assertTrue(rm1.getRMContext().getHAServiceState()
+    assertTrue(rm1.getRMContext().getHAServiceState()
         == HAServiceState.STANDBY);
 
     rm2.init(confForRM2);
     rm2.start();
-    Assertions.assertTrue(rm2.getRMContext().getHAServiceState()
+    assertTrue(rm2.getRMContext().getHAServiceState()
         == HAServiceState.STANDBY);
 
     rm1.adminService.transitionToActive(requestInfo);
-    Assertions.assertTrue(rm1.getRMContext().getHAServiceState()
+    assertTrue(rm1.getRMContext().getHAServiceState()
         == HAServiceState.ACTIVE);
   }
 }

@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
@@ -41,7 +43,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -94,7 +95,7 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
       failOverAndKillApp(app0.getApplicationId(), RMAppState.NEW);
       fail("Should get an exception here");
     } catch (ApplicationNotFoundException ex) {
-      Assertions.assertTrue(ex.getMessage().contains(
+      assertTrue(ex.getMessage().contains(
           "Trying to kill an absent application " + app0.getApplicationId()));
     }
   }
@@ -187,22 +188,22 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
       ApplicationAttemptId appAttemptId, RMAppState initialRMAppState,
       RMAppAttemptState initialRMAppAttemptState,
       RMAppState expectedAppStateBeforeKillApp) throws Exception {
-    Assertions.assertEquals(initialRMAppState,
+    assertEquals(initialRMAppState,
         rm1.getRMContext().getRMApps().get(appId).getState());
-    Assertions.assertEquals(initialRMAppAttemptState, rm1.getRMContext()
+    assertEquals(initialRMAppAttemptState, rm1.getRMContext()
         .getRMApps().get(appId).getAppAttempts().get(appAttemptId).getState());
     explicitFailover();
-    Assertions.assertEquals(expectedAppStateBeforeKillApp,
+    assertEquals(expectedAppStateBeforeKillApp,
         rm2.getRMContext().getRMApps().get(appId).getState());
     killApplication(rm2, appId, appAttemptId, initialRMAppState);
   }
 
   private void failOverAndKillApp(ApplicationId appId,
       RMAppState initialRMAppState) throws Exception {
-    Assertions.assertEquals(initialRMAppState,
+    assertEquals(initialRMAppState,
         rm1.getRMContext().getRMApps().get(appId).getState());
     explicitFailover();
-    Assertions.assertTrue(rm2.getRMContext().getRMApps().get(appId) == null);
+    assertTrue(rm2.getRMContext().getRMApps().get(appId) == null);
     killApplication(rm2, appId, null, initialRMAppState);
   }
 
@@ -264,7 +265,7 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
       ApplicationAttemptId appAttemptId, RMAppState rmAppState)
       throws Exception {
     KillApplicationResponse response = rm.killApp(appId);
-    Assertions.assertTrue(response.getIsKillCompleted() == isFinalState(rmAppState));
+    assertTrue(response.getIsKillCompleted() == isFinalState(rmAppState));
     RMApp loadedApp0 =
         rm.getRMContext().getRMApps().get(appId);
     rm.waitForState(appId, RMAppState.KILLED);
@@ -272,6 +273,6 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
       rm.waitForState(appAttemptId, RMAppAttemptState.KILLED);
     }
     // no new attempt is created.
-    Assertions.assertEquals(1, loadedApp0.getAppAttempts().size());
+    assertEquals(1, loadedApp0.getAppAttempts().size());
   }
 }
