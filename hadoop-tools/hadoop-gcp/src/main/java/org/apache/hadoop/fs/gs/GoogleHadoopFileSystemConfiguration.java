@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.gs;
 
+import java.util.regex.Pattern;
+
 import static java.lang.Math.toIntExact;
 
 import org.apache.hadoop.conf.Configuration;
@@ -26,6 +28,8 @@ import org.apache.hadoop.conf.Configuration;
  * This class provides a configuration for the {@link GoogleHadoopFileSystem} implementations.
  */
 class GoogleHadoopFileSystemConfiguration {
+  private static final Long GCS_INPUT_STREAM_INPLACE_SEEK_LIMIT_DEFAULT = 8 * 1024 * 1024L;
+
   /**
    * Configuration key for default block size of a file.
    *
@@ -55,23 +59,79 @@ class GoogleHadoopFileSystemConfiguration {
   static final HadoopConfigurationProperty<Long> GCS_OUTPUT_STREAM_BUFFER_SIZE =
       new HadoopConfigurationProperty<>("fs.gs.outputstream.buffer.size", 8L * 1024 * 1024);
 
+
+  /**
+   * If forward seeks are within this many bytes of the current position, seeks are performed by
+   * reading and discarding bytes in-place rather than opening a new underlying stream.
+   */
+  public static final HadoopConfigurationProperty<Long> GCS_INPUT_STREAM_INPLACE_SEEK_LIMIT =
+      new HadoopConfigurationProperty<>(
+          "fs.gs.inputstream.inplace.seek.limit",
+          GCS_INPUT_STREAM_INPLACE_SEEK_LIMIT_DEFAULT);
+
+  /** Tunes reading objects behavior to optimize HTTP GET requests for various use cases. */
+  public static final HadoopConfigurationProperty<Fadvise> GCS_INPUT_STREAM_FADVISE =
+      new HadoopConfigurationProperty<>("fs.gs.inputstream.fadvise", Fadvise.RANDOM);
+
+  /**
+   * If false, reading a file with GZIP content encoding (HTTP header "Content-Encoding: gzip") will
+   * result in failure (IOException is thrown).
+   */
+  public static final HadoopConfigurationProperty<Boolean>
+      GCS_INPUT_STREAM_SUPPORT_GZIP_ENCODING_ENABLE =
+      new HadoopConfigurationProperty<>(
+          "fs.gs.inputstream.support.gzip.encoding.enable",
+          false);
+
+  /**
+   * Minimum size in bytes of the HTTP Range header set in GCS request when opening new stream to
+   * read an object.
+   */
+  public static final HadoopConfigurationProperty<Long> GCS_INPUT_STREAM_MIN_RANGE_REQUEST_SIZE =
+      new HadoopConfigurationProperty<>(
+          "fs.gs.inputstream.min.range.request.size",
+          2 * 1024 * 1024L);
+
+  /**
+   * Configuration key for number of request to track for adapting the access pattern i.e. fadvise:
+   * AUTO & AUTO_RANDOM.
+   */
+  public static final HadoopConfigurationProperty<Integer> GCS_FADVISE_REQUEST_TRACK_COUNT =
+      new HadoopConfigurationProperty<>("fs.gs.fadvise.request.track.count", 3);
+
+  /**
+   * Configuration key for specifying max number of bytes rewritten in a single rewrite request when
+   * fs.gs.copy.with.rewrite.enable is set to 'true'.
+   */
+  public static final HadoopConfigurationProperty<Long> GCS_REWRITE_MAX_CHUNK_SIZE =
+      new HadoopConfigurationProperty<>(
+          "fs.gs.rewrite.max.chunk.size",
+          512 * 1024 * 1024L);
+
+  /** Configuration key for marker file pattern. Default value: none */
+  public static final HadoopConfigurationProperty<String> GCS_MARKER_FILE_PATTERN =
+      new HadoopConfigurationProperty<>("fs.gs.marker.file.pattern");
+
   private final String workingDirectory;
   private final String projectId;
+  private final Configuration config;
+  private Pattern fileMarkerFilePattern;
 
-  public int getOutStreamBufferSize() {
+  int getOutStreamBufferSize() {
     return outStreamBufferSize;
   }
 
   private final int outStreamBufferSize;
 
-  GoogleHadoopFileSystemConfiguration(Configuration config) {
-    this.workingDirectory = GCS_WORKING_DIRECTORY.get(config, config::get);
+  GoogleHadoopFileSystemConfiguration(Configuration conf) {
+    this.workingDirectory = GCS_WORKING_DIRECTORY.get(conf, conf::get);
     this.outStreamBufferSize =
-        toIntExact(GCS_OUTPUT_STREAM_BUFFER_SIZE.get(config, config::getLongBytes));
-    this.projectId = GCS_PROJECT_ID.get(config, config::get);
+        toIntExact(GCS_OUTPUT_STREAM_BUFFER_SIZE.get(conf, conf::getLongBytes));
+    this.projectId = GCS_PROJECT_ID.get(conf, conf::get);
+    this.config = conf;
   }
 
-  public String getWorkingDirectory() {
+  String getWorkingDirectory() {
     return this.workingDirectory;
   }
 
@@ -79,7 +139,53 @@ class GoogleHadoopFileSystemConfiguration {
     return this.projectId;
   }
 
-  public long getMaxListItemsPerCall() {
+  long getMaxListItemsPerCall() {
     return 5000L; //TODO: Make this configurable
+  }
+
+  Fadvise getFadvise() {
+    return GCS_INPUT_STREAM_FADVISE.get(config, config::getEnum);
+  }
+
+  long getInplaceSeekLimit() {
+    return GCS_INPUT_STREAM_INPLACE_SEEK_LIMIT.get(config, config::getLongBytes);
+  }
+
+  public int getFadviseRequestTrackCount() {
+    return GCS_FADVISE_REQUEST_TRACK_COUNT.get(config, config::getInt);
+  }
+
+  public boolean isGzipEncodingSupportEnabled() {
+    return GCS_INPUT_STREAM_SUPPORT_GZIP_ENCODING_ENABLE.get(config, config::getBoolean);
+  }
+
+  public long getMinRangeRequestSize() {
+    return GCS_INPUT_STREAM_MIN_RANGE_REQUEST_SIZE.get(config, config::getLongBytes);
+  }
+
+  public long getBlockSize() {
+    return BLOCK_SIZE.get(config, config::getLong);
+  }
+
+  public boolean isReadExactRequestedBytesEnabled() {
+    return false; //TODO: Remove this option?
+  }
+
+  public long getMaxRewriteChunkSize() {
+    return GCS_REWRITE_MAX_CHUNK_SIZE.get(config, config::getLong);
+  }
+
+  public Pattern getMarkerFilePattern() {
+    String pattern =  GCS_MARKER_FILE_PATTERN.get(config, config::get);
+    if (pattern == null) {
+      return null;
+    }
+
+    if (fileMarkerFilePattern == null) {
+      // Caching the pattern since compile step can be expensive
+      fileMarkerFilePattern =  Pattern.compile("^(.+/)?" + pattern + "$");
+    }
+
+    return fileMarkerFilePattern;
   }
 }
