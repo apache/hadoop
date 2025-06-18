@@ -265,9 +265,10 @@ public class GoogleHadoopFileSystem extends FileSystem {
   }
 
   @Override
-  public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
-    LOG.trace("open({})", path);
-    throw new UnsupportedOperationException(path.toString());
+  public FSDataInputStream open(final Path hadoopPath, final int bufferSize) throws IOException {
+    LOG.trace("open({})", hadoopPath);
+    URI gcsPath = getGcsPath(hadoopPath);
+    return new FSDataInputStream(GoogleHadoopFSInputStream.create(this, gcsPath, statistics));
   }
 
   @Override
@@ -327,9 +328,37 @@ public class GoogleHadoopFileSystem extends FileSystem {
   }
 
   @Override
-  public boolean rename(final Path path, final Path path1) throws IOException {
-    LOG.trace("rename({}, {})", path, path1);
-    throw new UnsupportedOperationException(path.toString());
+  public boolean rename(final Path src, final Path dst) throws IOException {
+    LOG.trace("rename({}, {})", src, dst);
+
+    checkArgument(src != null, "src must not be null");
+    checkArgument(dst != null, "dst must not be null");
+
+    // Even though the underlying GCSFS will also throw an IAE if src is root, since our filesystem
+    // root happens to equal the global root, we want to explicitly check it here since derived
+    // classes may not have filesystem roots equal to the global root.
+    if (this.makeQualified(src).equals(fsRoot)) {
+      LOG.trace("rename(src: {}, dst: {}): false [src is a root]", src, dst);
+      return false;
+    }
+
+    try {
+      checkOpen();
+
+      URI srcPath = getGcsPath(src);
+      URI dstPath = getGcsPath(dst);
+      getGcsFs().rename(srcPath, dstPath);
+
+      LOG.trace("rename(src: {}, dst: {}): true", src, dst);
+    } catch (IOException e) {
+      if (ApiErrorExtractor.INSTANCE.requestFailure(e)) {
+        throw e;
+      }
+      LOG.trace("rename(src: %s, dst: %s): false [failed]", src, dst, e);
+      return false;
+    }
+
+    return true;
   }
 
   @Override
@@ -468,8 +497,7 @@ public class GoogleHadoopFileSystem extends FileSystem {
   public boolean mkdirs(final Path hadoopPath, final FsPermission permission) throws IOException {
     checkArgument(hadoopPath != null, "hadoopPath must not be null");
 
-    LOG.trace(
-        "mkdirs(hadoopPath: {}, permission: {}): true", hadoopPath, permission);
+    LOG.trace("mkdirs(hadoopPath: {}, permission: {}): true", hadoopPath, permission);
 
     checkOpen();
 
@@ -581,7 +609,6 @@ public class GoogleHadoopFileSystem extends FileSystem {
     workingDirectory = getHadoopPath(gcsPath);
     LOG.trace("setWorkingDirectory(hadoopPath: {}): {}", hadoopPath, workingDirectory);
   }
-
 
   private static String getUgiUserName() throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
