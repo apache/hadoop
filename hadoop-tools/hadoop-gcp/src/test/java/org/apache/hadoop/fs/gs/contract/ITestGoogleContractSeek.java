@@ -16,23 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.gs;
+package org.apache.hadoop.fs.gs.contract;
 
-import javax.annotation.Nonnull;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.contract.AbstractContractSeekTest;
+import org.apache.hadoop.fs.contract.AbstractFSContract;
 
-final class ListFileOptions {
-  static final ListFileOptions OBJECTFIELDS = new ListFileOptions("bucket,name,size,updated");
-
-  static final ListFileOptions DELETE_RENAME_LIST_OPTIONS =
-      new ListFileOptions("bucket,name,generation");
-
-  private final String fields;
-
-  private ListFileOptions(@Nonnull String fields) {
-    this.fields = fields;
-  }
-
-  String getFields() {
-    return fields;
+public class ITestGoogleContractSeek extends AbstractContractSeekTest {
+  @Override
+  protected AbstractFSContract createContract(Configuration conf) {
+    return new GoogleContract(conf);
   }
 }

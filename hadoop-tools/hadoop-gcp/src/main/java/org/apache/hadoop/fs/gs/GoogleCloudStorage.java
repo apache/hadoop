@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.gs;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Strings.isNullOrEmpty;
 import static java.lang.Math.toIntExact;
+import static org.apache.hadoop.fs.gs.GoogleCloudStorageExceptions.createFileNotFoundException;
 
 import com.google.api.client.util.BackOff;
 import com.google.api.client.util.ExponentialBackOff;
@@ -34,7 +35,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.file.FileAlreadyExistsException;
 import java.time.Duration;
@@ -580,6 +583,292 @@ class GoogleCloudStorage {
       throw new IOException(e);
     }
     return allBuckets;
+  }
+
+  public SeekableByteChannel open(GoogleCloudStorageItemInfo itemInfo,
+      GoogleHadoopFileSystemConfiguration config) throws IOException {
+    LOG.trace("open({})", itemInfo);
+    checkNotNull(itemInfo, "itemInfo should not be null");
+
+    StorageResourceId resourceId = itemInfo.getResourceId();
+    checkArgument(
+        resourceId.isStorageObject(), "Expected full StorageObject id, got %s", resourceId);
+
+    return open(resourceId, itemInfo, config);
+  }
+
+  private SeekableByteChannel open(
+      StorageResourceId resourceId,
+      GoogleCloudStorageItemInfo itemInfo,
+      GoogleHadoopFileSystemConfiguration config)
+      throws IOException {
+    return new GoogleCloudStorageClientReadChannel(
+        storage,
+        itemInfo == null ? getItemInfo(resourceId) : itemInfo,
+        config);
+  }
+
+  public void move(Map<StorageResourceId, StorageResourceId> sourceToDestinationObjectsMap)
+      throws IOException {
+    validateMoveArguments(sourceToDestinationObjectsMap);
+
+    if (sourceToDestinationObjectsMap.isEmpty()) {
+      return;
+    }
+
+    for (Map.Entry<StorageResourceId, StorageResourceId> entry :
+        sourceToDestinationObjectsMap.entrySet()) {
+      StorageResourceId srcObject = entry.getKey();
+      StorageResourceId dstObject = entry.getValue();
+      // TODO: Do this concurrently
+      moveInternal(
+          srcObject.getBucketName(),
+          srcObject.getGenerationId(),
+          srcObject.getObjectName(),
+          dstObject.getGenerationId(),
+          dstObject.getObjectName());
+    }
+  }
+
+  private void moveInternal(
+      String srcBucketName,
+      long srcContentGeneration,
+      String srcObjectName,
+      long dstContentGeneration,
+      String dstObjectName) throws IOException {
+    Storage.MoveBlobRequest.Builder moveRequestBuilder =
+        createMoveRequestBuilder(
+            srcBucketName,
+            srcObjectName,
+            dstObjectName,
+            srcContentGeneration,
+            dstContentGeneration);
+    try {
+      String srcString = StringPaths.fromComponents(srcBucketName, srcObjectName);
+      String dstString = StringPaths.fromComponents(srcBucketName, dstObjectName);
+
+      Blob movedBlob = storage.moveBlob(moveRequestBuilder.build());
+      if (movedBlob != null) {
+        LOG.trace("Successfully moved {} to {}", srcString, dstString);
+      }
+    } catch (StorageException e) {
+      if (ErrorTypeExtractor.getErrorType(e) == ErrorTypeExtractor.ErrorType.NOT_FOUND) {
+        throw createFileNotFoundException(srcBucketName, srcObjectName, new IOException(e));
+      } else {
+        throw
+            new IOException(
+                String.format(
+                    "Error moving '%s'",
+                    StringPaths.fromComponents(srcBucketName, srcObjectName)),
+                e);
+      }
+    }
+  }
+
+  /** Creates a builder for a blob move request. */
+  private Storage.MoveBlobRequest.Builder createMoveRequestBuilder(
+      String srcBucketName,
+      String srcObjectName,
+      String dstObjectName,
+      long srcContentGeneration,
+      long dstContentGeneration) {
+
+    Storage.MoveBlobRequest.Builder moveRequestBuilder =
+        Storage.MoveBlobRequest.newBuilder().setSource(BlobId.of(srcBucketName, srcObjectName));
+    moveRequestBuilder.setTarget(BlobId.of(srcBucketName, dstObjectName));
+
+    List<Storage.BlobTargetOption> blobTargetOptions = new ArrayList<>();
+    List<Storage.BlobSourceOption> blobSourceOptions = new ArrayList<>();
+
+    if (srcContentGeneration != StorageResourceId.UNKNOWN_GENERATION_ID) {
+      blobSourceOptions.add(Storage.BlobSourceOption.generationMatch(srcContentGeneration));
+    }
+
+    if (dstContentGeneration != StorageResourceId.UNKNOWN_GENERATION_ID) {
+      blobTargetOptions.add(Storage.BlobTargetOption.generationMatch(dstContentGeneration));
+    }
+
+    // TODO: Add encryption support
+
+    moveRequestBuilder.setSourceOptions(blobSourceOptions);
+    moveRequestBuilder.setTargetOptions(blobTargetOptions);
+
+    return moveRequestBuilder;
+  }
+
+  /**
+   * Validates basic argument constraints like non-null, non-empty Strings, using {@code
+   * Preconditions} in addition to checking for src/dst bucket equality.
+   */
+  public static void validateMoveArguments(
+      Map<StorageResourceId, StorageResourceId> sourceToDestinationObjectsMap) throws IOException {
+    checkNotNull(sourceToDestinationObjectsMap, "srcObjects must not be null");
+
+    if (sourceToDestinationObjectsMap.isEmpty()) {
+      return;
+    }
+
+    for (Map.Entry<StorageResourceId, StorageResourceId> entry :
+        sourceToDestinationObjectsMap.entrySet()) {
+      StorageResourceId source = entry.getKey();
+      StorageResourceId destination = entry.getValue();
+      String srcBucketName = source.getBucketName();
+      String dstBucketName = destination.getBucketName();
+      // Avoid move across buckets.
+      if (!srcBucketName.equals(dstBucketName)) {
+        throw new UnsupportedOperationException(
+            "This operation is not supported across two different buckets.");
+      }
+      checkArgument(
+          !isNullOrEmpty(source.getObjectName()), "srcObjectName must not be null or empty");
+      checkArgument(
+          !isNullOrEmpty(destination.getObjectName()), "dstObjectName must not be null or empty");
+      if (srcBucketName.equals(dstBucketName)
+          && source.getObjectName().equals(destination.getObjectName())) {
+        throw new IllegalArgumentException(
+            String.format(
+                "Move destination must be different from source for %s.",
+                StringPaths.fromComponents(srcBucketName, source.getObjectName())));
+      }
+    }
+  }
+
+  void copy(Map<StorageResourceId, StorageResourceId> sourceToDestinationObjectsMap)
+      throws IOException {
+    validateCopyArguments(sourceToDestinationObjectsMap, this);
+
+    if (sourceToDestinationObjectsMap.isEmpty()) {
+      return;
+    }
+
+    for (Map.Entry<StorageResourceId, StorageResourceId> entry :
+        sourceToDestinationObjectsMap.entrySet()) {
+      StorageResourceId srcObject = entry.getKey();
+      StorageResourceId dstObject = entry.getValue();
+      // TODO: Do this concurrently
+      copyInternal(
+          srcObject.getBucketName(),
+          srcObject.getObjectName(),
+          dstObject.getGenerationId(),
+          dstObject.getBucketName(),
+          dstObject.getObjectName());
+    }
+  }
+
+  private void copyInternal(
+      String srcBucketName,
+      String srcObjectName,
+      long dstContentGeneration,
+      String dstBucketName,
+      String dstObjectName) throws IOException {
+    Storage.CopyRequest.Builder copyRequestBuilder =
+        Storage.CopyRequest.newBuilder().setSource(BlobId.of(srcBucketName, srcObjectName));
+    if (dstContentGeneration != StorageResourceId.UNKNOWN_GENERATION_ID) {
+      copyRequestBuilder.setTarget(
+          BlobId.of(dstBucketName, dstObjectName),
+          Storage.BlobTargetOption.generationMatch(dstContentGeneration));
+    } else {
+      copyRequestBuilder.setTarget(BlobId.of(dstBucketName, dstObjectName));
+    }
+
+    // TODO: Add support for encryption key
+    if (configuration.getMaxRewriteChunkSize() > 0) {
+      copyRequestBuilder.setMegabytesCopiedPerChunk(
+          // Convert raw byte size into Mib.
+          configuration.getMaxRewriteChunkSize() / (1024 * 1024));
+    }
+
+    String srcString = StringPaths.fromComponents(srcBucketName, srcObjectName);
+    String dstString = StringPaths.fromComponents(dstBucketName, dstObjectName);
+
+    try {
+      CopyWriter copyWriter = storage.copy(copyRequestBuilder.build());
+      while (!copyWriter.isDone()) {
+        copyWriter.copyChunk();
+        LOG.trace(
+            "Copy ({} to {}) did not complete. Resuming...", srcString, dstString);
+      }
+      LOG.trace("Successfully copied {} to {}", srcString, dstString);
+    } catch (StorageException e) {
+      if (ErrorTypeExtractor.getErrorType(e) == ErrorTypeExtractor.ErrorType.NOT_FOUND) {
+        throw createFileNotFoundException(srcBucketName, srcObjectName, new IOException(e));
+      } else {
+        throw new IOException(String.format("copy(%s->%s) failed.", srcString, dstString), e);
+      }
+    }
+  }
+
+  public static void validateCopyArguments(
+      Map<StorageResourceId, StorageResourceId> sourceToDestinationObjectsMap,
+      GoogleCloudStorage gcsImpl)
+      throws IOException {
+    checkNotNull(sourceToDestinationObjectsMap, "srcObjects must not be null");
+
+    if (sourceToDestinationObjectsMap.isEmpty()) {
+      return;
+    }
+
+    Map<StorageResourceId, GoogleCloudStorageItemInfo> bucketInfoCache = new HashMap<>();
+
+    for (Map.Entry<StorageResourceId, StorageResourceId> entry :
+        sourceToDestinationObjectsMap.entrySet()) {
+      StorageResourceId source = entry.getKey();
+      StorageResourceId destination = entry.getValue();
+      String srcBucketName = source.getBucketName();
+      String dstBucketName = destination.getBucketName();
+      // Avoid copy across locations or storage classes.
+      if (!srcBucketName.equals(dstBucketName)) {
+        StorageResourceId srcBucketResourceId = new StorageResourceId(srcBucketName);
+        GoogleCloudStorageItemInfo srcBucketInfo =
+            getGoogleCloudStorageItemInfo(gcsImpl, bucketInfoCache, srcBucketResourceId);
+        if (!srcBucketInfo.exists()) {
+          throw new FileNotFoundException("Bucket not found: " + srcBucketName);
+        }
+
+        StorageResourceId dstBucketResourceId = new StorageResourceId(dstBucketName);
+        GoogleCloudStorageItemInfo dstBucketInfo =
+            getGoogleCloudStorageItemInfo(gcsImpl, bucketInfoCache, dstBucketResourceId);
+        if (!dstBucketInfo.exists()) {
+          throw new FileNotFoundException("Bucket not found: " + dstBucketName);
+        }
+
+        // TODO: Restrict this only when copy-with-rewrite is enabled
+        if (!srcBucketInfo.getLocation().equals(dstBucketInfo.getLocation())) {
+          throw new UnsupportedOperationException(
+              "This operation is not supported across two different storage locations.");
+        }
+
+        if (!srcBucketInfo.getStorageClass().equals(dstBucketInfo.getStorageClass())) {
+          throw new UnsupportedOperationException(
+              "This operation is not supported across two different storage classes.");
+        }
+      }
+      checkArgument(
+          !isNullOrEmpty(source.getObjectName()), "srcObjectName must not be null or empty");
+      checkArgument(
+          !isNullOrEmpty(destination.getObjectName()), "dstObjectName must not be null or empty");
+      if (srcBucketName.equals(dstBucketName)
+          && source.getObjectName().equals(destination.getObjectName())) {
+        throw new IllegalArgumentException(
+            String.format(
+                "Copy destination must be different from source for %s.",
+                StringPaths.fromComponents(srcBucketName, source.getObjectName())));
+      }
+    }
+  }
+
+  private static GoogleCloudStorageItemInfo getGoogleCloudStorageItemInfo(
+      GoogleCloudStorage gcsImpl,
+      Map<StorageResourceId, GoogleCloudStorageItemInfo> bucketInfoCache,
+      StorageResourceId resourceId)
+      throws IOException {
+    GoogleCloudStorageItemInfo storageItemInfo = bucketInfoCache.get(resourceId);
+    if (storageItemInfo != null) {
+      return storageItemInfo;
+    }
+    storageItemInfo = gcsImpl.getItemInfo(resourceId);
+    bucketInfoCache.put(resourceId, storageItemInfo);
+    return storageItemInfo;
   }
 
   // Helper class to capture the results of list operation.
