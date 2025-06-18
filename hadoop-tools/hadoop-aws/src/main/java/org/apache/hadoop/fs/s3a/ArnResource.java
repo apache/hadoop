@@ -33,7 +33,6 @@ public final class ArnResource {
   private final static String S3_ACCESSPOINT_ENDPOINT_FORMAT = "s3-accesspoint.%s.amazonaws.com";
   private final static String S3_OUTPOSTS_ACCESSPOINT_ENDPOINT_FORMAT = "s3-outposts.%s.amazonaws.com";
   private final static String S3_EXPRESS_ACCESSPOINT_ENDPOINT_FORMAT = "s3express-%s.%s.amazonaws.com";
-  
   // bucket example: mybucket--usw2-az1--x-s3
   // access point example: myaccesspoint--usw2-az1--xa-s3
   public final static Pattern S3_EXPRESS_RESOURCE_FORMAT_REGEX = Pattern.compile(
@@ -180,7 +179,7 @@ public final class ArnResource {
         parsed.partition(), arn, parsed.service());
   }
 
-  private static Optional<String> getZoneIdFromResourceName(final String resourceName) {    
+  private static Optional<String> getZoneIdFromResourceName(final String resourceName) {   
     return Optional.ofNullable(resourceName)
         .map(name -> {
             Matcher matcher = S3_EXPRESS_RESOURCE_FORMAT_REGEX.matcher(name);

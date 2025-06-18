@@ -49,7 +49,7 @@ public class TestArnResource extends HadoopTestBase {
     String accessPoint = "testAp";
     String[][] regionPartitionEndpoints = new String[][] {
         {Region.EU_WEST_1.id(), "aws"},
-        {Region.US_GOV_EAST_1.id(), "aws-us-gov"},  
+        {Region.US_GOV_EAST_1.id(), "aws-us-gov"},
         {Region.CN_NORTH_1.id(), "aws-cn"},
     };
 
@@ -108,7 +108,7 @@ public class TestArnResource extends HadoopTestBase {
         "test");
     describe("Using an invalid access point name format must throw when getting an endpoint.");
 
-    intercept(IllegalArgumentException.class, () -> 
+    intercept(IllegalArgumentException.class, () ->
         accessPoint.getEndpoint());
   }
 
