@@ -142,7 +142,7 @@ public final class ArnResource {
     String format;
     if(isExpress()) {
       Optional<String> zoneId = getZoneIdFromResourceName(name);
-      if(zoneId.isEmpty()) {
+      if(!zoneId.isPresent()) {
         throw new IllegalArgumentException("Zone ID could not be extracted from S3Express resource name: " + name);
       }
 
