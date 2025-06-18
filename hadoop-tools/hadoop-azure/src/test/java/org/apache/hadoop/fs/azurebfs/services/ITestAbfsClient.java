@@ -359,7 +359,6 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   // Test to verify the unique identifier in user agent string for FNS-Blob accounts
   public void verifyUserAgentForFNSBlob() throws Exception {
-    Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
     assumeHnsDisabled();
     Assume.assumeTrue(getAbfsServiceType() == AbfsServiceType.BLOB);
     final AzureBlobFileSystem fs = getFileSystem(getRawConfiguration());
@@ -379,7 +378,6 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   // Test to verify that the user agent string for non-FNS-Blob accounts
   // does not contain the FNS identifier.
   public void verifyUserAgentForDFS() throws Exception {
-    Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
     Assume.assumeTrue(getAbfsServiceType() == AbfsServiceType.DFS);
     final AzureBlobFileSystem fs = getFileSystem(getRawConfiguration());
     final AbfsConfiguration configuration = fs.getAbfsStore()
