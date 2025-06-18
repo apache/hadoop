@@ -26,6 +26,7 @@ import static org.apache.hadoop.fs.gs.Constants.SCHEME;
 import com.google.auth.Credentials;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,13 +34,20 @@ import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.FileAlreadyExistsException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
+import java.util.regex.Pattern;
+import javax.annotation.Nullable;
 
 /**
  * Provides FS semantics over GCS based on Objects API.
@@ -73,6 +81,7 @@ class GoogleCloudStorageFileSystem {
 
   // URI of the root path.
   static final URI GCSROOT = URI.create(SCHEME + ":/");
+  private final GoogleHadoopFileSystemConfiguration configuration;
 
   // GCS access instance.
   private GoogleCloudStorage gcs;
@@ -87,6 +96,7 @@ class GoogleCloudStorageFileSystem {
 
   GoogleCloudStorageFileSystem(final GoogleHadoopFileSystemConfiguration configuration,
       final Credentials credentials) throws IOException {
+    this.configuration = configuration;
     gcs = createCloudStorage(configuration, credentials);
   }
 
@@ -157,9 +167,7 @@ class GoogleCloudStorageFileSystem {
             resourceId.getBucketName(),
             resourceId.getObjectName(),
             GET_FILE_INFO_LIST_OPTIONS);
-        LOG.trace("List for getMetadata returned {}. {}", listDirResult.size(), listDirResult);
         if (!listDirResult.isEmpty()) {
-          LOG.trace("Get metadata for directory returned non empty {}", listDirResult);
           return GoogleCloudStorageItemInfo.createInferredDirectory(resourceId.toDirectoryId());
         }
       }
@@ -370,5 +378,315 @@ class GoogleCloudStorageFileSystem {
     List<FileInfo> fileInfos = FileInfo.fromItemInfos(dirItemInfos);
     fileInfos.sort(FILE_INFO_PATH_COMPARATOR);
     return fileInfos;
+  }
+
+  FileInfo getFileInfoObject(URI path) throws IOException {
+    checkArgument(path != null, "path must not be null");
+    StorageResourceId resourceId = StorageResourceId.fromUriPath(path, true);
+    checkArgument(
+        !resourceId.isDirectory(),
+        String.format(
+            "path must be an object and not a directory, path: %s, resourceId: %s",
+            path, resourceId));
+    FileInfo fileInfo = FileInfo.fromItemInfo(gcs.getItemInfo(resourceId));
+    LOG.trace("getFileInfoObject(path: {}): {}", path, fileInfo);
+    return fileInfo;
+  }
+
+  SeekableByteChannel open(FileInfo fileInfo, GoogleHadoopFileSystemConfiguration config)
+      throws IOException {
+    checkNotNull(fileInfo, "fileInfo should not be null");
+    checkArgument(
+        !fileInfo.isDirectory(), "Cannot open a directory for reading: %s", fileInfo.getPath());
+
+    return gcs.open(fileInfo.getItemInfo(), config);
+  }
+
+  void rename(URI src, URI dst) throws IOException {
+    LOG.trace("rename(src: {}, dst: {})", src, dst);
+    checkNotNull(src);
+    checkNotNull(dst);
+    checkArgument(!src.equals(GCSROOT), "Root path cannot be renamed.");
+
+    // Parent of the destination path.
+    URI dstParent = UriPaths.getParentPath(dst);
+
+    // Obtain info on source, destination and destination-parent.
+    List<URI> paths = new ArrayList<>();
+    paths.add(src);
+    paths.add(dst);
+    if (dstParent != null) {
+      // dstParent is null if dst is GCS_ROOT.
+      paths.add(dstParent);
+    }
+    List<FileInfo> fileInfos = getFileInfos(paths);
+    FileInfo srcInfo = fileInfos.get(0);
+    FileInfo dstInfo = fileInfos.get(1);
+    FileInfo dstParentInfo = dstParent == null ? null : fileInfos.get(2);
+
+    // Throw if the source file does not exist.
+    if (!srcInfo.exists()) {
+      throw new FileNotFoundException("Item not found: " + src);
+    }
+
+    // Make sure paths match what getFileInfo() returned (it can add / at the end).
+    src = srcInfo.getPath();
+    dst = getDstUri(srcInfo, dstInfo, dstParentInfo);
+
+    // if src and dst are equal then do nothing
+    if (src.equals(dst)) {
+      return;
+    }
+
+    if (srcInfo.isDirectory()) {
+      renameDirectoryInternal(srcInfo, dst);
+    } else {
+      renameObject(src, dst, srcInfo);
+    }
+  }
+
+  private void renameObject(URI src, URI dst, FileInfo srcInfo) throws IOException {
+    StorageResourceId srcResourceId =
+        StorageResourceId.fromUriPath(src, /* allowEmptyObjectName= */ true);
+    StorageResourceId dstResourceId = StorageResourceId.fromUriPath(
+        dst,
+        /* allowEmptyObjectName= */ true,
+        /* generationId= */ 0L);
+
+    if (srcResourceId.getBucketName().equals(dstResourceId.getBucketName())) {
+      gcs.move(
+          ImmutableMap.of(
+              new StorageResourceId(
+                  srcInfo.getItemInfo().getBucketName(),
+                  srcInfo.getItemInfo().getObjectName(),
+                  srcInfo.getItemInfo().getContentGeneration()),
+              dstResourceId));
+    } else {
+      gcs.copy(ImmutableMap.of(srcResourceId, dstResourceId));
+
+      gcs.deleteObjects(
+          ImmutableList.of(
+              new StorageResourceId(
+                  srcInfo.getItemInfo().getBucketName(),
+                  srcInfo.getItemInfo().getObjectName(),
+                  srcInfo.getItemInfo().getContentGeneration())));
+    }
+  }
+
+  /**
+   * Renames given directory without checking any parameters.
+   *
+   * <p>GCS does not support atomic renames therefore rename is implemented as copying source
+   * metadata to destination and then deleting source metadata. Note that only the metadata is
+   * copied and not the content of any file.
+   */
+  private void renameDirectoryInternal(FileInfo srcInfo, URI dst) throws IOException {
+    checkArgument(srcInfo.isDirectory(), "'%s' should be a directory", srcInfo);
+    checkArgument(dst.toString().endsWith(PATH_DELIMITER), "'%s' should be a directory", dst);
+
+    URI src = srcInfo.getPath();
+
+    // Mapping from each src to its respective dst.
+    // Sort src items so that parent directories appear before their children.
+    // That allows us to copy parent directories before we copy their children.
+    Map<FileInfo, URI> srcToDstItemNames = new TreeMap<>(FILE_INFO_PATH_COMPARATOR);
+    Map<FileInfo, URI> srcToDstMarkerItemNames = new TreeMap<>(FILE_INFO_PATH_COMPARATOR);
+
+    // List of individual paths to rename;
+    // we will try to carry out the copies in this list's order.
+    List<FileInfo> srcItemInfos =
+        listFileInfoForPrefix(src, ListFileOptions.DELETE_RENAME_LIST_OPTIONS);
+
+    // Create a list of sub-items to copy.
+    Pattern markerFilePattern = configuration.getMarkerFilePattern();
+    String prefix = src.toString();
+    for (FileInfo srcItemInfo : srcItemInfos) {
+      String relativeItemName = srcItemInfo.getPath().toString().substring(prefix.length());
+      URI dstItemName = dst.resolve(relativeItemName);
+      if (markerFilePattern != null && markerFilePattern.matcher(relativeItemName).matches()) {
+        srcToDstMarkerItemNames.put(srcItemInfo, dstItemName);
+      } else {
+        srcToDstItemNames.put(srcItemInfo, dstItemName);
+      }
+    }
+
+    StorageResourceId srcResourceId =
+        StorageResourceId.fromUriPath(src, /* allowEmptyObjectName= */ true);
+    StorageResourceId dstResourceId =
+        StorageResourceId.fromUriPath(
+            dst, /* allowEmptyObjectName= */ true, /* generationId= */ 0L);
+    if (srcResourceId.getBucketName().equals(dstResourceId.getBucketName())) {
+      // First, move all items except marker items
+      moveInternal(srcToDstItemNames);
+      // Finally, move marker items (if any) to mark rename operation success
+      moveInternal(srcToDstMarkerItemNames);
+
+      if (srcInfo.getItemInfo().isBucket()) {
+        deleteBucket(Collections.singletonList(srcInfo));
+      } else {
+        // If src is a directory then srcItemInfos does not contain its own name,
+        // we delete item separately in the list.
+        deleteObjects(Collections.singletonList(srcInfo));
+      }
+      return;
+    }
+
+    // TODO: Add support for across bucket moves
+    throw new UnsupportedOperationException(String.format(
+        "Moving object from bucket '%s' to '%s' is not supported",
+        srcResourceId.getBucketName(),
+        dstResourceId.getBucketName()));
+  }
+
+  List<FileInfo> listFileInfoForPrefix(URI prefix, ListFileOptions listOptions)
+      throws IOException {
+    LOG.trace("listAllFileInfoForPrefix(prefix: {})", prefix);
+    StorageResourceId prefixId = getPrefixId(prefix);
+    List<GoogleCloudStorageItemInfo> itemInfos =
+        gcs.listObjectInfo(
+            prefixId.getBucketName(),
+            prefixId.getObjectName(),
+            updateListObjectOptions(ListObjectOptions.DEFAULT_FLAT_LIST, listOptions));
+    List<FileInfo> fileInfos = FileInfo.fromItemInfos(itemInfos);
+    fileInfos.sort(FILE_INFO_PATH_COMPARATOR);
+    return fileInfos;
+  }
+
+  /** Moves items in given map that maps source items to destination items. */
+  private void moveInternal(Map<FileInfo, URI> srcToDstItemNames) throws IOException {
+    if (srcToDstItemNames.isEmpty()) {
+      return;
+    }
+
+    Map<StorageResourceId, StorageResourceId> sourceToDestinationObjectsMap = new HashMap<>();
+
+    // Prepare list of items to move.
+    for (Map.Entry<FileInfo, URI> srcToDstItemName : srcToDstItemNames.entrySet()) {
+      StorageResourceId srcResourceId = srcToDstItemName.getKey().getItemInfo().getResourceId();
+
+      StorageResourceId dstResourceId =
+          StorageResourceId.fromUriPath(srcToDstItemName.getValue(), true);
+      sourceToDestinationObjectsMap.put(srcResourceId, dstResourceId);
+    }
+
+    // Perform move.
+    gcs.move(sourceToDestinationObjectsMap);
+  }
+
+  private static ListObjectOptions updateListObjectOptions(
+      ListObjectOptions listObjectOptions, ListFileOptions listFileOptions) {
+    return listObjectOptions.builder().setFields(listFileOptions.getFields()).build();
+  }
+
+  private List<FileInfo> getFileInfos(List<URI> paths) throws IOException {
+    List<FileInfo> result = new ArrayList<>(paths.size());
+    for (URI path : paths) {
+      // TODO: Do this concurrently
+      result.add(getFileInfo(path));
+    }
+
+    return result;
+  }
+
+  private URI getDstUri(FileInfo srcInfo, FileInfo dstInfo, @Nullable FileInfo dstParentInfo)
+      throws IOException {
+    URI src = srcInfo.getPath();
+    URI dst = dstInfo.getPath();
+
+    // Throw if src is a file and dst == GCS_ROOT
+    if (!srcInfo.isDirectory() && dst.equals(GCSROOT)) {
+      throw new IOException("A file cannot be created in root.");
+    }
+
+    // Throw if the destination is a file that already exists, and it's not a source file.
+    if (dstInfo.exists() && !dstInfo.isDirectory() && (srcInfo.isDirectory() || !dst.equals(src))) {
+      throw new IOException("Cannot overwrite an existing file: " + dst);
+    }
+
+    // Rename operation cannot be completed if parent of destination does not exist.
+    if (dstParentInfo != null && !dstParentInfo.exists()) {
+      throw new IOException(
+          "Cannot rename because path does not exist: " + dstParentInfo.getPath());
+    }
+
+    // Leaf item of the source path.
+    String srcItemName = getItemName(src);
+
+    // Having taken care of the initial checks, apply the regular rules.
+    // After applying the rules, we will be left with 2 paths such that:
+    // -- either both are files or both are directories
+    // -- src exists and dst leaf does not exist
+    if (srcInfo.isDirectory()) {
+      // -- if src is a directory
+      //    -- dst is an existing file => disallowed
+      //    -- dst is a directory => rename the directory.
+
+      // The first case (dst is an existing file) is already checked earlier.
+      // If the destination path looks like a file, make it look like a
+      // directory path. This is because users often type 'mv foo bar'
+      // rather than 'mv foo bar/'.
+      if (!dstInfo.isDirectory()) {
+        dst = UriPaths.toDirectory(dst);
+      }
+
+      // Throw if renaming directory to self - this is forbidden
+      if (src.equals(dst)) {
+        throw new IOException("Rename dir to self is forbidden");
+      }
+
+      URI dstRelativeToSrc = src.relativize(dst);
+      // Throw if dst URI relative to src is not equal to dst,
+      // because this means that src is a parent directory of dst
+      // and src cannot be "renamed" to its subdirectory
+      if (!dstRelativeToSrc.equals(dst)) {
+        throw new IOException("Rename to subdir is forbidden");
+      }
+
+      if (dstInfo.exists()) {
+        dst =
+            dst.equals(GCSROOT)
+                ? UriPaths.fromStringPathComponents(
+                srcItemName, /* objectName= */ null, /* allowEmptyObjectName= */ true)
+                : UriPaths.toDirectory(dst.resolve(srcItemName));
+      }
+    } else {
+      // -- src is a file
+      //    -- dst is a file => rename the file.
+      //    -- dst is a directory => similar to the previous case after
+      //                             appending src file-name to dst
+
+      if (dstInfo.isDirectory()) {
+        if (!dstInfo.exists()) {
+          throw new IOException("Cannot rename because path does not exist: " + dstInfo.getPath());
+        } else {
+          dst = dst.resolve(srcItemName);
+        }
+      }
+    }
+
+    return dst;
+  }
+
+  @Nullable
+  static String getItemName(URI path) {
+    checkNotNull(path, "path can not be null");
+
+    // There is no leaf item for the root path.
+    if (path.equals(GCSROOT)) {
+      return null;
+    }
+
+    StorageResourceId resourceId = StorageResourceId.fromUriPath(path, true);
+
+    if (resourceId.isBucket()) {
+      return resourceId.getBucketName();
+    }
+
+    String objectName = resourceId.getObjectName();
+    int index =
+        StringPaths.isDirectoryPath(objectName)
+            ? objectName.lastIndexOf(PATH_DELIMITER, objectName.length() - 2)
+            : objectName.lastIndexOf(PATH_DELIMITER);
+    return index < 0 ? objectName : objectName.substring(index + 1);
   }
 }
