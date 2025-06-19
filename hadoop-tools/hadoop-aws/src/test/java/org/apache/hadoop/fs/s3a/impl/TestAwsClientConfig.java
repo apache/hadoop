@@ -218,26 +218,26 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
     final Configuration conf = new Configuration();
     conf.set(CUSTOM_HEADERS_STS, "header1=value1;value2,header2=value3");
 
-    Assertions.assertThat(conf.get(CUSTOM_HEADERS_S3))
+    assertThat(conf.get(CUSTOM_HEADERS_S3))
             .describedAs("Custom client headers for s3 %s", CUSTOM_HEADERS_S3)
             .isNull();
 
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
             .headers().size())
         .describedAs("Count of S3 client headers")
         .isEqualTo(0);
 
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
             .headers().size())
         .describedAs("Count of STS client headers")
         .isEqualTo(2);
 
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
             .headers().get("header1"))
         .describedAs("STS client 'header1' header value")
         .isEqualTo(Lists.newArrayList("value1", "value2"));
 
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
             .headers().get("header2"))
         .describedAs("STS client 'header2' header value")
         .isEqualTo(Lists.newArrayList("value3"));
@@ -252,26 +252,26 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
     final Configuration conf = new Configuration();
     conf.set(CUSTOM_HEADERS_S3, "header1=value1;value2,header2=value3");
 
-    Assertions.assertThat(conf.get(CUSTOM_HEADERS_STS))
+    assertThat(conf.get(CUSTOM_HEADERS_STS))
             .describedAs("Custom client headers for STS %s", CUSTOM_HEADERS_STS)
             .isNull();
 
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
             .headers().size())
         .describedAs("Count of STS client headers")
         .isEqualTo(0);
 
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
             .headers().size())
         .describedAs("Count of S3 client headers")
         .isEqualTo(2);
 
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
             .headers().get("header1"))
         .describedAs("S3 client 'header1' header value")
         .isEqualTo(Lists.newArrayList("value1", "value2"));
 
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
             .headers().get("header2"))
         .describedAs("S3 client 'header2' header value")
         .isEqualTo(Lists.newArrayList("value3"));
@@ -287,26 +287,26 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
     final Configuration conf = new Configuration();
     conf.set(CUSTOM_HEADERS_S3, "  header1 =  value1 ;  value2 ,   header2= value3  ");
 
-    Assertions.assertThat(conf.get(CUSTOM_HEADERS_STS))
+    assertThat(conf.get(CUSTOM_HEADERS_STS))
             .describedAs("Custom client headers for STS %s", CUSTOM_HEADERS_STS)
             .isNull();
 
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
                     .headers().size())
             .describedAs("Count of STS client headers")
             .isEqualTo(0);
 
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
                     .headers().size())
             .describedAs("Count of S3 client headers")
             .isEqualTo(2);
 
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
                     .headers().get("header1"))
             .describedAs("S3 client 'header1' header value")
             .isEqualTo(Lists.newArrayList("value1", "value2"));
 
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
                     .headers().get("header2"))
             .describedAs("S3 client 'header2' header value")
             .isEqualTo(Lists.newArrayList("value3"));
@@ -321,7 +321,7 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
     Configuration conf = new Configuration();
     conf.set(CUSTOM_HEADERS_S3, "header1=duplicate;duplicate");
 
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
                     .headers().get("header1"))
             .describedAs("S3 client 'header1' header value")
             .isEqualTo(Lists.newArrayList("duplicate", "duplicate"));
