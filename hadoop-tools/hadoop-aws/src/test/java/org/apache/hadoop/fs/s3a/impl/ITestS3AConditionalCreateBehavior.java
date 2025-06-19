@@ -22,8 +22,8 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -110,7 +110,7 @@ public class ITestS3AConditionalCreateBehavior extends AbstractS3ATestBase {
     return conf;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setup();
   }

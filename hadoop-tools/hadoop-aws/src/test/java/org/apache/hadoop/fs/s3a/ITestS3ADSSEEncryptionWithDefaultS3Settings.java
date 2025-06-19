@@ -20,8 +20,8 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 
-import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import org.apache.commons.lang3.StringUtils;
@@ -96,13 +96,13 @@ public class ITestS3ADSSEEncryptionWithDefaultS3Settings extends
   }
 
   @Override
-  @Ignore
+  @Disabled
   @Test
   public void testEncryptionSettingPropagation() throws Throwable {
   }
 
   @Override
-  @Ignore
+  @Disabled
   @Test
   public void testEncryption() throws Throwable {
   }

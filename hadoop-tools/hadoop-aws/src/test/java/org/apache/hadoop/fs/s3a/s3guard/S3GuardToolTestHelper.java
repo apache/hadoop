@@ -30,7 +30,7 @@ import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Helper class for tests which make CLI invocations of the S3Guard tools.
@@ -128,7 +128,7 @@ public final class S3GuardToolTestHelper {
     if (expectedResult != r) {
       String message = errorText.isEmpty() ? "" : (errorText + ": ")
           + "Command " + cmd + " failed\n" + buf;
-      assertEquals(message, expectedResult, r);
+      assertEquals(expectedResult, r, message);
     }
   }
 

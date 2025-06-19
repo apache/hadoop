@@ -33,7 +33,7 @@ import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -49,8 +49,8 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.requestRange;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.sdkClientException;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_416_RANGE_NOT_SATISFIABLE;
 import static org.apache.hadoop.util.functional.FutureIO.eval;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests S3AInputStream retry behavior on read failure.
@@ -78,10 +78,12 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
   public void testInputStreamReadRetryForException() throws IOException {
     S3AInputStream s3AInputStream = getMockedS3AInputStream(failingInputStreamCallbacks(
         awsServiceException(STATUS)));
-    assertEquals("'0' from the test input stream should be the first " +
-        "character being read", INPUT.charAt(0), s3AInputStream.read());
-    assertEquals("'1' from the test input stream should be the second " +
-        "character being read", INPUT.charAt(1), s3AInputStream.read());
+    assertEquals(INPUT.charAt(0), s3AInputStream.read(),
+        "'0' from the test input stream should be the first " +
+        "character being read");
+    assertEquals(INPUT.charAt(1), s3AInputStream.read(),
+        "'1' from the test input stream should be the second " +
+         "character being read");
   }
 
   @Test
@@ -92,8 +94,8 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
     s3AInputStream.read(result, 0, INPUT.length());
 
     assertArrayEquals(
-        "The read result should equals to the test input stream content",
-        INPUT.getBytes(), result);
+        INPUT.getBytes(), result,
+        "The read result should equals to the test input stream content");
   }
 
   @Test
@@ -104,8 +106,8 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
     s3AInputStream.readFully(0, result);
 
     assertArrayEquals(
-        "The read result should equals to the test input stream content",
-        INPUT.getBytes(), result);
+        INPUT.getBytes(), result,
+        "The read result should equals to the test input stream content");
   }
 
   /**

@@ -19,9 +19,9 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,12 +31,12 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
  * Test the test utils. Why an integration test? it's needed to
  * verify property pushdown.
  */
-public class ITestS3ATestUtils extends Assert {
+public class ITestS3ATestUtils extends Assertions {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3ATestUtils.class);
   public static final String KEY = "undefined.property";
 
-  @Before
+  @BeforeEach
   public void clear() {
     System.clearProperty(KEY);
   }
