@@ -1822,7 +1822,97 @@ public class TestNodeLabelContainerAllocation {
 
     rm1.close();
   }
-  
+
+  @Test
+  @Timeout(value = 60)
+  public void
+      testQueueMaxCapacitiesWillBeHonoredWhenNotRespectingExclusivity()
+          throws Exception {
+
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration(this.conf);
+
+    csConf.setBoolean(CapacitySchedulerConfiguration.NON_EXCLUSIVE_LABEL_QUEUE_LIMIT_ENABLE, true);
+
+    // Define top-level queues
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
+    csConf.setCapacityByLabel(ROOT, "x", 100);
+
+    csConf.setCapacity(A, 50);
+    csConf.setAccessibleNodeLabels(A, toSet("x"));
+    csConf.setCapacityByLabel(A, "x", 50);
+    csConf.setMaximumCapacityByLabel(A, "x", 50);
+    csConf.setUserLimit(A, 200);
+
+    csConf.setCapacity(B, 50);
+    csConf.setAccessibleNodeLabels(B, toSet("x"));
+    csConf.setCapacityByLabel(B, "x", 50);
+    csConf.setMaximumCapacityByLabel(B, "x", 50);
+    csConf.setUserLimit(B, 200);
+
+    // set node -> label
+    mgr.addToCluserNodeLabels(ImmutableSet.of(
+        NodeLabel.newInstance("x", false)));
+    mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x")));
+
+    // inject node label manager
+    MockRM rm1 = new MockRM(csConf) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 10 * GB); // label = x
+    MockNM nm2 = rm1.registerNode("h2:1234", 10 * GB); // label = <empty>
+
+    // app1 -> a
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm2);
+
+    // app1 asks for 10 partition= containers
+    am1.allocate("*", 1 * GB, 10, new ArrayList<ContainerId>());
+
+    // NM1 do 50 heartbeats
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+
+    SchedulerNode schedulerNode1 = cs.getSchedulerNode(nm1.getNodeId());
+
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    for (int i = 0; i < 50; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    }
+
+    assertEquals(5, schedulerNode1.getNumContainers());
+
+    // check non-exclusive containers of LeafQueue is correctly updated
+    LeafQueue leafQueue = (LeafQueue) cs.getQueue("a");
+    assertFalse(leafQueue.getIgnoreExclusivityRMContainers().containsKey(
+        "y"));
+    assertEquals(5,
+        leafQueue.getIgnoreExclusivityRMContainers().get("x").size());
+
+    // completes all containers of app1, ignoreExclusivityRMContainers should be
+    // updated as well.
+    cs.handle(new AppAttemptRemovedSchedulerEvent(
+        am1.getApplicationAttemptId(), RMAppAttemptState.FINISHED, false));
+    assertFalse(leafQueue.getIgnoreExclusivityRMContainers().containsKey(
+        "x"));
+
+    rm1.close();
+  }
+
   private void checkQueueUsedCapacity(String queueName, CapacityScheduler cs,
       String nodePartition, float usedCapacity, float absoluteUsedCapacity) {
     float epsilon = 1e-6f;

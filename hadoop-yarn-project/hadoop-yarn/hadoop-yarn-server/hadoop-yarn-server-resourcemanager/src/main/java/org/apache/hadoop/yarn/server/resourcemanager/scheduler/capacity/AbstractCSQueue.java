@@ -801,9 +801,18 @@ public abstract class AbstractCSQueue implements CSQueue {
       return Resources.min(resourceCalculator, clusterResource,
           queueMaxResource, currentResourceLimits.getLimit());
     } else if (schedulingMode == SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY) {
-      // When we doing non-exclusive resource allocation, maximum capacity of
-      // all queues on this label equals to total resource with the label.
-      return labelManager.getResourceByLabel(nodePartition, clusterResource);
+      CapacitySchedulerConfiguration conf = queueContext.getConfiguration();
+      boolean queueLimitEnable = conf.getBoolean(
+          CapacitySchedulerConfiguration.NON_EXCLUSIVE_LABEL_QUEUE_LIMIT_ENABLE,
+          CapacitySchedulerConfiguration.DEFAULT_NON_EXCLUSIVE_LABEL_QUEUE_LIMIT_ENABLE
+      );
+      if (queueLimitEnable) {
+        return getQueueMaxResource(nodePartition);
+      } else {
+        // When we doing non-exclusive resource allocation, maximum capacity of
+        // all queues on this label equals to total resource with the label.
+        return labelManager.getResourceByLabel(nodePartition, clusterResource);
+      }
     }
 
     return Resources.none();
