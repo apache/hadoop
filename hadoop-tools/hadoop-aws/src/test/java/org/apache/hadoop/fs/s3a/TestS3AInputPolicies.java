@@ -43,18 +43,18 @@ public class TestS3AInputPolicies {
   public static final long _1MB = 1024L * 1024;
   public static final long _10MB = _1MB * 10;
 
-  public void initTestS3AInputPolicies(S3AInputPolicy policy,
-      long targetPos,
-      long length,
-      long contentLength,
-      long readahead,
-      long expectedLimit) {
-    this.policy = policy;
-    this.targetPos = targetPos;
-    this.length = length;
-    this.contentLength = contentLength;
-    this.readahead = readahead;
-    this.expectedLimit = expectedLimit;
+  public void initTestS3AInputPolicies(S3AInputPolicy pPolicy,
+      long pTargetPos,
+      long pLength,
+      long pContentLength,
+      long pReadahead,
+      long pExpectedLimit) {
+    this.policy = pPolicy;
+    this.targetPos = pTargetPos;
+    this.length = pLength;
+    this.contentLength = pContentLength;
+    this.readahead = pReadahead;
+    this.expectedLimit = pExpectedLimit;
   }
 
   public static Collection<Object[]> data() {
@@ -78,10 +78,11 @@ public class TestS3AInputPolicies {
 
   @MethodSource("data")
   @ParameterizedTest
-  public void testInputPolicies(S3AInputPolicy policy,
-      long targetPos, long length, long contentLength,
-      long readahead, long expectedLimit) throws Throwable {
-    initTestS3AInputPolicies(policy, targetPos, length, contentLength, readahead, expectedLimit);
+  public void testInputPolicies(S3AInputPolicy pPolicy,
+      long pTargetPos, long pLength, long pContentLength,
+      long pReadahead, long pExpectedLimit) throws Throwable {
+    initTestS3AInputPolicies(pPolicy, pTargetPos, pLength, pContentLength,
+        pReadahead, pExpectedLimit);
     Assertions.assertEquals(
         expectedLimit,
         S3AInputStream.calculateRequestLimit(policy, targetPos,

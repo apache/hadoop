@@ -137,7 +137,7 @@ public class TestS3ADelegationTokenSupport {
 
     SessionTokenIdentifier result = S3ATestUtils.roundTrip(id, null);
     String ids = id.toString();
-    assertEquals(id.getUri(), result.getUri(),"URI in " + ids);
+    assertEquals(id.getUri(), result.getUri(), "URI in " + ids);
     assertEquals(id.getMarshalledCredentials(),
         result.getMarshalledCredentials(),
         "credentials in " + ids);
