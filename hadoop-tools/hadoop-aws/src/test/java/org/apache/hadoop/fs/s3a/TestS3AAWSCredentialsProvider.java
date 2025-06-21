@@ -644,10 +644,10 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
 
       for (Future<AwsCredentials> result : results) {
         AwsCredentials credentials = result.get();
-        assertEquals("Access key from credential provider",
-            "expectedAccessKey", credentials.accessKeyId());
-        assertEquals("Secret key from credential provider",
-            "expectedSecret", credentials.secretAccessKey());
+        assertEquals("expectedAccessKey", credentials.accessKeyId(),
+            "Access key from credential provider");
+        assertEquals("expectedSecret", credentials.secretAccessKey(),
+            "Secret key from credential provider");
       }
     } finally {
       pool.awaitTermination(TERMINATION_TIMEOUT, TimeUnit.SECONDS);

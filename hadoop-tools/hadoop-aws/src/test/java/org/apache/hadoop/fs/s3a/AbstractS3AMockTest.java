@@ -30,8 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
-import org.junit.rules.ExpectedException;
 
 
 /**
@@ -48,9 +46,6 @@ public abstract class AbstractS3AMockTest {
               .errorCode("")
               .build())
           .build();
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
   protected S3AFileSystem fs;
   protected S3Client s3;

@@ -57,8 +57,9 @@ public final class TestMagicCommitTrackerUtils {
         taskAttemptId);
     Path path = CommitUtilsWithMR
         .getBaseMagicTaskAttemptPath(taskAttemptContext, "00001", DEST_PATH);
-    assertEquals(attemptId
-,         MagicCommitTrackerUtils.extractTaskAttemptIdFromPath(path), "TaskAttemptId didn't match");
+    assertEquals(attemptId,
+        MagicCommitTrackerUtils.extractTaskAttemptIdFromPath(path),
+        "TaskAttemptId didn't match");
 
   }
 }

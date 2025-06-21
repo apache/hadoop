@@ -131,16 +131,17 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
 
   @Test
   public void testNotFound() throws Exception {
-    Path path = new Path("/dir");
-    String key = path.toUri().getPath().substring(1);
-    when(s3.headObject(argThat(correctGetMetadataRequest(BUCKET, key))))
-      .thenThrow(NOT_FOUND);
-    when(s3.headObject(argThat(
-      correctGetMetadataRequest(BUCKET, key + "/")
-    ))).thenThrow(NOT_FOUND);
-    setupListMocks(Collections.emptyList(), Collections.emptyList());
-    exception.expect(FileNotFoundException.class);
-    fs.getFileStatus(path);
+    assertThrows(FileNotFoundException.class, () -> {
+      Path path = new Path("/dir");
+      String key = path.toUri().getPath().substring(1);
+      when(s3.headObject(argThat(correctGetMetadataRequest(BUCKET, key))))
+          .thenThrow(NOT_FOUND);
+      when(s3.headObject(argThat(
+          correctGetMetadataRequest(BUCKET, key + "/")
+      ))).thenThrow(NOT_FOUND);
+      setupListMocks(Collections.emptyList(), Collections.emptyList());
+      fs.getFileStatus(path);
+    });
   }
 
   private void setupListMocks(List<CommonPrefix> prefixes,

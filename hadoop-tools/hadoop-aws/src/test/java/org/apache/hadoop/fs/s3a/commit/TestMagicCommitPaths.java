@@ -178,9 +178,9 @@ public class TestMagicCommitPaths extends Assertions {
 
   @Test
   public void testFinalDestinationMagicNoChild() {
-      Assertions.assertThrows(IllegalArgumentException.class, () -> {
-          finalDestination(l(MAGIC_PATH_PREFIX));
-      });
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      finalDestination(l(MAGIC_PATH_PREFIX));
+    });
   }
 
   @Test
@@ -190,9 +190,9 @@ public class TestMagicCommitPaths extends Assertions {
 
   @Test
   public void testFinalDestinationBaseNoChild() {
-      Assertions.assertThrows(IllegalArgumentException.class, () -> {
-          assertEquals(l(), finalDestination(l(MAGIC_PATH_PREFIX, BASE)));
-      });
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      assertEquals(l(), finalDestination(l(MAGIC_PATH_PREFIX, BASE)));
+    });
   }
 
   @Test
@@ -239,8 +239,8 @@ public class TestMagicCommitPaths extends Assertions {
 
   private void assertPathSplits(String pathString, String[] expected) {
     Path path = new Path(pathString);
-    assertArrayEquals(expected
-,         splitPathToElements(path).toArray(), "From path " + path);
+    assertArrayEquals(expected,
+        splitPathToElements(path).toArray(), "From path " + path);
   }
 
   private void assertListEquals(String[] expected, List<String> actual) {

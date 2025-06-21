@@ -19,9 +19,8 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -29,7 +28,6 @@ import java.util.Collection;
 /**
  * Unit test of the input policy logic, without making any S3 calls.
  */
-@RunWith(Parameterized.class)
 public class TestS3AInputPolicies {
 
   private S3AInputPolicy policy;
@@ -45,7 +43,7 @@ public class TestS3AInputPolicies {
   public static final long _1MB = 1024L * 1024;
   public static final long _10MB = _1MB * 10;
 
-  public TestS3AInputPolicies(S3AInputPolicy policy,
+  public void initTestS3AInputPolicies(S3AInputPolicy policy,
       long targetPos,
       long length,
       long contentLength,
@@ -59,7 +57,6 @@ public class TestS3AInputPolicies {
     this.expectedLimit = expectedLimit;
   }
 
-  @Parameterized.Parameters
   public static Collection<Object[]> data() {
     return Arrays.asList(new Object[][]{
         {S3AInputPolicy.Normal, 0, -1, 0, _64K, 0},
@@ -79,8 +76,12 @@ public class TestS3AInputPolicies {
     });
   }
 
-  @Test
-  public void testInputPolicies() throws Throwable {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testInputPolicies(S3AInputPolicy policy,
+      long targetPos, long length, long contentLength,
+      long readahead, long expectedLimit) throws Throwable {
+    initTestS3AInputPolicies(policy, targetPos, length, contentLength, readahead, expectedLimit);
     Assertions.assertEquals(
         expectedLimit,
         S3AInputStream.calculateRequestLimit(policy, targetPos,
