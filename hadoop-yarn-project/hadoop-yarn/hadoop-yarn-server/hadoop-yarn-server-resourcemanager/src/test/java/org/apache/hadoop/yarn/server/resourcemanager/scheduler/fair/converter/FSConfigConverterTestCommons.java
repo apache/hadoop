@@ -58,9 +58,32 @@ public class FSConfigConverterTestCommons {
 
   public void setUp() throws IOException {
     File d = new File(TEST_DIR, "conversion-output");
+
     if (d.exists()) {
-      FileUtils.deleteDirectory(d);
+      // Retry mechanism to ensure file handles are released
+      int maxRetries = 3;
+      int attempts = 0;
+      boolean deleted = false;
+
+      while (attempts < maxRetries && !deleted) {
+        try {
+          FileUtils.deleteDirectory(d);
+          deleted = true;
+        } catch (IOException e) {
+          attempts++;
+          System.gc(); // Hint JVM to run GC to close any unreferenced file streams
+          try {
+            Thread.sleep(100); // Wait a bit before retrying
+          } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+          }
+          if (attempts == maxRetries) {
+            throw new IOException("Failed to delete directory after retries: " + d.getAbsolutePath(), e);
+          }
+        }
+      }
     }
+
     boolean success = d.mkdirs();
     assertTrue(success, "Can't create directory: " + d.getAbsolutePath());
   }
