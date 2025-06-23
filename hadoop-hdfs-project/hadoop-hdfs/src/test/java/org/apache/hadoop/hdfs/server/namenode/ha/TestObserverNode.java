@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -69,6 +70,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapterMockitoUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeRpcServer;
 import org.apache.hadoop.hdfs.server.namenode.TestFsck;
 import org.apache.hadoop.hdfs.tools.GetGroups;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -439,6 +441,43 @@ public class TestObserverNode {
     dfs.open(testPath).close();
     assertSentTo(0);
 
+    // Test erasure coded files
+    ErasureCodingPolicy ecPolicy = new ErasureCodingPolicy(new ECSchema("rs", 3, 2), 1024);
+
+    // Fake a small file that only needs 1 block
+    doAnswer((invocation) -> {
+      List<LocatedBlock> fakeBlocks = new ArrayList<>();
+      // Return a single location, which is enough for the small file but not for the large file
+      ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L, 1, 0));
+      DatanodeInfo datanodeInfo = new DatanodeInfo.DatanodeInfoBuilder().build();
+      LocatedBlock fakeBlock = new LocatedBlock(b, new DatanodeInfo[] {datanodeInfo});
+      fakeBlocks.add(fakeBlock);
+      return new LocatedBlocks(1, false, fakeBlocks, null, true, null, ecPolicy);
+    }).when(bmSpy).createLocatedBlocks(Mockito.any(), anyLong(),
+        anyBoolean(), anyLong(), anyLong(), anyBoolean(), anyBoolean(),
+        Mockito.any(), Mockito.any());
+
+    // Small file should suceed with just the one block
+    dfs.open(testPath).close();
+    assertSentTo(2);
+
+    // Fake a larger file that needs all 3 data shards
+    doAnswer((invocation) -> {
+      List<LocatedBlock> fakeBlocks = new ArrayList<>();
+      // Return a single location, which is enough for the small file but not for the large file
+      ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L, 1024 * 3, 0));
+      DatanodeInfo datanodeInfo = new DatanodeInfo.DatanodeInfoBuilder().build();
+      LocatedBlock fakeBlock = new LocatedBlock(b, new DatanodeInfo[] {datanodeInfo});
+      fakeBlocks.add(fakeBlock);
+      return new LocatedBlocks(1024 * 3, false, fakeBlocks, null, true, null, ecPolicy);
+    }).when(bmSpy).createLocatedBlocks(Mockito.any(), anyLong(),
+        anyBoolean(), anyLong(), anyLong(), anyBoolean(), anyBoolean(),
+        Mockito.any(), Mockito.any());
+
+    // Large file should failover to the active
+    dfs.open(testPath).close();
+    assertSentTo(0);
+
     Mockito.reset(bmSpy);
 
     // Remove safe mode on observer, request should still go to it.
@@ -473,7 +512,62 @@ public class TestObserverNode {
         anyBoolean(), anyLong(), anyLong(), anyBoolean(), anyBoolean(),
         Mockito.any(), Mockito.any());
 
-    dfs.open(testPath);
+    dfs.open(testPath).close();
+    assertSentTo(0);
+
+    dfs.getClient().listPaths("/", new byte[0], true);
+    assertSentTo(0);
+
+    dfs.getClient().getLocatedFileInfo(testPath.toString(), false);
+    assertSentTo(0);
+
+    dfs.getClient().batchedListPaths(new String[]{"/"}, new byte[0], true);
+    assertSentTo(0);
+
+    // Test erasure coded files
+    ErasureCodingPolicy ecPolicy = new ErasureCodingPolicy(new ECSchema("rs", 3, 2), 1024);
+
+    // Fake a small file that only needs 1 block
+    doAnswer((invocation) -> {
+      List<LocatedBlock> fakeBlocks = new ArrayList<>();
+      // Return a single location, which is enough for the small file but not for the large file
+      ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L, 1, 0));
+      DatanodeInfo datanodeInfo = new DatanodeInfo.DatanodeInfoBuilder().build();
+      LocatedBlock fakeBlock = new LocatedBlock(b, new DatanodeInfo[] {datanodeInfo});
+      fakeBlocks.add(fakeBlock);
+      return new LocatedBlocks(1, false, fakeBlocks, null, true, null, ecPolicy);
+    }).when(bmSpy).createLocatedBlocks(Mockito.any(), anyLong(),
+        anyBoolean(), anyLong(), anyLong(), anyBoolean(), anyBoolean(),
+        Mockito.any(), Mockito.any());
+
+    // The small file should succeed on the observer, while the large file should not
+
+    dfs.open(testPath).close();
+    assertSentTo(2);
+
+    dfs.getClient().listPaths("/", new byte[0], true);
+    assertSentTo(2);
+
+    dfs.getClient().getLocatedFileInfo(testPath.toString(), false);
+    assertSentTo(2);
+
+    dfs.getClient().batchedListPaths(new String[]{"/"}, new byte[0], true);
+    assertSentTo(2);
+
+    // Fake a larger file that needs all 3 data shards
+    doAnswer((invocation) -> {
+      List<LocatedBlock> fakeBlocks = new ArrayList<>();
+      // Return a single location, which is enough for the small file but not for the large file
+      ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L, 1024 * 3, 0));
+      DatanodeInfo datanodeInfo = new DatanodeInfo.DatanodeInfoBuilder().build();
+      LocatedBlock fakeBlock = new LocatedBlock(b, new DatanodeInfo[] {datanodeInfo});
+      fakeBlocks.add(fakeBlock);
+      return new LocatedBlocks(1024 * 3, false, fakeBlocks, null, true, null, ecPolicy);
+    }).when(bmSpy).createLocatedBlocks(Mockito.any(), anyLong(),
+        anyBoolean(), anyLong(), anyLong(), anyBoolean(), anyBoolean(),
+        Mockito.any(), Mockito.any());
+
+    dfs.open(testPath).close();
     assertSentTo(0);
 
     dfs.getClient().listPaths("/", new byte[0], true);

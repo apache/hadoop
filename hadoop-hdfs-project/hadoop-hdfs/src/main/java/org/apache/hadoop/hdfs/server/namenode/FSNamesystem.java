@@ -2252,11 +2252,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             dir, pc, srcArg, offset, length, true);
         inode = res.getIIp().getLastINode();
         if (isInSafeMode()) {
+          int minBlocks = 1;
+
+          ErasureCodingPolicy ecPolicy = res.blocks.getErasureCodingPolicy();
           for (LocatedBlock b : res.blocks.getLocatedBlocks()) {
+            if (ecPolicy != null) {
+              // If the file is erasure coded, we need at least the number of data units of
+              // blocks available, unless the file is smaller than a full stripe of cells.
+              long numCells = (b.getBlockSize() - 1) / (long)ecPolicy.getCellSize() + 1;
+              minBlocks = (int)Math.min((long)ecPolicy.getNumDataUnits(), numCells);
+            }
             // if safemode & no block locations yet then throw safemodeException
-            if ((b.getLocations() == null) || (b.getLocations().length == 0)) {
+            if ((b.getLocations() == null) || (b.getLocations().length < minBlocks)) {
               SafeModeException se = newSafemodeException(
-                  "Zero blocklocations for " + srcArg);
+                  "Not enough blocklocations for " + srcArg);
               if (haEnabled && haContext != null &&
                   (haContext.getState().getServiceState() == ACTIVE ||
                       haContext.getState().getServiceState() == OBSERVER)) {
@@ -9267,9 +9276,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     List<LocatedBlock> locatedBlockList = blocks.getLocatedBlocks();
     if (locatedBlockList != null) {
+      int minBlocks = 1;
+
+      ErasureCodingPolicy ecPolicy = blocks.getErasureCodingPolicy();
       for (LocatedBlock b : locatedBlockList) {
-        if (b.getLocations() == null || b.getLocations().length == 0) {
-          throw new ObserverRetryOnActiveException("Zero blocklocations for " + src);
+        if (ecPolicy != null) {
+          // If the file is erasure coded, we need at least the number of data units of
+          // blocks available, unless the file is smaller than a full stripe of cells.
+          long numCells = (b.getBlockSize() - 1) / (long)ecPolicy.getCellSize() + 1;
+          minBlocks = (int)Math.min((long)ecPolicy.getNumDataUnits(), numCells);
+        }
+        if (b.getLocations() == null || b.getLocations().length < minBlocks) {
+          throw new ObserverRetryOnActiveException("Not enough blocklocations for " + src);
         }
       }
     }
