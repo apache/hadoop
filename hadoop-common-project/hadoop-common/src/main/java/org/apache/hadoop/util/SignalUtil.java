@@ -130,7 +130,7 @@ public class SignalUtil {
               handler.handle(new Signal(args[0]));
               return null;
             } else {
-              Method delegateMethod = Handler.class.getMethod(
+              Method delegateMethod = handler.getClass().getMethod(
                   method.getName(), method.getParameterTypes());
               return delegateMethod.invoke(handler, args);
             }
