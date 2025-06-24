@@ -24,7 +24,6 @@ import org.apache.hadoop.util.dynamic.BindingUtils;
 import org.apache.hadoop.util.dynamic.DynConstructors;
 import org.apache.hadoop.util.dynamic.DynMethods;
 
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 
 @InterfaceAudience.Private
@@ -50,23 +49,28 @@ public class SignalUtil {
           .impl(jdkSignalClazz, jdkSignalClazz)
           .buildStatic();
 
-  static DynMethods.UnboundMethod jdkSignalHandlerHandleMethod =
+  static DynMethods.UnboundMethod jdkSignalHandlerHandleUnboundMethod =
       new DynMethods.Builder("handle")
           .impl(jdkSignalHandlerClazz, jdkSignalClazz)
           .build();
 
   @InterfaceAudience.Private
   public static class Signal {
-    private final static DynMethods.UnboundMethod getNumberMethod =
+    private final DynMethods.UnboundMethod getNumberUnboundMethod =
         new DynMethods.Builder("getNumber").impl(jdkSignalClazz).build();
 
-    private final static DynMethods.UnboundMethod getNameMethod =
+    private final DynMethods.UnboundMethod getNameUnboundMethod =
         new DynMethods.Builder("getName").impl(jdkSignalClazz).build();
 
     private final Object delegate;
+    private final DynMethods.BoundMethod getNumberMethod;
+    private final DynMethods.BoundMethod getNameMethod;
 
     public Signal(String name) {
+      Preconditions.checkNotNull(name);
       this.delegate = jdkSignalCtor.newInstance(name);
+      this.getNumberMethod = getNumberUnboundMethod.bind(delegate);
+      this.getNameMethod = getNameUnboundMethod.bind(delegate);
     }
 
     public Signal(Object delegate) {
@@ -74,14 +78,16 @@ public class SignalUtil {
           String.format("Expected class is '%s', but actual class is '%s'",
               jdkSignalClazz.getName(), delegate.getClass().getName()));
       this.delegate = delegate;
+      this.getNumberMethod = getNumberUnboundMethod.bind(delegate);
+      this.getNameMethod = getNameUnboundMethod.bind(delegate);
     }
 
     public int getNumber() {
-      return getNumberMethod.bind(delegate).invoke();
+      return getNumberMethod.invoke();
     }
 
     public String getName() {
-      return getNameMethod.bind(delegate).invoke();
+      return getNameMethod.invoke();
     }
 
     public boolean equals(Object obj) {
@@ -111,6 +117,7 @@ public class SignalUtil {
   static class JdkSignalHandlerImpl implements Handler {
 
     private final Object delegate;
+    private final DynMethods.BoundMethod jdkSignalHandlerHandleMethod;
 
     JdkSignalHandlerImpl(Handler handler) {
       this.delegate = Proxy.newProxyInstance(
@@ -121,10 +128,11 @@ public class SignalUtil {
               handler.handle(new Signal(args[0]));
               return null;
             } else {
-              return InvocationHandler.invokeDefault(proxyObj, method, args);
+              return method.invoke(proxyObj, args);
             }
           }
       );
+      this.jdkSignalHandlerHandleMethod = jdkSignalHandlerHandleUnboundMethod.bind(delegate);
     }
 
     JdkSignalHandlerImpl(Object delegate) {
@@ -132,11 +140,12 @@ public class SignalUtil {
           String.format("Expected class is '%s', but actual class is '%s'",
               jdkSignalHandlerClazz.getName(), delegate.getClass().getName()));
       this.delegate = delegate;
+      this.jdkSignalHandlerHandleMethod = jdkSignalHandlerHandleUnboundMethod.bind(delegate);
     }
 
     @Override
     public void handle(Signal sig) {
-      jdkSignalHandlerHandleMethod.bind(delegate).invoke(sig.delegate);
+      jdkSignalHandlerHandleMethod.invoke(sig.delegate);
     }
   }
 
