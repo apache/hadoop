@@ -72,7 +72,7 @@ public enum SignalLogger {
     registered = true;
     StringBuilder bld = new StringBuilder();
     bld.append("registered UNIX signal handlers for [");
-    final String[] SIGNALS = { "TERM", "HUP", "INT" };
+    final String[] SIGNALS = {"TERM", "HUP", "INT"};
     String separator = "";
     for (String signalName : SIGNALS) {
       try {

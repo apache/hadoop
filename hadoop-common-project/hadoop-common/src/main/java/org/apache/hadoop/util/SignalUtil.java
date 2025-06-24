@@ -30,38 +30,38 @@ import java.lang.reflect.Proxy;
 @InterfaceAudience.Private
 public class SignalUtil {
 
-  static final Class<?> jdkSignalClazz =
+  static final Class<?> JDK_SIGNAL_CLAZZ =
       BindingUtils.loadClassSafely("sun.misc.Signal");
-  static final Class<?> jdkSignalHandlerClazz =
+  static final Class<?> JDK_SIGNAL_HANDLER_CLAZZ =
       BindingUtils.loadClassSafely("sun.misc.SignalHandler");
 
-  static DynConstructors.Ctor<?> jdkSignalCtor =
+  static final DynConstructors.Ctor<?> JDK_SIGNAL_CTOR =
       new DynConstructors.Builder()
-          .impl(jdkSignalClazz, String.class)
+          .impl(JDK_SIGNAL_CLAZZ, String.class)
           .build();
 
-  static DynMethods.StaticMethod jdkSignalHandleStaticMethod =
+  static final DynMethods.StaticMethod JDK_SIGNAL_HANDLE_STATIC_METHOD =
       new DynMethods.Builder("handle")
-          .impl(jdkSignalClazz, jdkSignalClazz, jdkSignalHandlerClazz)
+          .impl(JDK_SIGNAL_CLAZZ, JDK_SIGNAL_CLAZZ, JDK_SIGNAL_HANDLER_CLAZZ)
           .buildStatic();
 
-  static DynMethods.StaticMethod jdkSignalRaiseStaticMethod =
+  static final DynMethods.StaticMethod JDK_SIGNAL_RAISE_STATIC_METHOD =
       new DynMethods.Builder("raise")
-          .impl(jdkSignalClazz, jdkSignalClazz)
+          .impl(JDK_SIGNAL_CLAZZ, JDK_SIGNAL_CLAZZ)
           .buildStatic();
 
-  static DynMethods.UnboundMethod jdkSignalHandlerHandleUnboundMethod =
+  static final DynMethods.UnboundMethod JDK_SIGNAL_HANDLER_HANDLE_UNBOUND_METHOD =
       new DynMethods.Builder("handle")
-          .impl(jdkSignalHandlerClazz, jdkSignalClazz)
+          .impl(JDK_SIGNAL_HANDLER_CLAZZ, JDK_SIGNAL_CLAZZ)
           .build();
 
   @InterfaceAudience.Private
   public static class Signal {
-    private static final DynMethods.UnboundMethod getNumberUnboundMethod =
-        new DynMethods.Builder("getNumber").impl(jdkSignalClazz).build();
+    private static final DynMethods.UnboundMethod GET_NUMBER_UNBOUND_METHOD =
+        new DynMethods.Builder("getNumber").impl(JDK_SIGNAL_CLAZZ).build();
 
-    private static final DynMethods.UnboundMethod getNameUnboundMethod =
-        new DynMethods.Builder("getName").impl(jdkSignalClazz).build();
+    private static final DynMethods.UnboundMethod GET_NAME_UNBOUND_METHOD =
+        new DynMethods.Builder("getName").impl(JDK_SIGNAL_CLAZZ).build();
 
     private final Object delegate;
     private final DynMethods.BoundMethod getNumberMethod;
@@ -69,18 +69,18 @@ public class SignalUtil {
 
     public Signal(String name) {
       Preconditions.checkNotNull(name);
-      this.delegate = jdkSignalCtor.newInstance(name);
-      this.getNumberMethod = getNumberUnboundMethod.bind(delegate);
-      this.getNameMethod = getNameUnboundMethod.bind(delegate);
+      this.delegate = JDK_SIGNAL_CTOR.newInstance(name);
+      this.getNumberMethod = GET_NUMBER_UNBOUND_METHOD.bind(delegate);
+      this.getNameMethod = GET_NAME_UNBOUND_METHOD.bind(delegate);
     }
 
     public Signal(Object delegate) {
-      Preconditions.checkArgument(jdkSignalClazz.isInstance(delegate),
+      Preconditions.checkArgument(JDK_SIGNAL_CLAZZ.isInstance(delegate),
           String.format("Expected class is '%s', but actual class is '%s'",
-              jdkSignalClazz.getName(), delegate.getClass().getName()));
+              JDK_SIGNAL_CLAZZ.getName(), delegate.getClass().getName()));
       this.delegate = delegate;
-      this.getNumberMethod = getNumberUnboundMethod.bind(delegate);
-      this.getNameMethod = getNameUnboundMethod.bind(delegate);
+      this.getNumberMethod = GET_NUMBER_UNBOUND_METHOD.bind(delegate);
+      this.getNameMethod = GET_NAME_UNBOUND_METHOD.bind(delegate);
     }
 
     public int getNumber() {
@@ -123,26 +123,28 @@ public class SignalUtil {
     JdkSignalHandlerImpl(Handler handler) {
       this.delegate = Proxy.newProxyInstance(
           getClass().getClassLoader(),
-          new Class<?>[] { jdkSignalHandlerClazz },
+          new Class<?>[] {JDK_SIGNAL_HANDLER_CLAZZ},
           (proxyObj, method, args) -> {
-            if ("handle".equals(method.getName()) && args.length == 1 && jdkSignalClazz.isInstance(args[0])) {
+            if ("handle".equals(method.getName()) && args.length == 1
+                && JDK_SIGNAL_CLAZZ.isInstance(args[0])) {
               handler.handle(new Signal(args[0]));
               return null;
             } else {
-              Method delegateMethod = Handler.class.getMethod(method.getName(), method.getParameterTypes());
+              Method delegateMethod = Handler.class.getMethod(
+                  method.getName(), method.getParameterTypes());
               return delegateMethod.invoke(handler, args);
             }
           }
       );
-      this.jdkSignalHandlerHandleMethod = jdkSignalHandlerHandleUnboundMethod.bind(delegate);
+      this.jdkSignalHandlerHandleMethod = JDK_SIGNAL_HANDLER_HANDLE_UNBOUND_METHOD.bind(delegate);
     }
 
     JdkSignalHandlerImpl(Object delegate) {
-      Preconditions.checkArgument(jdkSignalHandlerClazz.isInstance(delegate),
+      Preconditions.checkArgument(JDK_SIGNAL_HANDLER_CLAZZ.isInstance(delegate),
           String.format("Expected class is '%s', but actual class is '%s'",
-              jdkSignalHandlerClazz.getName(), delegate.getClass().getName()));
+              JDK_SIGNAL_HANDLER_CLAZZ.getName(), delegate.getClass().getName()));
       this.delegate = delegate;
-      this.jdkSignalHandlerHandleMethod = jdkSignalHandlerHandleUnboundMethod.bind(delegate);
+      this.jdkSignalHandlerHandleMethod = JDK_SIGNAL_HANDLER_HANDLE_UNBOUND_METHOD.bind(delegate);
     }
 
     @Override
@@ -152,12 +154,12 @@ public class SignalUtil {
   }
 
   public static Handler handle(Signal sig, Handler handler) {
-    Object preHandle = jdkSignalHandleStaticMethod.invoke(
+    Object preHandle = JDK_SIGNAL_HANDLE_STATIC_METHOD.invoke(
         sig.delegate, new JdkSignalHandlerImpl(handler).delegate);
     return new JdkSignalHandlerImpl(preHandle);
   }
 
   public static void raise(Signal sig) throws IllegalArgumentException {
-    jdkSignalRaiseStaticMethod.invoke(sig.delegate);
+    JDK_SIGNAL_RAISE_STATIC_METHOD.invoke(sig.delegate);
   }
 }
