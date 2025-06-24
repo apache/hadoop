@@ -617,8 +617,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
              dependencies of this project for known CVEs (security
              vulnerabilities against them). It will produce a report
              in target/dependency-check-report.html. To invoke, run
-             'mvn dependency-check:aggregate'. Note that this plugin
-             requires maven 3.1.1 or greater.
+             'mvn dependency-check:aggregate'.
         -->
         <groupId>org.owasp</groupId>
         <artifactId>dependency-check-maven</artifactId>
