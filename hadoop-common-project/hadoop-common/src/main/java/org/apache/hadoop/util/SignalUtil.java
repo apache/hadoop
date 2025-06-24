@@ -57,10 +57,10 @@ public class SignalUtil {
 
   @InterfaceAudience.Private
   public static class Signal {
-    private final DynMethods.UnboundMethod getNumberUnboundMethod =
+    private static final DynMethods.UnboundMethod getNumberUnboundMethod =
         new DynMethods.Builder("getNumber").impl(jdkSignalClazz).build();
 
-    private final DynMethods.UnboundMethod getNameUnboundMethod =
+    private static final DynMethods.UnboundMethod getNameUnboundMethod =
         new DynMethods.Builder("getName").impl(jdkSignalClazz).build();
 
     private final Object delegate;
