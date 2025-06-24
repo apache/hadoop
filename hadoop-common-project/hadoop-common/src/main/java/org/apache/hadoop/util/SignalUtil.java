@@ -24,6 +24,7 @@ import org.apache.hadoop.util.dynamic.BindingUtils;
 import org.apache.hadoop.util.dynamic.DynConstructors;
 import org.apache.hadoop.util.dynamic.DynMethods;
 
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
 @InterfaceAudience.Private
@@ -128,7 +129,8 @@ public class SignalUtil {
               handler.handle(new Signal(args[0]));
               return null;
             } else {
-              return method.invoke(proxyObj, args);
+              Method delegateMethod = Handler.class.getMethod(method.getName(), method.getParameterTypes());
+              return delegateMethod.invoke(handler, args);
             }
           }
       );
