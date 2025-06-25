@@ -38,7 +38,9 @@ import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
@@ -174,11 +176,26 @@ abstract class StripeReader {
 
   private void checkMissingBlocks() throws IOException {
     if (alignedStripe.missingChunksNum > parityBlkNum) {
-      clearFutures();
-      throw new IOException(alignedStripe.missingChunksNum
-          + " missing blocks, the stripe is: " + alignedStripe
-          + "; locatedBlocks is: " + dfsStripedInputStream.getLocatedBlocks());
+      if (countOfNullReaderInfos(readerInfos) < parityBlkNum) {
+        clearFutures();
+        throw new IOException(alignedStripe.missingChunksNum
+            + " missing blocks, the stripe is: " + alignedStripe
+            + "; locatedBlocks is: " + dfsStripedInputStream.getLocatedBlocks());
+      }
     }
+  }
+
+  private int countOfNullReaderInfos(BlockReaderInfo[] blockreaderInfos) {
+    if (blockreaderInfos == null) {
+      return 0;
+    }
+    int count = 0;
+    for (int i = 0; i < blockreaderInfos.length; i++) {
+      if (blockreaderInfos[i] == null) {
+        count++;
+      }
+    }
+    return count;
   }
 
   /**
@@ -187,6 +204,16 @@ abstract class StripeReader {
    */
   private void readDataForDecoding() throws IOException {
     prepareDecodeInputs();
+
+    if (alignedStripe.missingChunksNum > parityBlkNum) {
+      for (int index = 0; index < dataBlkNum; index++) {
+        if (readerInfos[index] == null) {
+          alignedStripe.chunks[index].state = StripingChunk.REQUESTED;
+          alignedStripe.missingChunksNum--;
+        }
+      }
+    }
+
     for (int i = 0; i < dataBlkNum; i++) {
       Preconditions.checkNotNull(alignedStripe.chunks[i]);
       if (alignedStripe.chunks[i].state == StripingChunk.REQUESTED) {
@@ -199,6 +226,17 @@ abstract class StripeReader {
   }
 
   void readParityChunks(int num) throws IOException {
+    if (alignedStripe.missingChunksNum > parityBlkNum) {
+      for (int index = dataBlkNum; index < dataBlkNum + parityBlkNum; index++) {
+        if (readerInfos[index] == null) {
+          if (alignedStripe.chunks[index] != null) {
+            alignedStripe.chunks[index].state = StripingChunk.REQUESTED;
+            alignedStripe.missingChunksNum--;
+          }
+        }
+      }
+    }
+
     for (int i = dataBlkNum, j = 0; i < dataBlkNum + parityBlkNum && j < num;
          i++) {
       if (alignedStripe.chunks[i] == null) {
@@ -332,7 +370,7 @@ abstract class StripeReader {
   }
 
   /**
-   * read the whole stripe. do decoding if necessary
+   * Read the whole stripe. do decoding if necessary.
    */
   void readStripe() throws IOException {
     try {
@@ -349,7 +387,7 @@ abstract class StripeReader {
       if (alignedStripe.missingChunksNum > 0) {
         checkMissingBlocks();
         readDataForDecoding();
-        // read parity chunks
+        // Read parity chunks.
         readParityChunks(alignedStripe.missingChunksNum);
       }
     } catch (IOException e) {
@@ -359,7 +397,7 @@ abstract class StripeReader {
     // TODO: for a full stripe we can start reading (dataBlkNum + 1) chunks
 
     // Input buffers for potential decode operation, which remains null until
-    // first read failure
+    // first read failure.
     while (!futures.isEmpty()) {
       try {
         long beginReadMS = Time.monotonicNow();
@@ -378,14 +416,20 @@ abstract class StripeReader {
           returnedChunk.state = StripingChunk.FETCHED;
           alignedStripe.fetchedChunksNum++;
           updateState4SuccessRead(r);
+          dfsStripedInputStream.setRetryCurrentReaderFlags(r.index, true);
           if (alignedStripe.fetchedChunksNum == dataBlkNum) {
             clearFutures();
             break;
           }
         } else {
           returnedChunk.state = StripingChunk.MISSING;
-          // close the corresponding reader
-          dfsStripedInputStream.closeReader(readerInfos[r.index]);
+          // Close the corresponding reader.
+          dfsStripedInputStream.closeReader(readerInfos[r.index], r.index);
+          boolean originalRetryFlag = dfsStripedInputStream.getRetryCurrentReaderFlags(r.index);
+          if (originalRetryFlag) {
+            dfsStripedInputStream.setRetryCurrentReaderFlags(r.index, false);
+            readerInfos[r.index] = null;
+          }
 
           final int missing = alignedStripe.missingChunksNum;
           alignedStripe.missingChunksNum++;
@@ -399,7 +443,7 @@ abstract class StripeReader {
         DFSClient.LOG.error(err, ie);
         dfsStripedInputStream.close();
         clearFutures();
-        // Don't decode if read interrupted
+        // Don't decode if read interrupted.
         throw new InterruptedIOException(err);
       }
     }

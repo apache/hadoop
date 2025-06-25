@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -50,6 +51,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
@@ -735,4 +737,86 @@ public class TestDFSStripedInputStream {
     assertEquals(rangesExpected, ranges);
   }
 
+  @Test
+  public void testStatefulReadAfterLongTimeIdle() throws Exception {
+    HdfsConfiguration hdfsConf = new HdfsConfiguration();
+    hdfsConf.setInt("dfs.datanode.socket.write.timeout", 5000);
+    hdfsConf.setInt("dfs.client.socket-timeout", 5000);
+    String testBaseDir = "/testECRead";
+    String testfileName = "testfile";
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(hdfsConf)
+        .numDataNodes(9).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      Path dir = new Path(testBaseDir);
+      assertTrue(dfs.mkdirs(dir));
+      dfs.enableErasureCodingPolicy("RS-6-3-1024k");
+      dfs.setErasureCodingPolicy(dir, "RS-6-3-1024k");
+      assertEquals("RS-6-3-1024k", dfs.getErasureCodingPolicy(dir).getName());
+
+      int writeBufSize = 30 * 1024 * 1024 + 1;
+      byte[] writeBuf = new byte[writeBufSize];
+      try (FSDataOutputStream fsdos = dfs.create(
+          new Path(testBaseDir + Path.SEPARATOR + testfileName))) {
+        Random random = new Random();
+        random.nextBytes(writeBuf);
+        fsdos.write(writeBuf, 0, writeBuf.length);
+        Thread.sleep(2000);
+      }
+
+      byte[] readBuf = new byte[6 * 1024 * 1024];
+      try (FSDataInputStream fsdis = dfs.open(
+          new Path(testBaseDir + Path.SEPARATOR + testfileName))) {
+        fsdis.read(readBuf);
+        Thread.sleep(6 * 1000);
+        while ((fsdis.read(readBuf)) > 0) {
+          Thread.sleep(6 * 1000);
+        }
+      }
+      assertTrue(dfs.delete(new Path(testBaseDir + Path.SEPARATOR + testfileName), true));
+    }
+  }
+
+  @Test
+  public void testPReadAfterLongTimeIdle() throws Exception {
+    HdfsConfiguration hdfsConf = new HdfsConfiguration();
+    hdfsConf.setInt("dfs.datanode.socket.write.timeout", 5000);
+    hdfsConf.setInt("dfs.client.socket-timeout", 5000);
+    String testBaseDir = "/testECRead";
+    String testfileName = "testfile";
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(hdfsConf)
+        .numDataNodes(9).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      Path dir = new Path(testBaseDir);
+      assertTrue(dfs.mkdirs(dir));
+      dfs.enableErasureCodingPolicy("RS-6-3-1024k");
+      dfs.setErasureCodingPolicy(dir, "RS-6-3-1024k");
+      assertEquals("RS-6-3-1024k", dfs.getErasureCodingPolicy(dir).getName());
+
+      int writeBufSize = 30 * 1024 * 1024 + 1;
+      byte[] writeBuf = new byte[writeBufSize];
+      try (FSDataOutputStream fsdos = dfs.create(
+          new Path(testBaseDir + Path.SEPARATOR + testfileName))) {
+        Random random = new Random();
+        random.nextBytes(writeBuf);
+        fsdos.write(writeBuf, 0, writeBuf.length);
+        Thread.sleep(2000);
+      }
+
+      byte[] readBuf = new byte[6 * 1024 * 1024];
+      try (FSDataInputStream fsdis = dfs.open(
+          new Path(testBaseDir + Path.SEPARATOR + testfileName))) {
+        int curPos = 0;
+        int readLen = fsdis.read(curPos, readBuf, 0, readBuf.length);
+        curPos += readLen;
+        Thread.sleep(6 * 1000);
+        while ((readLen = fsdis.read(curPos, readBuf, 0, readBuf.length)) > 0) {
+          curPos += readLen;
+          Thread.sleep(6 * 1000);
+        }
+      }
+      assertTrue(dfs.delete(new Path(testBaseDir + Path.SEPARATOR + testfileName), true));
+    }
+  }
 }

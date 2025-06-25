@@ -93,6 +93,13 @@ public class DFSStripedInputStream extends DFSInputStream {
    */
   private final Set<String> warnedNodes =
       Collections.newSetFromMap(new ConcurrentHashMap<>());
+  /**
+   * We use this field to indicate whether we should retry the corresponding reader before
+   * we mark it skipped. possibly retry the same node so that transient errors don't
+   * result in application level failures (e.g. Datanode could have closed the connection
+   * because the client is idle for too long).
+   */
+  private boolean[] retryCurrentReaderFlags;
 
   DFSStripedInputStream(DFSClient dfsClient, String src,
       boolean verifyChecksum, ErasureCodingPolicy ecPolicy,
@@ -112,6 +119,8 @@ public class DFSStripedInputStream extends DFSInputStream {
         dataBlkNum, parityBlkNum);
     decoder = CodecUtil.createRawDecoder(dfsClient.getConfiguration(),
         ecPolicy.getCodecName(), coderOptions);
+    retryCurrentReaderFlags = new boolean[groupSize];
+    Arrays.fill(retryCurrentReaderFlags, true);
     DFSClient.LOG.debug("Creating an striped input stream for file {}", src);
   }
 
@@ -206,13 +215,14 @@ public class DFSStripedInputStream extends DFSInputStream {
       return;
     }
     for (int i = 0; i < groupSize; i++) {
-      closeReader(blockReaders[i]);
+      retryCurrentReaderFlags[i] = false;
+      closeReader(blockReaders[i], i);
       blockReaders[i] = null;
     }
     blockEnd = -1;
   }
 
-  protected void closeReader(BlockReaderInfo readerInfo) {
+  protected void closeReader(BlockReaderInfo readerInfo, int readerIndex) {
     if (readerInfo != null) {
       if (readerInfo.reader != null) {
         try {
@@ -220,7 +230,9 @@ public class DFSStripedInputStream extends DFSInputStream {
         } catch (Throwable ignored) {
         }
       }
-      readerInfo.skip();
+      if (!retryCurrentReaderFlags[readerIndex]) {
+        readerInfo.skip();
+      }
     }
   }
 
@@ -516,8 +528,11 @@ public class DFSStripedInputStream extends DFSInputStream {
       }
       buf.position(buf.position() + (int)(end - start + 1));
     } finally {
+      int index = 0;
       for (BlockReaderInfo preaderInfo : preaderInfos) {
-        closeReader(preaderInfo);
+        retryCurrentReaderFlags[index] = false;
+        closeReader(preaderInfo, index);
+        index++;
       }
     }
   }
@@ -573,4 +588,11 @@ public class DFSStripedInputStream extends DFSInputStream {
     }
   }
 
+  public boolean getRetryCurrentReaderFlags(int index) {
+    return retryCurrentReaderFlags[index];
+  }
+
+  public void setRetryCurrentReaderFlags(int index, boolean retry) {
+    this.retryCurrentReaderFlags[index] = retry;
+  }
 }
