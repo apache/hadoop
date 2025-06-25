@@ -48,6 +48,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * A wrapper around <a href="https://github.com/googleapis/java-storage">Google cloud storage
@@ -89,7 +90,7 @@ class GoogleCloudStorage {
     return StorageOptions.newBuilder().build().getService();
   }
 
-  WritableByteChannel create(final StorageResourceId resourceId, final CreateOptions options)
+  WritableByteChannel create(final StorageResourceId resourceId, final CreateFileOptions options)
       throws IOException {
     LOG.trace("create({})", resourceId);
 
@@ -402,6 +403,47 @@ class GoogleCloudStorage {
     }
   }
 
+
+  public GoogleCloudStorageItemInfo composeObjects(
+      List<StorageResourceId> sources, StorageResourceId destination, CreateObjectOptions options)
+      throws IOException {
+    LOG.trace("composeObjects({}, {}, {})", sources, destination, options);
+    for (StorageResourceId inputId : sources) {
+      if (!destination.getBucketName().equals(inputId.getBucketName())) {
+        throw new IOException(
+            String.format(
+                "Bucket doesn't match for source '%s' and destination '%s'!",
+                inputId, destination));
+      }
+    }
+    Storage.ComposeRequest request =
+        Storage.ComposeRequest.newBuilder()
+            .addSource(
+                sources.stream().map(StorageResourceId::getObjectName).collect(Collectors.toList()))
+            .setTarget(
+                BlobInfo.newBuilder(destination.getBucketName(), destination.getObjectName())
+                    .setContentType(options.getContentType())
+                    .setContentEncoding(options.getContentEncoding())
+                    .setMetadata(encodeMetadata(options.getMetadata()))
+                    .build())
+            .setTargetOptions(
+                Storage.BlobTargetOption.generationMatch(
+                    destination.hasGenerationId()
+                        ? destination.getGenerationId()
+                        : getWriteGeneration(destination, true)))
+            .build();
+
+    Blob composedBlob;
+    try {
+      composedBlob = storage.compose(request);
+    } catch (StorageException e) {
+      throw new IOException(e);
+    }
+    GoogleCloudStorageItemInfo compositeInfo = createItemInfoForBlob(destination, composedBlob);
+    LOG.trace("composeObjects() done, returning: {}", compositeInfo);
+    return compositeInfo;
+  }
+
   /**
    * Helper to check whether an empty object already exists with the expected metadata specified in
    * {@code options}, to be used to determine whether it's safe to ignore an exception that was
@@ -450,6 +492,7 @@ class GoogleCloudStorage {
         return true;
       }
     }
+
     return false;
   }
 
@@ -472,18 +515,14 @@ class GoogleCloudStorage {
       blobTargetOptions.add(Storage.BlobTargetOption.doesNotExist());
     }
 
-    try {
-      // TODO: Set encryption key and related properties
-      storage.create(
-          BlobInfo.newBuilder(BlobId.of(resourceId.getBucketName(), resourceId.getObjectName()))
-              .setMetadata(rewrittenMetadata)
-              .setContentEncoding(createObjectOptions.getContentEncoding())
-              .setContentType(createObjectOptions.getContentType())
-              .build(),
-          blobTargetOptions.toArray(new Storage.BlobTargetOption[0]));
-    } catch (StorageException e) {
-      throw new IOException(String.format("Creating empty object %s failed.", resourceId), e);
-    }
+    // TODO: Set encryption key and related properties
+    storage.create(
+        BlobInfo.newBuilder(BlobId.of(resourceId.getBucketName(), resourceId.getObjectName()))
+            .setMetadata(rewrittenMetadata)
+            .setContentEncoding(createObjectOptions.getContentEncoding())
+            .setContentType(createObjectOptions.getContentType())
+            .build(),
+        blobTargetOptions.toArray(new Storage.BlobTargetOption[0]));
   }
 
   private static Map<String, String> encodeMetadata(Map<String, byte[]> metadata) {
@@ -869,6 +908,23 @@ class GoogleCloudStorage {
     storageItemInfo = gcsImpl.getItemInfo(resourceId);
     bucketInfoCache.put(resourceId, storageItemInfo);
     return storageItemInfo;
+  }
+
+  List<GoogleCloudStorageItemInfo> getItemInfos(List<StorageResourceId> resourceIds)
+      throws IOException {
+    LOG.trace("getItemInfos({})", resourceIds);
+
+    if (resourceIds.isEmpty()) {
+      return new ArrayList<>();
+    }
+
+    List<GoogleCloudStorageItemInfo> result = new ArrayList<>(resourceIds.size());
+    for (StorageResourceId resourceId : resourceIds) {
+      // TODO: Do this concurrently
+      result.add(getItemInfo(resourceId));
+    }
+
+    return result;
   }
 
   // Helper class to capture the results of list operation.
