@@ -18,20 +18,19 @@
 
 package org.apache.hadoop.fs.gs.contract;
 
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.AbstractContractMkdirTest;
+import org.apache.hadoop.fs.contract.AbstractContractCreateTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 
-public class ITestGoogleContractMkdir extends AbstractContractMkdirTest {
+public class ITestGoogleContractCreate extends AbstractContractCreateTest {
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new GoogleContract(conf);
   }
 
   @Override
-  public void testMkDirRmDir() {
-    // TODO: Enable this
-    ContractTestUtils.skip("Skipping the test. This will be enabled in a subsequent change");
+  public void testOverwriteEmptyDirectory() throws Throwable {
+    ContractTestUtils.skip("blobstores can't distinguish empty directories from files");
   }
 }
