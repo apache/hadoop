@@ -283,11 +283,11 @@ public class GoogleHadoopFileSystem extends FileSystem {
     LOG.trace("create(hadoopPath: {}, overwrite: {}, bufferSize: {} [ignored])", hadoopPath,
         overwrite, bufferSize);
 
-    CreateOptions.WriteMode writeMode =
-        overwrite ? CreateOptions.WriteMode.OVERWRITE : CreateOptions.WriteMode.CREATE_NEW;
+    CreateFileOptions.WriteMode writeMode =
+        overwrite ? CreateFileOptions.WriteMode.OVERWRITE : CreateFileOptions.WriteMode.CREATE_NEW;
     FSDataOutputStream response = new FSDataOutputStream(
         new GoogleHadoopOutputStream(this, getGcsPath(hadoopPath),
-            CreateOptions.builder().setWriteMode(writeMode).build(), statistics), statistics);
+            CreateFileOptions.builder().setWriteMode(writeMode).build(), statistics), statistics);
 
     return response;
   }
@@ -595,12 +595,6 @@ public class GoogleHadoopFileSystem extends FileSystem {
     LOG.trace("getUsed(): {}", result);
     return result;
   }
-
-//  @Override
-//  public long getDefaultBlockSize() {
-//    LOG.trace("getDefaultBlockSize(): {}", defaultBlockSize);
-//    return defaultBlockSize;
-//  }
 
   @Override
   public void setWorkingDirectory(final Path hadoopPath) {

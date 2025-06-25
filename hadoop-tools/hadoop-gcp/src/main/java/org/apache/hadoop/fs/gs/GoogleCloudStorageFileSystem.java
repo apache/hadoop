@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.gs;
 
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Strings.isNullOrEmpty;
+import static org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Comparator.comparing;
 import static org.apache.hadoop.fs.gs.Constants.PATH_DELIMITER;
 import static org.apache.hadoop.fs.gs.Constants.SCHEME;
@@ -100,7 +102,7 @@ class GoogleCloudStorageFileSystem {
     gcs = createCloudStorage(configuration, credentials);
   }
 
-  WritableByteChannel create(final URI path, final CreateOptions createOptions)
+  WritableByteChannel create(final URI path, final CreateFileOptions createOptions)
       throws IOException {
     LOG.trace("create(path: {}, createOptions: {})", path, createOptions);
     checkNotNull(path, "path could not be null");
@@ -111,6 +113,32 @@ class GoogleCloudStorageFileSystem {
       throw new IOException(
           String.format("Cannot create a file whose name looks like a directory: '%s'",
               resourceId));
+    }
+
+    // Because create call should create parent directories too, before creating an actual file
+    // we need to check if there are no conflicting items in the directory tree:
+    // - if there are no conflicting files with the same name as any parent subdirectory
+    // - if there are no conflicting directory with the name as a file
+    //
+    // For example, for a new `gs://bucket/c/d/f` file:
+    // - files `gs://bucket/c` and `gs://bucket/c/d` should not exist
+    // - directory `gs://bucket/c/d/f/` should not exist
+    if (configuration.isEnsureNoConflictingItems()) {
+      // Check if a directory with the same name exists.
+      StorageResourceId dirId = resourceId.toDirectoryId();
+      Boolean conflictingDirExist = false;
+      if (createOptions.isEnsureNoDirectoryConflict()) {
+        // TODO: Do this concurrently
+        conflictingDirExist =
+            getFileInfoInternal(dirId, /* inferImplicitDirectories */ true).exists();
+      }
+
+      checkNoFilesConflictingWithDirs(resourceId);
+
+      // Check if a directory with the same name exists.
+      if (conflictingDirExist) {
+        throw new FileAlreadyExistsException("A directory with that name exists: " + path);
+      }
     }
 
     if (createOptions.getOverwriteGenerationId() != StorageResourceId.UNKNOWN_GENERATION_ID) {
@@ -214,8 +242,11 @@ class GoogleCloudStorageFileSystem {
 
     resourceId = resourceId.toDirectoryId();
 
-    // TODO: Before creating a leaf directory we need to check if there are no conflicting files
-    // TODO: with the same name as any subdirectory
+    // Before creating a leaf directory we need to check if there are no conflicting files
+    // with the same name as any subdirectory
+    if (configuration.isEnsureNoConflictingItems()) {
+      checkNoFilesConflictingWithDirs(resourceId);
+    }
 
     // Create only a leaf directory because subdirectories will be inferred
     // if leaf directory exists
@@ -688,5 +719,83 @@ class GoogleCloudStorageFileSystem {
             ? objectName.lastIndexOf(PATH_DELIMITER, objectName.length() - 2)
             : objectName.lastIndexOf(PATH_DELIMITER);
     return index < 0 ? objectName : objectName.substring(index + 1);
+  }
+
+  static CreateObjectOptions objectOptionsFromFileOptions(CreateFileOptions options) {
+    checkArgument(
+        options.getWriteMode() == CreateFileOptions.WriteMode.CREATE_NEW
+            || options.getWriteMode() == CreateFileOptions.WriteMode.OVERWRITE,
+        "unsupported write mode: %s",
+        options.getWriteMode());
+    return CreateObjectOptions.builder()
+        .setContentType(options.getContentType())
+        .setMetadata(options.getAttributes())
+        .setOverwriteExisting(options.getWriteMode() == CreateFileOptions.WriteMode.OVERWRITE)
+        .build();
+  }
+
+  GoogleHadoopFileSystemConfiguration getConfiguration() {
+    return configuration;
+  }
+
+  GoogleCloudStorageItemInfo composeObjects(ImmutableList<StorageResourceId> sources,
+      StorageResourceId dstId, CreateObjectOptions composeObjectOptions) throws IOException {
+    return gcs.composeObjects(sources, dstId, composeObjectOptions);
+  }
+
+  void delete(List<StorageResourceId> items) throws IOException {
+    gcs.deleteObjects(items);
+  }
+
+  private void checkNoFilesConflictingWithDirs(StorageResourceId resourceId) throws IOException {
+    // Create a list of all files that can conflict with intermediate/subdirectory paths.
+    // For example: gs://foo/bar/zoo/ => (gs://foo/bar, gs://foo/bar/zoo)
+    List<StorageResourceId> fileIds =
+        getDirs(resourceId.getObjectName()).stream()
+            .filter(subdir -> !isNullOrEmpty(subdir))
+            .map(
+                subdir ->
+                    new StorageResourceId(
+                        resourceId.getBucketName(), StringPaths.toFilePath(subdir)))
+            .collect(toImmutableList());
+
+    // Each intermediate path must ensure that corresponding file does not exist
+    //
+    // If for any of the intermediate paths file already exists then bail out early.
+    // It is possible that the status of intermediate paths can change after
+    // we make this check therefore this is a good faith effort and not a guarantee.
+    for (GoogleCloudStorageItemInfo fileInfo : gcs.getItemInfos(fileIds)) {
+      if (fileInfo.exists()) {
+        throw new FileAlreadyExistsException(
+            "Cannot create directories because of existing file: " + fileInfo.getResourceId());
+      }
+    }
+  }
+
+  /**
+   * For objects whose name looks like a path (foo/bar/zoo), returns all directory paths.
+   *
+   * <p>For example:
+   *
+   * <ul>
+   *   <li>foo/bar/zoo => returns: (foo/, foo/bar/)
+   *   <li>foo/bar/zoo/ => returns: (foo/, foo/bar/, foo/bar/zoo/)
+   *   <li>foo => returns: ()
+   * </ul>
+   *
+   * @param objectName Name of an object.
+   * @return List of subdirectory like paths.
+   */
+  static List<String> getDirs(String objectName) {
+    if (isNullOrEmpty(objectName)) {
+      return ImmutableList.of();
+    }
+    List<String> dirs = new ArrayList<>();
+    int index = 0;
+    while ((index = objectName.indexOf(PATH_DELIMITER, index)) >= 0) {
+      index = index + PATH_DELIMITER.length();
+      dirs.add(objectName.substring(0, index));
+    }
+    return dirs;
   }
 }
