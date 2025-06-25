@@ -28,24 +28,38 @@ import javax.annotation.Nullable;
 /**
  * Options that can be specified when creating a file in the {@link GoogleCloudStorageFileSystem}.
  */
-final class CreateOptions {
+final class CreateFileOptions {
   private final ImmutableMap<String, byte[]> attributes;
   private final String contentType;
   private final long overwriteGenerationId;
   private final WriteMode mode;
+  private final boolean ensureNoDirectoryConflict;
 
-  private CreateOptions(CreateOperationOptionsBuilder builder) {
+  private CreateFileOptions(CreateOperationOptionsBuilder builder) {
     this.attributes = ImmutableMap.copyOf(builder.attributes);
     this.contentType = builder.contentType;
     this.overwriteGenerationId = builder.overwriteGenerationId;
     this.mode = builder.writeMode;
+    this.ensureNoDirectoryConflict = builder.ensureNoDirectoryConflict;
   }
 
   boolean isOverwriteExisting() {
     return this.mode == WriteMode.OVERWRITE;
   }
 
+  boolean isEnsureNoDirectoryConflict() {
+    return ensureNoDirectoryConflict;
+  }
+
+  CreateOperationOptionsBuilder toBuilder() {
+    return builder().setWriteMode(this.mode)
+        .setEnsureNoDirectoryConflict(ensureNoDirectoryConflict);
+  }
+
   enum WriteMode {
+    /** Write new bytes to the end of the existing file rather than the beginning. */
+    APPEND,
+
     /**
      * Creates a new file for write and fails if file already exists.
      */
@@ -98,14 +112,20 @@ final class CreateOptions {
     private String contentType = "application/octet-stream";
     private long overwriteGenerationId = StorageResourceId.UNKNOWN_GENERATION_ID;
     private WriteMode writeMode = WriteMode.CREATE_NEW;
+    private boolean ensureNoDirectoryConflict = true;
 
     CreateOperationOptionsBuilder setWriteMode(WriteMode mode) {
       this.writeMode = mode;
       return this;
     }
 
-    CreateOptions build() {
-      CreateOptions options = new CreateOptions(this);
+    CreateOperationOptionsBuilder setEnsureNoDirectoryConflict(boolean ensure) {
+      this.ensureNoDirectoryConflict = ensure;
+      return this;
+    }
+
+    CreateFileOptions build() {
+      CreateFileOptions options = new CreateFileOptions(this);
 
       checkArgument(!options.getAttributes().containsKey("Content-Type"),
           "The Content-Type attribute must be set via the contentType option");

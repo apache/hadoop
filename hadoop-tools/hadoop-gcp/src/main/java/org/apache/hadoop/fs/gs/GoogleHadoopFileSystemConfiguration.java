@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.gs;
 
+import java.time.Duration;
 import java.util.regex.Pattern;
 
 import static java.lang.Math.toIntExact;
@@ -44,7 +45,7 @@ class GoogleHadoopFileSystemConfiguration {
   /**
    * Configuration key for GCS project ID. Default value: none
    */
-  static final HadoopConfigurationProperty<String> GCS_PROJECT_ID =
+  private static final HadoopConfigurationProperty<String> GCS_PROJECT_ID =
       new HadoopConfigurationProperty<>("fs.gs.project.id");
 
   /**
@@ -56,7 +57,7 @@ class GoogleHadoopFileSystemConfiguration {
   /**
    * Configuration key for setting write buffer size.
    */
-  static final HadoopConfigurationProperty<Long> GCS_OUTPUT_STREAM_BUFFER_SIZE =
+  private static final HadoopConfigurationProperty<Long> GCS_OUTPUT_STREAM_BUFFER_SIZE =
       new HadoopConfigurationProperty<>("fs.gs.outputstream.buffer.size", 8L * 1024 * 1024);
 
 
@@ -64,20 +65,20 @@ class GoogleHadoopFileSystemConfiguration {
    * If forward seeks are within this many bytes of the current position, seeks are performed by
    * reading and discarding bytes in-place rather than opening a new underlying stream.
    */
-  public static final HadoopConfigurationProperty<Long> GCS_INPUT_STREAM_INPLACE_SEEK_LIMIT =
+  private static final HadoopConfigurationProperty<Long> GCS_INPUT_STREAM_INPLACE_SEEK_LIMIT =
       new HadoopConfigurationProperty<>(
           "fs.gs.inputstream.inplace.seek.limit",
           GCS_INPUT_STREAM_INPLACE_SEEK_LIMIT_DEFAULT);
 
   /** Tunes reading objects behavior to optimize HTTP GET requests for various use cases. */
-  public static final HadoopConfigurationProperty<Fadvise> GCS_INPUT_STREAM_FADVISE =
+  private static final HadoopConfigurationProperty<Fadvise> GCS_INPUT_STREAM_FADVISE =
       new HadoopConfigurationProperty<>("fs.gs.inputstream.fadvise", Fadvise.RANDOM);
 
   /**
    * If false, reading a file with GZIP content encoding (HTTP header "Content-Encoding: gzip") will
    * result in failure (IOException is thrown).
    */
-  public static final HadoopConfigurationProperty<Boolean>
+  private static final HadoopConfigurationProperty<Boolean>
       GCS_INPUT_STREAM_SUPPORT_GZIP_ENCODING_ENABLE =
       new HadoopConfigurationProperty<>(
           "fs.gs.inputstream.support.gzip.encoding.enable",
@@ -87,7 +88,7 @@ class GoogleHadoopFileSystemConfiguration {
    * Minimum size in bytes of the HTTP Range header set in GCS request when opening new stream to
    * read an object.
    */
-  public static final HadoopConfigurationProperty<Long> GCS_INPUT_STREAM_MIN_RANGE_REQUEST_SIZE =
+  private static final HadoopConfigurationProperty<Long> GCS_INPUT_STREAM_MIN_RANGE_REQUEST_SIZE =
       new HadoopConfigurationProperty<>(
           "fs.gs.inputstream.min.range.request.size",
           2 * 1024 * 1024L);
@@ -96,21 +97,38 @@ class GoogleHadoopFileSystemConfiguration {
    * Configuration key for number of request to track for adapting the access pattern i.e. fadvise:
    * AUTO & AUTO_RANDOM.
    */
-  public static final HadoopConfigurationProperty<Integer> GCS_FADVISE_REQUEST_TRACK_COUNT =
+  private static final HadoopConfigurationProperty<Integer> GCS_FADVISE_REQUEST_TRACK_COUNT =
       new HadoopConfigurationProperty<>("fs.gs.fadvise.request.track.count", 3);
 
   /**
    * Configuration key for specifying max number of bytes rewritten in a single rewrite request when
    * fs.gs.copy.with.rewrite.enable is set to 'true'.
    */
-  public static final HadoopConfigurationProperty<Long> GCS_REWRITE_MAX_CHUNK_SIZE =
+  private static final HadoopConfigurationProperty<Long> GCS_REWRITE_MAX_CHUNK_SIZE =
       new HadoopConfigurationProperty<>(
           "fs.gs.rewrite.max.chunk.size",
           512 * 1024 * 1024L);
 
   /** Configuration key for marker file pattern. Default value: none */
-  public static final HadoopConfigurationProperty<String> GCS_MARKER_FILE_PATTERN =
+  private static final HadoopConfigurationProperty<String> GCS_MARKER_FILE_PATTERN =
       new HadoopConfigurationProperty<>("fs.gs.marker.file.pattern");
+
+  /**
+   * Configuration key for enabling check to ensure that conflicting directories do not exist when
+   * creating files and conflicting files do not exist when creating directories.
+   */
+  private static final HadoopConfigurationProperty<Boolean> GCS_CREATE_ITEMS_CONFLICT_CHECK_ENABLE =
+      new HadoopConfigurationProperty<>(
+          "fs.gs.create.items.conflict.check.enable",
+          true);
+
+  /**
+   * Configuration key for the minimal time interval between consecutive sync/hsync/hflush calls.
+   */
+  private static final HadoopConfigurationProperty<Long> GCS_OUTPUT_STREAM_SYNC_MIN_INTERVAL =
+      new HadoopConfigurationProperty<>(
+          "fs.gs.outputstream.sync.min.interval",
+          0L);
 
   private final String workingDirectory;
   private final String projectId;
@@ -187,5 +205,13 @@ class GoogleHadoopFileSystemConfiguration {
     }
 
     return fileMarkerFilePattern;
+  }
+
+  public boolean isEnsureNoConflictingItems() {
+    return GCS_CREATE_ITEMS_CONFLICT_CHECK_ENABLE.get(config, config::getBoolean);
+  }
+
+  public Duration getMinSyncInterval() {
+    return GCS_OUTPUT_STREAM_SYNC_MIN_INTERVAL.getTimeDuration(config);
   }
 }

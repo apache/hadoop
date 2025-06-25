@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.gs;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.function.BiFunction;
 
@@ -27,6 +28,8 @@ import org.apache.hadoop.conf.Configuration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
  * Hadoop configuration property.
@@ -62,6 +65,13 @@ class HadoopConfigurationProperty<T> {
   T get(Configuration config, BiFunction<String, T, T> getterFn) {
     String lookupKey = getLookupKey(config, key, (c, k) -> c.get(k) != null);
     return logProperty(lookupKey, getterFn.apply(lookupKey, defaultValue));
+  }
+
+  Duration getTimeDuration(Configuration config) {
+    String lookupKey = getLookupKey(config, key, (c, k) -> c.get(k) != null);
+    String defValStr = defaultValue == null ? null : String.valueOf(defaultValue);
+    return logProperty(
+        lookupKey, Duration.ofMillis(config.getTimeDuration(lookupKey, defValStr, MILLISECONDS)));
   }
 
   private String getLookupKey(Configuration config, String lookupKey,
