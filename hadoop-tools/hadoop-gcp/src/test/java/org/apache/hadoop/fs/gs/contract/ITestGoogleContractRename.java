@@ -34,10 +34,4 @@ public class ITestGoogleContractRename extends AbstractContractRenameTest {
     // TODO: Enable this
     ContractTestUtils.skip("Skipping the test. This will be enabled in a subsequent change");
   }
-
-  @Override
-  public void testRenameNonexistentFile() {
-    // TODO: Enable this
-    ContractTestUtils.skip("Skipping the test. This will be enabled in a subsequent change");
-  }
 }
