@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.gs;
 
 import javax.annotation.Nullable;
 
+import com.google.api.client.http.HttpStatusCodes;
+import com.google.cloud.storage.StorageException;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 
@@ -63,8 +65,6 @@ final class ErrorTypeExtractor {
     UNAVAILABLE, UNKNOWN
   }
 
-  //  public static final ErrorTypeExtractor INSTANCE = new ErrorTypeExtractor();
-
   private static final String BUCKET_ALREADY_EXISTS_MESSAGE =
       "FAILED_PRECONDITION: Your previous request to create the named bucket succeeded and you "
           + "already own it.";
@@ -89,7 +89,28 @@ final class ErrorTypeExtractor {
     case UNAVAILABLE:
       return ErrorType.UNAVAILABLE;
     default:
-      return ErrorType.UNKNOWN;
+      return getErrorTypeFromStorageException(error);
     }
+  }
+
+  private static ErrorType getErrorTypeFromStorageException(Exception error) {
+    if (error instanceof StorageException) {
+      StorageException se = (StorageException) error;
+      int httpCode = se.getCode();
+
+      if (httpCode == HttpStatusCodes.STATUS_CODE_PRECONDITION_FAILED) {
+        return ErrorType.FAILED_PRECONDITION;
+      }
+
+      if (httpCode == HttpStatusCodes.STATUS_CODE_NOT_FOUND) {
+        return ErrorType.NOT_FOUND;
+      }
+
+      if (httpCode == HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE) {
+        return ErrorType.UNAVAILABLE;
+      }
+    }
+
+    return ErrorType.UNKNOWN;
   }
 }

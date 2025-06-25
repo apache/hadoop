@@ -44,8 +44,12 @@ class GoogleCloudStorageClientWriteChannel implements WritableByteChannel {
   private final StorageResourceId resourceId;
   private WritableByteChannel writableByteChannel;
 
-  GoogleCloudStorageClientWriteChannel(final Storage storage,
-      final StorageResourceId resourceId, final CreateOptions createOptions) throws IOException {
+  private GoogleCloudStorageItemInfo completedItemInfo = null;
+
+  GoogleCloudStorageClientWriteChannel(
+      final Storage storage,
+      final StorageResourceId resourceId,
+      final CreateFileOptions createOptions) throws IOException {
     this.resourceId = resourceId;
     BlobWriteSession blobWriteSession = getBlobWriteSession(storage, resourceId, createOptions);
     try {
@@ -56,7 +60,7 @@ class GoogleCloudStorageClientWriteChannel implements WritableByteChannel {
   }
 
   private static BlobInfo getBlobInfo(final StorageResourceId resourceId,
-      final CreateOptions createOptions) {
+      final CreateFileOptions createOptions) {
     BlobInfo blobInfo = BlobInfo.newBuilder(
             BlobId.of(resourceId.getBucketName(), resourceId.getObjectName(),
                 resourceId.getGenerationId())).setContentType(createOptions.getContentType())
@@ -66,12 +70,12 @@ class GoogleCloudStorageClientWriteChannel implements WritableByteChannel {
   }
 
   private static BlobWriteSession getBlobWriteSession(final Storage storage,
-      final StorageResourceId resourceId, final CreateOptions createOptions) {
+      final StorageResourceId resourceId, final CreateFileOptions createOptions) {
     return storage.blobWriteSession(getBlobInfo(resourceId, createOptions),
         generateWriteOptions(createOptions));
   }
 
-  private static BlobWriteOption[] generateWriteOptions(final CreateOptions createOptions) {
+  private static BlobWriteOption[] generateWriteOptions(final CreateFileOptions createOptions) {
     List<BlobWriteOption> blobWriteOptions = new ArrayList<>();
 
     blobWriteOptions.add(BlobWriteOption.disableGzipContent());
