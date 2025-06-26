@@ -37,7 +37,6 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-@SuppressWarnings("UseOfSunClasses")
 public final class IrqHandler implements SignalUtil.Handler {
   private static final Logger LOG = LoggerFactory.getLogger(IrqHandler.class);
   
