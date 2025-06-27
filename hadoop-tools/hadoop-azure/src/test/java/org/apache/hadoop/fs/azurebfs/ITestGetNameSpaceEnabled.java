@@ -29,6 +29,7 @@ import org.mockito.Mockito;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
@@ -339,6 +340,66 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
           .describedAs("getAcl() to determine HNS Nature of account should"
               + "fail with Unknown Host Exception").contains("UnknownHostException");
     }
+  }
+
+  /**
+   * Tests the behavior of AbfsConfiguration when the namespace-enabled
+   * configuration is not explicitly set (i.e., set to an empty string).
+   *
+   * Expects the namespace value to be set as UNKNOWN.
+   *
+   * @throws Exception if any error occurs during configuration setup or evaluation
+   */
+  @Test
+  public void testNameSpaceConfigNotSet() throws Exception {
+    Configuration configuration = new Configuration();
+    configuration.set(ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED, "");
+    AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
+
+    // Test that the namespace enabled config is set correctly
+    Assertions.assertThat(abfsConfig.getIsNamespaceEnabledAccount())
+        .describedAs("Namespace enabled should be unknown in case config is not set")
+        .isEqualTo(Trilean.UNKNOWN);
+  }
+
+  /**
+   * Tests the behavior of AbfsConfiguration when the namespace-enabled
+   * configuration is explicitly set to "true".
+   *
+   * Expects the namespace value to be set as TRUE.
+   *
+   * @throws Exception if any error occurs during configuration setup or evaluation
+   */
+  @Test
+  public void testNameSpaceConfigSetToTrue() throws Exception {
+    Configuration configuration = new Configuration();
+    configuration.set(ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED, "true");
+    AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
+
+    // Test that the namespace enabled config is set correctly
+    Assertions.assertThat(abfsConfig.getIsNamespaceEnabledAccount())
+        .describedAs("Namespace enabled should be true in case config is set to true")
+        .isEqualTo(Trilean.TRUE);
+  }
+
+  /**
+   * Tests the behavior of AbfsConfiguration when the namespace-enabled
+   * configuration is explicitly set to "false".
+   *
+   * Expects the namespace value to be set as FALSE.
+   *
+   * @throws Exception if any error occurs during configuration setup or evaluation
+   */
+  @Test
+  public void testNameSpaceConfigSetToFalse() throws Exception {
+    Configuration configuration = new Configuration();
+    configuration.set(ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED, "false");
+    AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
+
+    // Test that the namespace enabled config is set correctly
+    Assertions.assertThat(abfsConfig.getIsNamespaceEnabledAccount())
+        .describedAs("Namespace enabled should be false in case config is set to false")
+        .isEqualTo(Trilean.FALSE);
   }
 
   private void assertFileSystemInitWithExpectedHNSSettings(

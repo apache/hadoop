@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidati
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.LongConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.Base64StringConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.KeyProviderException;
-import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SSL_CHANNEL_MODE_KEY;
@@ -209,66 +208,6 @@ public class TestAbfsConfigurationFieldsValidation {
     Assertions.assertThat(localAbfsConfiguration.getPreferredSSLFactoryOption())
             .describedAs("SSL Channel Mode should be OpenSSL as set")
             .isEqualTo(DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL);
-  }
-
-  /**
-   * Tests the behavior of AbfsConfiguration when the namespace-enabled
-   * configuration is not explicitly set (i.e., set to an empty string).
-   *
-   * Expects the namespace value to be set as UNKNOWN.
-   *
-   * @throws Exception if any error occurs during configuration setup or evaluation
-   */
-  @Test
-  public void testNameSpaceConfigNotSet() throws Exception {
-    Configuration configuration = new Configuration();
-    configuration.set(ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED, "");
-    AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
-
-    // Test that the namespace enabled config is set correctly
-    Assertions.assertThat(abfsConfig.getIsNamespaceEnabledAccount())
-            .describedAs("Namespace enabled should be unknown in case config is not set")
-            .isEqualTo(Trilean.UNKNOWN);
-  }
-
-  /**
-   * Tests the behavior of AbfsConfiguration when the namespace-enabled
-   * configuration is explicitly set to "true".
-   *
-   * Expects the namespace value to be set as TRUE.
-   *
-   * @throws Exception if any error occurs during configuration setup or evaluation
-   */
-  @Test
-  public void testNameSpaceConfigSetToTrue() throws Exception {
-    Configuration configuration = new Configuration();
-    configuration.set(ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED, "true");
-    AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
-
-    // Test that the namespace enabled config is set correctly
-    Assertions.assertThat(abfsConfig.getIsNamespaceEnabledAccount())
-            .describedAs("Namespace enabled should be true in case config is set to true")
-            .isEqualTo(Trilean.TRUE);
-  }
-
-  /**
-   * Tests the behavior of AbfsConfiguration when the namespace-enabled
-   * configuration is explicitly set to "false".
-   *
-   * Expects the namespace value to be set as FALSE.
-   *
-   * @throws Exception if any error occurs during configuration setup or evaluation
-   */
-  @Test
-  public void testNameSpaceConfigSetToFalse() throws Exception {
-    Configuration configuration = new Configuration();
-    configuration.set(ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED, "false");
-    AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
-
-    // Test that the namespace enabled config is set correctly
-    Assertions.assertThat(abfsConfig.getIsNamespaceEnabledAccount())
-        .describedAs("Namespace enabled should be false in case config is set to false")
-        .isEqualTo(Trilean.FALSE);
   }
 
   public static AbfsConfiguration updateRetryConfigs(AbfsConfiguration abfsConfig,

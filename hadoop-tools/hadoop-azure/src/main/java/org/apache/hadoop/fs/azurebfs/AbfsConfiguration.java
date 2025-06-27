@@ -1530,7 +1530,7 @@ public class AbfsConfiguration{
 
   @VisibleForTesting
   public void setIsNamespaceEnabledAccount(Trilean isNamespaceEnabledAccount) {
-    isNamespaceEnabled = isNamespaceEnabledAccount;
+    this.isNamespaceEnabled = isNamespaceEnabledAccount;
   }
 
   /**
