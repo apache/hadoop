@@ -39,6 +39,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
@@ -370,7 +371,7 @@ public final class AbfsClientTestUtil {
    * @param clientTransactionId An array to hold the generated transaction ID.
    */
   public static void mockAddClientTransactionIdToHeader(AbfsDfsClient abfsDfsClient,
-      String[] clientTransactionId) {
+      String[] clientTransactionId) throws AzureBlobFileSystemException {
     Mockito.doAnswer(addClientTransactionId -> {
       clientTransactionId[0] = UUID.randomUUID().toString();
       List<AbfsHttpHeader> headers = addClientTransactionId.getArgument(0);

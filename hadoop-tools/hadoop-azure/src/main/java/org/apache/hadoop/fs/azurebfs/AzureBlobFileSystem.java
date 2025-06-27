@@ -229,6 +229,8 @@ public class AzureBlobFileSystem extends FileSystem
      * HNS Account Cannot have Blob Endpoint URI.
      */
     try {
+      // This will update namespaceEnable based on getAcl in case config is not set.
+      // This Information will be stored in abfsConfiguration class.
       abfsConfiguration.validateConfiguredServiceType(
           tryGetIsNamespaceEnabled(initFSTracingContext));
     } catch (InvalidConfigurationValueException ex) {
@@ -296,7 +298,6 @@ public class AzureBlobFileSystem extends FileSystem
         }
       }
     }
-    getAbfsStore().updateClientWithNamespaceInfo(new TracingContext(initFSTracingContext));
 
     LOG.trace("Initiate check for delegation token manager");
     if (UserGroupInformation.isSecurityEnabled()) {

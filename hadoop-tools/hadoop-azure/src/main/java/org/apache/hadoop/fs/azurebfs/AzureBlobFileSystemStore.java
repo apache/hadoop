@@ -186,7 +186,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   private final AbfsConfiguration abfsConfiguration;
   private Set<String> azureInfiniteLeaseDirSet;
-  private volatile Trilean isNamespaceEnabled;
   private final AuthType authType;
   private final UserGroupInformation userGroupInformation;
   private final IdentityTransformerInterface identityTransformer;
@@ -233,8 +232,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
 
     LOG.trace("AbfsConfiguration init complete");
-
-    this.isNamespaceEnabled = abfsConfiguration.getIsNamespaceEnabledAccount();
 
     this.userGroupInformation = UserGroupInformation.getCurrentUser();
     this.userName = userGroupInformation.getShortUserName();
@@ -285,18 +282,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         abfsConfiguration.getMaxWriteRequestsToQueue(),
         10L, TimeUnit.SECONDS,
         "abfs-bounded");
-  }
-
-  /**
-   * Updates the client with the namespace information.
-   *
-   * @param tracingContext the tracing context to be used for the operation
-   * @throws AzureBlobFileSystemException if an error occurs while updating the client
-   */
-  public void updateClientWithNamespaceInfo(TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    boolean isNamespaceEnabled = getIsNamespaceEnabled(tracingContext);
-    AbfsClient.setIsNamespaceEnabled(isNamespaceEnabled);
   }
 
   /**
@@ -409,20 +394,20 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   private synchronized boolean getNamespaceEnabledInformationFromServer(
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
-    if (isNamespaceEnabled != Trilean.UNKNOWN) {
-      return isNamespaceEnabled.toBoolean();
+    if (abfsConfiguration.getIsNamespaceEnabledAccount() != Trilean.UNKNOWN) {
+      return isNamespaceEnabled();
     }
     try {
       LOG.debug("Get root ACL status");
       getClient(AbfsServiceType.DFS).getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
       // If getAcl succeeds, namespace is enabled.
-      isNamespaceEnabled = Trilean.getTrilean(true);
+      setNamespaceEnabled(Trilean.TRUE);
     } catch (AbfsRestOperationException ex) {
       // Get ACL status is a HEAD request, its response doesn't contain errorCode
       // So can only rely on its status code to determine account type.
       if (HttpURLConnection.HTTP_BAD_REQUEST != ex.getStatusCode()) {
         // If getAcl fails with anything other than 400, namespace is enabled.
-        isNamespaceEnabled = Trilean.getTrilean(true);
+        setNamespaceEnabled(Trilean.TRUE);
         // Continue to throw exception as earlier.
         LOG.debug("Failed to get ACL status with non 400. Inferring namespace enabled", ex);
         throw ex;
@@ -430,11 +415,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // If getAcl fails with 400, namespace is disabled.
       LOG.debug("Failed to get ACL status with 400. "
           + "Inferring namespace disabled and ignoring error", ex);
-      isNamespaceEnabled = Trilean.getTrilean(false);
+      setNamespaceEnabled(Trilean.FALSE);
     } catch (AzureBlobFileSystemException ex) {
       throw ex;
     }
-    return isNamespaceEnabled.toBoolean();
+    return isNamespaceEnabled();
   }
 
   /**
@@ -443,7 +428,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    */
   @VisibleForTesting
   boolean isNamespaceEnabled() throws TrileanConversionException {
-    return this.isNamespaceEnabled.toBoolean();
+    return abfsConfiguration.getIsNamespaceEnabledAccount().toBoolean();
   }
 
   @VisibleForTesting
@@ -2028,7 +2013,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   @VisibleForTesting
   void setNamespaceEnabled(Trilean isNamespaceEnabled){
-    this.isNamespaceEnabled = isNamespaceEnabled;
+    abfsConfiguration.setIsNamespaceEnabledAccount(isNamespaceEnabled);
   }
 
   @VisibleForTesting

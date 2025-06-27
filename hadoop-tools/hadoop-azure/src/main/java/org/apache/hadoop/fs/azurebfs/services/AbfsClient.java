@@ -69,6 +69,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperati
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidFileSystemPropertyException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
@@ -194,7 +195,6 @@ public abstract class AbfsClient implements Closeable {
   private KeepAliveCache keepAliveCache;
 
   private AbfsApacheHttpClient abfsApacheHttpClient;
-  private static boolean isNamespaceEnabled = false;
 
   /**
    * logging the rename failure if metadata is in an incomplete state.
@@ -1717,17 +1717,13 @@ public abstract class AbfsClient implements Closeable {
    *
    * @return True if the namespace is enabled, false otherwise.
    */
-  public static boolean getIsNamespaceEnabled() {
-    return isNamespaceEnabled;
-  }
-
-  /**
-   * Sets the namespace enabled status.
-   *
-   * @param namespaceEnabled True to enable the namespace, false to disable it.
-   */
-  public static void setIsNamespaceEnabled(final boolean namespaceEnabled) {
-    isNamespaceEnabled = namespaceEnabled;
+  public boolean getIsNamespaceEnabled() throws TrileanConversionException {
+    try {
+      return abfsConfiguration.getIsNamespaceEnabledAccount().toBoolean();
+    } catch (TrileanConversionException ex) {
+      LOG.error("Failed to convert namespace enabled account property to boolean", ex);
+      throw ex;
+    }
   }
 
   protected boolean isRenameResilience() {
