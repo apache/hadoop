@@ -27,6 +27,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -43,8 +44,7 @@ public class FSConfigConverterTestCommons {
       new File(TEST_DIR, "test-yarn-site.xml").getAbsolutePath();
   public final static String CONVERSION_RULES_FILE =
       new File(TEST_DIR, "test-conversion-rules.properties").getAbsolutePath();
-  public final static String OUTPUT_DIR =
-      new File(TEST_DIR, "conversion-output").getAbsolutePath();
+  public static String OUTPUT_DIR;
 
   private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
   private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
@@ -57,33 +57,14 @@ public class FSConfigConverterTestCommons {
   }
 
   public void setUp() throws IOException {
-    File d = new File(TEST_DIR, "conversion-output");
+    String uuid = UUID.randomUUID().toString().trim();
+    OUTPUT_DIR =
+            new File(TEST_DIR, "conversion-output" + uuid).getAbsolutePath();
+    File d = new File(TEST_DIR, "conversion-output" + uuid);
 
     if (d.exists()) {
-      // Retry mechanism to ensure file handles are released
-      int maxRetries = 3;
-      int attempts = 0;
-      boolean deleted = false;
-
-      while (attempts < maxRetries && !deleted) {
-        try {
-          FileUtils.deleteDirectory(d);
-          deleted = true;
-        } catch (IOException e) {
-          attempts++;
-          System.gc(); // Hint JVM to run GC to close any unreferenced file streams
-          try {
-            Thread.sleep(100); // Wait a bit before retrying
-          } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-          }
-          if (attempts == maxRetries) {
-            throw new IOException("Failed to delete directory after retries: " + d.getAbsolutePath(), e);
-          }
-        }
-      }
+      FileUtils.deleteDirectory(d);
     }
-
     boolean success = d.mkdirs();
     assertTrue(success, "Can't create directory: " + d.getAbsolutePath());
   }
