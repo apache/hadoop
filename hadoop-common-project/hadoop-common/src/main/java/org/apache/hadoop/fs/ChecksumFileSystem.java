@@ -205,13 +205,29 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       } catch (IOException e) {
         // mincing the message is terrible, but java throws permission
         // exceptions as FNF because that's all the method signatures allow!
-        if (!(e instanceof FileNotFoundException) ||
-            e.getMessage().endsWith(" (Permission denied)")) {
+        if (!(e instanceof FileNotFoundException) || isPermissionDenied(e)) {
           LOG.warn("Problem opening checksum file: "+ file +
               ".  Ignoring exception: " , e);
         }
         set(fs.verifyChecksum, null, 1, 0);
       }
+    }
+
+    /**
+     * Check if the exception is a permission denied error.
+     * This is used to differentiate between a missing checksum file
+     * and a permission denied error when trying to read it.
+     *
+     * @param e the IOException to check
+     * @return true if the exception indicates a permission denied error
+     */
+    private static boolean isPermissionDenied(IOException e) {
+      String errorMessage = e.getMessage();
+      if (Path.WINDOWS) {
+        return errorMessage.endsWith(" (Access is denied)");
+      }
+
+      return errorMessage.endsWith(" (Permission denied)");
     }
 
     private long getChecksumFilePos( long dataPos ) {

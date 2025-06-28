@@ -676,11 +676,26 @@ public class TestFsShellCopy {
       System.setErr(new PrintStream(err));
       shellRun(1, "-put", src.toString(), dst.toString());
       System.setErr(oldErr);
-      System.err.print(err.toString());
-      assertTrue(err.toString().contains("(Permission denied)"));
+      System.err.print(err);
+      assertPermissionDenied(err);
     } finally {
       // make sure the test file can be deleted
       lfs.setPermission(src, new FsPermission((short)0755));
+    }
+  }
+
+  /**
+   * Assert that the error message contains the expected permission denied
+   * message, which varies by platform.
+   *
+   * @param err the ByteArrayOutputStream containing the error output
+   */
+  private static void assertPermissionDenied(ByteArrayOutputStream err) {
+    String errorMessage = err.toString();
+    if (Path.WINDOWS) {
+      assertTrue(errorMessage.contains("(Access is denied)"));
+    } else {
+      assertTrue(errorMessage.contains("(Permission denied)"));
     }
   }
 
