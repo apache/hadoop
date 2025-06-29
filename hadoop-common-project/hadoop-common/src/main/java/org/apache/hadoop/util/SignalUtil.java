@@ -63,7 +63,7 @@ public class SignalUtil {
     private static final DynMethods.UnboundMethod GET_NAME_UNBOUND_METHOD =
         new DynMethods.Builder("getName").impl(JDK_SIGNAL_CLAZZ).build();
 
-    private final Object/* sun.misc.SignalHandler */ delegate;
+    private final Object/* sun.misc.Signal */ delegate;
     private final DynMethods.BoundMethod getNumberMethod;
     private final DynMethods.BoundMethod getNameMethod;
 
@@ -91,6 +91,7 @@ public class SignalUtil {
       return getNameMethod.invoke();
     }
 
+    @Override
     public boolean equals(Object obj) {
       if (this == obj) {
         return true;
@@ -101,10 +102,12 @@ public class SignalUtil {
       return false;
     }
 
+    @Override
     public int hashCode() {
       return delegate.hashCode();
     }
 
+    @Override
     public String toString() {
       return delegate.toString();
     }
@@ -117,7 +120,7 @@ public class SignalUtil {
 
   static class JdkSignalHandlerImpl implements Handler {
 
-    private final Object/* sun.misc.Signal */ delegate;
+    private final Object/* sun.misc.SignalHandler */ delegate;
     private final DynMethods.BoundMethod jdkSignalHandlerHandleMethod;
 
     JdkSignalHandlerImpl(Handler handler) {
