@@ -123,7 +123,6 @@ public class TestBlobListXmlParser {
         + "</EnumerationResults>";
     BlobListResultSchema listResultSchema = getResultSchema(xmlResponse);
     List<BlobListResultEntrySchema> paths = listResultSchema.paths();
-    
     assertThat(paths.size()).isEqualTo(0);
     assertThat(listResultSchema.getNextMarker()).isNull();
   }
