@@ -25,7 +25,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,6 +75,7 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
    */
   private DynamicWrappedIO dynamicWrappedIO;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();

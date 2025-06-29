@@ -18,22 +18,27 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
 
-import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.apache.hadoop.util.Lists;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_STS;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_ACQUISITION_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_IDLE_TIME;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_KEEPALIVE;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_TTL;
+import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_HEADERS_S3;
+import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_HEADERS_STS;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_ACQUISITION_TIMEOUT_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_IDLE_TIME_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_KEEPALIVE;
@@ -48,8 +53,10 @@ import static org.apache.hadoop.fs.s3a.Constants.MINIMUM_NETWORK_OPERATION_DURAT
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.createApiConnectionSettings;
+import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.createClientConfigBuilder;
 import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.createConnectionSettings;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.enforceMinimumDuration;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link AWSClientConfig}.
@@ -62,7 +69,7 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAwsClientConfig.class);
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     AWSClientConfig.resetMinimumOperationDuration();
   }
@@ -84,13 +91,13 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
     final Duration s10 = Duration.ofSeconds(10);
     final Duration s1 = Duration.ofSeconds(1);
 
-    Assertions.assertThat(enforceMinimumDuration("key", s1, s10))
+    assertThat(enforceMinimumDuration("key", s1, s10))
         .describedAs("10s")
         .isEqualTo(s10);
 
     // and a null check
-    Assertions.assertThat(enforceMinimumDuration("key",
-           s1, null))
+    assertThat(enforceMinimumDuration("key",
+        s1, null))
         .describedAs("10s")
         .isEqualTo(s1);
   }
@@ -112,10 +119,10 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
         conn.getEstablishTimeout());
     assertDuration(SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT_DURATION,
         conn.getSocketTimeout());
-    Assertions.assertThat(conn.getMaxConnections())
+    assertThat(conn.getMaxConnections())
         .describedAs(MAXIMUM_CONNECTIONS)
         .isEqualTo(DEFAULT_MAXIMUM_CONNECTIONS);
-    Assertions.assertThat(conn.isKeepAlive())
+    assertThat(conn.isKeepAlive())
         .describedAs(CONNECTION_KEEPALIVE)
         .isEqualTo(DEFAULT_CONNECTION_KEEPALIVE);
   }
@@ -158,7 +165,7 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
    * @param actual actual duration
    */
   private void assertDuration(String name, Duration expected, Duration actual) {
-    Assertions.assertThat(actual)
+    assertThat(actual)
         .describedAs("Duration of %s", name)
         .isEqualTo(expected);
   }
@@ -172,7 +179,7 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
     conf.set(REQUEST_TIMEOUT, "1h");
     final AWSClientConfig.ClientSettings settings =
         createApiConnectionSettings(conf);
-    Assertions.assertThat(settings.getApiCallTimeout())
+    assertThat(settings.getApiCallTimeout())
         .describedAs("%s in %s", REQUEST_TIMEOUT, settings)
         .isEqualTo(Duration.ofHours(1));
   }
@@ -184,7 +191,7 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
   @Test
   public void testCreateApiConnectionSettingsDefault() {
     final Configuration conf = new Configuration();
-    Assertions.assertThat(conf.get(REQUEST_TIMEOUT))
+    assertThat(conf.get(REQUEST_TIMEOUT))
         .describedAs("Request timeout %s", REQUEST_TIMEOUT)
         .isNull();
 
@@ -200,5 +207,123 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
    */
   private void setOptionsToValue(String value, Configuration conf, String... keys) {
     Arrays.stream(keys).forEach(key -> conf.set(key, value));
+  }
+
+  /**
+   * if {@link org.apache.hadoop.fs.s3a.Constants#CUSTOM_HEADERS_STS} is set,
+   * verify that returned client configuration has desired headers set.
+   */
+  @Test
+  public void testInitRequestHeadersForSTS() throws IOException {
+    final Configuration conf = new Configuration();
+    conf.set(CUSTOM_HEADERS_STS, "header1=value1;value2,header2=value3");
+
+    assertThat(conf.get(CUSTOM_HEADERS_S3))
+            .describedAs("Custom client headers for s3 %s", CUSTOM_HEADERS_S3)
+            .isNull();
+
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+            .headers().size())
+        .describedAs("Count of S3 client headers")
+        .isEqualTo(0);
+
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+            .headers().size())
+        .describedAs("Count of STS client headers")
+        .isEqualTo(2);
+
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+            .headers().get("header1"))
+        .describedAs("STS client 'header1' header value")
+        .isEqualTo(Lists.newArrayList("value1", "value2"));
+
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+            .headers().get("header2"))
+        .describedAs("STS client 'header2' header value")
+        .isEqualTo(Lists.newArrayList("value3"));
+  }
+
+  /**
+   * if {@link org.apache.hadoop.fs.s3a.Constants#CUSTOM_HEADERS_S3} is set,
+   * verify that returned client configuration has desired headers set.
+   */
+  @Test
+  public void testInitRequestHeadersForS3() throws IOException {
+    final Configuration conf = new Configuration();
+    conf.set(CUSTOM_HEADERS_S3, "header1=value1;value2,header2=value3");
+
+    assertThat(conf.get(CUSTOM_HEADERS_STS))
+            .describedAs("Custom client headers for STS %s", CUSTOM_HEADERS_STS)
+            .isNull();
+
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+            .headers().size())
+        .describedAs("Count of STS client headers")
+        .isEqualTo(0);
+
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+            .headers().size())
+        .describedAs("Count of S3 client headers")
+        .isEqualTo(2);
+
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+            .headers().get("header1"))
+        .describedAs("S3 client 'header1' header value")
+        .isEqualTo(Lists.newArrayList("value1", "value2"));
+
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+            .headers().get("header2"))
+        .describedAs("S3 client 'header2' header value")
+        .isEqualTo(Lists.newArrayList("value3"));
+  }
+
+  /**
+   * if {@link org.apache.hadoop.fs.s3a.Constants#CUSTOM_HEADERS_S3} is set,
+   * verify that returned client configuration has desired headers set with
+   * whitespaces trimmed for headers and values.
+   */
+  @Test
+  public void testInitRequestHeadersForS3WithWhitespace() throws IOException {
+    final Configuration conf = new Configuration();
+    conf.set(CUSTOM_HEADERS_S3, "  header1 =  value1 ;  value2 ,   header2= value3  ");
+
+    assertThat(conf.get(CUSTOM_HEADERS_STS))
+            .describedAs("Custom client headers for STS %s", CUSTOM_HEADERS_STS)
+            .isNull();
+
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+                    .headers().size())
+            .describedAs("Count of STS client headers")
+            .isEqualTo(0);
+
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+                    .headers().size())
+            .describedAs("Count of S3 client headers")
+            .isEqualTo(2);
+
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+                    .headers().get("header1"))
+            .describedAs("S3 client 'header1' header value")
+            .isEqualTo(Lists.newArrayList("value1", "value2"));
+
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+                    .headers().get("header2"))
+            .describedAs("S3 client 'header2' header value")
+            .isEqualTo(Lists.newArrayList("value3"));
+  }
+
+  /**
+   * if {@link org.apache.hadoop.fs.s3a.Constants#CUSTOM_HEADERS_S3} is set with duplicate values,
+   * verify that returned client configuration has desired headers with both values.
+   */
+  @Test
+  public void testInitRequestHeadersForS3WithDuplicateValues() throws IOException {
+    Configuration conf = new Configuration();
+    conf.set(CUSTOM_HEADERS_S3, "header1=duplicate;duplicate");
+
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+                    .headers().get("header1"))
+            .describedAs("S3 client 'header1' header value")
+            .isEqualTo(Lists.newArrayList("duplicate", "duplicate"));
   }
 }

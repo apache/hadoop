@@ -18,11 +18,10 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import org.junit.Ignore;
-
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
+import org.junit.jupiter.api.Disabled;
 
 /**
  * Test AzureBlobFileSystem main operations.
@@ -63,14 +62,14 @@ public class ITestAzureBlobFileSystemMainOperation extends FSMainOperationsBaseT
   }
 
   @Override
-  @Ignore("Permission check for getFileInfo doesn't match the HdfsPermissionsGuide")
+  @Disabled("Permission check for getFileInfo doesn't match the HdfsPermissionsGuide")
   public void testListStatusThrowsExceptionForUnreadableDir() {
     // Permission Checks:
     // https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html
   }
 
   @Override
-  @Ignore("Permission check for getFileInfo doesn't match the HdfsPermissionsGuide")
+  @Disabled("Permission check for getFileInfo doesn't match the HdfsPermissionsGuide")
   public void testGlobStatusThrowsExceptionForUnreadableDir() {
     // Permission Checks:
     // https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html

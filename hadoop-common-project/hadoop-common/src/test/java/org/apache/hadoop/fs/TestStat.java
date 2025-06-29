@@ -17,19 +17,20 @@
  */
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.StringReader;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestStat extends FileSystemTestHelper {
   static {
@@ -37,7 +38,7 @@ public class TestStat extends FileSystemTestHelper {
   }
   private static Stat stat;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     stat = new Stat(new Path("/dummypath"),
         4096l, false, FileSystem.get(new Configuration()));
@@ -95,7 +96,8 @@ public class TestStat extends FileSystemTestHelper {
     }
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testStatLinux() throws Exception {
     String[] symlinks = new String[] {
         "6,symbolic link,1373584236,1373584236,777,andrew,andrew,`link' -> `target'",
@@ -110,7 +112,8 @@ public class TestStat extends FileSystemTestHelper {
     linux.test();
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testStatFreeBSD() throws Exception {
     String[] symlinks = new String[] {
         "6,Symbolic Link,1373508941,1373508941,120755,awang,awang,`link' -> `target'"
@@ -125,9 +128,10 @@ public class TestStat extends FileSystemTestHelper {
     freebsd.test();
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testStatFileNotFound() throws Exception {
-    Assume.assumeTrue(Stat.isAvailable());
+    assumeTrue(Stat.isAvailable());
     try {
       stat.getFileStatus();
       fail("Expected FileNotFoundException");
@@ -136,14 +140,16 @@ public class TestStat extends FileSystemTestHelper {
     }
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testStatEnvironment() throws Exception {
     assertEquals("C", stat.getEnvironment("LANG"));
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testStat() throws Exception {
-    Assume.assumeTrue(Stat.isAvailable());
+    assumeTrue(Stat.isAvailable());
     FileSystem fs = FileSystem.getLocal(new Configuration());
     Path testDir = new Path(getTestRootPath(fs), "teststat");
     fs.mkdirs(testDir);

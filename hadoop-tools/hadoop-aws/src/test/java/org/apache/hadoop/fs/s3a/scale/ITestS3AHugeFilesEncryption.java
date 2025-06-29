@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.EncryptionTestUtils;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.junit.jupiter.api.BeforeEach;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.DSSE_KMS;
@@ -44,6 +45,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
  */
 public class ITestS3AHugeFilesEncryption extends AbstractSTestS3AHugeFiles {
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     Configuration c = new Configuration();

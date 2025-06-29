@@ -29,8 +29,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -40,7 +40,7 @@ import java.net.InetSocketAddress;
  */
 public class TestViewFSStoragePolicyCommands extends TestStoragePolicyCommands {
 
-  @Before
+  @BeforeEach
   public void clusterSetUp() throws IOException {
     conf = new HdfsConfiguration();
     String clusterName = "cluster";

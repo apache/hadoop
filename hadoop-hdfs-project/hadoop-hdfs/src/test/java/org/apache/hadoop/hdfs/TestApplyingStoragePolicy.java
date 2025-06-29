@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -27,9 +27,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestApplyingStoragePolicy {
   private static final short REPL = 1;
@@ -39,7 +39,7 @@ public class TestApplyingStoragePolicy {
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem fs;
 
-  @Before
+  @BeforeEach
   public void clusterSetUp() throws IOException {
     conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL).build();
@@ -47,7 +47,7 @@ public class TestApplyingStoragePolicy {
     fs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void clusterShutdown() throws IOException{
     if(fs != null) {
       fs.close();

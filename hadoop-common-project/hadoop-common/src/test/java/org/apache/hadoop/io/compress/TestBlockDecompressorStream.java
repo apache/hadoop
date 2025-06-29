@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.io.compress;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -29,7 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestBlockDecompressorStream {
   
@@ -63,8 +63,8 @@ public class TestBlockDecompressorStream {
     
     // check compressed output 
     buf = bytesOut.toByteArray();
-    assertEquals("empty file compressed output size is not " + (bufLen + 4),
-        bufLen + 4, buf.length);
+    assertEquals(bufLen + 4, buf.length,
+        "empty file compressed output size is not " + (bufLen + 4));
     
     // use compressed output as input for decompression
     bytesIn = new ByteArrayInputStream(buf);
@@ -72,8 +72,8 @@ public class TestBlockDecompressorStream {
     // get decompression stream
     try (BlockDecompressorStream blockDecompressorStream =
       new BlockDecompressorStream(bytesIn, new FakeDecompressor(), 1024)) {
-      assertEquals("return value is not -1", 
-          -1 , blockDecompressorStream.read());
+      assertEquals(-1, blockDecompressorStream.read(),
+          "return value is not -1");
     } catch (IOException e) {
       fail("unexpected IOException : " + e);
     }

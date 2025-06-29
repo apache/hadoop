@@ -17,9 +17,9 @@ package org.apache.hadoop.fs.s3a.fileContext;
 import java.io.IOException;
 import java.util.UUID;
 
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContextMainOperationsBaseTest;
@@ -36,7 +36,7 @@ public class ITestS3AFileContextMainOperations
     extends FileContextMainOperationsBaseTest {
 
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, Exception {
     Configuration conf = setPerformanceFlags(
         new Configuration(),
@@ -65,25 +65,25 @@ public class ITestS3AFileContextMainOperations
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void testCreateFlagAppendExistingFile() throws IOException {
     //append not supported, so test removed
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void testCreateFlagCreateAppendExistingFile() throws IOException {
     //append not supported, so test removed
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void testBuilderCreateAppendExistingFile() throws IOException {
     // not supported
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void testSetVerifyChecksum() throws IOException {
     //checksums ignored, so test removed
   }

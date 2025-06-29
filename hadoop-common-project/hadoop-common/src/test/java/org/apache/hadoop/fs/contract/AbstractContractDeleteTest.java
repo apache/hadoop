@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.contract;
 
 import org.apache.hadoop.fs.Path;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -49,9 +49,9 @@ public abstract class AbstractContractDeleteTest extends
     Path path = path("testDeleteNonexistentPathRecursive");
     assertPathDoesNotExist("leftover", path);
     ContractTestUtils.rejectRootOperation(path);
-    assertFalse("Returned true attempting to recursively delete"
-                + " a nonexistent path " + path,
-                getFileSystem().delete(path, true));
+    assertFalse(getFileSystem().delete(path, true),
+        "Returned true attempting to recursively delete"
+        + " a nonexistent path " + path);
   }
 
   @Test
@@ -59,9 +59,9 @@ public abstract class AbstractContractDeleteTest extends
     Path path = path("testDeleteNonexistentPathNonRecursive");
     assertPathDoesNotExist("leftover", path);
     ContractTestUtils.rejectRootOperation(path);
-    assertFalse("Returned true attempting to non recursively delete"
-                + " a nonexistent path " + path,
-                getFileSystem().delete(path, false));
+    assertFalse(getFileSystem().delete(path, false),
+        "Returned true attempting to non recursively delete"
+        + " a nonexistent path " + path);
   }
 
   @Test

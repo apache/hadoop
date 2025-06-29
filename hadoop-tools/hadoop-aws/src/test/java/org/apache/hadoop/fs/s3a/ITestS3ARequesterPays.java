@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import java.nio.file.AccessDeniedException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;

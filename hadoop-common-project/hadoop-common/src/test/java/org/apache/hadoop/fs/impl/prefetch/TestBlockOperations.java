@@ -21,12 +21,12 @@ package org.apache.hadoop.fs.impl.prefetch;
 
 import java.lang.reflect.Method;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestBlockOperations extends AbstractHadoopTestBase {
 

@@ -19,12 +19,12 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -42,17 +42,13 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Test the caches expiration of the block locations.
  */
-@RunWith(Parameterized.class)
 public class TestDFSInputStreamBlockLocations {
   private static final int BLOCK_SIZE = 1024 * 1024;
   private static final String[] RACKS = new String[] {
@@ -73,7 +69,6 @@ public class TestDFSInputStreamBlockLocations {
   private Path filePath;
   private boolean enableBlkExpiration;
 
-  @Parameterized.Parameters(name = "{index}: CacheExpirationConfig(Enable {0})")
   public static Collection<Object[]> getTestParameters() {
     return Arrays.asList(new Object[][] {
         {Boolean.TRUE},
@@ -81,11 +76,12 @@ public class TestDFSInputStreamBlockLocations {
     });
   }
 
-  public TestDFSInputStreamBlockLocations(Boolean enableExpiration) {
-    enableBlkExpiration = enableExpiration;
+  public void initTestDFSInputStreamBlockLocations(Boolean pEnableExpiration)
+      throws IOException {
+    enableBlkExpiration = pEnableExpiration;
+    setup();
   }
 
-  @Before
   public void setup() throws IOException {
     conf = new HdfsConfiguration();
     conf.setBoolean(
@@ -120,7 +116,7 @@ public class TestDFSInputStreamBlockLocations {
     fs = dfsCluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException {
     if (dfsClient != null) {
       dfsClient.close();
@@ -137,8 +133,10 @@ public class TestDFSInputStreamBlockLocations {
     }
   }
 
-  @Test
-  public void testRefreshBlockLocations() throws IOException {
+  @MethodSource("getTestParameters")
+  @ParameterizedTest
+  public void testRefreshBlockLocations(Boolean pEnableExpiration) throws IOException {
+    initTestDFSInputStreamBlockLocations(pEnableExpiration);
     final String fileName = "/test_cache_locations";
     filePath = createFile(fileName);
 
@@ -146,19 +144,19 @@ public class TestDFSInputStreamBlockLocations {
       LocatedBlocks existing = fin.locatedBlocks;
       long lastRefreshedAt = fin.getLastRefreshedBlocksAtForTesting();
 
-      assertFalse("should not have attempted refresh",
-          fin.refreshBlockLocations(null));
-      assertEquals("should not have updated lastRefreshedAt",
-          lastRefreshedAt, fin.getLastRefreshedBlocksAtForTesting());
-      assertSame("should not have modified locatedBlocks",
-          existing, fin.locatedBlocks);
+      assertFalse(fin.refreshBlockLocations(null),
+          "should not have attempted refresh");
+      assertEquals(lastRefreshedAt, fin.getLastRefreshedBlocksAtForTesting(),
+          "should not have updated lastRefreshedAt");
+      assertSame(existing, fin.locatedBlocks,
+          "should not have modified locatedBlocks");
 
       // fake a dead node to force refresh
       // refreshBlockLocations should return true, indicating we attempted a refresh
       // nothing should be changed, because locations have not changed
       fin.addToLocalDeadNodes(dfsClient.datanodeReport(DatanodeReportType.LIVE)[0]);
-      assertTrue("should have attempted refresh",
-          fin.refreshBlockLocations(null));
+      assertTrue(fin.refreshBlockLocations(null),
+          "should have attempted refresh");
       verifyChanged(fin, existing, lastRefreshedAt);
 
       // reset
@@ -174,33 +172,39 @@ public class TestDFSInputStreamBlockLocations {
         mockAddressCache.put(dataNode.getDatanodeUuid(), unresolved);
       }
 
-      assertTrue("should have attempted refresh",
-          fin.refreshBlockLocations(mockAddressCache));
+      assertTrue(fin.refreshBlockLocations(mockAddressCache),
+          "should have attempted refresh");
       verifyChanged(fin, existing, lastRefreshedAt);
     }
   }
 
   private void verifyChanged(DFSInputStream fin, LocatedBlocks existing, long lastRefreshedAt) {
-    assertTrue("lastRefreshedAt should have incremented",
-        fin.getLastRefreshedBlocksAtForTesting() > lastRefreshedAt);
-    assertNotSame("located blocks should have changed",
-        existing, fin.locatedBlocks);
-    assertTrue("deadNodes should be empty",
-        fin.getLocalDeadNodes().isEmpty());
+    assertTrue(fin.getLastRefreshedBlocksAtForTesting() > lastRefreshedAt,
+        "lastRefreshedAt should have incremented");
+    assertNotSame(existing, fin.locatedBlocks,
+        "located blocks should have changed");
+    assertTrue(fin.getLocalDeadNodes().isEmpty(),
+        "deadNodes should be empty");
   }
 
-  @Test
-  public void testDeferredRegistrationStatefulRead() throws IOException {
+  @MethodSource("getTestParameters")
+  @ParameterizedTest
+  public void testDeferredRegistrationStatefulRead(Boolean pEnableExpiration) throws IOException {
+    initTestDFSInputStreamBlockLocations(pEnableExpiration);
     testWithRegistrationMethod(DFSInputStream::read);
   }
 
-  @Test
-  public void testDeferredRegistrationPositionalRead() throws IOException {
+  @MethodSource("getTestParameters")
+  @ParameterizedTest
+  public void testDeferredRegistrationPositionalRead(Boolean pEnableExpiration) throws IOException {
+    initTestDFSInputStreamBlockLocations(pEnableExpiration);
     testWithRegistrationMethod(fin -> fin.readFully(0, new byte[1]));
   }
 
-  @Test
-  public void testDeferredRegistrationGetAllBlocks() throws IOException {
+  @MethodSource("getTestParameters")
+  @ParameterizedTest
+  public void testDeferredRegistrationGetAllBlocks(Boolean pEnableExpiration) throws IOException {
+    initTestDFSInputStreamBlockLocations(pEnableExpiration);
     testWithRegistrationMethod(DFSInputStream::getAllBlocks);
   }
 
@@ -209,8 +213,10 @@ public class TestDFSInputStreamBlockLocations {
    * of retries built into chooseDataNode. This is needed for hedged reads
    * @throws IOException
    */
-  @Test
-  public void testClearIgnoreListChooseDataNode() throws IOException {
+  @MethodSource("getTestParameters")
+  @ParameterizedTest
+  public void testClearIgnoreListChooseDataNode(Boolean pEnableExpiration) throws IOException {
+    initTestDFSInputStreamBlockLocations(pEnableExpiration);
     final String fileName = "/test_cache_locations";
     filePath = createFile(fileName);
 
@@ -218,8 +224,8 @@ public class TestDFSInputStreamBlockLocations {
       LocatedBlocks existing = fin.locatedBlocks;
       LocatedBlock block = existing.getLastLocatedBlock();
       ArrayList<DatanodeInfo> ignoreList = new ArrayList<>(Arrays.asList(block.getLocations()));
-      Assert.assertNotNull(fin.chooseDataNode(block, ignoreList, true));
-      Assert.assertEquals(0, ignoreList.size());
+      assertNotNull(fin.chooseDataNode(block, ignoreList, true));
+      assertEquals(0, ignoreList.size());
     }
   }
 
@@ -235,19 +241,20 @@ public class TestDFSInputStreamBlockLocations {
     DFSInputStream fin = null;
     try {
       fin = dfsClient.open(fileName);
-      assertFalse("should not be tracking input stream on open",
-          dfsClient.getLocatedBlockRefresher().isInputStreamTracked(fin));
+      assertFalse(dfsClient.getLocatedBlockRefresher().isInputStreamTracked(fin),
+          "should not be tracking input stream on open");
 
       // still not registered because it hasn't been an hour by the time we call this
       registrationMethod.accept(fin);
-      assertFalse("should not be tracking input stream after first read",
-          dfsClient.getLocatedBlockRefresher().isInputStreamTracked(fin));
+      assertFalse(dfsClient.getLocatedBlockRefresher().isInputStreamTracked(fin),
+          "should not be tracking input stream after first read");
 
       // artificially make it have been an hour
       fin.setLastRefreshedBlocksAtForTesting(Time.monotonicNow() - (dfsInputLocationsTimeout + 1));
       registrationMethod.accept(fin);
-      assertEquals("SHOULD be tracking input stream on read after interval, only if enabled",
-          enableBlkExpiration, dfsClient.getLocatedBlockRefresher().isInputStreamTracked(fin));
+      assertEquals(enableBlkExpiration,
+          dfsClient.getLocatedBlockRefresher().isInputStreamTracked(fin),
+          "SHOULD be tracking input stream on read after interval, only if enabled");
     } finally {
       if (fin != null) {
         fin.close();

@@ -20,17 +20,17 @@ package org.apache.hadoop.fs.contract.rawlocal;
 
 import org.apache.hadoop.conf.Configuration;
 
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-public class TestRawLocalContractUnderlyingFileBehavior extends Assert {
+public class TestRawLocalContractUnderlyingFileBehavior extends Assertions {
 
   private static File testDirectory;
 
-  @BeforeClass
+  @BeforeAll
   public static void before() {
     RawlocalFSContract contract =
       new RawlocalFSContract(new Configuration());
@@ -44,6 +44,6 @@ public class TestRawLocalContractUnderlyingFileBehavior extends Assert {
   public void testDeleteEmptyPath() throws Throwable {
     File nonexistent = new File(testDirectory, "testDeleteEmptyPath");
     assertFalse(nonexistent.exists());
-    assertFalse("nonexistent.delete() returned true", nonexistent.delete());
+    assertFalse(nonexistent.delete(), "nonexistent.delete() returned true");
   }
 }

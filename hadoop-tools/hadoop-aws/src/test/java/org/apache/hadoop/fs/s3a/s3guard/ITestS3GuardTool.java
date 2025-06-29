@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -150,7 +150,7 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
       describe("Uploading single part.");
       createPartUpload(fs, key, 128, 1);
 
-      assertEquals("Should be one upload", 1, countUploadsAt(fs, path));
+      assertEquals(1, countUploadsAt(fs, path), "Should be one upload");
 
       // 6. Confirm part exists via CLI, direct path and parent path
       describe("Confirming CLI lists one part");
@@ -160,7 +160,7 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
 
       // 8. Confirm deletion via API
       describe("Confirming deletion via API");
-      assertEquals("Should be no uploads", 0, countUploadsAt(fs, path));
+      assertEquals(0, countUploadsAt(fs, path), "Should be no uploads");
 
       // 9. Confirm no uploads are listed via CLI
       describe("Confirming CLI lists nothing.");
@@ -193,7 +193,7 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
     try {
 
       // 3. Confirm it exists via API
-      assertEquals("Should be one upload", 1, countUploadsAt(fs, path));
+      assertEquals(1, countUploadsAt(fs, path), "Should be one upload");
 
       // 4. Confirm part does appear in listing with long age filter
       describe("Confirming CLI older age doesn't list");
@@ -216,7 +216,7 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
       describe("Doing aged deletion");
       uploadCommandAssertCount(fs, ABORT_FORCE_OPTIONS, path, 1, 1);
       describe("Confirming age deletion happened");
-      assertEquals("Should be no uploads", 0, countUploadsAt(fs, path));
+      assertEquals(0, countUploadsAt(fs, path), "Should be no uploads");
     } catch (Throwable t) {
       // Clean up on intermediate failure
       clearAnyUploads(fs, path);
@@ -291,8 +291,8 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
           int parsedUploads = Integer.parseInt(fields[1]);
           LOG.debug("Matched CLI output: {} {} {} {}",
               fields[0], fields[1], fields[2], fields[3]);
-          assertEquals("Unexpected number of uploads", numUploads,
-              parsedUploads);
+          assertEquals(numUploads,
+              parsedUploads, "Unexpected number of uploads");
           return;
         }
         LOG.debug("Not matched: {}", line);

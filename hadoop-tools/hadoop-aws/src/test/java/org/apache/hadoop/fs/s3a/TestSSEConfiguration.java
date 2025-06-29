@@ -21,12 +21,11 @@ package org.apache.hadoop.fs.s3a;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.impl.S3AEncryption;
@@ -34,9 +33,12 @@ import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.util.StringUtils;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.*;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.S3A_TEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
@@ -45,7 +47,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
  * Tests related to secret providers and AWS credentials are also
  * included, as they share some common setup operations.
  */
-public class TestSSEConfiguration extends Assert {
+@Timeout(value = S3A_TEST_TIMEOUT, unit = TimeUnit.MILLISECONDS)
+public class TestSSEConfiguration extends Assertions {
 
   /** Bucket to use for per-bucket options. */
   public static final String BUCKET = "dataset-1";
@@ -53,13 +56,8 @@ public class TestSSEConfiguration extends Assert {
   /** Valid set of key/value pairs for the encryption context. */
   private static final String VALID_ENCRYPTION_CONTEXT = "key1=value1, key2=value2, key3=value3";
 
-  @Rule
-  public Timeout testTimeout = new Timeout(
-      S3ATestConstants.S3A_TEST_TIMEOUT
-  );
-
-  @Rule
-  public final TemporaryFolder tempDir = new TemporaryFolder();
+  @TempDir
+  private Path tempDir;
 
   @Test
   public void testSSECNoKey() throws Throwable {
@@ -115,8 +113,8 @@ public class TestSSEConfiguration extends Assert {
     conf.set(Constants.S3_ENCRYPTION_KEY, "keyInConfObject");
 
     String sseKey = getS3EncryptionKey(BUCKET, conf);
-    assertNotNull("Proxy password should not retrun null.", sseKey);
-    assertEquals("Proxy password override did NOT work.", key, sseKey);
+    assertNotNull(sseKey, "Proxy password should not retrun null.");
+    assertEquals(key, sseKey, "Proxy password override did NOT work.");
   }
 
   /**
@@ -126,7 +124,7 @@ public class TestSSEConfiguration extends Assert {
    */
   private void addFileProvider(Configuration conf)
       throws Exception {
-    final File file = tempDir.newFile("test.jks");
+    final File file = tempDir.resolve("test.jks").toFile();
     final URI jks = ProviderUtils.nestURIForLocalJavaKeyStoreProvider(
         file.toURI());
     conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
@@ -306,14 +304,14 @@ public class TestSSEConfiguration extends Assert {
   public void testClientEncryptionMethod() throws Throwable {
     S3AEncryptionMethods method = getMethod("CSE-KMS");
     assertEquals(CSE_KMS, method);
-    assertFalse("shouldn't be server side " + method, method.isServerSide());
+    assertFalse(method.isServerSide(), "shouldn't be server side " + method);
   }
 
   @Test
   public void testCSEKMSEncryptionMethod() throws Throwable {
     S3AEncryptionMethods method = getMethod("CSE-CUSTOM");
     assertEquals(CSE_CUSTOM, method);
-    assertFalse("shouldn't be server side " + method, method.isServerSide());
+    assertFalse(method.isServerSide(), "shouldn't be server side " + method);
   }
 
   @Test

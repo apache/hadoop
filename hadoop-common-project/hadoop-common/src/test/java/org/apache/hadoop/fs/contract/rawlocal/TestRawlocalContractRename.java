@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.fs.contract.AbstractContractRenameTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestRawlocalContractRename extends AbstractContractRenameTest {
 

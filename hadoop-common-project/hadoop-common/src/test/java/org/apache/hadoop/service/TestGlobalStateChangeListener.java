@@ -23,8 +23,8 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.LoggingStateChangeListener;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.ServiceStateChangeListener;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test global state changes. It is critical for all tests to clean up the
@@ -58,7 +58,7 @@ public class TestGlobalStateChangeListener extends ServiceAssert {
   /**
    * After every test case reset the list of global listeners.
    */
-  @After
+  @AfterEach
   public void cleanup() {
     AbstractService.resetGlobalListeners();
   }
@@ -70,7 +70,7 @@ public class TestGlobalStateChangeListener extends ServiceAssert {
    */
   public void assertListenerState(BreakableStateChangeListener breakable,
                                   Service.STATE state) {
-    assertEquals("Wrong state in " + breakable, state, breakable.getLastState());
+    assertEquals(state, breakable.getLastState(), "Wrong state in " + breakable);
   }
 
   /**
@@ -80,8 +80,8 @@ public class TestGlobalStateChangeListener extends ServiceAssert {
    */
   public void assertListenerEventCount(BreakableStateChangeListener breakable,
                                        int count) {
-    assertEquals("Wrong event count in " + breakable, count,
-                 breakable.getEventCount());
+    assertEquals(count, breakable.getEventCount(),
+        "Wrong event count in " + breakable);
   }
 
   /**
@@ -90,7 +90,7 @@ public class TestGlobalStateChangeListener extends ServiceAssert {
   @Test
   public void testRegisterListener() {
     register();
-    assertTrue("listener not registered", unregister());
+    assertTrue(unregister(), "listener not registered");
   }
 
   /**
@@ -100,9 +100,9 @@ public class TestGlobalStateChangeListener extends ServiceAssert {
   public void testRegisterListenerTwice() {
     register();
     register();
-    assertTrue("listener not registered", unregister());
+    assertTrue(unregister(), "listener not registered");
     //there should be no listener to unregister the second time
-    assertFalse("listener double registered", unregister());
+    assertFalse(unregister(), "listener double registered");
   }
 
   /**

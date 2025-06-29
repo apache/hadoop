@@ -18,9 +18,9 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -47,8 +47,9 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.event.Level;
 
 /* File Append tests for HDFS-200 & HDFS-142, specifically focused on:
@@ -72,7 +73,7 @@ public class TestFileAppend4 {
     GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     this.conf = new Configuration();
 
@@ -142,7 +143,8 @@ public class TestFileAppend4 {
    * before calling completeFile, and then tries to recover
    * the lease from another thread.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testRecoverFinalizedBlock() throws Throwable {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
  
@@ -212,7 +214,8 @@ public class TestFileAppend4 {
    * starts writing from that writer, and then has the old lease holder
    * call completeFile
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testCompleteOtherLeaseHoldersFile() throws Throwable {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
  
@@ -290,7 +293,8 @@ public class TestFileAppend4 {
   /**
    * Test the updation of NeededReplications for the Appended Block
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testUpdateNeededReplicationsForAppendedFile() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
@@ -326,7 +330,8 @@ public class TestFileAppend4 {
    * Test that an append with no locations fails with an exception
    * showing insufficient locations.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testAppendInsufficientLocations() throws Exception {
     Configuration conf = new Configuration();
 
@@ -379,7 +384,7 @@ public class TestFileAppend4 {
       FSDirectory dir = cluster.getNamesystem().getFSDirectory();
       final INodeFile inode = INodeFile.
           valueOf(dir.getINode("/testAppend"), "/testAppend");
-      assertTrue("File should remain closed", !inode.isUnderConstruction());
+      assertTrue(!inode.isUnderConstruction(), "File should remain closed");
     } finally {
       if (null != fileSystem) {
         fileSystem.close();

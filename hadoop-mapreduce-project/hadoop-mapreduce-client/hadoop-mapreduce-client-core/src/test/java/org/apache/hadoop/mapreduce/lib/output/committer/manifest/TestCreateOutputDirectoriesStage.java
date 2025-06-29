@@ -26,7 +26,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
@@ -75,6 +76,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
   private StageConfig stageConfig;
   private IOStatisticsStore iostats;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();

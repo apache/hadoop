@@ -21,9 +21,9 @@ package org.apache.hadoop.fs.aliyun.oss.fileContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContextMainOperationsBaseTest;
 import org.apache.hadoop.fs.aliyun.oss.AliyunOSSTestUtils;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -33,7 +33,7 @@ import java.io.IOException;
 public class TestOSSFileContextMainOperations
     extends FileContextMainOperationsBaseTest {
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, Exception {
     Configuration conf = new Configuration();
     fc = AliyunOSSTestUtils.createTestFileContext(conf);
@@ -46,25 +46,25 @@ public class TestOSSFileContextMainOperations
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void testCreateFlagAppendExistingFile() throws IOException {
     // append not supported, so test removed
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void testCreateFlagCreateAppendExistingFile() throws IOException {
     // append not supported, so test removed
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void testSetVerifyChecksum() throws IOException {
     // checksums ignored, so test ignored
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void testBuilderCreateAppendExistingFile() throws IOException {
     // append not supported, so test removed
   }

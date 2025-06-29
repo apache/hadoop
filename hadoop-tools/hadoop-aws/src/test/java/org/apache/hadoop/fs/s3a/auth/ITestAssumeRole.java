@@ -30,12 +30,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.sts.model.StsException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,6 +121,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -126,6 +129,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     uri = requireAnonymousDataPath(getConfiguration()).toUri();
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     cleanupWithLogger(LOG, roleFS);
@@ -167,7 +171,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
              = new AssumedRoleCredentialProvider(uri, conf)) {
       LOG.info("Provider is {}", provider);
       AwsCredentials credentials = provider.resolveCredentials();
-      assertNotNull("Null credentials from " + provider, credentials);
+      assertNotNull(credentials, "Null credentials from " + provider);
     }
   }
 
@@ -180,7 +184,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
              = new AssumedRoleCredentialProvider(null, conf)) {
       LOG.info("Provider is {}", provider);
       AwsCredentials credentials = provider.resolveCredentials();
-      assertNotNull("Null credentials from " + provider, credentials);
+      assertNotNull(credentials, "Null credentials from " + provider);
     }
   }
 
@@ -679,7 +683,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   public void assertCommitAccessDenied(final Path path,
       final CommitOperations.MaybeIOE maybeIOE) {
     IOException ex = maybeIOE.getException();
-    assertNotNull("no IOE in " + maybeIOE + " for " + path, ex);
+    assertNotNull(ex, "no IOE in " + maybeIOE + " for " + path);
     if (!(ex instanceof AccessDeniedException)) {
       ContractTestUtils.fail("Wrong exception class for commit to "
           + path, ex);
@@ -854,8 +858,8 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     // and although you can't delete under the path, if the file doesn't
     // exist, the delete call fails fast.
     Path pathWhichDoesntExist = new Path(readOnlyDir, "no-such-path");
-    assertFalse("deleting " + pathWhichDoesntExist,
-        roleFS.delete(pathWhichDoesntExist, true));
+    assertFalse(roleFS.delete(pathWhichDoesntExist, true),
+        "deleting " + pathWhichDoesntExist);
   }
 
   /**

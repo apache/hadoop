@@ -18,8 +18,14 @@
 
 package org.apache.hadoop.ha;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.reset;
 
 import java.util.Collections;
 import java.util.UUID;
@@ -33,9 +39,10 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.server.ZooKeeperServer;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.AdditionalMatchers;
-import org.mockito.Mockito;
 
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 import org.slf4j.event.Level;
@@ -58,7 +65,7 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
       new ActiveStandbyElectorCallback[NUM_ELECTORS];
   private ZooKeeperServer zkServer;
 
-  
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -66,7 +73,7 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     zkServer = getServer(serverFactory);
 
     for (int i = 0; i < NUM_ELECTORS; i++) {
-      cbs[i] =  Mockito.mock(ActiveStandbyElectorCallback.class);
+      cbs[i] = mock(ActiveStandbyElectorCallback.class);
       appDatas[i] = Ints.toByteArray(i);
       electors[i] = new ActiveStandbyElector(hostPort, 5000, PARENT_DIR,
           Ids.OPEN_ACL_UNSAFE, Collections.<ZKAuthInfo> emptyList(), cbs[i],
@@ -76,9 +83,9 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
   
   private void checkFatalsAndReset() throws Exception {
     for (int i = 0; i < NUM_ELECTORS; i++) {
-      Mockito.verify(cbs[i], Mockito.never()).notifyFatalError(
-          Mockito.anyString());
-      Mockito.reset(cbs[i]);
+      verify(cbs[i], never()).notifyFatalError(
+          anyString());
+      reset(cbs[i]);
     }
   }
 
@@ -88,7 +95,8 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
    * Upon becoming active the leader quits election and the test verifies that
    * the standby now becomes active.
    */
-  @Test(timeout=20000)
+  @Test
+  @Timeout(value = 20)
   public void testActiveStandbyTransition() throws Exception {
     LOG.info("starting test with parentDir:" + PARENT_DIR);
 
@@ -100,24 +108,24 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     electors[0].joinElection(appDatas[0]);
     ActiveStandbyElectorTestUtil.waitForActiveLockData(null,
         zkServer, PARENT_DIR, appDatas[0]);
-    Mockito.verify(cbs[0], Mockito.timeout(1000)).becomeActive();
+    verify(cbs[0], timeout(1000)).becomeActive();
     checkFatalsAndReset();
 
     // Second elector joins election, becomes standby.
     electors[1].joinElection(appDatas[1]);
-    Mockito.verify(cbs[1], Mockito.timeout(1000)).becomeStandby();
+    verify(cbs[1], timeout(1000)).becomeStandby();
     checkFatalsAndReset();
     
     // First elector quits, second one should become active
     electors[0].quitElection(true);
     ActiveStandbyElectorTestUtil.waitForActiveLockData(null,
         zkServer, PARENT_DIR, appDatas[1]);
-    Mockito.verify(cbs[1], Mockito.timeout(1000)).becomeActive();
+    verify(cbs[1], timeout(1000)).becomeActive();
     checkFatalsAndReset();
     
     // First one rejoins, becomes standby, second one stays active
     electors[0].joinElection(appDatas[0]);
-    Mockito.verify(cbs[0], Mockito.timeout(1000)).becomeStandby();
+    verify(cbs[0], timeout(1000)).becomeStandby();
     checkFatalsAndReset();
     
     // Second one expires, first one becomes active
@@ -127,16 +135,16 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
       
       ActiveStandbyElectorTestUtil.waitForActiveLockData(null,
           zkServer, PARENT_DIR, appDatas[0]);
-      Mockito.verify(cbs[1], Mockito.timeout(1000)).enterNeutralMode();
-      Mockito.verify(cbs[0], Mockito.timeout(1000)).fenceOldActive(
+      verify(cbs[1], timeout(1000)).enterNeutralMode();
+      verify(cbs[0], timeout(1000)).fenceOldActive(
           AdditionalMatchers.aryEq(appDatas[1]));
-      Mockito.verify(cbs[0], Mockito.timeout(1000)).becomeActive();
+      verify(cbs[0], timeout(1000)).becomeActive();
     } finally {
       electors[1].allowSessionReestablishmentForTests();
     }
     
     // Second one eventually reconnects and becomes standby
-    Mockito.verify(cbs[1], Mockito.timeout(5000)).becomeStandby();
+    verify(cbs[1], timeout(5000)).becomeStandby();
     checkFatalsAndReset();
     
     // First one expires, second one should become active
@@ -146,10 +154,10 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
       
       ActiveStandbyElectorTestUtil.waitForActiveLockData(null,
           zkServer, PARENT_DIR, appDatas[1]);
-      Mockito.verify(cbs[0], Mockito.timeout(1000)).enterNeutralMode();
-      Mockito.verify(cbs[1], Mockito.timeout(1000)).fenceOldActive(
+      verify(cbs[0], timeout(1000)).enterNeutralMode();
+      verify(cbs[1], timeout(1000)).fenceOldActive(
           AdditionalMatchers.aryEq(appDatas[0]));
-      Mockito.verify(cbs[1], Mockito.timeout(1000)).becomeActive();
+      verify(cbs[1], timeout(1000)).becomeActive();
     } finally {
       electors[0].allowSessionReestablishmentForTests();
     }
@@ -157,7 +165,8 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     checkFatalsAndReset();
   }
   
-  @Test(timeout=15000)
+  @Test
+  @Timeout(value = 15)
   public void testHandleSessionExpiration() throws Exception {
     ActiveStandbyElectorCallback cb = cbs[0];
     byte[] appData = appDatas[0];
@@ -169,19 +178,19 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     ZooKeeperServer zks = getServer(serverFactory);
     ActiveStandbyElectorTestUtil.waitForActiveLockData(null,
         zks, PARENT_DIR, appData);
-    Mockito.verify(cb, Mockito.timeout(1000)).becomeActive();
+    verify(cb, timeout(1000)).becomeActive();
     checkFatalsAndReset();
     
     LOG.info("========================== Expiring session");
     zks.closeSession(elector.getZKSessionIdForTests());
 
     // Should enter neutral mode when disconnected
-    Mockito.verify(cb, Mockito.timeout(1000)).enterNeutralMode();
+    verify(cb, timeout(1000)).enterNeutralMode();
 
     // Should re-join the election and regain active
     ActiveStandbyElectorTestUtil.waitForActiveLockData(null,
         zks, PARENT_DIR, appData);
-    Mockito.verify(cb, Mockito.timeout(1000)).becomeActive();
+    verify(cb, timeout(1000)).becomeActive();
     checkFatalsAndReset();
     
     LOG.info("========================== Quitting election");
@@ -192,14 +201,15 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     // Double check that we don't accidentally re-join the election
     // due to receiving the "expired" event.
     Thread.sleep(1000);
-    Mockito.verify(cb, Mockito.never()).becomeActive();
+    verify(cb, never()).becomeActive();
     ActiveStandbyElectorTestUtil.waitForActiveLockData(null,
         zks, PARENT_DIR, null);
 
     checkFatalsAndReset();
   }
   
-  @Test(timeout=15000)
+  @Test
+  @Timeout(value = 15)
   public void testHandleSessionExpirationOfStandby() throws Exception {
     // Let elector 0 be active
     electors[0].ensureParentZNode();
@@ -207,7 +217,7 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     ZooKeeperServer zks = getServer(serverFactory);
     ActiveStandbyElectorTestUtil.waitForActiveLockData(null,
         zks, PARENT_DIR, appDatas[0]);
-    Mockito.verify(cbs[0], Mockito.timeout(1000)).becomeActive();
+    verify(cbs[0], timeout(1000)).becomeActive();
     checkFatalsAndReset();
     
     // Let elector 1 be standby
@@ -219,7 +229,7 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     zks.closeSession(electors[1].getZKSessionIdForTests());
 
     // Should enter neutral mode when disconnected
-    Mockito.verify(cbs[1], Mockito.timeout(1000)).enterNeutralMode();
+    verify(cbs[1], timeout(1000)).enterNeutralMode();
 
     // Should re-join the election and go back to STANDBY
     ActiveStandbyElectorTestUtil.waitForElectorState(null, electors[1],
@@ -235,14 +245,15 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     
     // due to receiving the "expired" event.
     Thread.sleep(1000);
-    Mockito.verify(cbs[1], Mockito.never()).becomeActive();
+    verify(cbs[1], never()).becomeActive();
     ActiveStandbyElectorTestUtil.waitForActiveLockData(null,
         zks, PARENT_DIR, null);
 
     checkFatalsAndReset();
   }
 
-  @Test(timeout=15000)
+  @Test
+  @Timeout(value = 15)
   public void testDontJoinElectionOnDisconnectAndReconnect() throws Exception {
     electors[0].ensureParentZNode();
 
@@ -253,8 +264,8 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     waitForServerUp(hostPort, CONNECTION_TIMEOUT);
     // Have to sleep to allow time for the clients to reconnect.
     Thread.sleep(2000);
-    Mockito.verify(cbs[0], Mockito.never()).becomeActive();
-    Mockito.verify(cbs[1], Mockito.never()).becomeActive();
+    verify(cbs[0], never()).becomeActive();
+    verify(cbs[1], never()).becomeActive();
     checkFatalsAndReset();
   }
 
@@ -262,11 +273,12 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
    * Test to verify that proper ZooKeeper ACLs can be updated on
    * ActiveStandbyElector's parent znode.
    */
-  @Test(timeout = 15000)
+  @Test
+  @Timeout(value = 15)
   public void testSetZooKeeperACLsOnParentZnodeName()
       throws Exception {
     ActiveStandbyElectorCallback cb =
-        Mockito.mock(ActiveStandbyElectorCallback.class);
+        mock(ActiveStandbyElectorCallback.class);
     ActiveStandbyElector elector =
         new ActiveStandbyElector(hostPort, 5000, PARENT_DIR,
             Ids.READ_ACL_UNSAFE, Collections.<ZKAuthInfo>emptyList(), cb,

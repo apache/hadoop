@@ -22,7 +22,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
-import org.junit.Assume;
+import org.junit.jupiter.api.BeforeEach;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assumeScaleTestsEnabled;
 
@@ -39,9 +41,10 @@ public class ITestAbfsFileSystemContractDistCp extends AbstractContractDistCpTes
 
   public ITestAbfsFileSystemContractDistCp() throws Exception {
     binding = new ABFSContractTestBinding();
-    Assume.assumeTrue(binding.getAuthType() != AuthType.OAuth);
+    assumeTrue(binding.getAuthType() != AuthType.OAuth);
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     binding.setup();

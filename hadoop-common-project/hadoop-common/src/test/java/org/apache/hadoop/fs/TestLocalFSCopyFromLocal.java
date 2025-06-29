@@ -20,7 +20,7 @@ package org.apache.hadoop.fs;
 
 import java.io.File;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractCopyFromLocalTest;

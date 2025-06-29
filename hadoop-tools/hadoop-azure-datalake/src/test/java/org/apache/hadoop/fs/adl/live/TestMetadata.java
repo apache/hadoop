@@ -23,17 +23,18 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.adl.AdlFileSystem;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.UUID;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * This class is responsible for testing ContentSummary, ListStatus on
@@ -48,13 +49,13 @@ public class TestMetadata {
     parent = new Path("test");
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
-    Assume.assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
+    assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
     adlStore = AdlStorageConfiguration.createStorageConnector();
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws Exception {
     if (AdlStorageConfiguration.isContractTestEnabled()) {
       adlStore.delete(parent, true);
@@ -72,12 +73,12 @@ public class TestMetadata {
     }
     out.close();
 
-    Assert.assertTrue(adlStore.isFile(testFile));
+    assertTrue(adlStore.isFile(testFile));
     ContentSummary summary = adlStore.getContentSummary(testFile);
-    Assert.assertEquals(1024, summary.getSpaceConsumed());
-    Assert.assertEquals(1, summary.getFileCount());
-    Assert.assertEquals(0, summary.getDirectoryCount());
-    Assert.assertEquals(1024, summary.getLength());
+    assertEquals(1024, summary.getSpaceConsumed());
+    assertEquals(1, summary.getFileCount());
+    assertEquals(0, summary.getDirectoryCount());
+    assertEquals(1024, summary.getLength());
   }
 
   @Test
@@ -91,12 +92,12 @@ public class TestMetadata {
     }
     out.close();
 
-    Assert.assertTrue(adlStore.isFile(testFile));
+    assertTrue(adlStore.isFile(testFile));
     ContentSummary summary = adlStore.getContentSummary(parent);
-    Assert.assertEquals(1024, summary.getSpaceConsumed());
-    Assert.assertEquals(1, summary.getFileCount());
-    Assert.assertEquals(1, summary.getDirectoryCount());
-    Assert.assertEquals(1024, summary.getLength());
+    assertEquals(1024, summary.getSpaceConsumed());
+    assertEquals(1, summary.getFileCount());
+    assertEquals(1, summary.getDirectoryCount());
+    assertEquals(1024, summary.getLength());
   }
 
   @Test
@@ -104,11 +105,10 @@ public class TestMetadata {
     Path path = new Path(parent, "a.txt");
     FileSystem fs = adlStore;
     fs.createNewFile(path);
-    Assert.assertTrue(fs.isFile(path));
+    assertTrue(fs.isFile(path));
     FileStatus[] statuses = fs.listStatus(path);
-    Assert
-        .assertEquals(path.makeQualified(fs.getUri(), fs.getWorkingDirectory()),
-            statuses[0].getPath());
+    assertEquals(path.makeQualified(fs.getUri(), fs.getWorkingDirectory()),
+        statuses[0].getPath());
   }
 
   @Test
@@ -122,7 +122,7 @@ public class TestMetadata {
     // That is non GUID value.
     fs.setUserGroupRepresentationAsUPN(false);
     fs.createNewFile(path);
-    Assert.assertTrue(fs.isFile(path));
+    assertTrue(fs.isFile(path));
     FileStatus fileStatus = fs.getFileStatus(path);
     UUID.fromString(fileStatus.getGroup());
     UUID.fromString(fileStatus.getOwner());

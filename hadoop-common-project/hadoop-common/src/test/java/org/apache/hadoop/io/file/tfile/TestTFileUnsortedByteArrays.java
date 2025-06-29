@@ -19,7 +19,7 @@ package org.apache.hadoop.io.file.tfile;
 
 import java.io.IOException;
 
-import org.junit.After;
+import org.junit.jupiter.api.AfterEach;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -29,11 +29,11 @@ import org.apache.hadoop.io.file.tfile.TFile.Reader;
 import org.apache.hadoop.io.file.tfile.TFile.Writer;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestTFileUnsortedByteArrays {
   private static String ROOT = GenericTestUtils.getTestDir().getAbsolutePath();
@@ -64,7 +64,7 @@ public class TestTFileUnsortedByteArrays {
     this.records2ndBlock = numRecords2ndBlock;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = new Configuration();
     path = new Path(ROOT, outputFile);
@@ -78,7 +78,7 @@ public class TestTFileUnsortedByteArrays {
     closeOutput();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     fs.delete(path, true);
   }

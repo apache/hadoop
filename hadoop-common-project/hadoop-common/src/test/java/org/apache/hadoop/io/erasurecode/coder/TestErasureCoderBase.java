@@ -26,7 +26,7 @@ import org.apache.hadoop.io.erasurecode.TestCoderBase;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Erasure coder test base with utilities.
