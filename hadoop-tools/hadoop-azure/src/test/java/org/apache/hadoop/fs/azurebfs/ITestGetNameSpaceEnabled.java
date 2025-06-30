@@ -29,7 +29,6 @@ import org.mockito.Mockito;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
-import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
@@ -283,6 +282,9 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     boolean isHnsEnabled = store.getIsNamespaceEnabled(
         getTestTracingContext(getFileSystem(), false));
     Assertions.assertThat(isHnsEnabled).isEqualTo(expectedValue);
+    Assertions.assertThat(store.getClient().getIsNamespaceEnabled())
+        .describedAs("ABFS Client should return same isNameSpace value as store")
+        .isEqualTo(expectedValue);
 
     // GetAcl() should be called only once to determine the HNS status.
     Mockito.verify(mockClient, times(1))
@@ -344,57 +346,33 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
 
   /**
    * Tests the behavior of AbfsConfiguration when the namespace-enabled
-   * configuration is not explicitly set (i.e., set to an empty string).
+   * configuration set based on config provided.
    *
-   * Expects the namespace value to be set as UNKNOWN.
+   * Expects the namespace value based on config provided.
    *
    * @throws Exception if any error occurs during configuration setup or evaluation
    */
   @Test
-  public void testNameSpaceConfigNotSet() throws Exception {
+  public void testNameSpaceConfig() throws Exception {
     Configuration configuration = new Configuration();
-    configuration.set(ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED, "");
+    configuration.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
     AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
 
-    // Test that the namespace enabled config is set correctly
+    // Test that the namespace value when config is not set
     Assertions.assertThat(abfsConfig.getIsNamespaceEnabledAccount())
         .describedAs("Namespace enabled should be unknown in case config is not set")
         .isEqualTo(Trilean.UNKNOWN);
-  }
 
-  /**
-   * Tests the behavior of AbfsConfiguration when the namespace-enabled
-   * configuration is explicitly set to "true".
-   *
-   * Expects the namespace value to be set as TRUE.
-   *
-   * @throws Exception if any error occurs during configuration setup or evaluation
-   */
-  @Test
-  public void testNameSpaceConfigSetToTrue() throws Exception {
-    Configuration configuration = new Configuration();
-    configuration.set(ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED, "true");
-    AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
+    configuration.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, TRUE_STR);
+    abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
 
     // Test that the namespace enabled config is set correctly
     Assertions.assertThat(abfsConfig.getIsNamespaceEnabledAccount())
         .describedAs("Namespace enabled should be true in case config is set to true")
         .isEqualTo(Trilean.TRUE);
-  }
 
-  /**
-   * Tests the behavior of AbfsConfiguration when the namespace-enabled
-   * configuration is explicitly set to "false".
-   *
-   * Expects the namespace value to be set as FALSE.
-   *
-   * @throws Exception if any error occurs during configuration setup or evaluation
-   */
-  @Test
-  public void testNameSpaceConfigSetToFalse() throws Exception {
-    Configuration configuration = new Configuration();
-    configuration.set(ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED, "false");
-    AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
+    configuration.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, FALSE_STR);
+    abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
 
     // Test that the namespace enabled config is set correctly
     Assertions.assertThat(abfsConfig.getIsNamespaceEnabledAccount())
