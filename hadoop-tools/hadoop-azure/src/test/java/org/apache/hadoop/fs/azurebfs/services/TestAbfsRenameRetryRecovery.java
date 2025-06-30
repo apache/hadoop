@@ -460,8 +460,8 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // In DFS endpoint, renamePath is O(1) API call and idempotency issue can happen.
     // For blob endpoint, client orchestrates the rename operation.
     assumeDfsServiceType();
+    assumeHnsDisabled();
     AzureBlobFileSystem fs = getFileSystem();
-    Assume.assumeTrue(!getIsNamespaceEnabled(fs));
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 

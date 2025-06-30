@@ -354,8 +354,10 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testNameSpaceConfig() throws Exception {
-    Configuration configuration = new Configuration();
+    Configuration configuration = getRawConfiguration();
     configuration.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
+    configuration.unset(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getAccountName()));
+    AzureBlobFileSystem abfs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
     AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
 
     // Test that the namespace value when config is not set
@@ -363,7 +365,18 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
         .describedAs("Namespace enabled should be unknown in case config is not set")
         .isEqualTo(Trilean.UNKNOWN);
 
+    // In case no namespace config is present, file system init calls getAcl() to determine account type.
+    Assertions.assertThat(abfs.getIsNamespaceEnabled(getTestTracingContext(abfs, false)))
+        .describedAs("getIsNamespaceEnabled should return account type based on getAcl() call")
+        .isEqualTo(abfs.getAbfsClient().getIsNamespaceEnabled());
+
+    // In case no namespace config is present, file system init calls getAcl() to determine account type.
+    Assertions.assertThat(abfs.getAbfsStore().getAbfsConfiguration().getIsNamespaceEnabledAccount())
+        .describedAs("getIsNamespaceEnabled() should return updated account type based on getAcl() call")
+        .isNotEqualTo(Trilean.UNKNOWN);
+
     configuration.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, TRUE_STR);
+    abfs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
     abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
 
     // Test that the namespace enabled config is set correctly
@@ -371,13 +384,34 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
         .describedAs("Namespace enabled should be true in case config is set to true")
         .isEqualTo(Trilean.TRUE);
 
+    // In case namespace config is present, same value will be return.
+    Assertions.assertThat(abfs.getIsNamespaceEnabled(getTestTracingContext(abfs, false)))
+        .describedAs("getIsNamespaceEnabled() should return true when config is set to true")
+        .isEqualTo(true);
+
+    // In case namespace config is present, same value will be return.
+    Assertions.assertThat(abfs.getAbfsClient().getIsNamespaceEnabled())
+        .describedAs("Client's getIsNamespaceEnabled() should return true when config is set to true")
+        .isEqualTo(true);
+
     configuration.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, FALSE_STR);
+    abfs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
     abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
 
     // Test that the namespace enabled config is set correctly
     Assertions.assertThat(abfsConfig.getIsNamespaceEnabledAccount())
         .describedAs("Namespace enabled should be false in case config is set to false")
         .isEqualTo(Trilean.FALSE);
+
+    // In case namespace config is present, same value will be return.
+    Assertions.assertThat(abfs.getIsNamespaceEnabled(getTestTracingContext(abfs, false)))
+        .describedAs("getIsNamespaceEnabled() should return false when config is set to false")
+        .isEqualTo(false);
+
+    // In case namespace config is present, same value will be return.
+    Assertions.assertThat(abfs.getAbfsClient().getIsNamespaceEnabled())
+        .describedAs("Client's getIsNamespaceEnabled() should return false when config is set to false")
+        .isEqualTo(false);
   }
 
   private void assertFileSystemInitWithExpectedHNSSettings(
