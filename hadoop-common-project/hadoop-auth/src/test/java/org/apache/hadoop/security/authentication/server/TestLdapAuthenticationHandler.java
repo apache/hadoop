@@ -177,7 +177,7 @@ public class TestLdapAuthenticationHandler extends AbstractLdapTestUnit {
     HttpServletResponse response = mock(HttpServletResponse.class);
 
     final Base64 base64 = new Base64(0);
-    String credentials = base64.encodeToString("bjones:******".getBytes());
+    String credentials = base64.encodeToString("bjones:p@ssw0rd".getBytes());
     String authHeader = HttpConstants.BASIC + " " + credentials;
     when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
         .thenReturn(authHeader);
