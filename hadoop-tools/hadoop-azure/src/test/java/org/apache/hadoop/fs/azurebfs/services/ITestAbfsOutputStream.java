@@ -378,7 +378,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     Mockito.verify(blobClient, Mockito.times(0)).
         flush(Mockito.any(byte[].class), Mockito.anyString(), Mockito.anyBoolean(),
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.any(),
-            Mockito.any(TracingContext.class));
+            Mockito.any(TracingContext.class), Mockito.anyString());
   }
 
   private AbfsRestOperationException getMockAbfsRestOperationException(int status) {
@@ -424,6 +424,6 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
             Mockito.any(TracingContext.class));
     Mockito.verify(blobClient, Mockito.times(1)).
         flush(Mockito.any(byte[].class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.any(), Mockito.any(), Mockito.anyString(), Mockito.any(),
-            Mockito.any(TracingContext.class));
+            Mockito.any(TracingContext.class), Mockito.anyString());
   }
 }

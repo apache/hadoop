@@ -1132,7 +1132,7 @@ public class ITestAzureBlobFileSystemAppend extends
           Mockito.nullable(String.class),
           Mockito.anyString(),
           Mockito.nullable(ContextEncryptionAdapter.class),
-          Mockito.any(TracingContext.class)
+          Mockito.any(TracingContext.class), Mockito.anyString()
       );
 
       out.hsync();
@@ -1145,7 +1145,7 @@ public class ITestAzureBlobFileSystemAppend extends
           Mockito.nullable(String.class),
           Mockito.anyString(),
           Mockito.nullable(ContextEncryptionAdapter.class),
-          Mockito.any(TracingContext.class));
+          Mockito.any(TracingContext.class), Mockito.anyString());
     }
   }
 
@@ -1234,7 +1234,7 @@ public class ITestAzureBlobFileSystemAppend extends
           Mockito.nullable(String.class),
           Mockito.anyString(),
           Mockito.nullable(ContextEncryptionAdapter.class),
-          Mockito.any(TracingContext.class)
+          Mockito.any(TracingContext.class), Mockito.anyString()
       );
 
       FSDataOutputStream os1 = createMockedOutputStream(fs,

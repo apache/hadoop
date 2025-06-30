@@ -210,6 +210,7 @@ public abstract class AbstractAbfsIntegrationTest extends
       if (rawConfig.get(keyProperty) == null) {
         rawConfig.set(keyProperty, getAccountKey());
       }
+      rawConfig.set("fs.azure.enable.append.support", "true");
 
       azureNativeFileSystemStore.initialize(
           wasbUri,

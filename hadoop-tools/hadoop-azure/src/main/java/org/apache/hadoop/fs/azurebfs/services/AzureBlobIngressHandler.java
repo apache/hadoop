@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Base64;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -179,11 +181,13 @@ public class AzureBlobIngressHandler extends AzureIngressHandler {
       tracingContextFlush.setIngressHandler(BLOB_FLUSH);
       tracingContextFlush.setPosition(String.valueOf(offset));
       LOG.trace("Flushing data at offset {} for path {}", offset, getAbfsOutputStream().getPath());
+      String fullBlobMd5 = Base64.getEncoder().encodeToString(getAbfsOutputStream().getFullBlobContentMd5().digest());
       op = getClient().flush(blockListXml.getBytes(StandardCharsets.UTF_8),
           getAbfsOutputStream().getPath(),
           isClose, getAbfsOutputStream().getCachedSasTokenString(), leaseId,
-          getETag(), getAbfsOutputStream().getContextEncryptionAdapter(), tracingContextFlush);
+          getETag(), getAbfsOutputStream().getContextEncryptionAdapter(), tracingContextFlush, fullBlobMd5);
       setETag(op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG));
+      getAbfsOutputStream().getFullBlobContentMd5().reset();
     } catch (AbfsRestOperationException ex) {
       LOG.error("Error in remote flush requiring handler switch for path {}", getAbfsOutputStream().getPath(), ex);
       if (shouldIngressHandlerBeSwitched(ex)) {
@@ -289,7 +293,9 @@ public class AzureBlobIngressHandler extends AzureIngressHandler {
       LOG.trace("Writing current buffer to service at offset {} and path {}", offset, getAbfsOutputStream().getPath());
       AppendRequestParameters reqParams = new AppendRequestParameters(
           offset, 0, bytesLength, AppendRequestParameters.Mode.APPEND_MODE,
-          true, getAbfsOutputStream().getLeaseId(), getAbfsOutputStream().isExpectHeaderEnabled());
+          true, getAbfsOutputStream().getLeaseId(),
+          getAbfsOutputStream().isExpectHeaderEnabled(),
+          getAbfsOutputStream().getMd5());
 
       AbfsRestOperation op;
       try {

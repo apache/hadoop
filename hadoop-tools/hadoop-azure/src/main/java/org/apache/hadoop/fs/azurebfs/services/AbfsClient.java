@@ -526,7 +526,7 @@ public abstract class AbfsClient implements Closeable {
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
-  public abstract AbfsRestOperation setFilesystemProperties(Hashtable<String, String> properties,
+  public abstract AbfsRestOperation setFilesystemProperties(Hashtable<String, String> properties, final String name,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   /**
@@ -882,7 +882,7 @@ public abstract class AbfsClient implements Closeable {
   public abstract AbfsRestOperation flush(String path, long position,
       boolean retainUncommittedData, boolean isClose,
       String cachedSasToken, String leaseId,
-      ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
+      ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext, String blobMd5)
       throws AzureBlobFileSystemException;
 
   /**
@@ -905,7 +905,7 @@ public abstract class AbfsClient implements Closeable {
       String leaseId,
       String eTag,
       ContextEncryptionAdapter contextEncryptionAdapter,
-      TracingContext tracingContext) throws AzureBlobFileSystemException;
+      TracingContext tracingContext, String blobMd5) throws AzureBlobFileSystemException;
 
   /**
    * Set the properties of a file or directory.
@@ -1336,21 +1336,6 @@ public abstract class AbfsClient implements Closeable {
     if (shouldAppendSemiColon) {
       sb.append(SEMICOLON);
     }
-  }
-
-  /**
-   * Add MD5 hash as request header to the append request.
-   * @param requestHeaders to be updated with checksum header
-   * @param reqParams for getting offset and length
-   * @param buffer for getting input data for MD5 computation
-   * @throws AbfsRestOperationException if Md5 computation fails
-   */
-  protected void addCheckSumHeaderForWrite(List<AbfsHttpHeader> requestHeaders,
-      final AppendRequestParameters reqParams, final byte[] buffer)
-      throws AbfsRestOperationException {
-    String md5Hash = computeMD5Hash(buffer, reqParams.getoffset(),
-        reqParams.getLength());
-    requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, md5Hash));
   }
 
   /**

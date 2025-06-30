@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -28,6 +31,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -61,10 +65,35 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
   private static final int MB_15 = 15 * ONE_MB;
   private static final int MB_16 = 16 * ONE_MB;
   private static final String INVALID_MD5_TEXT = "Text for Invalid MD5 Computation";
+  private final MessageDigest md;
 
   public ITestAzureBlobFileSystemChecksum() throws Exception {
     super();
+    try {
+      md = MessageDigest.getInstance("MD5");
+    } catch (NoSuchAlgorithmException e) {
+      throw new IOException("MD5 algorithm not available", e);
+    }
   }
+
+  /**
+   * Computes the MD5 checksum of a specified portion of the input byte array.
+   *
+   * @param data The byte array containing the data to compute the MD5 checksum for.
+   * @param off The starting offset in the byte array.
+   * @param length The number of bytes to include in the checksum computation.
+   * @return The Base64-encoded MD5 checksum of the specified data, or null if the digest is empty.
+   * @throws IllegalArgumentException If the offset or length is invalid for the given byte array.
+   */
+public String getMd5(byte[] data, int off, int length) {
+  md.update(data, off, length);
+  byte[] digest = md.digest();
+  String md5 = null;
+  if (digest.length != 0) {
+    md5 = java.util.Base64.getEncoder().encodeToString(digest);
+  }
+  return md5;
+}
 
   @Test
   public void testWriteReadWithChecksum() throws Exception {
@@ -84,10 +113,10 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     byte[] data = generateRandomBytes(MB_4);
     int pos = 0;
 
-    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, 0);
-    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, ONE_MB);
-    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, MB_2);
-    appendWithOffsetHelper(os, client, path, data, fs, pos, MB_4 - 1);
+    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, 0,  getMd5(data, 0, data.length));
+    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, ONE_MB, getMd5(data, ONE_MB, data.length - ONE_MB));
+    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, MB_2, getMd5(data, MB_2, data.length-MB_2));
+    appendWithOffsetHelper(os, client, path, data, fs, pos, MB_4 - 1, getMd5(data, MB_4 - 1, data.length - (MB_4 - 1)));
     fs.close();
   }
 
@@ -118,14 +147,15 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true);
     AbfsClient spiedClient = Mockito.spy(fs.getAbfsStore().getClientHandler().getIngressClient());
     Path path = path("testPath" + getMethodName());
-    AbfsOutputStream os = (AbfsOutputStream) fs.create(path).getWrappedStream();
+    AbfsOutputStream os = Mockito.spy((AbfsOutputStream) fs.create(path).getWrappedStream());
     byte[] data= generateRandomBytes(MB_4);
     String invalidMD5Hash = spiedClient.computeMD5Hash(
             INVALID_MD5_TEXT.getBytes(), 0, INVALID_MD5_TEXT.length());
     Mockito.doReturn(invalidMD5Hash).when(spiedClient).computeMD5Hash(any(),
         any(Integer.class), any(Integer.class));
+    Mockito.doReturn(invalidMD5Hash).when(os).getMd5();
     AbfsRestOperationException ex = intercept(AbfsInvalidChecksumException.class, () -> {
-      appendWithOffsetHelper(os, spiedClient, path, data, fs, 0, 0);
+      appendWithOffsetHelper(os, spiedClient, path, data, fs, 0, 0, invalidMD5Hash);
     });
 
     Assertions.assertThat(ex.getErrorCode())
@@ -197,12 +227,12 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
    * @throws Exception
    */
   private int appendWithOffsetHelper(AbfsOutputStream os, AbfsClient client, Path path,
-      byte[] data, AzureBlobFileSystem fs, final int pos, final int offset) throws Exception {
+      byte[] data, AzureBlobFileSystem fs, final int pos, final int offset, String md5) throws Exception {
     String blockId = generateBlockId(os, pos);
     String eTag = os.getIngressHandler().getETag();
     AppendRequestParameters reqParams = new AppendRequestParameters(
         pos, offset, data.length - offset, APPEND_MODE, isAppendBlobEnabled(), null, true,
-        new BlobAppendRequestParameters(blockId, eTag));
+        new BlobAppendRequestParameters(blockId, eTag), md5);
     client.append(path.toUri().getPath(), data, reqParams, null, null,
         getTestTracingContext(fs, false));
     return reqParams.getLength();

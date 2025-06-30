@@ -213,7 +213,7 @@ public class RenameAtomicity {
         = new AppendRequestParameters(0, 0,
         bytes.length, AppendRequestParameters.Mode.APPEND_MODE, false, null,
         abfsClient.getAbfsConfiguration().isExpectHeaderEnabled(),
-        new BlobAppendRequestParameters(blockId, eTag));
+        new BlobAppendRequestParameters(blockId, eTag), null);
 
     abfsClient.append(path.toUri().getPath(), bytes,
         appendRequestParameters, null, null, tracingContext);
@@ -221,7 +221,7 @@ public class RenameAtomicity {
     String blockList = generateBlockListXml(blockId);
     // PutBlockList on the path.
     abfsClient.flush(blockList.getBytes(StandardCharsets.UTF_8),
-        path.toUri().getPath(), true, null, null, eTag, null, tracingContext);
+        path.toUri().getPath(), true, null, null, eTag, null, tracingContext, null);
   }
 
   /**

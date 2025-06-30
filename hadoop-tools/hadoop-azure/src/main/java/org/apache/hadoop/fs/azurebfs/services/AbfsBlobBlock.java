@@ -20,10 +20,12 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 import org.apache.commons.codec.binary.Base64;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_ID_LENGTH;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 
 /**
  * Represents a block in Azure Blob Storage used by Azure Data Lake Storage (ADLS).
@@ -42,23 +44,42 @@ public class AbfsBlobBlock extends AbfsBlock {
    * @param offset       Used to generate blockId based on offset.
    * @throws IOException exception is thrown.
    */
-  AbfsBlobBlock(AbfsOutputStream outputStream, long offset) throws IOException {
+  AbfsBlobBlock(AbfsOutputStream outputStream, long offset, int blockIdLength) throws IOException {
     super(outputStream, offset);
-    this.blockId = generateBlockId(offset);
+    String streamId = getOutputStream().getStreamID();
+    UUID streamIdGuid = UUID.nameUUIDFromBytes(streamId.getBytes(StandardCharsets.UTF_8));
+    this.blockId = generateBlockId(offset, streamIdGuid, blockIdLength);
   }
 
   /**
-   * Helper method that generates blockId.
-   * @param position The offset needed to generate blockId.
-   * @return String representing the block ID generated.
+   * Generates a Base64-encoded block ID string based on the given position, stream ID, and desired raw length.
+   *
+   * The block ID is composed using the stream UUID and the block index, which is derived from
+   * the given position divided by the output stream's buffer size. The resulting string is
+   * optionally adjusted to match the specified raw length, padded or trimmed as needed, and
+   * then Base64-encoded.
+   *
+   * @param position   The byte position in the stream, used to compute the block index.
+   * @param streamId   The UUID representing the stream, used as a prefix in the block ID.
+   * @param rawLength  The desired length of the raw block ID string before Base64 encoding.
+   *                   If 0, no length adjustment is made.
+   * @return A Base64-encoded block ID string suitable for use in block-based storage APIs.
    */
-  private String generateBlockId(long position) {
-    String streamId = getOutputStream().getStreamID();
-    String streamIdHash = Integer.toString(streamId.hashCode());
-    String blockId = String.format("%d_%s", position, streamIdHash);
-    byte[] blockIdByteArray = new byte[BLOCK_ID_LENGTH];
-    System.arraycopy(blockId.getBytes(StandardCharsets.UTF_8), 0, blockIdByteArray, 0, Math.min(BLOCK_ID_LENGTH, blockId.length()));
-    return new String(Base64.encodeBase64(blockIdByteArray), StandardCharsets.UTF_8);
+  private String generateBlockId(long position, UUID streamId, int rawLength) {
+    long blockIndex = position / getOutputStream().getBufferSize();
+    String rawBlockId = String.format("%s-%06d", streamId, blockIndex);
+
+    if (rawLength != 0) {
+      // Adjust to match expected decoded length
+      if (rawBlockId.length() < rawLength) {
+        rawBlockId = String.format("%-" + rawLength + "s", rawBlockId)
+            .replace(' ', '_');
+      } else if (rawBlockId.length() > rawLength) {
+        rawBlockId = rawBlockId.substring(0, rawLength);
+      }
+    }
+
+    return Base64.encodeBase64String(rawBlockId.getBytes(StandardCharsets.UTF_8));
   }
 
   /**

@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.util.Base64;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -178,13 +180,16 @@ public class AzureDFSIngressHandler extends AzureIngressHandler {
       tracingContextFlush.setIngressHandler(DFS_FLUSH);
       tracingContextFlush.setPosition(String.valueOf(offset));
     }
+    String fullBlobMd5 = Base64.getEncoder().encodeToString(getAbfsOutputStream().getFullBlobContentMd5().digest());
     LOG.trace("Flushing data at offset {} and path {}", offset, getAbfsOutputStream().getPath());
-    return getClient()
+    AbfsRestOperation op = getClient()
         .flush(getAbfsOutputStream().getPath(), offset, retainUncommitedData,
             isClose,
             getAbfsOutputStream().getCachedSasTokenString(), leaseId,
             getAbfsOutputStream().getContextEncryptionAdapter(),
-            tracingContextFlush);
+            tracingContextFlush, fullBlobMd5);
+    getAbfsOutputStream().getFullBlobContentMd5().reset();
+    return op;
   }
 
   /**
@@ -225,7 +230,9 @@ public class AzureDFSIngressHandler extends AzureIngressHandler {
       LOG.trace("Writing current buffer to service at offset {} and path {}", offset, getAbfsOutputStream().getPath());
       AppendRequestParameters reqParams = new AppendRequestParameters(
           offset, 0, bytesLength, AppendRequestParameters.Mode.APPEND_MODE,
-          true, getAbfsOutputStream().getLeaseId(), getAbfsOutputStream().isExpectHeaderEnabled());
+          true, getAbfsOutputStream().getLeaseId(),
+          getAbfsOutputStream().isExpectHeaderEnabled(),
+          getAbfsOutputStream().getMd5());
 
       // Perform the remote write operation.
       AbfsRestOperation op = remoteWrite(activeBlock, uploadData, reqParams,

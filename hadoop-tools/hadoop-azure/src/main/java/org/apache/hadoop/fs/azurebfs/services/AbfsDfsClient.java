@@ -110,12 +110,14 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.STAR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XMS_PROPERTIES_ENCODING_ASCII;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.ACCEPT;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_MD5;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.IF_MATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.IF_NONE_MATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.RANGE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.USER_AGENT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_HTTP_METHOD_OVERRIDE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_BLOB_CONTENT_MD5;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_EXISTING_RESOURCE_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_LEASE_ACTION;
@@ -229,7 +231,7 @@ public class AbfsDfsClient extends AbfsClient {
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
   @Override
-  public AbfsRestOperation setFilesystemProperties(final Hashtable<String, String> properties,
+  public AbfsRestOperation setFilesystemProperties(final Hashtable<String, String> properties, final String name,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     final String commaSeparatedProperties;
     try {
@@ -762,7 +764,9 @@ public class AbfsDfsClient extends AbfsClient {
 
     // Add MD5 Hash of request content as request header if feature is enabled
     if (isChecksumValidationEnabled()) {
-      addCheckSumHeaderForWrite(requestHeaders, reqParams, buffer);
+      if (reqParams.getMd5() != null) {
+        requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, reqParams.getMd5()));
+      }
     }
 
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
@@ -855,7 +859,7 @@ public class AbfsDfsClient extends AbfsClient {
       final String cachedSasToken,
       final String leaseId,
       ContextEncryptionAdapter contextEncryptionAdapter,
-      TracingContext tracingContext) throws AzureBlobFileSystemException {
+      TracingContext tracingContext, String blobMd5) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(path, requestHeaders, false,
         contextEncryptionAdapter, tracingContext);
@@ -864,6 +868,9 @@ public class AbfsDfsClient extends AbfsClient {
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE, HTTP_METHOD_PATCH));
     if (leaseId != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
+    }
+    if (isChecksumValidationEnabled()) {
+      requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, blobMd5));
     }
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -894,7 +901,7 @@ public class AbfsDfsClient extends AbfsClient {
       final String leaseId,
       final String eTag,
       final ContextEncryptionAdapter contextEncryptionAdapter,
-      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+      final TracingContext tracingContext, String blobMd5) throws AzureBlobFileSystemException {
     throw new UnsupportedOperationException(
         "Flush with blockIds not supported on DFS Endpoint");
   }

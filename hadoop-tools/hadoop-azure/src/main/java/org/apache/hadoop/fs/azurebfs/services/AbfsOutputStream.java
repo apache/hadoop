@@ -22,6 +22,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Future;
 import java.util.UUID;
@@ -150,6 +153,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   /** The handler for managing Abfs client operations. */
   private final AbfsClientHandler clientHandler;
 
+  private final MessageDigest md5;
+  private final MessageDigest fullBlobContentMd5;
+
   public AbfsOutputStream(AbfsOutputStreamContext abfsOutputStreamContext)
       throws IOException {
     this.statistics = abfsOutputStreamContext.getStatistics();
@@ -202,6 +208,16 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.clientHandler = abfsOutputStreamContext.getClientHandler();
     createIngressHandler(serviceTypeAtInit,
         abfsOutputStreamContext.getBlockFactory(), bufferSize, false, null);
+    try {
+      md5 = MessageDigest.getInstance("MD5");
+      fullBlobContentMd5 = MessageDigest.getInstance("MD5");
+    } catch (NoSuchAlgorithmException e) {
+      throw new IOException("MD5 algorithm not available", e);
+    }
+  }
+
+  public int getBufferSize() {
+    return bufferSize;
   }
 
   /**
@@ -438,6 +454,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
 
     AbfsBlock block = createBlockIfNeeded(position);
     int written = bufferData(block, data, off, length);
+    getMessageDigest().update(data, off, written);
+    getFullBlobContentMd5().update(data, off, written);
     int remainingCapacity = block.remainingCapacity();
 
     if (written < length) {
@@ -514,6 +532,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     outputStreamStatistics.bytesToUpload(bytesLength);
     outputStreamStatistics.writeCurrentBuffer();
     DataBlocks.BlockUploadData blockUploadData = blockToUpload.startUpload();
+    String md5Hash = getMd5();
     final Future<Void> job =
         executorService.submit(() -> {
           AbfsPerfTracker tracker =
@@ -535,7 +554,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
              * leaseId - The AbfsLeaseId for this request.
              */
             AppendRequestParameters reqParams = new AppendRequestParameters(
-                offset, 0, bytesLength, mode, false, leaseId, isExpectHeaderEnabled);
+                offset, 0, bytesLength, mode, false, leaseId, isExpectHeaderEnabled, md5Hash);
             AbfsRestOperation op;
             try {
               op = remoteWrite(blockToUpload, blockUploadData, reqParams, tracingContext);
@@ -1169,5 +1188,40 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       }
     }
     return true;
+  }
+
+  /**
+   * Returns the MessageDigest used for computing the incremental MD5 hash
+   * of the data written so far.
+   *
+   * @return the MessageDigest used for partial MD5 calculation.
+   */
+  public MessageDigest getMessageDigest() {
+    return md5;
+  }
+
+  /**
+   * Returns the MessageDigest used for computing the MD5 hash
+   * of the full blob content.
+   *
+   * @return the MessageDigest used for full blob MD5 calculation.
+   */
+  public MessageDigest getFullBlobContentMd5() {
+    return fullBlobContentMd5;
+  }
+
+  /**
+   * Returns the Base64-encoded MD5 checksum based on the current digest state.
+   * This finalizes the digest calculation. Returns null if the digest is empty.
+   *
+   * @return the Base64-encoded MD5 string, or null if no digest is available.
+   */
+  public String getMd5() {
+    byte[] digest = getMessageDigest().digest();
+    String md5 = null;
+    if (digest.length != 0) {
+      md5 = Base64.getEncoder().encodeToString(digest);
+    }
+    return md5;
   }
 }

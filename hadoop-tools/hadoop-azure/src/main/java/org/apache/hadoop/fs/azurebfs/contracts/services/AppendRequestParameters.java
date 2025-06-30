@@ -37,6 +37,7 @@ public class AppendRequestParameters {
   private boolean isExpectHeaderEnabled;
   private boolean isRetryDueToExpect;
   private BlobAppendRequestParameters blobParams;
+  private final String md5;
 
 
   /**
@@ -55,7 +56,8 @@ public class AppendRequestParameters {
       final Mode mode,
       final boolean isAppendBlob,
       final String leaseId,
-      final boolean isExpectHeaderEnabled) {
+      final boolean isExpectHeaderEnabled,
+      final String md5) {
     this.position = position;
     this.offset = offset;
     this.length = length;
@@ -65,6 +67,7 @@ public class AppendRequestParameters {
     this.isExpectHeaderEnabled = isExpectHeaderEnabled;
     this.isRetryDueToExpect = false;
     this.blobParams = null;
+    this.md5 = md5;
   }
 
   /**
@@ -85,7 +88,8 @@ public class AppendRequestParameters {
       final boolean isAppendBlob,
       final String leaseId,
       final boolean isExpectHeaderEnabled,
-      final BlobAppendRequestParameters blobParams) {
+      final BlobAppendRequestParameters blobParams,
+      final String md5) {
     this.position = position;
     this.offset = offset;
     this.length = length;
@@ -95,6 +99,7 @@ public class AppendRequestParameters {
     this.isExpectHeaderEnabled = isExpectHeaderEnabled;
     this.isRetryDueToExpect = false;
     this.blobParams = blobParams;
+    this.md5 = md5;
   }
 
   public long getPosition() {
@@ -144,6 +149,15 @@ public class AppendRequestParameters {
    */
   public String getBlockId() {
     return getBlobParams().getBlockId();
+  }
+
+  /**
+   * Gets the MD5 hash.
+   *
+   * @return the MD5 hash string
+   */
+  public String getMd5() {
+    return md5;
   }
 
   /**

@@ -320,22 +320,22 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
       case WRITE:
         if (ingressClient instanceof AbfsDfsClient) {
           return ingressClient.flush(path, 3, false, false, null,
-              null, encryptionAdapter, getTestTracingContext(fs, false));
+              null, encryptionAdapter, getTestTracingContext(fs, false), null);
         } else {
           byte[] buffer = generateBlockListXml(EMPTY_STRING).getBytes(StandardCharsets.UTF_8);
           return ingressClient.flush(buffer, path, false, null,
-              null, null, encryptionAdapter, getTestTracingContext(fs, false));
+              null, null, encryptionAdapter, getTestTracingContext(fs, false), null);
         }
       case APPEND:
         if (ingressClient instanceof AbfsDfsClient) {
           return ingressClient.append(path, "val".getBytes(),
               new AppendRequestParameters(3, 0, 3, APPEND_MODE, false, null,
-                  true),
+                  true, null, null),
               null, encryptionAdapter, getTestTracingContext(fs, false));
         } else {
           return ingressClient.append(path, "val".getBytes(),
               new AppendRequestParameters(3, 0, 3, APPEND_MODE, false, null,
-                  true, new BlobAppendRequestParameters(BLOCK_ID, null)),
+                  true, new BlobAppendRequestParameters(BLOCK_ID, null), null),
               null, encryptionAdapter, getTestTracingContext(fs, false));
         }
       case SET_ACL:
