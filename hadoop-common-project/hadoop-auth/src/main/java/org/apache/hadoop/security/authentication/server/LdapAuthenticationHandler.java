@@ -15,7 +15,9 @@ package org.apache.hadoop.security.authentication.server;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.Properties;
 
 import javax.naming.Context;
@@ -100,11 +102,19 @@ public class LdapAuthenticationHandler implements AuthenticationHandler {
    */
   public static final String ENABLE_START_TLS = TYPE + ".enablestarttls";
 
+  /**
+   * Constant for the number of attempts per LDAP server URL.
+   */
+  public static final String NUM_ATTEMPTS = TYPE + ".numattempts";
+
+  public static final String NUM_ATTEMPTS_DEFAULT = "2";
+
   private String ldapDomain;
   private String baseDN;
-  private String providerUrl;
   private Boolean enableStartTls;
   private Boolean disableHostNameVerification;
+  private Iterator<String> ldapUrls;
+  private int numAttempts;
 
   /**
    * Configure StartTLS LDAP extension for this handler.
@@ -138,25 +148,31 @@ public class LdapAuthenticationHandler implements AuthenticationHandler {
   @Override
   public void init(Properties config) throws ServletException {
     this.baseDN = config.getProperty(BASE_DN);
-    this.providerUrl = config.getProperty(PROVIDER_URL);
+    String providerUrl = config.getProperty(PROVIDER_URL);
+    if (providerUrl == null) {
+      throw new NullPointerException("The LDAP URI can not be null");
+    }
+    this.ldapUrls = Arrays.asList(providerUrl.split(",")).iterator();
     this.ldapDomain = config.getProperty(LDAP_BIND_DOMAIN);
     this.enableStartTls =
         Boolean.valueOf(config.getProperty(ENABLE_START_TLS, "false"));
+    this.numAttempts =
+        Integer.parseInt(config.getProperty(NUM_ATTEMPTS, NUM_ATTEMPTS_DEFAULT));
 
-    if (this.providerUrl == null) {
-      throw new NullPointerException("The LDAP URI can not be null");
-    }
     if (!((this.baseDN == null)
         ^ (this.ldapDomain == null))) {
       throw new IllegalArgumentException(
           "Either LDAP base DN or LDAP domain value needs to be specified");
     }
     if (this.enableStartTls) {
-      String tmp = this.providerUrl.toLowerCase();
-      if (tmp.startsWith("ldaps")) {
-        throw new IllegalArgumentException(
-            "Can not use ldaps and StartTLS option at the same time");
+      while (ldapUrls.hasNext()) {
+        String tmp = ldapUrls.next().toLowerCase();
+        if (tmp.startsWith("ldaps")) {
+          throw new IllegalArgumentException(
+              "Can not use ldaps and StartTLS option at the same time");
+        }
       }
+
     }
   }
 
@@ -234,22 +250,33 @@ public class LdapAuthenticationHandler implements AuthenticationHandler {
       bindDN = "uid=" + userName + "," + baseDN;
     }
 
-    if (this.enableStartTls) {
-      authenticateWithTlsExtension(bindDN, password);
-    } else {
-      authenticateWithoutTlsExtension(bindDN, password);
+    while (ldapUrls.hasNext()){
+      String currentLdapUrl = ldapUrls.next();
+      for (int attempt = 1; attempt <= numAttempts; attempt++) {
+        try {
+          if (this.enableStartTls) {
+            authenticateWithTlsExtension(bindDN, password, currentLdapUrl);
+          } else {
+            authenticateWithoutTlsExtension(bindDN, password, currentLdapUrl);
+          }
+          return new AuthenticationToken(userName, userName, TYPE);
+        } catch (AuthenticationException e) {
+          logger.warn("Failed to authenticate for user {} (attempt={}/{}) using {}. " +
+              "Exception: ", bindDN, attempt, numAttempts, currentLdapUrl, e);
+        }
+      }
     }
 
-    return new AuthenticationToken(userName, userName, TYPE);
+    return null;
   }
 
-  private void authenticateWithTlsExtension(String userDN, String password)
-      throws AuthenticationException {
+  private void authenticateWithTlsExtension(String userDN, String password,
+      String ldapUrl) throws AuthenticationException {
     LdapContext ctx = null;
     Hashtable<String, Object> env = new Hashtable<String, Object>();
     env.put(Context.INITIAL_CONTEXT_FACTORY,
         "com.sun.jndi.ldap.LdapCtxFactory");
-    env.put(Context.PROVIDER_URL, providerUrl);
+    env.put(Context.PROVIDER_URL, ldapUrl);
 
     try {
       // Create initial context
@@ -290,12 +317,12 @@ public class LdapAuthenticationHandler implements AuthenticationHandler {
     }
   }
 
-  private void authenticateWithoutTlsExtension(String userDN, String password)
-      throws AuthenticationException {
+  private void authenticateWithoutTlsExtension(String userDN, String password,
+      String ldapUrl) throws AuthenticationException {
     Hashtable<String, Object> env = new Hashtable<String, Object>();
     env.put(Context.INITIAL_CONTEXT_FACTORY,
         "com.sun.jndi.ldap.LdapCtxFactory");
-    env.put(Context.PROVIDER_URL, providerUrl);
+    env.put(Context.PROVIDER_URL, ldapUrl);
     env.put(Context.SECURITY_AUTHENTICATION, SECURITY_AUTHENTICATION);
     env.put(Context.SECURITY_PRINCIPAL, userDN);
     env.put(Context.SECURITY_CREDENTIALS, password);

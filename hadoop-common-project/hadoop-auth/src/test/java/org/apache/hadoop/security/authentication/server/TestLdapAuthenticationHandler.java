@@ -160,13 +160,32 @@ public class TestLdapAuthenticationHandler extends AbstractLdapTestUnit {
     when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
         .thenReturn(authHeader);
 
-    try {
-      handler.authenticate(request, response);
-      fail();
-    } catch (AuthenticationException ex) {
-      // Expected
-    } catch (Exception ex) {
-      fail();
-    }
+    assertNull(handler.authenticate(request, response));
+  }
+
+  @Test
+  @Timeout(value = 60, unit = TimeUnit.SECONDS)
+  public void testMultiLdapUrl() throws Exception {
+    LdapAuthenticationHandler handler1 = new LdapAuthenticationHandler();
+    Properties p1 = new Properties();
+    p1.setProperty(BASE_DN, LDAP_BASE_DN);
+    p1.setProperty(PROVIDER_URL, String.format("ldap://errorLdap:389,ldap://%s:%s",
+        LDAP_SERVER_ADDR, getLdapServer().getPort()));
+    handler1.init(p1);
+
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    HttpServletResponse response = mock(HttpServletResponse.class);
+
+    final Base64 base64 = new Base64(0);
+    String credentials = base64.encodeToString("bjones:******".getBytes());
+    String authHeader = HttpConstants.BASIC + " " + credentials;
+    when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
+        .thenReturn(authHeader);
+    AuthenticationToken token = handler1.authenticate(request, response);
+    assertNotNull(token);
+    verify(response).setStatus(HttpServletResponse.SC_OK);
+    assertEquals(TYPE, token.getType());
+    assertEquals("bjones", token.getUserName());
+    assertEquals("bjones", token.getName());
   }
 }
