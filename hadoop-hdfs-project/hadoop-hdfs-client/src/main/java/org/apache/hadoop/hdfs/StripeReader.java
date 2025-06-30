@@ -120,6 +120,7 @@ abstract class StripeReader {
   protected final RawErasureDecoder decoder;
   protected final DFSStripedInputStream dfsStripedInputStream;
   private long readTo = -1;
+  private final int readDNMaxRetryCounts;
 
   protected ECChunk[] decodeInputs;
 
@@ -138,6 +139,8 @@ abstract class StripeReader {
     this.corruptedBlocks = corruptedBlocks;
     this.decoder = decoder;
     this.dfsStripedInputStream = dfsStripedInputStream;
+    this.readDNMaxRetryCounts = dfsStripedInputStream.getDFSClient()
+        .getConf().getStripedReadDnMaxRetryCounts();
 
     service = new ExecutorCompletionService<>(
             dfsStripedInputStream.getStripedReadsThreadPool());
@@ -309,7 +312,7 @@ abstract class StripeReader {
     if (readerInfos[chunkIndex] == null) {
       if (!dfsStripedInputStream.createBlockReader(block,
           alignedStripe.getOffsetInBlock(), targetBlocks,
-          readerInfos, chunkIndex, readTo)) {
+          readerInfos, chunkIndex, readTo, readDNMaxRetryCounts)) {
         chunk.state = StripingChunk.MISSING;
         return false;
       }

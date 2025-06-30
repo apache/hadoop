@@ -167,6 +167,7 @@ public class DfsClientConf {
   private final boolean deadNodeDetectionEnabled;
   private final long leaseHardLimitPeriod;
   private final boolean recoverLeaseOnCloseException;
+  private final int stripedReadDnMaxRetryCounts;
 
   public DfsClientConf(Configuration conf) {
     // The hdfsTimeout is currently the same as the ipc timeout
@@ -296,6 +297,13 @@ public class DfsClientConf {
     Preconditions.checkArgument(stripedReadThreadpoolSize > 0, "The value of " +
         HdfsClientConfigKeys.StripedRead.THREADPOOL_SIZE_KEY +
         " must be greater than 0.");
+    stripedReadDnMaxRetryCounts =
+        conf.getInt(
+            HdfsClientConfigKeys.StripedRead.DATANODE_MAX_RETRY_COUNT,
+            HdfsClientConfigKeys.StripedRead.DATANODE_MAX_RETRY_COUNT_DEFAULT);
+    Preconditions.checkArgument(stripedReadDnMaxRetryCounts >= 0, "The value of " +
+        HdfsClientConfigKeys.StripedRead.DATANODE_MAX_RETRY_COUNT +
+        " must be greater than or equal to 0.");
     replicaAccessorBuilderClasses = loadReplicaAccessorBuilderClasses(conf);
 
     leaseHardLimitPeriod =
@@ -708,6 +716,13 @@ public class DfsClientConf {
    */
   public long getleaseHardLimitPeriod() {
     return leaseHardLimitPeriod;
+  }
+
+  /**
+   * @return the stripedReadDnMaxRetryCounts
+   */
+  public int getStripedReadDnMaxRetryCounts() {
+    return stripedReadDnMaxRetryCounts;
   }
 
   /**

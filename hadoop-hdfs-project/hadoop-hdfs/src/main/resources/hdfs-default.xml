@@ -4626,6 +4626,15 @@
 </property>
 
 <property>
+  <name>dfs.client.read.striped.datanode.max.retry.count</name>
+  <value>1</value>
+  <description>
+    The max retry counts of reconnecting to DN during
+    the striped read process, Default is 1.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.replica.accessor.builder.classes</name>
   <value></value>
   <description>

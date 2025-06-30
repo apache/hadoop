@@ -234,12 +234,12 @@ public class DFSStripedInputStream extends DFSInputStream {
 
   boolean createBlockReader(LocatedBlock block, long offsetInBlock,
       LocatedBlock[] targetBlocks, BlockReaderInfo[] readerInfos,
-      int chunkIndex, long readTo) throws IOException {
+      int chunkIndex, long readTo, int readDNMaxRetryCounts) throws IOException {
     BlockReader reader = null;
     final ReaderRetryPolicy retry = new ReaderRetryPolicy();
     DFSInputStream.DNAddrPair dnInfo =
         new DFSInputStream.DNAddrPair(null, null, null, null);
-
+    int curRetryCounts = 0;
     while (true) {
       try {
         // the cached block location might have been re-fetched, so always
@@ -255,6 +255,7 @@ public class DFSStripedInputStream extends DFSInputStream {
         if (readTo < 0 || readTo > block.getBlockSize()) {
           readTo = block.getBlockSize();
         }
+        DFSClientFaultInjector.get().failCreateBlockReader(curRetryCounts);
         reader = getBlockReader(block, offsetInBlock,
             readTo - offsetInBlock,
             dnInfo.addr, dnInfo.storageType, dnInfo.info);
@@ -273,10 +274,17 @@ public class DFSStripedInputStream extends DFSInputStream {
           fetchBlockAt(block.getStartOffset());
           retry.refetchToken();
         } else {
+          if (curRetryCounts++ < readDNMaxRetryCounts) {
+            DFSClient.LOG.info("Try to reconnect to {} for block {} for {} time.", dnInfo.addr,
+                block.getBlock(), curRetryCounts);
+            // Re-fetch the block in case the block has been moved.
+            fetchBlockAt(block.getStartOffset());
+            continue;
+          }
           //TODO: handles connection issues
-          DFSClient.LOG.warn("Failed to connect to " + dnInfo.addr + " for " +
-              "block" + block.getBlock(), e);
-          // re-fetch the block in case the block has been moved
+          DFSClient.LOG.warn("Failed to connect to {} for block {} after retrying {} time.",
+              dnInfo.addr, block.getBlock(), curRetryCounts, e);
+          // Re-fetch the block in case the block has been moved
           fetchBlockAt(block.getStartOffset());
           addToLocalDeadNodes(dnInfo.info);
         }

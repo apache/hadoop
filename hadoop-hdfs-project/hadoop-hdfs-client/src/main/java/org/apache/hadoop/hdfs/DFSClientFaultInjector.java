@@ -72,6 +72,8 @@ public class DFSClientFaultInjector {
   public void onCreateBlockReader(LocatedBlock block, int chunkIndex, long offset, long length) {}
 
   public void failCreateBlockReader() throws InvalidBlockTokenException {}
+  
+  public void failWhenReadWithStrategy(boolean isRetryRead) throws IOException {}
 
-  public void failWhenReadWithStrategy(boolean isRetryRead) throws IOException {};
+  public void failCreateBlockReader(int curRetryCounts) throws IOException {}
 }

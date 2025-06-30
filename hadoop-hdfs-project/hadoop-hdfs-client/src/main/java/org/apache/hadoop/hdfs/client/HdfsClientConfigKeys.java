@@ -532,6 +532,14 @@ public interface HdfsClientConfigKeys {
      * span 6 DNs, so this default value accommodates 3 read streams
      */
     int     THREADPOOL_SIZE_DEFAULT = 18;
+
+    /**
+     * The max retry counts of reconnecting to DN
+     * during the striped read process, Default is 1.
+     */
+    String DATANODE_MAX_RETRY_COUNT = PREFIX +
+        "datanode.max.retry.count";
+    int DATANODE_MAX_RETRY_COUNT_DEFAULT = 1;
   }
 
   /** dfs.http.client configuration properties */
