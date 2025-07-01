@@ -39,17 +39,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INFINITE_LEASE_KEY;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_LEASE_THREADS;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDeleted;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsDirectory;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.file;
 
 /**
  * Test compatibility between ABFS client and WASB client.
@@ -162,6 +158,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     }
   }
 
+  // Create and write a file using WASB then read and write the same file using ABFS.
   @Test
   public void testwriteFile() throws Exception {
     AzureBlobFileSystem abfs = getFileSystem();
@@ -170,7 +167,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 1);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
     // Write
     try (FSDataOutputStream nativeFsStream = wasb.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -192,8 +189,11 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       nativeFsStream.flush();
       nativeFsStream.hsync();
     }
+    // Remove file
+    assertDeleted(abfs, path, true);
   }
 
+  // Create and write a file using ABFS, then append the file using wasb and then write the file again using ABFS.
   @Test
   public void testwriteFile1() throws Exception {
     AzureBlobFileSystem abfs = getFileSystem();
@@ -202,7 +202,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 2);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
     // Write
     try (FSDataOutputStream nativeFsStream = abfs.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -224,17 +224,19 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       nativeFsStream.flush();
       nativeFsStream.hsync();
     }
+    // Remove file
+    assertDeleted(abfs, path, true);
   }
 
+  // Create file using azcopy and append it using ABFS.
   @Test
   public void testazcopywasbcompatibility() throws Exception {
     AzureBlobFileSystem abfs = getFileSystem();
     Assume.assumeFalse("Namespace enabled account does not support this test",
         getIsNamespaceEnabled(abfs));
-    NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 2);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
     createAzCopyFile(path);
 
     try (FSDataOutputStream nativeFsStream = abfs.append(path)) {
@@ -242,6 +244,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       nativeFsStream.flush();
       nativeFsStream.hsync();
     }
+    // Remove file
+    assertDeleted(abfs, path, true);
   }
 
 
@@ -328,7 +332,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 1);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     try (FSDataOutputStream nativeFsStream = wasb.create(path, true)) {
@@ -359,7 +363,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 2);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     try (FSDataOutputStream nativeFsStream = wasb.create(path, true)) {
@@ -397,7 +401,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 3);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     try (FSDataOutputStream nativeFsStream = abfs.create(path, true)) {
@@ -428,7 +432,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 4);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     wasb.create(path, true);
@@ -438,7 +442,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       abfsOutputStream.hsync();
     }
 
-    try (FSDataOutputStream nativeFsStream = abfs.append(path)) {
+    try (FSDataOutputStream nativeFsStream = wasb.append(path)) {
       nativeFsStream.write(TEST_CONTEXT1.getBytes());
       nativeFsStream.flush();
       nativeFsStream.hsync();
@@ -462,7 +466,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 5);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     abfs.create(path, true);
@@ -498,7 +502,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 6);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     abfs.create(path, true);
@@ -534,7 +538,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 7);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     try (FSDataOutputStream nativeFsStream = wasb.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -569,7 +573,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 8);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     try (FSDataOutputStream nativeFsStream = wasb.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -608,7 +612,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 9);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     try (FSDataOutputStream nativeFsStream = abfs.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -643,7 +647,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 10);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     try (FSDataOutputStream nativeFsStream = abfs.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -682,7 +686,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 11);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     abfs.create(path, true);
@@ -716,7 +720,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 12);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     try (FSDataOutputStream nativeFsStream = abfs.create(path, true)) {
@@ -749,7 +753,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 13);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     abfs.create(path, true);
@@ -783,7 +787,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 14);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     abfs.create(path, true);
@@ -817,7 +821,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 15);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     try (FSDataOutputStream nativeFsStream = wasb.create(path, true)) {
@@ -850,7 +854,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 16);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     wasb.create(path, true);
@@ -884,7 +888,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 17);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+
     // Write
     try (FSDataOutputStream nativeFsStream = abfs.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -926,7 +931,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 18);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+
     // Write
     try (FSDataOutputStream nativeFsStream = wasb.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -968,7 +974,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 19);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+
     // Write
     try (FSDataOutputStream nativeFsStream = wasb.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -1010,7 +1017,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 20);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+
     // Write
     try (FSDataOutputStream nativeFsStream = wasb.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -1053,7 +1061,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 21);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+
     // Write
     try (FSDataOutputStream nativeFsStream = abfs.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -1096,7 +1105,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 22);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+
     // Write
     try (FSDataOutputStream nativeFsStream = wasb.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -1139,7 +1149,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 23);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
     // Write
     try (FSDataOutputStream nativeFsStream = wasb.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -1181,7 +1191,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 24);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+
     // Write
     try (FSDataOutputStream nativeFsStream = abfs.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -1223,7 +1234,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 25);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+
     // Write
     try (FSDataOutputStream nativeFsStream = wasb.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -1265,7 +1277,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 26);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+
     // Write
     try (FSDataOutputStream nativeFsStream = abfs.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -1307,8 +1320,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path testPath1 = new Path(testFile + "/~12/!008/testfile" + 27);
-    Path testPath2 = new Path(testFile + "/~12/!008/testfile" + 28);
+    Path testPath1 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath2 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     try (FSDataOutputStream nativeFsStream = abfs.create(testPath1, true)) {
@@ -1328,7 +1341,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     }
     // --- RENAME FILE ---
     boolean renamed = wasb.rename(testPath1, testPath2);
-    System.out.println("Rename successful: " + renamed);
+    Assertions.assertThat(renamed)
+        .as("Rename failed")
+        .isTrue();
 
     // --- LIST FILES IN DIRECTORY ---
     Path parentDir = new Path(testFile + "/~12/!008");
@@ -1352,8 +1367,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path testPath1 = new Path(testFile + "/~12/!008/testfile" + 29);
-    Path testPath2 = new Path(testFile + "/~12/!008/testfile" + 30);
+    Path testPath1 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath2 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     try (FSDataOutputStream nativeFsStream = wasb.create(testPath1, true)) {
@@ -1373,7 +1388,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     }
     // --- RENAME FILE ---
     boolean renamed = abfs.rename(testPath1, testPath2);
-    System.out.println("Rename successful: " + renamed);
+    Assertions.assertThat(renamed)
+        .as("Rename failed")
+        .isTrue();
 
     // --- LIST FILES IN DIRECTORY ---
     Path parentDir = new Path(testFile + "/~12/!008");
@@ -1397,8 +1414,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path testPath1 = new Path(testFile + "/~12/!008/testfile" + 29);
-    Path testPath2 = new Path(testFile + "/~12/!008/testfile" + 30);
+    Path testPath1 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath2 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     wasb.create(testPath1, true);
@@ -1419,7 +1436,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     }
     // --- RENAME FILE ---
     boolean renamed = abfs.rename(testPath1, testPath2);
-    System.out.println("Rename successful: " + renamed);
+    Assertions.assertThat(renamed)
+        .as("Rename failed")
+        .isTrue();
 
     // --- LIST FILES IN DIRECTORY ---
     Path parentDir = new Path(testFile + "/~12/!008");
@@ -1443,9 +1462,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path testPath1 = new Path(testFile + "/~12/!008/testfile" + 31);
-    Path testPath2 = new Path(testFile + "/~12/!008/testfile" + 32);
-    Path testPath3 = new Path(testFile + "/~12/!008/testfile" + 33);
+    Path testPath1 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath2 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath3 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     try (FSDataOutputStream nativeFsStream = wasb.create(testPath1, true)) {
@@ -1465,10 +1484,15 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     }
     // --- RENAME FILE ---
     boolean renamed = wasb.rename(testPath1, testPath2);
-    System.out.println("Rename successful: " + renamed);
+    Assertions.assertThat(renamed)
+        .as("Rename failed")
+        .isTrue();
+
     // --- RENAME FILE ---
     boolean renamed1 = abfs.rename(testPath2, testPath3);
-    System.out.println("Rename successful: " + renamed1);
+    Assertions.assertThat(renamed1)
+        .as("Rename failed")
+        .isTrue();
 
     // --- LIST FILES IN DIRECTORY ---
     Path parentDir = new Path(testFile + "/~12/!008");
@@ -1492,9 +1516,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path testPath1 = new Path(testFile + "/~12/!008/testfile" + 31);
-    Path testPath2 = new Path(testFile + "/~12/!008/testfile" + 32);
-    Path testPath3 = new Path(testFile + "/~12/!008/testfile" + 33);
+    Path testPath1 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath2 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     try (FSDataOutputStream nativeFsStream = wasb.create(testPath1, true)) {
@@ -1513,9 +1536,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
           TEST_CONTEXT, line);
     }
     wasb.delete(testPath1, true);
+
     // --- RENAME FILE ---
     boolean renamed = abfs.rename(testPath1, testPath2);
-    System.out.println("Rename successful: " + renamed);
     Assertions.assertThat(renamed)
         .as("Rename operation should have failed but returned true")
         .isFalse();
@@ -1534,9 +1557,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     Path testFile = path("/testReadFile");
     Path testFile1 = path("/testReadFile1");
-    Path testPath1 = new Path(testFile + "/~12/!008/testfile" + 50);
-    Path testPath2 = new Path(testFile + "/~12/!008/testfile" + 51);
-    Path testPath3 = new Path(testFile + "/~12/!008/testfile" + 52);
+    Path testPath1 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath2 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath3 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     wasb.mkdirs(testFile);
@@ -1559,7 +1582,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     }
     // --- RENAME DIR ---
     boolean renamed = abfs.rename(testFile, testFile1);
-    System.out.println("Rename successful: " + renamed);
+    Assertions.assertThat(renamed)
+        .as("Rename failed")
+        .isTrue();
     // --- LIST FILES IN DIRECTORY ---
    listAllFilesAndDirs(abfs, testFile1);
   }
@@ -1577,9 +1602,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     Path testFile = path("/testReadFile");
     Path testFile1 = path("/testReadFile1");
-    Path testPath1 = new Path(testFile + "/~12/!008/testfile" + 55);
-    Path testPath2 = new Path(testFile + "/~12/!008/testfile" + 56);
-    Path testPath3 = new Path(testFile + "/~12/!008/testfile" + 57);
+    Path testPath1 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath2 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath3 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     abfs.mkdirs(testFile);
@@ -1602,7 +1627,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     }
     // --- RENAME DIR ---
     boolean renamed = wasb.rename(testFile, testFile1);
-    System.out.println("Rename successful: " + renamed);
+    Assertions.assertThat(renamed)
+        .as("Rename failed")
+        .isTrue();
     // --- LIST FILES IN DIRECTORY ---
     listAllFilesAndDirs(wasb, testFile1);
   }
@@ -1619,10 +1646,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path testFile1 = path("/testReadFile1");
-    Path testPath1 = new Path(testFile + "/~12/!008/testfile" + 65);
-    Path testPath2 = new Path(testFile + "/~12/!008/testfile" + 66);
-    Path testPath3 = new Path(testFile + "/~12/!008/testfile" + 67);
+    Path testPath1 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath2 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath3 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     abfs.mkdirs(testFile);
@@ -1644,7 +1670,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     }
     // --- RENAME DIR ---
     boolean renamed = wasb.rename(testPath1, testPath2);
-    System.out.println("Rename successful: " + renamed);
+    Assertions.assertThat(renamed)
+        .as("Rename failed")
+        .isTrue();
     // --- LIST FILES IN DIRECTORY ---
     listAllFilesAndDirs(abfs, testFile);
   }
@@ -1661,10 +1689,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path testFile1 = path("/testReadFile1");
-    Path testPath1 = new Path(testFile + "/~12/!008/testfile" + 75);
-    Path testPath2 = new Path(testFile + "/~12/!008/testfile" + 76);
-    Path testPath3 = new Path(testFile + "/~12/!008/testfile" + 77);
+    Path testPath1 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath2 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath3 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     wasb.mkdirs(testFile);
@@ -1686,7 +1713,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     }
     // --- RENAME DIR ---
     boolean renamed = abfs.rename(testPath1, testPath2);
-    System.out.println("Rename successful: " + renamed);
+    Assertions.assertThat(renamed)
+        .as("Rename failed")
+        .isTrue();
     // --- LIST FILES IN DIRECTORY ---
     listAllFilesAndDirs(wasb, testFile);
   }
@@ -1703,10 +1732,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path testFile1 = path("/testReadFile1");
-    Path testPath1 = new Path(testFile + "/~12/!008/testfile" + 75);
-    Path testPath2 = new Path(testFile + "/~12/!008/testfile" + 76);
-    Path testPath3 = new Path(testFile + "/~12/!008/testfile" + 77);
+    Path testPath1 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath3 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     wasb.mkdirs(testFile);
@@ -1728,7 +1755,6 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     }
     // --- RENAME DIR ---
     boolean renamed = abfs.rename(testFile, testFile);
-    System.out.println("Rename successful: " + renamed);
     Assertions.assertThat(renamed)
         .as("Rename operation should have failed but returned true")
         .isFalse();
@@ -1746,10 +1772,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path testFile1 = path("/testReadFile1");
-    Path testPath1 = new Path(testFile + "/~12/!008/testfile" + 75);
-    Path testPath2 = new Path(testFile + "/~12/!008/testfile" + 76);
-    Path testPath3 = new Path(testFile + "/~12/!008/testfile" + 77);
+    Path testPath1 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath2 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath3 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     abfs.mkdirs(testFile);
@@ -1771,7 +1796,6 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     }
     // --- RENAME NON EXISTENT FILE ---
     boolean renamed = wasb.rename(testPath2, testPath3);
-    System.out.println("Rename successful: " + renamed);
     Assertions.assertThat(renamed)
         .as("Rename operation should have failed but returned true")
         .isFalse();
@@ -1789,7 +1813,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
-    Path path = new Path(testFile + "/~12/!008/testfile" + 38);
+    Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+
     // Write
     try (FSDataOutputStream nativeFsStream = wasb.create(path, true)) {
       nativeFsStream.write(TEST_CONTEXT.getBytes());
@@ -1834,9 +1859,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     String testRunId = UUID.randomUUID().toString();
     Path baseDir = path("/testScenario39_" + testRunId);
     Path testFile = new Path(baseDir, "testReadFile");
-    Path testPath1 = new Path(testFile + "/~12/!008/testfile" + 1);
-    Path testPath2 = new Path(testFile + "/~12/!008/testfile" + 2);
-    Path testPath3 = new Path(testFile + "/~12/!008/testfile" + 3);
+    Path testPath1 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath2 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
+    Path testPath3 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
     wasb.mkdirs(testFile);
@@ -1858,28 +1883,44 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     }
     // --- RENAME DIR ---
     boolean renamed = wasb.rename(testPath1, testPath2);
-    System.out.println("Rename successful: " + renamed);
+    Assertions.assertThat(renamed)
+        .as("Rename failed")
+        .isTrue();
     // --- LIST FILES IN DIRECTORY ---
     listAllFilesAndDirs(wasb, testFile);
   }
 
-  public static void listAllFilesAndDirs(FileSystem fs, Path path) throws
-      IOException {
+  /**
+   * Recursively counts all files and directories under the given path.
+   *
+   * @param fs   The file system to use.
+   * @param path The starting path.
+   * @return Total number of files and directories.
+   * @throws IOException If an error occurs while accessing the file system.
+   */
+  public static int listAllFilesAndDirs(FileSystem fs, Path path) throws IOException {
+    int count = 0;
     RemoteIterator<FileStatus> iter = fs.listStatusIterator(path);
 
     while (iter.hasNext()) {
       FileStatus status = iter.next();
+      count++; // Count this file or directory
 
       if (status.isDirectory()) {
-        System.out.println("Directory: " + status.getPath());
-        // Recursive call
-        listAllFilesAndDirs(fs, status.getPath());
-      } else {
-        System.out.println("File: " + status.getPath());
+        count += listAllFilesAndDirs(fs, status.getPath()); // Recurse into directory
       }
     }
+
+    return count;
   }
 
+  /**
+   * Checks that the given path is a regular file (not a directory or symlink).
+   *
+   * @param path   The file path.
+   * @param status The file status.
+   * @throws AssertionError If the path is a directory or a symlink.
+   */
   private static void assertIsFile(Path path, FileStatus status) {
     if (status.isDirectory()) {
       throw new AssertionError("File claims to be a directory: " + path + " " + status);
@@ -1889,6 +1930,14 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * Checks that the actual byte array matches the expected byte array and decoded string.
+   *
+   * @param actual          The actual byte array.
+   * @param expected        The expected byte array.
+   * @param expectedDecoded The expected decoded string.
+   * @throws AssertionError If the bytes or decoded string don't match.
+   */
   private static void assertAttributeEqual(byte[] actual, byte[] expected, String expectedDecoded) {
     if (!Arrays.equals(actual, expected)) {
       throw new AssertionError("Encoded attribute does not match expected bytes");

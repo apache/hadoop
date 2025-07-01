@@ -35,8 +35,10 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
@@ -1077,10 +1079,10 @@ public class AbfsBlobClient extends AbfsClient {
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
     if (leaseId != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
+    };
+    if (blobMd5 != null) {
+      requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, blobMd5));
     }
-    //String md5Hash = computeMD5Hash(buffer, 0, buffer.length);
-    requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, blobMd5));
-
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCKLIST);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(isClose));
@@ -1105,8 +1107,10 @@ public class AbfsBlobClient extends AbfsClient {
         AbfsRestOperation op1 = getPathStatus(path, true, tracingContext,
             contextEncryptionAdapter);
         String metadataMd5 = op1.getResult().getResponseHeader(CONTENT_MD5);
-        if (!blobMd5.equals(metadataMd5)) {
-          throw ex;
+        if (blobMd5 != null) {
+          if (!blobMd5.equals(metadataMd5)) {
+            throw ex;
+          }
         }
         return op;
       }

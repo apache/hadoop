@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -1046,11 +1047,10 @@ public class ITestAzureBlobFileSystemAppend extends
    */
   private String generateBlockId(AbfsOutputStream os, long position) {
     String streamId = os.getStreamID();
-    String streamIdHash = Integer.toString(streamId.hashCode());
-    String blockId = String.format("%d_%s", position, streamIdHash);
-    byte[] blockIdByteArray = new byte[BLOCK_ID_LENGTH];
-    System.arraycopy(blockId.getBytes(), 0, blockIdByteArray, 0, Math.min(BLOCK_ID_LENGTH, blockId.length()));
-    return new String(Base64.encodeBase64(blockIdByteArray), StandardCharsets.UTF_8);
+    UUID streamIdGuid = UUID.nameUUIDFromBytes(streamId.getBytes(StandardCharsets.UTF_8));
+    long blockIndex = position / os.getBufferSize();
+    String rawBlockId = String.format("%s-%06d", streamIdGuid, blockIndex);
+    return Base64.encodeBase64String(rawBlockId.getBytes(StandardCharsets.UTF_8));
   }
 
   /**
@@ -1099,7 +1099,7 @@ public class ITestAzureBlobFileSystemAppend extends
       Mockito.doAnswer(answer -> {
         // Set up the mock for the flush operation
         AbfsClientTestUtil.setMockAbfsRestOperationForFlushOperation(blobClient,
-            eTag, blockListXml,
+            eTag, blockListXml, out,
             (httpOperation) -> {
               Mockito.doAnswer(invocation -> {
                 // Call the real processResponse method
@@ -1196,7 +1196,7 @@ public class ITestAzureBlobFileSystemAppend extends
       Mockito.doAnswer(answer -> {
         // Set up the mock for the flush operation
         AbfsClientTestUtil.setMockAbfsRestOperationForFlushOperation(blobClient,
-            eTag, blockListXml,
+            eTag, blockListXml, out,
             (httpOperation) -> {
               Mockito.doAnswer(invocation -> {
                 // Call the real processResponse method
