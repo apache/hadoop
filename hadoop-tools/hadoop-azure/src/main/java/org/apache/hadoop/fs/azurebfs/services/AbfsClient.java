@@ -528,7 +528,7 @@ public abstract class AbfsClient implements Closeable {
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
-  public abstract AbfsRestOperation setFilesystemProperties(Hashtable<String, String> properties, final String name,
+  public abstract AbfsRestOperation setFilesystemProperties(Hashtable<String, String> properties,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   /**

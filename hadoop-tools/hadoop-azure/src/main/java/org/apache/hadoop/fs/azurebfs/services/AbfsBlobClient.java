@@ -35,10 +35,8 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
@@ -265,7 +263,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
   @Override
-  public AbfsRestOperation setFilesystemProperties(final Hashtable<String, String> properties, final String name,
+  public AbfsRestOperation setFilesystemProperties(final Hashtable<String, String> properties,
       TracingContext tracingContext) throws AzureBlobFileSystemException  {
     List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     /*
@@ -2051,7 +2049,7 @@ public class AbfsBlobClient extends AbfsClient {
     List<FileStatus> fileStatusList = new ArrayList<>();
     // We need to loop on continuation token until we get an entry or continuation token becomes null.
     do {
-      ListResponseData listResponseData = listPath(path, false, 1, null, tracingContext, null);
+      ListResponseData listResponseData = listPath(path, false, 1, continuationToken, tracingContext, null);
       fileStatusList.addAll(listResponseData.getFileStatusList());
       continuationToken = listResponseData.getContinuationToken();
     } while (StringUtils.isNotEmpty(continuationToken) && fileStatusList.isEmpty());

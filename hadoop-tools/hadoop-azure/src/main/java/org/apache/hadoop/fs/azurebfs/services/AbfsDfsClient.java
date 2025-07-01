@@ -231,7 +231,7 @@ public class AbfsDfsClient extends AbfsClient {
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
   @Override
-  public AbfsRestOperation setFilesystemProperties(final Hashtable<String, String> properties, final String name,
+  public AbfsRestOperation setFilesystemProperties(final Hashtable<String, String> properties,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     final String commaSeparatedProperties;
     try {

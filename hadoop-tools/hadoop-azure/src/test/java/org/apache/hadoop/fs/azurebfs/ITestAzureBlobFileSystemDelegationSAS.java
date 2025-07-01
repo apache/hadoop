@@ -436,7 +436,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     properties.put("FileSystemProperties", "true");
     TracingContext tracingContext = getTestTracingContext(fs, true);
     assertThrows(IOException.class, () -> fs.getAbfsStore()
-        .setFilesystemProperties(properties, "FileSystemProperties", tracingContext));
+        .setFilesystemProperties(properties, tracingContext));
     assertThrows(IOException.class,
         () -> fs.getAbfsStore().getFilesystemProperties(tracingContext));
   }

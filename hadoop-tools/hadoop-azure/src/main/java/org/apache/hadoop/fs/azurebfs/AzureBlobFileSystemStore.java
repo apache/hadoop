@@ -503,7 +503,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   public void setFilesystemProperties(
-      final Hashtable<String, String> properties, final String name, TracingContext tracingContext)
+      final Hashtable<String, String> properties, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     if (properties == null || properties.isEmpty()) {
       LOG.trace("setFilesystemProperties no properties present");
@@ -518,7 +518,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             "setFilesystemProperties")) {
 
       final AbfsRestOperation op = getClient()
-          .setFilesystemProperties(properties, name, tracingContext);
+          .setFilesystemProperties(properties, tracingContext);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }

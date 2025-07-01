@@ -77,7 +77,7 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "{ value: value }");
     TracingContext tracingContext = getTestTracingContext(fs, true);
-    fs.getAbfsStore().setFilesystemProperties(properties, "key", tracingContext);
+    fs.getAbfsStore().setFilesystemProperties(properties, tracingContext);
     Hashtable<String, String> fetchedProperties = fs.getAbfsStore()
         .getFilesystemProperties(tracingContext);
 
@@ -105,7 +105,7 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "{ value: value歲 }");
     TracingContext tracingContext = getTestTracingContext(fs, true);
-    fs.getAbfsStore().setFilesystemProperties(properties, "key", tracingContext);
+    fs.getAbfsStore().setFilesystemProperties(properties, tracingContext);
     Hashtable<String, String> fetchedProperties = fs.getAbfsStore()
         .getFilesystemProperties(tracingContext);
 
@@ -133,7 +133,7 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("containerForDevTest", "true");
     TracingContext tracingContext = getTestTracingContext(fs, true);
-    fs.getAbfsStore().setFilesystemProperties(properties, "containerForDevTest", tracingContext);
+    fs.getAbfsStore().setFilesystemProperties(properties, tracingContext);
     Hashtable<String, String> fetchedProperties = fs.getAbfsStore()
         .getFilesystemProperties(tracingContext);
 
