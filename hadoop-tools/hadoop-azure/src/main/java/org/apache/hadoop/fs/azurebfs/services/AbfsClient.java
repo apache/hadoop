@@ -127,6 +127,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.PLUS_ENC
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.UTF_8;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType.BLOB;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
@@ -152,6 +153,7 @@ public abstract class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
   public static final String ABFS_CLIENT_TIMER_THREAD_NAME = "abfs-timer-client";
+  public static final String FNS_BLOB_USER_AGENT_IDENTIFIER = "FNS";
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
@@ -1318,6 +1320,14 @@ public abstract class AbfsClient implements Closeable {
     sb.append(abfsConfiguration.getClusterName());
     sb.append(FORWARD_SLASH);
     sb.append(abfsConfiguration.getClusterType());
+
+    // Add a unique identifier in FNS-Blob user agent string
+    if (!getIsNamespaceEnabled()
+        && abfsConfiguration.getFsConfiguredServiceType() == BLOB) {
+      sb.append(SEMICOLON)
+          .append(SINGLE_WHITE_SPACE)
+          .append(FNS_BLOB_USER_AGENT_IDENTIFIER);
+    }
 
     sb.append(")");
 

@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.s3a.api.PerformanceFlagEnum;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -186,7 +186,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     S3AFileStatus status = verifyInnerGetFileStatus(simpleFile, true,
         StatusProbeEnum.ALL,
         GET_FILE_STATUS_ON_FILE);
-    assertTrue("not a file: " + status, status.isFile());
+    assertTrue(status.isFile(), "not a file: " + status);
   }
 
   @Test
@@ -196,8 +196,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     S3AFileStatus status = verifyInnerGetFileStatus(dir, true,
         StatusProbeEnum.ALL,
         GET_FILE_STATUS_ON_DIR_MARKER);
-    assertSame("not empty: " + status, Tristate.TRUE,
-        status.isEmptyDirectory());
+    assertSame(Tristate.TRUE,
+        status.isEmptyDirectory(), "not empty: " + status);
     // but now only ask for the directories and the file check is skipped.
     verifyInnerGetFileStatus(dir, false,
         StatusProbeEnum.DIRECTORIES,

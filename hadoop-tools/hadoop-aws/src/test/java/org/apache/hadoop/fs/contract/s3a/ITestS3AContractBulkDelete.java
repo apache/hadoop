@@ -23,9 +23,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,7 +53,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Contract tests for bulk delete operation for S3A Implementation.
  */
-@RunWith(Parameterized.class)
+
 public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(ITestS3AContractBulkDelete.class);
@@ -67,9 +66,8 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
    */
   private static final int DELETE_PAGE_SIZE = 20;
 
-  private final boolean enableMultiObjectDelete;
+  private boolean enableMultiObjectDelete;
 
-  @Parameterized.Parameters(name = "enableMultiObjectDelete = {0}")
   public static Iterable<Object[]> enableMultiObjectDelete() {
     return Arrays.asList(new Object[][]{
             {true},
@@ -77,8 +75,8 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
     });
   }
 
-  public ITestS3AContractBulkDelete(boolean enableMultiObjectDelete) {
-    this.enableMultiObjectDelete = enableMultiObjectDelete;
+  public void initITestS3AContractBulkDelete(boolean pEnableMultiObjectDelete) {
+    this.enableMultiObjectDelete = pEnableMultiObjectDelete;
   }
 
   @Override
@@ -119,8 +117,11 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
             .isEqualTo(getExpectedPageSize());
   }
 
-  @Test
-  public void testBulkDeleteZeroPageSizePrecondition() throws Exception {
+  @MethodSource("enableMultiObjectDelete")
+  @ParameterizedTest(name = "enableMultiObjectDelete = {0}")
+  public void testBulkDeleteZeroPageSizePrecondition(
+      boolean pEnableMultiObjectDelete) throws Exception {
+    initITestS3AContractBulkDelete(pEnableMultiObjectDelete);
     if (!enableMultiObjectDelete) {
       // if multi-object delete is disabled, skip this test as
       // page size is always 1.
@@ -135,8 +136,11 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
     }
   }
 
-  @Test
-  public void testPageSizeWhenMultiObjectsDisabled() throws Exception {
+  @MethodSource("enableMultiObjectDelete")
+  @ParameterizedTest(name = "enableMultiObjectDelete = {0}")
+  public void testPageSizeWhenMultiObjectsDisabled(
+      boolean pEnableMultiObjectDelete) throws Exception {
+    initITestS3AContractBulkDelete(pEnableMultiObjectDelete);
     Configuration conf = getContract().getConf();
     conf.setBoolean(Constants.ENABLE_MULTI_DELETE, false);
     Path testPath = path(getMethodName());
@@ -165,8 +169,11 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
     assertIsDirectory(dirPath);
   }
 
-  @Test
-  public void testBulkDeleteParentDirectoryWithDirectories() throws Exception {
+  @MethodSource("enableMultiObjectDelete")
+  @ParameterizedTest(name = "enableMultiObjectDelete = {0}")
+  public void testBulkDeleteParentDirectoryWithDirectories(
+      boolean pEnableMultiObjectDelete) throws Exception {
+    initITestS3AContractBulkDelete(pEnableMultiObjectDelete);
     List<Path> paths = new ArrayList<>();
     Path dirPath = new Path(basePath, "dir");
     fs.mkdirs(dirPath);
@@ -195,7 +202,8 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
   }
 
 
-  @Test
+  @MethodSource("enableMultiObjectDelete")
+  @ParameterizedTest(name = "enableMultiObjectDelete = {0}")
   public void testRateLimiting() throws Exception {
     if (!enableMultiObjectDelete) {
       skip("Multi-object delete is disabled so hard to trigger rate limiting");

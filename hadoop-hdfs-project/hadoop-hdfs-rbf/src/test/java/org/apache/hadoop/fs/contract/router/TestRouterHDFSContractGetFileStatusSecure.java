@@ -18,8 +18,8 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 /**
  * Test secure get file status operations on the Router-based FS.
@@ -27,12 +27,12 @@ import org.junit.BeforeClass;
 public class TestRouterHDFSContractGetFileStatusSecure
     extends AbstractContractGetFileStatusTest {
 
-  @BeforeClass
+  @BeforeAll
   public static void createCluster() throws Exception {
     RouterHDFSContract.createCluster(true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownCluster() throws IOException {
     RouterHDFSContract.destroyCluster();
   }

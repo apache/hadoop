@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
-import org.junit.Ignore;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +39,7 @@ public class ITestS3AContractRootDir extends
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AContractRootDir.class);
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -55,7 +57,7 @@ public class ITestS3AContractRootDir extends
   }
 
   @Override
-  @Ignore("S3 always return false when non-recursively remove root dir")
+  @Disabled("S3 always return false when non-recursively remove root dir")
   public void testRmNonEmptyRootDirNonRecursive() throws Throwable {
   }
 }

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -61,7 +61,7 @@ public class ITestS3AContractMkdirWithCreatePerf extends AbstractContractMkdirTe
     createFile(getFileSystem(), path, false, dataset);
     Path child = new Path(path, "child-to-mkdir");
     boolean childCreated = fs.mkdirs(child);
-    assertTrue("Child dir is created", childCreated);
+    assertTrue(childCreated, "Child dir is created");
     assertIsFile(path);
     byte[] bytes = ContractTestUtils.readDataset(getFileSystem(), path, dataset.length);
     ContractTestUtils.compareByteArrays(dataset, bytes, dataset.length);

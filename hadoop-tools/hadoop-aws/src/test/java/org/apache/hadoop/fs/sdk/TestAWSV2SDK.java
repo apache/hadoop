@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.net.URI;
 
@@ -30,7 +31,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import java.io.IOException;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -76,15 +76,16 @@ public class TestViewFileSystemWithAuthorityLocalFileSystem extends ViewFileSyst
   @Override
   @Test
   public void testBasicPaths() {
-    Assertions.assertEquals(fsView.getUri(), schemeWithAuthority);
-    Assertions.assertEquals(fsView.getWorkingDirectory(),
-        fsView.makeQualified(
-        new Path("/user/" + System.getProperty("user.name"))));
-    Assertions.assertEquals(fsView.getHomeDirectory(),
-        fsView.makeQualified(
-        new Path("/user/" + System.getProperty("user.name"))));
-    Assertions.assertEquals(
-        fsView.makeQualified(new Path("/foo/bar")),
-        new Path("/foo/bar").makeQualified(schemeWithAuthority, null));
+    assertEquals(schemeWithAuthority,
+        fsView.getUri());
+    assertEquals(fsView.makeQualified(
+        new Path("/user/" + System.getProperty("user.name"))),
+        fsView.getWorkingDirectory());
+    assertEquals(fsView.makeQualified(
+        new Path("/user/" + System.getProperty("user.name"))),
+        fsView.getHomeDirectory());
+    assertEquals(
+        new Path("/foo/bar").makeQualified(schemeWithAuthority, null),
+        fsView.makeQualified(new Path("/foo/bar")));
   }
 }

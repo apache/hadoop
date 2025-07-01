@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -26,10 +27,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test cases for trying to append to a file with a different
@@ -44,7 +46,7 @@ public class TestAppendDifferentChecksum {
   private static FileSystem fs; 
   
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
@@ -55,7 +57,7 @@ public class TestAppendDifferentChecksum {
     fs = cluster.getFileSystem();
   }
   
-  @AfterClass
+  @AfterAll
   public static void teardown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -68,7 +70,7 @@ public class TestAppendDifferentChecksum {
    * difficulties in doing so.
    */
   @Test
-  @Ignore("this is not implemented! See HDFS-2130")
+  @Disabled("this is not implemented! See HDFS-2130")
   public void testSwitchChunkSize() throws IOException {
     FileSystem fsWithSmallChunk = createFsWithChecksum("CRC32", 512);
     FileSystem fsWithBigChunk = createFsWithChecksum("CRC32", 1024);
@@ -100,7 +102,8 @@ public class TestAppendDifferentChecksum {
    * CRC32 and with CRC32C, crossing several block boundaries.
    * Then, checks that all of the data can be read back correct.
    */
-  @Test(timeout=RANDOM_TEST_RUNTIME*2)
+  @Test
+  @Timeout(value = RANDOM_TEST_RUNTIME * 2, unit = TimeUnit.MILLISECONDS)
   public void testAlgoSwitchRandomized() throws IOException {
     FileSystem fsWithCrc32 = createFsWithChecksum("CRC32", 512);
     FileSystem fsWithCrc32C = createFsWithChecksum("CRC32C", 512);

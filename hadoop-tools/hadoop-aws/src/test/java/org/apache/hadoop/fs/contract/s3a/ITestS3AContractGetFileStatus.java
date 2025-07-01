@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.junit.jupiter.api.AfterEach;
 
 /**
  * S3A contract tests covering getFileStatus.
@@ -37,6 +38,7 @@ public class ITestS3AContractGetFileStatus
     return new S3AContract(conf);
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     getLogger().info("FS details {}", getFileSystem());

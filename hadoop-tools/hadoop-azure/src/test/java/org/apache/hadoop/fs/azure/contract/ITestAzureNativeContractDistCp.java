@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azure.contract;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
+import org.junit.jupiter.api.BeforeEach;
 
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assumeScaleTestsEnabled;
 
@@ -39,6 +40,7 @@ public class ITestAzureNativeContractDistCp extends AbstractContractDistCpTest {
     return new NativeAzureFileSystemContract(conf);
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();

@@ -24,10 +24,9 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +63,6 @@ import static org.junit.Assume.assumeTrue;
 /**
  * S3A contract tests covering file seek.
  */
-@RunWith(Parameterized.class)
 public class ITestS3AContractSeek extends AbstractContractSeekTest {
 
   private static final Logger LOG =
@@ -72,8 +70,8 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
 
   protected static final int READAHEAD = 1024;
 
-  private final String seekPolicy;
-  private final DelegatingSSLSocketFactory.SSLChannelMode sslChannelMode;
+  private String seekPolicy;
+  private DelegatingSSLSocketFactory.SSLChannelMode sslChannelMode;
 
   public static final int DATASET_LEN = READAHEAD * 2;
 
@@ -84,7 +82,6 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
    * which S3A Supports.
    * @return a list of seek policies to test.
    */
-  @Parameterized.Parameters(name="policy={0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL, Default_JSSE},
@@ -97,10 +94,11 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
    * Run the test with a chosen seek policy.
    * @param seekPolicy fadvise policy to use.
    */
-  public ITestS3AContractSeek(final String seekPolicy,
-      final DelegatingSSLSocketFactory.SSLChannelMode sslChannelMode) {
-    this.seekPolicy = seekPolicy;
-    this.sslChannelMode = sslChannelMode;
+  public void initITestS3AContractSeek(final String pSeekPolicy,
+      final DelegatingSSLSocketFactory.SSLChannelMode pSslChannelMode) {
+    this.seekPolicy = pSeekPolicy;
+    this.sslChannelMode = pSslChannelMode;
+    validateSSLChannelMode();
   }
 
   /**
@@ -136,6 +134,7 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
     return new S3AContract(conf);
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     super.teardown();
@@ -191,10 +190,10 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
       int length) {
     for (int i = 0; i < length; i++) {
       int o = readOffset + i;
-      assertEquals(operation + " with seek policy " + seekPolicy
+      assertEquals(DATASET[o], data[i],
+          operation + " with seek policy " + seekPolicy
           + "and read offset " + readOffset
-          + ": data[" + i + "] != DATASET[" + o + "]",
-          DATASET[o], data[i]);
+          + ": data[" + i + "] != DATASET[" + o + "]");
     }
   }
 
@@ -203,7 +202,6 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
     return (S3AFileSystem) super.getFileSystem();
   }
 
-  @Before
   public void validateSSLChannelMode() {
     if (this.sslChannelMode == OpenSSL) {
       assumeTrue(NativeCodeLoader.isNativeCodeLoaded() &&
@@ -211,8 +209,11 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
     }
   }
 
-  @Test
-  public void testReadPolicyInFS() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest(name="policy={0}")
+  public void testReadPolicyInFS(String pSeekPolicy,
+      DelegatingSSLSocketFactory.SSLChannelMode pSslChannelMode) throws Throwable {
+    initITestS3AContractSeek(pSeekPolicy, pSslChannelMode);
     describe("Verify the read policy is being consistently set");
     S3AFileSystem fs = getFileSystem();
     assertEquals(S3AInputPolicy.getPolicy(seekPolicy, S3AInputPolicy.Normal),
@@ -224,8 +225,11 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
    * This sets up a read which will span the active readahead and,
    * in random IO mode, a subsequent GET.
    */
-  @Test
-  public void testReadAcrossReadahead() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest(name="policy={0}")
+  public void testReadAcrossReadahead(String pSeekPolicy,
+      DelegatingSSLSocketFactory.SSLChannelMode pSslChannelMode) throws Throwable {
+    initITestS3AContractSeek(pSeekPolicy, pSslChannelMode);
     describe("Sets up a read which will span the active readahead"
         + " and the rest of the file.");
     Path path = path("testReadAcrossReadahead");
@@ -243,7 +247,7 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
     try (FSDataInputStream in = fs.open(path)) {
       final byte[] temp = new byte[5];
       readAtEndAndReturn(in);
-      assertEquals("current position", 1, (int)(in.getPos()));
+      assertEquals(1, (int)(in.getPos()), "current position");
       in.readFully(READAHEAD, temp);
       assertDatasetEquals(READAHEAD, "read exactly on boundary",
           temp, temp.length);
@@ -254,8 +258,11 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
    * Read across the end of the read buffer using the readByte call,
    * which will read a single byte only.
    */
-  @Test
-  public void testReadSingleByteAcrossReadahead() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest(name="policy={0}")
+  public void testReadSingleByteAcrossReadahead(String pSeekPolicy,
+      DelegatingSSLSocketFactory.SSLChannelMode pSslChannelMode) throws Throwable {
+    initITestS3AContractSeek(pSeekPolicy, pSslChannelMode);
     describe("Read over boundary using read()/readByte() calls.");
     Path path = path("testReadSingleByteAcrossReadahead");
     writeTestDataset(path);
@@ -275,8 +282,11 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
     }
   }
 
-  @Test
-  public void testSeekToReadaheadAndRead() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest(name="policy={0}")
+  public void testSeekToReadaheadAndRead(String pSeekPolicy,
+      DelegatingSSLSocketFactory.SSLChannelMode pSslChannelMode) throws Throwable {
+    initITestS3AContractSeek(pSeekPolicy, pSslChannelMode);
     describe("Seek to just before readahead limit and call"
         + " InputStream.read(byte[])");
     Path path = path("testSeekToReadaheadAndRead");
@@ -289,14 +299,17 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
       in.seek(offset);
       // expect to read at least one byte.
       int l = in.read(temp);
-      assertTrue("Reading in temp data", l > 0);
+      assertTrue(l > 0, "Reading in temp data");
       LOG.info("Read of byte array at offset {} returned {} bytes", offset, l);
       assertDatasetEquals(offset, "read at end of boundary", temp, l);
     }
   }
 
-  @Test
-  public void testSeekToReadaheadExactlyAndRead() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest(name="policy={0}")
+  public void testSeekToReadaheadExactlyAndRead(String pSeekPolicy,
+      DelegatingSSLSocketFactory.SSLChannelMode pSslChannelMode) throws Throwable {
+    initITestS3AContractSeek(pSeekPolicy, pSslChannelMode);
     describe("Seek to exactly the readahead limit and call"
         + " InputStream.read(byte[])");
     Path path = path("testSeekToReadaheadExactlyAndRead");
@@ -310,13 +323,16 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
       // expect to read at least one byte.
       int l = in.read(temp);
       LOG.info("Read of byte array at offset {} returned {} bytes", offset, l);
-      assertTrue("Reading in temp data", l > 0);
+      assertTrue(l > 0, "Reading in temp data");
       assertDatasetEquals(offset, "read at end of boundary", temp, l);
     }
   }
 
-  @Test
-  public void testSeekToReadaheadExactlyAndReadByte() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest(name="policy={0}")
+  public void testSeekToReadaheadExactlyAndReadByte(String pSeekPolicy,
+      DelegatingSSLSocketFactory.SSLChannelMode pSslChannelMode) throws Throwable {
+    initITestS3AContractSeek(pSeekPolicy, pSslChannelMode);
     describe("Seek to exactly the readahead limit and call"
         + " readByte()");
     Path path = path("testSeekToReadaheadExactlyAndReadByte");

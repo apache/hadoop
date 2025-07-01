@@ -26,7 +26,8 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,7 +117,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     return conf;
   }
 
-  @AfterClass
+  @AfterAll
   public static void printStatistics() {
     LOG.info("Aggregate job statistics {}\n",
         IOStatisticsLogging.ioStatisticsToPrettyString(JOB_STATISTICS));
@@ -138,6 +139,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     return reportDir;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     // set the manifest committer to a localfs path for reports across
@@ -233,8 +235,8 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @throws IOException IO failure
    */
   protected void assertMultipartUploadsPending(Path path) throws IOException {
-    assertTrue("No multipart uploads in progress under " + path,
-        countMultipartUploads(path) > 0);
+    assertTrue(countMultipartUploads(path) > 0,
+        "No multipart uploads in progress under " + path);
   }
 
   /**
@@ -392,8 +394,8 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     LOG.info("Diagnostics\n{}",
         successData.dumpDiagnostics("  ", " = ", "\n"));
     if (!committerName.isEmpty()) {
-      assertEquals("Wrong committer in " + commitDetails,
-          committerName, successData.getCommitter());
+      assertEquals(committerName, successData.getCommitter(),
+          "Wrong committer in " + commitDetails);
     }
     Assertions.assertThat(successData.getFilenames())
         .describedAs("Files committed in " + commitDetails)
@@ -437,12 +439,12 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
             + " from " + origin
             + " not found: Job may have failed",
         success);
-    assertTrue("_SUCCESS outout from " + origin + " is not a file " + status,
-        status.isFile());
-    assertTrue("0 byte success file "
-            + success + " from " + origin
-            + "; an S3A committer was not used",
-        status.getLen() > 0);
+    assertTrue(status.isFile(),
+        "_SUCCESS outout from " + origin + " is not a file " + status);
+    assertTrue(status.getLen() > 0,
+        "0 byte success file "
+        + success + " from " + origin
+        + "; an S3A committer was not used");
     String body = ContractTestUtils.readUTF8(fs, success, -1);
     LOG.info("Loading committer success file {}. Actual contents=\n{}", success,
         body);

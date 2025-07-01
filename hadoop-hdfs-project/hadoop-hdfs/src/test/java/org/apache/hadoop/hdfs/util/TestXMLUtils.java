@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hdfs.util;
 
-import org.apache.hadoop.hdfs.util.XMLUtils.UnmanglingError;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
+
+import org.apache.hadoop.hdfs.util.XMLUtils.UnmanglingError;
+import org.junit.jupiter.api.Test;
 
 public class TestXMLUtils {
   private static void testRoundTripImpl(String str, String expectedMangled,

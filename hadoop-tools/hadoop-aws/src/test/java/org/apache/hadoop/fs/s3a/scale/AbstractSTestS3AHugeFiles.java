@@ -27,9 +27,10 @@ import java.util.NoSuchElementException;
 import java.util.function.IntFunction;
 
 import org.assertj.core.api.Assertions;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,7 +83,7 @@ import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteI
  * exists. Even so: they should all have a {@link #assumeHugeFileExists()}
  * check at the start, in case an individual test is executed.
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
 public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -97,6 +98,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   private int partitionSize;
   private long filesize;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -186,14 +188,14 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     // assume 1 MB/s upload bandwidth
     int bandwidth = _1MB;
     long uploadTime = filesize / bandwidth;
-    assertTrue(String.format("Timeout set in %s seconds is too low;" +
-            " estimating upload time of %d seconds at 1 MB/s." +
-            " Rerun tests with -D%s=%d",
-        timeout, uploadTime, KEY_TEST_TIMEOUT, uploadTime * 2),
-        uploadTime < timeout);
-    assertEquals("File size set in " + KEY_HUGE_FILESIZE + " = " + filesize
-            + " is not a multiple of " + uploadBlockSize,
-        0, filesize % uploadBlockSize);
+    assertTrue(uploadTime < timeout,
+        String.format("Timeout set in %s seconds is too low;" +
+        " estimating upload time of %d seconds at 1 MB/s." +
+        " Rerun tests with -D%s=%d",
+        timeout, uploadTime, KEY_TEST_TIMEOUT, uploadTime * 2));
+    assertEquals(0, filesize % uploadBlockSize,
+        "File size set in " + KEY_HUGE_FILESIZE + " = " + filesize
+         + " is not a multiple of " + uploadBlockSize);
 
     byte[] data = new byte[uploadBlockSize];
     for (int i = 0; i < uploadBlockSize; i++) {
@@ -311,8 +313,8 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
 
     progress.verifyNoFailures(
         "Put file " + fileToCreate + " of size " + filesize);
-    assertEquals("actively allocated blocks in " + streamStatistics,
-        0, streamStatistics.getBlocksActivelyAllocated());
+    assertEquals(0, streamStatistics.getBlocksActivelyAllocated(),
+        "actively allocated blocks in " + streamStatistics);
   }
 
   /**
@@ -402,7 +404,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         file);
     FileStatus status = fs.getFileStatus(file);
     ContractTestUtils.assertIsFile(file, status);
-    assertTrue("File " + file + " is empty", status.getLen() > 0);
+    assertTrue(status.getLen() > 0, "File " + file + " is empty");
   }
 
   private void logFSState() {
@@ -421,7 +423,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     FileStatus status = fs.getFileStatus(hugefile);
     ContractTestUtils.assertIsFile(hugefile, status);
     LOG.info("Huge File Status: {}", status);
-    assertEquals("File size in " + status, filesize, status.getLen());
+    assertEquals(filesize, status.getLen(), "File size in " + status);
 
     // now do some etag status checks asserting they are always the same
     // across listing operations.

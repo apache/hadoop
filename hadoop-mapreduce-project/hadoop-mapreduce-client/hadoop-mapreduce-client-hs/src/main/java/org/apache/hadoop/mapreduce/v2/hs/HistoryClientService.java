@@ -168,7 +168,7 @@ public class HistoryClientService extends AbstractService {
         ClientRMProxy.createRMProxy(conf, ApplicationClientProtocol.class);
     // NOTE: there should be a .at(InetSocketAddress)
     WebApps
-        .$for("jobhistory", HistoryClientService.class, this, "ws")
+        .$for("jobhistory", HistoryClientService.class, this, "hs-ws")
         .with(conf)
         .withHttpSpnegoKeytabKey(
             JHAdminConfig.MR_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
