@@ -47,6 +47,11 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.enableAnalyticsAccelerator;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
+
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_OPERATIONS;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_ANALYTICS_GET_REQUESTS;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_ANALYTICS_HEAD_REQUESTS;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_ANALYTICS_OPENED;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.ANALYTICS_STREAM_FACTORY_CLOSED;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -104,6 +109,12 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
       Assertions.assertThat(objectInputStream.streamType()).isEqualTo(InputStreamType.Analytics);
       Assertions.assertThat(objectInputStream.getInputPolicy())
           .isEqualTo(S3AInputPolicy.Sequential);
+
+      verifyStatisticCounterValue(ioStats, STREAM_READ_BYTES, 500);
+      verifyStatisticCounterValue(ioStats, STREAM_READ_OPERATIONS, 1);
+
+      long streamBytesRead = objectInputStream.getS3AStreamStatistics().getBytesRead();
+      Assertions.assertThat(streamBytesRead).as("Stream statistics should track bytes read").isEqualTo(500);
     }
 
     verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
@@ -129,11 +140,17 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
 
     byte[] buffer = new byte[500];
     IOStatistics ioStats;
+    int bytesRead;
 
     try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
       ioStats = inputStream.getIOStatistics();
       inputStream.seek(5);
-      inputStream.read(buffer, 0, 500);
+      bytesRead = inputStream.read(buffer, 0, 500);
+
+      ObjectInputStream objectInputStream = (ObjectInputStream) inputStream.getWrappedStream();
+      long streamBytesRead = objectInputStream.getS3AStreamStatistics().getBytesRead();
+      Assertions.assertThat(streamBytesRead).as("Stream statistics should track bytes read").isEqualTo(bytesRead);
+
     }
 
     verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
@@ -166,15 +183,19 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
     }
 
     verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
-
+    verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_GET_REQUESTS, 1);
     try (FSDataInputStream inputStream = getFileSystem().openFile(dest)
         .must(FS_OPTION_OPENFILE_READ_POLICY, FS_OPTION_OPENFILE_READ_POLICY_PARQUET)
         .build().get()) {
       ioStats = inputStream.getIOStatistics();
       inputStream.readFully(buffer, 0, (int) fileStatus.getLen());
+
+      verifyStatisticCounterValue(ioStats, STREAM_READ_BYTES, (int) fileStatus.getLen());
+      verifyStatisticCounterValue(ioStats, STREAM_READ_OPERATIONS, 1);
     }
 
     verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
+    verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_HEAD_REQUESTS, 0);
   }
 
   @Test
@@ -194,4 +215,127 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
         () -> S3SeekableInputStreamConfiguration.fromConfiguration(connectorConfiguration));
   }
 
+  @Test
+  public void testLargeFileMultipleGets() throws Throwable {
+    describe("Large file should trigger multiple GET requests");
+
+    Path dest = writeThenReadFile("large-test-file.txt", 10 * 1024 * 1024); // 10MB
+
+
+    try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
+      IOStatistics ioStats = inputStream.getIOStatistics();
+      inputStream.readFully(new byte[(int) getFileSystem().getFileStatus(dest).getLen()]);
+
+      verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_GET_REQUESTS, 2);
+    }
+  }
+
+  @Test
+  public void testSmallFileSingleGet() throws Throwable {
+    describe("Small file should trigger only one GET request");
+
+    Path dest = writeThenReadFile("small-test-file.txt", 1 * 1024 * 1024); // 1KB
+
+    try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
+      IOStatistics ioStats = inputStream.getIOStatistics();
+      inputStream.readFully(new byte[(int) getFileSystem().getFileStatus(dest).getLen()]);
+
+      verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_GET_REQUESTS, 1);
+    }
+  }
+
+
+  @Test
+  public void testRandomSeekPatternGets() throws Throwable {
+    describe("Random seek pattern should optimize GET requests");
+
+    Path dest = writeThenReadFile("seek-test.txt", 100 * 1024);
+
+    try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
+      IOStatistics ioStats = inputStream.getIOStatistics();
+
+      inputStream.seek(1000);
+      inputStream.read(new byte[100]);
+
+      inputStream.seek(50000);
+      inputStream.read(new byte[100]);
+
+      inputStream.seek(90000);
+      inputStream.read(new byte[100]);
+
+      verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_GET_REQUESTS, 1);
+    }
+}
+
+  @Test
+  public void testAALNeverMakesHeadRequests() throws Throwable {
+    describe("Prove AAL never makes HEAD requests - S3A provides all metadata");
+
+    Path dest = writeThenReadFile("no-head-test.txt", 1024 * 1024); // 1MB
+
+    try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
+      IOStatistics ioStats = inputStream.getIOStatistics();
+      inputStream.read(new byte[1024]);
+
+      verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_HEAD_REQUESTS, 0);
+      verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
+
+      ObjectInputStream objectInputStream = (ObjectInputStream) inputStream.getWrappedStream();
+      Assertions.assertThat(objectInputStream.streamType()).isEqualTo(InputStreamType.Analytics);
+
+    }
+  }
+
+
+  @Test
+  public void testParquetReadingNoHeadRequests() throws Throwable {
+    describe("Parquet-optimized reading should not trigger AAL HEAD requests");
+
+    Path dest = path("parquet-head-test.parquet");
+    File file = new File("src/test/resources/multi_row_group.parquet");
+    Path sourcePath = new Path(file.toURI().getPath());
+    getFileSystem().copyFromLocalFile(false, true, sourcePath, dest);
+
+    try (FSDataInputStream stream = getFileSystem().openFile(dest)
+            .must(FS_OPTION_OPENFILE_READ_POLICY, FS_OPTION_OPENFILE_READ_POLICY_PARQUET)
+            .build().get()) {
+
+      FileStatus fileStatus = getFileSystem().getFileStatus(dest);
+      stream.readFully(new byte[(int) fileStatus.getLen()]);
+
+      IOStatistics stats = stream.getIOStatistics();
+
+      verifyStatisticCounterValue(stats, STREAM_READ_ANALYTICS_HEAD_REQUESTS, 0);
+      verifyStatisticCounterValue(stats, STREAM_READ_ANALYTICS_OPENED, 1);
+
+      verifyStatisticCounterValue(stats, STREAM_READ_ANALYTICS_GET_REQUESTS, 1);
+    }
+  }
+
+
+  @Test
+  public void testConcurrentStreamsNoDuplicateGets() throws Throwable {
+    describe("Concurrent streams reading same object should not duplicate GETs");
+
+    Path dest = writeThenReadFile("concurrent-test.txt", 1 * 1024 * 1024);
+
+    try (FSDataInputStream stream1 = getFileSystem().open(dest);
+         FSDataInputStream stream2 = getFileSystem().open(dest)) {
+
+      byte[] buffer1 = new byte[1024];
+      byte[] buffer2 = new byte[1024];
+
+      stream1.read(buffer1);
+      stream2.read(buffer2);
+
+      IOStatistics stats1 = stream1.getIOStatistics();
+      IOStatistics stats2 = stream2.getIOStatistics();
+
+      long totalGets = stats1.counters().getOrDefault(
+              STREAM_READ_ANALYTICS_GET_REQUESTS, 0L) +
+              stats2.counters().getOrDefault(
+                      STREAM_READ_ANALYTICS_GET_REQUESTS, 0L);
+      Assertions.assertThat(totalGets).isEqualTo(1);
+    }
+  }
 }

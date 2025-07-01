@@ -459,6 +459,14 @@ public enum Statistic {
       "Gauge of active memory in use",
       TYPE_GAUGE),
 
+  ANALYTICS_GET_REQUESTS(
+      StreamStatisticNames.STREAM_READ_ANALYTICS_GET_REQUESTS,
+      "GET requests made by analytics streams",
+      TYPE_COUNTER),
+  ANALYTICS_HEAD_REQUESTS(
+          StreamStatisticNames.STREAM_READ_ANALYTICS_HEAD_REQUESTS,
+          "HEAD requests made by analytics streams",
+          TYPE_COUNTER),
   /* Stream Write statistics */
 
   STREAM_WRITE_EXCEPTIONS(

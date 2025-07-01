@@ -872,6 +872,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_CLOSE_OPERATIONS,
               StreamStatisticNames.STREAM_READ_OPENED,
               StreamStatisticNames.STREAM_READ_BYTES,
+              StreamStatisticNames.STREAM_READ_ANALYTICS_GET_REQUESTS,
+              StreamStatisticNames.STREAM_READ_ANALYTICS_HEAD_REQUESTS,
               StreamStatisticNames.STREAM_READ_EXCEPTIONS,
               StreamStatisticNames.STREAM_READ_FULLY_OPERATIONS,
               StreamStatisticNames.STREAM_READ_OPERATIONS,
@@ -1126,6 +1128,15 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void readVectoredBytesDiscarded(int discarded) {
       bytesDiscardedInVectoredIO.addAndGet(discarded);
+    }
+
+    @Override
+    public void incrementAnalyticsGetRequests() {
+      increment(StreamStatisticNames.STREAM_READ_ANALYTICS_GET_REQUESTS);
+    }
+    @Override
+    public void incrementAnalyticsHeadRequests() {
+      increment(StreamStatisticNames.STREAM_READ_ANALYTICS_HEAD_REQUESTS);
     }
 
     @Override

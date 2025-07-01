@@ -159,7 +159,12 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
         final long bytesReadInSeek) {
 
     }
-
+    @Override
+    public void incrementAnalyticsGetRequests() {
+    }
+    @Override
+    public void incrementAnalyticsHeadRequests() {
+    }
     @Override
     public long streamOpened() {
       return 0;

@@ -190,7 +190,14 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
   long getVersionMismatches();
 
   long getInputPolicy();
-
+  /**
+   * Increment the counter for GET requests made by Analytics Accelerator Library.
+   */
+  void incrementAnalyticsGetRequests();
+  /**
+   * Increment the counter for HEAD requests made by Analytics Accelerator Library.
+   */
+  void incrementAnalyticsHeadRequests();
   /**
    * Get the value of a counter.
    * @param name counter name
