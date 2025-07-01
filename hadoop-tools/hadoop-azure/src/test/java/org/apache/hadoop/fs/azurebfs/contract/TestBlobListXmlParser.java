@@ -110,6 +110,7 @@ public class TestBlobListXmlParser {
     assertThat(paths.get(1).isDirectory()).isEqualTo(true);
     assertThat(paths.get(2).isDirectory()).isEqualTo(true);
     assertThat(paths.get(3).isDirectory()).isEqualTo(false);
+    assertThat(listResultSchema.getNextMarker()).isNotNull();
   }
 
   @Test
