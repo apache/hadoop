@@ -1716,9 +1716,9 @@ public abstract class AbfsClient implements Closeable {
    * Checks if the namespace is enabled.
    *
    * @return True if the namespace is enabled, false otherwise.
-   * @throws AbfsDriverException if the conversion fails.
+   * @throws AzureBlobFileSystemException if the conversion fails.
    */
-  public boolean getIsNamespaceEnabled() throws AbfsDriverException {
+  public boolean getIsNamespaceEnabled() throws AzureBlobFileSystemException {
     try {
       return getAbfsConfiguration().getIsNamespaceEnabledAccount().toBoolean();
     } catch (TrileanConversionException ex) {
