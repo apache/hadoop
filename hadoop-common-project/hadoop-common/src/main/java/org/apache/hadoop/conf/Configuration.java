@@ -379,10 +379,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       this.customMessage = customMessage;
     }
 
-    private final String getWarningMessage(String key) {
-      return getWarningMessage(key, null);
-    }
-
     /**
      * Method to provide the warning message. It gives the custom message if
      * non-null, and default message otherwise.
