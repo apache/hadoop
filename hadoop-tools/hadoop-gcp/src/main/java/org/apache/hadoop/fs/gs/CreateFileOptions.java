@@ -29,6 +29,7 @@ import javax.annotation.Nullable;
  * Options that can be specified when creating a file in the {@link GoogleCloudStorageFileSystem}.
  */
 final class CreateFileOptions {
+  static final CreateFileOptions DEFAULT = CreateFileOptions.builder().build();
   private final ImmutableMap<String, byte[]> attributes;
   private final String contentType;
   private final long overwriteGenerationId;

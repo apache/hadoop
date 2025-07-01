@@ -20,18 +20,11 @@ package org.apache.hadoop.fs.gs.contract;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractRenameTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 /** GCS contract tests covering file rename. */
 public class ITestGoogleContractRename extends AbstractContractRenameTest {
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new GoogleContract(conf);
-  }
-
-  @Override
-  public void testRenameWithNonEmptySubDir() {
-    // TODO: Enable this
-    ContractTestUtils.skip("Skipping the test. This will be enabled in a subsequent change");
   }
 }

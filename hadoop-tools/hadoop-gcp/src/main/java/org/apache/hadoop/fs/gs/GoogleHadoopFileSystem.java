@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.gs;
 
+import static org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList.toImmutableList;
 import static org.apache.hadoop.fs.gs.Constants.GCS_CONFIG_PREFIX;
 import static org.apache.hadoop.fs.gs.GoogleHadoopFileSystemConfiguration.GCS_WORKING_DIRECTORY;
 
@@ -34,6 +35,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.DirectoryNotEmptyException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -44,6 +46,8 @@ import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -321,10 +325,63 @@ public class GoogleHadoopFileSystem extends FileSystem {
         progress);
   }
 
+  /**
+   * Appends to an existing file (optional operation). Not supported.
+   *
+   * @param hadoopPath The existing file to be appended.
+   * @param bufferSize The size of the buffer to be used.
+   * @param progress For reporting progress if it is not null.
+   * @return A writable stream.
+   * @throws IOException if an error occurs.
+   */
   @Override
-  public FSDataOutputStream append(final Path path, final int i, final Progressable progressable)
+  public FSDataOutputStream append(Path hadoopPath, int bufferSize, Progressable progress)
       throws IOException {
-    throw new UnsupportedOperationException(path.toString());
+    Preconditions.checkArgument(hadoopPath != null, "hadoopPath must not be null");
+    LOG.trace("append(hadoopPath: {}, bufferSize: {} [ignored])", hadoopPath, bufferSize);
+    URI filePath = getGcsPath(hadoopPath);
+    return new FSDataOutputStream(
+        new GoogleHadoopOutputStream(
+            this,
+            filePath,
+            CreateFileOptions.builder()
+                .setWriteMode(CreateFileOptions.WriteMode.APPEND)
+                .build(),
+            statistics),
+        statistics);
+  }
+
+  /**
+   * Concat existing files into one file.
+   *
+   * @param tgt the path to the target destination.
+   * @param srcs the paths to the sources to use for the concatenation.
+   * @throws IOException IO failure
+   */
+  @Override
+  public void concat(Path tgt, Path[] srcs) throws IOException {
+    LOG.trace("concat(tgt: {}, srcs.length: {})", tgt, srcs.length);
+
+    Preconditions.checkArgument(srcs.length > 0, "srcs must have at least one source");
+
+    URI tgtPath = getGcsPath(tgt);
+    List<URI> srcPaths = Arrays.stream(srcs).map(this::getGcsPath).collect(toImmutableList());
+
+    Preconditions.checkArgument(
+        !srcPaths.contains(tgtPath),
+        "target must not be contained in sources");
+
+    List<List<URI>> partitions =
+        Lists.partition(srcPaths, Constants.MAX_COMPOSE_OBJECTS - 1);
+    LOG.trace("concat(tgt: {}, {} partitions: {})", tgt, partitions.size(), partitions);
+    for (List<URI> partition : partitions) {
+      // We need to include the target in the list of sources to compose since
+      // the GCS FS compose operation will overwrite the target, whereas the Hadoop
+      // concat operation appends to the target.
+      List<URI> sources = Lists.newArrayList(tgtPath);
+      sources.addAll(partition);
+      getGcsFs().compose(sources, tgtPath, CreateFileOptions.DEFAULT.getContentType());
+    }
   }
 
   @Override
@@ -377,6 +434,7 @@ public class GoogleHadoopFileSystem extends FileSystem {
       if (ApiErrorExtractor.INSTANCE.requestFailure(e)) {
         throw e;
       }
+
       LOG.trace("delete(hadoopPath: {}, recursive: {}): false [failed]", hadoopPath, recursive, e);
       return false;
     }
@@ -397,7 +455,7 @@ public class GoogleHadoopFileSystem extends FileSystem {
     List<FileStatus> status;
 
     try {
-      List<FileInfo> fileInfos = getGcsFs().listFileInfo(gcsPath, ListFileOptions.OBJECTFIELDS);
+      List<FileInfo> fileInfos = getGcsFs().listDirectory(gcsPath);
       status = new ArrayList<>(fileInfos.size());
       String userName = getUgiUserName();
       for (FileInfo fileInfo : fileInfos) {
@@ -476,7 +534,7 @@ public class GoogleHadoopFileSystem extends FileSystem {
     switch (Ascii.toLowerCase(capability)) {
     case CommonPathCapabilities.FS_APPEND:
     case CommonPathCapabilities.FS_CONCAT:
-      return false;
+      return true;
     default:
       return false;
     }
@@ -524,7 +582,6 @@ public class GoogleHadoopFileSystem extends FileSystem {
     checkOpen();
 
     URI gcsPath = getGcsPath(path);
-
     FileInfo fileInfo = getGcsFs().getFileInfo(gcsPath);
     if (!fileInfo.exists()) {
       throw new FileNotFoundException(
