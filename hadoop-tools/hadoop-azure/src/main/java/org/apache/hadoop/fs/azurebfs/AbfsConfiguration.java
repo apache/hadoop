@@ -84,6 +84,7 @@ public class AbfsConfiguration{
   private final String accountName;
   private final boolean isSecure;
   private static final Logger LOG = LoggerFactory.getLogger(AbfsConfiguration.class);
+  private Trilean isNamespaceEnabled = null;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
       DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_HNS_ENABLED)
@@ -332,8 +333,19 @@ public class AbfsConfiguration{
     }
   }
 
+  /**
+   * Returns the account type as per the user configuration. Gets the account
+   * specific value if it exists, then looks for an account agnostic value.
+   * If not configured driver makes additional getAcl call to determine
+   * the account type during file system initialization.
+   * @return TRUE/FALSE value if configured, UNKNOWN if not configured.
+   */
   public Trilean getIsNamespaceEnabledAccount() {
-    return Trilean.getTrilean(isNamespaceEnabledAccount);
+    if (isNamespaceEnabled == null) {
+      isNamespaceEnabled = Trilean.getTrilean(
+          getString(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, isNamespaceEnabledAccount));
+    }
+    return isNamespaceEnabled;
   }
 
   /**
@@ -1049,8 +1061,8 @@ public class AbfsConfiguration{
   }
 
   @VisibleForTesting
-  void setIsNamespaceEnabledAccount(String isNamespaceEnabledAccount) {
-    this.isNamespaceEnabledAccount = isNamespaceEnabledAccount;
+  public void setIsNamespaceEnabledAccount(Trilean isNamespaceEnabledAccount) {
+    this.isNamespaceEnabled = isNamespaceEnabledAccount;
   }
 
   private String getTrimmedPasswordString(String key, String defaultValue) throws IOException {
