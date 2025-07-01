@@ -82,7 +82,7 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     AbfsClient client = Mockito.spy(fs.getAbfsStore().getClient(AbfsServiceType.DFS));
     Mockito.doReturn(client).when(store).getClient(AbfsServiceType.DFS);
-    store.setNamespaceEnabled(Trilean.UNKNOWN);
+    store.getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
 
     TracingContext tracingContext = getSampleTracingContext(fs, true);
     Mockito.doReturn(Mockito.mock(AbfsRestOperation.class))

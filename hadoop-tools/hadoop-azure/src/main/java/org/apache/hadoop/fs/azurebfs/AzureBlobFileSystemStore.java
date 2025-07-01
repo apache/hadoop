@@ -394,20 +394,20 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   private synchronized boolean getNamespaceEnabledInformationFromServer(
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
-    if (abfsConfiguration.getIsNamespaceEnabledAccount() != Trilean.UNKNOWN) {
+    if (getAbfsConfiguration().getIsNamespaceEnabledAccount() != Trilean.UNKNOWN) {
       return isNamespaceEnabled();
     }
     try {
       LOG.debug("Get root ACL status");
       getClient(AbfsServiceType.DFS).getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
       // If getAcl succeeds, namespace is enabled.
-      setNamespaceEnabled(Trilean.TRUE);
+      setNamespaceEnabled(true);
     } catch (AbfsRestOperationException ex) {
       // Get ACL status is a HEAD request, its response doesn't contain errorCode
       // So can only rely on its status code to determine account type.
       if (HttpURLConnection.HTTP_BAD_REQUEST != ex.getStatusCode()) {
         // If getAcl fails with anything other than 400, namespace is enabled.
-        setNamespaceEnabled(Trilean.TRUE);
+        setNamespaceEnabled(true);
         // Continue to throw exception as earlier.
         LOG.debug("Failed to get ACL status with non 400. Inferring namespace enabled", ex);
         throw ex;
@@ -415,7 +415,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // If getAcl fails with 400, namespace is disabled.
       LOG.debug("Failed to get ACL status with 400. "
           + "Inferring namespace disabled and ignoring error", ex);
-      setNamespaceEnabled(Trilean.FALSE);
+      setNamespaceEnabled(false);
     } catch (AzureBlobFileSystemException ex) {
       throw ex;
     }
@@ -428,7 +428,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    */
   @VisibleForTesting
   boolean isNamespaceEnabled() throws TrileanConversionException {
-    return abfsConfiguration.getIsNamespaceEnabledAccount().toBoolean();
+    return getAbfsConfiguration().getIsNamespaceEnabledAccount().toBoolean();
   }
 
   @VisibleForTesting
@@ -2011,9 +2011,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return blockFactory;
   }
 
-  @VisibleForTesting
-  void setNamespaceEnabled(Trilean isNamespaceEnabled){
-    abfsConfiguration.setIsNamespaceEnabledAccount(isNamespaceEnabled);
+  void setNamespaceEnabled(boolean isNamespaceEnabled){
+    getAbfsConfiguration().setIsNamespaceEnabledAccount(isNamespaceEnabled);
   }
 
   @VisibleForTesting

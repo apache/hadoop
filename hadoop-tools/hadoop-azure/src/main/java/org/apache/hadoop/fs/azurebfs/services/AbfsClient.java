@@ -1720,10 +1720,10 @@ public abstract class AbfsClient implements Closeable {
    */
   public boolean getIsNamespaceEnabled() throws AbfsDriverException {
     try {
-      return abfsConfiguration.getIsNamespaceEnabledAccount().toBoolean();
+      return getAbfsConfiguration().getIsNamespaceEnabledAccount().toBoolean();
     } catch (TrileanConversionException ex) {
       LOG.error("Failed to convert namespace enabled account property to boolean", ex);
-      throw new AbfsDriverException("Failed to determine if namespace is enabled", ex);
+      throw new AbfsDriverException("Failed to determine account type", ex);
     }
   }
 

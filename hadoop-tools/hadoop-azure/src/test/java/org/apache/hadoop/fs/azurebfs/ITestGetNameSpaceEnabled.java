@@ -29,6 +29,7 @@ import org.mockito.Mockito;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
@@ -159,7 +160,8 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
             + testUri.substring(testUri.indexOf("@"));
     config.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, isUsingXNSAccount);
     AzureBlobFileSystem fs = this.getFileSystem(nonExistingFsUrl);
-    fs.getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
+    fs.getAbfsStore().getAbfsConfiguration()
+        .setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
 
     FileNotFoundException ex = intercept(FileNotFoundException.class, ()-> {
       fs.getFileStatus(new Path("/")); // Run a dummy FS call
@@ -207,7 +209,8 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
   private void ensureGetAclCallIsMadeOnceForInvalidConf(String invalidConf)
       throws Exception {
     this.getFileSystem().getAbfsStore()
-        .setNamespaceEnabled(Trilean.getTrilean(invalidConf));
+        .getAbfsConfiguration()
+        .setIsNamespaceEnabledAccountForTesting(Trilean.getTrilean(invalidConf));
     AbfsClient mockClient =
         callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient();
     verify(mockClient, times(1))
@@ -217,7 +220,8 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
   private void ensureGetAclCallIsNeverMadeForValidConf(String validConf)
       throws Exception {
     this.getFileSystem().getAbfsStore()
-        .setNamespaceEnabled(Trilean.getTrilean(validConf));
+        .getAbfsConfiguration()
+        .setIsNamespaceEnabledAccountForTesting(Trilean.getTrilean(validConf));
     AbfsClient mockClient =
         callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient();
     verify(mockClient, never())
@@ -225,7 +229,8 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
   }
 
   private void unsetConfAndEnsureGetAclCallIsMadeOnce() throws IOException {
-    this.getFileSystem().getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
+    this.getFileSystem().getAbfsStore()
+        .getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
     AbfsClient mockClient =
         callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient();
     verify(mockClient, times(1))
@@ -262,7 +267,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
       boolean expectedValue, boolean isExceptionExpected) throws Exception {
     AzureBlobFileSystemStore store = Mockito.spy(getFileSystem().getAbfsStore());
     AbfsClient mockClient = mock(AbfsClient.class);
-    store.setNamespaceEnabled(Trilean.UNKNOWN);
+    store.getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
     doReturn(mockClient).when(store).getClient(AbfsServiceType.DFS);
     AbfsRestOperationException ex = new AbfsRestOperationException(
         statusCode, null, Integer.toString(statusCode), null);
@@ -354,9 +359,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testNameSpaceConfig() throws Exception {
-    Configuration configuration = getRawConfiguration();
-    configuration.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
-    configuration.unset(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getAccountName()));
+    Configuration configuration = getConfigurationWithoutHnsConfig();
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
     AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
 
@@ -412,6 +415,63 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(abfs.getAbfsClient().getIsNamespaceEnabled())
         .describedAs("Client's getIsNamespaceEnabled() should return false when config is set to false")
         .isEqualTo(false);
+  }
+
+  /**
+   * Tests to check that the namespace configuration is set correctly
+   * during the initialization of the AzureBlobFileSystem.
+   *
+   *
+   * @throws Exception if any error occurs during configuration setup or evaluation
+   */
+  @Test
+  public void testFsInitShouldSetNamespaceConfig() throws Exception {
+    // Mock the AzureBlobFileSystem and its dependencies
+    AzureBlobFileSystem mockFileSystem = Mockito.spy((AzureBlobFileSystem)
+        FileSystem.newInstance(getConfigurationWithoutHnsConfig()));
+    AzureBlobFileSystemStore mockStore = Mockito.spy(mockFileSystem.getAbfsStore());
+    AbfsClient abfsClient = Mockito.spy(mockStore.getClient());
+    Mockito.doReturn(abfsClient).when(mockStore).getClient();
+    Mockito.doReturn(abfsClient).when(mockStore).getClient(any());
+    abfsClient.getIsNamespaceEnabled();
+    // Verify that getAclStatus is called once during initialization
+    Mockito.verify(abfsClient, times(0))
+        .getAclStatus(anyString(), any(TracingContext.class));
+
+    mockStore.getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
+    // In case someone wrongly configured the namespace in between the processing,
+    // abfsclient.getIsNamespaceEnabled() should throw an exception.
+    String errorMessage = intercept(AbfsDriverException.class, () -> {
+      abfsClient.getIsNamespaceEnabled();
+    }).getMessage();
+    Assertions.assertThat(errorMessage)
+        .describedAs("Client should throw exception when namespace is unknown")
+        .contains("Failed to determine account type");
+
+    // In case of unknown namespace, store's getIsNamespaceEnabled should call getAclStatus
+    // to determine the namespace status.
+    mockStore.getIsNamespaceEnabled(getTestTracingContext(mockFileSystem, false));
+    Mockito.verify(abfsClient, times(1))
+        .getAclStatus(anyString(), any(TracingContext.class));
+
+    abfsClient.getIsNamespaceEnabled();
+    // Verify that client's getNamespaceEnabled will not call getAclStatus again
+    Mockito.verify(abfsClient, times(1))
+        .getAclStatus(anyString(), any(TracingContext.class));
+  }
+
+  /**
+   * Returns the configuration without the HNS config set.
+   *
+   * @return Configuration without HNS config
+   */
+  private Configuration getConfigurationWithoutHnsConfig() {
+    Configuration configuration = getRawConfiguration();
+    configuration.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
+    configuration.unset(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getAccountName()));
+    configuration.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
+    configuration.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, getTestUrl());
+    return configuration;
   }
 
   private void assertFileSystemInitWithExpectedHNSSettings(
