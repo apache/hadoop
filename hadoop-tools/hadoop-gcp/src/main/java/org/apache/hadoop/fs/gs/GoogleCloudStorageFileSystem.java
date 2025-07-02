@@ -29,7 +29,6 @@ import com.google.auth.Credentials;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +48,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /**
@@ -161,7 +161,7 @@ class GoogleCloudStorageFileSystem {
     }
   }
 
-  public FileInfo getFileInfo(URI path) throws IOException {
+  FileInfo getFileInfo(URI path) throws IOException {
     checkArgument(path != null, "path must not be null");
     // Validate the given path. true == allow empty object name.
     // One should be able to get info about top level directory (== bucket),
@@ -182,42 +182,17 @@ class GoogleCloudStorageFileSystem {
       return gcs.getItemInfo(resourceId);
     }
 
-    StorageResourceId dirId = resourceId.toDirectoryId();
-    if (!resourceId.isDirectory()) {
-      GoogleCloudStorageItemInfo itemInfo = gcs.getItemInfo(resourceId);
-      if (itemInfo.exists()) {
-        return itemInfo;
-      }
-
-      if (inferImplicitDirectories) {
-        // TODO: Set max result
-        List<GoogleCloudStorageItemInfo> listDirResult = gcs.listObjectInfo(
-            resourceId.getBucketName(),
-            resourceId.getObjectName(),
-            GET_FILE_INFO_LIST_OPTIONS);
-        if (!listDirResult.isEmpty()) {
-          return GoogleCloudStorageItemInfo.createInferredDirectory(resourceId.toDirectoryId());
-        }
-      }
+    GoogleCloudStorageItemInfo dirOrObject = gcs.getFileOrDirectoryInfo(resourceId);
+    if (dirOrObject.exists() || !inferImplicitDirectories) {
+      return dirOrObject;
     }
 
-    List<GoogleCloudStorageItemInfo> listDirInfo = ImmutableList.of(gcs.getItemInfo(dirId));
-    if (listDirInfo.isEmpty()) {
-      return GoogleCloudStorageItemInfo.createNotFound(resourceId);
-    }
-    checkState(listDirInfo.size() <= 2, "listed more than 2 objects: '%s'", listDirInfo);
-    GoogleCloudStorageItemInfo dirInfo = Iterables.get(listDirInfo, /* position= */ 0);
-    checkState(
-        dirInfo.getResourceId().equals(dirId) || !inferImplicitDirectories,
-        "listed wrong object '%s', but should be '%s'",
-        dirInfo.getResourceId(),
-        resourceId);
-    return dirInfo.getResourceId().equals(dirId) && dirInfo.exists()
-        ? dirInfo
-        : GoogleCloudStorageItemInfo.createNotFound(resourceId);
+    // File does not exist; Explicit directory does not exist. Check for implicit directory.
+    // This will result in a list operation, which is expensive
+    return gcs.getImplicitDirectory(resourceId);
   }
 
-  public void mkdirs(URI path) throws IOException {
+  void mkdirs(URI path) throws IOException {
     LOG.trace("mkdirs(path: {})", path);
     checkNotNull(path, "path should not be null");
 
@@ -313,18 +288,6 @@ class GoogleCloudStorageFileSystem {
     return fileInfos;
   }
 
-  private List<FileInfo> listDirectory(URI prefix) throws IOException {
-    StorageResourceId prefixId = getPrefixId(prefix);
-    List<GoogleCloudStorageItemInfo> itemInfos = gcs.listObjectInfo(
-        prefixId.getBucketName(),
-        prefixId.getObjectName(),
-        ListObjectOptions.DEFAULT_FLAT_LIST);
-
-    List<FileInfo> fileInfos = FileInfo.fromItemInfos(itemInfos);
-    fileInfos.sort(FILE_INFO_PATH_COMPARATOR);
-    return fileInfos;
-  }
-
   private StorageResourceId getPrefixId(URI prefix) {
     checkNotNull(prefix, "prefix could not be null");
 
@@ -373,42 +336,6 @@ class GoogleCloudStorageFileSystem {
 
     // TODO: Add support for deleting bucket
     throw new UnsupportedOperationException("deleteBucket is not supported.");
-  }
-
-  public List<FileInfo> listFileInfo(URI path, ListFileOptions listOptions) throws IOException {
-    checkNotNull(path, "path can not be null");
-    LOG.trace("listStatus(path: {})", path);
-
-    StorageResourceId pathId =
-        StorageResourceId.fromUriPath(path, /* allowEmptyObjectName= */ true);
-
-    if (!pathId.isDirectory()) {
-      GoogleCloudStorageItemInfo pathInfo = gcs.getItemInfo(pathId);
-      if (pathInfo.exists()) {
-        List<FileInfo> listedInfo = new ArrayList<>();
-        listedInfo.add(FileInfo.fromItemInfo(pathInfo));
-
-        return listedInfo;
-      }
-    }
-
-    StorageResourceId dirId = pathId.toDirectoryId();
-    List<GoogleCloudStorageItemInfo> dirItemInfos = dirId.isRoot() ?
-        gcs.listBucketInfo() :
-        gcs.listObjectInfo(
-            dirId.getBucketName(), dirId.getObjectName(), LIST_FILE_INFO_LIST_OPTIONS);
-
-    if (pathId.isStorageObject() && dirItemInfos.isEmpty()) {
-      throw new FileNotFoundException("Item not found: " + path);
-    }
-
-    if (!dirItemInfos.isEmpty() && Objects.equals(dirItemInfos.get(0).getResourceId(), dirId)) {
-      dirItemInfos.remove(0);
-    }
-
-    List<FileInfo> fileInfos = FileInfo.fromItemInfos(dirItemInfos);
-    fileInfos.sort(FILE_INFO_PATH_COMPARATOR);
-    return fileInfos;
   }
 
   FileInfo getFileInfoObject(URI path) throws IOException {
@@ -574,10 +501,7 @@ class GoogleCloudStorageFileSystem {
     LOG.trace("listAllFileInfoForPrefix(prefix: {})", prefix);
     StorageResourceId prefixId = getPrefixId(prefix);
     List<GoogleCloudStorageItemInfo> itemInfos =
-        gcs.listObjectInfo(
-            prefixId.getBucketName(),
-            prefixId.getObjectName(),
-            updateListObjectOptions(ListObjectOptions.DEFAULT_FLAT_LIST, listOptions));
+        gcs.listDirectoryRecursive(prefixId.getBucketName(), prefixId.getObjectName());
     List<FileInfo> fileInfos = FileInfo.fromItemInfos(itemInfos);
     fileInfos.sort(FILE_INFO_PATH_COMPARATOR);
     return fileInfos;
@@ -602,11 +526,6 @@ class GoogleCloudStorageFileSystem {
 
     // Perform move.
     gcs.move(sourceToDestinationObjectsMap);
-  }
-
-  private static ListObjectOptions updateListObjectOptions(
-      ListObjectOptions listObjectOptions, ListFileOptions listFileOptions) {
-    return listObjectOptions.builder().setFields(listFileOptions.getFields()).build();
   }
 
   private List<FileInfo> getFileInfos(List<URI> paths) throws IOException {
@@ -797,5 +716,51 @@ class GoogleCloudStorageFileSystem {
       dirs.add(objectName.substring(0, index));
     }
     return dirs;
+  }
+
+  List<FileInfo> listDirectory(URI path) throws IOException {
+    checkNotNull(path, "path can not be null");
+    LOG.trace("listStatus(path: {})", path);
+
+    StorageResourceId pathId =
+        StorageResourceId.fromUriPath(path, /* allowEmptyObjectName= */ true);
+
+    if (!pathId.isDirectory()) {
+      GoogleCloudStorageItemInfo pathInfo = gcs.getItemInfo(pathId);
+      if (pathInfo.exists()) {
+        List<FileInfo> listedInfo = new ArrayList<>();
+        listedInfo.add(FileInfo.fromItemInfo(pathInfo));
+
+        return listedInfo;
+      }
+    }
+
+    StorageResourceId dirId = pathId.toDirectoryId();
+    List<GoogleCloudStorageItemInfo> dirItemInfos = dirId.isRoot() ?
+        gcs.listBucketInfo() :
+        gcs.listDirectory(
+            dirId.getBucketName(), dirId.getObjectName());
+
+    if (pathId.isStorageObject() && dirItemInfos.isEmpty()) {
+      throw new FileNotFoundException("Item not found: " + path);
+    }
+
+    if (!dirItemInfos.isEmpty() && Objects.equals(dirItemInfos.get(0).getResourceId(), dirId)) {
+      dirItemInfos.remove(0);
+    }
+
+    List<FileInfo> fileInfos = FileInfo.fromItemInfos(dirItemInfos);
+    fileInfos.sort(FILE_INFO_PATH_COMPARATOR);
+    return fileInfos;
+  }
+
+  void compose(List<URI> sources, URI destination, String contentType) throws IOException {
+    StorageResourceId destResource = StorageResourceId.fromStringPath(destination.toString());
+    List<String> sourceObjects =
+        sources.stream()
+            .map(uri -> StorageResourceId.fromStringPath(uri.toString()).getObjectName())
+            .collect(Collectors.toList());
+    gcs.compose(
+        destResource.getBucketName(), sourceObjects, destResource.getObjectName(), contentType);
   }
 }

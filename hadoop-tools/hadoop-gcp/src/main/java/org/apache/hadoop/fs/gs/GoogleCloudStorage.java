@@ -288,49 +288,6 @@ class GoogleCloudStorage {
         bucket.getStorageClass() == null ? null : bucket.getStorageClass().name());
   }
 
-  List<GoogleCloudStorageItemInfo> listObjectInfo(
-      String bucketName,
-      String objectNamePrefix,
-      ListObjectOptions listOptions) throws IOException {
-    try {
-      long maxResults = listOptions.getMaxResults() > 0 ?
-          listOptions.getMaxResults() + (listOptions.isIncludePrefix() ? 0 : 1) :
-          listOptions.getMaxResults();
-
-      Storage.BlobListOption[] blobListOptions =
-          getBlobListOptions(objectNamePrefix, listOptions, maxResults);
-      Page<Blob> blobs = storage.list(bucketName, blobListOptions);
-      ListOperationResult result = new ListOperationResult(maxResults);
-      for (Blob blob : blobs.iterateAll()) {
-        result.add(blob);
-      }
-
-      return result.getItems();
-    } catch (StorageException e) {
-      throw new IOException(
-          String.format("listing object '%s' failed.", BlobId.of(bucketName, objectNamePrefix)),
-          e);
-    }
-  }
-
-  private Storage.BlobListOption[] getBlobListOptions(
-      String objectNamePrefix, ListObjectOptions listOptions, long maxResults) {
-    List<Storage.BlobListOption> options = new ArrayList<>();
-
-    options.add(Storage.BlobListOption.fields(BLOB_FIELDS.toArray(new Storage.BlobField[0])));
-    options.add(Storage.BlobListOption.prefix(objectNamePrefix));
-    // TODO: set max results as a BlobListOption
-    if ("/".equals(listOptions.getDelimiter())) {
-      options.add(Storage.BlobListOption.currentDirectory());
-    }
-
-    if (listOptions.getDelimiter() != null) {
-      options.add(Storage.BlobListOption.includeTrailingDelimiter());
-    }
-
-    return options.toArray(new Storage.BlobListOption[0]);
-  }
-
   private GoogleCloudStorageItemInfo createItemInfoForBlob(Blob blob) {
     long generationId = blob.getGeneration() == null ? 0L : blob.getGeneration();
     StorageResourceId resourceId =
@@ -403,8 +360,7 @@ class GoogleCloudStorage {
     }
   }
 
-
-  public GoogleCloudStorageItemInfo composeObjects(
+  GoogleCloudStorageItemInfo composeObjects(
       List<StorageResourceId> sources, StorageResourceId destination, CreateObjectOptions options)
       throws IOException {
     LOG.trace("composeObjects({}, {}, {})", sources, destination, options);
@@ -538,13 +494,14 @@ class GoogleCloudStorage {
     // TODO: Take delimiter from config
     // TODO: Set specific fields
 
+    checkArgument(objectName.endsWith("/"), String.format("%s should end with /", objectName));
     try {
-      Page<Blob> blobs = storage.list(
-          bucketName,
-          Storage.BlobListOption.prefix(objectName));
+      List<Blob> blobs = new GcsListOperation.Builder(bucketName, objectName, storage)
+          .forRecursiveListing().build()
+          .execute();
 
       List<GoogleCloudStorageItemInfo> result = new ArrayList<>();
-      for (Blob blob : blobs.iterateAll()) {
+      for (Blob blob : blobs) {
         result.add(createItemInfoForBlob(blob));
       }
 
@@ -624,7 +581,7 @@ class GoogleCloudStorage {
     return allBuckets;
   }
 
-  public SeekableByteChannel open(GoogleCloudStorageItemInfo itemInfo,
+  SeekableByteChannel open(GoogleCloudStorageItemInfo itemInfo,
       GoogleHadoopFileSystemConfiguration config) throws IOException {
     LOG.trace("open({})", itemInfo);
     checkNotNull(itemInfo, "itemInfo should not be null");
@@ -647,7 +604,7 @@ class GoogleCloudStorage {
         config);
   }
 
-  public void move(Map<StorageResourceId, StorageResourceId> sourceToDestinationObjectsMap)
+  void move(Map<StorageResourceId, StorageResourceId> sourceToDestinationObjectsMap)
       throws IOException {
     validateMoveArguments(sourceToDestinationObjectsMap);
 
@@ -739,7 +696,7 @@ class GoogleCloudStorage {
    * Validates basic argument constraints like non-null, non-empty Strings, using {@code
    * Preconditions} in addition to checking for src/dst bucket equality.
    */
-  public static void validateMoveArguments(
+  static void validateMoveArguments(
       Map<StorageResourceId, StorageResourceId> sourceToDestinationObjectsMap) throws IOException {
     checkNotNull(sourceToDestinationObjectsMap, "srcObjects must not be null");
 
@@ -837,7 +794,7 @@ class GoogleCloudStorage {
     }
   }
 
-  public static void validateCopyArguments(
+  static void validateCopyArguments(
       Map<StorageResourceId, StorageResourceId> sourceToDestinationObjectsMap,
       GoogleCloudStorage gcsImpl)
       throws IOException {
@@ -927,18 +884,109 @@ class GoogleCloudStorage {
     return result;
   }
 
+  List<GoogleCloudStorageItemInfo> listDirectory(String bucketName, String objectNamePrefix)
+      throws IOException {
+    checkArgument(
+        objectNamePrefix.endsWith("/"),
+        String.format("%s should end with /", objectNamePrefix));
+
+    try {
+      List<Blob> blobs = new GcsListOperation.Builder(bucketName, objectNamePrefix, storage)
+          .forCurrentDirectoryListing().build()
+          .execute();
+
+      ListOperationResult result = new ListOperationResult();
+      for (Blob blob : blobs) {
+        result.add(blob);
+      }
+
+      return result.getItems();
+    } catch (StorageException e) {
+      throw new IOException(
+          String.format("listing object '%s' failed.", BlobId.of(bucketName, objectNamePrefix)),
+          e);
+    }
+  }
+
+  void compose(
+      String bucketName, List<String> sources, String destination, String contentType)
+      throws IOException {
+    LOG.trace("compose({}, {}, {}, {})", bucketName, sources, destination, contentType);
+    List<StorageResourceId> sourceIds =
+        sources.stream()
+            .map(objectName -> new StorageResourceId(bucketName, objectName))
+            .collect(Collectors.toList());
+    StorageResourceId destinationId = new StorageResourceId(bucketName, destination);
+    CreateObjectOptions options =
+        CreateObjectOptions.DEFAULT_OVERWRITE.toBuilder()
+            .setContentType(contentType)
+            .setEnsureEmptyObjectsMetadataMatch(false)
+            .build();
+    composeObjects(sourceIds, destinationId, options);
+  }
+
+  /**
+   * Get metadata for the given resourceId. The resourceId can be a file or a directory.
+   *
+   * For a resourceId gs://b/foo/a, it can be a file or a directory (gs:/b/foo/a/).
+   * This method checks for both and return the one that is found. "NotFound" is returned
+   * if not found.
+   */
+  GoogleCloudStorageItemInfo getFileOrDirectoryInfo(StorageResourceId resourceId) {
+    BlobId blobId = resourceId.toBlobId();
+    if (resourceId.isDirectory()) {
+      // Do not check for "file" for directory paths.
+      Blob blob = storage.get(blobId);
+      if (blob != null) {
+        return createItemInfoForBlob(blob);
+      }
+    } else {
+      BlobId dirId = resourceId.toDirectoryId().toBlobId();
+
+      // Check for both file and directory.
+      List<Blob> blobs = storage.get(blobId, dirId);
+      for (Blob blob : blobs) {
+        if (blob != null) {
+          return createItemInfoForBlob(blob);
+        }
+      }
+    }
+
+    return GoogleCloudStorageItemInfo.createNotFound(resourceId);
+  }
+
+  /**
+   * Check if any "implicit" directory exists for the given resourceId.
+   *
+   * Note that GCS object store does not have a concept of directories for non-HNS buckets.
+   * For e.g. one could create an object gs://bucket/foo/bar/a.txt, without creating the
+   * parent directories (i.e. placeholder emtpy files ending with a /). In this case we might
+   * want to treat gs://bucket/foo/ and gs://bucket/foo/bar/ as directories.
+   *
+   * This method helps check if a given resourceId (e.g. gs://bucket/foo/bar/) is an "implicit"
+   * directory.
+   *
+   * Note that this will result in a list operation and is more expensive than "get metadata".
+   */
+  GoogleCloudStorageItemInfo getImplicitDirectory(StorageResourceId resourceId) {
+    List<Blob> blobs = new GcsListOperation
+        .Builder(resourceId.getBucketName(), resourceId.getObjectName(), storage)
+        .forCurrentDirectoryListingWithLimit(1).build()
+        .execute();
+
+    if (blobs.isEmpty()) {
+      return GoogleCloudStorageItemInfo.createNotFound(resourceId);
+    }
+
+    return GoogleCloudStorageItemInfo.createInferredDirectory(resourceId.toDirectoryId());
+  }
+
   // Helper class to capture the results of list operation.
   private class ListOperationResult {
     private final Map<String, Blob> prefixes = new HashMap<>();
     private final List<Blob> objects = new ArrayList<>();
 
     private  final Set<String> objectsSet = new HashSet<>();
-
-    private final long maxResults;
-
-    ListOperationResult(long maxResults) {
-      this.maxResults = maxResults;
-    }
 
     void add(Blob blob) {
       String path = blob.getBlobId().toGsUtilUri();
@@ -957,17 +1005,9 @@ class GoogleCloudStorage {
 
       for (Blob blob : objects) {
         result.add(createItemInfoForBlob(blob));
-
-        if (result.size() == maxResults) {
-          return result;
-        }
       }
 
       for (Blob blob : prefixes.values()) {
-        if (result.size() == maxResults) {
-          return result;
-        }
-
         result.add(createItemInfoForBlob(blob));
       }
 
