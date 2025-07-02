@@ -77,7 +77,7 @@ public final class StreamIntegration {
   /**
    * What is the default type?
    */
-  public static final InputStreamType DEFAULT_STREAM_TYPE = InputStreamType.Classic;
+  public static final InputStreamType DEFAULT_STREAM_TYPE = InputStreamType.Analytics;
 
   /**
    * Configuration deprecation log for warning about use of the

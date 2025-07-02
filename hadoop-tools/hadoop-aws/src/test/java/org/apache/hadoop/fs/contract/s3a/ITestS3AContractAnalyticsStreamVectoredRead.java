@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
@@ -79,11 +78,6 @@ public class ITestS3AContractAnalyticsStreamVectoredRead extends AbstractContrac
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf);
-  }
-
-  @Override
-  public void testNegativeOffsetRange()  throws Exception {
-    verifyExceptionalVectoredRead(ContractTestUtils.range(-1, 50), IllegalArgumentException.class);
   }
 
   @Test
