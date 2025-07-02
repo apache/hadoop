@@ -52,10 +52,6 @@ public class ITestS3AMetrics extends AbstractS3ATestBase {
 
   @Test
   public void testStreamStatistics() throws IOException {
-     // Analytics accelerator currently does not support IOStatistics, this will be added as
-    // part of https://issues.apache.org/jira/browse/HADOOP-19364
-    skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
-        "Analytics Accelerator currently does not support stream statistics");
 
     S3AFileSystem fs = getFileSystem();
     Path file = path("testStreamStatistics");

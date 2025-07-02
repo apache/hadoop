@@ -49,6 +49,8 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
   private S3SeekableInputStream inputStream;
   private long lastReadCurrentPos = 0;
   private volatile boolean closed;
+  private final long contentLength;
+  private final long lengthLimit;
 
   public static final Logger LOG = LoggerFactory.getLogger(AnalyticsStream.class);
 
@@ -56,6 +58,8 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
       final S3SeekableInputStreamFactory s3SeekableInputStreamFactory) throws IOException {
     super(InputStreamType.Analytics, parameters);
     S3ObjectAttributes s3Attributes = parameters.getObjectAttributes();
+    this.contentLength = s3Attributes.getLen();
+    this.lengthLimit = s3Attributes.getLen();
     this.inputStream = s3SeekableInputStreamFactory.createStream(S3URI.of(s3Attributes.getBucket(),
         s3Attributes.getKey()), buildOpenStreamInformation(parameters));
     getS3AStreamStatistics().streamOpened(InputStreamType.Analytics);
@@ -64,6 +68,9 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
   @Override
   public int read() throws IOException {
     throwIfClosed();
+    if (getPos() >= lengthLimit) {
+      return -1; // EOF reached due to length limit
+    }
     getS3AStreamStatistics().readOperationStarted(getPos(), 1);
 
     int bytesRead;
@@ -75,7 +82,7 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
     }
 
     if (bytesRead != -1) {
-      getS3AStreamStatistics().bytesRead(1);
+      incrementBytesRead(1);
     }
 
     return bytesRead;
@@ -124,7 +131,7 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
     }
 
     if (bytesRead > 0) {
-      getS3AStreamStatistics().bytesRead(bytesRead);
+      incrementBytesRead(bytesRead);
     }
 
     return bytesRead;
@@ -133,18 +140,25 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
   @Override
   public int read(byte[] buf, int off, int len) throws IOException {
     throwIfClosed();
-    getS3AStreamStatistics().readOperationStarted(getPos(), len);
+    long pos = getPos();
+    if (pos >= lengthLimit) {
+      return -1; // EOF reached due to length limit
+    }
+    
+    // Limit read length to not exceed the length limit
+    int maxRead = (int) Math.min(len, lengthLimit - pos);
+    getS3AStreamStatistics().readOperationStarted(pos, maxRead);
 
     int bytesRead;
     try {
-      bytesRead = inputStream.read(buf, off, len);
+      bytesRead = inputStream.read(buf, off, maxRead);
     } catch (IOException ioe) {
       onReadFailure(ioe);
       throw ioe;
     }
 
     if (bytesRead > 0) {
-      getS3AStreamStatistics().bytesRead(bytesRead);
+      incrementBytesRead(bytesRead);
     }
 
     return bytesRead;
@@ -258,6 +272,18 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
   protected void throwIfClosed() throws IOException {
     if (closed) {
       throw new IOException(getKey() + ": " + FSExceptionMessages.STREAM_IS_CLOSED);
+    }
+  }
+
+  /**
+   * Increment the bytes read counter if there is a stats instance
+   * and the number of bytes read is more than zero.
+   * @param bytesRead number of bytes read
+   */
+  private void incrementBytesRead(long bytesRead) {
+    getS3AStreamStatistics().bytesRead(bytesRead);
+    if (getContext().getStats() != null && bytesRead > 0) {
+      getContext().getStats().incrementBytesRead(bytesRead);
     }
   }
 }

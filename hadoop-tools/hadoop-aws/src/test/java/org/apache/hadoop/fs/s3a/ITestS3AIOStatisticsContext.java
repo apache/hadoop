@@ -81,10 +81,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
   public void setup() throws Exception {
     super.setup();
     executor = HadoopExecutors.newFixedThreadPool(SMALL_THREADS);
-    // Analytics accelerator currently does not support IOStatisticsContext, this will be added as
-    // part of https://issues.apache.org/jira/browse/HADOOP-19364
-    skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
-        "Analytics Accelerator currently does not support IOStatisticsContext");
+
 
   }
 

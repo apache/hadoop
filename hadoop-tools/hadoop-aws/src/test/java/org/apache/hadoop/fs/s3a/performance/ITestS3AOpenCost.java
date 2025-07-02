@@ -113,10 +113,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
   @Override
   public void setup() throws Exception {
     super.setup();
-    // Analytics accelerator currently does not support IOStatistics, this will be added as
-    // part of https://issues.apache.org/jira/browse/HADOOP-19364
-    skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
-        "Analytics Accelerator currently does not support stream statistics");
+
     S3AFileSystem fs = getFileSystem();
     testFile = methodPath();
 
@@ -177,6 +174,11 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
 
     // if prefetching is enabled, skip this test
     assumeNoPrefetching();
+    // Skip for Analytics streams - checksum validation only exists in S3AInputStream.
+    // AnalyticsStream handles data integrity through AWS Analytics Accelerator internally.
+    if (isAnalyticsStream()) {
+      skip("Analytics stream doesn't use checksums");
+    }
     S3AFileSystem fs = getFileSystem();
 
     // open the file
@@ -261,10 +263,13 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
       }
     },
         always(),
-        // two GET calls were made, one for readFully,
-        // the second on the read() past the EOF
-        // the operation has got as far as S3
-        probe(!prefetching(), STREAM_READ_OPENED, 1 + 1));
+        // Analytics stream: 1 open (persistent connection)
+        // S3AInputStream: 2 opens (reopen on EOF)
+            // two GET calls were made, one for readFully,
+            // the second on the read() past the EOF
+            // the operation has got as far as S3
+        probe(!prefetching() && !isAnalyticsStream(), STREAM_READ_OPENED, 2),
+        probe(!prefetching() && isAnalyticsStream(), STREAM_READ_OPENED, 1));
 
     // now on a new stream, try a full read from after the EOF
     verifyMetrics(() -> {
@@ -348,7 +353,9 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
       }
     },
         always(),
-        probe(!prefetching, Statistic.ACTION_HTTP_GET_REQUEST, extra));
+        // Analytics streams don't make HTTP requests when reading past EOF
+        probe(!prefetching && !isAnalyticsStream(), Statistic.ACTION_HTTP_GET_REQUEST, extra),
+        probe(!prefetching && isAnalyticsStream(), Statistic.ACTION_HTTP_GET_REQUEST, 0));
   }
 
   /**
@@ -459,6 +466,14 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
    */
   private boolean prefetching()  {
     return InputStreamType.Prefetch == streamType(getFileSystem());
+  }
+
+  /**
+   * Is the current stream type Analytics?
+   * @return true if Analytics stream is enabled.
+   */
+  private boolean isAnalyticsStream() {
+    return streamType(getFileSystem()) == InputStreamType.Analytics;
   }
 
   /**
