@@ -132,10 +132,10 @@ public final class StreamStatisticNames {
   public static final String STREAM_READ_OPERATIONS =
       "stream_read_operations";
 
-  /** Analytics GET requests made by stream. */
+  /** GET requests made by the analytics stream. */
   public static final String STREAM_READ_ANALYTICS_GET_REQUESTS = "stream_read_analytics_get_requests";
 
-  /** Analytics HEAD requests made by stream. */
+  /** HEAD requests made by the analytics stream. */
   public static final String STREAM_READ_ANALYTICS_HEAD_REQUESTS = "stream_read_analytics_head_requests";
 
   /**
