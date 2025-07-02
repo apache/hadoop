@@ -119,7 +119,7 @@ abstract class StripeReader {
   protected final RawErasureDecoder decoder;
   protected final DFSStripedInputStream dfsStripedInputStream;
   private long readTo = -1;
-  protected final int readDNMaxAttempts;
+  private final int readDNMaxAttempts;
 
   protected ECChunk[] decodeInputs;
 
