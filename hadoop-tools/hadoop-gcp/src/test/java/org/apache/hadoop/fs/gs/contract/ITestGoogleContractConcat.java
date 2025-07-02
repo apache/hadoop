@@ -17,12 +17,12 @@
  */
 
 package org.apache.hadoop.fs.gs.contract;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.AbstractContractMkdirTest;
+import org.apache.hadoop.fs.contract.AbstractContractConcatTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
-public class ITestGoogleContractMkdir extends AbstractContractMkdirTest {
+/** GCS contract tests covering file concat. */
+public class ITestGoogleContractConcat extends AbstractContractConcatTest {
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new GoogleContract(conf);
