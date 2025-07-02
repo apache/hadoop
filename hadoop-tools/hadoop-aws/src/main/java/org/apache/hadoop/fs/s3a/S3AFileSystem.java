@@ -1920,7 +1920,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withCallbacks(createInputStreamCallbacks(auditSpan))
         .withContext(readContext.build())
         .withObjectAttributes(createObjectAttributes(path, fileStatus))
-        .withStreamStatistics(inputStreamStats);
+        .withStreamStatistics(inputStreamStats)
+        .withAuditSpan(auditSpan);
+
     return new FSDataInputStream(getStore().readObject(parameters));
   }
 

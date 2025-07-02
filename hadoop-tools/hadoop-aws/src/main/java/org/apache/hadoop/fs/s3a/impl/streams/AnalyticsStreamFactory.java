@@ -96,8 +96,7 @@ public class AnalyticsStreamFactory extends AbstractObjectInputStreamFactory {
     vectorContext.setMinSeekForVectoredReads(0);
 
     return new StreamFactoryRequirements(0,
-            0, vectorContext,
-            StreamFactoryRequirements.Requirements.ExpectUnauditedGetRequests);
+            0, vectorContext);
   }
 
   @Override
