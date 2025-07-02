@@ -21,17 +21,10 @@ package org.apache.hadoop.fs.gs.contract;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractDeleteTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 public class ITestGoogleContractDelete extends AbstractContractDeleteTest {
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new GoogleContract(conf);
-  }
-
-  @Override
-  public void testDeleteEmptyDirNonRecursive() {
-    // TODO: Enable this
-    ContractTestUtils.skip("Skipping the test. This will be enabled in a subsequent change");
   }
 }

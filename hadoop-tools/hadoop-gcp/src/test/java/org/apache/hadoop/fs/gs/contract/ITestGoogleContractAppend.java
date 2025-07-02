@@ -17,14 +17,19 @@
  */
 
 package org.apache.hadoop.fs.gs.contract;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.AbstractContractMkdirTest;
+import org.apache.hadoop.fs.contract.AbstractContractAppendTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 
-public class ITestGoogleContractMkdir extends AbstractContractMkdirTest {
+public class ITestGoogleContractAppend extends AbstractContractAppendTest {
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new GoogleContract(conf);
+  }
+
+  @Override
+  public void testRenameFileBeingAppended() throws Throwable {
+    ContractTestUtils.skip("blobstores can not rename file that being appended");
   }
 }
