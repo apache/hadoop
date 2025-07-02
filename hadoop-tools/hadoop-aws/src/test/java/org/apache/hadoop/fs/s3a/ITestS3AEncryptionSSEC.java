@@ -42,10 +42,10 @@ import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITH
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeStoreAwsHosted;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.enableAnalyticsAccelerator;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeSkipRootTests;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -99,8 +99,6 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   @Override
   public void setup() throws Exception {
     super.setup();
-    skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
-        "Analytics Accelerator currently does not support SSE-C");
     assumeEnabled();
     // although not a root dir test, this confuses paths enough it shouldn't be run in
     // parallel with other jobs
@@ -329,6 +327,65 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     intercept(AccessDeniedException.class,
         SERVICE_AMAZON_S3_STATUS_CODE_403,
         () -> fsKeyB.getFileChecksum(path));
+  }
+
+
+  /**
+   * Tests the creation and reading of a file using a different encryption key
+   * when Analytics Accelerator is enabled.
+   *
+   * @throws Exception if any error occurs during the test execution
+   */
+  @Test
+  public void testCreateFileAndReadWithDifferentEncryptionKeyWithAnalyticsAcceleratorEnabled() throws Exception {
+    enableAnalyticsAccelerator(getConfiguration());
+    testCreateFileAndReadWithDifferentEncryptionKey();
+  }
+
+  /**
+   * Tests the creation and movement of a file using a different SSE-C key
+   * when Analytics Accelerator is enabled.
+   *
+   * @throws Exception if any error occurs during the test execution
+   */
+  @Test
+  public void testCreateFileThenMoveWithDifferentSSECKeyWithAnalyticsAcceleratorEnabled() throws Exception {
+    enableAnalyticsAccelerator(getConfiguration());
+    testCreateFileThenMoveWithDifferentSSECKey();
+  }
+
+  /**
+   * Tests create and file rename operation when Analytics Accelerator is enabled.
+   *
+   * @throws Exception if any error occurs during the test execution
+   */
+  @Test
+  public void testCreateFileAndRenameFileWithAnalyticsAcceleratorEnabled() throws Exception {
+    enableAnalyticsAccelerator(getConfiguration());
+    testRenameFile();
+  }
+
+  /**
+   * Tests the creation and listing of encrypted files when Analytics Accelerator is enabled.
+   *
+   * @throws Exception if any error occurs during the test execution
+   */
+  @Test
+  public void testCreateFileAndListStatusEncryptedFileWithAnalyticsAcceleratorEnabled() throws Exception {
+    enableAnalyticsAccelerator(getConfiguration());
+    testListStatusEncryptedFile();
+  }
+
+  /**
+   * Tests the creation and deletion of an encrypted object using a different key
+   * when Analytics Accelerator is enabled.t.
+   *
+   * @throws Exception if any error occurs during the test execution
+   */
+  @Test
+  public void testCreateFileAndDeleteEncryptedObjectWithDifferentKeyWithAnalyticsAcceleratorEnabled() throws Exception {
+    enableAnalyticsAccelerator(getConfiguration());
+    testDeleteEncryptedObjectWithDifferentKey();
   }
 
   private S3AFileSystem createNewFileSystemWithSSECKey(String sseCKey) throws

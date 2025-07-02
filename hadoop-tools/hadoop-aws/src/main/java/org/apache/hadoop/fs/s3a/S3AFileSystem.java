@@ -1921,7 +1921,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withContext(readContext.build())
         .withObjectAttributes(createObjectAttributes(path, fileStatus))
         .withStreamStatistics(inputStreamStats)
-        .withAuditSpan(auditSpan);
+        .withAuditSpan(auditSpan)
+        .withEncryptionSecrets(getEncryptionSecrets());
 
     return new FSDataInputStream(getStore().readObject(parameters));
   }

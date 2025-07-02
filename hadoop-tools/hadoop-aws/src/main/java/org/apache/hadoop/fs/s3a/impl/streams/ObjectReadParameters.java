@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
@@ -74,6 +75,29 @@ public final class ObjectReadParameters {
    * Span for which this stream is being created.
    */
   private AuditSpan auditSpan;
+
+   /**
+   * Encryption secrets for this stream
+   */
+  private EncryptionSecrets encryptionSecrets;
+
+  /**
+   * Getter.
+   * @return Encryption secrets.
+   */
+  public EncryptionSecrets getEncryptionSecrets() {
+    return encryptionSecrets;
+  }
+
+  /**
+   * Set encryption secrets.
+   * @param value new value
+   * @return the builder
+   */
+  public ObjectReadParameters withEncryptionSecrets(final EncryptionSecrets value) {
+    encryptionSecrets = value;
+    return this;
+  }
 
   /**
    * @return Read operation context.
@@ -210,6 +234,8 @@ public final class ObjectReadParameters {
     requireNonNull(objectAttributes, "objectAttributes");
     requireNonNull(streamStatistics, "streamStatistics");
     requireNonNull(auditSpan, "auditSpan");
+    requireNonNull(encryptionSecrets, "encryptionSecrets");
+
     return this;
   }
 }
