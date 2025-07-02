@@ -23,6 +23,7 @@ import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.
 import static org.apache.hadoop.thirdparty.com.google.common.base.Strings.isNullOrEmpty;
 import static org.apache.hadoop.fs.gs.Constants.SCHEME;
 
+import com.google.cloud.storage.BlobId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -324,5 +325,9 @@ class StorageResourceId {
     return isNullOrEmpty(objectName) ?
         new StorageResourceId(bucketName, generationId) :
         new StorageResourceId(bucketName, objectName, generationId);
+  }
+
+  BlobId toBlobId() {
+    return BlobId.of(bucketName, objectName);
   }
 }

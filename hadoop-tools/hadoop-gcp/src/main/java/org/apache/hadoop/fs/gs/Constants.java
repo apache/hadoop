@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.gs;
 
 final class Constants {
+  static final int MAX_COMPOSE_OBJECTS = 32;
+
   private Constants() {}
 
   // URI scheme for GCS.
