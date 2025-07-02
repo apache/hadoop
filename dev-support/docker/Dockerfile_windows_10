@@ -62,7 +62,7 @@ RUN powershell Invoke-WebRequest -URI https://cdn.azul.com/zulu/bin/zulu8.62.0.1
 RUN powershell Expand-Archive -Path $Env:TEMP\zulu8.62.0.19-ca-jdk8.0.332-win_x64.zip -DestinationPath "C:\Java"
 
 # Install Apache Maven.
-RUN powershell Invoke-WebRequest -URI https://downloads.apache.org/maven/maven-3/3.8.8/binaries/apache-maven-3.8.8-bin.zip -OutFile $Env:TEMP\apache-maven-3.8.8-bin.zip
+RUN powershell Invoke-WebRequest -URI https://archive.apache.org/dist/maven/maven-3/3.8.8/binaries/apache-maven-3.8.8-bin.zip -OutFile $Env:TEMP\apache-maven-3.8.8-bin.zip
 RUN powershell Expand-Archive -Path $Env:TEMP\apache-maven-3.8.8-bin.zip -DestinationPath "C:\Maven"
 
 # Install CMake 3.19.0.
