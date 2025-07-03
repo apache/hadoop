@@ -36,6 +36,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.O
 public class AbfsBlobBlock extends AbfsBlock {
 
   private final String blockId;
+  private final long blockIndex;
 
   /**
    * Gets the activeBlock and the blockId.
@@ -44,11 +45,12 @@ public class AbfsBlobBlock extends AbfsBlock {
    * @param offset       Used to generate blockId based on offset.
    * @throws IOException exception is thrown.
    */
-  AbfsBlobBlock(AbfsOutputStream outputStream, long offset, int blockIdLength) throws IOException {
+  AbfsBlobBlock(AbfsOutputStream outputStream, long offset, int blockIdLength, long blockIndex) throws IOException {
     super(outputStream, offset);
+    this.blockIndex = blockIndex;
     String streamId = getOutputStream().getStreamID();
     UUID streamIdGuid = UUID.nameUUIDFromBytes(streamId.getBytes(StandardCharsets.UTF_8));
-    this.blockId = generateBlockId(offset, streamIdGuid, blockIdLength);
+    this.blockId = generateBlockId(streamIdGuid, blockIdLength);
   }
 
   /**
@@ -59,14 +61,12 @@ public class AbfsBlobBlock extends AbfsBlock {
    * optionally adjusted to match the specified raw length, padded or trimmed as needed, and
    * then Base64-encoded.
    *
-   * @param position   The byte position in the stream, used to compute the block index.
    * @param streamId   The UUID representing the stream, used as a prefix in the block ID.
    * @param rawLength  The desired length of the raw block ID string before Base64 encoding.
    *                   If 0, no length adjustment is made.
    * @return A Base64-encoded block ID string suitable for use in block-based storage APIs.
    */
-  private String generateBlockId(long position, UUID streamId, int rawLength) {
-    long blockIndex = position / getOutputStream().getBufferSize();
+  private String generateBlockId(UUID streamId, int rawLength) {
     String rawBlockId = String.format("%s-%06d", streamId, blockIndex);
 
     if (rawLength != 0) {

@@ -84,7 +84,7 @@ public class AzureBlobBlockManager extends AzureBlockManager {
       throws IOException {
     if (getActiveBlock() == null) {
       setBlockCount(getBlockCount() + 1);
-      AbfsBlock activeBlock = new AbfsBlobBlock(getAbfsOutputStream(), position, blockIdLength);
+      AbfsBlock activeBlock = new AbfsBlobBlock(getAbfsOutputStream(), position, blockIdLength, getBlockCount());
       activeBlock.setBlockEntry(addNewEntry(activeBlock.getBlockId(), activeBlock.getOffset()));
       getAbfsOutputStream().getMessageDigest().reset();
       setActiveBlock(activeBlock);

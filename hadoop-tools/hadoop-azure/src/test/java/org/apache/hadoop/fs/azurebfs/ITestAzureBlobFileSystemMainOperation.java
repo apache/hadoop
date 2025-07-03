@@ -28,7 +28,6 @@ import org.junit.jupiter.api.Disabled;
 /**
  * Test AzureBlobFileSystem main operations.
  * */
-@Ignore
 public class ITestAzureBlobFileSystemMainOperation extends FSMainOperationsBaseTest {
 
   private static final String TEST_ROOT_DIR =

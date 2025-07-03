@@ -1042,13 +1042,12 @@ public class ITestAzureBlobFileSystemAppend extends
 
   /**
    * Helper method that generates blockId.
-   * @param position The offset needed to generate blockId.
    * @return String representing the block ID generated.
    */
-  private String generateBlockId(AbfsOutputStream os, long position) {
+  private String generateBlockId(AbfsOutputStream os) {
     String streamId = os.getStreamID();
     UUID streamIdGuid = UUID.nameUUIDFromBytes(streamId.getBytes(StandardCharsets.UTF_8));
-    long blockIndex = position / os.getBufferSize();
+    long blockIndex = os.getBlockManager().getBlockCount();
     String rawBlockId = String.format("%s-%06d", streamIdGuid, blockIndex);
     return Base64.encodeBase64String(rawBlockId.getBytes(StandardCharsets.UTF_8));
   }
@@ -1093,7 +1092,7 @@ public class ITestAzureBlobFileSystemAppend extends
       new Random().nextBytes(bytes);
       // Write some bytes and attempt to flush, which should retry
       out.write(bytes);
-      String blockId = generateBlockId(out, 0);
+      String blockId = generateBlockId(out);
       String blockListXml = generateBlockListXml(blockId);
 
       Mockito.doAnswer(answer -> {
@@ -1190,7 +1189,7 @@ public class ITestAzureBlobFileSystemAppend extends
       new Random().nextBytes(bytes);
       // Write some bytes and attempt to flush, which should retry
       out.write(bytes);
-      String blockId = generateBlockId(out, 0);
+      String blockId = generateBlockId(out);
       String blockListXml = generateBlockListXml(blockId);
 
       Mockito.doAnswer(answer -> {

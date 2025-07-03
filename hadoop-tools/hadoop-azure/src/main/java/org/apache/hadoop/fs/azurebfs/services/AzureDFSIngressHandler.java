@@ -25,6 +25,7 @@ import java.util.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.store.DataBlocks;
@@ -180,15 +181,35 @@ public class AzureDFSIngressHandler extends AzureIngressHandler {
       tracingContextFlush.setIngressHandler(DFS_FLUSH);
       tracingContextFlush.setPosition(String.valueOf(offset));
     }
-    String fullBlobMd5 = Base64.getEncoder().encodeToString(getAbfsOutputStream().getFullBlobContentMd5().digest());
-    LOG.trace("Flushing data at offset {} and path {}", offset, getAbfsOutputStream().getPath());
-    AbfsRestOperation op = getClient()
-        .flush(getAbfsOutputStream().getPath(), offset, retainUncommitedData,
-            isClose,
-            getAbfsOutputStream().getCachedSasTokenString(), leaseId,
-            getAbfsOutputStream().getContextEncryptionAdapter(),
-            tracingContextFlush, fullBlobMd5);
-    getAbfsOutputStream().getFullBlobContentMd5().reset();
+    byte[] digest = null;
+    String fullBlobMd5 = null;
+    try {
+      // Clone the MessageDigest to avoid resetting the original state
+      MessageDigest clonedMd5 = (MessageDigest) getAbfsOutputStream().getFullBlobContentMd5().clone();
+      digest = clonedMd5.digest();
+    } catch (CloneNotSupportedException e) {
+      LOG.warn("Failed to clone MessageDigest instance", e);
+    }
+    if (digest != null && digest.length != 0) {
+      fullBlobMd5 = Base64.getEncoder().encodeToString(digest);
+    }
+    LOG.trace("Flushing data at offset {} and path {}", offset,
+        getAbfsOutputStream().getPath());
+    AbfsRestOperation op;
+    try {
+      op = getClient()
+          .flush(getAbfsOutputStream().getPath(), offset, retainUncommitedData,
+              isClose,
+              getAbfsOutputStream().getCachedSasTokenString(), leaseId,
+              getAbfsOutputStream().getContextEncryptionAdapter(),
+              tracingContextFlush, fullBlobMd5);
+    } catch (AbfsRestOperationException ex) {
+      LOG.error("Error in remote flush for path {} and offset {}",
+          getAbfsOutputStream().getPath(), offset, ex);
+      throw ex;
+    } finally {
+      getAbfsOutputStream().getFullBlobContentMd5().reset();
+    }
     return op;
   }
 

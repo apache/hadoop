@@ -869,7 +869,7 @@ public class AbfsDfsClient extends AbfsClient {
     if (leaseId != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
     }
-    if (isChecksumValidationEnabled()) {
+    if (isChecksumValidationEnabled() && blobMd5 != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, blobMd5));
     }
 

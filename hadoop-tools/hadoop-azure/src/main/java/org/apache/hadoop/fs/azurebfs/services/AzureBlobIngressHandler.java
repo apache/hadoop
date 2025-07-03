@@ -198,7 +198,6 @@ public class AzureBlobIngressHandler extends AzureIngressHandler {
           isClose, getAbfsOutputStream().getCachedSasTokenString(), leaseId,
           getETag(), getAbfsOutputStream().getContextEncryptionAdapter(), tracingContextFlush, fullBlobMd5);
       setETag(op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG));
-      getAbfsOutputStream().getFullBlobContentMd5().reset();
     } catch (AbfsRestOperationException ex) {
       LOG.error("Error in remote flush requiring handler switch for path {}", getAbfsOutputStream().getPath(), ex);
       if (shouldIngressHandlerBeSwitched(ex)) {
@@ -206,6 +205,8 @@ public class AzureBlobIngressHandler extends AzureIngressHandler {
       }
       LOG.error("Error in remote flush for path {} and offset {}", getAbfsOutputStream().getPath(), offset, ex);
       throw ex;
+    } finally {
+      getAbfsOutputStream().getFullBlobContentMd5().reset();
     }
     return op;
   }

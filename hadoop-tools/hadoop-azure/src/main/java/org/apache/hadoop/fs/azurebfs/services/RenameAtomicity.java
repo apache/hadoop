@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Random;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -209,19 +210,21 @@ public class RenameAtomicity {
     String eTag = extractEtagHeader(putBlobOp.getResult());
 
     String blockId = generateBlockId();
+    String blockList = generateBlockListXml(blockId);
+    byte[] buffer = blockList.getBytes(StandardCharsets.UTF_8);
+    String computedMd5 = abfsClient.computeMD5Hash(buffer, 0,  buffer.length);
+
     AppendRequestParameters appendRequestParameters
         = new AppendRequestParameters(0, 0,
         bytes.length, AppendRequestParameters.Mode.APPEND_MODE, false, null,
         abfsClient.getAbfsConfiguration().isExpectHeaderEnabled(),
-        new BlobAppendRequestParameters(blockId, eTag), null);
+        new BlobAppendRequestParameters(blockId, eTag), computedMd5);
 
     abfsClient.append(path.toUri().getPath(), bytes,
         appendRequestParameters, null, null, tracingContext);
 
-    String blockList = generateBlockListXml(blockId);
-    // PutBlockList on the path.
-    abfsClient.flush(blockList.getBytes(StandardCharsets.UTF_8),
-        path.toUri().getPath(), true, null, null, eTag, null, tracingContext, null);
+    abfsClient.flush(buffer,
+        path.toUri().getPath(), true, null, null, eTag, null, tracingContext, computedMd5);
   }
 
   /**
