@@ -878,6 +878,7 @@ public abstract class AbfsClient implements Closeable {
    * @param leaseId if there is an active lease on the path.
    * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the server calls.
+   * @param blobMd5  The Base64-encoded MD5 hash of the blob for data integrity validation.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -888,17 +889,18 @@ public abstract class AbfsClient implements Closeable {
       throws AzureBlobFileSystemException;
 
   /**
-   * Flush previously uploaded data to a file.
-   * @param buffer containing blockIds to be flushed.
-   * @param path on which data has to be flushed.
-   * @param isClose specify if this is the last flush to the file.
-   * @param cachedSasToken to be used for the authenticating operation.
-   * @param leaseId if there is an active lease on the path.
-   * @param eTag to specify conditional headers.
-   * @param contextEncryptionAdapter to provide encryption context.
-   * @param tracingContext for tracing the server calls.
-   * @return executed rest operation containing response from server.
-   * @throws AzureBlobFileSystemException if rest operation fails.
+   * Flushes previously uploaded data to the specified path.
+   * @param buffer                The buffer containing block IDs to be flushed.
+   * @param path                  The file path to which data should be flushed.
+   * @param isClose               True if this is the final flush (i.e., the file is being closed).
+   * @param cachedSasToken        SAS token used for authentication (if applicable).
+   * @param leaseId               Lease ID, if a lease is active on the file.
+   * @param eTag                  ETag used for conditional request headers (e.g., If-Match).
+   * @param contextEncryptionAdapter Adapter to provide encryption context, if encryption is enabled.
+   * @param tracingContext        Context for tracing the server calls.
+   * @param blobMd5               The Base64-encoded MD5 hash of the blob for data integrity validation.
+   * @return                      The executed {@link AbfsRestOperation} containing the server response.
+   * @throws AzureBlobFileSystemException if the flush operation fails.
    */
   public abstract AbfsRestOperation flush(byte[] buffer,
       String path,
