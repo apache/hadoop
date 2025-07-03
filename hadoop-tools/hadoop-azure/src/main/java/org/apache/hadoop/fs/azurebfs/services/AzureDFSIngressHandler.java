@@ -193,8 +193,7 @@ public class AzureDFSIngressHandler extends AzureIngressHandler {
     if (digest != null && digest.length != 0) {
       fullBlobMd5 = Base64.getEncoder().encodeToString(digest);
     }
-    LOG.trace("Flushing data at offset {} and path {}", offset,
-        getAbfsOutputStream().getPath());
+    LOG.trace("Flushing data at offset {} and path {}", offset, getAbfsOutputStream().getPath());
     AbfsRestOperation op;
     try {
       op = getClient()

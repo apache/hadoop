@@ -18,20 +18,18 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashSet;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -46,6 +44,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.MD5;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_ID_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
@@ -65,14 +64,15 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
   private static final int MB_15 = 15 * ONE_MB;
   private static final int MB_16 = 16 * ONE_MB;
   private static final String INVALID_MD5_TEXT = "Text for Invalid MD5 Computation";
-  private final MessageDigest md;
+  private MessageDigest md = null;
 
   public ITestAzureBlobFileSystemChecksum() throws Exception {
     super();
     try {
-      md = MessageDigest.getInstance("MD5");
+      md = MessageDigest.getInstance(MD5);
     } catch (NoSuchAlgorithmException e) {
-      throw new IOException("MD5 algorithm not available", e);
+      // MD5 algorithm not available; md will remain null
+      // Log this in production code if needed
     }
   }
 
@@ -90,7 +90,7 @@ public String getMd5(byte[] data, int off, int length) {
   byte[] digest = md.digest();
   String md5 = null;
   if (digest.length != 0) {
-    md5 = java.util.Base64.getEncoder().encodeToString(digest);
+    md5 = Base64.getEncoder().encodeToString(digest);
   }
   return md5;
 }

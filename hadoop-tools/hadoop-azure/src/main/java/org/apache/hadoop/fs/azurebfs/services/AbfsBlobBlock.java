@@ -24,9 +24,6 @@ import java.util.UUID;
 
 import org.apache.commons.codec.binary.Base64;
 
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_ID_LENGTH;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
-
 /**
  * Represents a block in Azure Blob Storage used by Azure Data Lake Storage (ADLS).
  *
@@ -55,7 +52,6 @@ public class AbfsBlobBlock extends AbfsBlock {
 
   /**
    * Generates a Base64-encoded block ID string based on the given position, stream ID, and desired raw length.
-   *
    * The block ID is composed using the stream UUID and the block index, which is derived from
    * the given position divided by the output stream's buffer size. The resulting string is
    * optionally adjusted to match the specified raw length, padded or trimmed as needed, and

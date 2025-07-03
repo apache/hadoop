@@ -141,20 +141,24 @@ public final class AbfsClientTestUtil {
    * @throws Exception           If an error occurs while setting up the mock operation.
    */
   public static void setMockAbfsRestOperationForFlushOperation(
-      final AbfsClient spiedClient, String eTag, String blockListXml, AbfsOutputStream os, FunctionRaisingIOE<AbfsHttpOperation, AbfsHttpOperation> functionRaisingIOE)
+      final AbfsClient spiedClient,
+      String eTag,
+      String blockListXml,
+      AbfsOutputStream os,
+      FunctionRaisingIOE<AbfsHttpOperation, AbfsHttpOperation> functionRaisingIOE)
       throws Exception {
-    List<AbfsHttpHeader> requestHeaders = ITestAbfsClient.getTestRequestHeaders(spiedClient);
+    List<AbfsHttpHeader> requestHeaders = ITestAbfsClient.getTestRequestHeaders(
+        spiedClient);
     String blobMd5 = null;
     MessageDigest blobDigest = os.getFullBlobContentMd5();
-
     if (blobDigest != null) {
       try {
         MessageDigest clonedMd5 = (MessageDigest) blobDigest.clone();
         byte[] digest = clonedMd5.digest();
-        if (digest.length != 0) {
+        if (digest != null && digest.length != 0) {
           blobMd5 = Base64.getEncoder().encodeToString(digest);
         }
-      } catch (CloneNotSupportedException e) {
+      } catch (CloneNotSupportedException ignored) {
       }
     }
     byte[] buffer = blockListXml.getBytes(StandardCharsets.UTF_8);

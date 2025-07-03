@@ -73,6 +73,15 @@ public class AzureBlobBlockManager extends AzureBlockManager {
   }
 
   /**
+   * Retrieves the length of the block ID.
+   *
+   * @return the length of the block ID in bytes.
+   */
+  public int getBlockIdLength() {
+    return blockIdLength;
+  }
+
+  /**
    * Creates a new block.
    *
    * @param position the position
@@ -84,7 +93,7 @@ public class AzureBlobBlockManager extends AzureBlockManager {
       throws IOException {
     if (getActiveBlock() == null) {
       setBlockCount(getBlockCount() + 1);
-      AbfsBlock activeBlock = new AbfsBlobBlock(getAbfsOutputStream(), position, blockIdLength, getBlockCount());
+      AbfsBlock activeBlock = new AbfsBlobBlock(getAbfsOutputStream(), position, getBlockIdLength(), getBlockCount());
       activeBlock.setBlockEntry(addNewEntry(activeBlock.getBlockId(), activeBlock.getOffset()));
       getAbfsOutputStream().getMessageDigest().reset();
       setActiveBlock(activeBlock);
