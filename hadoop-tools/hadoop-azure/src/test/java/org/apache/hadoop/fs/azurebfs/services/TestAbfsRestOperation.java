@@ -22,7 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_FAILED;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.DeletePath;
@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import java.util.ArrayList;
 import java.util.Arrays;
-import org.junit.Assert;
 import java.net.HttpURLConnection;
 
 public class TestAbfsRestOperation extends
@@ -83,8 +82,9 @@ public class TestAbfsRestOperation extends
     }
 
     // For retry count greater than the max configured value, the request should fail.
-    Assert.assertEquals("Number of failed requests does not match expected value.",
-            "3", String.valueOf(testClient.getAbfsCounters().getAbfsBackoffMetrics().getMetricValue(NUMBER_OF_REQUESTS_FAILED)));
+    assertEquals("Number of failed requests does not match expected value.",
+        "3", String.valueOf(testClient.getAbfsCounters().getAbfsBackoffMetrics().
+        getMetricValue(NUMBER_OF_REQUESTS_FAILED)));
 
     // Close the AzureBlobFileSystem.
     fs.close();

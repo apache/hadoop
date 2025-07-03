@@ -26,13 +26,15 @@ import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.apache.hadoop.test.TestName;
 
+import java.util.concurrent.TimeUnit;
+
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Base class for any Wasb test with timeouts & named threads.
  * This class does not attempt to bind to Azure.
  */
-@Timeout(AzureTestConstants.AZURE_TEST_TIMEOUT)
+@Timeout(value = AzureTestConstants.AZURE_TEST_TIMEOUT, unit = TimeUnit.MILLISECONDS)
 public class AbstractWasbTestWithTimeout extends Assertions {
 
   /**
