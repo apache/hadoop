@@ -44,7 +44,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.apache.hadoop.security.UserGroupInformation.loginUserFromKeytabAndReturnUGI;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * composite service for adding kerberos login for ABFS
@@ -256,8 +256,8 @@ public class KerberizedAbfsCluster extends CompositeService {
    * General assertion that security is turred on for a cluster.
    */
   public static void assertSecurityEnabled() {
-    assertTrue("Security is needed for this test",
-        UserGroupInformation.isSecurityEnabled());
+    assertTrue(UserGroupInformation.isSecurityEnabled(),
+        "Security is needed for this test");
   }
 
 

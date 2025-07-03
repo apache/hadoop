@@ -23,9 +23,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Stubber;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -58,9 +56,17 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_T
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_JDK_MESSAGE;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.SOCKET_EXCEPTION_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.UNKNOWN_HOST_EXCEPTION_ABBREVIATION;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class TestAbfsRestOperationMockFailures {
@@ -195,48 +201,48 @@ public class TestAbfsRestOperationMockFailures {
   @Test
   public void testRetryPolicyWithDifferentFailureReasons() throws Exception {
 
-    AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
-    ExponentialRetryPolicy exponentialRetryPolicy = Mockito.mock(
+    AbfsClient abfsClient = mock(AbfsClient.class);
+    ExponentialRetryPolicy exponentialRetryPolicy = mock(
         ExponentialRetryPolicy.class);
-    StaticRetryPolicy staticRetryPolicy = Mockito.mock(StaticRetryPolicy.class);
-    AbfsThrottlingIntercept intercept = Mockito.mock(
+    StaticRetryPolicy staticRetryPolicy = mock(StaticRetryPolicy.class);
+    AbfsThrottlingIntercept intercept = mock(
         AbfsThrottlingIntercept.class);
-    addGeneralMockBehaviourToAbfsClient(abfsClient, exponentialRetryPolicy, staticRetryPolicy, intercept, Mockito.mock(
+    addGeneralMockBehaviourToAbfsClient(abfsClient, exponentialRetryPolicy, staticRetryPolicy, intercept, mock(
         ListResponseData.class));
 
-    AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
+    AbfsRestOperation abfsRestOperation = spy(new AbfsRestOperation(
         AbfsRestOperationType.ReadFile,
         abfsClient,
         "PUT",
         null,
         new ArrayList<>(),
-        Mockito.mock(AbfsConfiguration.class)
+        mock(AbfsConfiguration.class)
     ));
 
-    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
+    AbfsHttpOperation httpOperation = mock(AbfsHttpOperation.class);
     addGeneralMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
 
-    Stubber stubber = Mockito.doThrow(new SocketTimeoutException(CONNECTION_TIMEOUT_JDK_MESSAGE));
+    Stubber stubber = doThrow(new SocketTimeoutException(CONNECTION_TIMEOUT_JDK_MESSAGE));
     stubber.doNothing().when(httpOperation).processResponse(
         nullable(byte[].class), nullable(int.class), nullable(int.class));
 
     when(httpOperation.getStatusCode()).thenReturn(-1).thenReturn(HTTP_UNAVAILABLE);
 
-    TracingContext tracingContext = Mockito.mock(TracingContext.class);
-    Mockito.doNothing().when(tracingContext).setRetryCount(nullable(int.class));
-    Mockito.doReturn("").when(httpOperation).getStorageErrorMessage();
-    Mockito.doReturn("").when(httpOperation).getStorageErrorCode();
-    Mockito.doReturn("HEAD").when(httpOperation).getMethod();
-    Mockito.doReturn("").when(httpOperation).getMaskedUrl();
-    Mockito.doReturn("").when(httpOperation).getRequestId();
-    Mockito.doReturn(EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage()).when(httpOperation).getStorageErrorMessage();
-    Mockito.doReturn(tracingContext).when(abfsRestOperation).createNewTracingContext(any());
+    TracingContext tracingContext = mock(TracingContext.class);
+    doNothing().when(tracingContext).setRetryCount(nullable(int.class));
+    doReturn("").when(httpOperation).getStorageErrorMessage();
+    doReturn("").when(httpOperation).getStorageErrorCode();
+    doReturn("HEAD").when(httpOperation).getMethod();
+    doReturn("").when(httpOperation).getMaskedUrl();
+    doReturn("").when(httpOperation).getRequestId();
+    doReturn(EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage()).when(httpOperation).getStorageErrorMessage();
+    doReturn(tracingContext).when(abfsRestOperation).createNewTracingContext(any());
 
     try {
       // Operation will fail with CT first and then 503 thereafter.
       abfsRestOperation.execute(tracingContext);
     } catch(AbfsRestOperationException ex) {
-      Assertions.assertThat(ex.getStatusCode())
+      assertThat(ex.getStatusCode())
           .describedAs("Status Code must be HTTP_UNAVAILABLE(503)")
           .isEqualTo(HTTP_UNAVAILABLE);
     }
@@ -245,36 +251,36 @@ public class TestAbfsRestOperationMockFailures {
     // One for retry count 0
     // One for retry count 1 after failing with CT
     // One for retry count 2 after failing with 503
-    Mockito.verify(httpOperation, times(3)).processResponse(
+    verify(httpOperation, times(3)).processResponse(
         nullable(byte[].class), nullable(int.class), nullable(int.class));
 
     // Primary Request Failed with CT. Static Retry Policy should be used.
-    Mockito.verify(abfsClient, Mockito.times(1))
+    verify(abfsClient, times(1))
         .getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
-    Mockito.verify(staticRetryPolicy, Mockito.times(1))
+    verify(staticRetryPolicy, times(1))
         .shouldRetry(0, -1);
-    Mockito.verify(staticRetryPolicy, Mockito.times(1))
+    verify(staticRetryPolicy, times(1))
         .getRetryInterval(1);
-    Mockito.verify(tracingContext, Mockito.times(1))
+    verify(tracingContext, times(1))
         .constructHeader(httpOperation, CONNECTION_TIMEOUT_ABBREVIATION, STATIC_RETRY_POLICY_ABBREVIATION);
 
     // Assert that exponential Retry Policy was used during second and third Iteration.
     // Iteration 2 and 3 failed with 503 and should retry was called with retry count 1 and 2
     // Before iteration 3 sleep will be computed using exponential retry policy and retry count 2
     // Should retry with retry count 2 will return false and no further requests will be made.
-    Mockito.verify(abfsClient, Mockito.times(2))
+    verify(abfsClient, times(2))
         .getRetryPolicy(EGRESS_LIMIT_BREACH_ABBREVIATION);
-    Mockito.verify(exponentialRetryPolicy, Mockito.times(1))
+    verify(exponentialRetryPolicy, times(1))
         .shouldRetry(1, HTTP_UNAVAILABLE);
-    Mockito.verify(exponentialRetryPolicy, Mockito.times(1))
+    verify(exponentialRetryPolicy, times(1))
         .shouldRetry(2, HTTP_UNAVAILABLE);
-    Mockito.verify(exponentialRetryPolicy, Mockito.times(1))
+    verify(exponentialRetryPolicy, times(1))
         .getRetryInterval(2);
-    Mockito.verify(tracingContext, Mockito.times(1))
+    verify(tracingContext, times(1))
         .constructHeader(httpOperation, EGRESS_LIMIT_BREACH_ABBREVIATION, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
 
     // Assert that intercept.updateMetrics was called 2 times. Both the retried request fails with EGR.
-    Mockito.verify(intercept, Mockito.times(2))
+    verify(intercept, times(2))
         .updateMetrics(nullable(AbfsRestOperationType.class), nullable(
             AbfsHttpOperation.class));
   }
@@ -284,29 +290,29 @@ public class TestAbfsRestOperationMockFailures {
                                                  String keyExpected,
                                                  int numOfTimesCSTMetricsUpdated) throws Exception {
 
-    AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
-    ExponentialRetryPolicy exponentialRetryPolicy = Mockito.mock(
+    AbfsClient abfsClient = mock(AbfsClient.class);
+    ExponentialRetryPolicy exponentialRetryPolicy = mock(
         ExponentialRetryPolicy.class);
-    StaticRetryPolicy staticRetryPolicy = Mockito.mock(StaticRetryPolicy.class);
-    AbfsThrottlingIntercept intercept = Mockito.mock(
+    StaticRetryPolicy staticRetryPolicy = mock(StaticRetryPolicy.class);
+    AbfsThrottlingIntercept intercept = mock(
         AbfsThrottlingIntercept.class);
-    addGeneralMockBehaviourToAbfsClient(abfsClient, exponentialRetryPolicy, staticRetryPolicy, intercept, Mockito.mock(
+    addGeneralMockBehaviourToAbfsClient(abfsClient, exponentialRetryPolicy, staticRetryPolicy, intercept, mock(
         ListResponseData.class));
 
     // Create a readfile operation that will fail
-    AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
+    AbfsRestOperation abfsRestOperation = spy(new AbfsRestOperation(
         AbfsRestOperationType.ReadFile,
         abfsClient,
         "PUT",
         null,
         new ArrayList<>(),
-        Mockito.mock(AbfsConfiguration.class)
+        mock(AbfsConfiguration.class)
     ));
 
-    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
+    AbfsHttpOperation httpOperation = mock(AbfsHttpOperation.class);
     addGeneralMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
 
-    Mockito.doNothing()
+    doNothing()
         .doNothing()
         .when(httpOperation)
         .processResponse(nullable(byte[].class), nullable(int.class),
@@ -314,7 +320,7 @@ public class TestAbfsRestOperationMockFailures {
 
     int[] statusCount = new int[1];
     statusCount[0] = 0;
-    Mockito.doAnswer(answer -> {
+    doAnswer(answer -> {
       if (statusCount[0] <= 10) {
         statusCount[0]++;
         return status;
@@ -322,19 +328,19 @@ public class TestAbfsRestOperationMockFailures {
       return HTTP_OK;
     }).when(httpOperation).getStatusCode();
 
-    Mockito.doReturn(serverErrorMessage)
+    doReturn(serverErrorMessage)
         .when(httpOperation)
         .getStorageErrorMessage();
 
-    TracingContext tracingContext = Mockito.mock(TracingContext.class);
-    Mockito.doNothing().when(tracingContext).setRetryCount(nullable(int.class));
-    Mockito.doReturn(tracingContext).when(abfsRestOperation).createNewTracingContext(any());
+    TracingContext tracingContext = mock(TracingContext.class);
+    doNothing().when(tracingContext).setRetryCount(nullable(int.class));
+    doReturn(tracingContext).when(abfsRestOperation).createNewTracingContext(any());
 
     int[] count = new int[1];
     count[0] = 0;
-    Mockito.doAnswer(invocationOnMock -> {
+    doAnswer(invocationOnMock -> {
       if (count[0] == 1) {
-        Assertions.assertThat((String) invocationOnMock.getArgument(1))
+        assertThat((String) invocationOnMock.getArgument(1))
             .isEqualTo(keyExpected);
       }
       count[0]++;
@@ -342,9 +348,9 @@ public class TestAbfsRestOperationMockFailures {
     }).when(tracingContext).constructHeader(any(), any(), any());
 
     abfsRestOperation.execute(tracingContext);
-    Assertions.assertThat(count[0]).isEqualTo(2);
+    assertThat(count[0]).isEqualTo(2);
 
-    Mockito.verify(intercept, Mockito.times(numOfTimesCSTMetricsUpdated)).updateMetrics(any(), any());
+    verify(intercept, times(numOfTimesCSTMetricsUpdated)).updateMetrics(any(), any());
 
   }
 
@@ -352,28 +358,28 @@ public class TestAbfsRestOperationMockFailures {
                                                   String[] abbreviationsExpected,
                                                   int len,
                                                   int numOfCTExceptions) throws Exception {
-    AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
-    ExponentialRetryPolicy exponentialRetryPolicy = Mockito.mock(
+    AbfsClient abfsClient = mock(AbfsClient.class);
+    ExponentialRetryPolicy exponentialRetryPolicy = mock(
         ExponentialRetryPolicy.class);
-    StaticRetryPolicy staticRetryPolicy = Mockito.mock(StaticRetryPolicy.class);
-    AbfsThrottlingIntercept intercept = Mockito.mock(
+    StaticRetryPolicy staticRetryPolicy = mock(StaticRetryPolicy.class);
+    AbfsThrottlingIntercept intercept = mock(
         AbfsThrottlingIntercept.class);
-    addGeneralMockBehaviourToAbfsClient(abfsClient, exponentialRetryPolicy, staticRetryPolicy, intercept, Mockito.mock(
+    addGeneralMockBehaviourToAbfsClient(abfsClient, exponentialRetryPolicy, staticRetryPolicy, intercept, mock(
         ListResponseData.class));
 
-    AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
+    AbfsRestOperation abfsRestOperation = spy(new AbfsRestOperation(
         AbfsRestOperationType.ReadFile,
         abfsClient,
         "PUT",
         null,
         new ArrayList<>(),
-        Mockito.mock(AbfsConfiguration.class)
+        mock(AbfsConfiguration.class)
     ));
 
-    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
+    AbfsHttpOperation httpOperation = mock(AbfsHttpOperation.class);
     addGeneralMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
 
-    Stubber stubber = Mockito.doThrow(exceptions[0]);
+    Stubber stubber = doThrow(exceptions[0]);
     for (int iteration = 1; iteration < len; iteration++) {
       stubber.doThrow(exceptions[iteration]);
     }
@@ -383,17 +389,17 @@ public class TestAbfsRestOperationMockFailures {
         .processResponse(nullable(byte[].class), nullable(int.class),
             nullable(int.class));
 
-    Mockito.doReturn(HTTP_OK).when(httpOperation).getStatusCode();
+    doReturn(HTTP_OK).when(httpOperation).getStatusCode();
 
-    TracingContext tracingContext = Mockito.mock(TracingContext.class);
-    Mockito.doNothing().when(tracingContext).setRetryCount(nullable(int.class));
-    Mockito.doReturn(tracingContext).when(abfsRestOperation).createNewTracingContext(any());
+    TracingContext tracingContext = mock(TracingContext.class);
+    doNothing().when(tracingContext).setRetryCount(nullable(int.class));
+    doReturn(tracingContext).when(abfsRestOperation).createNewTracingContext(any());
 
     int[] count = new int[1];
     count[0] = 0;
-    Mockito.doAnswer(invocationOnMock -> {
+    doAnswer(invocationOnMock -> {
       if (count[0] > 0 && count[0] <= len) {
-        Assertions.assertThat((String) invocationOnMock.getArgument(1))
+        assertThat((String) invocationOnMock.getArgument(1))
             .isEqualTo(abbreviationsExpected[count[0] - 1]);
       }
       count[0]++;
@@ -401,7 +407,7 @@ public class TestAbfsRestOperationMockFailures {
     }).when(tracingContext).constructHeader(any(), any(), any());
 
     abfsRestOperation.execute(tracingContext);
-    Assertions.assertThat(count[0]).isEqualTo(len + 1);
+    assertThat(count[0]).isEqualTo(len + 1);
 
     /**
      * Assert that getRetryPolicy was called with
@@ -409,7 +415,7 @@ public class TestAbfsRestOperationMockFailures {
      * For every failed request getRetryPolicy will be called three times
      * It will be called with failureReason CT for every request failing with CT
      */
-    Mockito.verify(abfsClient, Mockito.times(
+    verify(abfsClient, times(
         numOfCTExceptions))
         .getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
   }

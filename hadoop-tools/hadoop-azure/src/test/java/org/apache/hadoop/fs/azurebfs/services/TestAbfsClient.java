@@ -22,9 +22,7 @@ import java.net.URI;
 import java.net.URL;
 import java.util.Map;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -38,7 +36,11 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsClient.ABFS_CLIENT_TIMER_THREAD_NAME;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 /**
  * Unit test cases for the AbfsClient class.
@@ -59,7 +61,7 @@ public class TestAbfsClient {
         AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, ACCOUNT_NAME);
         abfsConfiguration.unset(FS_AZURE_METRIC_FORMAT);
 
-        AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
+        AbfsCounters abfsCounters = spy(new AbfsCountersImpl(new URI("abcd")));
         AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters).build();
 
         // Get an instance of AbfsClient.
@@ -70,12 +72,12 @@ public class TestAbfsClient {
                 null,
                 abfsClientContext);
 
-        Assertions.assertThat(client.getTimer())
+        assertThat(client.getTimer())
                 .describedAs("Timer should not be initialized")
                 .isNull();
 
         // Check if a thread with the name "abfs-timer-client" exists
-        Assertions.assertThat(isThreadRunning(ABFS_CLIENT_TIMER_THREAD_NAME))
+        assertThat(isThreadRunning(ABFS_CLIENT_TIMER_THREAD_NAME))
                 .describedAs("Expected thread 'abfs-timer-client' not found")
                 .isEqualTo(false);
         client.close();
@@ -95,7 +97,7 @@ public class TestAbfsClient {
         configuration.set(FS_AZURE_METRIC_ACCOUNT_KEY, Base64.encode(ACCOUNT_KEY.getBytes()));
         AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, ACCOUNT_NAME);
 
-        AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
+        AbfsCounters abfsCounters = spy(new AbfsCountersImpl(new URI("abcd")));
         AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters).build();
 
         // Get an instance of AbfsClient.
@@ -106,19 +108,19 @@ public class TestAbfsClient {
                 null,
                 abfsClientContext);
 
-        Assertions.assertThat(client.getTimer())
+        assertThat(client.getTimer())
                 .describedAs("Timer should be initialized")
                 .isNotNull();
 
         // Check if a thread with the name "abfs-timer-client" exists
-        Assertions.assertThat(isThreadRunning(ABFS_CLIENT_TIMER_THREAD_NAME))
+        assertThat(isThreadRunning(ABFS_CLIENT_TIMER_THREAD_NAME))
                 .describedAs("Expected thread 'abfs-timer-client' not found")
                 .isEqualTo(true);
         client.close();
 
         // Check if the thread is removed after closing the client
         Thread.sleep(SLEEP_DURATION_MS);
-        Assertions.assertThat(isThreadRunning(ABFS_CLIENT_TIMER_THREAD_NAME))
+        assertThat(isThreadRunning(ABFS_CLIENT_TIMER_THREAD_NAME))
                 .describedAs("Unexpected thread 'abfs-timer-client' found")
                 .isEqualTo(false);
     }
@@ -154,10 +156,10 @@ public class TestAbfsClient {
   public static void mockAbfsOperationCreation(final AbfsClient abfsClient,
       final MockIntercept mockIntercept, int failedCall) throws Exception {
     int[] flag = new int[1];
-    Mockito.doAnswer(answer -> {
+    doAnswer(answer -> {
           if (flag[0] == failedCall) {
             flag[0] += 1;
-            AbfsRestOperation op = Mockito.spy(
+            AbfsRestOperation op = spy(
                 new AbfsRestOperation(
                     answer.getArgument(0),
                     abfsClient,
@@ -166,12 +168,12 @@ public class TestAbfsClient {
                     answer.getArgument(3),
                     abfsClient.getAbfsConfiguration()
                 ));
-            Mockito.doAnswer((answer1) -> {
+            doAnswer((answer1) -> {
                   mockIntercept.answer(op, answer1);
                   return null;
                 }).when(op)
                 .execute(any());
-            Mockito.doReturn(true).when(op).isARetriedRequest();
+            doReturn(true).when(op).isARetriedRequest();
             return op;
           }
           flag[0] += 1;

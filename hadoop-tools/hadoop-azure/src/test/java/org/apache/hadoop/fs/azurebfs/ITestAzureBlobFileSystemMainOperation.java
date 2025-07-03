@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs;
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
-
 import org.junit.jupiter.api.Disabled;
 
 /**
