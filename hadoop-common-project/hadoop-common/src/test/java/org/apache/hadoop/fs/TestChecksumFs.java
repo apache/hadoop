@@ -21,9 +21,9 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 import java.util.EnumSet;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -40,7 +40,7 @@ public class TestChecksumFs extends HadoopTestBase {
   private Path testRootDirPath;
   private FileContext fc;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = getTestConfiguration();
     fc = FileContext.getFileContext(conf);
@@ -49,7 +49,7 @@ public class TestChecksumFs extends HadoopTestBase {
     mkdirs(testRootDirPath);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (fc != null) {
       fc.delete(testRootDirPath, true);
@@ -101,11 +101,11 @@ public class TestChecksumFs extends HadoopTestBase {
 
     // ensure file + checksum are moved
     createTestFile(fs, srcPath, 1);
-    assertTrue("Checksum file doesn't exist for source file - " + srcPath,
-        fc.util().exists(fs.getChecksumFile(srcPath)));
+    assertTrue(fc.util().exists(fs.getChecksumFile(srcPath)),
+        "Checksum file doesn't exist for source file - " + srcPath);
     fs.rename(srcPath, dstPath, renameOpt);
-    assertTrue("Checksum file doesn't exist for dest file - " + srcPath,
-        fc.util().exists(fs.getChecksumFile(dstPath)));
+    assertTrue(fc.util().exists(fs.getChecksumFile(dstPath)),
+        "Checksum file doesn't exist for dest file - " + srcPath);
     try (FSDataInputStream is = fs.open(dstPath)) {
       assertEquals(1, is.readInt());
     }

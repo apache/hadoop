@@ -480,6 +480,9 @@ public class TestObserverNode {
     dfs.getClient().getLocatedFileInfo(testPath.toString(), false);
     assertSentTo(0);
 
+    dfs.getClient().batchedListPaths(new String[]{"/"}, new byte[0], true);
+    assertSentTo(0);
+
     Mockito.reset(bmSpy);
   }
 

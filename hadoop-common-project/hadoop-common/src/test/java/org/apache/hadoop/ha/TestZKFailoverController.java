@@ -17,12 +17,19 @@
  */
 package org.apache.hadoop.ha;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
 
 import java.net.InetSocketAddress;
 import java.security.NoSuchAlgorithmException;
 
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -41,23 +48,17 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.slf4j.event.Level;
 
+@Timeout(180)
 public class TestZKFailoverController extends ClientBaseWithFixes {
   private Configuration conf;
   private MiniZKFCCluster cluster;
-
-  /**
-   * Set the timeout for every test
-   */
-  @Rule
-  public Timeout testTimeout = new Timeout(3, TimeUnit.MINUTES);
 
   // Set up ZK digest-based credentials for the purposes of the tests,
   // to make sure all of our functionality works with auth and ACLs
@@ -81,7 +82,7 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     GenericTestUtils.setLogLevel(ActiveStandbyElector.LOG, Level.TRACE);
   }
   
-  @Before
+  @BeforeEach
   public void setupConfAndServices() {
     conf = new Configuration();
     conf.set(ZKFailoverController.ZK_ACL_KEY, TEST_ACL);
@@ -91,7 +92,7 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     this.cluster = new MiniZKFCCluster(conf, getServer(serverFactory));
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     if (cluster != null) {
       try {
@@ -216,8 +217,8 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
   @Test
   public void testWontRunWhenAutoFailoverDisabled() throws Exception {
     DummyHAService svc = cluster.getService(1);
-    svc = Mockito.spy(svc);
-    Mockito.doReturn(false).when(svc).isAutoFailoverEnabled();
+    svc = spy(svc);
+    doReturn(false).when(svc).isAutoFailoverEnabled();
     
     assertEquals(ZKFailoverController.ERR_CODE_AUTO_FAILOVER_NOT_ENABLED,
         runFC(svc, "-formatZK"));
@@ -253,8 +254,8 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
    */
   @Test
   public void testFencingMustBeConfigured() throws Exception {
-    DummyHAService svc = Mockito.spy(cluster.getService(0));
-    Mockito.doThrow(new BadFencingConfigurationException("no fencing"))
+    DummyHAService svc = spy(cluster.getService(0));
+    doThrow(new BadFencingConfigurationException("no fencing"))
         .when(svc).checkFencingConfigured();
     // Format the base dir, should succeed
     assertEquals(0, runFC(svc, "-formatZK"));
@@ -289,7 +290,7 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     // Should fail back to svc0 at this point
     cluster.waitForHAState(0, HAServiceState.ACTIVE);
     // and fence svc1
-    Mockito.verify(svc1.fencer).fence(Mockito.same(svc1));
+    verify(svc1.fencer).fence(same(svc1));
   }
 
   /**
@@ -394,7 +395,7 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     cluster.waitForActiveLockHolder(null);
 
 
-    Mockito.verify(svc1.proxy, Mockito.timeout(2000).atLeastOnce())
+    verify(svc1.proxy, timeout(2000).atLeastOnce())
       .transitionToActive(Mockito.<StateChangeRequestInfo>any());
 
     cluster.waitForHAState(0, HAServiceState.INITIALIZING);
@@ -476,8 +477,8 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     long st = Time.now();
     proxy.cedeActive(3000);
     long et = Time.now();
-    assertTrue("RPC to cedeActive took " + (et - st) + " ms",
-        et - st < 1000);
+    assertTrue(et - st < 1000,
+        "RPC to cedeActive took " + (et - st) + " ms");
 
     // Should be in "INIT" state since it's not in the election
     // at this point.
@@ -488,9 +489,9 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     // since the other node in the cluster would have taken ACTIVE.
     cluster.waitForElectorState(0, ActiveStandbyElector.State.STANDBY);
     long et2 = Time.now();
-    assertTrue("Should take ~3 seconds to rejoin. Only took " + (et2 - et) +
-        "ms before rejoining.",
-        et2 - et > 2800);
+    assertTrue(et2 - et > 2800,
+        "Should take ~3 seconds to rejoin. Only took " + (et2 - et) +
+        "ms before rejoining.");
   }
 
   @Test

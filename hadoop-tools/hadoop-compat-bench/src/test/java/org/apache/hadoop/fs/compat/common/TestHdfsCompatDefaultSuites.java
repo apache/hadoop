@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.fs.compat.common;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.apache.hadoop.fs.compat.HdfsCompatTool;
 import org.apache.hadoop.fs.compat.hdfs.HdfsCompatMiniCluster;
 import org.apache.hadoop.fs.compat.hdfs.HdfsCompatTestCommand;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestHdfsCompatDefaultSuites {
   @Test
@@ -35,7 +36,7 @@ public class TestHdfsCompatDefaultSuites {
       HdfsCompatCommand cmd = new HdfsCompatTestCommand(uri, "ALL", conf);
       cmd.initialize();
       HdfsCompatReport report = cmd.apply();
-      Assert.assertEquals(0, report.getFailedCase().size());
+      assertEquals(0, report.getFailedCase().size());
       new HdfsCompatTool(conf).printReport(report, System.out);
     } finally {
       cluster.shutdown();
@@ -52,7 +53,7 @@ public class TestHdfsCompatDefaultSuites {
       HdfsCompatCommand cmd = new HdfsCompatTestCommand(uri, "TPCDS", conf);
       cmd.initialize();
       HdfsCompatReport report = cmd.apply();
-      Assert.assertEquals(0, report.getFailedCase().size());
+      assertEquals(0, report.getFailedCase().size());
       new HdfsCompatTool(conf).printReport(report, System.out);
     } finally {
       cluster.shutdown();

@@ -21,11 +21,10 @@ package org.apache.hadoop.fs.s3a;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.apache.hadoop.test.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,8 +38,10 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.isCreatePerformanceEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assume.*;
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  *  Tests a live S3 system. If your keys and bucket aren't specified, all tests
@@ -53,8 +54,8 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
 
   private Path basePath;
 
-  @Rule
-  public TestName methodName = new TestName();
+  @RegisterExtension
+  private TestName methodName = new TestName();
 
   private void nameThread() {
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
@@ -65,7 +66,7 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
     return S3ATestConstants.S3A_TEST_TIMEOUT;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     nameThread();
     Configuration conf = setPerformanceFlags(
@@ -73,7 +74,7 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
         "");
 
     fs = S3ATestUtils.createTestFileSystem(conf);
-    assumeNotNull(fs);
+    assumeTrue(fs != null);
     basePath = fs.makeQualified(
         S3ATestUtils.createTestPath(new Path("s3afilesystemcontract")));
   }
@@ -100,14 +101,14 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
     Path dst = path("testRenameDirectoryAsExistingNew/newdir");
     fs.mkdirs(dst);
     rename(src, dst, true, false, true);
-    assertFalse("Nested file1 exists",
-        fs.exists(path(src + "/file1")));
-    assertFalse("Nested file2 exists",
-        fs.exists(path(src + "/subdir/file2")));
-    assertTrue("Renamed nested file1 exists",
-        fs.exists(path(dst + "/file1")));
-    assertTrue("Renamed nested exists",
-        fs.exists(path(dst + "/subdir/file2")));
+    assertFalse(fs.exists(path(src + "/file1")),
+        "Nested file1 exists");
+    assertFalse(fs.exists(path(src + "/subdir/file2")),
+        "Nested file2 exists");
+    assertTrue(fs.exists(path(dst + "/file1")),
+        "Renamed nested file1 exists");
+    assertTrue(fs.exists(path(dst + "/subdir/file2")),
+        "Renamed nested exists");
   }
 
   @Test
@@ -151,7 +152,7 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
     boolean createPerformance = isCreatePerformanceEnabled(fs);
     try {
       super.testOverwrite();
-      Assertions.assertThat(createPerformance)
+      assertThat(createPerformance)
           .describedAs("create performance enabled")
           .isFalse();
     } catch (AssertionError e) {

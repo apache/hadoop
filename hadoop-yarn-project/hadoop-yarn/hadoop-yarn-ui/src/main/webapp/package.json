@@ -60,6 +60,7 @@
     "em-table": "0.12.0"
   },
   "resolutions": {
-    "graceful-fs": "^4.2.4"
+    "graceful-fs": "^4.2.4",
+    "node-gyp": "5.1.1"
   }
 }

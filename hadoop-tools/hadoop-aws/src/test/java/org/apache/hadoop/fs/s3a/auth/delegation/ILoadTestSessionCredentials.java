@@ -29,7 +29,8 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,14 +117,14 @@ public class ILoadTestSessionCredentials extends S3AScaleTestBase {
     return DELEGATION_TOKEN_SESSION_BINDING;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
     assumeSessionTestsEnabled(getConfiguration());
     S3AFileSystem fileSystem = getFileSystem();
-    assertNotNull(
-        "No delegation tokens in FS",
-        fileSystem.getCanonicalServiceName());
+    assertNotNull(fileSystem.getCanonicalServiceName(),
+        "No delegation tokens in FS");
     dataDir = GenericTestUtils.getTestDir("kerberos");
     dataDir.mkdirs();
   }

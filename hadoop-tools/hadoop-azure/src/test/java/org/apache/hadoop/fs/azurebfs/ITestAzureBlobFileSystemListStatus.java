@@ -24,7 +24,9 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -49,10 +51,12 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
 import org.apache.hadoop.fs.azurebfs.services.ListResponseData;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
+import org.apache.hadoop.fs.azurebfs.services.VersionedFileStatus;
 import org.apache.hadoop.fs.azurebfs.utils.DirectoryStateHelper;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
@@ -60,6 +64,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
@@ -90,6 +95,8 @@ public class ITestAzureBlobFileSystemListStatus extends
     AbstractAbfsIntegrationTest {
   private static final int TEST_FILES_NUMBER = 6000;
   public static final String TEST_CONTINUATION_TOKEN = "continuation";
+  private static final int TOTAL_NUMBER_OF_PATHS = 11;
+  private static final int NUMBER_OF_UNIQUE_PATHS = 7;
 
   public ITestAzureBlobFileSystemListStatus() throws Exception {
     super();
@@ -197,7 +204,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
     Mockito.doReturn(spiedClient).when(spiedStore).getClient();
 
-    Mockito.doThrow(new SocketException(CONNECTION_RESET_MESSAGE)).when(spiedClient).filterDuplicateEntriesAndRenamePendingFiles(any(), any());
+    Mockito.doThrow(new SocketException(CONNECTION_RESET_MESSAGE)).when(spiedClient).filterRenamePendingFiles(any(), any());
     List<FileStatus> fileStatuses = new ArrayList<>();
     AbfsDriverException ex = intercept(AbfsDriverException.class,
       () -> {
@@ -369,7 +376,134 @@ public class ITestAzureBlobFileSystemListStatus extends
         + " throw IllegalArgumentException", exceptionThrown);
   }
 
+  @Test
+  public void testEmptyListingInSubsequentCall() throws IOException {
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, true, EMPTY_STRING,
+        true, 1, 0);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, true, EMPTY_STRING,
+        false, 1, 0);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, true, TEST_CONTINUATION_TOKEN,
+        true, 1, 0);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, true, TEST_CONTINUATION_TOKEN,
+        false, 1, 0);
 
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, EMPTY_STRING,
+        true, 2, 0);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, EMPTY_STRING,
+        false, 2, 1);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN + 1, true, TEST_CONTINUATION_TOKEN + 2,
+        true, 3, 0);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN + 1, true, TEST_CONTINUATION_TOKEN + 2,
+        false, 3, 1);
+
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, EMPTY_STRING,
+        true, 1, 1);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, EMPTY_STRING,
+        false, 1, 1);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, TEST_CONTINUATION_TOKEN,
+        true, 1, 1);
+    testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, TEST_CONTINUATION_TOKEN,
+        false, 1, 1);
+
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, EMPTY_STRING,
+        true, 2, 1);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, EMPTY_STRING,
+        false, 2, 2);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN + 1, false, TEST_CONTINUATION_TOKEN + 2,
+        true, 3, 1);
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN + 1, false, TEST_CONTINUATION_TOKEN + 2,
+        false, 3, 2);
+  }
+
+  private void testEmptyListingInSubsequentCallInternal(String firstCT,
+      boolean isfirstEmpty, String secondCT, boolean isSecondEmpty,
+      int expectedInvocations, int expectedSize) throws IOException {
+    assumeBlobServiceType();
+    AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
+    AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
+    spiedStore.getAbfsConfiguration().setListMaxResults(1);
+    AbfsBlobClient spiedClient = Mockito.spy(spiedStore.getClientHandler().getBlobClient());
+    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
+    Mockito.doReturn(spiedClient).when(spiedStore).getClient();
+    spiedFs.mkdirs(new Path("/testPath"));
+    VersionedFileStatus status1 = new VersionedFileStatus(
+        "owner", "group", null, false, 0, false, 0, 0, 0,
+        new Path("/testPath/file1"), "version", "encryptionContext");
+    VersionedFileStatus status2 = new VersionedFileStatus(
+        "owner", "group", null, false, 0, false, 0, 0, 0,
+        new Path("/testPath/file2"), "version", "encryptionContext");
+
+    List<VersionedFileStatus> mockedList1 = new ArrayList<>();
+    mockedList1.add(status1);
+    List<VersionedFileStatus> mockedList2 = new ArrayList<>();
+    mockedList2.add(status2);
+
+    ListResponseData listResponseData1 = new ListResponseData();
+    listResponseData1.setContinuationToken(firstCT);
+    listResponseData1.setFileStatusList(isfirstEmpty ? new ArrayList<>() : mockedList1);
+    listResponseData1.setOp(Mockito.mock(AbfsRestOperation.class));
+
+    ListResponseData listResponseData2 = new ListResponseData();
+    listResponseData2.setContinuationToken(secondCT);
+    listResponseData2.setFileStatusList(isSecondEmpty ? new ArrayList<>() : mockedList2);
+    listResponseData2.setOp(Mockito.mock(AbfsRestOperation.class));
+
+    ListResponseData listResponseData3 = new ListResponseData();
+    listResponseData3.setContinuationToken(EMPTY_STRING);
+    listResponseData3.setFileStatusList(new ArrayList<>());
+    listResponseData3.setOp(Mockito.mock(AbfsRestOperation.class));
+
+    final int[] itr = new int[1];
+    final String[] continuationTokenUsed = new String[3];
+
+    Mockito.doAnswer(invocationOnMock -> {
+      if (itr[0] == 0) {
+        itr[0]++;
+        continuationTokenUsed[0] = invocationOnMock.getArgument(3);
+        return listResponseData1;
+      } else if (itr[0] == 1) {
+        itr[0]++;
+        continuationTokenUsed[1] = invocationOnMock.getArgument(3);
+        return listResponseData2;
+      }
+      continuationTokenUsed[2] = invocationOnMock.getArgument(3);
+      return listResponseData3;
+    }).when(spiedClient).listPath(eq("/testPath"), eq(false), eq(1),
+        any(), any(TracingContext.class), any());
+
+    FileStatus[] list = spiedFs.listStatus(new Path("/testPath"));
+
+    Mockito.verify(spiedClient, times(expectedInvocations))
+        .listPath(eq("/testPath"), eq(false), eq(1),
+        any(), any(TracingContext.class), any());
+    Mockito.verify(spiedClient, times(1))
+        .postListProcessing(eq("/testPath"), any(), any(), any());
+    Assertions.assertThat(list).hasSize(expectedSize);
+
+    if (expectedSize == 0) {
+      Mockito.verify(spiedClient, times(1))
+          .getPathStatus(eq("/testPath"), any(), eq(null), eq(false));
+    } else {
+      Mockito.verify(spiedClient, times(0))
+          .getPathStatus(eq("/testPath"), any(), eq(null), eq(false));
+    }
+
+    Assertions.assertThat(continuationTokenUsed[0])
+        .describedAs("First continuation token used is not as expected")
+        .isNull();
+
+    if (expectedInvocations > 1) {
+      Assertions.assertThat(continuationTokenUsed[1])
+          .describedAs("Second continuation token used is not as expected")
+          .isEqualTo(firstCT);
+    }
+
+    if (expectedInvocations > 2) {
+      Assertions.assertThat(continuationTokenUsed[2])
+          .describedAs("Third continuation token used is not as expected")
+          .isEqualTo(secondCT);
+    }
+  }
 
   /**
    * Test to verify that listStatus returns the correct file status all types
@@ -530,6 +664,87 @@ public class ITestAzureBlobFileSystemListStatus extends
         .describedAs("Continuation Token Should Not be null").isNotNull();
     Assertions.assertThat(listResponseData.getFileStatusList())
         .describedAs("Listing Size Not as expected").hasSize(1);
+  }
+
+  /**
+   * Test to verify that listStatus returns the correct file status
+   * after removing duplicates across multiple iterations of list blobs.
+   * Also verifies that in case of non-empty explicit dir,
+   * entry corresponding to marker blob is returned.
+   * @throws Exception if test fails.
+   */
+  @Test
+  public void testDuplicateEntriesAcrossListBlobIterations() throws Exception {
+    AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    store.getAbfsConfiguration().setListMaxResults(1);
+    AbfsClient client = Mockito.spy(store.getClient());
+
+    Mockito.doReturn(store).when(fs).getAbfsStore();
+    Mockito.doReturn(client).when(store).getClient();
+
+    /*
+     * Following entries will be created inside the root path.
+     * 0. /A - implicit directory without any marker blob
+     * 1. /a - marker file for explicit directory
+     * 2. /a/file1 - normal file inside explicit directory
+     * 3. /b - normal file inside root
+     * 4. /c - marker file for explicit directory
+     * 5. /c.bak - marker file for explicit directory
+     * 6. /c.bak/file2 - normal file inside explicit directory
+     * 7. /c/file3 - normal file inside explicit directory
+     * 8. /d - implicit directory
+     * 9. /e - marker file for explicit directory
+     * 10. /e/file4 - normal file inside explicit directory
+     */
+    // Create Path 0
+    createAzCopyFolder(new Path("/A"));
+
+    // Create Path 1 and 2.
+    fs.create(new Path("/a/file1"));
+
+    // Create Path 3
+    fs.create(new Path("/b"));
+
+    // Create Path 4 and 7
+    fs.create(new Path("/c/file3"));
+
+    // Create Path 5 and 6
+    fs.create(new Path("/c.bak/file2"));
+
+    // Create Path 8
+    createAzCopyFolder(new Path("/d"));
+
+    // Create Path 9 and 10
+    fs.create(new Path("/e/file4"));
+
+    FileStatus[] fileStatuses = fs.listStatus(new Path(ROOT_PATH));
+
+    // Assert that client.listPath was called 11 times.
+    // This will assert server returned 11 entries in total.
+    Mockito.verify(client, Mockito.times(TOTAL_NUMBER_OF_PATHS))
+        .listPath(eq(ROOT_PATH), eq(false), eq(1), any(), any(), any());
+
+    // Assert that after duplicate removal, only 7 unique entries are returned.
+    Assertions.assertThat(fileStatuses.length)
+        .describedAs("List size is not expected").isEqualTo(NUMBER_OF_UNIQUE_PATHS);
+
+    // Assert that for duplicates, entry corresponding to marker blob is returned.
+    assertImplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(new Path("/A")));
+    assertExplicitDirectoryFileStatus(fileStatuses[1], fs.makeQualified(new Path("/a")));
+    assertFilePathFileStatus(fileStatuses[2], fs.makeQualified(new Path("/b")));
+    assertExplicitDirectoryFileStatus(fileStatuses[3], fs.makeQualified(new Path("/c")));
+    assertExplicitDirectoryFileStatus(fileStatuses[4], fs.makeQualified(new Path("/c.bak")));
+    assertImplicitDirectoryFileStatus(fileStatuses[5], fs.makeQualified(new Path("/d")));
+    assertExplicitDirectoryFileStatus(fileStatuses[6], fs.makeQualified(new Path("/e")));
+
+    // Assert that there are no duplicates in the returned file statuses.
+    Set<Path> uniquePaths = new HashSet<>();
+    for (FileStatus fileStatus : fileStatuses) {
+      Assertions.assertThat(uniquePaths.add(fileStatus.getPath()))
+          .describedAs("Duplicate Entries found")
+          .isTrue();
+    }
   }
 
   private void assertFilePathFileStatus(final FileStatus fileStatus,

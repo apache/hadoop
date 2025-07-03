@@ -22,28 +22,22 @@ import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.registry.conf.RegistryConfiguration;
 import org.apache.hadoop.registry.server.services.MicroZookeeperService;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 
 /**
  * Simple tests to look at the micro ZK service itself
  */
-public class TestMicroZookeeperService extends Assert {
+@Timeout(10)
+public class TestMicroZookeeperService extends Assertions {
 
   private MicroZookeeperService zookeeper;
 
-  @Rule
-  public final Timeout testTimeout = new Timeout(10000);
-  @Rule
-  public TestName methodName = new TestName();
-
-  @After
+  @AfterEach
   public void destroyZKServer() throws IOException {
 
     ServiceOperations.stop(zookeeper);

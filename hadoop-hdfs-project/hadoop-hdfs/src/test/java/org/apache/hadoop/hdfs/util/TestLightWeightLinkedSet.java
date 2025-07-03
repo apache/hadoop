@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -30,8 +30,9 @@ import java.util.Random;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.util.Time;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestLightWeightLinkedSet {
 
@@ -42,7 +43,7 @@ public class TestLightWeightLinkedSet {
   private LightWeightLinkedSet<Integer> set;
   private Random rand;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     float maxF = LightWeightLinkedSet.DEFAULT_MAX_LOAD_FACTOR;
     float minF = LightWeightLinkedSet.DEFAUT_MIN_LOAD_FACTOR;
@@ -372,7 +373,8 @@ public class TestLightWeightLinkedSet {
     LOG.info("Test capacity - DONE");
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testGetBookmarkReturnsBookmarkIterator() {
     LOG.info("Test getBookmark returns proper iterator");
     assertTrue(set.addAll(list));
@@ -389,7 +391,8 @@ public class TestLightWeightLinkedSet {
     assertEquals(bookmark2.next(), list.get(numAdvance));
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testBookmarkAdvancesOnRemoveOfSameElement() {
     LOG.info("Test that the bookmark advances if we remove its element.");
     assertTrue(set.add(list.get(0)));
@@ -403,7 +406,8 @@ public class TestLightWeightLinkedSet {
     assertEquals(it.next(), list.get(2));
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testBookmarkSetToHeadOnAddToEmpty() {
     LOG.info("Test bookmark is set after adding to previously empty set.");
     Iterator<Integer> it = set.getBookmark();
@@ -418,7 +422,8 @@ public class TestLightWeightLinkedSet {
     assertFalse(it.hasNext());
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testResetBookmarkPlacesBookmarkAtHead() {
     set.addAll(list);
     Iterator<Integer> it = set.getBookmark();

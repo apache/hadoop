@@ -13,7 +13,16 @@
  */
 package org.apache.hadoop.security.authentication.server;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -29,18 +38,17 @@ import org.apache.directory.server.core.annotations.ContextEntry;
 import org.apache.directory.server.core.annotations.CreateDS;
 import org.apache.directory.server.core.annotations.CreatePartition;
 import org.apache.directory.server.core.integ.AbstractLdapTestUnit;
-import org.apache.directory.server.core.integ.FrameworkRunner;
+import org.apache.directory.server.core.integ.ApacheDSTestExtension;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
  * This unit test verifies the functionality of LDAP authentication handler.
  */
-@RunWith(FrameworkRunner.class)
+@ExtendWith(ApacheDSTestExtension.class)
 @CreateLdapServer(
     transports =
       {
@@ -65,7 +73,7 @@ import org.mockito.Mockito;
 public class TestLdapAuthenticationHandler extends AbstractLdapTestUnit {
   private LdapAuthenticationHandler handler;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     handler = new LdapAuthenticationHandler();
     try {
@@ -84,76 +92,81 @@ public class TestLdapAuthenticationHandler extends AbstractLdapTestUnit {
     return p;
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60, unit = TimeUnit.SECONDS)
   public void testRequestWithoutAuthorization() throws Exception {
-    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    HttpServletResponse response = mock(HttpServletResponse.class);
 
-    Assert.assertNull(handler.authenticate(request, response));
-    Mockito.verify(response).setHeader(WWW_AUTHENTICATE, HttpConstants.BASIC);
-    Mockito.verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+    assertNull(handler.authenticate(request, response));
+    verify(response).setHeader(WWW_AUTHENTICATE, HttpConstants.BASIC);
+    verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60, unit = TimeUnit.SECONDS)
   public void testRequestWithInvalidAuthorization() throws Exception {
-    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    HttpServletResponse response = mock(HttpServletResponse.class);
 
     final Base64 base64 = new Base64(0);
     String credentials = "bjones:invalidpassword";
-    Mockito.when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
+    when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
         .thenReturn(base64.encodeToString(credentials.getBytes()));
-    Assert.assertNull(handler.authenticate(request, response));
-    Mockito.verify(response).setHeader(WWW_AUTHENTICATE, HttpConstants.BASIC);
-    Mockito.verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+    assertNull(handler.authenticate(request, response));
+    verify(response).setHeader(WWW_AUTHENTICATE, HttpConstants.BASIC);
+    verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60, unit = TimeUnit.SECONDS)
   public void testRequestWithIncompleteAuthorization() throws Exception {
-    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    HttpServletResponse response = mock(HttpServletResponse.class);
 
-    Mockito.when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
+    when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
         .thenReturn(HttpConstants.BASIC);
-    Assert.assertNull(handler.authenticate(request, response));
+    assertNull(handler.authenticate(request, response));
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60, unit = TimeUnit.SECONDS)
   public void testRequestWithAuthorization() throws Exception {
-    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    HttpServletResponse response = mock(HttpServletResponse.class);
 
     final Base64 base64 = new Base64(0);
     String credentials = base64.encodeToString("bjones:p@ssw0rd".getBytes());
     String authHeader = HttpConstants.BASIC + " " + credentials;
-    Mockito.when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
+    when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
         .thenReturn(authHeader);
     AuthenticationToken token = handler.authenticate(request, response);
-    Assert.assertNotNull(token);
-    Mockito.verify(response).setStatus(HttpServletResponse.SC_OK);
-    Assert.assertEquals(TYPE, token.getType());
-    Assert.assertEquals("bjones", token.getUserName());
-    Assert.assertEquals("bjones", token.getName());
+    assertNotNull(token);
+    verify(response).setStatus(HttpServletResponse.SC_OK);
+    assertEquals(token.getType(), TYPE);
+    assertEquals(token.getUserName(), "bjones");
+    assertEquals(token.getName(), "bjones");
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60, unit = TimeUnit.SECONDS)
   public void testRequestWithWrongCredentials() throws Exception {
-    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    HttpServletResponse response = mock(HttpServletResponse.class);
 
     final Base64 base64 = new Base64(0);
     String credentials = base64.encodeToString("bjones:foo123".getBytes());
     String authHeader = HttpConstants.BASIC + " " + credentials;
-    Mockito.when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
+    when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
         .thenReturn(authHeader);
 
     try {
       handler.authenticate(request, response);
-      Assert.fail();
+      fail();
     } catch (AuthenticationException ex) {
       // Expected
     } catch (Exception ex) {
-      Assert.fail();
+      fail();
     }
   }
 }

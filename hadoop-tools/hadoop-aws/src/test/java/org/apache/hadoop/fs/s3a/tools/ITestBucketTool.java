@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.s3a.tools;
 import java.io.IOException;
 import java.net.UnknownHostException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,6 +102,7 @@ public class ITestBucketTool extends AbstractS3ATestBase {
 
   private S3AFileSystem fs;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();

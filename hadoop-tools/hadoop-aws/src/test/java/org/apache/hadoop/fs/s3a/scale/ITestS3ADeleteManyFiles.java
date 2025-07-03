@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.util.DurationInfo;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,7 +102,7 @@ public class ITestS3ADeleteManyFiles extends S3AScaleTestBase {
     long sourceSize = Arrays.stream(statuses)
         .mapToLong(FileStatus::getLen)
         .sum();
-    assertEquals("Source file Count", count, nSrcFiles);
+    assertEquals(count, nSrcFiles, "Source file Count");
     ContractTestUtils.NanoTimer renameTimer = new ContractTestUtils.NanoTimer();
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Rename %s to %s", srcDir, finalDir)) {

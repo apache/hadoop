@@ -152,7 +152,7 @@ public class RenameAtomicity {
             abfsClient, srcEtag, true,
             true, tracingContext);
 
-        blobRenameHandler.execute();
+        blobRenameHandler.execute(true);
       }
     } finally {
       deleteRenamePendingJson();

@@ -352,7 +352,7 @@ public final class AbfsClientTestUtil {
               Mockito.doAnswer(answer1 -> {
                 functionRaisingIOE.apply(blobRenameHandler);
                 return answer1.callRealMethod();
-              }).when(blobRenameHandler).execute();
+              }).when(blobRenameHandler).execute(Mockito.anyBoolean());
               return blobRenameHandler;
             })
             .when(blobClient)

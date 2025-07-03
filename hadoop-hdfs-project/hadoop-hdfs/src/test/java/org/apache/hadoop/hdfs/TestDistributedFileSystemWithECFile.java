@@ -28,20 +28,19 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Testing correctness of FileSystem.getFileBlockLocations and
@@ -66,10 +65,7 @@ public class TestDistributedFileSystemWithECFile {
     return StripedFileTestUtil.getDefaultECPolicy();
   }
 
-  @Rule
-  public final Timeout globalTimeout = new Timeout(60000 * 3);
-
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     ecPolicy = getEcPolicy();
     cellSize = ecPolicy.getCellSize();
@@ -92,7 +88,7 @@ public class TestDistributedFileSystemWithECFile {
         ecPolicy.getName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -108,7 +104,8 @@ public class TestDistributedFileSystemWithECFile {
     StripedFileTestUtil.verifyLength(fs, src, size);
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testListECFilesSmallerThanOneCell() throws Exception {
     createFile("/ec/smallcell", 1);
     final List<LocatedFileStatus> retVal = new ArrayList<>();
@@ -142,7 +139,8 @@ public class TestDistributedFileSystemWithECFile {
     assertTrue(blockLocation.getHosts().length == 1 + parityBlocks);
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testListECFilesSmallerThanOneStripe() throws Exception {
     int dataBlocksNum = dataBlocks;
     createFile("/ec/smallstripe", cellSize * dataBlocksNum);
@@ -173,7 +171,8 @@ public class TestDistributedFileSystemWithECFile {
     assertTrue(blockLocation.getLength() == dataBlocksNum * cellSize);
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testListECFilesMoreThanOneBlockGroup() throws Exception {
     createFile("/ec/group", blockGroupSize + 123);
     RemoteIterator<LocatedFileStatus> iter =
@@ -207,7 +206,8 @@ public class TestDistributedFileSystemWithECFile {
     assertTrue(lastBlock.getLength() == lastBlockSize);
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testReplayEditLogsForReplicatedFile() throws Exception {
     cluster.shutdown();
 

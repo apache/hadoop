@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -83,6 +84,7 @@ import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
@@ -125,6 +127,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.PLUS_ENC
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.UTF_8;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType.BLOB;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
@@ -150,6 +153,7 @@ public abstract class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
   public static final String ABFS_CLIENT_TIMER_THREAD_NAME = "abfs-timer-client";
+  public static final String FNS_BLOB_USER_AGENT_IDENTIFIER = "FNS";
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
@@ -163,6 +167,8 @@ public abstract class AbfsClient implements Closeable {
   private String clientProvidedEncryptionKey = null;
   private String clientProvidedEncryptionKeySHA = null;
   private final IdentityTransformerInterface identityTransformer;
+  private final String userName;
+  private String primaryUserGroup;
 
   private final String accountName;
   private final AuthType authType;
@@ -218,7 +224,6 @@ public abstract class AbfsClient implements Closeable {
       this.encryptionContextProvider = encryptionContextProvider;
       // Version update needed to support x-ms-encryption-context header
       // @link https://learn.microsoft.com/en-us/rest/api/storageservices/put-block?tabs=microsoft-entra-id}
-      xMsVersion = ApiVersion.AUG_03_2023; // will be default once server change deployed
       encryptionType = EncryptionType.ENCRYPTION_CONTEXT;
     } else if (abfsConfiguration.getEncodedClientProvidedEncryptionKey() != null) {
       clientProvidedEncryptionKey =
@@ -226,11 +231,6 @@ public abstract class AbfsClient implements Closeable {
       this.clientProvidedEncryptionKeySHA =
           abfsConfiguration.getEncodedClientProvidedEncryptionKeySHA();
       encryptionType = EncryptionType.GLOBAL_KEY;
-    }
-
-    // Version update needed to support x-ms-client-transaction-id header
-    if (abfsConfiguration.getIsClientTransactionIdEnabled()) {
-      xMsVersion = ApiVersion.NOV_04_2024;
     }
 
     String sslProviderName = null;
@@ -310,6 +310,22 @@ public abstract class AbfsClient implements Closeable {
       throw new IOException(e);
     }
     LOG.trace("IdentityTransformer init complete");
+
+    UserGroupInformation userGroupInformation = UserGroupInformation.getCurrentUser();
+    this.userName = userGroupInformation.getShortUserName();
+    LOG.trace("UGI init complete");
+    if (!abfsConfiguration.getSkipUserGroupMetadataDuringInitialization()) {
+      try {
+        this.primaryUserGroup = userGroupInformation.getPrimaryGroupName();
+      } catch (IOException ex) {
+        LOG.error("Failed to get primary group for {}, using user name as primary group name", userName);
+        this.primaryUserGroup = userName;
+      }
+    } else {
+      //Provide a default group name
+      this.primaryUserGroup = userName;
+    }
+    LOG.trace("primaryUserGroup is {}", this.primaryUserGroup);
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
@@ -528,6 +544,18 @@ public abstract class AbfsClient implements Closeable {
    */
   public abstract ListResponseData listPath(String relativePath, boolean recursive,
       int listMaxResults, String continuation, TracingContext tracingContext, URI uri) throws IOException;
+
+  /**
+   * Post-processing of the list operation.
+   * @param relativePath which is used to list the blobs.
+   * @param fileStatuses list of file statuses to be processed.
+   * @param tracingContext for tracing the server calls.
+   * @param uri to be used for the path conversion.
+   * @return list of file statuses to be returned.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
+  public abstract List<FileStatus> postListProcessing(String relativePath,
+      List<FileStatus> fileStatuses, TracingContext tracingContext, URI uri) throws AzureBlobFileSystemException;
 
   /**
    * Retrieves user-defined metadata on filesystem.
@@ -1293,6 +1321,14 @@ public abstract class AbfsClient implements Closeable {
     sb.append(FORWARD_SLASH);
     sb.append(abfsConfiguration.getClusterType());
 
+    // Add a unique identifier in FNS-Blob user agent string
+    if (!getIsNamespaceEnabled()
+        && abfsConfiguration.getFsConfiguredServiceType() == BLOB) {
+      sb.append(SEMICOLON)
+          .append(SINGLE_WHITE_SPACE)
+          .append(FNS_BLOB_USER_AGENT_IDENTIFIER);
+    }
+
     sb.append(")");
 
     appendIfNotEmpty(sb, abfsConfiguration.getCustomUserAgentPrefix(), false);
@@ -1542,8 +1578,11 @@ public abstract class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
 
-    final URL url = createRequestUrl(new URL(abfsMetricUrl), EMPTY_STRING, abfsUriQueryBuilder.toString());
-
+    // Construct the URL for the metric call
+    // In case of blob storage, the URL is changed to DFS URL
+    final URL url = UriUtils.changeUrlFromBlobToDfs(
+        createRequestUrl(new URL(abfsMetricUrl),
+            EMPTY_STRING, abfsUriQueryBuilder.toString()));
     final AbfsRestOperation op = getAbfsRestOperation(
             AbfsRestOperationType.GetFileSystemProperties,
             HTTP_METHOD_HEAD,
@@ -1775,37 +1814,6 @@ public abstract class AbfsClient implements Closeable {
   }
 
   /**
-   * Get the primary user group name.
-   * @return primary user group name
-   * @throws AzureBlobFileSystemException if unable to get the primary user group
-   */
-  private String getPrimaryUserGroup() throws AzureBlobFileSystemException {
-    if (!getAbfsConfiguration().getSkipUserGroupMetadataDuringInitialization()) {
-      try {
-        return UserGroupInformation.getCurrentUser().getPrimaryGroupName();
-      } catch (IOException ex) {
-        LOG.error("Failed to get primary group for {}, using user name as primary group name",
-            getPrimaryUser());
-      }
-    }
-    //Provide a default group name
-    return getPrimaryUser();
-  }
-
-  /**
-   * Get the primary username.
-   * @return primary username
-   * @throws AzureBlobFileSystemException if unable to get the primary user
-   */
-  private String getPrimaryUser() throws AzureBlobFileSystemException {
-    try {
-      return UserGroupInformation.getCurrentUser().getUserName();
-    } catch (IOException ex) {
-      throw new AbfsDriverException(ex);
-    }
-  }
-
-  /**
    * Creates a VersionedFileStatus object from the ListResultEntrySchema.
    * @param entry ListResultEntrySchema object.
    * @param uri to be used for the path conversion.
@@ -1818,10 +1826,10 @@ public abstract class AbfsClient implements Closeable {
     String owner = null, group = null;
     try{
       if (identityTransformer != null) {
-        owner = identityTransformer.transformIdentityForGetRequest(
-            entry.owner(), true, getPrimaryUser());
-        group = identityTransformer.transformIdentityForGetRequest(
-            entry.group(), false, getPrimaryUserGroup());
+        owner = identityTransformer.transformIdentityForGetRequest(entry.owner(),
+            true, userName);
+        group = identityTransformer.transformIdentityForGetRequest(entry.group(),
+            false, primaryUserGroup);
       }
     } catch (IOException ex) {
       LOG.error("Failed to get owner/group for path {}", entry.name(), ex);

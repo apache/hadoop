@@ -25,16 +25,17 @@ import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -65,7 +66,7 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
     STANDBY_TIMING
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
@@ -94,7 +95,8 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
    *
    * The test times out if there is a deadlock.
    */
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testDeadlockShutdownBecomeActive() throws InterruptedException {
     MockRM rm = new MockRMWithElector(conf, 1000);
     rm.start();
@@ -320,9 +322,9 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
         new ActiveStandbyElectorBasedElectorService(rm);
     try {
       ees.init(myConf);
-      Assert.fail("expect failure to connect to Zookeeper");
+      fail("expect failure to connect to Zookeeper");
     } catch (ServiceStateException sse) {
-      Assert.assertTrue(sse.getMessage().contains("ConnectionLoss"));
+      assertTrue(sse.getMessage().contains("ConnectionLoss"));
     }
   }
 

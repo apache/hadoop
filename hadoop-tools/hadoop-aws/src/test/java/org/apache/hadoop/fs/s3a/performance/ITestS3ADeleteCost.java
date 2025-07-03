@@ -23,7 +23,8 @@ import java.io.FileNotFoundException;
 import java.util.Arrays;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,6 +64,7 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         "");
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     // do this ourselves to avoid audits teardown failing

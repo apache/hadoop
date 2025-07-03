@@ -1272,7 +1272,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             : generateContinuationTokenForNonXns(relativePath, startFrom);
       }
     }
-
+    List<FileStatus> fileStatusList = new ArrayList<>();
     do {
       try (AbfsPerfInfo perfInfo = startTracking("listStatus", "listPath")) {
         ListResponseData listResponseData = listingClient.listPath(relativePath,
@@ -1281,9 +1281,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         AbfsRestOperation op = listResponseData.getOp();
         perfInfo.registerResult(op.getResult());
         continuation = listResponseData.getContinuationToken();
-        List<FileStatus> fileStatusListInCurrItr = listResponseData.getFileStatusList();
+        List<VersionedFileStatus> fileStatusListInCurrItr = listResponseData.getFileStatusList();
         if (fileStatusListInCurrItr != null && !fileStatusListInCurrItr.isEmpty()) {
-          fileStatuses.addAll(fileStatusListInCurrItr);
+          fileStatusList.addAll(fileStatusListInCurrItr);
         }
         perfInfo.registerSuccess(true);
         countAggregate++;
@@ -1295,6 +1295,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         }
       }
     } while (shouldContinue);
+
+    fileStatuses.addAll(listingClient.postListProcessing(
+        relativePath, fileStatusList, tracingContext, uri));
 
     return continuation;
   }

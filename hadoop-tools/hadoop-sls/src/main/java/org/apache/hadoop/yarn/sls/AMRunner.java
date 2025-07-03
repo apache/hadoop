@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.scheduler.TaskRunner;
 import org.apache.hadoop.yarn.sls.synthetic.SynthJob;
 import org.apache.hadoop.yarn.sls.synthetic.SynthTraceJobProducer;
-import org.apache.hadoop.util.UTCClock;
+import org.apache.hadoop.yarn.util.UTCClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

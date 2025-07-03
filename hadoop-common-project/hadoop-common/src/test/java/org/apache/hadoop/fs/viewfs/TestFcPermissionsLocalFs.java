@@ -20,21 +20,21 @@ package org.apache.hadoop.fs.viewfs;
 
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextPermissionBase;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
-import org.junit.After;
-import org.junit.Before;
 
 
 public class TestFcPermissionsLocalFs  extends FileContextPermissionBase {
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
   }
   
   @Override
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     super.tearDown();
     ViewFsTestSetup.tearDownForViewFsLocalFs(fileContextTestHelper);

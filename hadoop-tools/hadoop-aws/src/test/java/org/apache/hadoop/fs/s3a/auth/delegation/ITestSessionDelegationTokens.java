@@ -22,10 +22,11 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
-import org.hamcrest.Matchers;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +50,7 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEG
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_SESSION_BINDING;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.SESSION_TOKEN_KIND;
 import static org.apache.hadoop.fs.s3a.auth.delegation.SessionTokenBinding.CREDENTIALS_CONVERTED_TO_DELEGATION_TOKEN;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests use of Hadoop delegation tokens to marshall S3 credentials.
@@ -81,6 +83,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -90,6 +93,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     delegationTokens.start();
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     IOUtils.cleanupWithLogger(LOG, delegationTokens);
@@ -104,12 +108,12 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
   @Test
   public void testCanonicalization() throws Throwable {
     S3AFileSystem fs = getFileSystem();
-    assertEquals("Default port has changed",
-        0, fs.getDefaultPort());
+    assertEquals(0, fs.getDefaultPort(),
+        "Default port has changed");
     URI uri = fs.getCanonicalUri();
     String service = fs.getCanonicalServiceName();
-    assertEquals("canonical URI and service name mismatch",
-        uri, new URI(service));
+    assertEquals(uri, new URI(service),
+        "canonical URI and service name mismatch");
   }
 
   @Test
@@ -121,10 +125,10 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
         = delegationTokens.createDelegationToken(encryptionSecrets, null);
     final SessionTokenIdentifier origIdentifier
         = (SessionTokenIdentifier) dt.decodeIdentifier();
-    assertEquals("kind in " + dt, getTokenKind(), dt.getKind());
+    assertEquals(getTokenKind(), dt.getKind(), "kind in " + dt);
     Configuration conf = getConfiguration();
     saveDT(tokenFile, dt);
-    assertTrue("Empty token file", tokenFile.length() > 0);
+    assertTrue(tokenFile.length() > 0, "Empty token file");
     Credentials creds = Credentials.readTokenStorageFile(tokenFile, conf);
     Text serviceId = delegationTokens.getService();
     Token<? extends TokenIdentifier> token = requireNonNull(
@@ -133,13 +137,13 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     SessionTokenIdentifier decoded =
         (SessionTokenIdentifier) token.decodeIdentifier();
     decoded.validate();
-    assertEquals("token identifier ", origIdentifier, decoded);
-    assertEquals("Origin in " + decoded,
-        origIdentifier.getOrigin(), decoded.getOrigin());
-    assertEquals("Expiry time",
-        origIdentifier.getExpiryTime(), decoded.getExpiryTime());
-    assertEquals("Encryption Secrets",
-        encryptionSecrets, decoded.getEncryptionSecrets());
+    assertEquals(origIdentifier, decoded, "token identifier ");
+    assertEquals(origIdentifier.getOrigin(), decoded.getOrigin(),
+        "Origin in " + decoded);
+    assertEquals(origIdentifier.getExpiryTime(), decoded.getExpiryTime(),
+        "Expiry time");
+    assertEquals(encryptionSecrets, decoded.getEncryptionSecrets(),
+        "Encryption Secrets");
   }
 
   /**
@@ -168,13 +172,13 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     final S3AFileSystem fs = getFileSystem();
     final Configuration conf = fs.getConf();
 
-    assertNull("Current User has delegation token",
-        delegationTokens.selectTokenFromFSOwner());
+    assertNull(delegationTokens.selectTokenFromFSOwner(),
+        "Current User has delegation token");
     EncryptionSecrets secrets = new EncryptionSecrets(
         S3AEncryptionMethods.SSE_KMS, KMS_KEY, "");
     Token<AbstractS3ATokenIdentifier> originalDT
         = delegationTokens.createDelegationToken(secrets, null);
-    assertEquals("Token kind mismatch", getTokenKind(), originalDT.getKind());
+    assertEquals(getTokenKind(), originalDT.getKind(), "Token kind mismatch");
 
     // decode to get the binding info
     SessionTokenIdentifier issued =
@@ -200,7 +204,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
 
       Token<AbstractS3ATokenIdentifier> boundDT =
           dt2.getBoundOrNewDT(secrets, null);
-      assertEquals("Delegation Tokens", originalDT, boundDT);
+      assertEquals(originalDT, boundDT, "Delegation Tokens");
       // simulate marshall and transmission
       creds = roundTrip(origCreds, conf);
       SessionTokenIdentifier reissued
@@ -208,9 +212,8 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
           .decodeIdentifier();
       reissued.validate();
       String userAgentField = dt2.getUserAgentField();
-      assertThat("UA field does not contain UUID",
-          userAgentField,
-          Matchers.containsString(issued.getUuid()));
+      assertThat(userAgentField).contains(issued.getUuid()).
+          as("UA field does not contain UUID");
     }
 
     // now use those chained credentials to create a new FS instance
@@ -226,13 +229,13 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     final Configuration conf = fs.getConf();
     final Text renewer = new Text("yarn");
 
-    assertNull("Current User has delegation token",
-        delegationTokens.selectTokenFromFSOwner());
+    assertNull(delegationTokens.selectTokenFromFSOwner(),
+        "Current User has delegation token");
     EncryptionSecrets secrets = new EncryptionSecrets(
         S3AEncryptionMethods.SSE_KMS, KMS_KEY, "");
     Token<AbstractS3ATokenIdentifier> dt
         = delegationTokens.createDelegationToken(secrets, renewer);
-    assertEquals("Token kind mismatch", getTokenKind(), dt.getKind());
+    assertEquals(getTokenKind(), dt.getKind(), "Token kind mismatch");
 
     // decode to get the binding info
     SessionTokenIdentifier issued =
@@ -240,7 +243,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
             (SessionTokenIdentifier) dt.decodeIdentifier(),
             () -> "no identifier in " + dt);
     issued.validate();
-    assertEquals("Token renewer mismatch", renewer, issued.getRenewer());
+    assertEquals(renewer, issued.getRenewer(), "Token renewer mismatch");
   }
 
   /**
@@ -283,10 +286,10 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
       final MarshalledCredentials creds2 = fromAWSCredentials(
           verifySessionCredentials(
               delegationTokens2.getCredentialProviders().resolveCredentials()));
-      assertEquals("Credentials", session, creds2);
-      assertTrue("Origin in " + boundId,
-          boundId.getOrigin()
-              .contains(CREDENTIALS_CONVERTED_TO_DELEGATION_TOKEN));
+      assertEquals(session, creds2, "Credentials");
+      assertTrue(boundId.getOrigin()
+          .contains(CREDENTIALS_CONVERTED_TO_DELEGATION_TOKEN),
+          "Origin in " + boundId);
       return boundId;
     }
   }
@@ -294,9 +297,9 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
   private AwsSessionCredentials verifySessionCredentials(
       final AwsCredentials creds) {
     AwsSessionCredentials session = (AwsSessionCredentials) creds;
-    assertNotNull("access key", session.accessKeyId());
-    assertNotNull("secret key", session.secretAccessKey());
-    assertNotNull("session token", session.sessionToken());
+    assertNotNull(session.accessKeyId(), "access key");
+    assertNotNull(session.secretAccessKey(), "secret key");
+    assertNotNull(session.sessionToken(), "session token");
     return session;
   }
 
@@ -306,8 +309,8 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
         + " is no token");
     S3ADelegationTokens delegation = instantiateDTSupport(getConfiguration());
     delegation.start();
-    assertFalse("Delegation is bound to a DT: " + delegation,
-        delegation.isBoundToDT());
+    assertFalse(delegation.isBoundToDT(),
+        "Delegation is bound to a DT: " + delegation);
   }
 
 }

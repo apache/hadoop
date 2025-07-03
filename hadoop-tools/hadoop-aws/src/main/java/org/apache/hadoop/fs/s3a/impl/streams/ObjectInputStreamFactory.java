@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 
+import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.service.Service;
 
@@ -85,6 +86,8 @@ public interface ObjectInputStreamFactory
      * @throws IOException failure to create the client.
      */
     S3AsyncClient getOrCreateAsyncClient(boolean requireCRT) throws IOException;
+
+    void incrementFactoryStatistic(Statistic statistic);
   }
 }
 

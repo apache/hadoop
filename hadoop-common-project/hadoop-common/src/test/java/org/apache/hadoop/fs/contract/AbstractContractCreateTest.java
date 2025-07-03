@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -278,8 +278,8 @@ public abstract class AbstractContractCreateTest extends
     FileSystem fs = getFileSystem();
 
     long rootPath = fs.getDefaultBlockSize(path("/"));
-    assertTrue("Root block size is invalid " + rootPath,
-        rootPath > 0);
+    assertTrue(rootPath > 0,
+        "Root block size is invalid " + rootPath);
 
     Path path = path("testFileStatusBlocksizeNonEmptyFile");
     byte[] data = dataset(256, 'a', 'z');
@@ -303,13 +303,13 @@ public abstract class AbstractContractCreateTest extends
     FileStatus status =
         getFileStatusEventually(fs, path, CREATE_TIMEOUT);
     String statusDetails = status.toString();
-    assertTrue("File status block size too low:  " + statusDetails
-            + " min value: " + minValue,
-        status.getBlockSize() >= minValue);
+    assertTrue(status.getBlockSize() >= minValue,
+        "File status block size too low:  " + statusDetails
+        + " min value: " + minValue);
     long defaultBlockSize = fs.getDefaultBlockSize(path);
-    assertTrue("fs.getDefaultBlockSize(" + path + ") size " +
-            defaultBlockSize + " is below the minimum of " + minValue,
-        defaultBlockSize >= minValue);
+    assertTrue(defaultBlockSize >= minValue,
+        "fs.getDefaultBlockSize(" + path + ") size " +
+        defaultBlockSize + " is below the minimum of " + minValue);
   }
 
   @Test
@@ -320,14 +320,14 @@ public abstract class AbstractContractCreateTest extends
     Path parent = new Path(grandparent, "parent");
     Path child = new Path(parent, "child");
     touch(fs, child);
-    assertEquals("List status of parent should include the 1 child file",
-        1, fs.listStatus(parent).length);
-    assertTrue("Parent directory does not appear to be a directory",
-        fs.getFileStatus(parent).isDirectory());
-    assertEquals("List status of grandparent should include the 1 parent dir",
-        1, fs.listStatus(grandparent).length);
-    assertTrue("Grandparent directory does not appear to be a directory",
-        fs.getFileStatus(grandparent).isDirectory());
+    assertEquals(1, fs.listStatus(parent).length,
+        "List status of parent should include the 1 child file");
+    assertTrue(fs.getFileStatus(parent).isDirectory(),
+        "Parent directory does not appear to be a directory");
+    assertEquals(1, fs.listStatus(grandparent).length,
+        "List status of grandparent should include the 1 parent dir");
+    assertTrue(fs.getFileStatus(grandparent).isDirectory(),
+        "Grandparent directory does not appear to be a directory");
   }
 
   @Test
@@ -531,8 +531,8 @@ public abstract class AbstractContractCreateTest extends
         final FileStatus st = fs.getFileStatus(path);
         if (metadataUpdatedOnHSync) {
           // not all stores reliably update it, HDFS/webHDFS in particular
-          assertEquals("Metadata not updated during write " + st,
-              2, st.getLen());
+          assertEquals(2, st.getLen(),
+              "Metadata not updated during write " + st);
         }
 
         // there's no way to verify durability, but we can

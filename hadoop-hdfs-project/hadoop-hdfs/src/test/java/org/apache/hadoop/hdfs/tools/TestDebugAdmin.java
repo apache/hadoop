@@ -34,9 +34,10 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -45,8 +46,8 @@ import java.util.List;
 import java.util.Random;
 
 import static org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDebugAdmin {
 
@@ -57,7 +58,7 @@ public class TestDebugAdmin {
   private MiniDFSCluster cluster;
   private DebugAdmin admin;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     final File testRoot = new File(TEST_ROOT_DIR);
     testRoot.delete();
@@ -65,7 +66,7 @@ public class TestDebugAdmin {
     admin = new DebugAdmin(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -92,7 +93,8 @@ public class TestDebugAdmin {
         bytes.toString().replaceAll(System.lineSeparator(), "");
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testRecoverLease() throws Exception {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
@@ -106,7 +108,8 @@ public class TestDebugAdmin {
         runCmd(new String[]{"recoverLease", "-path", "/foo"}));
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testVerifyMetaCommand() throws Exception {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
@@ -135,7 +138,8 @@ public class TestDebugAdmin {
     );
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testComputeMetaCommand() throws Exception {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
@@ -177,7 +181,8 @@ public class TestDebugAdmin {
     assertTrue(outFile.length() > 0);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testRecoverLeaseforFileNotFound() throws Exception {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
@@ -186,7 +191,8 @@ public class TestDebugAdmin {
         "Giving up on recoverLease for /foo after 1 try"));
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testVerifyECCommand() throws Exception {
     final ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies.getByID(
         SystemErasureCodingPolicies.RS_3_2_POLICY_ID);

@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.util.Set;
 
 import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.Path;
 
@@ -39,6 +41,7 @@ public class ITestS3AClosedFS extends AbstractS3ATestBase {
 
   private Path root = new Path("/");
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -46,6 +49,7 @@ public class ITestS3AClosedFS extends AbstractS3ATestBase {
     getFileSystem().close();
   }
 
+  @AfterEach
   @Override
   public void teardown()  {
     // no op, as the FS is closed
@@ -54,7 +58,7 @@ public class ITestS3AClosedFS extends AbstractS3ATestBase {
   private static final Set<String> THREAD_SET =
       listInitialThreadsForLifecycleChecks();
 
-  @AfterClass
+  @AfterAll
   public static void checkForThreadLeakage() {
     Assertions.assertThat(getCurrentThreadNames())
         .describedAs("The threads at the end of the test run")

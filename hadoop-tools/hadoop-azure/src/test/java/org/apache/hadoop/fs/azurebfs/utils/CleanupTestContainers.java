@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +43,7 @@ public class CleanupTestContainers extends AbstractAbfsIntegrationTest {
   public CleanupTestContainers() throws Exception {
   }
 
-  @org.junit.Test
+  @Test
   public void testDeleteContainers() throws Throwable {
     int count = 0;
     AbfsConfiguration abfsConfig = getAbfsStore(getFileSystem()).getAbfsConfiguration();

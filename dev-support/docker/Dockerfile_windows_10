@@ -49,27 +49,20 @@ RUN powershell Copy-Item -Recurse -Path 'C:\Program Files\Git' -Destination C:\G
 # hadolint ignore=DL3003
 RUN powershell git clone https://github.com/microsoft/vcpkg.git \
     && cd vcpkg \
-    && git checkout 7ffa425e1db8b0c3edf9c50f2f3a0f25a324541d \
+    && git fetch --all \
+    && git checkout 2025.03.19 \
     && .\bootstrap-vcpkg.bat
 
-# Fix wrong download link for 7-zip in .\vcpkg\scripts\vcpkgTools.xml:
-# - https://www.nuget.org/api/v2/package/7-Zip.CommandLine/18.1.0 (not working anymore) is replaced with
-# - https://globalcdn.nuget.org/packages/7-zip.commandline.18.1.0.nupkg?packageVersion=18.1.0 (working)
-# Replacing is done using the Linux tool "sed".
-RUN choco install sed -y
-RUN sed -i "s,https://www.nuget.org/api/v2/package/7-Zip.CommandLine/18.1.0,https://globalcdn.nuget.org/packages/7-zip.commandline.18.1.0.nupkg?packageVersion=18.1.0,g" .\vcpkg\scripts\vcpkgTools.xml
+ADD vcpkg/vcpkg.json .
 
-RUN powershell .\vcpkg\vcpkg.exe install boost:x64-windows
-RUN powershell .\vcpkg\vcpkg.exe install protobuf:x64-windows
-RUN powershell .\vcpkg\vcpkg.exe install openssl:x64-windows
-RUN powershell .\vcpkg\vcpkg.exe install zlib:x64-windows
+RUN powershell .\vcpkg\vcpkg.exe install --x-install-root .\vcpkg\installed
 
 # Install Azul Java 8 JDK.
 RUN powershell Invoke-WebRequest -URI https://cdn.azul.com/zulu/bin/zulu8.62.0.19-ca-jdk8.0.332-win_x64.zip -OutFile $Env:TEMP\zulu8.62.0.19-ca-jdk8.0.332-win_x64.zip
 RUN powershell Expand-Archive -Path $Env:TEMP\zulu8.62.0.19-ca-jdk8.0.332-win_x64.zip -DestinationPath "C:\Java"
 
 # Install Apache Maven.
-RUN powershell Invoke-WebRequest -URI https://downloads.apache.org/maven/maven-3/3.8.8/binaries/apache-maven-3.8.8-bin.zip -OutFile $Env:TEMP\apache-maven-3.8.8-bin.zip
+RUN powershell Invoke-WebRequest -URI https://archive.apache.org/dist/maven/maven-3/3.8.8/binaries/apache-maven-3.8.8-bin.zip -OutFile $Env:TEMP\apache-maven-3.8.8-bin.zip
 RUN powershell Expand-Archive -Path $Env:TEMP\apache-maven-3.8.8-bin.zip -DestinationPath "C:\Maven"
 
 # Install CMake 3.19.0.
@@ -82,16 +75,16 @@ RUN powershell Expand-Archive -Path $Env:TEMP\zstd-v1.5.4-win64.zip -Destination
 RUN setx PATH "%PATH%;C:\ZStd"
 
 # Install libopenssl 3.1.1 needed for rsync 3.2.7.
-RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libopenssl-3.1.1-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libopenssl-3.1.1-1-x86_64.pkg.tar.zst
-RUN powershell zstd -d $Env:TEMP\libopenssl-3.1.1-1-x86_64.pkg.tar.zst -o $Env:TEMP\libopenssl-3.1.1-1-x86_64.pkg.tar
+RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libopenssl-3.1.2-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libopenssl-3.1.2-1-x86_64.pkg.tar.zst
+RUN powershell zstd -d $Env:TEMP\libopenssl-3.1.2-1-x86_64.pkg.tar.zst -o $Env:TEMP\libopenssl-3.1.1-1-x86_64.pkg.tar
 RUN powershell mkdir "C:\LibOpenSSL"
 RUN powershell tar -xvf $Env:TEMP\libopenssl-3.1.1-1-x86_64.pkg.tar -C "C:\LibOpenSSL"
 
-# Install libxxhash 0.8.1 needed for rsync 3.2.7.
-RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libxxhash-0.8.1-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libxxhash-0.8.1-1-x86_64.pkg.tar.zst
-RUN powershell zstd -d $Env:TEMP\libxxhash-0.8.1-1-x86_64.pkg.tar.zst -o $Env:TEMP\libxxhash-0.8.1-1-x86_64.pkg.tar
+# Install libxxhash 0.8.3 needed for rsync 3.2.7.
+RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libxxhash-0.8.3-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar.zst
+RUN powershell zstd -d $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar.zst -o $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar
 RUN powershell mkdir "C:\LibXXHash"
-RUN powershell tar -xvf $Env:TEMP\libxxhash-0.8.1-1-x86_64.pkg.tar -C "C:\LibXXHash"
+RUN powershell tar -xvf $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar -C "C:\LibXXHash"
 
 # Install libzstd 1.5.4 needed for rsync 3.2.7.
 RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libzstd-1.5.5-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libzstd-1.5.5-1-x86_64.pkg.tar.zst
@@ -125,6 +118,11 @@ RUN powershell Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentU
 RUN powershell pkg-resolver\install-python.ps1
 RUN powershell pkg-resolver\install-pip.ps1
 RUN powershell pip install python-dateutil
+
+## Install the Microsoft Visual C++ 2010 Redistributable to link leveldbjni native library
+RUN powershell -Command Invoke-WebRequest -Uri https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe -OutFile vcredist_x64.exe
+RUN powershell -Command Start-Process -FilePath .\vcredist_x64.exe -ArgumentList '/quiet', '/norestart' -Wait
+RUN powershell -Command Remove-Item vcredist_x64.exe
 
 # Create a user HadoopBuilder with basic privileges and use it for building Hadoop on Windows.
 RUN powershell New-LocalUser -Name 'HadoopBuilder' -Description 'User account for building Apache Hadoop' -Password ([securestring]::new()) -AccountNeverExpires -PasswordNeverExpires

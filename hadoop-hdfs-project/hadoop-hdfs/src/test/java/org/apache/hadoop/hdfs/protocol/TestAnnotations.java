@@ -22,8 +22,9 @@ import java.lang.reflect.Method;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.retry.AtMostOnce;
 import org.apache.hadoop.io.retry.Idempotent;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests to make sure all the protocol class public methods have
@@ -34,10 +35,9 @@ public class TestAnnotations {
   public void checkAnnotations() {
     Method[] methods = NamenodeProtocols.class.getMethods();
     for (Method m : methods) {
-      Assert.assertTrue(
-          "Idempotent or AtMostOnce annotation is not present " + m,
-          m.isAnnotationPresent(Idempotent.class)
-              || m.isAnnotationPresent(AtMostOnce.class));
+      assertTrue(m.isAnnotationPresent(Idempotent.class)
+              || m.isAnnotationPresent(AtMostOnce.class),
+          "Idempotent or AtMostOnce annotation is not present " + m);
     }
   }
 }

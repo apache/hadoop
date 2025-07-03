@@ -41,6 +41,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.TestName;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCp;
 import org.apache.hadoop.tools.DistCpConstants;
@@ -51,10 +52,9 @@ import org.apache.hadoop.tools.util.DistCpTestUtils;
 import org.apache.hadoop.util.functional.RemoteIterators;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,7 +99,7 @@ public abstract class AbstractContractDistCpTest
    */
   protected static final int DEFAULT_WIDTH = 2;
 
-  @Rule
+  @RegisterExtension
   public TestName testName = new TestName();
 
   /**
@@ -160,7 +160,7 @@ public abstract class AbstractContractDistCpTest
     return newConf;
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -287,12 +287,10 @@ public abstract class AbstractContractDistCpTest
         String.format("%s value %s", c.getDisplayName(), value, false);
 
     if (min >= 0) {
-      assertTrue(description + " too below minimum " + min,
-          value >= min);
+      assertTrue(value >= min, description + " too below minimum " + min);
     }
     if (max >= 0) {
-      assertTrue(description + " above maximum " + max,
-          value <= max);
+      assertTrue(value <= max, description + " above maximum " + max);
     }
   }
 
@@ -479,14 +477,14 @@ public abstract class AbstractContractDistCpTest
     }
 
     // look for the new file in both lists
-    assertTrue("No " + outputFileNew1 + " in source listing",
-        sourceFiles.containsValue(inputFileNew1));
-    assertTrue("No " + outputFileNew1 + " in target listing",
-        targetFiles.containsValue(outputFileNew1));
-    assertTrue("No " + outputSubDir4 + " in target listing",
-        targetFiles.containsValue(outputSubDir4));
-    assertFalse("Found " + inputSubDir4 + " in source listing",
-        sourceFiles.containsValue(inputSubDir4));
+    assertTrue(sourceFiles.containsValue(inputFileNew1),
+        "No " + outputFileNew1 + " in source listing");
+    assertTrue(targetFiles.containsValue(outputFileNew1),
+        "No " + outputFileNew1 + " in target listing");
+    assertTrue(targetFiles.containsValue(outputSubDir4),
+        "No " + outputSubDir4 + " in target listing");
+    assertFalse(sourceFiles.containsValue(inputSubDir4),
+        "Found " + inputSubDir4 + " in source listing");
 
   }
 
@@ -531,8 +529,8 @@ public abstract class AbstractContractDistCpTest
     DistCpTestUtils
         .assertRunDistCp(DistCpConstants.SUCCESS, remoteDir.toString(),
             localDir.toString(), getDefaultCLIOptionsOrNull(), conf);
-    assertNotNull("DistCp job id isn't set",
-        conf.get(CONF_LABEL_DISTCP_JOB_ID));
+    assertNotNull(conf.get(CONF_LABEL_DISTCP_JOB_ID),
+        "DistCp job id isn't set");
   }
 
   /**
@@ -646,9 +644,9 @@ public abstract class AbstractContractDistCpTest
    */
   private Job runDistCp(final DistCpOptions options) throws Exception {
     Job job = new DistCp(conf, options).execute();
-    assertNotNull("Unexpected null job returned from DistCp execution.", job);
-    assertTrue("DistCp job did not complete.", job.isComplete());
-    assertTrue("DistCp job did not complete successfully.", job.isSuccessful());
+    assertNotNull(job, "Unexpected null job returned from DistCp execution.");
+    assertTrue(job.isComplete(), "DistCp job did not complete.");
+    assertTrue(job.isSuccessful(), "DistCp job did not complete successfully.");
     return job;
   }
 
@@ -672,7 +670,7 @@ public abstract class AbstractContractDistCpTest
    * @throws Exception if there is a failure
    */
   private static void mkdirs(FileSystem fs, Path dir) throws Exception {
-    assertTrue("Failed to mkdir " + dir, fs.mkdirs(dir));
+    assertTrue(fs.mkdirs(dir), "Failed to mkdir " + dir);
   }
 
   @Test
@@ -996,9 +994,9 @@ public abstract class AbstractContractDistCpTest
     long copyActualValue = job.getCounters()
         .findCounter(CopyMapper.Counter.COPY).getValue();
     // Verify if the actual values equals the expected ones.
-    assertEquals("Mismatch in COPY counter value", copyExpectedValue,
-        copyActualValue);
-    assertEquals("Mismatch in SKIP counter value", skipExpectedValue,
-        skipActualValue);
+    assertEquals(copyExpectedValue,
+        copyActualValue, "Mismatch in COPY counter value");
+    assertEquals(skipExpectedValue,
+        skipActualValue, "Mismatch in SKIP counter value");
   }
 }

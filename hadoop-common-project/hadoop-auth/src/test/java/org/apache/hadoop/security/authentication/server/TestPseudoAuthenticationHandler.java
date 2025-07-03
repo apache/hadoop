@@ -13,10 +13,14 @@
  */
 package org.apache.hadoop.security.authentication.server;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import org.apache.hadoop.security.authentication.client.PseudoAuthenticator;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -32,7 +36,7 @@ public class TestPseudoAuthenticationHandler {
       Properties props = new Properties();
       props.setProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, "false");
       handler.init(props);
-      Assert.assertEquals(false, handler.getAcceptAnonymous());
+      assertEquals(false, handler.getAcceptAnonymous());
     } finally {
       handler.destroy();
     }
@@ -41,7 +45,7 @@ public class TestPseudoAuthenticationHandler {
   @Test
   public void testType() throws Exception {
     PseudoAuthenticationHandler handler = new PseudoAuthenticationHandler();
-    Assert.assertEquals(PseudoAuthenticationHandler.TYPE, handler.getType());
+    assertEquals(PseudoAuthenticationHandler.TYPE, handler.getType());
   }
 
   @Test
@@ -52,12 +56,12 @@ public class TestPseudoAuthenticationHandler {
       props.setProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, "true");
       handler.init(props);
 
-      HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-      HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      HttpServletResponse response = mock(HttpServletResponse.class);
 
       AuthenticationToken token = handler.authenticate(request, response);
 
-      Assert.assertEquals(AuthenticationToken.ANONYMOUS, token);
+      assertEquals(AuthenticationToken.ANONYMOUS, token);
     } finally {
       handler.destroy();
     }
@@ -71,11 +75,11 @@ public class TestPseudoAuthenticationHandler {
       props.setProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, "false");
       handler.init(props);
 
-      HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-      HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      HttpServletResponse response = mock(HttpServletResponse.class);
 
       AuthenticationToken token = handler.authenticate(request, response);
-      Assert.assertNull(token);
+      assertNull(token);
     } finally {
       handler.destroy();
     }
@@ -88,16 +92,16 @@ public class TestPseudoAuthenticationHandler {
       props.setProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, Boolean.toString(anonymous));
       handler.init(props);
 
-      HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-      HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-      Mockito.when(request.getQueryString()).thenReturn(PseudoAuthenticator.USER_NAME + "=" + "user");
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      HttpServletResponse response = mock(HttpServletResponse.class);
+      when(request.getQueryString()).thenReturn(PseudoAuthenticator.USER_NAME + "=" + "user");
 
       AuthenticationToken token = handler.authenticate(request, response);
 
-      Assert.assertNotNull(token);
-      Assert.assertEquals("user", token.getUserName());
-      Assert.assertEquals("user", token.getName());
-      Assert.assertEquals(PseudoAuthenticationHandler.TYPE, token.getType());
+      assertNotNull(token);
+      assertEquals("user", token.getUserName());
+      assertEquals("user", token.getName());
+      assertEquals(PseudoAuthenticationHandler.TYPE, token.getType());
     } finally {
       handler.destroy();
     }

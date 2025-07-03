@@ -13,10 +13,12 @@
  */
 package org.apache.hadoop.security.authentication.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -34,7 +36,7 @@ public class TestPseudoAuthenticator {
   @Test
   public void testGetUserName() throws Exception {
     PseudoAuthenticator authenticator = new PseudoAuthenticator();
-    Assert.assertEquals(System.getProperty("user.name"), authenticator.getUserName());
+    assertEquals(System.getProperty("user.name"), authenticator.getUserName());
   }
 
   @Test
@@ -47,7 +49,7 @@ public class TestPseudoAuthenticator {
       URL url = new URL(auth.getBaseURL());
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       conn.connect();
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     } finally {
       auth.stop();
     }
@@ -63,9 +65,9 @@ public class TestPseudoAuthenticator {
       URL url = new URL(auth.getBaseURL());
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       conn.connect();
-      Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, conn.getResponseCode());
-      Assert.assertTrue(conn.getHeaderFields().containsKey("WWW-Authenticate"));
-      Assert.assertEquals("Authentication required", conn.getResponseMessage());
+      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, conn.getResponseCode());
+      assertTrue(conn.getHeaderFields().containsKey("WWW-Authenticate"));
+      assertEquals("Authentication required", conn.getResponseMessage());
     } finally {
       auth.stop();
     }

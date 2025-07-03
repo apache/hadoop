@@ -23,15 +23,15 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import org.assertj.core.api.Assertions;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
 
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListXmlParser;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestBlobListXmlParser {
   @Test
@@ -101,19 +101,20 @@ public class TestBlobListXmlParser {
         + "<OrMetadata />"
         + "</Blob>"
         + "</Blobs>"
-        + "<NextMarker />"
+        + "<NextMarker>TEST_CONTINUATION_TOKEN</NextMarker>"
         + "</EnumerationResults>";
     BlobListResultSchema listResultSchema = getResultSchema(xmlResponseWithDelimiter);
     List<BlobListResultEntrySchema> paths = listResultSchema.paths();
-    Assertions.assertThat(paths.size()).isEqualTo(4);
-    Assertions.assertThat(paths.get(0).isDirectory()).isEqualTo(true);
-    Assertions.assertThat(paths.get(1).isDirectory()).isEqualTo(true);
-    Assertions.assertThat(paths.get(2).isDirectory()).isEqualTo(true);
-    Assertions.assertThat(paths.get(3).isDirectory()).isEqualTo(false);
+    assertThat(paths.size()).isEqualTo(4);
+    assertThat(paths.get(0).isDirectory()).isEqualTo(true);
+    assertThat(paths.get(1).isDirectory()).isEqualTo(true);
+    assertThat(paths.get(2).isDirectory()).isEqualTo(true);
+    assertThat(paths.get(3).isDirectory()).isEqualTo(false);
+    assertThat(listResultSchema.getNextMarker()).isNotNull();
   }
 
   @Test
-  public void testEmptyBlobList() throws Exception {
+  public void testEmptyBlobListNullCT() throws Exception {
     String xmlResponse = ""
         + "<?xml version=\"1.0\" encoding=\"utf-8\"?><"
         + "EnumerationResults ServiceEndpoint=\"https://anujtestfns.blob.core.windows.net/\" ContainerName=\"manualtest\">"
@@ -123,7 +124,44 @@ public class TestBlobListXmlParser {
         + "</EnumerationResults>";
     BlobListResultSchema listResultSchema = getResultSchema(xmlResponse);
     List<BlobListResultEntrySchema> paths = listResultSchema.paths();
-    Assertions.assertThat(paths.size()).isEqualTo(0);
+    assertThat(paths.size()).isEqualTo(0);
+    assertThat(listResultSchema.getNextMarker()).isNull();
+  }
+
+  @Test
+  public void testEmptyBlobListValidCT() throws Exception {
+    String xmlResponse = ""
+        + "<?xml version=\"1.0\" encoding=\"utf-8\"?><"
+        + "EnumerationResults ServiceEndpoint=\"https://anujtestfns.blob.core.windows.net/\" ContainerName=\"manualtest\">"
+        + "<Prefix>abc/</Prefix>"
+        + "<Delimiter>/</Delimiter>"
+        + "<Blobs />"
+        + "<NextMarker>TEST_CONTINUATION_TOKEN</NextMarker>"
+        + "</EnumerationResults>";
+    BlobListResultSchema listResultSchema = getResultSchema(xmlResponse);
+    List<BlobListResultEntrySchema> paths = listResultSchema.paths();
+    assertThat(paths.size()).isEqualTo(0);
+    assertThat(listResultSchema.getNextMarker()).isNotNull();
+  }
+
+  @Test
+  public void testNonEmptyBlobListNullCT() throws Exception {
+    String xmlResponse = ""
+        + "<?xml version=\"1.0\" encoding=\"utf-8\"?><"
+        + "EnumerationResults ServiceEndpoint=\"https://anujtestfns.blob.core.windows.net/\" ContainerName=\"manualtest\">"
+        + "<Prefix>abc/</Prefix>"
+        + "<Delimiter>/</Delimiter>"
+        + "<Blobs>"
+        + "<BlobPrefix>"
+        + "<Name>bye/</Name>"
+        + "</BlobPrefix>"
+        + "</Blobs>"
+        + "<NextMarker />"
+        + "</EnumerationResults>";
+    BlobListResultSchema listResultSchema = getResultSchema(xmlResponse);
+    List<BlobListResultEntrySchema> paths = listResultSchema.paths();
+    assertThat(paths.size()).isEqualTo(1);
+    assertThat(listResultSchema.getNextMarker()).isNull();
   }
 
   private static final ThreadLocal<SAXParser> SAX_PARSER_THREAD_LOCAL

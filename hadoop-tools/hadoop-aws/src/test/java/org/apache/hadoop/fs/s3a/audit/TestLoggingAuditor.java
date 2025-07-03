@@ -28,8 +28,8 @@ import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartCopyRequest;
 import software.amazon.awssdk.transfer.s3.progress.TransferListener;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +60,7 @@ public class TestLoggingAuditor extends AbstractAuditingTest {
 
   private LoggingAuditor auditor;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
     auditor = (LoggingAuditor) getManager().getAuditor();

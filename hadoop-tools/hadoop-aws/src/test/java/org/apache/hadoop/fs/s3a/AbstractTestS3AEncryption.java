@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -99,6 +100,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
    * S3 throw AmazonS3Exception with status 403 AccessDenied
    * then it is translated into AccessDeniedException by S3AUtils.translateException(...)
    */
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     try {
@@ -119,8 +121,8 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     S3AEncryptionMethods algorithm = getEncryptionAlgorithm(
         fs.getBucket(), fs.getConf());
-    assertEquals("Configuration has wrong encryption algorithm",
-        getSSEAlgorithm(), algorithm);
+    assertEquals(getSSEAlgorithm(), algorithm,
+        "Configuration has wrong encryption algorithm");
   }
 
   @Test
@@ -158,10 +160,10 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
    * @param secrets encryption secrets of the filesystem.
    */
   protected void validateEncryptionSecrets(final EncryptionSecrets secrets) {
-    assertNotNull("No encryption secrets for filesystem", secrets);
+    assertNotNull(secrets, "No encryption secrets for filesystem");
     S3AEncryptionMethods sseAlgorithm = getSSEAlgorithm();
-    assertEquals("Filesystem has wrong encryption algorithm",
-        sseAlgorithm, secrets.getEncryptionMethod());
+    assertEquals(sseAlgorithm, secrets.getEncryptionMethod(),
+        "Filesystem has wrong encryption algorithm");
   }
 
   protected void validateEncryptionForFilesize(int len) throws IOException {

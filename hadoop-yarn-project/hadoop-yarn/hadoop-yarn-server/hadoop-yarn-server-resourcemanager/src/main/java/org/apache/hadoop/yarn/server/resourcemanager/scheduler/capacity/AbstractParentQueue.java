@@ -552,6 +552,15 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     return isDynamicQueue() || queueContext.getConfiguration().
         isAutoQueueCreationV2Enabled(getQueuePathObject());
   }
+  /**
+   * Check whether this queue supports legacy(v1) dynamic child queue creation.
+   * @return true if queue is eligible to create child queues dynamically using
+   * the legacy system, false otherwise
+   */
+  public boolean isEligibleForLegacyAutoQueueCreation() {
+    return isDynamicQueue() || queueContext.getConfiguration().
+        isAutoCreateChildQueueEnabled(getQueuePathObject());
+  }
 
   @Override
   public void reinitialize(CSQueue newlyParsedQueue,

@@ -18,8 +18,16 @@
 
 package org.apache.hadoop.io;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.atMost;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -43,9 +51,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,109 +64,109 @@ public class TestIOUtils {
   
   @Test
   public void testCopyBytesShouldCloseStreamsWhenCloseIsTrue() throws Exception {
-    InputStream inputStream = Mockito.mock(InputStream.class);
-    OutputStream outputStream = Mockito.mock(OutputStream.class);
-    Mockito.doReturn(-1).when(inputStream).read(new byte[1]);
+    InputStream inputStream = mock(InputStream.class);
+    OutputStream outputStream = mock(OutputStream.class);
+    doReturn(-1).when(inputStream).read(new byte[1]);
     IOUtils.copyBytes(inputStream, outputStream, 1, true);
-    Mockito.verify(inputStream, Mockito.atLeastOnce()).close();
-    Mockito.verify(outputStream, Mockito.atLeastOnce()).close();
+    verify(inputStream, atLeastOnce()).close();
+    verify(outputStream, atLeastOnce()).close();
   }
 
   @Test
   public void testCopyBytesShouldCloseInputSteamWhenOutputStreamCloseThrowsException()
       throws Exception {
-    InputStream inputStream = Mockito.mock(InputStream.class);
-    OutputStream outputStream = Mockito.mock(OutputStream.class);
-    Mockito.doReturn(-1).when(inputStream).read(new byte[1]);
-    Mockito.doThrow(new IOException()).when(outputStream).close();
+    InputStream inputStream = mock(InputStream.class);
+    OutputStream outputStream = mock(OutputStream.class);
+    doReturn(-1).when(inputStream).read(new byte[1]);
+    doThrow(new IOException()).when(outputStream).close();
     try{
       IOUtils.copyBytes(inputStream, outputStream, 1, true);
     } catch (IOException e) {
     }
-    Mockito.verify(inputStream, Mockito.atLeastOnce()).close();
-    Mockito.verify(outputStream, Mockito.atLeastOnce()).close();
+    verify(inputStream, atLeastOnce()).close();
+    verify(outputStream, atLeastOnce()).close();
   }
 
   @Test
   public void testCopyBytesShouldCloseInputSteamWhenOutputStreamCloseThrowsRunTimeException()
       throws Exception {
-    InputStream inputStream = Mockito.mock(InputStream.class);
-    OutputStream outputStream = Mockito.mock(OutputStream.class);
-    Mockito.doReturn(-1).when(inputStream).read(new byte[1]);
-    Mockito.doThrow(new RuntimeException()).when(outputStream).close();
+    InputStream inputStream = mock(InputStream.class);
+    OutputStream outputStream = mock(OutputStream.class);
+    doReturn(-1).when(inputStream).read(new byte[1]);
+    doThrow(new RuntimeException()).when(outputStream).close();
     try {
       IOUtils.copyBytes(inputStream, outputStream, 1, true);
       fail("Didn't throw exception");
     } catch (RuntimeException e) {
     }
-    Mockito.verify(outputStream, Mockito.atLeastOnce()).close();
+    verify(outputStream, atLeastOnce()).close();
   }
 
   @Test
   public void testCopyBytesShouldCloseInputSteamWhenInputStreamCloseThrowsRunTimeException()
       throws Exception {
-    InputStream inputStream = Mockito.mock(InputStream.class);
-    OutputStream outputStream = Mockito.mock(OutputStream.class);
-    Mockito.doReturn(-1).when(inputStream).read(new byte[1]);
-    Mockito.doThrow(new RuntimeException()).when(inputStream).close();
+    InputStream inputStream = mock(InputStream.class);
+    OutputStream outputStream = mock(OutputStream.class);
+    doReturn(-1).when(inputStream).read(new byte[1]);
+    doThrow(new RuntimeException()).when(inputStream).close();
     try {
       IOUtils.copyBytes(inputStream, outputStream, 1, true);
       fail("Didn't throw exception");
     } catch (RuntimeException e) {
     }
-    Mockito.verify(inputStream, Mockito.atLeastOnce()).close();
+    verify(inputStream, atLeastOnce()).close();
   }
 
   @Test
   public void testCopyBytesShouldNotCloseStreamsWhenCloseIsFalse()
       throws Exception {
-    InputStream inputStream = Mockito.mock(InputStream.class);
-    OutputStream outputStream = Mockito.mock(OutputStream.class);
-    Mockito.doReturn(-1).when(inputStream).read(new byte[1]);
+    InputStream inputStream = mock(InputStream.class);
+    OutputStream outputStream = mock(OutputStream.class);
+    doReturn(-1).when(inputStream).read(new byte[1]);
     IOUtils.copyBytes(inputStream, outputStream, 1, false);
-    Mockito.verify(inputStream, Mockito.atMost(0)).close();
-    Mockito.verify(outputStream, Mockito.atMost(0)).close();
+    verify(inputStream, atMost(0)).close();
+    verify(outputStream, atMost(0)).close();
   }
 
   @Test
   public void testCopyBytesWithCountShouldCloseStreamsWhenCloseIsTrue()
       throws Exception {
-    InputStream inputStream = Mockito.mock(InputStream.class);
-    OutputStream outputStream = Mockito.mock(OutputStream.class);
-    Mockito.doReturn(-1).when(inputStream).read(new byte[4096], 0, 1);
+    InputStream inputStream = mock(InputStream.class);
+    OutputStream outputStream = mock(OutputStream.class);
+    doReturn(-1).when(inputStream).read(new byte[4096], 0, 1);
     IOUtils.copyBytes(inputStream, outputStream, (long) 1, true);
-    Mockito.verify(inputStream, Mockito.atLeastOnce()).close();
-    Mockito.verify(outputStream, Mockito.atLeastOnce()).close();
+    verify(inputStream, atLeastOnce()).close();
+    verify(outputStream, atLeastOnce()).close();
   }
 
   @Test
   public void testCopyBytesWithCountShouldNotCloseStreamsWhenCloseIsFalse()
       throws Exception {
-    InputStream inputStream = Mockito.mock(InputStream.class);
-    OutputStream outputStream = Mockito.mock(OutputStream.class);
-    Mockito.doReturn(-1).when(inputStream).read(new byte[4096], 0, 1);
+    InputStream inputStream = mock(InputStream.class);
+    OutputStream outputStream = mock(OutputStream.class);
+    doReturn(-1).when(inputStream).read(new byte[4096], 0, 1);
     IOUtils.copyBytes(inputStream, outputStream, (long) 1, false);
-    Mockito.verify(inputStream, Mockito.atMost(0)).close();
-    Mockito.verify(outputStream, Mockito.atMost(0)).close();
+    verify(inputStream, atMost(0)).close();
+    verify(outputStream, atMost(0)).close();
   }
 
   @Test
   public void testCopyBytesWithCountShouldThrowOutTheStreamClosureExceptions()
       throws Exception {
-    InputStream inputStream = Mockito.mock(InputStream.class);
-    OutputStream outputStream = Mockito.mock(OutputStream.class);
-    Mockito.doReturn(-1).when(inputStream).read(new byte[4096], 0, 1);
-    Mockito.doThrow(new IOException("Exception in closing the stream")).when(
+    InputStream inputStream = mock(InputStream.class);
+    OutputStream outputStream = mock(OutputStream.class);
+    doReturn(-1).when(inputStream).read(new byte[4096], 0, 1);
+    doThrow(new IOException("Exception in closing the stream")).when(
         outputStream).close();
     try {
       IOUtils.copyBytes(inputStream, outputStream, (long) 1, true);
       fail("Should throw out the exception");
     } catch (IOException e) {
-      assertEquals("Not throwing the expected exception.",
-          "Exception in closing the stream", e.getMessage());
+      assertEquals("Exception in closing the stream", e.getMessage(),
+          "Not throwing the expected exception.");
     }
-    Mockito.verify(inputStream, Mockito.atLeastOnce()).close();
-    Mockito.verify(outputStream, Mockito.atLeastOnce()).close();
+    verify(inputStream, atLeastOnce()).close();
+    verify(outputStream, atLeastOnce()).close();
   }
 
   @Test
@@ -205,14 +211,14 @@ public class TestIOUtils {
   @Test
   public void testWrappedReadForCompressedData() throws IOException {
     byte[] buf = new byte[2];
-    InputStream mockStream = Mockito.mock(InputStream.class);
-    Mockito.when(mockStream.read(buf, 0, 1)).thenReturn(1);
-    Mockito.when(mockStream.read(buf, 0, 2)).thenThrow(
+    InputStream mockStream = mock(InputStream.class);
+    when(mockStream.read(buf, 0, 1)).thenReturn(1);
+    when(mockStream.read(buf, 0, 2)).thenThrow(
         new java.lang.InternalError());
 
     try {
-      assertEquals("Check expected value", 1,
-          IOUtils.wrappedReadForCompressedData(mockStream, buf, 0, 1));
+      assertEquals(1, IOUtils.wrappedReadForCompressedData(mockStream, buf, 0, 1),
+          "Check expected value");
     } catch (IOException ioe) {
       fail("Unexpected error while reading");
     }
@@ -285,14 +291,14 @@ public class TestIOUtils {
       List<String> list = IOUtils.listDirectory(dir,
           NoEntry3Filter.INSTANCE);
       for (String entry : list) {
-        Assert.assertTrue(entries.remove(entry));
+        assertTrue(entries.remove(entry));
       }
-      Assert.assertTrue(entries.contains("entry3"));
+      assertTrue(entries.contains("entry3"));
       list = IOUtils.listDirectory(dir, null);
       for (String entry : list) {
         entries.remove(entry);
       }
-      Assert.assertTrue(entries.isEmpty());
+      assertTrue(entries.isEmpty());
     } finally {
       FileUtils.deleteDirectory(dir);
     }

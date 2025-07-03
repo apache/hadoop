@@ -17,10 +17,10 @@
 package org.apache.hadoop.registry.server.dns;
 
 import java.net.UnknownHostException;
-import static org.junit.Assert.assertEquals;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the reverse zone utilities.
@@ -29,8 +29,6 @@ public class TestReverseZoneUtils {
   private static final String NET = "172.17.4.0";
   private static final int RANGE = 256;
   private static final int INDEX = 0;
-
-  @Rule public ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testGetReverseZoneNetworkAddress() throws Exception {
@@ -50,22 +48,25 @@ public class TestReverseZoneUtils {
   @Test
   public void testThrowIllegalArgumentExceptionIfIndexIsNegative()
       throws Exception {
-    exception.expect(IllegalArgumentException.class);
-    ReverseZoneUtils.getReverseZoneNetworkAddress(NET, RANGE, -1);
+    assertThrows(IllegalArgumentException.class, () -> {
+      ReverseZoneUtils.getReverseZoneNetworkAddress(NET, RANGE, -1);
+    });
   }
 
   @Test
   public void testThrowUnknownHostExceptionIfIpIsInvalid() throws Exception {
-    exception.expect(UnknownHostException.class);
-    ReverseZoneUtils
-        .getReverseZoneNetworkAddress("213124.21231.14123.13", RANGE, INDEX);
+    assertThrows(UnknownHostException.class, () -> {
+      ReverseZoneUtils.getReverseZoneNetworkAddress(
+          "213124.21231.14123.13", RANGE, INDEX);
+    });
   }
 
   @Test
   public void testThrowIllegalArgumentExceptionIfRangeIsNegative()
       throws Exception {
-    exception.expect(IllegalArgumentException.class);
-    ReverseZoneUtils.getReverseZoneNetworkAddress(NET, -1, INDEX);
+    assertThrows(IllegalArgumentException.class, () -> {
+      ReverseZoneUtils.getReverseZoneNetworkAddress(NET, -1, INDEX);
+    });
   }
 
   @Test

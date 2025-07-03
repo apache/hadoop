@@ -42,7 +42,6 @@ import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.UUID;
 
 import org.w3c.dom.Document;
@@ -79,6 +78,7 @@ import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
+import org.apache.hadoop.fs.azurebfs.utils.ListUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
@@ -350,13 +350,9 @@ public class AbfsBlobClient extends AbfsClient {
    */
   @Override
   public ListResponseData listPath(final String relativePath, final boolean recursive,
-      final int listMaxResults, final String continuation, TracingContext tracingContext, URI uri) throws IOException {
-    return listPath(relativePath, recursive, listMaxResults, continuation, tracingContext, uri, true);
-  }
-
-  public ListResponseData listPath(final String relativePath, final boolean recursive,
-      final int listMaxResults, final String continuation, TracingContext tracingContext, URI uri, boolean is404CheckRequired)
+      final int listMaxResults, final String continuation, TracingContext tracingContext, URI uri)
       throws AzureBlobFileSystemException {
+
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -369,7 +365,7 @@ public class AbfsBlobClient extends AbfsClient {
       abfsUriQueryBuilder.addQuery(QUERY_PARAM_DELIMITER, FORWARD_SLASH);
     }
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_MAX_RESULTS, String.valueOf(listMaxResults));
-    appendSASTokenToQuery(relativePath, SASTokenProvider.FIXED_SAS_STORE_OPERATION, abfsUriQueryBuilder);
+    appendSASTokenToQuery(relativePath, SASTokenProvider.LIST_OPERATION_BLOB, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -387,55 +383,77 @@ public class AbfsBlobClient extends AbfsClient {
     if (tracingContext.getOpType() == FSOperationType.LISTSTATUS
         && op.getResult() != null
         && op.getResult().getStatusCode() == HTTP_OK) {
-      retryRenameOnAtomicEntriesInListResults(tracingContext,
+      boolean isRenameRecovered = retryRenameOnAtomicEntriesInListResults(tracingContext,
           listResponseData.getRenamePendingJsonPaths());
-    }
-
-    if (isEmptyListResults(listResponseData) && is404CheckRequired) {
-      // If the list operation returns no paths, we need to check if the path is a file.
-      // If it is a file, we need to return the file in the list.
-      // If it is a non-existing path, we need to throw a FileNotFoundException.
-      if (relativePath.equals(ROOT_PATH)) {
-        // Root Always exists as directory. It can be an empty listing.
-        return listResponseData;
+      if (isRenameRecovered) {
+        LOG.debug("Retrying list operation after rename recovery.");
+        // Retry the list operation to get the updated list of paths after rename recovery.
+        AbfsRestOperation retryListOp = getAbfsRestOperation(
+            AbfsRestOperationType.ListBlobs,
+            HTTP_METHOD_GET,
+            url,
+            requestHeaders);
+        retryListOp.execute(tracingContext);
+        listResponseData = parseListPathResults(retryListOp.getResult(), uri);
+        listResponseData.setOp(retryListOp);
       }
-      AbfsRestOperation pathStatus = this.getPathStatus(relativePath, tracingContext, null, false);
-      BlobListResultSchema listResultSchema = getListResultSchemaFromPathStatus(relativePath, pathStatus);
-      LOG.debug("ListBlob attempted on a file path. Returning file status.");
-      List<FileStatus> fileStatusList = new ArrayList<>();
-      for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
-        fileStatusList.add(getVersionedFileStatusFromEntry(entry, uri));
-      }
-      AbfsRestOperation listOp = getAbfsRestOperation(
-          AbfsRestOperationType.ListBlobs,
-          HTTP_METHOD_GET,
-          url,
-          requestHeaders);
-      listOp.hardSetGetListStatusResult(HTTP_OK, listResultSchema);
-      listResponseData.setFileStatusList(fileStatusList);
-      listResponseData.setContinuationToken(null);
-      listResponseData.setRenamePendingJsonPaths(null);
-      listResponseData.setOp(listOp);
-      return listResponseData;
     }
     return listResponseData;
   }
 
+  /**
+   * Post-processing of the list operation on Blob endpoint.
+   * There are two client handing to be done on list output.
+   * 1. Empty List returned on server could potentially mean path is a file.
+   * 2. There can be duplicates returned from the server for explicit non-empty directory.
+   * @param relativePath relative path to be listed.
+   * @param fileStatuses list of file statuses returned from the server.
+   * @param tracingContext tracing context to trace server calls.
+   * @param uri URI to be used for path conversion.
+   * @return rectified list of file statuses.
+   * @throws AzureBlobFileSystemException if any failure occurs.
+   */
+  @Override
+  public List<FileStatus> postListProcessing(String relativePath, List<FileStatus> fileStatuses,
+      TracingContext tracingContext, URI uri) throws AzureBlobFileSystemException {
+    List<FileStatus> rectifiedFileStatuses = new ArrayList<>();
+    if (fileStatuses.isEmpty() && !ROOT_PATH.equals(relativePath)) {
+      // If the list operation returns no paths, we need to check if the path is a file.
+      // If it is a file, we need to return the file in the list.
+      // If it is a directory or root path, we need to return an empty list.
+      // If it is a non-existing path, we need to throw a FileNotFoundException.
+      AbfsRestOperation pathStatus = this.getPathStatus(relativePath, tracingContext, null, false);
+      BlobListResultSchema listResultSchema = getListResultSchemaFromPathStatus(relativePath, pathStatus);
+      LOG.debug("ListStatus attempted on a file path {}. Returning file status.", relativePath);
+      for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
+        rectifiedFileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
+      }
+    } else {
+      // Remove duplicates from the non-empty list output only.
+      rectifiedFileStatuses.addAll(ListUtils.getUniqueListResult(fileStatuses));
+      LOG.debug(
+          "ListBlob API returned a total of {} elements including duplicates."
+              + "Number of unique Elements are {}", fileStatuses.size(),
+          rectifiedFileStatuses.size());
+    }
+    return rectifiedFileStatuses;
+  }
   /**
    * Filter the paths for which no rename redo operation is performed.
    * Update BlobListResultSchema path with filtered entries.
    * @param tracingContext tracing context
    * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
    */
-  private void retryRenameOnAtomicEntriesInListResults(TracingContext tracingContext,
+  private boolean retryRenameOnAtomicEntriesInListResults(TracingContext tracingContext,
       Map<Path, Integer> renamePendingJsonPaths) throws AzureBlobFileSystemException {
     if (renamePendingJsonPaths == null || renamePendingJsonPaths.isEmpty()) {
-      return;
+      return false;
     }
 
     for (Map.Entry<Path, Integer> entry : renamePendingJsonPaths.entrySet()) {
       retryRenameOnAtomicKeyPath(entry.getKey(), entry.getValue(), tracingContext);
     }
+    return true;
   }
 
   /**{@inheritDoc}*/
@@ -544,11 +562,14 @@ public class AbfsBlobClient extends AbfsClient {
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     if (isFile) {
       addEncryptionKeyRequestHeaders(path, requestHeaders, true,
           contextEncryptionAdapter, tracingContext);
+      appendSASTokenToQuery(path, SASTokenProvider.CREATE_FILE_OPERATION, abfsUriQueryBuilder);
     } else {
       requestHeaders.add(new AbfsHttpHeader(X_MS_META_HDI_ISFOLDER, TRUE));
+      appendSASTokenToQuery(path, SASTokenProvider.CREATE_DIRECTORY_OPERATION, abfsUriQueryBuilder);
     }
     requestHeaders.add(new AbfsHttpHeader(CONTENT_LENGTH, ZERO));
     if (isAppendBlob) {
@@ -562,9 +583,6 @@ public class AbfsBlobClient extends AbfsClient {
     if (eTag != null && !eTag.isEmpty()) {
       requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.IF_MATCH, eTag));
     }
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    appendSASTokenToQuery(path, SASTokenProvider.FIXED_SAS_STORE_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -687,7 +705,7 @@ public class AbfsBlobClient extends AbfsClient {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, LEASE);
-    appendSASTokenToQuery(path, SASTokenProvider.FIXED_SAS_STORE_OPERATION, abfsUriQueryBuilder);
+    appendSASTokenToQuery(path, SASTokenProvider.LEASE_BLOB_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -715,7 +733,7 @@ public class AbfsBlobClient extends AbfsClient {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, LEASE);
-    appendSASTokenToQuery(path, SASTokenProvider.FIXED_SAS_STORE_OPERATION, abfsUriQueryBuilder);
+    appendSASTokenToQuery(path, SASTokenProvider.LEASE_BLOB_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -743,7 +761,7 @@ public class AbfsBlobClient extends AbfsClient {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, LEASE);
-    appendSASTokenToQuery(path, SASTokenProvider.FIXED_SAS_STORE_OPERATION, abfsUriQueryBuilder);
+    appendSASTokenToQuery(path, SASTokenProvider.LEASE_BLOB_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -770,7 +788,7 @@ public class AbfsBlobClient extends AbfsClient {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, LEASE);
-    appendSASTokenToQuery(path, SASTokenProvider.FIXED_SAS_STORE_OPERATION, abfsUriQueryBuilder);
+    appendSASTokenToQuery(path, SASTokenProvider.LEASE_BLOB_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -815,9 +833,11 @@ public class AbfsBlobClient extends AbfsClient {
         destination, sourceEtag, isAtomicRenameKey(source), tracingContext
     );
     try {
-      if (blobRenameHandler.execute()) {
+      if (blobRenameHandler.execute(false)) {
         final AbfsUriQueryBuilder abfsUriQueryBuilder
             = createDefaultUriQueryBuilder();
+        appendSASTokenToQuery(source, SASTokenProvider.RENAME_SOURCE_OPERATION,
+            abfsUriQueryBuilder);
         final URL url = createRequestUrl(destination,
             abfsUriQueryBuilder.toString());
         final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
@@ -891,7 +911,7 @@ public class AbfsBlobClient extends AbfsClient {
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCK);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_BLOCKID, reqParams.getBlockId());
 
-    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.FIXED_SAS_STORE_OPERATION,
+    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
@@ -964,7 +984,7 @@ public class AbfsBlobClient extends AbfsClient {
     }
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, APPEND_BLOCK);
-    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.FIXED_SAS_STORE_OPERATION, abfsUriQueryBuilder);
+    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -1056,7 +1076,7 @@ public class AbfsBlobClient extends AbfsClient {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCKLIST);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(isClose));
-    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.FIXED_SAS_STORE_OPERATION,
+    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
@@ -1118,7 +1138,7 @@ public class AbfsBlobClient extends AbfsClient {
 
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, METADATA);
-    appendSASTokenToQuery(path, SASTokenProvider.FIXED_SAS_STORE_OPERATION, abfsUriQueryBuilder);
+    appendSASTokenToQuery(path, SASTokenProvider.SET_PROPERTIES_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -1197,7 +1217,7 @@ public class AbfsBlobClient extends AbfsClient {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN,
         String.valueOf(getAbfsConfiguration().isUpnUsed()));
-    appendSASTokenToQuery(path, SASTokenProvider.FIXED_SAS_STORE_OPERATION,
+    appendSASTokenToQuery(path, SASTokenProvider.GET_PROPERTIES_OPERATION,
         abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
@@ -1276,7 +1296,7 @@ public class AbfsBlobClient extends AbfsClient {
     }
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.FIXED_SAS_STORE_OPERATION,
+    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.READ_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
 
     URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
@@ -1438,7 +1458,7 @@ public class AbfsBlobClient extends AbfsClient {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    String operation = SASTokenProvider.FIXED_SAS_STORE_OPERATION;
+    String operation = SASTokenProvider.READ_OPERATION;
     appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
 
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCKLIST);
@@ -1476,9 +1496,9 @@ public class AbfsBlobClient extends AbfsClient {
     String dstBlobRelativePath = destinationBlobPath.toUri().getPath();
     String srcBlobRelativePath = sourceBlobPath.toUri().getPath();
     appendSASTokenToQuery(dstBlobRelativePath,
-        SASTokenProvider.FIXED_SAS_STORE_OPERATION, abfsUriQueryBuilderDst);
+        SASTokenProvider.COPY_BLOB_DST_OPERATION, abfsUriQueryBuilderDst);
     appendSASTokenToQuery(srcBlobRelativePath,
-        SASTokenProvider.FIXED_SAS_STORE_OPERATION, abfsUriQueryBuilderSrc);
+        SASTokenProvider.COPY_BLOB_SRC_OPERATION, abfsUriQueryBuilderSrc);
     final URL url = createRequestUrl(dstBlobRelativePath,
         abfsUriQueryBuilderDst.toString());
     final String sourcePathUrl = createRequestUrl(srcBlobRelativePath,
@@ -1512,7 +1532,7 @@ public class AbfsBlobClient extends AbfsClient {
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     String blobRelativePath = blobPath.toUri().getPath();
     appendSASTokenToQuery(blobRelativePath,
-        SASTokenProvider.FIXED_SAS_STORE_OPERATION, abfsUriQueryBuilder);
+        SASTokenProvider.DELETE_OPERATION, abfsUriQueryBuilder);
     final URL url = createRequestUrl(blobRelativePath,
         abfsUriQueryBuilder.toString());
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
@@ -1617,7 +1637,7 @@ public class AbfsBlobClient extends AbfsClient {
         LOG.debug("ListBlobs listed {} blobs with {} as continuation token",
             listResultSchema.paths().size(),
             listResultSchema.getNextMarker());
-        return filterDuplicateEntriesAndRenamePendingFiles(listResultSchema, uri);
+        return filterRenamePendingFiles(listResultSchema, uri);
       } catch (SAXException | IOException ex) {
         throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, ex);
       }
@@ -1917,39 +1937,23 @@ public class AbfsBlobClient extends AbfsClient {
   });
 
   /**
-   * This is to handle duplicate listing entries returned by Blob Endpoint for
-   * implicit paths that also has a marker file created for them.
-   * This will retain entry corresponding to marker file and remove the BlobPrefix entry.
-   * This will also filter out all the rename pending json files in listing output.
+   * This will filter out all the rename pending json files in listing output.
    * @param listResultSchema List of entries returned by Blob Endpoint.
    * @param uri URI to be used for path conversion.
    * @return List of entries after removing duplicates.
    * @throws IOException if path conversion fails.
    */
   @VisibleForTesting
-  public ListResponseData filterDuplicateEntriesAndRenamePendingFiles(
+  public ListResponseData filterRenamePendingFiles(
       BlobListResultSchema listResultSchema, URI uri) throws IOException {
-    List<FileStatus> fileStatuses = new ArrayList<>();
+    List<VersionedFileStatus> fileStatuses = new ArrayList<>();
     Map<Path, Integer> renamePendingJsonPaths = new HashMap<>();
-    TreeMap<String, BlobListResultEntrySchema> nameToEntryMap = new TreeMap<>();
 
     for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
-      if (StringUtils.isNotEmpty(entry.eTag())) {
-        // This is a blob entry. It is either a file or a marker blob.
-        // In both cases we will add this.
-        if (isRenamePendingJsonPathEntry(entry)) {
-          renamePendingJsonPaths.put(entry.path(), entry.contentLength().intValue());
-        } else {
-          nameToEntryMap.put(entry.name(), entry);
-          fileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
-        }
+      if (isRenamePendingJsonPathEntry(entry)) {
+        renamePendingJsonPaths.put(entry.path(), entry.contentLength().intValue());
       } else {
-        // This is a BlobPrefix entry. It is a directory with file inside
-        // This might have already been added as a marker blob.
-        if (!nameToEntryMap.containsKey(entry.name())) {
-          nameToEntryMap.put(entry.name(), entry);
-          fileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
-        }
+        fileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
       }
     }
 
@@ -2016,6 +2020,8 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Checks if the listing of the specified path is non-empty.
+   * Since listing is incomplete as long as continuation token is returned by server,
+   * we need to iterate until either we get one entry or continuation token becomes null.
    *
    * @param path The path to be listed.
    * @param tracingContext The tracing context for tracking the operation.
@@ -2027,26 +2033,15 @@ public class AbfsBlobClient extends AbfsClient {
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     // This method is only called internally to determine state of a path
     // and hence don't need identity transformation to happen.
-    ListResponseData listResponseData = listPath(path, false, 1, null, tracingContext, null, false);
-    return !isEmptyListResults(listResponseData);
-  }
-
-  /**
-   * Check if the list call returned empty results without any continuation token.
-   * @param listResponseData The response of listing API from the server.
-   * @return True if empty results without continuation token.
-   */
-  private boolean isEmptyListResults(ListResponseData listResponseData) {
-    AbfsHttpOperation result = listResponseData.getOp().getResult();
-    boolean isEmptyList = result != null && result.getStatusCode() == HTTP_OK && // List Call was successful
-        result.getListResultSchema() != null && // Parsing of list response was successful
-        listResponseData.getFileStatusList().isEmpty() && listResponseData.getRenamePendingJsonPaths().isEmpty() &&// No paths were returned
-        StringUtils.isEmpty(listResponseData.getContinuationToken()); // No continuation token was returned
-    if (isEmptyList) {
-      LOG.debug("List call returned empty results without any continuation token.");
-      return true;
-    }
-    return false;
+    String continuationToken = null;
+    List<FileStatus> fileStatusList = new ArrayList<>();
+    // We need to loop on continuation token until we get an entry or continuation token becomes null.
+    do {
+      ListResponseData listResponseData = listPath(path, false, 1, continuationToken, tracingContext, null);
+      fileStatusList.addAll(listResponseData.getFileStatusList());
+      continuationToken = listResponseData.getContinuationToken();
+    } while (StringUtils.isNotEmpty(continuationToken) && fileStatusList.isEmpty());
+    return !fileStatusList.isEmpty();
   }
 
   /**

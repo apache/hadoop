@@ -24,7 +24,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
@@ -70,7 +72,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       String message,
       S3GuardTool tool,
       String... args) throws Exception {
-    assertEquals(message, expected, tool.run(args));
+    assertEquals(expected, tool.run(args), message);
   }
 
   /**
@@ -131,11 +133,13 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     }
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     super.teardown();
@@ -153,8 +157,8 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
         "-" + S3GuardTool.BucketInfo.UNGUARDED_FLAG,
         fsUri.toString());
 
-    assertTrue("Output should contain information about S3A client " + info,
-        info.contains("S3A Client"));
+    assertTrue(info.contains("S3A Client"),
+        "Output should contain information about S3A client " + info);
   }
 
   /**

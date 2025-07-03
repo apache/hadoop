@@ -22,9 +22,9 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.Date;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +49,7 @@ public class TestDFSShellTouch {
   private static DistributedFileSystem dfs;
   private static FsShell shell;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     final Configuration conf = new Configuration();
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR,
@@ -61,7 +61,7 @@ public class TestDFSShellTouch {
     shell = new FsShell(dfs.getConf());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (miniCluster != null) {
       miniCluster.shutdown(true, true);

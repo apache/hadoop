@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -93,6 +95,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -105,6 +108,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     assumeStoreAwsHosted(getFileSystem());
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     super.teardown();
@@ -272,7 +276,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   @Test
   public void testListStatusEncryptedFile() throws Exception {
     Path pathABC = new Path(methodPath(), "a/b/c/");
-    assertTrue("mkdirs failed", getFileSystem().mkdirs(pathABC));
+    assertTrue(getFileSystem().mkdirs(pathABC), "mkdirs failed");
 
     Path fileToStat = new Path(pathABC, "fileToStat.txt");
     writeThenReadFile(fileToStat, TEST_FILE_LEN);

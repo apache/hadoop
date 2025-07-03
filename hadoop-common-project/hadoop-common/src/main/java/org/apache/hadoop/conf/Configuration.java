@@ -3433,6 +3433,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           deprecations.getDeprecatedKeyMap().get(confName);
 
       if (keyInfo != null) {
+        logDeprecation(keyInfo.getWarningMessage(confName, wrapper.toString()));
         keyInfo.clearAccessed();
         for (String key : keyInfo.newKeys) {
           // update new keys with deprecated key's value
