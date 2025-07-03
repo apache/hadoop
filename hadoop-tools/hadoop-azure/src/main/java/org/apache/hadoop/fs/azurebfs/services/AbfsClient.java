@@ -442,7 +442,7 @@ public abstract class AbfsClient implements Closeable {
     requestHeaders.add(new AbfsHttpHeader(X_MS_VERSION, xMsVersion.toString()));
     requestHeaders.add(new AbfsHttpHeader(ACCEPT_CHARSET, UTF_8));
     requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, EMPTY_STRING));
-    requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgent));
+    requestHeaders.add(new AbfsHttpHeader(USER_AGENT, getUserAgent()));
     return requestHeaders;
   }
 
@@ -1322,8 +1322,9 @@ public abstract class AbfsClient implements Closeable {
     sb.append(abfsConfiguration.getClusterType());
 
     // Add a unique identifier in FNS-Blob user agent string
-    if (!getIsNamespaceEnabled()
-        && abfsConfiguration.getFsConfiguredServiceType() == BLOB) {
+    // Current filesystem init restricts HNS-Blob combination
+    // so namespace check not required.
+    if (BLOB == abfsConfiguration.getFsConfiguredServiceType()) {
       sb.append(SEMICOLON)
           .append(SINGLE_WHITE_SPACE)
           .append(FNS_BLOB_USER_AGENT_IDENTIFIER);
