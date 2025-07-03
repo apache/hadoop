@@ -47,7 +47,7 @@ public class AzureBlobBlockManager extends AzureBlockManager {
   /** The list to store blockId, position, and status. */
   private final LinkedList<BlockEntry> blockEntryList = new LinkedList<>();
 
-  int blockIdLength = 0;
+  private int blockIdLength = 0;
 
   /**
    * Constructs an AzureBlobBlockManager.
