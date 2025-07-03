@@ -23,9 +23,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.HashSet;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -85,15 +85,17 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
    * @return The Base64-encoded MD5 checksum of the specified data, or null if the digest is empty.
    * @throws IllegalArgumentException If the offset or length is invalid for the given byte array.
    */
-public String getMd5(byte[] data, int off, int length) {
-  md.update(data, off, length);
-  byte[] digest = md.digest();
-  String md5 = null;
-  if (digest.length != 0) {
-    md5 = Base64.getEncoder().encodeToString(digest);
+  public String getMd5(byte[] data, int off, int length) {
+    String md5 = null;
+    if (md != null) {
+      md.update(data, off, length);
+      byte[] digest = md.digest();
+      if (digest.length != 0) {
+        md5 = Base64.encodeBase64String(digest);
+      }
+    }
+    return md5;
   }
-  return md5;
-}
 
   @Test
   public void testWriteReadWithChecksum() throws Exception {

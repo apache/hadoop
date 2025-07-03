@@ -158,14 +158,14 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    * The `MessageDigest` instance used for computing the incremental MD5 hash
    * of the data written so far. This is updated as data is written to the stream.
    */
-  private final MessageDigest md5;
+  private MessageDigest md5 = null;
 
   /**
    * The `MessageDigest` instance used for computing the MD5 hash
    * of the full blob content. This is updated with all data written to the stream
    * and represents the complete MD5 checksum of the blob.
    */
-  private final MessageDigest fullBlobContentMd5;
+  private MessageDigest fullBlobContentMd5 = null;
 
   public AbfsOutputStream(AbfsOutputStreamContext abfsOutputStreamContext)
       throws IOException {
