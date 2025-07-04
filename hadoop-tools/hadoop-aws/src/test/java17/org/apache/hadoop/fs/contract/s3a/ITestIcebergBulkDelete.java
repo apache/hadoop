@@ -23,10 +23,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +57,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>
  * Parameterized on s3a multipart delete enabled/disabled.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("params")
+
 public class ITestIcebergBulkDelete extends AbstractS3ACostTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(ITestIcebergBulkDelete.class);
@@ -94,14 +98,10 @@ public class ITestIcebergBulkDelete extends AbstractS3ACostTest {
   /**
    * Enable s3a multi object delete.
    */
-  private boolean enableMultiObjectDelete;
+  private final boolean enableMultiObjectDelete;
 
-  /**
-   * Init the test suite.
-   * @param enableMultiObjectDelete Enable s3a multi object delete.
-   */
-  protected void initSuite(boolean enableMultiObjectDelete) {
-    enableMultiObjectDelete = enableMultiObjectDelete;
+  public ITestIcebergBulkDelete(boolean enableMultiObjectDelete) {
+    this.enableMultiObjectDelete = enableMultiObjectDelete;
   }
 
   /**
@@ -111,12 +111,16 @@ public class ITestIcebergBulkDelete extends AbstractS3ACostTest {
    * cached ones to avoid contamination.
    */
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     // close all filesystems.
     FileSystem.closeAllForUGI(UserGroupInformation.getCurrentUser());
 
     // then create the single new one
     super.setup();
+    assertThat(getContract())
+        .describedAs("FS Contract is null")
+        .isNotNull();
     fileIO = createFileIO();
   }
 
@@ -152,10 +156,8 @@ public class ITestIcebergBulkDelete extends AbstractS3ACostTest {
   /**
    * Delete a single file using the bulk delete API.
    */
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testDeleteSingleFile(boolean params) throws Throwable {
-    initSuite(params);
+  @Test
+  public void testDeleteSingleFile() throws Throwable {
     Path path = new Path(methodPath(), "../single");
     final List<String> filename = stringList(path);
     LOG.info("Deleting empty path");
@@ -220,10 +222,8 @@ public class ITestIcebergBulkDelete extends AbstractS3ACostTest {
    * but does not report a failure.
    * The classic invocation mechanism reports a failure.
    */
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testBulkDeleteDirectory(boolean params) throws Throwable {
-    initSuite(params);
+  @Test
+  public void testBulkDeleteDirectory() throws Throwable {
     Path path = methodPath();
     Path child = new Path(path, "child+=comple]x");
     final FileSystem fs = getFileSystem();
@@ -247,10 +247,8 @@ public class ITestIcebergBulkDelete extends AbstractS3ACostTest {
    * but does not report a failure.
    * The classic invocation mechanism reports a failure.
    */
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testDeleteDirectorySimpleAPI(boolean params) throws Throwable {
-    initSuite(params);
+  @Test
+  public void testDeleteDirectorySimpleAPI() throws Throwable {
     final Path base = methodPath();
     Path path = new Path(base, "subdir");
     Path child = new Path(path, "child+=comple]x");
@@ -286,10 +284,8 @@ public class ITestIcebergBulkDelete extends AbstractS3ACostTest {
    * but does not report a failure.
    * The classic invocation mechanism reports a failure.
    */
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testDeleteFileSimpleAPI(boolean params) throws Throwable {
-    initSuite(params);
+  @Test
+  public void testDeleteFileSimpleAPI() throws Throwable {
     LOG.info("Deleting file via deleteFile(String)");
     final Path base = methodPath();
     Path path = new Path(base, "subdir");
@@ -311,10 +307,8 @@ public class ITestIcebergBulkDelete extends AbstractS3ACostTest {
         .isEmpty();
   }
 
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testDeleteManyFiles(boolean params) throws Throwable {
-    initSuite(params);
+  @Test
+  public void testDeleteManyFiles() throws Throwable {
     LOG.info("Deleting many files via the bulk delete API");
     Path path = methodPath();
     final FileSystem fs = getFileSystem();
