@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -34,14 +32,11 @@ import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AStore;
 import org.apache.hadoop.fs.s3a.statistics.CountersAndGauges;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
-import org.apache.hadoop.util.functional.Tuples;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.apache.hadoop.fs.s3a.Invoker.once;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_BULK_DELETE;
-import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_DELETE;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.util.functional.Tuples.pair;
@@ -86,10 +81,7 @@ public class BulkDeleteOperationCallbacksImpl implements
   /**
    * Measure the duration of the operation in the {@code INVOCATION_BULK_DELETE} duration
    * tracker statistics; counters of object-level operations are handled in the store.
-   * @param keysToDelete key list
-   * @return
-   * @throws IOException
-   * @throws IllegalArgumentException
+   * {@inheritDoc}
    */
   @Override
   @Retries.RetryTranslated

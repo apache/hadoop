@@ -328,11 +328,16 @@
       </properties>
     </profile>
 
-    <!-- Adds a *test only* java 17 build profile-->
+    <!--
+     Add a test profile for formats profile; allows for extra tests of format IO.
+     When trying to avoid loops in the build, don't set this.
+     -->
     <profile>
-      <id>java-17-or-later</id>
+      <id>format-tests</id>
       <activation>
-        <jdk>[17,)</jdk>
+        <property>
+          <name>format-tests</name>
+        </property>
       </activation>
       <build>
         <plugins>
@@ -341,14 +346,14 @@
             <artifactId>build-helper-maven-plugin</artifactId>
             <executions>
               <execution>
-                <id>add-java17-test-source</id>
+                <id>add-format-test-source</id>
                 <phase>generate-test-sources</phase>
                 <goals>
                   <goal>add-test-source</goal>
                 </goals>
                 <configuration>
                   <sources>
-                    <source>${basedir}/src/test/java17</source>
+                    <source>${basedir}/src/test/formats</source>
                   </sources>
                 </configuration>
               </execution>
@@ -359,7 +364,7 @@
       <dependencies>
 
         <!-- Apache Iceberg, used for testing/regression testing BulkDelete -->
-        <!-- iceberg is java 11+ and and is referenced in the java 17 test source tree -->
+        <!-- iceberg is java 11+ and and is referenced in the formats test source tree -->
         <dependency>
           <groupId>org.apache.iceberg</groupId>
           <artifactId>iceberg-core</artifactId>
