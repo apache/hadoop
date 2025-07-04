@@ -359,7 +359,6 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testNameSpaceConfig() throws Exception {
-    assumeDfsServiceType();
     Configuration configuration = getConfigurationWithoutHnsConfig();
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
     AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
@@ -428,7 +427,6 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
   @Test
   public void testFsInitShouldSetNamespaceConfig() throws Exception {
     // Mock the AzureBlobFileSystem and its dependencies
-    assumeDfsServiceType();
     AzureBlobFileSystem mockFileSystem = Mockito.spy((AzureBlobFileSystem)
         FileSystem.newInstance(getConfigurationWithoutHnsConfig()));
     AzureBlobFileSystemStore mockStore = Mockito.spy(mockFileSystem.getAbfsStore());
@@ -468,12 +466,16 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
    * @return Configuration without HNS config
    */
   private Configuration getConfigurationWithoutHnsConfig() {
-    Configuration configuration = getRawConfiguration();
-    configuration.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
-    configuration.unset(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getAccountName()));
-    configuration.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, false);
-    configuration.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, getTestUrl());
-    return configuration;
+    Configuration rawConfig = new Configuration();
+    rawConfig.addResource(TEST_CONFIGURATION_FILE_NAME);
+    rawConfig.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
+    rawConfig.unset(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
+        this.getAccountName()));
+    String testAccountName = "testAccount.dfs.core.windows.net";
+    String defaultUri = this.getTestUrl().replace(this.getAccountName(), testAccountName);
+    // Assert that account specific config takes precedence
+    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri);
+    return rawConfig;
   }
 
   private void assertFileSystemInitWithExpectedHNSSettings(
