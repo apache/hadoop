@@ -5717,7 +5717,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws IllegalArgumentException, IOException {
 
     final Path p = makeQualified(path);
-    final AuditSpanS3A span = createSpan("bulkdelete", p.toString(), null);
+    final AuditSpanS3A span = createSpan(INVOCATION_BULK_DELETE.getSymbol(), p.toString(), null);
     final int size = enableMultiObjectsDelete ? pageSize : 1;
     return new BulkDeleteOperation(
         createStoreContext(),
@@ -5736,7 +5736,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   protected BulkDeleteOperation.BulkDeleteOperationCallbacks createBulkDeleteCallbacks(
       Path path, int pageSize, AuditSpanS3A span) {
-    return new BulkDeleteOperationCallbacksImpl(getStore(), pathToKey(path), pageSize, span);
+    return new BulkDeleteOperationCallbacksImpl(getStore(), pathToKey(path), pageSize, span, statisticsContext);
   }
 
 }

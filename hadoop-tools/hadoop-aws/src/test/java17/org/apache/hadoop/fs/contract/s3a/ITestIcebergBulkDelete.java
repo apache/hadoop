@@ -19,11 +19,12 @@
 package org.apache.hadoop.fs.contract.s3a;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
@@ -32,7 +33,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
+import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Lists;
 import org.apache.iceberg.exceptions.RuntimeIOException;
@@ -47,6 +48,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test Iceberg Bulk Delete API.
@@ -54,7 +56,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * Parameterized on s3a multipart delete enabled/disabled.
  */
 @RunWith(Parameterized.class)
-public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
+public class ITestIcebergBulkDelete extends AbstractS3ACostTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(ITestIcebergBulkDelete.class);
 
@@ -76,23 +78,38 @@ public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
    */
   private HadoopFileIO fileIO;
 
-  @Parameterized.Parameters(name = "multiobjectdelete-{0}")
-  public static Iterable<Object[]> enableMultiObjectDelete() {
+  /**
+   * This test suite is parameterized for single/multiple
+   * delete options.
+   * @return a list of test parameters.
+   */
+  public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {true},
-        {false}
+        {false},
+        {true}
     });
   }
+
 
   /**
    * Enable s3a multi object delete.
    */
-  private final boolean enableMultiObjectDelete;
+  private boolean enableMultiObjectDelete;
 
-  public ITestIcebergBulkDelete(boolean enableMultiObjectDelete) {
-    this.enableMultiObjectDelete = enableMultiObjectDelete;
+  /**
+   * Init the test suite.
+   * @param enableMultiObjectDelete Enable s3a multi object delete.
+   */
+  protected void initSuite(boolean enableMultiObjectDelete) {
+    enableMultiObjectDelete = enableMultiObjectDelete;
   }
 
+  /**
+   * Setup.
+   * To avoid iceberg creating filesystem instances repeatedly, caching
+   * must be enabled. Test setup needs to delete any existing
+   * cached ones to avoid contamination.
+   */
   @Override
   public void setup() throws Exception {
     // close all filesystems.
@@ -104,7 +121,7 @@ public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
   }
 
   @Override
-  protected Configuration createConfiguration() {
+  public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     conf = propagateBucketOptions(conf, getTestBucketName(conf));
     removeBaseAndBucketOverrides(conf,
@@ -135,14 +152,16 @@ public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
   /**
    * Delete a single file using the bulk delete API.
    */
-  @Test
-  public void testDeleteSingleFile() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest
+  public void testDeleteSingleFile(boolean params) throws Throwable {
+    initSuite(params);
     Path path = new Path(methodPath(), "../single");
     final List<String> filename = stringList(path);
     LOG.info("Deleting empty path");
     fileIO.deleteFiles(filename);
     // now one file
-    file(path);
+    touchfile(path);
     LOG.info("Deleting file at {}", filename);
     fileIO.deleteFiles(filename);
     assertDoesNotExist("should have been deleted", path);
@@ -154,7 +173,7 @@ public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
    * @return the string representation of the path
    * @throws Throwable any exception raised
    */
-  String file(Path path) throws Throwable {
+  public String touchfile(Path path) throws Throwable {
     final String name = toString(path);
     fileIO.newOutputFile(name)
         .createOrOverwrite()
@@ -179,7 +198,7 @@ public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
    * @throws Throwable any exception raised
    */
   private void assertExists(String message, Path path) throws Throwable {
-    Assertions.assertThat(exists(path))
+    assertThat(exists(path))
         .as(message + ": " + path)
         .isTrue();
   }
@@ -191,7 +210,7 @@ public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
    * @throws Throwable any exception raised
    */
   private void assertDoesNotExist(String message, Path path) throws Throwable {
-    Assertions.assertThat(exists(path))
+    assertThat(exists(path))
         .as(message + ": " + path)
         .isFalse();
   }
@@ -201,8 +220,10 @@ public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
    * but does not report a failure.
    * The classic invocation mechanism reports a failure.
    */
-  @Test
-  public void testBulkDeleteDirectory() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest
+  public void testBulkDeleteDirectory(boolean params) throws Throwable {
+    initSuite(params);
     Path path = methodPath();
     Path child = new Path(path, "child+=comple]x");
     final FileSystem fs = getFileSystem();
@@ -211,7 +232,7 @@ public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
     // create a directory and a child underneath
 
     fs.mkdirs(path);
-    final String childname = file(child);
+    final String childname = touchfile(child);
 
     LOG.info("Deleting path to directory");
     fileIO.deleteFiles(dir);
@@ -226,8 +247,10 @@ public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
    * but does not report a failure.
    * The classic invocation mechanism reports a failure.
    */
-  @Test
-  public void testDeleteDirectorySimpleAPI() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest
+  public void testDeleteDirectorySimpleAPI(boolean params) throws Throwable {
+    initSuite(params);
     final Path base = methodPath();
     Path path = new Path(base, "subdir");
     Path child = new Path(path, "child+=comple]x");
@@ -238,8 +261,8 @@ public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
 
     // create a directory and a child underneath
     fs.mkdirs(path);
-    final String childname = file(child);
-    Assertions.assertThat(listPaths(base))
+    final String childname = touchfile(child);
+    assertThat(listPaths(base))
         .as("directory should be empty after deletion")
         .hasSize(1)
             .element(0)
@@ -263,8 +286,10 @@ public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
    * but does not report a failure.
    * The classic invocation mechanism reports a failure.
    */
-  @Test
-  public void testDeleteFileSimpleAPI() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest
+  public void testDeleteFileSimpleAPI(boolean params) throws Throwable {
+    initSuite(params);
     LOG.info("Deleting file via deleteFile(String)");
     final Path base = methodPath();
     Path path = new Path(base, "subdir");
@@ -274,20 +299,22 @@ public class ITestIcebergBulkDelete extends AbstractS3ATestBase {
 
     // create a directory and a child underneath
     fs.mkdirs(path);
-    final String childname = file(child);
+    final String childname = touchfile(child);
 
     // Through the HadoopFileIO.deleteFile API.
     fileIO.deleteFile(childname);
     assertDoesNotExist("child should have been deleted", child);
     fileIO.deleteFile(toString(path));
     assertDoesNotExist("empty directory should have been deleted", path);
-    Assertions.assertThat(listPaths(base))
+    assertThat(listPaths(base))
         .as("directory should be empty after deletion")
         .isEmpty();
   }
 
-  @Test
-  public void testDeleteManyFiles() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest
+  public void testDeleteManyFiles(boolean params) throws Throwable {
+    initSuite(params);
     LOG.info("Deleting many files via the bulk delete API");
     Path path = methodPath();
     final FileSystem fs = getFileSystem();

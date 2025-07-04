@@ -32,12 +32,17 @@ import software.amazon.awssdk.services.s3.model.S3Error;
 
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AStore;
+import org.apache.hadoop.fs.s3a.statistics.CountersAndGauges;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.util.functional.Tuples;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.apache.hadoop.fs.s3a.Invoker.once;
+import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_BULK_DELETE;
+import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_DELETE;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.util.functional.Tuples.pair;
 
@@ -63,44 +68,60 @@ public class BulkDeleteOperationCallbacksImpl implements
    */
   private final S3AStore store;
 
+  /**
+   * Statistics counters to update;
+   */
+  private final CountersAndGauges statisticsCounters;
 
   public BulkDeleteOperationCallbacksImpl(final S3AStore store,
-      String path, int pageSize, AuditSpan span) {
+      String path, int pageSize, AuditSpan span,
+      final CountersAndGauges statisticsCounters) {
     this.span = span;
     this.pageSize = pageSize;
     this.path = path;
     this.store = store;
+    this.statisticsCounters = statisticsCounters;
   }
 
+  /**
+   * Measure the duration of the operation in the {@code INVOCATION_BULK_DELETE} duration
+   * tracker statistics; counters of object-level operations are handled in the store.
+   * @param keysToDelete key list
+   * @return
+   * @throws IOException
+   * @throws IllegalArgumentException
+   */
   @Override
   @Retries.RetryTranslated
   public List<Map.Entry<String, String>> bulkDelete(final List<ObjectIdentifier> keysToDelete)
       throws IOException, IllegalArgumentException {
     span.activate();
-    final int size = keysToDelete.size();
-    checkArgument(size <= pageSize,
-        "Too many paths to delete in one operation: %s", size);
-    if (size == 0) {
-      return emptyList();
-    }
+    return trackDuration(statisticsCounters, INVOCATION_BULK_DELETE.getSymbol(), () -> {
+      final int size = keysToDelete.size();
+      checkArgument(size <= pageSize,
+          "Too many paths to delete in one operation: %s", size);
+      if (size == 0) {
+        return emptyList();
+      }
 
-    if (size == 1) {
-      return deleteSingleObject(keysToDelete.get(0).key());
-    }
+      if (size == 1) {
+        return deleteSingleObject(keysToDelete.get(0).key());
+      }
 
-    final DeleteObjectsResponse response = once("bulkDelete", path, () ->
-        store.deleteObjects(store.getRequestFactory()
-            .newBulkDeleteRequestBuilder(keysToDelete)
-            .build())).getValue();
-    final List<S3Error> errors = response.errors();
-    if (errors.isEmpty()) {
-      // all good.
-      return emptyList();
-    } else {
-      return errors.stream()
-          .map(e -> pair(e.key(), e.toString()))
-          .collect(Collectors.toList());
-    }
+      final DeleteObjectsResponse response = once("bulkDelete", path, () ->
+          store.deleteObjects(store.getRequestFactory()
+              .newBulkDeleteRequestBuilder(keysToDelete)
+              .build())).getValue();
+      final List<S3Error> errors = response.errors();
+      if (errors.isEmpty()) {
+        // all good.
+        return emptyList();
+      } else {
+        return errors.stream()
+            .map(e -> pair(e.key(), e.toString()))
+            .collect(Collectors.toList());
+      }
+    });
   }
 
   /**

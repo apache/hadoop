@@ -1878,10 +1878,10 @@ public class ContractTestUtils extends Assertions {
    * Entries should be empty after successful delete.
    */
   public static void assertSuccessfulBulkDelete(List<Map.Entry<Path, String>> entries) {
-    Assertions.assertThat(entries)
-            .describedAs("Bulk delete failed, " +
-                    "return entries should be empty after successful delete")
-            .isEmpty();
+    assertThat(entries)
+        .describedAs("Bulk delete failed;"
+            + " return entries should be empty after successful delete")
+        .isEmpty();
   }
 
   /**

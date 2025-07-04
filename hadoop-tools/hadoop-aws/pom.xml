@@ -58,7 +58,7 @@
 
     <!-- iceberg is java 11+ -->
     <!-- This requires the changes of the Iceberg PR #12055 -->
-    <iceberg.version>1.9.0-SNAPSHOT</iceberg.version>
+    <iceberg.version>1.10.0-SNAPSHOT</iceberg.version>
   </properties>
 
   <profiles>

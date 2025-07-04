@@ -159,7 +159,7 @@ public interface S3AStore extends
 
   /**
    * Perform a bulk object delete operation against S3.
-   * Increments the {@code OBJECT_DELETE_REQUESTS} and write
+   * Increments the {@code OBJECT_BULK_DELETE_REQUEST} and write
    * operation statistics
    * <p>
    * {@code OBJECT_DELETE_OBJECTS} is updated with the actual number
