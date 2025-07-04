@@ -187,7 +187,7 @@
     </extraJavaTestArgs>
     <!-- Plugin versions and config -->
     <maven-surefire-plugin.argLine>-Xmx4096m -Xss2m -XX:+HeapDumpOnOutOfMemoryError ${extraJavaTestArgs}</maven-surefire-plugin.argLine>
-    <maven-surefire-plugin.version>3.0.0-M4</maven-surefire-plugin.version>
+    <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
 
@@ -225,9 +225,9 @@
     <sshd.version>2.11.0</sshd.version>
     <hbase.version>2.6.1-hadoop3</hbase.version>
     <junit.version>4.13.2</junit.version>
-    <junit.jupiter.version>5.8.2</junit.jupiter.version>
-    <junit.vintage.version>5.8.2</junit.vintage.version>
-    <junit.platform.version>1.8.2</junit.platform.version>
+    <junit.jupiter.version>5.13.3</junit.jupiter.version>
+    <junit.vintage.version>5.13.3</junit.vintage.version>
+    <junit.platform.version>1.13.3</junit.platform.version>
     <assertj.version>3.12.2</assertj.version>
     <jline.version>3.9.0</jline.version>
     <powermock.version>2.0.9</powermock.version>
