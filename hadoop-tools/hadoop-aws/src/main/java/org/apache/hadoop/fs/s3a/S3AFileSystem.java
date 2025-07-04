@@ -689,9 +689,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       s3ExpressStore = isS3ExpressStore(bucket, endpoint);
 
       // should the delete also purge uploads?
-      // happens if explicitly enabled, or if the store is S3Express storage.
       dirOperationsPurgeUploads = conf.getBoolean(DIRECTORY_OPERATIONS_PURGE_UPLOADS,
-          s3ExpressStore);
+          DIRECTORY_OPERATIONS_PURGE_UPLOADS_DEFAULT);
 
       this.isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
           DEFAULT_MULTIPART_UPLOAD_ENABLED);
