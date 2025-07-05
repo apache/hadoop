@@ -24,8 +24,6 @@ import java.util.List;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Storage;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
-
 final class GcsListOperation {
   private static final int ALL = 0;
   private final Storage.BlobListOption[] listOptions;
@@ -72,7 +70,11 @@ final class GcsListOperation {
     }
 
     GcsListOperation build() {
-      blobListOptions.add(Storage.BlobListOption.prefix(prefix));
+      // Can be null while listing the root directory.
+      if (prefix != null) {
+        blobListOptions.add(Storage.BlobListOption.prefix(prefix));
+      }
+
       return new GcsListOperation(this);
     }
 
@@ -82,13 +84,11 @@ final class GcsListOperation {
       return this;
     }
 
-    Builder forCurrentDirectoryListingWithLimit(int theLimit) {
-      checkArgument(
-          theLimit > 0,
-          "limit should be greater than 0. found %d; prefix=%s", theLimit, prefix);
-
-      this.limit = theLimit;
-      prefix = StringPaths.toDirectoryPath(prefix);
+    Builder forImplicitDirectoryCheck() {
+      this.limit = 1;
+      if (prefix != null) {
+        prefix = StringPaths.toDirectoryPath(prefix);
+      }
 
       blobListOptions.add(Storage.BlobListOption.pageSize(1));
       forCurrentDirectoryListing();

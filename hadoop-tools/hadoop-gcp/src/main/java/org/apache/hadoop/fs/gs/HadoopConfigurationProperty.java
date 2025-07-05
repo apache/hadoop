@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.gs;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.function.BiFunction;
@@ -29,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkState;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -72,6 +74,25 @@ class HadoopConfigurationProperty<T> {
     String defValStr = defaultValue == null ? null : String.valueOf(defaultValue);
     return logProperty(
         lookupKey, Duration.ofMillis(config.getTimeDuration(lookupKey, defValStr, MILLISECONDS)));
+  }
+
+  HadoopConfigurationProperty<T> withPrefixes(List<String> prefixes) {
+    this.keyPrefixes = ImmutableList.copyOf(prefixes);
+    return this;
+  }
+
+  RedactedString getPassword(Configuration config) {
+    checkState(defaultValue == null || defaultValue instanceof String, "Not a string property");
+    String lookupKey = getLookupKey(config, key, (c, k) -> c.get(k) != null);
+    char[] value;
+    try {
+      value = config.getPassword(lookupKey);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return logProperty(
+            lookupKey,
+            RedactedString.create(value == null ? (String) defaultValue : String.valueOf(value)));
   }
 
   private String getLookupKey(Configuration config, String lookupKey,
