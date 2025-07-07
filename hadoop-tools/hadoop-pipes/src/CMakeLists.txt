@@ -25,9 +25,7 @@ find_package(OpenSSL REQUIRED)
 find_package(PkgConfig QUIET)
 pkg_check_modules(LIBTIRPC libtirpc)
 
-find_path(RPC_INCLUDE_DIRS NAMES rpc/rpc.h)
-
-if (NOT RPC_INCLUDE_DIRS)
+if (LIBTIRPC_FOUND)
     find_path(TIRPC_INCLUDE_DIRS
         NAMES netconfig.h
         PATH_SUFFIXES tirpc
@@ -70,7 +68,7 @@ add_library(hadooputils STATIC
     main/native/utils/impl/StringUtils.cc
     main/native/utils/impl/SerialUtils.cc
 )
-if (NOT RPC_INCLUDE_DIRS AND LIBTIRPC_FOUND)
+if (LIBTIRPC_FOUND)
     target_link_libraries(hadooputils tirpc)
 endif()
 
