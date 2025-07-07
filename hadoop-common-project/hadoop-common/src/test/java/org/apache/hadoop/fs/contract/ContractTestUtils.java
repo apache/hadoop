@@ -46,6 +46,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -56,6 +57,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
@@ -63,6 +65,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
@@ -1888,17 +1892,18 @@ public class ContractTestUtils extends Assertions {
    * Get a file status value or, if the path doesn't exist, return null.
    * @param fs filesystem
    * @param path path
-   * @return status or null
-   * @throws IOException Any IO Failure other than file not found.
+   * @return status or empty
+   * @throws UncheckedIOException Any IO Failure other than file not found.
    */
-  public static final FileStatus getFileStatusOrNull(
+  public static final Optional<FileStatus> getFileStatusIfPresent(
       final FileSystem fs,
-      final Path path)
-      throws IOException {
+      final Path path) {
     try {
-      return fs.getFileStatus(path);
+      return of(fs.getFileStatus(path));
     } catch (FileNotFoundException e) {
-      return null;
+      return empty();
+    } catch (IOException ioe) {
+      throw new UncheckedIOException(ioe);
     }
   }
 

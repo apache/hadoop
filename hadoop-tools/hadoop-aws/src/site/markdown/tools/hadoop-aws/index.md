@@ -43,6 +43,7 @@ full details.
 * [S3A and Directory Markers](directory_markers.html).
 * [Auditing](./auditing.html).
 * [Committing work to S3 with the "S3A Committers"](./committers.html)
+* [Apache Iceberg Integration](iceberg.html)
 * [S3A Committers Architecture](./committer_architecture.html)
 * [Working with IAM Assumed Roles](./assumed_roles.html)
 * [S3A Delegation Token Support](./delegation_tokens.html)
