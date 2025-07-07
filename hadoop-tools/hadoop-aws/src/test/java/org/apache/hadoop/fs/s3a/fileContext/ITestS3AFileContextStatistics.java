@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * S3a implementation of FCStatisticsBaseTest.
  */
+@IntegrationTest
 public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
 
   private static final Logger LOG =

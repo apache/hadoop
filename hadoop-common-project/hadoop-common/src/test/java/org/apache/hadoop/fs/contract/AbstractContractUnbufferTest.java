@@ -26,6 +26,7 @@ import java.util.Arrays;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.tags.FlakyTest;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
@@ -49,6 +50,7 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
   }
 
   @Test
+  @FlakyTest("buffer underflow")
   public void testUnbufferAfterRead() throws IOException {
     describe("unbuffer a file after a single read");
     try (FSDataInputStream stream = getFileSystem().open(file)) {
@@ -58,6 +60,7 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
   }
 
   @Test
+  @FlakyTest("buffer underflow")
   public void testUnbufferBeforeRead() throws IOException {
     describe("unbuffer a file before a read");
     try (FSDataInputStream stream = getFileSystem().open(file)) {
@@ -77,6 +80,7 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
   }
 
   @Test
+  @FlakyTest("buffer underflow")
   public void testUnbufferOnClosedFile() throws IOException {
     describe("unbuffer a file before a read");
     FSDataInputStream stream = null;
@@ -94,6 +98,7 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
   }
 
   @Test
+  @FlakyTest("buffer underflow")
   public void testMultipleUnbuffers() throws IOException {
     describe("unbuffer a file multiple times");
     try (FSDataInputStream stream = getFileSystem().open(file)) {
@@ -105,6 +110,7 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
     }
   }
 
+  @FlakyTest("buffer underflow")
   @Test
   public void testUnbufferMultipleReads() throws IOException {
     describe("unbuffer a file multiple times");

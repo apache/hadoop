@@ -16,28 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.auth.delegation;
-
-import org.apache.hadoop.test.tags.LoadTest;
-import org.apache.hadoop.test.tags.ScaleTest;
-
-import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_ROLE_BINDING;
-
 /**
- * This looks at the cost of assume role, to see if it is more expensive
- * than creating simple session credentials.
+ * JUnit 5 tags.
+ * <p>
+ * For use in Hadoop's own test suites, and those which extend them, such as FileSystem contract
+ * tests.
  */
-@LoadTest
-@ScaleTest
-public class ILoadTestRoleCredentials extends ILoadTestSessionCredentials {
-
-  @Override
-  protected String getDelegationBinding() {
-    return DELEGATION_TOKEN_ROLE_BINDING;
-  }
-
-  @Override
-  protected String getFilePrefix() {
-    return "role";
-  }
-}
+@org.apache.hadoop.classification.InterfaceStability.Unstable
+@org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate("Derived Test Suites")
+package org.apache.hadoop.test.tags;

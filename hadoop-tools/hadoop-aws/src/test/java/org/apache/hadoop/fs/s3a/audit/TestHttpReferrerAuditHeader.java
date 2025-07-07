@@ -71,6 +71,7 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
   private LoggingAuditor auditor;
 
   @BeforeEach
+  @Override
   public void setup() throws Exception {
     super.setup();
 

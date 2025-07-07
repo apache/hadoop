@@ -16,28 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.auth.delegation;
+package org.apache.hadoop.test.tags;
 
-import org.apache.hadoop.test.tags.LoadTest;
-import org.apache.hadoop.test.tags.ScaleTest;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_ROLE_BINDING;
+import org.junit.jupiter.api.Tag;
 
 /**
- * This looks at the cost of assume role, to see if it is more expensive
- * than creating simple session credentials.
+ * JUnit 5 tag to indicate that a test is a scale test. which can be used by test runners
+ * to skip slower tests.
+ * <p> The test runner tag to filter on is {@code scale}.
  */
-@LoadTest
-@ScaleTest
-public class ILoadTestRoleCredentials extends ILoadTestSessionCredentials {
-
-  @Override
-  protected String getDelegationBinding() {
-    return DELEGATION_TOKEN_ROLE_BINDING;
-  }
-
-  @Override
-  protected String getFilePrefix() {
-    return "role";
-  }
+@Target({ElementType.METHOD, ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Inherited
+@Tag("scale")
+public @interface ScaleTest {
 }
