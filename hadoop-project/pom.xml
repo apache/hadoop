@@ -2580,30 +2580,6 @@
 
   <profiles>
     <profile>
-      <id>os.linux</id>
-      <activation>
-        <os>
-          <family>!Mac</family>
-        </os>
-      </activation>
-      <properties>
-        <build.platform>${os.name}-${os.arch}-${sun.arch.data.model}</build.platform>
-      </properties>
-    </profile>
-    <profile>
-      <id>os.mac</id>
-      <activation>
-        <os>
-          <family>Mac</family>
-        </os>
-      </activation>
-      <properties>
-        <build.platform>Mac_OS_X-${sun.arch.data.model}</build.platform>
-        <!-- To make protoc work on Apple Silicon via fallback -->
-        <os.detected.classifier>osx-x86_64</os.detected.classifier>
-      </properties>
-    </profile>
-    <profile>
       <id>native-win</id>
       <activation>
         <os>
