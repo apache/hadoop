@@ -187,7 +187,8 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         0));
 
     // unset namespaceEnabled to call getAcl -> trigger tracing header validator
-    fs.getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
+    fs.getAbfsStore()
+        .getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
     fs.hasPathCapability(new Path("/"), CommonPathCapabilities.FS_ACLS);
 
     Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
@@ -195,7 +196,8 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     Assume.assumeTrue(getAuthType() == AuthType.OAuth);
 
     fs.setListenerOperation(FSOperationType.ACCESS);
-    fs.getAbfsStore().setNamespaceEnabled(Trilean.TRUE);
+    fs.getAbfsStore()
+        .getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.TRUE);
     fs.access(new Path("/"), FsAction.READ);
   }
 }

@@ -1060,8 +1060,22 @@ public class AbfsConfiguration{
     this.maxBackoffInterval = maxBackoffInterval;
   }
 
+  /**
+   * Sets the namespace enabled account flag.
+   *
+   * @param isNamespaceEnabledAccount boolean value indicating if the account is namespace enabled.
+   */
+  void setIsNamespaceEnabledAccount(boolean isNamespaceEnabledAccount) {
+    this.isNamespaceEnabled = Trilean.getTrilean(isNamespaceEnabledAccount);
+  }
+
+  /**
+   * Sets the namespace enabled account flag for testing purposes.
+   *
+   * @param isNamespaceEnabledAccount Trilean value indicating if the account is namespace enabled.
+   */
   @VisibleForTesting
-  public void setIsNamespaceEnabledAccount(Trilean isNamespaceEnabledAccount) {
+  void setIsNamespaceEnabledAccountForTesting(Trilean isNamespaceEnabledAccount) {
     this.isNamespaceEnabled = isNamespaceEnabledAccount;
   }
 

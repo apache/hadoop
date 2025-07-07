@@ -164,7 +164,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private final AbfsConfiguration abfsConfiguration;
   private final Set<String> azureAtomicRenameDirSet;
   private Set<String> azureInfiniteLeaseDirSet;
-  private Trilean isNamespaceEnabled;
   private final AuthType authType;
   private final UserGroupInformation userGroupInformation;
   private final IdentityTransformerInterface identityTransformer;
@@ -206,8 +205,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
 
     LOG.trace("AbfsConfiguration init complete");
-
-    this.isNamespaceEnabled = abfsConfiguration.getIsNamespaceEnabledAccount();
 
     this.userGroupInformation = UserGroupInformation.getCurrentUser();
     this.userName = userGroupInformation.getShortUserName();
@@ -343,12 +340,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   /**
-   * Resolves namespace information of the filesystem from the state of {@link #isNamespaceEnabled}.
+   * Resolves namespace information of the filesystem from the state of {@link #isNamespaceEnabled()}.
    * if the state is UNKNOWN, it will be determined by making a GET_ACL request
    * to the root of the filesystem. GET_ACL call is synchronized to ensure a single
    * call is made to determine the namespace information in case multiple threads are
    * calling this method at the same time. The resolution of namespace information
-   * would be stored back as state of {@link #isNamespaceEnabled}.
+   * would be stored back as {@link #setNamespaceEnabled(boolean)}.
    *
    * @param tracingContext tracing context
    * @return true if namespace is enabled, false otherwise.
@@ -373,15 +370,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
     try {
       LOG.debug("Get root ACL status");
-      client.getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
+      getClient().getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
       // If getAcl succeeds, namespace is enabled.
-      setNamespaceEnabled(Trilean.TRUE);
+      setNamespaceEnabled(true);
     } catch (AbfsRestOperationException ex) {
       // Get ACL status is a HEAD request, its response doesn't contain errorCode
       // So can only rely on its status code to determine account type.
       if (HttpURLConnection.HTTP_BAD_REQUEST != ex.getStatusCode()) {
         // If getAcl fails with anything other than 400, namespace is enabled.
-        setNamespaceEnabled(Trilean.TRUE);
+        setNamespaceEnabled(true);
         // Continue to throw exception as earlier.
         LOG.debug("Failed to get ACL status with non 400. Inferring namespace enabled", ex);
         throw ex;
@@ -389,7 +386,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // If getAcl fails with 400, namespace is disabled.
       LOG.debug("Failed to get ACL status with 400. "
           + "Inferring namespace disabled and ignoring error", ex);
-      setNamespaceEnabled(Trilean.FALSE);
+      setNamespaceEnabled(false);
     } catch (AzureBlobFileSystemException ex) {
       throw ex;
     }
@@ -1901,8 +1898,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     this.client = client;
   }
 
-  @VisibleForTesting
-  void setNamespaceEnabled(Trilean isNamespaceEnabled){
+  void setNamespaceEnabled(boolean isNamespaceEnabled){
     abfsConfiguration.setIsNamespaceEnabledAccount(isNamespaceEnabled);
   }
 

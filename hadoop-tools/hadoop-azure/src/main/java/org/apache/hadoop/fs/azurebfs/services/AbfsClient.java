@@ -37,6 +37,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -1153,5 +1155,22 @@ public class AbfsClient implements Closeable {
 
   public <V> void addCallback(ListenableFuture<V> future, FutureCallback<V> callback) {
     Futures.addCallback(future, callback, executorService);
+  }
+
+  /**
+   * Checks if the namespace is enabled.
+   *
+   * @return True if the namespace is enabled, false otherwise.
+   * * @throws AzureBlobFileSystemException if the conversion fails.
+   */
+  public boolean getIsNamespaceEnabled() throws AzureBlobFileSystemException {
+    try {
+      return abfsConfiguration.getIsNamespaceEnabledAccount().toBoolean();
+    } catch (TrileanConversionException ex) {
+      LOG.error(
+          "Failed to convert namespace enabled account property to boolean",
+          ex);
+      throw new InvalidConfigurationValueException("Failed to determine account type");
+    }
   }
 }
