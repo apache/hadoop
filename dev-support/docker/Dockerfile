@@ -72,7 +72,7 @@ ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 ENV SPOTBUGS_HOME /opt/spotbugs
 
 #######
-# Set env vars for Google Protobuf 3.21.12
+# Set env vars for Google Protobuf 3.25.5
 #######
 ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
