@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**

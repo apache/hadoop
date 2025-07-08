@@ -26,27 +26,27 @@ import software.amazon.s3.analyticsaccelerator.util.RequestCallback;
  * Implementation of AAL's RequestCallback interface that tracks analytics operations.
  */
 public class AnalyticsRequestCallback implements RequestCallback {
-    private final S3AInputStreamStatistics statistics;
+  private final S3AInputStreamStatistics statistics;
 
     /**
      * Create a new callback instance.
      * @param statistics the statistics to update
      */
-    public AnalyticsRequestCallback(S3AInputStreamStatistics statistics) {
-        this.statistics = statistics;
-    }
+  public AnalyticsRequestCallback(S3AInputStreamStatistics statistics) {
+    this.statistics = statistics;
+  }
 
-    @Override
+  @Override
     public void onGetRequest() {
-        statistics.incrementAnalyticsGetRequests();
-        // Update ACTION_HTTP_GET_REQUEST statistic
-        DurationTracker tracker = statistics.initiateGetRequest();
-        tracker.close();
-    }
+    statistics.incrementAnalyticsGetRequests();
+    // Update ACTION_HTTP_GET_REQUEST statistic
+    DurationTracker tracker = statistics.initiateGetRequest();
+    tracker.close();
+  }
 
-    @Override
+  @Override
     public void onHeadRequest() {
-        statistics.incrementAnalyticsHeadRequests();
-    }
+    statistics.incrementAnalyticsHeadRequests();
+  }
 }
 

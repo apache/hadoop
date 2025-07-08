@@ -144,7 +144,6 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
     if (pos >= lengthLimit) {
       return -1; // EOF reached due to length limit
     }
-    
     // Limit read length to not exceed the length limit
     int maxRead = (int) Math.min(len, lengthLimit - pos);
     getS3AStreamStatistics().readOperationStarted(pos, maxRead);

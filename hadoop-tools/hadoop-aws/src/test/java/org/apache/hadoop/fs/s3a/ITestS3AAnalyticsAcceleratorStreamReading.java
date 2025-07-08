@@ -118,7 +118,8 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
       verifyStatisticCounterValue(ioStats, STREAM_READ_OPERATIONS, 1);
 
       long streamBytesRead = objectInputStream.getS3AStreamStatistics().getBytesRead();
-      Assertions.assertThat(streamBytesRead).as("Stream statistics should track bytes read").isEqualTo(500);
+      Assertions.assertThat(streamBytesRead).as("Stream statistics should track bytes read")
+              .isEqualTo(500);
     }
 
     verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
@@ -153,7 +154,8 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
 
       ObjectInputStream objectInputStream = (ObjectInputStream) inputStream.getWrappedStream();
       long streamBytesRead = objectInputStream.getS3AStreamStatistics().getBytesRead();
-      Assertions.assertThat(streamBytesRead).as("Stream statistics should track bytes read").isEqualTo(bytesRead);
+      Assertions.assertThat(streamBytesRead).as("Stream statistics should track bytes read")
+              .isEqualTo(bytesRead);
 
     }
 
@@ -200,9 +202,9 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
       verifyStatisticCounterValue(ioStats, STREAM_READ_BYTES, (int) fileStatus.getLen());
       verifyStatisticCounterValue(ioStats, STREAM_READ_OPERATIONS, 1);
     }
-
     verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
-    // S3A passes in the meta-data(content length) on file open, we expect AAL to make no HEAD requests
+    // S3A passes in the meta-data(content length) on file open,
+    // we expect AAL to make no HEAD requests
     verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_HEAD_REQUESTS, 0);
   }
 
@@ -224,8 +226,7 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
   }
 
   /**
-   *
-   * TXT files are classified as SEQUENTIAL format and use SequentialPrefetcher(requests the entire 10MB file)
+   * TXT files(SEQUENTIAL format) use SequentialPrefetcher(requests the entire 10MB file).
    * RangeOptimiser splits ranges larger than maxRangeSizeBytes (8MB) using partSizeBytes (8MB)
    * The 10MB range gets split into: [0-8MB) and [8MB-10MB)
    * Each split range becomes a separate Block, resulting in 2 GET requests:
@@ -244,7 +245,8 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
       inputStream.readFully(buffer);
 
       verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_GET_REQUESTS, 2);
-      // Because S3A passes in the meta-data(content length) on file open, we expect AAL to make no HEAD requests
+      // Because S3A passes in the meta-data(content length) on file open,
+      // we expect AAL to make no HEAD requests
       verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_HEAD_REQUESTS, 0);
     }
   }
@@ -263,7 +265,8 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
       inputStream.readFully(buffer);
 
       verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_GET_REQUESTS, 1);
-      // Because S3A passes in the meta-data(content length) on file open, we expect AAL to make no HEAD requests
+      // Because S3A passes in the meta-data(content length) on file open,
+      // we expect AAL to make no HEAD requests
       verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_HEAD_REQUESTS, 0);
     }
   }
