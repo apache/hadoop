@@ -54,7 +54,7 @@ import static org.apache.hadoop.thirdparty.com.google.common.base.Strings.isNull
 
 class GoogleHadoopOutputStream extends OutputStream
     implements StreamCapabilities, Syncable {
-  private static final Logger LOG = LoggerFactory.getLogger(StorageResourceId.class);
+  private static final Logger LOG = LoggerFactory.getLogger(GoogleHadoopOutputStream.class);
 
   // Prefix used for all temporary files created by this stream.
   private static final String TMP_FILE_PREFIX = "_GHFS_SYNC_TMP_FILE_";

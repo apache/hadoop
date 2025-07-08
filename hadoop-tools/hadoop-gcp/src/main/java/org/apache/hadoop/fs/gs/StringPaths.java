@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
  */
 final class StringPaths {
 
-  public static final Logger LOG = LoggerFactory.getLogger(StorageResourceId.class);
+  public static final Logger LOG = LoggerFactory.getLogger(StringPaths.class);
 
   private StringPaths() {
   }

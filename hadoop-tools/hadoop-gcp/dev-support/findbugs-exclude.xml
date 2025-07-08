@@ -26,4 +26,9 @@
     <Method name="createItemInfoForBlob" />
     <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
   </Match>
+    <Match>
+    <Class name="org.apache.hadoop.fs.gs.GoogleCloudStorageExceptions" />
+    <Method name="createCompositeException" />
+    <Bug pattern="NP_NULL_ON_SOME_PATH" />
+  </Match>
 </FindBugsFilter>

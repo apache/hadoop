@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.gs;
 
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Strings.isNullOrEmpty;
 import static java.lang.Math.toIntExact;
@@ -27,7 +28,9 @@ import com.google.api.client.util.BackOff;
 import com.google.api.client.util.ExponentialBackOff;
 import com.google.api.client.util.Sleeper;
 import com.google.api.gax.paging.Page;
+import com.google.auth.Credentials;
 import com.google.cloud.storage.*;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.thirdparty.com.google.common.io.BaseEncoding;
@@ -55,7 +58,7 @@ import java.util.stream.Collectors;
  * client</a>.
  */
 class GoogleCloudStorage {
-  static final Logger LOG = LoggerFactory.getLogger(GoogleHadoopFileSystem.class);
+  static final Logger LOG = LoggerFactory.getLogger(GoogleCloudStorage.class);
   static final List<Storage.BlobField> BLOB_FIELDS =
       ImmutableList.of(
           Storage.BlobField.BUCKET, Storage.BlobField.CONTENT_ENCODING,
@@ -76,18 +79,19 @@ class GoogleCloudStorage {
    * Having an instance of gscImpl to redirect calls to Json client while new client implementation
    * is in WIP.
    */
-  GoogleCloudStorage(GoogleHadoopFileSystemConfiguration configuration) throws IOException {
-    // TODO: Set credentials
-    this.storage = createStorage(configuration.getProjectId());
+  GoogleCloudStorage(GoogleHadoopFileSystemConfiguration configuration, Credentials credentials)
+          throws IOException {
+    this.storage = createStorage(configuration.getProjectId(), credentials);
     this.configuration = configuration;
   }
 
-  private static Storage createStorage(String projectId) {
+  private static Storage createStorage(String projectId, Credentials credentials) {
+    StorageOptions.Builder builder = StorageOptions.newBuilder();
     if (projectId != null) {
-      return StorageOptions.newBuilder().setProjectId(projectId).build().getService();
+      builder.setProjectId(projectId);
     }
 
-    return StorageOptions.newBuilder().build().getService();
+    return builder.setCredentials(credentials).build().getService();
   }
 
   WritableByteChannel create(final StorageResourceId resourceId, final CreateFileOptions options)
@@ -494,7 +498,9 @@ class GoogleCloudStorage {
     // TODO: Take delimiter from config
     // TODO: Set specific fields
 
-    checkArgument(objectName.endsWith("/"), String.format("%s should end with /", objectName));
+    checkArgument(
+            objectName == null || objectName.endsWith("/"),
+            String.format("%s should end with /", objectName));
     try {
       List<Blob> blobs = new GcsListOperation.Builder(bucketName, objectName, storage)
           .forRecursiveListing().build()
@@ -887,7 +893,7 @@ class GoogleCloudStorage {
   List<GoogleCloudStorageItemInfo> listDirectory(String bucketName, String objectNamePrefix)
       throws IOException {
     checkArgument(
-        objectNamePrefix.endsWith("/"),
+        objectNamePrefix == null || objectNamePrefix.endsWith("/"),
         String.format("%s should end with /", objectNamePrefix));
 
     try {
@@ -971,7 +977,7 @@ class GoogleCloudStorage {
   GoogleCloudStorageItemInfo getImplicitDirectory(StorageResourceId resourceId) {
     List<Blob> blobs = new GcsListOperation
         .Builder(resourceId.getBucketName(), resourceId.getObjectName(), storage)
-        .forCurrentDirectoryListingWithLimit(1).build()
+        .forImplicitDirectoryCheck().build()
         .execute();
 
     if (blobs.isEmpty()) {
@@ -979,6 +985,34 @@ class GoogleCloudStorage {
     }
 
     return GoogleCloudStorageItemInfo.createInferredDirectory(resourceId.toDirectoryId());
+  }
+
+  public void deleteBuckets(List<String> bucketNames) throws IOException {
+    LOG.trace("deleteBuckets({})", bucketNames);
+
+    // Validate all the inputs first.
+    for (String bucketName : bucketNames) {
+      checkArgument(!Strings.isNullOrEmpty(bucketName), "bucketName must not be null or empty");
+    }
+
+    // Gather exceptions to wrap in a composite exception at the end.
+    List<IOException> innerExceptions = new ArrayList<>();
+
+    for (String bucketName : bucketNames) {
+      try {
+        boolean isDeleted = storage.delete(bucketName);
+        if (!isDeleted) {
+          innerExceptions.add(createFileNotFoundException(bucketName, null, null));
+        }
+      } catch (StorageException e) {
+        innerExceptions.add(
+                new IOException(String.format("Error deleting '%s' bucket", bucketName), e));
+      }
+    }
+
+    if (!innerExceptions.isEmpty()) {
+      throw GoogleCloudStorageExceptions.createCompositeException(innerExceptions);
+    }
   }
 
   // Helper class to capture the results of list operation.

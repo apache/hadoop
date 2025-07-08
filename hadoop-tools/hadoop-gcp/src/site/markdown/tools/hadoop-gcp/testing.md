@@ -51,19 +51,28 @@ Example:
 
 ```xml
 <configuration>
-  <property>
-    <name>fs.contract.test.fs.gs</name>
-    <value>gs://your bucket name</value>
-  </property>
-
+    <property>
+      <name>fs.gs.auth.type</name>
+      <value>SERVICE_ACCOUNT_JSON_KEYFILE</value>
+    </property>
+    <property>
+      <name>fs.gs.auth.service.account.json.keyfile</name>
+      <value>YOUR_JSON_KEY_FILE</value>
+    </property>
+    <property>
+      <name>fs.gs.project.id</name>
+      <value>YOUR_PROJECT_ID_HERE</value>
+    </property>
+    <property>
+      <name>fs.contract.test.fs.gs</name>
+      <value>gs://your_bucket</value>
+    </property>
 </configuration>
 ```
 
 ## <a name="running"></a> Running the Tests
 
 After completing the configuration, execute the test run through Maven.
-
-This has to be run from a GCP VM. This limitation will be removed later.
 
 ```bash
 mvn clean verify

@@ -72,7 +72,7 @@ final class GoogleHadoopFSInputStream extends FSInputStream {
       URI gcsPath,
       SeekableByteChannel channel,
       FileSystem.Statistics statistics) {
-    LOG.trace("GoogleHadoopFSInputStream(gcsPath: %s)", gcsPath);
+    LOG.trace("GoogleHadoopFSInputStream(gcsPath: {})", gcsPath);
     this.gcsPath = gcsPath;
     this.channel = channel;
     this.statistics = statistics;
