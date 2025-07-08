@@ -53,8 +53,8 @@ enum GcsStatistics {
       TYPE_DURATION);
 
   private final String description;
-  private StatisticTypeEnum type;
-  private String symbol;
+  private final StatisticTypeEnum type;
+  private final String symbol;
 
   StatisticTypeEnum getType() {
     return this.type;

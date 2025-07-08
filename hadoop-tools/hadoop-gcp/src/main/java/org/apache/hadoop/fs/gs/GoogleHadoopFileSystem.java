@@ -110,6 +110,16 @@ public class GoogleHadoopFileSystem extends FileSystem implements IOStatisticsSo
   private GoogleCloudStorageFileSystem gcsFs;
   private boolean isClosed;
   private FsPermission reportedPermissions;
+
+  /**
+   * Setting this to static inorder to have a singleton instance. This will help us get the JVM
+   * level metrics. Note that we use this to generate Global Storage Statistics. If we make this
+   * an instance field, only the first filesystem instance metrics will be updated since while initializing
+   * GlobalStorageStatistics (refer initialize()) only the first instance will be registered.
+   *
+   * For filesystem instance level instrumentation, one more per instance object can be created and both
+   * be updated.
+   */
   private static GcsInstrumentation instrumentation = new GcsInstrumentation();
   private GcsStorageStatistics storageStatistics;
 

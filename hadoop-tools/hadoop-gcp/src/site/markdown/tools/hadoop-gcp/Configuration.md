@@ -78,7 +78,7 @@
 
   * `UNAUTHENTICATED` - configures unauthenticated access
 
-  * `USER_CREDENTIALS` - configure [user credentials](https://www.google.com/search?q=%23user-credentials)
+  * `USER_CREDENTIALS` - configure [user credentials](#user-credentials)
 
 * `fs.gs.auth.service.account.json.keyfile` (not set by default)
 

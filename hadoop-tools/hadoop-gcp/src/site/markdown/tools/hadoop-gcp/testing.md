@@ -65,7 +65,7 @@ Example:
     </property>
     <property>
       <name>fs.contract.test.fs.gs</name>
-      <value>YOUR_BUCKET_NAME</value>
+      <value>gs://your_bucket</value>
     </property>
 </configuration>
 ```
