@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.fs.gs;
 
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Strings.isNullOrEmpty;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Strings.nullToEmpty;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Iterator;
 import javax.annotation.Nullable;
 
 /**
@@ -54,5 +58,24 @@ final class GoogleCloudStorageExceptions {
       StorageResourceId resourceId, @Nullable IOException cause) {
     return createFileNotFoundException(
         resourceId.getBucketName(), resourceId.getObjectName(), cause);
+  }
+
+  public static IOException createCompositeException(Collection<IOException> innerExceptions) {
+    Preconditions.checkArgument(
+            innerExceptions != null && !innerExceptions.isEmpty(),
+            "innerExceptions (%s) must be not null and contain at least one element",
+            innerExceptions);
+
+    Iterator<IOException> innerExceptionIterator = innerExceptions.iterator();
+
+    if (innerExceptions.size() == 1) {
+      return innerExceptionIterator.next();
+    }
+
+    IOException combined = new IOException("Multiple IOExceptions.");
+    while (innerExceptionIterator.hasNext()) {
+      combined.addSuppressed(innerExceptionIterator.next());
+    }
+    return combined;
   }
 }
