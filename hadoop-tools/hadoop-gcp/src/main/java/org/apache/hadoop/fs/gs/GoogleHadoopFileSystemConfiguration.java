@@ -130,6 +130,19 @@ class GoogleHadoopFileSystemConfiguration {
           "fs.gs.outputstream.sync.min.interval",
           0L);
 
+  /**
+   * If true, recursive delete on a path that refers to a GCS bucket itself ('/' for any
+   * bucket-rooted GoogleHadoopFileSystem) or delete on that path when it's empty will result in
+   * fully deleting the GCS bucket. If false, any operation that normally would have deleted the
+   * bucket will be ignored instead. Setting to 'false' preserves the typical behavior of "rm -rf /"
+   * which translates to deleting everything inside of root, but without clobbering the filesystem
+   * authority corresponding to that root path in the process.
+   */
+  static final HadoopConfigurationProperty<Boolean> GCE_BUCKET_DELETE_ENABLE =
+          new HadoopConfigurationProperty<>(
+                  "fs.gs.bucket.delete.enable",
+                  false);
+
   private final String workingDirectory;
   private final String projectId;
   private final Configuration config;
@@ -169,31 +182,31 @@ class GoogleHadoopFileSystemConfiguration {
     return GCS_INPUT_STREAM_INPLACE_SEEK_LIMIT.get(config, config::getLongBytes);
   }
 
-  public int getFadviseRequestTrackCount() {
+  int getFadviseRequestTrackCount() {
     return GCS_FADVISE_REQUEST_TRACK_COUNT.get(config, config::getInt);
   }
 
-  public boolean isGzipEncodingSupportEnabled() {
+  boolean isGzipEncodingSupportEnabled() {
     return GCS_INPUT_STREAM_SUPPORT_GZIP_ENCODING_ENABLE.get(config, config::getBoolean);
   }
 
-  public long getMinRangeRequestSize() {
+  long getMinRangeRequestSize() {
     return GCS_INPUT_STREAM_MIN_RANGE_REQUEST_SIZE.get(config, config::getLongBytes);
   }
 
-  public long getBlockSize() {
+  long getBlockSize() {
     return BLOCK_SIZE.get(config, config::getLong);
   }
 
-  public boolean isReadExactRequestedBytesEnabled() {
+  boolean isReadExactRequestedBytesEnabled() {
     return false; //TODO: Remove this option?
   }
 
-  public long getMaxRewriteChunkSize() {
+  long getMaxRewriteChunkSize() {
     return GCS_REWRITE_MAX_CHUNK_SIZE.get(config, config::getLong);
   }
 
-  public Pattern getMarkerFilePattern() {
+  Pattern getMarkerFilePattern() {
     String pattern =  GCS_MARKER_FILE_PATTERN.get(config, config::get);
     if (pattern == null) {
       return null;
@@ -207,11 +220,19 @@ class GoogleHadoopFileSystemConfiguration {
     return fileMarkerFilePattern;
   }
 
-  public boolean isEnsureNoConflictingItems() {
+  boolean isEnsureNoConflictingItems() {
     return GCS_CREATE_ITEMS_CONFLICT_CHECK_ENABLE.get(config, config::getBoolean);
   }
 
-  public Duration getMinSyncInterval() {
+  Duration getMinSyncInterval() {
     return GCS_OUTPUT_STREAM_SYNC_MIN_INTERVAL.getTimeDuration(config);
+  }
+
+  Configuration getConfig() {
+    return config;
+  }
+
+  boolean isBucketDeleteEnabled() {
+    return GCE_BUCKET_DELETE_ENABLE.get(config, config::getBoolean);
   }
 }

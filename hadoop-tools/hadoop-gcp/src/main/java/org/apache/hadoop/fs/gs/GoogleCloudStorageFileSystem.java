@@ -55,7 +55,7 @@ import javax.annotation.Nullable;
  * Provides FS semantics over GCS based on Objects API.
  */
 class GoogleCloudStorageFileSystem {
-  private static final Logger LOG = LoggerFactory.getLogger(StorageResourceId.class);
+  private static final Logger LOG = LoggerFactory.getLogger(GoogleCloudStorageFileSystem.class);
   // Comparator used for sorting paths.
   //
   // For some bulk operations, we need to operate on parent directories before
@@ -93,7 +93,7 @@ class GoogleCloudStorageFileSystem {
       throws IOException {
     checkNotNull(configuration, "configuration must not be null");
 
-    return new GoogleCloudStorage(configuration);
+    return new GoogleCloudStorage(configuration, credentials);
   }
 
   GoogleCloudStorageFileSystem(final GoogleHadoopFileSystemConfiguration configuration,
@@ -330,12 +330,19 @@ class GoogleCloudStorageFileSystem {
   }
 
   private void deleteBucket(List<FileInfo> bucketsToDelete) throws IOException {
-    if (bucketsToDelete == null || bucketsToDelete.isEmpty()) {
-      return;
-    }
+    if (!bucketsToDelete.isEmpty()) {
+      List<String> bucketNames = new ArrayList<>(bucketsToDelete.size());
+      for (FileInfo bucketInfo : bucketsToDelete) {
+        bucketNames.add(bucketInfo.getItemInfo().getResourceId().getBucketName());
+      }
 
-    // TODO: Add support for deleting bucket
-    throw new UnsupportedOperationException("deleteBucket is not supported.");
+      if (configuration.isBucketDeleteEnabled()) {
+        gcs.deleteBuckets(bucketNames);
+      } else {
+        LOG.info("Skipping deletion of buckets because enableBucketDelete is false: {}",
+                bucketNames);
+      }
+    }
   }
 
   FileInfo getFileInfoObject(URI path) throws IOException {
