@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
@@ -441,7 +442,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     mockStore.getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
     // In case someone wrongly configured the namespace in between the processing,
     // abfsclient.getIsNamespaceEnabled() should throw an exception.
-    String errorMessage = intercept(AbfsDriverException.class, () -> {
+    String errorMessage = intercept(InvalidConfigurationValueException.class, () -> {
       abfsClient.getIsNamespaceEnabled();
     }).getMessage();
     Assertions.assertThat(errorMessage)

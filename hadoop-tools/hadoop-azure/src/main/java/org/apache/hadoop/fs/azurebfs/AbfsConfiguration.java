@@ -1539,6 +1539,7 @@ public class AbfsConfiguration{
 
   /**
    * Sets the namespace enabled account flag for testing purposes.
+   * Use this method only for testing scenarios.
    *
    * @param isNamespaceEnabledAccount Trilean value indicating if the account is namespace enabled.
    */

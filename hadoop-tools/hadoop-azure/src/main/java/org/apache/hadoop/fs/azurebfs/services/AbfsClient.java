@@ -66,6 +66,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidFileSystemPropertyException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
@@ -1725,6 +1726,9 @@ public abstract class AbfsClient implements Closeable {
 
   /**
    * Checks if the namespace is enabled.
+   * Filesystem init will fail if namespace is not correctly configured,
+   * so instead of swallowing the exception, we should throw the exception
+   * in case namespace is not configured correctly.
    *
    * @return True if the namespace is enabled, false otherwise.
    * @throws AzureBlobFileSystemException if the conversion fails.
@@ -1734,7 +1738,7 @@ public abstract class AbfsClient implements Closeable {
       return getAbfsConfiguration().getIsNamespaceEnabledAccount().toBoolean();
     } catch (TrileanConversionException ex) {
       LOG.error("Failed to convert namespace enabled account property to boolean", ex);
-      throw new AbfsDriverException("Failed to determine account type", ex);
+      throw new InvalidConfigurationValueException("Failed to determine account type", ex);
     }
   }
 
