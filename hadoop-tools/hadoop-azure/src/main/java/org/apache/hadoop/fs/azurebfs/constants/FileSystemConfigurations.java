@@ -137,7 +137,7 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_ENABLE_ABFS_LIST_ITERATOR = true;
   public static final boolean DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE = true;
   public static final boolean DEFAULT_ENABLE_PAGINATED_DELETE = false;
-  public static final boolean DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION = true;
+  public static final boolean DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION = false;
 
   /**
    * Limit of queued block upload operations before writes
