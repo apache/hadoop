@@ -463,10 +463,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
 
     AbfsBlock block = createBlockIfNeeded(position);
     int written = bufferData(block, data, off, length);
-// Update the incremental MD5 hash with the written data.
+    // Update the incremental MD5 hash with the written data.
     getMessageDigest().update(data, off, written);
 
-// Update the full blob MD5 hash with the written data.
+    // Update the full blob MD5 hash with the written data.
     getFullBlobContentMd5().update(data, off, written);
     int remainingCapacity = block.remainingCapacity();
 

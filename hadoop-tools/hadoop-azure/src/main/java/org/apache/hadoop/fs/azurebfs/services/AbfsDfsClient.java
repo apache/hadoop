@@ -764,9 +764,7 @@ public class AbfsDfsClient extends AbfsClient {
 
     // Add MD5 Hash of request content as request header if feature is enabled
     if (isChecksumValidationEnabled()) {
-      if (reqParams.getMd5() != null) {
-        requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, reqParams.getMd5()));
-      }
+     addCheckSumHeaderForWrite(requestHeaders, reqParams);
     }
 
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
