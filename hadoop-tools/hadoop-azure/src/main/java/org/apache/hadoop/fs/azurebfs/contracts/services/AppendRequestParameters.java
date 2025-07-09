@@ -81,7 +81,7 @@ public class AppendRequestParameters {
    * @param leaseId leaseId of the blob to be appended
    * @param isExpectHeaderEnabled true if the expect header is enabled
    * @param blobParams parameters specific to append operation on Blob Endpoint.
-   *  @param md5  The Base64-encoded MD5 hash of the block for data integrity validation.
+   * @param md5  The Base64-encoded MD5 hash of the block for data integrity validation.
    */
   public AppendRequestParameters(final long position,
       final int offset,

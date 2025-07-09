@@ -846,6 +846,7 @@ public class AbfsDfsClient extends AbfsClient {
    * @param leaseId if there is an active lease on the path.
    * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the server calls.
+   * @param blobMd5 the MD5 hash of the blob for integrity verification.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -891,6 +892,21 @@ public class AbfsDfsClient extends AbfsClient {
     return op;
   }
 
+  /**
+   * Flushes data to a file at the specified path, using the provided buffer and other parameters.
+   * This operation is not supported on the DFS endpoint and will throw an {@link UnsupportedOperationException}.
+   *
+   * @param buffer the byte array containing the data to be flushed to the file.
+   * @param path the path where the data has to be flushed.
+   * @param isClose whether this is the last flush operation to the file.
+   * @param cachedSasToken the SAS token to authenticate the operation.
+   * @param leaseId the lease ID, if an active lease exists on the path.
+   * @param eTag the ETag for concurrency control to ensure the flush is applied to the correct file version.
+   * @param contextEncryptionAdapter the adapter providing the encryption context.
+   * @param tracingContext the tracing context for tracking server calls.
+   * @param blobMd5 the MD5 hash of the blob for integrity verification.
+   * @throws UnsupportedOperationException if flush with blockIds is called on a DFS endpoint.
+   */
   @Override
   public AbfsRestOperation flush(byte[] buffer,
       final String path,

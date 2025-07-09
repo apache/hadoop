@@ -984,7 +984,7 @@ public class AbfsBlobClient extends AbfsClient {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, requestParameters.getLeaseId()));
     }
     if (isChecksumValidationEnabled()) {
-    addCheckSumHeaderForWrite(requestHeaders, requestParameters);
+      addCheckSumHeaderForWrite(requestHeaders, requestParameters);
     }
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, APPEND_BLOCK);
@@ -1025,6 +1025,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param leaseId if there is an active lease on the path.
    * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the server calls.
+   * @param blobMd5 the MD5 hash of the blob for integrity verification.
    * @return exception as this operation is not supported on Blob Endpoint.
    * @throws UnsupportedOperationException always.
    */
@@ -1053,6 +1054,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param eTag The etag of the blob.
    * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the service call.
+   * @param blobMd5 the MD5 hash of the blob for integrity verification.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */

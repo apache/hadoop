@@ -46,6 +46,8 @@ public class AbfsBlobBlock extends AbfsBlock {
    *
    * @param outputStream AbfsOutputStream Instance.
    * @param offset       Used to generate blockId based on offset.
+   * @param blockIdLength  the expected length of the generated block ID.
+   * @param blockIndex     the index of the block; used in block ID generation.
    * @throws IOException exception is thrown.
    */
   AbfsBlobBlock(AbfsOutputStream outputStream, long offset, int blockIdLength, long blockIndex) throws IOException {
@@ -57,16 +59,15 @@ public class AbfsBlobBlock extends AbfsBlock {
   }
 
   /**
-   * Generates a Base64-encoded block ID string based on the given position, stream ID, and desired raw length.
-   * The block ID is composed using the stream UUID and the block index, which is derived from
-   * the given position divided by the output stream's buffer size. The resulting string is
-   * optionally adjusted to match the specified raw length, padded or trimmed as needed, and
-   * then Base64-encoded.
+   * Generates a Base64-encoded block ID string using the given stream UUID and block index.
+   * The block ID is first created as a raw string using a format with the stream ID and block index.
+   * If a non-zero rawLength is provided, the raw block ID is padded or trimmed to match the length.
+   * The final string is then Base64-encoded and returned.
    *
-   * @param streamId   The UUID representing the stream, used as a prefix in the block ID.
-   * @param rawLength  The desired length of the raw block ID string before Base64 encoding.
-   *                   If 0, no length adjustment is made.
-   * @return A Base64-encoded block ID string suitable for use in block-based storage APIs.
+   * @param streamId   the UUID of the stream used to generate the block ID.
+   * @param rawLength  the desired length of the raw block ID string before encoding.
+   *                   If 0, no length adjustment is done.
+   * @return the Base64-encoded block ID string.
    */
   private String generateBlockId(UUID streamId, int rawLength) {
     String rawBlockId = String.format(BLOCK_ID_FORMAT, streamId, blockIndex);

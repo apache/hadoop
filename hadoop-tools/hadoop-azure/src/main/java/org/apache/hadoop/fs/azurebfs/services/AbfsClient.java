@@ -890,16 +890,18 @@ public abstract class AbfsClient implements Closeable {
 
   /**
    * Flushes previously uploaded data to the specified path.
-   * @param buffer                The buffer containing block IDs to be flushed.
-   * @param path                  The file path to which data should be flushed.
-   * @param isClose               True if this is the final flush (i.e., the file is being closed).
-   * @param cachedSasToken        SAS token used for authentication (if applicable).
-   * @param leaseId               Lease ID, if a lease is active on the file.
-   * @param eTag                  ETag used for conditional request headers (e.g., If-Match).
+   *
+   * @param buffer The buffer containing block IDs to be flushed.
+   * @param path The file path to which data should be flushed.
+   * @param isClose True if this is the final flush (i.e., the file is being closed).
+   * @param cachedSasToken SAS token used for authentication (if applicable).
+   * @param leaseId Lease ID, if a lease is active on the file.
+   * @param eTag ETag used for conditional request headers (e.g., If-Match).
    * @param contextEncryptionAdapter Adapter to provide encryption context, if encryption is enabled.
-   * @param tracingContext        Context for tracing the server calls.
-   * @param blobMd5               The Base64-encoded MD5 hash of the blob for data integrity validation.
-   * @return                      The executed {@link AbfsRestOperation} containing the server response.
+   * @param tracingContext Context for tracing the server calls.
+   * @param blobMd5 The Base64-encoded MD5 hash of the blob for data integrity validation.
+   * @return The executed {@link AbfsRestOperation} containing the server response.
+   *
    * @throws AzureBlobFileSystemException if the flush operation fails.
    */
   public abstract AbfsRestOperation flush(byte[] buffer,
