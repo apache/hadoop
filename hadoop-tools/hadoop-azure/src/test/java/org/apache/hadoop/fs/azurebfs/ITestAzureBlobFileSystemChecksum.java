@@ -72,7 +72,6 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
       md = MessageDigest.getInstance(MD5);
     } catch (NoSuchAlgorithmException e) {
       // MD5 algorithm not available; md will remain null
-      // Log this in production code if needed
     }
   }
 
@@ -115,7 +114,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     byte[] data = generateRandomBytes(MB_4);
     int pos = 0;
 
-    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, 0,  getMd5(data, 0, data.length));
+    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, 0, getMd5(data, 0, data.length));
     pos += appendWithOffsetHelper(os, client, path, data, fs, pos, ONE_MB, getMd5(data, ONE_MB, data.length - ONE_MB));
     pos += appendWithOffsetHelper(os, client, path, data, fs, pos, MB_2, getMd5(data, MB_2, data.length-MB_2));
     appendWithOffsetHelper(os, client, path, data, fs, pos, MB_4 - 1, getMd5(data, MB_4 - 1, data.length - (MB_4 - 1)));

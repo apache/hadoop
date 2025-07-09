@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.util.Base64;
 import java.util.Objects;
 
 import org.slf4j.Logger;
@@ -87,7 +89,9 @@ public abstract class AzureIngressHandler {
    * @param data the data to buffer
    * @param off the start offset in the data
    * @param length the number of bytes to buffer
+   *
    * @return the number of bytes buffered
+   *
    * @throws IOException if an I/O error occurs
    */
   protected abstract int bufferData(AbfsBlock block,
@@ -100,7 +104,9 @@ public abstract class AzureIngressHandler {
    * @param uploadData the data to upload
    * @param reqParams the request parameters for the append operation
    * @param tracingContext the tracing context
+   *
    * @return the result of the REST operation
+   *
    * @throws IOException if an I/O error occurs
    */
   protected abstract AbfsRestOperation remoteWrite(AbfsBlock blockToUpload,
@@ -116,7 +122,9 @@ public abstract class AzureIngressHandler {
    * @param isClose whether this is a close operation
    * @param leaseId the lease ID
    * @param tracingContext the tracing context
+   *
    * @return the result of the REST operation
+   *
    * @throws IOException if an I/O error occurs
    */
   protected abstract AbfsRestOperation remoteFlush(long offset,
@@ -141,12 +149,14 @@ public abstract class AzureIngressHandler {
    * the data to be uploaded, the block of data, and additional parameters required for
    * the append operation.</p>
    *
-   * @param path           The path of the append blob to which data is to be appended.
-   * @param uploadData     The data to be uploaded as part of the append operation.
-   * @param block          The block of data to append.
-   * @param reqParams      The additional parameters required for the append operation.
+   * @param path The path of the append blob to which data is to be appended.
+   * @param uploadData The data to be uploaded as part of the append operation.
+   * @param block The block of data to append.
+   * @param reqParams The additional parameters required for the append operation.
    * @param tracingContext The tracing context for the operation.
+   *
    * @return An {@link AbfsRestOperation} object representing the remote write operation.
+   *
    * @throws IOException If an I/O error occurs during the append operation.
    */
   protected abstract AbfsRestOperation remoteAppendBlobWrite(String path,
@@ -159,6 +169,7 @@ public abstract class AzureIngressHandler {
    * Determines if the ingress handler should be switched based on the given exception.
    *
    * @param ex the exception that occurred
+   *
    * @return true if the ingress handler should be switched, false otherwise
    */
   protected boolean shouldIngressHandlerBeSwitched(AbfsRestOperationException ex) {
@@ -168,8 +179,10 @@ public abstract class AzureIngressHandler {
     String errorCode = ex.getErrorCode().getErrorCode();
     if (errorCode != null) {
       return ex.getStatusCode() == HTTP_CONFLICT
-          && (Objects.equals(errorCode, AzureServiceErrorCode.BLOB_OPERATION_NOT_SUPPORTED.getErrorCode())
-              || Objects.equals(errorCode, AzureServiceErrorCode.INVALID_APPEND_OPERATION.getErrorCode()));
+          && (Objects.equals(errorCode,
+          AzureServiceErrorCode.BLOB_OPERATION_NOT_SUPPORTED.getErrorCode())
+          || Objects.equals(errorCode,
+          AzureServiceErrorCode.INVALID_APPEND_OPERATION.getErrorCode()));
     }
     return false;
   }
@@ -178,6 +191,7 @@ public abstract class AzureIngressHandler {
    * Constructs an InvalidIngressServiceException that includes the current handler class name in the exception message.
    *
    * @param e the original AbfsRestOperationException that triggered this exception.
+   *
    * @return an InvalidIngressServiceException with the status code, error code, original message, and handler class name.
    */
   protected InvalidIngressServiceException getIngressHandlerSwitchException(
@@ -206,4 +220,32 @@ public abstract class AzureIngressHandler {
    * @return the block manager
    */
   public abstract AbfsClient getClient();
+
+  /**
+   * Computes the Base64-encoded MD5 hash of the full blob content.
+   *
+   * <p>This method clones the current state of the {@link MessageDigest} instance
+   * associated with the blob content to avoid resetting its original state. It then
+   * calculates the MD5 digest and encodes it into a Base64 string.</p>
+   *
+   * @return A Base64-encoded string representing the MD5 hash of the full blob content,
+   *         or {@code null} if the digest could not be computed.
+   */
+  protected String computeFullBlobMd5() {
+    byte[] digest = null;
+    String fullBlobMd5 = null;
+    try {
+      // Clone the MessageDigest to avoid resetting the original state
+      MessageDigest clonedMd5
+          = (MessageDigest) getAbfsOutputStream().getFullBlobContentMd5()
+          .clone();
+      digest = clonedMd5.digest();
+    } catch (CloneNotSupportedException e) {
+      LOG.warn("Failed to clone MessageDigest instance", e);
+    }
+    if (digest != null && digest.length != 0) {
+      fullBlobMd5 = Base64.getEncoder().encodeToString(digest);
+    }
+    return fullBlobMd5;
+  }
 }

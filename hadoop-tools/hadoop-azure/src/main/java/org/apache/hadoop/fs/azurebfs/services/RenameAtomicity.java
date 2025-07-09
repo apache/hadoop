@@ -217,7 +217,7 @@ public class RenameAtomicity {
         = new AppendRequestParameters(0, 0,
         bytes.length, AppendRequestParameters.Mode.APPEND_MODE, false, null,
         abfsClient.getAbfsConfiguration().isExpectHeaderEnabled(),
-        new BlobAppendRequestParameters(blockId, eTag), computedMd5);
+        new BlobAppendRequestParameters(blockId, eTag), abfsClient.computeMD5Hash(bytes, 0,  bytes.length));
 
     abfsClient.append(path.toUri().getPath(), bytes,
         appendRequestParameters, null, null, tracingContext);

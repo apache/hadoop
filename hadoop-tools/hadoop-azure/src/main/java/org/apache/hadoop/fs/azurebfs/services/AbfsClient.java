@@ -1351,6 +1351,19 @@ public abstract class AbfsClient implements Closeable {
   }
 
   /**
+   * Add MD5 hash as request header to the append request.
+   *
+   * @param requestHeaders to be updated with checksum header
+   * @param reqParams for getting offset and length
+   */
+  protected void addCheckSumHeaderForWrite(List<AbfsHttpHeader> requestHeaders,
+      final AppendRequestParameters reqParams) {
+    if (reqParams.getMd5() != null) {
+      requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, reqParams.getMd5()));
+    }
+  }
+
+  /**
    * To verify the checksum information received from server for the data read.
    * @param buffer stores the data received from server.
    * @param result HTTP Operation Result.

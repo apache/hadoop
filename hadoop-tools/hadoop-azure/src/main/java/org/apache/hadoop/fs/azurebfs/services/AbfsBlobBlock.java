@@ -24,6 +24,12 @@ import java.util.UUID;
 
 import org.apache.commons.codec.binary.Base64;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_ID_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.PADDING_CHARACTER;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.PADDING_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SPACE_CHARACTER;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STRING_SUFFIX;
+
 /**
  * Represents a block in Azure Blob Storage used by Azure Data Lake Storage (ADLS).
  *
@@ -45,7 +51,7 @@ public class AbfsBlobBlock extends AbfsBlock {
   AbfsBlobBlock(AbfsOutputStream outputStream, long offset, int blockIdLength, long blockIndex) throws IOException {
     super(outputStream, offset);
     this.blockIndex = blockIndex;
-    String streamId = getOutputStream().getStreamID();
+    String streamId = outputStream.getStreamID();
     UUID streamIdGuid = UUID.nameUUIDFromBytes(streamId.getBytes(StandardCharsets.UTF_8));
     this.blockId = generateBlockId(streamIdGuid, blockIdLength);
   }
@@ -63,13 +69,13 @@ public class AbfsBlobBlock extends AbfsBlock {
    * @return A Base64-encoded block ID string suitable for use in block-based storage APIs.
    */
   private String generateBlockId(UUID streamId, int rawLength) {
-    String rawBlockId = String.format("%s-%06d", streamId, blockIndex);
+    String rawBlockId = String.format(BLOCK_ID_FORMAT, streamId, blockIndex);
 
     if (rawLength != 0) {
       // Adjust to match expected decoded length
       if (rawBlockId.length() < rawLength) {
-        rawBlockId = String.format("%-" + rawLength + "s", rawBlockId)
-            .replace(' ', '_');
+        rawBlockId = String.format(PADDING_FORMAT + rawLength + STRING_SUFFIX, rawBlockId)
+            .replace(SPACE_CHARACTER, PADDING_CHARACTER);
       } else if (rawBlockId.length() > rawLength) {
         rawBlockId = rawBlockId.substring(0, rawLength);
       }

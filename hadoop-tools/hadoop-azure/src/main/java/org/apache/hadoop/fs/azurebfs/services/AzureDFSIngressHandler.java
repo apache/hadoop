@@ -181,18 +181,7 @@ public class AzureDFSIngressHandler extends AzureIngressHandler {
       tracingContextFlush.setIngressHandler(DFS_FLUSH);
       tracingContextFlush.setPosition(String.valueOf(offset));
     }
-    byte[] digest = null;
-    String fullBlobMd5 = null;
-    try {
-      // Clone the MessageDigest to avoid resetting the original state
-      MessageDigest clonedMd5 = (MessageDigest) getAbfsOutputStream().getFullBlobContentMd5().clone();
-      digest = clonedMd5.digest();
-    } catch (CloneNotSupportedException e) {
-      LOG.warn("Failed to clone MessageDigest instance", e);
-    }
-    if (digest != null && digest.length != 0) {
-      fullBlobMd5 = Base64.getEncoder().encodeToString(digest);
-    }
+    String fullBlobMd5 = computeFullBlobMd5();
     LOG.trace("Flushing data at offset {} and path {}", offset, getAbfsOutputStream().getPath());
     AbfsRestOperation op;
     try {

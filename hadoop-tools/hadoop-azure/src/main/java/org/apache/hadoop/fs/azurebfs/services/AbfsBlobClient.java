@@ -899,9 +899,7 @@ public class AbfsBlobClient extends AbfsClient {
       requestHeaders.add(new AbfsHttpHeader(EXPECT, HUNDRED_CONTINUE));
     }
     if (isChecksumValidationEnabled()) {
-      if (reqParams.getMd5() != null) {
-        requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, reqParams.getMd5()));
-      }
+      addCheckSumHeaderForWrite(requestHeaders, reqParams);
     }
     if (reqParams.isRetryDueToExpect()) {
       String userAgentRetry = getUserAgent();
@@ -986,9 +984,7 @@ public class AbfsBlobClient extends AbfsClient {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, requestParameters.getLeaseId()));
     }
     if (isChecksumValidationEnabled()) {
-      if (requestParameters.getMd5() != null) {
-        requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, requestParameters.getMd5()));
-      }
+    addCheckSumHeaderForWrite(requestHeaders, requestParameters);
     }
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, APPEND_BLOCK);
@@ -1105,10 +1101,8 @@ public class AbfsBlobClient extends AbfsClient {
         AbfsRestOperation op1 = getPathStatus(path, true, tracingContext,
             contextEncryptionAdapter);
         String metadataMd5 = op1.getResult().getResponseHeader(CONTENT_MD5);
-        if (blobMd5 != null) {
-          if (!blobMd5.equals(metadataMd5)) {
-            throw ex;
-          }
+        if (blobMd5 != null && !blobMd5.equals(metadataMd5)) {
+          throw ex;
         }
         return op;
       }
@@ -1924,6 +1918,8 @@ public class AbfsBlobClient extends AbfsClient {
       // AzureBlobFileSystem supports only ASCII Characters in property values.
       if (isPureASCII(value)) {
         try {
+          // URL encoding this JSON metadata, set by the WASB Client during file creation, causes compatibility issues.
+          // Therefore, we need to avoid encoding this metadata.
           if (!XML_TAG_HDI_PERMISSION.equalsIgnoreCase(entry.getKey())) {
             value = encodeMetadataAttribute(value);
           }
@@ -2069,7 +2065,7 @@ public class AbfsBlobClient extends AbfsClient {
 
     // Split the block ID string by commas and generate XML for each block ID
     if (!blockIdString.isEmpty()) {
-      String[] blockIds = blockIdString.split(",");
+      String[] blockIds = blockIdString.split(COMMA);
       for (String blockId : blockIds) {
         stringBuilder.append(String.format(LATEST_BLOCK_FORMAT, blockId));
       }
