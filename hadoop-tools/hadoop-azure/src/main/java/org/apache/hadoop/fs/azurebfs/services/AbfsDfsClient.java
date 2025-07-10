@@ -1563,9 +1563,11 @@ public class AbfsDfsClient extends AbfsClient {
    * @param requestHeaders list of headers to be sent with the request
    *
    * @return client transaction id
+   * @throws AzureBlobFileSystemException if an error occurs while generating the client transaction id
    */
   @VisibleForTesting
-  public String addClientTransactionIdToHeader(List<AbfsHttpHeader> requestHeaders) {
+  public String addClientTransactionIdToHeader(List<AbfsHttpHeader> requestHeaders)
+      throws AzureBlobFileSystemException {
     String clientTransactionId = null;
     // Set client transaction ID if the namespace and client transaction ID config are enabled.
     if (getIsNamespaceEnabled() && getAbfsConfiguration().getIsClientTransactionIdEnabled()) {
