@@ -613,8 +613,9 @@ final class FileChecksumHelper {
 
     @Override
     void checksumBlocks() throws IOException {
-      int tmpTimeout = getClient().getConf().getChecksumEcSocketTimeout() * 1 +
-          getClient().getConf().getSocketTimeout();
+      int tmpTimeout =
+          getClient().getConf().getChecksumEcSocketTimeout() * ecPolicy.getNumDataUnits()
+              + getClient().getConf().getSocketTimeout();
       setTimeout(tmpTimeout);
 
       for (bgIdx = 0;

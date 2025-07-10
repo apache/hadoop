@@ -136,7 +136,7 @@ public interface HdfsClientConfigKeys {
   String  DFS_CHECKSUM_COMBINE_MODE_KEY = "dfs.checksum.combine.mode";
   String  DFS_CHECKSUM_COMBINE_MODE_DEFAULT = "MD5MD5CRC";
   String  DFS_CHECKSUM_EC_SOCKET_TIMEOUT_KEY = "dfs.checksum.ec.socket-timeout";
-  int     DFS_CHECKSUM_EC_SOCKET_TIMEOUT_DEFAULT = 3000;
+  int     DFS_CHECKSUM_EC_SOCKET_TIMEOUT_DEFAULT = 30000;
   String  DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY =
       "dfs.datanode.socket.write.timeout";
   String  DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC =
