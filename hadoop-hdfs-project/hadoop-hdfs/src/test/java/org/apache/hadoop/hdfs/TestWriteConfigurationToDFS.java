@@ -23,7 +23,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Regression test for HDFS-1542, a deadlock between the main thread
@@ -31,7 +32,8 @@ import org.junit.Test;
  * Configuration.writeXML holds a lock on itself while writing to DFS.
  */
 public class TestWriteConfigurationToDFS {
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testWriteConf() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
