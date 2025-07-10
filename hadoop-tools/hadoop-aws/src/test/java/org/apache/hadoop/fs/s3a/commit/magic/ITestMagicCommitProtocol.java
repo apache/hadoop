@@ -171,9 +171,9 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
       final AbstractS3ACommitter committer,
       final TaskAttemptContext context) throws IOException {
     URI wd = committer.getWorkPath().toUri();
-    assertEquals("Wrong schema for working dir " + wd
-        + " with committer " + committer,
-        "s3a", wd.getScheme());
+    assertEquals("s3a", wd.getScheme(),
+        "Wrong schema for working dir " + wd
+        + " with committer " + committer);
     Assertions.assertThat(wd.getPath())
         .contains("/" + MAGIC_PATH_PREFIX + committer.getUUID() + "/");
   }

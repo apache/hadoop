@@ -379,10 +379,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       this.customMessage = customMessage;
     }
 
-    private final String getWarningMessage(String key) {
-      return getWarningMessage(key, null);
-    }
-
     /**
      * Method to provide the warning message. It gives the custom message if
      * non-null, and default message otherwise.
@@ -412,12 +408,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return warningMessage;
     }
 
-    boolean getAndSetAccessed() {
-      return accessed.getAndSet(true);
-    }
-
-    public void clearAccessed() {
-      accessed.set(false);
+    void logDeprecation(String name, String source) {
+      LOG_DEPRECATION.info(getWarningMessage(name, source));
+      this.accessed.set(true);
     }
   }
   
@@ -728,12 +721,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     // Initialize the return value with requested name
     String[] names = new String[]{name};
-    // Deprecated keys are logged once and an updated names are returned
+    // Deprecated keys are logged and updated names are returned
     DeprecatedKeyInfo keyInfo = deprecations.getDeprecatedKeyMap().get(name);
     if (keyInfo != null) {
-      if (!keyInfo.getAndSetAccessed()) {
-        logDeprecation(keyInfo.getWarningMessage(name));
-      }
+      keyInfo.logDeprecation(name, null);
       // Override return value for deprecated keys
       names = keyInfo.newKeys;
     }
@@ -1460,13 +1451,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   @VisibleForTesting
   void logDeprecation(String message) {
     LOG_DEPRECATION.info(message);
-  }
-
-  void logDeprecationOnce(String name, String source) {
-    DeprecatedKeyInfo keyInfo = getDeprecatedKeyInfo(name);
-    if (keyInfo != null && !keyInfo.getAndSetAccessed()) {
-      LOG_DEPRECATION.info(keyInfo.getWarningMessage(name, source));
-    }
   }
 
   /**
@@ -2448,7 +2432,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (oldName != null) {
       entry = provider.getCredentialEntry(oldName);
       if (entry != null) {
-        logDeprecationOnce(oldName, provider.toString());
+        DeprecatedKeyInfo ki = getDeprecatedKeyInfo(oldName);
+        if (ki != null) {
+          ki.logDeprecation(oldName, provider.toString());
+        }
         return entry;
       }
     }
@@ -2459,7 +2446,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       for (String newName : keyInfo.newKeys) {
         entry = provider.getCredentialEntry(newName);
         if (entry != null) {
-          logDeprecationOnce(name, null);
+          keyInfo.logDeprecation(name, null);
           return entry;
         }
       }
@@ -3433,8 +3420,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           deprecations.getDeprecatedKeyMap().get(confName);
 
       if (keyInfo != null) {
-        logDeprecation(keyInfo.getWarningMessage(confName, wrapper.toString()));
-        keyInfo.clearAccessed();
+        keyInfo.logDeprecation(confName, wrapper.toString());
         for (String key : keyInfo.newKeys) {
           // update new keys with deprecated key's value
           results.add(new ParsedItem(

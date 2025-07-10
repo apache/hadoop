@@ -19,7 +19,11 @@
 package org.apache.hadoop.yarn.server.router.clientrm;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.FEDERATION_POLICY_MANAGER;
-import static org.hamcrest.CoreMatchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -52,12 +56,9 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,13 +74,11 @@ import static org.apache.hadoop.yarn.server.federation.policies.FederationPolicy
  * It tests the case with SubClusters down and the Router logic of retries. We
  * have 1 good SubCluster and 2 bad ones for all the tests.
  */
-@RunWith(Parameterized.class)
 public class TestFederationClientInterceptorRetry
     extends BaseRouterClientRMTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFederationClientInterceptorRetry.class);
 
-  @Parameters
   public static Collection<String[]> getParameters() {
     return Arrays.asList(new String[][] {{UniformBroadcastPolicyManager.class.getName()},
         {TestSequentialBroadcastPolicyManager.class.getName()}});
@@ -101,8 +100,10 @@ public class TestFederationClientInterceptorRetry
 
   private static List<SubClusterId> scs = new ArrayList<>();
 
-  public TestFederationClientInterceptorRetry(String policyManagerName) {
+  private void initTestFederationClientInterceptorRetry(String policyManagerName)
+      throws IOException {
     this.routerPolicyManagerName = policyManagerName;
+    setUp();
   }
 
   @Override
@@ -134,6 +135,7 @@ public class TestFederationClientInterceptorRetry
     interceptor.registerBadSubCluster(bad2);
   }
 
+  @AfterEach
   @Override
   public void tearDown() {
     interceptor.shutdown();
@@ -151,7 +153,7 @@ public class TestFederationClientInterceptorRetry
       }
     } catch (YarnException e) {
       LOG.error(e.getMessage());
-      Assert.fail();
+      fail();
     }
   }
 
@@ -183,9 +185,10 @@ public class TestFederationClientInterceptorRetry
    * This test validates the correctness of GetNewApplication in case the
    * cluster is composed of only 1 bad SubCluster.
    */
-  @Test
-  public void testGetNewApplicationOneBadSC() throws Exception {
-
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testGetNewApplicationOneBadSC(String policyManagerName) throws Exception {
+    initTestFederationClientInterceptorRetry(policyManagerName);
     LOG.info("Test getNewApplication with one bad SubCluster");
     setupCluster(Arrays.asList(bad2));
 
@@ -198,9 +201,10 @@ public class TestFederationClientInterceptorRetry
    * This test validates the correctness of GetNewApplication in case the
    * cluster is composed of only 2 bad SubClusters.
    */
-  @Test
-  public void testGetNewApplicationTwoBadSCs() throws Exception {
-
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testGetNewApplicationTwoBadSCs(String policyManagerName) throws Exception {
+    initTestFederationClientInterceptorRetry(policyManagerName);
     LOG.info("Test getNewApplication with two bad SubClusters");
     setupCluster(Arrays.asList(bad1, bad2));
 
@@ -213,16 +217,18 @@ public class TestFederationClientInterceptorRetry
    * This test validates the correctness of GetNewApplication in case the
    * cluster is composed of only 1 bad SubCluster and 1 good one.
    */
-  @Test
-  public void testGetNewApplicationOneBadOneGood() throws YarnException, IOException {
-
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testGetNewApplicationOneBadOneGood(String policyManagerName)
+      throws YarnException, IOException {
+    initTestFederationClientInterceptorRetry(policyManagerName);
     LOG.info("Test getNewApplication with one bad, one good SC");
     setupCluster(Arrays.asList(good, bad2));
     GetNewApplicationRequest request = GetNewApplicationRequest.newInstance();
     GetNewApplicationResponse response = interceptor.getNewApplication(request);
 
-    Assert.assertNotNull(response);
-    Assert.assertEquals(ResourceManager.getClusterTimeStamp(),
+    assertNotNull(response);
+    assertEquals(ResourceManager.getClusterTimeStamp(),
         response.getApplicationId().getClusterTimestamp());
   }
 
@@ -230,9 +236,10 @@ public class TestFederationClientInterceptorRetry
    * This test validates the correctness of SubmitApplication in case the
    * cluster is composed of only 1 bad SubCluster.
    */
-  @Test
-  public void testSubmitApplicationOneBadSC() throws Exception {
-
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testSubmitApplicationOneBadSC(String policyManagerName) throws Exception {
+    initTestFederationClientInterceptorRetry(policyManagerName);
     LOG.info("Test submitApplication with one bad SubCluster");
     setupCluster(Arrays.asList(bad2));
 
@@ -259,9 +266,10 @@ public class TestFederationClientInterceptorRetry
    * This test validates the correctness of SubmitApplication in case the
    * cluster is composed of only 2 bad SubClusters.
    */
-  @Test
-  public void testSubmitApplicationTwoBadSCs() throws Exception {
-
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testSubmitApplicationTwoBadSCs(String policyManagerName) throws Exception {
+    initTestFederationClientInterceptorRetry(policyManagerName);
     LOG.info("Test submitApplication with two bad SubClusters.");
     setupCluster(Arrays.asList(bad1, bad2));
 
@@ -277,10 +285,11 @@ public class TestFederationClientInterceptorRetry
    * This test validates the correctness of SubmitApplication in case the
    * cluster is composed of only 1 bad SubCluster and a good one.
    */
-  @Test
-  public void testSubmitApplicationOneBadOneGood()
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testSubmitApplicationOneBadOneGood(String policyManagerName)
       throws YarnException, IOException, InterruptedException {
-
+    initTestFederationClientInterceptorRetry(policyManagerName);
     LOG.info("Test submitApplication with one bad, one good SC.");
     setupCluster(Arrays.asList(good, bad2));
 
@@ -289,29 +298,31 @@ public class TestFederationClientInterceptorRetry
 
     final SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
     SubmitApplicationResponse response = interceptor.submitApplication(request);
-    Assert.assertNotNull(response);
+    assertNotNull(response);
 
     GetApplicationHomeSubClusterRequest getAppRequest =
         GetApplicationHomeSubClusterRequest.newInstance(appId);
     GetApplicationHomeSubClusterResponse getAppResponse =
         stateStore.getApplicationHomeSubCluster(getAppRequest);
-    Assert.assertNotNull(getAppResponse);
+    assertNotNull(getAppResponse);
 
     ApplicationHomeSubCluster responseHomeSubCluster =
         getAppResponse.getApplicationHomeSubCluster();
-    Assert.assertNotNull(responseHomeSubCluster);
+    assertNotNull(responseHomeSubCluster);
     SubClusterId respSubClusterId = responseHomeSubCluster.getHomeSubCluster();
-    Assert.assertEquals(good, respSubClusterId);
+    assertEquals(good, respSubClusterId);
   }
 
-  @Test
-  public void testSubmitApplicationTwoBadOneGood() throws Exception {
-
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testSubmitApplicationTwoBadOneGood(String policyManagerName) throws Exception {
+    initTestFederationClientInterceptorRetry(policyManagerName);
+    assumeTrue(policyManagerName.equals(TestSequentialBroadcastPolicyManager.class.getName()));
     LOG.info("Test submitApplication with two bad, one good SC.");
 
     // This test must require the TestSequentialRouterPolicy policy
-    Assume.assumeThat(routerPolicyManagerName,
-        is(TestSequentialBroadcastPolicyManager.class.getName()));
+    assertThat(routerPolicyManagerName).
+        isEqualTo(TestSequentialBroadcastPolicyManager.class.getName());
 
     setupCluster(Arrays.asList(bad1, bad2, good));
     final ApplicationId appId =
@@ -335,7 +346,7 @@ public class TestFederationClientInterceptorRetry
     // 1st time will use bad2, 2nd time will use bad1, 3rd good
     interceptor.setNumSubmitRetries(2);
     SubmitApplicationResponse submitAppResponse = interceptor.submitApplication(request);
-    Assert.assertNotNull(submitAppResponse);
+    assertNotNull(submitAppResponse);
 
     // We will get good
     checkSubmitSubCluster(appId, good);
@@ -347,17 +358,20 @@ public class TestFederationClientInterceptorRetry
         GetApplicationHomeSubClusterRequest.newInstance(appId);
     GetApplicationHomeSubClusterResponse getAppResponse =
         stateStore.getApplicationHomeSubCluster(getAppRequest);
-    Assert.assertNotNull(getAppResponse);
-    Assert.assertNotNull(getAppResponse);
+    assertNotNull(getAppResponse);
+    assertNotNull(getAppResponse);
     ApplicationHomeSubCluster responseHomeSubCluster =
         getAppResponse.getApplicationHomeSubCluster();
-    Assert.assertNotNull(responseHomeSubCluster);
+    assertNotNull(responseHomeSubCluster);
     SubClusterId respSubClusterId = responseHomeSubCluster.getHomeSubCluster();
-    Assert.assertEquals(expectSubCluster, respSubClusterId);
+    assertEquals(expectSubCluster, respSubClusterId);
   }
 
-  @Test
-  public void testSubmitApplicationTwoBadNodeWithRealError() throws Exception {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testSubmitApplicationTwoBadNodeWithRealError(String policyManagerName)
+      throws Exception {
+    initTestFederationClientInterceptorRetry(policyManagerName);
     LOG.info("Test submitApplication with two bad SubClusters.");
     setupCluster(Arrays.asList(bad1, bad2));
     interceptor.setNumSubmitRetries(1);
@@ -371,8 +385,11 @@ public class TestFederationClientInterceptorRetry
         () -> interceptor.submitApplication(request));
   }
 
-  @Test
-  public void testSubmitApplicationOneBadNodeWithRealError() throws Exception {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testSubmitApplicationOneBadNodeWithRealError(String policyManagerName)
+      throws Exception {
+    initTestFederationClientInterceptorRetry(policyManagerName);
     LOG.info("Test submitApplication with one bad SubClusters.");
     setupCluster(Arrays.asList(bad1));
     interceptor.setNumSubmitRetries(0);
@@ -386,8 +403,11 @@ public class TestFederationClientInterceptorRetry
         () -> interceptor.submitApplication(request));
   }
 
-  @Test
-  public void testGetClusterMetricsTwoBadNodeWithRealError() throws Exception {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testGetClusterMetricsTwoBadNodeWithRealError(String policyManagerName)
+      throws Exception {
+    initTestFederationClientInterceptorRetry(policyManagerName);
     LOG.info("Test getClusterMetrics with two bad SubClusters.");
     setupCluster(Arrays.asList(bad1, bad2));
     GetClusterMetricsRequest request = GetClusterMetricsRequest.newInstance();
@@ -401,8 +421,11 @@ public class TestFederationClientInterceptorRetry
         () -> interceptor.getClusterMetrics(request));
   }
 
-  @Test
-  public void testGetClusterMetricsOneBadNodeWithRealError() throws Exception {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testGetClusterMetricsOneBadNodeWithRealError(String policyManagerName)
+      throws Exception {
+    initTestFederationClientInterceptorRetry(policyManagerName);
     LOG.info("Test getClusterMetrics with one bad SubClusters.");
     setupCluster(Arrays.asList(bad1));
     GetClusterMetricsRequest request = GetClusterMetricsRequest.newInstance();
@@ -412,14 +435,17 @@ public class TestFederationClientInterceptorRetry
         () -> interceptor.getClusterMetrics(request));
   }
 
-  @Test
-  public void testGetClusterMetricsOneBadOneGoodNodeWithRealError() throws Exception {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testGetClusterMetricsOneBadOneGoodNodeWithRealError(
+      String policyManagerName) throws Exception {
+    initTestFederationClientInterceptorRetry(policyManagerName);
     LOG.info("Test getClusterMetrics with one bad and one good SubCluster.");
     setupCluster(Arrays.asList(bad1, good));
     GetClusterMetricsRequest request = GetClusterMetricsRequest.newInstance();
 
     GetClusterMetricsResponse clusterMetrics = interceptor.getClusterMetrics(request);
-    Assert.assertNotNull(clusterMetrics);
+    assertNotNull(clusterMetrics);
 
     // If partial results are not allowed to be returned, an exception will be thrown.
     interceptor.setAllowPartialResult(false);

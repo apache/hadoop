@@ -46,8 +46,8 @@ import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Helper class for testing roles.
@@ -229,15 +229,14 @@ public final class RoleTestUtils {
       final MarshalledCredentials actual) {
     // DO NOT use assertEquals() here, as that could print a secret to
     // the test report.
-    assertEquals(message + ": access key",
-        expected.getAccessKey(),
-        actual.getAccessKey());
-    assertTrue(message + ": secret key",
-        expected.getSecretKey().equals(actual.getSecretKey()));
-    assertEquals(message + ": session token",
-        expected.getSessionToken(),
-        actual.getSessionToken());
-
+    assertEquals(expected.getAccessKey(),
+        actual.getAccessKey(),
+        message + ": access key");
+    assertTrue(expected.getSecretKey().equals(actual.getSecretKey()),
+        message + ": secret key");
+    assertEquals(expected.getSessionToken(),
+        actual.getSessionToken(),
+        message + ": session token");
   }
 
   /**

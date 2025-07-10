@@ -95,6 +95,7 @@ public class AbfsConfiguration{
   private final AbfsServiceType fsConfiguredServiceType;
   private final boolean isSecure;
   private static final Logger LOG = LoggerFactory.getLogger(AbfsConfiguration.class);
+  private Trilean isNamespaceEnabled = null;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
       DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_HNS_ENABLED)
@@ -525,8 +526,11 @@ public class AbfsConfiguration{
    * @return TRUE/FALSE value if configured, UNKNOWN if not configured.
    */
   public Trilean getIsNamespaceEnabledAccount() {
-    return Trilean.getTrilean(
-        getString(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, isNamespaceEnabledAccount));
+    if (isNamespaceEnabled == null) {
+      isNamespaceEnabled = Trilean.getTrilean(
+          getString(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, isNamespaceEnabledAccount));
+    }
+    return isNamespaceEnabled;
   }
 
   /**
@@ -1524,9 +1528,24 @@ public class AbfsConfiguration{
     this.maxBackoffInterval = maxBackoffInterval;
   }
 
+  /**
+   * Sets the namespace enabled account flag.
+   *
+   * @param isNamespaceEnabledAccount boolean value indicating if the account is namespace enabled.
+   */
+  void setIsNamespaceEnabledAccount(boolean isNamespaceEnabledAccount) {
+    this.isNamespaceEnabled = Trilean.getTrilean(isNamespaceEnabledAccount);
+  }
+
+  /**
+   * Sets the namespace enabled account flag for testing purposes.
+   * Use this method only for testing scenarios.
+   *
+   * @param isNamespaceEnabledAccount Trilean value indicating if the account is namespace enabled.
+   */
   @VisibleForTesting
-  void setIsNamespaceEnabledAccount(String isNamespaceEnabledAccount) {
-    this.isNamespaceEnabledAccount = isNamespaceEnabledAccount;
+  void setIsNamespaceEnabledAccountForTesting(Trilean isNamespaceEnabledAccount) {
+    this.isNamespaceEnabled = isNamespaceEnabledAccount;
   }
 
   /**

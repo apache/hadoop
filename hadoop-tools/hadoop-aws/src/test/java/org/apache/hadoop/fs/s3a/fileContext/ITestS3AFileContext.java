@@ -16,7 +16,7 @@ package org.apache.hadoop.fs.s3a.fileContext;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.TestFileContext;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Implementation of TestFileContext for S3a.

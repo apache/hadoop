@@ -384,6 +384,36 @@ public class TestConfiguration {
     assertTrue(hasDeprecationMessage);
   }
 
+  @Test
+  public void testDeprecatedPropertyLogsWarningOnEveryUse(){
+    String oldProp = "test.deprecation.old.conf.b";
+    String newProp = "test.deprecation.new.conf.b";
+    Configuration.addDeprecation(oldProp, newProp);
+
+    TestAppender appender = new TestAppender();
+    Logger deprecationLogger = Logger.getLogger("org.apache.hadoop.conf.Configuration.deprecation");
+    deprecationLogger.addAppender(appender);
+
+    try {
+      conf.set(oldProp, "b1");
+      conf.get(oldProp);
+      conf.set(oldProp, "b2");
+      conf.get(oldProp);
+      // Using the new property should not log a warning
+      conf.set(newProp, "b3");
+      conf.get(newProp);
+      conf.set(newProp, "b4");
+      conf.get(newProp);
+    } finally {
+      deprecationLogger.removeAppender(appender);
+    }
+
+    Pattern deprecationMsgPattern = Pattern.compile(oldProp + " is deprecated");
+    long count = appender.log.stream().map(LoggingEvent::getRenderedMessage)
+            .filter(msg -> deprecationMsgPattern.matcher(msg).find()).count();
+    assertEquals(4, count, "Expected exactly four warnings for deprecated property usage");
+  }
+
   /**
    * A simple appender for white box testing.
    */

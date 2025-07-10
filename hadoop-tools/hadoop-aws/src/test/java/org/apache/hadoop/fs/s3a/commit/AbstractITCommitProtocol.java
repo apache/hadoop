@@ -733,8 +733,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     expectedOutput.append(KEY_1).append("\n");
     expectedOutput.append(KEY_2).append('\t').append(VAL_2).append("\n");
     String output = readFile(expectedFile);
-    assertEquals("Content of " + expectedFile,
-        expectedOutput.toString(), output);
+    assertEquals(expectedOutput.toString(), output,
+        "Content of " + expectedFile);
   }
 
   /**
