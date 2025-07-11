@@ -135,7 +135,7 @@ public class TestSeekBug {
   }
 
   /**
-   * Test (expected to throw IOE) for negative
+   * Test (expected to throw IOE) for negative.
    * <code>FSDataInpuStream#seek</code> argument
    */
   @Test
