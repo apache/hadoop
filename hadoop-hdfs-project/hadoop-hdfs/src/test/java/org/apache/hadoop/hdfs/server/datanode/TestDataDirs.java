@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.util.Shell;
-import org.junit.AssumptionViolatedException;
+import org.opentest4j.TestAbortedException;
 import org.junit.Test;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
@@ -104,7 +104,7 @@ public class TestDataDirs {
   @Test
   public void testDataDirFileSystem() throws Exception {
     if (Shell.MAC) {
-      throw new AssumptionViolatedException("Not supported on MAC OS");
+      throw new TestAbortedException("Not supported on MAC OS");
     }
     Configuration conf = new Configuration();
     String archiveDir = "/home";

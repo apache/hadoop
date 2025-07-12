@@ -28,7 +28,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
-import org.junit.internal.AssumptionViolatedException;
+import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +75,7 @@ public final class AzureTestUtils extends Assertions {
    * @param conf configuration
    * @return the FS
    * @throws IOException IO Problems
-   * @throws AssumptionViolatedException if the FS is not named
+   * @throws TestAbortedException if the FS is not named
    */
   public static NativeAzureFileSystem createTestFileSystem(Configuration conf)
       throws IOException {
@@ -90,7 +90,7 @@ public final class AzureTestUtils extends Assertions {
     }
     if (!liveTest) {
       // Skip the test
-      throw new AssumptionViolatedException(
+      throw new TestAbortedException(
           "No test filesystem in " + TEST_FS_WASB_NAME);
     }
     NativeAzureFileSystem fs1 = new NativeAzureFileSystem();
@@ -108,7 +108,7 @@ public final class AzureTestUtils extends Assertions {
    * @param conf configuration
    * @return the FS
    * @throws IOException IO Problems
-   * @throws AssumptionViolatedException if the FS is not named
+   * @throws TestAbortedException if the FS is not named
    */
   public static FileContext createTestFileContext(Configuration conf)
       throws IOException {
@@ -123,7 +123,7 @@ public final class AzureTestUtils extends Assertions {
     if (!liveTest) {
       // This doesn't work with our JUnit 3 style test cases, so instead we'll
       // make this whole class not run by default
-      throw new AssumptionViolatedException("No test filesystem in "
+      throw new TestAbortedException("No test filesystem in "
           + TEST_FS_WASB_NAME);
     }
     FileContext fc = FileContext.getFileContext(testURI, conf);
@@ -386,7 +386,7 @@ public final class AzureTestUtils extends Assertions {
 
   /**
    * Assume that a condition is met. If not: log at WARN and
-   * then throw an {@link AssumptionViolatedException}.
+   * then throw an {@link TestAbortedException}.
    * @param message message in an assumption
    * @param condition condition to probe
    */
