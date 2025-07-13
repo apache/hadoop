@@ -51,7 +51,7 @@ class ReadBufferWorker implements Runnable {
     } catch (InterruptedException ex) {
       Thread.currentThread().interrupt();
     }
-    ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
+    ReadBufferManager bufferManager = ReadBufferManagerV1.getBufferManager();
     ReadBuffer buffer;
     while (true) {
       try {
