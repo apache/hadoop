@@ -127,6 +127,7 @@ public final class FileSystemConfigurations {
   public static final long DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS = 120;
 
   public static final boolean DEFAULT_ENABLE_READAHEAD = true;
+  public static final boolean DEFAULT_ENABLE_READAHEAD_V2 = false;
   public static final String DEFAULT_FS_AZURE_USER_AGENT_PREFIX = EMPTY_STRING;
   public static final String DEFAULT_VALUE_UNKNOWN = "UNKNOWN";
 

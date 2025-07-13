@@ -79,6 +79,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final String eTag;                  // eTag of the path when InputStream are created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
   private final boolean readAheadEnabled; // whether enable readAhead;
+  private final boolean readAheadV2Enabled; // whether enable readAhead V2;
   private final String inputStreamId;
   private final boolean alwaysReadBufferSize;
   /*
@@ -151,6 +152,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.eTag = eTag;
     this.readAheadRange = abfsInputStreamContext.getReadAheadRange();
     this.readAheadEnabled = abfsInputStreamContext.isReadAheadEnabled();
+    this.readAheadV2Enabled = abfsInputStreamContext.isReadAheadV2Enabled();
     this.alwaysReadBufferSize
         = abfsInputStreamContext.shouldReadBufferSizeAlways();
     this.bufferedPreadDisabled = abfsInputStreamContext
@@ -176,8 +178,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
     // Propagate the config values to ReadBufferManager so that the first instance
     // to initialize can set the readAheadBlockSize
-    ReadBufferManagerV1.setReadBufferManagerConfigs(readAheadBlockSize);
-    readBufferManager = ReadBufferManagerV1.getBufferManager();
+    if (readAheadV2Enabled) {
+      readBufferManager = ReadBufferManagerV2.getBufferManager();
+    } else {
+      ReadBufferManagerV1.setReadBufferManagerConfigs(readAheadBlockSize);
+      readBufferManager = ReadBufferManagerV1.getBufferManager();
+    }
     if (streamStatistics != null) {
       ioStatistics = streamStatistics.getIOStatistics();
     }
