@@ -66,17 +66,16 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
   public void testDistCpWithIterator() throws Exception {
     final long renames = getRenameOperationCount();
     super.testDistCpWithIterator();
-    assertEquals("Expected no renames for a direct write distcp",
-        getRenameOperationCount(),
-         renames);
+    assertEquals(getRenameOperationCount(),
+        renames, "Expected no renames for a direct write distcp");
   }
 
   @Override
   public void testNonDirectWrite() throws Exception {
     final long renames = getRenameOperationCount();
     super.testNonDirectWrite();
-    assertEquals("Expected 2 renames for a non-direct write distcp", 2L,
-        getRenameOperationCount() - renames);
+    assertEquals(2L, getRenameOperationCount() - renames,
+        "Expected 2 renames for a non-direct write distcp");
   }
 
   @Override

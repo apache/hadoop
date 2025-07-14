@@ -38,8 +38,9 @@ import org.apache.hadoop.fs.contract.ContractTestUtils.NanoTimer;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
 import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,6 +72,7 @@ public class ITestS3AConcurrentOps extends S3AScaleTestBase {
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -92,7 +94,7 @@ public class ITestS3AConcurrentOps extends S3AScaleTestBase {
     return s3a;
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     super.teardown();
     if (auxFs != null) {
@@ -152,7 +154,7 @@ public class ITestS3AConcurrentOps extends S3AScaleTestBase {
       LOG.info("Deadlock may have occurred if nothing else is logged" +
           " or the test times out");
       for (int i = 0; i < concurrentRenames; i++) {
-        assertTrue("No future " + i, futures[i].get());
+        assertTrue(futures[i].get(), "No future " + i);
         assertPathExists("target path", target[i]);
         assertPathDoesNotExist("source path", source[i]);
       }

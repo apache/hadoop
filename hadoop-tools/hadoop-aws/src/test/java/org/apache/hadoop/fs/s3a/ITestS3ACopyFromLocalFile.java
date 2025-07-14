@@ -31,9 +31,8 @@ import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.Path;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.apache.hadoop.fs.s3a.Constants.OPTIMIZED_COPY_FROM_LOCAL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
@@ -46,23 +45,21 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * Parameterized on whether or not the optimized
  * copyFromLocalFile is enabled.
  */
-@RunWith(Parameterized.class)
 public class ITestS3ACopyFromLocalFile extends
         AbstractContractCopyFromLocalTest {
   /**
    * Parameterization.
    */
-  @Parameterized.Parameters(name = "enabled={0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {true},
         {false},
     });
   }
-  private final boolean enabled;
+  private boolean enabled;
 
-  public ITestS3ACopyFromLocalFile(final boolean enabled) {
-    this.enabled = enabled;
+  public void initITestS3ACopyFromLocalFile(final boolean pEnabled) {
+    this.enabled = pEnabled;
   }
 
   @Override
@@ -81,8 +78,10 @@ public class ITestS3ACopyFromLocalFile extends
     return new S3AContract(conf);
   }
 
-  @Test
-  public void testOptionPropagation() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest
+  public void testOptionPropagation(boolean pEnabled) throws Throwable {
+    initITestS3ACopyFromLocalFile(pEnabled);
     Assertions.assertThat(getFileSystem().hasPathCapability(new Path("/"),
         OPTIMIZED_COPY_FROM_LOCAL))
         .describedAs("path capability of %s", OPTIMIZED_COPY_FROM_LOCAL)
@@ -90,8 +89,10 @@ public class ITestS3ACopyFromLocalFile extends
 
   }
 
-  @Test
-  public void testLocalFilesOnly() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest
+  public void testLocalFilesOnly(boolean pEnabled) throws Throwable {
+    initITestS3ACopyFromLocalFile(pEnabled);
     describe("Copying into other file systems must fail");
     Path dest = fileToPath(createTempDirectory("someDir"));
 
@@ -99,8 +100,10 @@ public class ITestS3ACopyFromLocalFile extends
         () -> getFileSystem().copyFromLocalFile(false, true, dest, dest));
   }
 
-  @Test
-  public void testOnlyFromLocal() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest
+  public void testOnlyFromLocal(boolean pEnabled) throws Throwable {
+    initITestS3ACopyFromLocalFile(pEnabled);
     describe("Copying must be from a local file system");
     File source = createTempFile("someFile");
     Path dest = copyFromLocal(source, true);
@@ -109,8 +112,10 @@ public class ITestS3ACopyFromLocalFile extends
         () -> getFileSystem().copyFromLocalFile(true, true, dest, dest));
   }
 
-  @Test
-  public void testCopyFromLocalWithNoFileScheme() throws IOException {
+  @MethodSource("params")
+  @ParameterizedTest
+  public void testCopyFromLocalWithNoFileScheme(boolean pEnabled) throws IOException {
+    initITestS3ACopyFromLocalFile(pEnabled);
     describe("Copying from local file with no file scheme to remote s3 destination");
     File source = createTempFile("tempData");
     Path dest = path(getMethodName());

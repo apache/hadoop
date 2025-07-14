@@ -34,13 +34,14 @@ import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestDFSAdminWithHA {
 
@@ -125,7 +126,7 @@ public class TestDFSAdminWithHA {
     conf.setInt(HdfsClientConfigKeys.Failover.SLEEPTIME_MAX_KEY, 0);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     try {
       System.out.flush();
@@ -144,91 +145,96 @@ public class TestDFSAdminWithHA {
     err.reset();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSetSafeMode() throws Exception {
     setUpHaCluster(false);
     // Enter safemode
     int exitCode = admin.run(new String[] {"-safemode", "enter"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     String message = "Safe mode is ON in.*";
     assertOutputMatches(message + newLine + message + newLine);
 
     // Get safemode
     exitCode = admin.run(new String[] {"-safemode", "get"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     message = "Safe mode is ON in.*";
     assertOutputMatches(message + newLine + message + newLine);
 
     // Leave safemode
     exitCode = admin.run(new String[] {"-safemode", "leave"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     message = "Safe mode is OFF in.*";
     assertOutputMatches(message + newLine + message + newLine);
 
     // Get safemode
     exitCode = admin.run(new String[] {"-safemode", "get"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     message = "Safe mode is OFF in.*";
     assertOutputMatches(message + newLine + message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSaveNamespace() throws Exception {
     setUpHaCluster(false);
     // Safe mode should be turned ON in order to create namespace image.
     int exitCode = admin.run(new String[] {"-safemode", "enter"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     String message = "Safe mode is ON in.*";
     assertOutputMatches(message + newLine + message + newLine);
 
     exitCode = admin.run(new String[] {"-saveNamespace"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     message = "Save namespace successful for.*";
     assertOutputMatches(message + newLine + message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSaveNamespaceNN1UpNN2Down() throws Exception {
     setUpHaCluster(false);
     // Safe mode should be turned ON in order to create namespace image.
     int exitCode = admin.run(new String[] {"-safemode", "enter"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     String message = "Safe mode is ON in.*";
     assertOutputMatches(message + newLine + message + newLine);
 
     cluster.getDfsCluster().shutdownNameNode(1);
 //
     exitCode = admin.run(new String[] {"-saveNamespace"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String outMessage = "Save namespace successful for.*" + newLine;
     String errMessage = "Save namespace failed for ([\\s\\S]*)" + newLine;
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSaveNamespaceNN1DownNN2Up() throws Exception {
     setUpHaCluster(false);
     // Safe mode should be turned ON in order to create namespace image.
     int exitCode = admin.run(new String[] {"-safemode", "enter"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     String message = "Safe mode is ON in.*";
     assertOutputMatches(message + newLine + message + newLine);
 
     cluster.getDfsCluster().shutdownNameNode(0);
 
     exitCode = admin.run(new String[] {"-saveNamespace"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String errMessage = "Save namespace failed for ([\\s\\S]*)" + newLine;
     String outMessage = "Save namespace successful for.*" + newLine;
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSaveNamespaceNN1DownNN2Down() throws Exception {
     setUpHaCluster(false);
     // Safe mode should be turned ON in order to create namespace image.
     int exitCode = admin.run(new String[] {"-safemode", "enter"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     String message = "Safe mode is ON in.*";
     assertOutputMatches(message + newLine + message + newLine);
 
@@ -236,172 +242,183 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(1);
 
     exitCode = admin.run(new String[] {"-saveNamespace"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     message = "Save namespace failed for ([\\s\\S]*)";
     assertOutputMatches(message + newLine + message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRestoreFailedStorage() throws Exception {
     setUpHaCluster(false);
     int exitCode = admin.run(new String[] {"-restoreFailedStorage", "check"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     String message = "restoreFailedStorage is set to false for.*";
     // Default is false
     assertOutputMatches(message + newLine + message + newLine);
 
     exitCode = admin.run(new String[] {"-restoreFailedStorage", "true"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     message = "restoreFailedStorage is set to true for.*";
     assertOutputMatches(message + newLine + message + newLine);
 
     exitCode = admin.run(new String[] {"-restoreFailedStorage", "false"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     message = "restoreFailedStorage is set to false for.*";
     assertOutputMatches(message + newLine + message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRestoreFailedStorageNN1UpNN2Down() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-restoreFailedStorage", "check"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String outMessage = "restoreFailedStorage is set to false for.*" + newLine;
     String errMessage = "restoreFailedStorage failed for ([\\s\\S]*)" + newLine;
     // Default is false
     assertOutputMatches(outMessage, errMessage);
 
     exitCode = admin.run(new String[] {"-restoreFailedStorage", "true"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     outMessage = "restoreFailedStorage is set to true for.*" + newLine;
     errMessage = "restoreFailedStorage failed for ([\\s\\S]*)" + newLine;
     assertOutputMatches(outMessage, errMessage);
 
     exitCode = admin.run(new String[] {"-restoreFailedStorage", "false"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     outMessage = "restoreFailedStorage is set to false for.*" + newLine;
     errMessage = "restoreFailedStorage failed for ([\\s\\S]*)" + newLine;
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRestoreFailedStorageNN1DownNN2Up() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(0);
     int exitCode = admin.run(new String[] {"-restoreFailedStorage", "check"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String errMessage = "restoreFailedStorage failed for ([\\s\\S]*)" + newLine;
     String outMessage = "restoreFailedStorage is set to false for.*" + newLine;
     // Default is false
     assertOutputMatches(outMessage, errMessage);
 
     exitCode = admin.run(new String[] {"-restoreFailedStorage", "true"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     errMessage = "restoreFailedStorage failed for ([\\s\\S]*)" + newLine;
     outMessage = "restoreFailedStorage is set to true for.*" + newLine;
     assertOutputMatches(outMessage, errMessage);
 
     exitCode = admin.run(new String[] {"-restoreFailedStorage", "false"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     errMessage = "restoreFailedStorage failed for ([\\s\\S]*)" + newLine;
     outMessage = "restoreFailedStorage is set to false for.*" + newLine;
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRestoreFailedStorageNN1DownNN2Down() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(0);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-restoreFailedStorage", "check"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String message = "restoreFailedStorage failed for ([\\s\\S]*)";
     // Default is false
     assertOutputMatches(message + newLine + message + newLine);
 
     exitCode = admin.run(new String[] {"-restoreFailedStorage", "true"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     message = "restoreFailedStorage failed for ([\\s\\S]*)";
     assertOutputMatches(message + newLine + message + newLine);
 
     exitCode = admin.run(new String[] {"-restoreFailedStorage", "false"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     message = "restoreFailedStorage failed for ([\\s\\S]*)";
     assertOutputMatches(message + newLine + message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshNodes() throws Exception {
     setUpHaCluster(false);
     int exitCode = admin.run(new String[] {"-refreshNodes"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     String message = "Refresh nodes successful for.*";
     assertOutputMatches(message + newLine + message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshNodesNN1UpNN2Down() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-refreshNodes"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String outMessage = "Refresh nodes successful for .*" + newLine;
     String errMessage = "Refresh nodes failed for ([\\s\\S]*)" + newLine;
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshNodesNN1DownNN2Up() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(0);
     int exitCode = admin.run(new String[] {"-refreshNodes"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String errMessage = "Refresh nodes failed for ([\\s\\S]*)" + newLine;
     String outMessage = "Refresh nodes successful for .*" + newLine;
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshNodesNN1DownNN2Down() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(0);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-refreshNodes"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String message = "Refresh nodes failed for ([\\s\\S]*)";
     assertOutputMatches(message + newLine + message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSetBalancerBandwidth() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().transitionToActive(0);
 
     int exitCode = admin.run(new String[] {"-setBalancerBandwidth", "10"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     String message = "Balancer bandwidth is set to 10";
     assertOutputMatches(message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSetBalancerBandwidthNN1UpNN2Down() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(1);
     cluster.getDfsCluster().transitionToActive(0);
     int exitCode = admin.run(new String[] {"-setBalancerBandwidth", "10"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     String message = "Balancer bandwidth is set to 10";
     assertOutputMatches(message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSetBalancerBandwidthNN1DownNN2Up() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(0);
     cluster.getDfsCluster().transitionToActive(1);
     int exitCode = admin.run(new String[] {"-setBalancerBandwidth", "10"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     String message = "Balancer bandwidth is set to 10";
     assertOutputMatches(message + newLine);
   }
@@ -412,25 +429,27 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(0);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-setBalancerBandwidth", "10"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String message = "Balancer bandwidth is set failed." + newLine
         + ".*" + newLine;
     assertOutputMatches(message);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSetNegativeBalancerBandwidth() throws Exception {
     setUpHaCluster(false);
     int exitCode = admin.run(new String[] {"-setBalancerBandwidth", "-10"});
-    assertEquals("Negative bandwidth value must fail the command", -1, exitCode);
+    assertEquals(-1, exitCode, "Negative bandwidth value must fail the command");
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMetaSave() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().transitionToActive(0);
     int exitCode = admin.run(new String[] {"-metasave", "dfs.meta"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     String messageFromActiveNN = "Created metasave file dfs.meta "
         + "in the log directory of namenode.*";
     String messageFromStandbyNN = "Skip Standby NameNode, since it "
@@ -439,13 +458,14 @@ public class TestDFSAdminWithHA {
         messageFromStandbyNN + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMetaSaveNN1UpNN2Down() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().transitionToActive(0);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-metasave", "dfs.meta"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String outMessage = "Created metasave file dfs.meta in the log " +
             "directory of namenode.*" + newLine;
     String errMessage = "Created metasave file dfs.meta in the log " +
@@ -453,13 +473,14 @@ public class TestDFSAdminWithHA {
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMetaSaveNN1DownNN2Up() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().transitionToActive(1);
     cluster.getDfsCluster().shutdownNameNode(0);
     int exitCode = admin.run(new String[] {"-metasave", "dfs.meta"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String errMessage = "Created metasave file dfs.meta in the log " +
             "directory of namenode.*failed" + newLine + ".*" + newLine;
     String outMessage = "Created metasave file dfs.meta in the log " +
@@ -467,120 +488,131 @@ public class TestDFSAdminWithHA {
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMetaSaveNN1DownNN2Down() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(0);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-metasave", "dfs.meta"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String message = "([\\s\\S]*)2 exceptions([\\s\\S]*)";
     assertOutputMatches(message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshServiceAcl() throws Exception {
     setUpHaCluster(true);
     int exitCode = admin.run(new String[] {"-refreshServiceAcl"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     String message = "Refresh service acl successful for.*";
     assertOutputMatches(message + newLine + message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshServiceAclNN1UpNN2Down() throws Exception {
     setUpHaCluster(true);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-refreshServiceAcl"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String outMessage = "Refresh service acl successful for.*" + newLine;
     String errMessage = "Refresh service acl failed for([\\s\\S]*)" + newLine;
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshServiceAclNN1DownNN2Up() throws Exception {
     setUpHaCluster(true);
     cluster.getDfsCluster().shutdownNameNode(0);
     int exitCode = admin.run(new String[] {"-refreshServiceAcl"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String errMessage = "Refresh service acl failed for([\\s\\S]*)" + newLine;
     String outMessage = "Refresh service acl successful for.*" + newLine;
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshServiceAclNN1DownNN2Down() throws Exception {
     setUpHaCluster(true);
     cluster.getDfsCluster().shutdownNameNode(0);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-refreshServiceAcl"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String message = "([\\s\\S]*)2 exceptions([\\s\\S]*)";
     assertOutputMatches(message + newLine);
   }
 
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshUserToGroupsMappings() throws Exception {
     setUpHaCluster(false);
     int exitCode = admin.run(new String[] {"-refreshUserToGroupsMappings"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     String message = "Refresh user to groups mapping successful for.*";
     assertOutputMatches(message + newLine + message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshUserToGroupsMappingsNN1UpNN2Down() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-refreshUserToGroupsMappings"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String outMessage = "Refresh user to groups mapping successful for.*" + newLine;
     String errMessage = "Refresh user to groups mapping failed for([\\s\\S]*)" + newLine;
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshUserToGroupsMappingsNN1DownNN2Up() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(0);
     int exitCode = admin.run(new String[] {"-refreshUserToGroupsMappings"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String errMessage = "Refresh user to groups mapping failed for([\\s\\S]*)" + newLine;
     String outMessage = "Refresh user to groups mapping successful for.*" + newLine;
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshUserToGroupsMappingsNN1DownNN2Down() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(0);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-refreshUserToGroupsMappings"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String message = "([\\s\\S]*)2 exceptions([\\s\\S]*)";
     assertOutputMatches(message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshSuperUserGroupsConfiguration() throws Exception {
     setUpHaCluster(false);
     int exitCode = admin.run(
         new String[] {"-refreshSuperUserGroupsConfiguration"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     String message = "Refresh super user groups configuration successful for.*";
     assertOutputMatches(message + newLine + message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshSuperUserGroupsConfigurationNN1UpNN2Down()
       throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(
         new String[] {"-refreshSuperUserGroupsConfiguration"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String outMessage = "Refresh super user groups configuration successful for.*"
             + newLine;
     String errMessage = "Refresh super user groups configuration failed for([\\s\\S]*)"
@@ -588,14 +620,15 @@ public class TestDFSAdminWithHA {
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshSuperUserGroupsConfigurationNN1DownNN2Up()
       throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(0);
     int exitCode = admin.run(
         new String[] {"-refreshSuperUserGroupsConfiguration"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String errMessage = "Refresh super user groups configuration failed for([\\s\\S]*)"
             + newLine;
     String outMessage = "Refresh super user groups configuration successful for.*"
@@ -603,7 +636,8 @@ public class TestDFSAdminWithHA {
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshSuperUserGroupsConfigurationNN1DownNN2Down()
       throws Exception {
     setUpHaCluster(false);
@@ -611,104 +645,113 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(
         new String[] {"-refreshSuperUserGroupsConfiguration"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String message = "([\\s\\S]*)2 exceptions([\\s\\S]*)";
     assertOutputMatches(message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshCallQueue() throws Exception {
     setUpHaCluster(false);
     int exitCode = admin.run(new String[] {"-refreshCallQueue"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     String message = "Refresh call queue successful for.*";
     assertOutputMatches(message + newLine + message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshCallQueueNN1UpNN2Down() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-refreshCallQueue"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String outMessage = "Refresh call queue successful for.*" + newLine;
     String errMessage = "Refresh call queue failed for([\\s\\S]*)" + newLine;
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshCallQueueNN1DownNN2Up() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(0);
     int exitCode = admin.run(new String[] {"-refreshCallQueue"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String errMessage = "Refresh call queue failed for([\\s\\S]*)" + newLine;
     String outMessage = "Refresh call queue successful for.*" + newLine;
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshCallQueueNN1DownNN2Down() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(0);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-refreshCallQueue"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String message = "([\\s\\S]*)2 exceptions([\\s\\S]*)";
     assertOutputMatches(message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testFinalizeUpgrade() throws Exception {
     setUpHaCluster(false);
     int exitCode = admin.run(new String[] {"-finalizeUpgrade"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String message = ".*Cannot finalize with no NameNode active";
     assertOutputMatches(message + newLine);
 
     cluster.getDfsCluster().transitionToActive(0);
     exitCode = admin.run(new String[] {"-finalizeUpgrade"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     message = "Finalize upgrade successful for.*";
     assertOutputMatches(message + newLine + message + newLine);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testFinalizeUpgradeNN1UpNN2Down() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(1);
     cluster.getDfsCluster().transitionToActive(0);
     int exitCode = admin.run(new String[] {"-finalizeUpgrade"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String outMessage = "Finalize upgrade successful for .*" + newLine;
     String errMessage = "Finalize upgrade failed for ([\\s\\S]*)" + newLine;
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testFinalizeUpgradeNN1DownNN2Up() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(0);
     cluster.getDfsCluster().transitionToActive(1);
     int exitCode = admin.run(new String[] {"-finalizeUpgrade"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String errMessage = "Finalize upgrade failed for ([\\s\\S]*)" + newLine;
     String outMessage = "Finalize upgrade successful for .*" + newLine;
     assertOutputMatches(outMessage, errMessage);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testFinalizeUpgradeNN1DownNN2Down() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(0);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-finalizeUpgrade"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String message = ".*2 exceptions.*";
     assertOutputMatches(message + newLine);
   }
 
-  @Test (timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testUpgradeCommand() throws Exception {
     final String finalizedMsg = "Upgrade finalized for.*";
     final String notFinalizedMsg = "Upgrade not finalized for.*";
@@ -756,7 +799,7 @@ public class TestDFSAdminWithHA {
 
     // Finalize the upgrade
     int exitCode = admin.run(new String[] {"-upgrade", "finalize"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
     message = finalizeSuccessMsg + newLine + finalizeSuccessMsg + newLine;
     assertOutputMatches(message);
 
@@ -768,26 +811,28 @@ public class TestDFSAdminWithHA {
   private void verifyUpgradeQueryOutput(String message, int expected) throws
       Exception {
     int exitCode = admin.run(new String[] {"-upgrade", "query"});
-    assertEquals(err.toString().trim(), expected, exitCode);
+    assertEquals(expected, exitCode, err.toString().trim());
     assertOutputMatches(message);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testListOpenFilesNN1UpNN2Down() throws Exception{
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(1);
     cluster.getDfsCluster().transitionToActive(0);
     int exitCode = admin.run(new String[] {"-listOpenFiles"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testListOpenFilesNN1DownNN2Up() throws Exception{
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(0);
     cluster.getDfsCluster().transitionToActive(1);
     int exitCode = admin.run(new String[] {"-listOpenFiles"});
-    assertEquals(err.toString().trim(), 0, exitCode);
+    assertEquals(0, exitCode, err.toString().trim());
   }
 
   @Test
@@ -796,7 +841,7 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(0);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-listOpenFiles"});
-    assertNotEquals(err.toString().trim(), 0, exitCode);
+    assertNotEquals(0, exitCode, err.toString().trim());
     String message = "List open files failed." + newLine
             + ".*" + newLine;
     assertOutputMatches(message);

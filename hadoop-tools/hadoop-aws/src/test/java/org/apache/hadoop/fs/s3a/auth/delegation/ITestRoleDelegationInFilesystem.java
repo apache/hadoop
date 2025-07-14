@@ -22,6 +22,7 @@ import java.nio.file.AccessDeniedException;
 
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.io.Text;
+import org.junit.jupiter.api.BeforeEach;
 
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.probeForAssumedRoleARN;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_ROLE_BINDING;
@@ -35,6 +36,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public class ITestRoleDelegationInFilesystem extends
     ITestSessionDelegationInFilesystem {
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();

@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.assertj.core.api.Assertions;
 import org.junit.FixMethodOrder;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.runners.MethodSorters;
 
 import org.apache.hadoop.conf.Configuration;
@@ -52,6 +53,7 @@ public class ITestAbfsJobThroughManifestCommitter
     binding = new ABFSContractTestBinding();
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     binding.setup();

@@ -44,6 +44,7 @@ public class HsWebApp extends WebApp implements AMParams {
     bind(HistoryContext.class).toInstance(history);
     route("/", HsController.class);
     route("/app", HsController.class);
+    route("/jobhistory", HsController.class);
     route(pajoin("/job", JOB_ID), HsController.class, "job");
     route(pajoin("/conf", JOB_ID), HsController.class, "conf");
     routeWithoutDefaultView(pajoin("/downloadconf", JOB_ID),

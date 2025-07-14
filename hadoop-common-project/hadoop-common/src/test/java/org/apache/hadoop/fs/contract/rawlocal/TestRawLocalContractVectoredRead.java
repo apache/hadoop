@@ -24,8 +24,7 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 
 public class TestRawLocalContractVectoredRead extends AbstractContractVectoredReadTest {
 
-  public TestRawLocalContractVectoredRead(String bufferType) {
-    super(bufferType);
+  public TestRawLocalContractVectoredRead() {
   }
 
   @Override

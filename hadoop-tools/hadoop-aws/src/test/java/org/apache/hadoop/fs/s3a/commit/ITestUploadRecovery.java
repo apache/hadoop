@@ -27,9 +27,10 @@ import java.util.function.Function;
 
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Assumptions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.interceptor.Context;
@@ -67,7 +68,7 @@ import static org.apache.hadoop.fs.s3a.test.SdkFaultInjector.setRequestFailureCo
  * Test upload recovery by injecting failures into the response chain.
  * The tests are parameterized on upload buffering.
  * <p>
- * The test case {@link #testCommitOperations()} is independent of this option;
+ * The test case {@link #testCommitOperations(String, boolean)} is independent of this option;
  * the test parameterization only runs this once.
  * A bit inelegant but as the fault injection code is shared and the problem "adjacent"
  * this isolates all forms of upload recovery into the same test class without
@@ -75,7 +76,6 @@ import static org.apache.hadoop.fs.s3a.test.SdkFaultInjector.setRequestFailureCo
  * <p>
  * Fault injection is implemented in {@link SdkFaultInjector}.
  */
-@RunWith(Parameterized.class)
 public class ITestUploadRecovery extends AbstractS3ACostTest {
 
   private static final Logger LOG =
@@ -84,7 +84,6 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
   /**
    * Parameterization.
    */
-  @Parameterized.Parameters(name = "{0}-commit-{1}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {FAST_UPLOAD_BUFFER_ARRAY, true},
@@ -103,21 +102,22 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
   /**
    * should the commit test be included?
    */
-  private final boolean includeCommitTest;
+  private boolean includeCommitTest;
 
   /**
    * Buffer type for this test run.
    */
-  private final String buffer;
+  private String buffer;
 
   /**
    * Parameterized test suite.
-   * @param buffer buffer type
-   * @param includeCommitTest should the commit upload test be included?
+   * @param pBuffer buffer type
+   * @param pIncludeCommitTest should the commit upload test be included?
    */
-  public ITestUploadRecovery(final String buffer, final boolean includeCommitTest) {
-    this.includeCommitTest = includeCommitTest;
-    this.buffer = buffer;
+  public void initITestUploadRecovery(final String pBuffer,
+      final boolean pIncludeCommitTest) {
+    this.includeCommitTest = pIncludeCommitTest;
+    this.buffer = pBuffer;
   }
 
   @Override
@@ -152,12 +152,14 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
   /**
    * Setup MUST set up the evaluator before the FS is created.
    */
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     SdkFaultInjector.resetFaultInjector();
     super.setup();
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     // safety check in case the evaluation is failing any
@@ -170,8 +172,11 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
   /**
    * Verify that failures of simple PUT requests can be recovered from.
    */
-  @Test
-  public void testPutRecovery() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest(name = "{0}-commit-{1}")
+  public void testPutRecovery(String pBuffer,
+      boolean pIncludeCommitTest) throws Throwable {
+    initITestUploadRecovery(pBuffer, pIncludeCommitTest);
     describe("test put recovery");
     final S3AFileSystem fs = getFileSystem();
     final Path path = methodPath();
@@ -187,8 +192,11 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
   /**
    * Validate recovery of multipart uploads within a magic write sequence.
    */
-  @Test
-  public void testMagicWriteRecovery() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest(name = "{0}-commit-{1}")
+  public void testMagicWriteRecovery(String pBuffer,
+      boolean pIncludeCommitTest) throws Throwable {
+    initITestUploadRecovery(pBuffer, pIncludeCommitTest);
     describe("test magic write recovery with multipart uploads");
     final S3AFileSystem fs = getFileSystem();
 
@@ -227,8 +235,11 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
   /**
    * Test the commit operations iff {@link #includeCommitTest} is true.
    */
-  @Test
-  public void testCommitOperations() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest(name = "{0}-commit-{1}")
+  public void testCommitOperations(String pBuffer,
+      boolean pIncludeCommitTest) throws Throwable {
+    initITestUploadRecovery(pBuffer, pIncludeCommitTest);
     skipIfClientSideEncryption();
     Assumptions.assumeThat(includeCommitTest)
         .describedAs("commit test excluded")

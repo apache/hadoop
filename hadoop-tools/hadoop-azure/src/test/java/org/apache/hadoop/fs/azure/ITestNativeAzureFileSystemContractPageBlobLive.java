@@ -18,18 +18,19 @@
 
 package org.apache.hadoop.fs.azure;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 
-import static org.junit.Assume.assumeNotNull;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.apache.hadoop.test.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 /**
  * Run the {@link FileSystemContractBaseTest} test suite against azure
@@ -39,8 +40,8 @@ public class ITestNativeAzureFileSystemContractPageBlobLive extends
     FileSystemContractBaseTest {
   private AzureBlobStorageTestAccount testAccount;
   private Path basePath;
-  @Rule
-  public TestName methodName = new TestName();
+  @RegisterExtension
+  private TestName methodName = new TestName();
 
   private void nameThread() {
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
@@ -59,10 +60,10 @@ public class ITestNativeAzureFileSystemContractPageBlobLive extends
     return AzureBlobStorageTestAccount.create(conf);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     testAccount = createTestAccount();
-    assumeNotNull(testAccount);
+    assumeTrue(testAccount != null);
     fs = testAccount.getFileSystem();
     basePath = AzureTestUtils.pathForTests(fs, "filesystemcontractpageblob");
   }
@@ -87,27 +88,27 @@ public class ITestNativeAzureFileSystemContractPageBlobLive extends
    * file system code needs to be modified to make them pass.
    * A separate work item has been opened for this.
    */
-  @Ignore
+  @Disabled
   @Test
   public void testMoveFileUnderParent() throws Throwable {
   }
 
-  @Ignore
+  @Disabled
   @Test
   public void testRenameFileToSelf() throws Throwable {
   }
   
-  @Ignore
+  @Disabled
   @Test
   public void testRenameChildDirForbidden() throws Exception {
   }
   
-  @Ignore
+  @Disabled
   @Test
   public void testMoveDirUnderParent() throws Throwable {
   }
   
-  @Ignore
+  @Disabled
   @Test
   public void testRenameDirToSelf() throws Throwable {
   }

@@ -21,13 +21,10 @@ package org.apache.hadoop.fs.s3a.statistics;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import org.apache.hadoop.fs.s3a.statistics.impl.StatisticsFromAwsSdkImpl;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_400_BAD_REQUEST;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404_NOT_FOUND;
@@ -40,17 +37,16 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_500;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_503;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_5XX;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test mapping logic of {@link StatisticsFromAwsSdkImpl}.
  */
-@RunWith(Parameterized.class)
 public class TestErrorCodeMapping extends AbstractHadoopTestBase {
 
   /**
    * Parameterization.
    */
-  @Parameterized.Parameters(name = "http {0} to {1}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {200, null},
@@ -65,18 +61,20 @@ public class TestErrorCodeMapping extends AbstractHadoopTestBase {
     });
   }
 
-  private final int code;
+  private int code;
 
-  private final String name;
+  private String name;
 
-  public TestErrorCodeMapping(final int code, final String name) {
-    this.code = code;
-    this.name = name;
+  public void initTestErrorCodeMapping(final int pCode, final String pName) {
+    this.code = pCode;
+    this.name = pName;
   }
 
-  @Test
-  public void testMapping() throws Throwable {
-    Assertions.assertThat(mapErrorStatusCodeToStatisticName(code))
+  @ParameterizedTest(name = "http {0} to {1}")
+  @MethodSource("params")
+  public void testMapping(int pCode, String pName) throws Throwable {
+    initTestErrorCodeMapping(pCode, pName);
+    assertThat(mapErrorStatusCodeToStatisticName(code))
         .describedAs("Mapping of status code %d", code)
         .isEqualTo(name);
   }

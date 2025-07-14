@@ -24,9 +24,8 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +49,6 @@ import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
 /**
  * Use metrics to assert about the cost of misc operations.
  */
-@RunWith(Parameterized.class)
 public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
 
   private static final Logger LOG =
@@ -59,12 +57,11 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
   /**
    * Parameter: should auditing be enabled?
    */
-  private final boolean auditing;
+  private boolean auditing;
 
   /**
    * Parameterization.
    */
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {"auditing", true},
@@ -72,9 +69,9 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
     });
   }
 
-  public ITestS3AMiscOperationCost(final String name,
-      final boolean auditing) {
-    this.auditing = auditing;
+  public void initITestS3AMiscOperationCost(final String pName,
+      final boolean pAuditing) throws Exception {
+    this.auditing = pAuditing;
   }
 
   @Override
@@ -101,8 +98,11 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
   /**
    * Common operation which should be low cost as possible.
    */
-  @Test
-  public void testMkdirOverDir() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest(name = "{0}")
+  public void testMkdirOverDir(String pName,
+      boolean pAuditing) throws Throwable {
+    initITestS3AMiscOperationCost(pName, pAuditing);
     describe("create a dir over a dir");
     S3AFileSystem fs = getFileSystem();
     // create base dir with marker
@@ -116,8 +116,11 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
         with(OBJECT_LIST_REQUEST, FILESTATUS_DIR_PROBE_L));
   }
 
-  @Test
-  public void testGetContentSummaryRoot() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest(name = "{0}")
+  public void testGetContentSummaryRoot(String pName,
+      boolean pAuditing) throws Throwable {
+    initITestS3AMiscOperationCost(pName, pAuditing);
     describe("getContentSummary on Root");
     S3AFileSystem fs = getFileSystem();
 
@@ -126,8 +129,11 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
         with(INVOCATION_GET_CONTENT_SUMMARY, 1));
   }
 
-  @Test
-  public void testGetContentSummaryDir() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest(name = "{0}")
+  public void testGetContentSummaryDir(String pName,
+      boolean pAuditing) throws Throwable {
+    initITestS3AMiscOperationCost(pName, pAuditing);
     describe("getContentSummary on test dir with children");
     S3AFileSystem fs = getFileSystem();
     Path baseDir = methodPath();
@@ -151,8 +157,11 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
         .isEqualTo(1);
   }
 
-  @Test
-  public void testGetContentMissingPath() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest(name = "{0}")
+  public void testGetContentMissingPath(String pName,
+      boolean pAuditing) throws Throwable {
+    initITestS3AMiscOperationCost(pName, pAuditing);
     describe("getContentSummary on a missing path");
     Path baseDir = methodPath();
     verifyMetricsIntercepting(FileNotFoundException.class,

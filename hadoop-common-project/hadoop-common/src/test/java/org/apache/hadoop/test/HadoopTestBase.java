@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.test;
 
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
+import static org.apache.hadoop.test.HadoopTestBase.TEST_DEFAULT_TIMEOUT_VALUE;
 
 /**
  * A base class for JUnit4 tests that sets a default timeout for all tests
@@ -33,7 +34,8 @@ import org.junit.rules.Timeout;
  * Threads are named to the method being executed, for ease of diagnostics
  * in logs and thread dumps.
  */
-public abstract class HadoopTestBase extends Assert {
+@Timeout(value = TEST_DEFAULT_TIMEOUT_VALUE, unit = TimeUnit.MILLISECONDS)
+public abstract class HadoopTestBase extends Assertions {
 
   /**
    * System property name to set the test timeout: {@value}.
@@ -51,8 +53,7 @@ public abstract class HadoopTestBase extends Assert {
   /**
    * The JUnit rule that sets the default timeout for tests.
    */
-  @Rule
-  public Timeout defaultTimeout = retrieveTestTimeout();
+  private int defaultTimeout = retrieveTestTimeout();
 
   /**
    * Retrieve the test timeout from the system property
@@ -61,7 +62,7 @@ public abstract class HadoopTestBase extends Assert {
    * property is not defined.
    * @return the recommended timeout for tests
    */
-  protected Timeout retrieveTestTimeout() {
+  protected int retrieveTestTimeout() {
     String propval = System.getProperty(PROPERTY_TEST_DEFAULT_TIMEOUT,
                                          Integer.toString(
                                            TEST_DEFAULT_TIMEOUT_VALUE));
@@ -72,14 +73,14 @@ public abstract class HadoopTestBase extends Assert {
       //fall back to the default value, as the property cannot be parsed
       millis = TEST_DEFAULT_TIMEOUT_VALUE;
     }
-    return new Timeout(millis, TimeUnit.MILLISECONDS);
+    return millis;
   }
 
   /**
    * The method name.
    */
-  @Rule
-  public TestName methodName = new TestName();
+  @RegisterExtension
+  private TestName methodName = new TestName();
 
   /**
    * Get the method name; defaults to the value of {@link #methodName}.
@@ -93,7 +94,7 @@ public abstract class HadoopTestBase extends Assert {
   /**
    * Static initializer names this thread "JUnit".
    */
-  @BeforeClass
+  @BeforeAll
   public static void nameTestThread() {
     Thread.currentThread().setName("JUnit");
   }
@@ -101,7 +102,7 @@ public abstract class HadoopTestBase extends Assert {
   /**
    * Before each method, the thread is renamed to match the method name.
    */
-  @Before
+  @BeforeEach
   public void nameThreadToMethod() {
     Thread.currentThread().setName("JUnit-" + getMethodName());
   }

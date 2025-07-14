@@ -20,9 +20,10 @@ package org.apache.hadoop.fs.s3a.tools;
 
 import java.io.File;
 
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import org.apache.hadoop.fs.Path;
 
@@ -35,11 +36,12 @@ import static org.apache.hadoop.fs.s3a.tools.MarkerTool.OPT_OUT;
 /**
  * Marker tool tests against the root FS; run in the sequential phase.
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
 public class ITestMarkerToolRootOperations extends AbstractMarkerToolTest {
 
   private Path rootPath;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();

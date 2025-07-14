@@ -61,11 +61,16 @@ import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.Stat.*;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assume.*;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,18 +80,19 @@ public class TestNativeIO {
 
   static final File TEST_DIR = GenericTestUtils.getTestDir("testnativeio");
 
-  @Before
+  @BeforeEach
   public void checkLoaded() {
     assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
   }
 
-  @Before
+  @BeforeEach
   public void setupTestDir() {
     FileUtil.fullyDelete(TEST_DIR);
     TEST_DIR.mkdirs();
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testFstat() throws Exception {
     FileOutputStream fos = new FileOutputStream(
       new File(TEST_DIR, "testfstat"));
@@ -107,8 +113,8 @@ public class TestNativeIO {
     assertEquals(expectedOwner, owner);
     assertNotNull(stat.getGroup());
     assertTrue(!stat.getGroup().isEmpty());
-    assertEquals("Stat mode field should indicate a regular file", S_IFREG,
-      stat.getMode() & S_IFMT);
+    assertEquals(S_IFREG,
+        stat.getMode() & S_IFMT, "Stat mode field should indicate a regular file");
   }
 
   /**
@@ -117,7 +123,8 @@ public class TestNativeIO {
    * NOTE: this test is likely to fail on RHEL 6.0 which has a non-threadsafe
    * implementation of getpwuid_r.
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMultiThreadedFstat() throws Exception {
     assumeNotWindows();
 
@@ -138,8 +145,8 @@ public class TestNativeIO {
               assertEquals(System.getProperty("user.name"), stat.getOwner());
               assertNotNull(stat.getGroup());
               assertTrue(!stat.getGroup().isEmpty());
-              assertEquals("Stat mode field should indicate a regular file",
-                S_IFREG, stat.getMode() & S_IFMT);
+              assertEquals(S_IFREG, stat.getMode() & S_IFMT,
+                  "Stat mode field should indicate a regular file");
             } catch (Throwable t) {
               thrown.set(t);
             }
@@ -160,7 +167,8 @@ public class TestNativeIO {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testFstatClosedFd() throws Exception {
     FileOutputStream fos = new FileOutputStream(
       new File(TEST_DIR, "testfstat2"));
@@ -173,7 +181,8 @@ public class TestNativeIO {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testStat() throws Exception {
     Configuration conf = new Configuration();
     FileSystem fileSystem = FileSystem.getLocal(conf).getRawFileSystem();
@@ -232,7 +241,8 @@ public class TestNativeIO {
             () -> NativeIO.POSIX.getStat(testInvalidFilePath));
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMultiThreadedStat() throws Exception {
     Configuration conf = new Configuration();
     FileSystem fileSystem = FileSystem.getLocal(conf).getRawFileSystem();
@@ -277,15 +287,16 @@ public class TestNativeIO {
     executorService.shutdown();
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSetFilePointer() throws Exception {
     assumeWindows();
 
     LOG.info("Set a file pointer on Windows");
     try {
       File testfile = new File(TEST_DIR, "testSetFilePointer");
-      assertTrue("Create test subject",
-          testfile.exists() || testfile.createNewFile());
+      assertTrue(testfile.exists() || testfile.createNewFile(),
+          "Create test subject");
       FileWriter writer = new FileWriter(testfile);
       try {
         for (int i = 0; i < 200; i++)
@@ -311,7 +322,7 @@ public class TestNativeIO {
       FileReader reader = new FileReader(fd);
       try {
         int c = reader.read();
-        assertTrue("Unexpected character: " + c, c == 'b');
+        assertTrue(c == 'b', "Unexpected character: " + c);
       } catch (Exception readerException) {
         fail("Got unexpected exception: " + readerException.getMessage());
       } finally {
@@ -322,15 +333,16 @@ public class TestNativeIO {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testCreateFile() throws Exception {
     assumeWindows();
 
     LOG.info("Open a file on Windows with SHARE_DELETE shared mode");
     try {
       File testfile = new File(TEST_DIR, "testCreateFile");
-      assertTrue("Create test subject",
-          testfile.exists() || testfile.createNewFile());
+      assertTrue(testfile.exists() || testfile.createNewFile(),
+          "Create test subject");
 
       FileDescriptor fd = NativeIO.Windows.createFile(
           testfile.getCanonicalPath(),
@@ -347,7 +359,7 @@ public class TestNativeIO {
         File newfile = new File(TEST_DIR, "testRenamedFile");
 
         boolean renamed = testfile.renameTo(newfile);
-        assertTrue("Rename failed.", renamed);
+        assertTrue(renamed, "Rename failed.");
 
         fin.read();
       } catch (Exception e) {
@@ -363,7 +375,8 @@ public class TestNativeIO {
   }
 
   /** Validate access checks on Windows */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAccess() throws Exception {
     assumeWindows();
 
@@ -437,7 +450,8 @@ public class TestNativeIO {
         NativeIO.Windows.AccessRight.ACCESS_EXECUTE));
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testOpenMissingWithoutCreate() throws Exception {
     assumeNotWindows();
 
@@ -452,7 +466,8 @@ public class TestNativeIO {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testOpenWithCreate() throws Exception {
     assumeNotWindows();
 
@@ -484,7 +499,8 @@ public class TestNativeIO {
    * Test that opens and closes a file 10000 times - this would crash with
    * "Too many open files" if we leaked fds using this access pattern.
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testFDDoesntLeak() throws IOException {
     assumeNotWindows();
 
@@ -503,7 +519,8 @@ public class TestNativeIO {
   /**
    * Test basic chmod operation
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testChmod() throws Exception {
     assumeNotWindows();
 
@@ -515,8 +532,7 @@ public class TestNativeIO {
     }
 
     File toChmod = new File(TEST_DIR, "testChmod");
-    assertTrue("Create test subject",
-               toChmod.exists() || toChmod.mkdir());
+    assertTrue(toChmod.exists() || toChmod.mkdir(), "Create test subject");
     NativeIO.POSIX.chmod(toChmod.getAbsolutePath(), 0777);
     assertPermissions(toChmod, 0777);
     NativeIO.POSIX.chmod(toChmod.getAbsolutePath(), 0000);
@@ -526,7 +542,8 @@ public class TestNativeIO {
   }
 
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testPosixFadvise() throws Exception {
     assumeNotWindows();
 
@@ -560,7 +577,8 @@ public class TestNativeIO {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSyncFileRange() throws Exception {
     FileOutputStream fos = new FileOutputStream(
       new File(TEST_DIR, "testSyncFileRange"));
@@ -593,19 +611,22 @@ public class TestNativeIO {
     assertEquals(expected, perms.toShort());
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testGetUserName() throws IOException {
     assumeNotWindows();
     assertFalse(NativeIO.POSIX.getUserName(0).isEmpty());
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testGetGroupName() throws IOException {
     assumeNotWindows();
     assertFalse(NativeIO.POSIX.getGroupName(0).isEmpty());
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRenameTo() throws Exception {
     final File TEST_DIR = GenericTestUtils.getTestDir("renameTest") ;
     assumeTrue(TEST_DIR.mkdirs());
@@ -614,20 +635,20 @@ public class TestNativeIO {
     // Test attempting to rename a nonexistent file.
     try {
       NativeIO.renameTo(nonExistentFile, targetFile);
-      Assert.fail();
+      fail();
     } catch (NativeIOException e) {
       if (Path.WINDOWS) {
-        Assert.assertEquals(
+        assertEquals(
           String.format("The system cannot find the file specified.%n"),
           e.getMessage());
       } else {
-        Assert.assertEquals(Errno.ENOENT, e.getErrno());
+        assertEquals(Errno.ENOENT, e.getErrno());
       }
     }
 
     // Test renaming a file to itself.  It should succeed and do nothing.
     File sourceFile = new File(TEST_DIR, "source");
-    Assert.assertTrue(sourceFile.createNewFile());
+    assertTrue(sourceFile.createNewFile());
     NativeIO.renameTo(sourceFile, sourceFile);
 
     // Test renaming a source to a destination.
@@ -635,18 +656,18 @@ public class TestNativeIO {
 
     // Test renaming a source to a path which uses a file as a directory.
     sourceFile = new File(TEST_DIR, "source");
-    Assert.assertTrue(sourceFile.createNewFile());
+    assertTrue(sourceFile.createNewFile());
     File badTarget = new File(targetFile, "subdir");
     try {
       NativeIO.renameTo(sourceFile, badTarget);
-      Assert.fail();
+      fail();
     } catch (NativeIOException e) {
       if (Path.WINDOWS) {
-        Assert.assertEquals(
+        assertEquals(
           String.format("The parameter is incorrect.%n"),
           e.getMessage());
       } else {
-        Assert.assertEquals(Errno.ENOTDIR, e.getErrno());
+        assertEquals(Errno.ENOTDIR, e.getErrno());
       }
     }
 
@@ -655,7 +676,8 @@ public class TestNativeIO {
     NativeIO.renameTo(sourceFile, targetFile);
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testMlock() throws Exception {
     assumeTrue(NativeIO.isAvailable());
     final File TEST_FILE = GenericTestUtils.getTestDir("testMlockFile");
@@ -689,7 +711,7 @@ public class TestNativeIO {
       for (int i=0; i<fileSize; i++) {
         sum += mapbuf.get(i);
       }
-      assertEquals("Expected sums to be equal", bufSum, sum);
+      assertEquals(bufSum, sum, "Expected sums to be equal");
       // munmap the buffer, which also implicitly unlocks it
       NativeIO.POSIX.munmap(mapbuf);
     } finally {
@@ -702,13 +724,15 @@ public class TestNativeIO {
     }
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testGetMemlockLimit() throws Exception {
     assumeTrue(NativeIO.isAvailable());
     NativeIO.getMemlockLimit();
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testCopyFileUnbuffered() throws Exception {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     File srcFile = new File(TEST_DIR, METHOD_NAME + ".src.dat");
@@ -731,7 +755,7 @@ public class TestNativeIO {
         mapBuf.put(bytesToWrite);
       }
       NativeIO.copyFileUnbuffered(srcFile, dstFile);
-      Assert.assertEquals(srcFile.length(), dstFile.length());
+      assertEquals(srcFile.length(), dstFile.length());
     } finally {
       IOUtils.cleanupWithLogger(LOG, channel);
       IOUtils.cleanupWithLogger(LOG, raSrcFile);
@@ -739,54 +763,57 @@ public class TestNativeIO {
     }
   }
 
-  @Test (timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testNativePosixConsts() {
     assumeNotWindows("Native POSIX constants not required for Windows");
-    assertTrue("Native 0_RDONLY const not set", O_RDONLY >= 0);
-    assertTrue("Native 0_WRONLY const not set", O_WRONLY >= 0);
-    assertTrue("Native 0_RDWR const not set", O_RDWR >= 0);
-    assertTrue("Native 0_CREAT const not set", O_CREAT >= 0);
-    assertTrue("Native 0_EXCL const not set", O_EXCL >= 0);
-    assertTrue("Native 0_NOCTTY const not set", O_NOCTTY >= 0);
-    assertTrue("Native 0_TRUNC const not set", O_TRUNC >= 0);
-    assertTrue("Native 0_APPEND const not set", O_APPEND >= 0);
-    assertTrue("Native 0_NONBLOCK const not set", O_NONBLOCK >= 0);
-    assertTrue("Native 0_SYNC const not set", O_SYNC >= 0);
-    assertTrue("Native S_IFMT const not set", S_IFMT >= 0);
-    assertTrue("Native S_IFIFO const not set", S_IFIFO >= 0);
-    assertTrue("Native S_IFCHR const not set", S_IFCHR >= 0);
-    assertTrue("Native S_IFDIR const not set", S_IFDIR >= 0);
-    assertTrue("Native S_IFBLK const not set", S_IFBLK >= 0);
-    assertTrue("Native S_IFREG const not set", S_IFREG >= 0);
-    assertTrue("Native S_IFLNK const not set", S_IFLNK >= 0);
-    assertTrue("Native S_IFSOCK const not set", S_IFSOCK >= 0);
-    assertTrue("Native S_ISUID const not set", S_ISUID >= 0);
-    assertTrue("Native S_ISGID const not set", S_ISGID >= 0);
-    assertTrue("Native S_ISVTX const not set", S_ISVTX >= 0);
-    assertTrue("Native S_IRUSR const not set", S_IRUSR >= 0);
-    assertTrue("Native S_IWUSR const not set", S_IWUSR >= 0);
-    assertTrue("Native S_IXUSR const not set", S_IXUSR >= 0);
+    assertTrue(O_RDONLY >= 0, "Native 0_RDONLY const not set");
+    assertTrue(O_WRONLY >= 0, "Native 0_WRONLY const not set");
+    assertTrue(O_RDWR >= 0, "Native 0_RDWR const not set");
+    assertTrue(O_CREAT >= 0, "Native 0_CREAT const not set");
+    assertTrue(O_EXCL >= 0, "Native 0_EXCL const not set");
+    assertTrue(O_NOCTTY >= 0, "Native 0_NOCTTY const not set");
+    assertTrue(O_TRUNC >= 0, "Native 0_TRUNC const not set");
+    assertTrue(O_APPEND >= 0, "Native 0_APPEND const not set");
+    assertTrue(O_NONBLOCK >= 0, "Native 0_NONBLOCK const not set");
+    assertTrue(O_SYNC >= 0, "Native 0_SYNC const not set");
+    assertTrue(S_IFMT >= 0, "Native S_IFMT const not set");
+    assertTrue(S_IFIFO >= 0, "Native S_IFIFO const not set");
+    assertTrue(S_IFCHR >= 0, "Native S_IFCHR const not set");
+    assertTrue(S_IFDIR >= 0, "Native S_IFDIR const not set");
+    assertTrue(S_IFBLK >= 0, "Native S_IFBLK const not set");
+    assertTrue(S_IFREG >= 0, "Native S_IFREG const not set");
+    assertTrue(S_IFLNK >= 0, "Native S_IFLNK const not set");
+    assertTrue(S_IFSOCK >= 0, "Native S_IFSOCK const not set");
+    assertTrue(S_ISUID >= 0, "Native S_ISUID const not set");
+    assertTrue(S_ISGID >= 0, "Native S_ISGID const not set");
+    assertTrue(S_ISVTX >= 0, "Native S_ISVTX const not set");
+    assertTrue(S_IRUSR >= 0, "Native S_IRUSR const not set");
+    assertTrue(S_IWUSR >= 0, "Native S_IWUSR const not set");
+    assertTrue(S_IXUSR >= 0, "Native S_IXUSR const not set");
   }
 
-  @Test (timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testNativeFadviseConsts() {
-    assumeTrue("Fadvise constants not supported", fadvisePossible);
-    assertTrue("Native POSIX_FADV_NORMAL const not set",
-      POSIX_FADV_NORMAL >= 0);
-    assertTrue("Native POSIX_FADV_RANDOM const not set",
-      POSIX_FADV_RANDOM >= 0);
-    assertTrue("Native POSIX_FADV_SEQUENTIAL const not set",
-      POSIX_FADV_SEQUENTIAL >= 0);
-    assertTrue("Native POSIX_FADV_WILLNEED const not set",
-      POSIX_FADV_WILLNEED >= 0);
-    assertTrue("Native POSIX_FADV_DONTNEED const not set",
-      POSIX_FADV_DONTNEED >= 0);
-    assertTrue("Native POSIX_FADV_NOREUSE const not set",
-      POSIX_FADV_NOREUSE >= 0);
+    assumeTrue(fadvisePossible, "Fadvise constants not supported");
+    assertTrue(POSIX_FADV_NORMAL >= 0,
+        "Native POSIX_FADV_NORMAL const not set");
+    assertTrue(POSIX_FADV_RANDOM >= 0,
+        "Native POSIX_FADV_RANDOM const not set");
+    assertTrue(POSIX_FADV_SEQUENTIAL >= 0,
+        "Native POSIX_FADV_SEQUENTIAL const not set");
+    assertTrue(POSIX_FADV_WILLNEED >= 0,
+        "Native POSIX_FADV_WILLNEED const not set");
+    assertTrue(POSIX_FADV_DONTNEED >= 0,
+        "Native POSIX_FADV_DONTNEED const not set");
+    assertTrue(POSIX_FADV_NOREUSE >= 0,
+        "Native POSIX_FADV_NOREUSE const not set");
   }
 
 
-  @Test (timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testPmemCheckParameters() {
     assumeNotWindows("Native PMDK not supported on Windows");
     // Skip testing while the build or environment does not support PMDK
@@ -817,7 +844,8 @@ public class TestNativeIO {
     }
   }
 
-  @Test (timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testPmemMapMultipleFiles() {
     assumeNotWindows("Native PMDK not supported on Windows");
     // Skip testing while the build or environment does not support PMDK
@@ -847,7 +875,8 @@ public class TestNativeIO {
     }
   }
 
-  @Test (timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testPmemMapBigFile() {
     assumeNotWindows("Native PMDK not supported on Windows");
     // Skip testing while the build or environment does not support PMDK
@@ -871,7 +900,8 @@ public class TestNativeIO {
     }
   }
 
-  @Test (timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testPmemCopy() throws IOException {
     assumeNotWindows("Native PMDK not supported on Windows");
     // Skip testing while the build or environment does not support PMDK

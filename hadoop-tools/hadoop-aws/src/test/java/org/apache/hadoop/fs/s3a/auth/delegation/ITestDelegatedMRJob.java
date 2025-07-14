@@ -20,11 +20,11 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,7 +86,6 @@ import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireAnonym
  * This is needed to verify that job resources have their tokens extracted
  * too.
  */
-@RunWith(Parameterized.class)
 public class ITestDelegatedMRJob extends AbstractDelegationIT {
 
   private static final Logger LOG =
@@ -98,11 +97,11 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
   @SuppressWarnings("StaticNonFinalField")
   private static MiniKerberizedHadoopCluster cluster;
 
-  private final String name;
+  private String name;
 
-  private final String tokenBinding;
+  private String tokenBinding;
 
-  private final Text tokenKind;
+  private Text tokenKind;
 
   /**
    * Created in test setup.
@@ -127,7 +126,6 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
    * Test array for parameterized test runs.
    * @return a list of parameter tuples.
    */
-  @Parameterized.Parameters
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {"session", DELEGATION_TOKEN_SESSION_BINDING, SESSION_TOKEN_KIND},
@@ -136,16 +134,18 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
     });
   }
 
-  public ITestDelegatedMRJob(String name, String tokenBinding, Text tokenKind) {
-    this.name = name;
-    this.tokenBinding = tokenBinding;
-    this.tokenKind = tokenKind;
+  public void initITestDelegatedMRJob(String pName, String pTokenBinding, Text pTokenKind)
+      throws Exception {
+    this.name = pName;
+    this.tokenBinding = pTokenBinding;
+    this.tokenKind = pTokenKind;
+    setup();
   }
 
   /***
    * Set up the clusters.
    */
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     JobConf conf = new JobConf();
     assumeSessionTestsEnabled(conf);
@@ -156,7 +156,7 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
   /**
    * Tear down the cluster.
    */
-  @AfterClass
+  @AfterAll
   public static void teardownCluster() throws Exception {
     cluster = terminateService(cluster);
   }
@@ -213,6 +213,7 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
 
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     describe("Teardown operations");
@@ -241,17 +242,23 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
     return getTestTimeoutSeconds() * 1000;
   }
 
-  @Test
-  public void testCommonCrawlLookup() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest
+  public void testCommonCrawlLookup(String pName, String pTokenBinding,
+      Text pTokenKind) throws Throwable {
+    initITestDelegatedMRJob(pName, pTokenBinding, pTokenKind);
     FileSystem resourceFS = extraJobResourcePath.getFileSystem(
         getConfiguration());
     FileStatus status = resourceFS.getFileStatus(extraJobResourcePath);
     LOG.info("Extra job resource is {}", status);
-    assertTrue("Not encrypted: " + status, status.isEncrypted());
+    assertTrue(status.isEncrypted(), "Not encrypted: " + status);
   }
 
-  @Test
-  public void testJobSubmissionCollectsTokens() throws Exception {
+  @MethodSource("params")
+  @ParameterizedTest
+  public void testJobSubmissionCollectsTokens(String pName, String pTokenBinding,
+      Text pTokenKind) throws Exception {
+    initITestDelegatedMRJob(pName, pTokenBinding, pTokenKind);
     describe("Mock Job test");
     JobConf conf = new JobConf(getConfiguration());
     if (isUsingDefaultExternalDataFile(conf)) {
@@ -298,10 +305,8 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
 
     job.submit();
     final JobStatus status = job.getStatus();
-    assertEquals("not a mock job",
-        MockJob.NAME, status.getSchedulingInfo());
-    assertEquals("Job State",
-        JobStatus.State.RUNNING, status.getState());
+    assertEquals(MockJob.NAME, status.getSchedulingInfo(), "not a mock job");
+    assertEquals(JobStatus.State.RUNNING, status.getState(), "Job State");
 
     final Credentials submittedCredentials =
         requireNonNull(job.getSubmittedCredentials(),

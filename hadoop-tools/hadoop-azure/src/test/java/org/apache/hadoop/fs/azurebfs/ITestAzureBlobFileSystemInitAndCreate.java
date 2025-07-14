@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
@@ -83,11 +82,7 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     AbfsClient client = Mockito.spy(fs.getAbfsStore().getClient(AbfsServiceType.DFS));
     Mockito.doReturn(client).when(store).getClient(AbfsServiceType.DFS);
-
-    Mockito.doThrow(TrileanConversionException.class)
-        .when(store)
-        .isNamespaceEnabled();
-    store.setNamespaceEnabled(Trilean.UNKNOWN);
+    store.getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
 
     TracingContext tracingContext = getSampleTracingContext(fs, true);
     Mockito.doReturn(Mockito.mock(AbfsRestOperation.class))

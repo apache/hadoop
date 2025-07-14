@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import org.apache.hadoop.conf.Configuration;
@@ -179,26 +179,25 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
     try (FSDataInputStream in = fs.open(filePath)) {
       // Verify random IO.
       in.seek(BIG_FILE_SIZE - 4);
-      assertEquals("Byte at a specific position not equal to actual byte",
-          offsetSeek, in.read());
+      assertEquals(offsetSeek, in.read(),
+          "Byte at a specific position not equal to actual byte");
       in.seek(0);
-      assertEquals("Byte at a specific position not equal to actual byte",
-          'a', in.read());
+      assertEquals('a', in.read(),
+          "Byte at a specific position not equal to actual byte");
 
       // Verify seek-read between two multipart blocks.
       in.seek(MULTIPART_MIN_SIZE - 1);
       int byteBeforeBlockEnd = fileContent[MULTIPART_MIN_SIZE];
-      assertEquals("Byte before multipart block end mismatch",
-          byteBeforeBlockEnd - 1, in.read());
-      assertEquals("Byte at multipart end mismatch",
-          byteBeforeBlockEnd, in.read());
-      assertEquals("Byte after multipart end mismatch",
-          byteBeforeBlockEnd + 1, in.read());
+      assertEquals(byteBeforeBlockEnd - 1, in.read(),
+          "Byte before multipart block end mismatch");
+      assertEquals(byteBeforeBlockEnd, in.read(),
+          "Byte at multipart end mismatch");
+      assertEquals(byteBeforeBlockEnd + 1, in.read(),
+          "Byte after multipart end mismatch");
 
       // Verify end of file seek read.
       in.seek(BIG_FILE_SIZE + 1);
-      assertEquals("Byte at eof mismatch",
-          -1, in.read());
+      assertEquals(-1, in.read(), "Byte at eof mismatch");
 
       // Verify full read.
       in.readFully(0, fileContent);
@@ -265,8 +264,8 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
           cseDisabledFS.getFileStatus(encryptedFilePath);
       // Due to padding and encryption, content written and length shouldn't be
       // equal to what a CSE disabled FS would read.
-      assertNotEquals("Mismatch in content length", 1,
-          unEncryptedFSFileStatus.getLen());
+      assertNotEquals(1, unEncryptedFSFileStatus.getLen(),
+          "Mismatch in content length");
       Assertions.assertThat(in.read())
           .describedAs("Encrypted data shouldn't be equal to actual content "
               + "without deciphering")

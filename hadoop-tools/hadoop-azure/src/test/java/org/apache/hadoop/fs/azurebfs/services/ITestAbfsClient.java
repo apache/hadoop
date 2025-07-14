@@ -106,6 +106,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   private static final String ACCOUNT_NAME = "bogusAccountName.dfs.core.windows.net";
   private static final String FS_AZURE_USER_AGENT_PREFIX = "Partner Service";
+  private static final String FNS_BLOB_USER_AGENT_IDENTIFIER = "FNS";
   private static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
   private static final String TEST_PATH = "/testfile";
   public static final int REDUCED_RETRY_COUNT = 2;
@@ -353,6 +354,42 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       .doesNotContain(clusterType)
       .describedAs("User-Agent string should contain UNKNOWN as cluster type config is absent")
       .contains(DEFAULT_VALUE_UNKNOWN);
+  }
+
+  @Test
+  // Test to verify the unique identifier in user agent string for FNS-Blob accounts
+  public void verifyUserAgentForFNSBlob() throws Exception {
+    assumeHnsDisabled();
+    assumeBlobServiceType();
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AbfsConfiguration configuration = fs.getAbfsStore()
+        .getAbfsConfiguration();
+
+    String userAgentStr = getUserAgentString(configuration, false);
+    verifyBasicInfo(userAgentStr);
+    Assertions.assertThat(userAgentStr)
+        .describedAs(
+            "User-Agent string for FNS accounts on Blob endpoint should contain "
+                + FNS_BLOB_USER_AGENT_IDENTIFIER)
+        .contains(FNS_BLOB_USER_AGENT_IDENTIFIER);
+  }
+
+  @Test
+  // Test to verify that the user agent string for non-FNS-Blob accounts
+  // does not contain the FNS identifier.
+  public void verifyUserAgentForDFS() throws Exception {
+    assumeDfsServiceType();
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AbfsConfiguration configuration = fs.getAbfsStore()
+        .getAbfsConfiguration();
+
+    String userAgentStr = getUserAgentString(configuration, false);
+    verifyBasicInfo(userAgentStr);
+    Assertions.assertThat(userAgentStr)
+        .describedAs(
+            "User-Agent string for non-FNS-Blob accounts should not contain"
+                + FNS_BLOB_USER_AGENT_IDENTIFIER)
+        .doesNotContain(FNS_BLOB_USER_AGENT_IDENTIFIER);
   }
 
   public static AbfsClient createTestClientFromCurrentContext(
@@ -745,18 +782,18 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         true, 2, false);
     testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, true, EMPTY_STRING,
         false, 2, true);
-    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, true, TEST_CONTINUATION_TOKEN,
+    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN + 1, true, TEST_CONTINUATION_TOKEN + 2,
         true, 3, false);
-    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, true, TEST_CONTINUATION_TOKEN,
+    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN + 1, true, TEST_CONTINUATION_TOKEN + 2,
         false, 2, true);
 
     testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, false, EMPTY_STRING,
         true, 1, true);
     testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, false, EMPTY_STRING,
         false, 1, true);
-    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, false, TEST_CONTINUATION_TOKEN,
+    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN + 1, false, TEST_CONTINUATION_TOKEN + 2,
         true, 1, true);
-    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN, false, TEST_CONTINUATION_TOKEN,
+    testIsNonEmptyDirectoryInternal(TEST_CONTINUATION_TOKEN + 1, false, TEST_CONTINUATION_TOKEN + 2,
         false, 1, true);
   }
 
@@ -801,10 +838,44 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         .when(spiedClient).listPath(eq("/testPath"), eq(false), eq(1),
             any(), any(), any());
 
+    final int[] itr = new int[1];
+    final String[] continuationTokenUsed = new String[3];
+
+    Mockito.doAnswer(invocationOnMock -> {
+      if (itr[0] == 0) {
+        itr[0]++;
+        continuationTokenUsed[0] = invocationOnMock.getArgument(3);
+        return listResponseData1;
+      } else if (itr[0] == 1) {
+        itr[0]++;
+        continuationTokenUsed[1] = invocationOnMock.getArgument(3);
+        return listResponseData2;
+      }
+      continuationTokenUsed[2] = invocationOnMock.getArgument(3);
+      return listResponseData3;
+    }).when(spiedClient).listPath(eq("/testPath"), eq(false), eq(1),
+        any(), any(TracingContext.class), any());
+
     Assertions.assertThat(spiedClient.isNonEmptyDirectory("/testPath",
         Mockito.mock(TracingContext.class)))
         .describedAs("isNonEmptyDirectory in client giving unexpected results")
         .isEqualTo(isNonEmpty);
+
+    Assertions.assertThat(continuationTokenUsed[0])
+        .describedAs("First continuation token used is not as expected")
+        .isNull();
+
+    if (expectedInvocations > 1) {
+      Assertions.assertThat(continuationTokenUsed[1])
+          .describedAs("Second continuation token used is not as expected")
+          .isEqualTo(firstCT);
+    }
+
+    if (expectedInvocations > 2) {
+      Assertions.assertThat(continuationTokenUsed[2])
+          .describedAs("Third continuation token used is not as expected")
+          .isEqualTo(secondCT);
+    }
 
     Mockito.verify(spiedClient, times(expectedInvocations))
         .listPath(eq("/testPath"), eq(false), eq(1),

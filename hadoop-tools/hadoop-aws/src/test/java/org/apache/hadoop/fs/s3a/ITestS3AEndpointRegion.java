@@ -27,7 +27,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.awscore.AwsExecutionAttribute;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.interceptor.Context;
@@ -116,6 +117,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
    */
   private S3AFileSystem newFS;
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     closeStream(newFS);
@@ -482,7 +484,6 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Access the test bucket using central endpoint and"
         + " null region, perform file system CRUD operations");
     final Configuration conf = getConfiguration();
-    assumeStoreAwsHosted(getFileSystem());
 
     final Configuration newConf = new Configuration(conf);
 
@@ -583,7 +584,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
         .isFalse();
   }
 
-  private static final class RegionInterceptor implements ExecutionInterceptor {
+  private final class RegionInterceptor implements ExecutionInterceptor {
     private final String endpoint;
     private final String region;
     private final boolean isFips;

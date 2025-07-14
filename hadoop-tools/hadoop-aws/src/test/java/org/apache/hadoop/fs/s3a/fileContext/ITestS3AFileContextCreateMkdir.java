@@ -16,7 +16,7 @@ package org.apache.hadoop.fs.s3a.fileContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContextCreateMkdirBaseTest;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 
@@ -26,7 +26,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 public class ITestS3AFileContextCreateMkdir
         extends FileContextCreateMkdirBaseTest {
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = setPerformanceFlags(
         new Configuration(),

@@ -37,13 +37,20 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Listenable
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_CREATION_PARALLEL_COUNT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.mockito.Mockito.*;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.reset;
 
 public class TestFileSystemCaching extends HadoopTestBase {
 
@@ -355,7 +362,7 @@ public class TestFileSystemCaching extends HadoopTestBase {
   public void testCacheSingleSemaphoredConstruction() throws Exception {
     FileSystem.Cache cache = semaphoredCache(1);
     createFileSystems(cache, 10);
-    Assertions.assertThat(cache.getDiscardedInstances())
+    assertThat(cache.getDiscardedInstances())
         .describedAs("Discarded FS instances")
         .isEqualTo(0);
   }
@@ -374,7 +381,7 @@ public class TestFileSystemCaching extends HadoopTestBase {
   public void testCacheDualSemaphoreConstruction() throws Exception {
     FileSystem.Cache cache = semaphoredCache(2);
     createFileSystems(cache, 10);
-    Assertions.assertThat(cache.getDiscardedInstances())
+    assertThat(cache.getDiscardedInstances())
         .describedAs("Discarded FS instances")
         .isEqualTo(1);
   }
@@ -393,7 +400,7 @@ public class TestFileSystemCaching extends HadoopTestBase {
     FileSystem.Cache cache = semaphoredCache(999);
     int count = 10;
     createFileSystems(cache, count);
-    Assertions.assertThat(cache.getDiscardedInstances())
+    assertThat(cache.getDiscardedInstances())
         .describedAs("Discarded FS instances")
         .isEqualTo(count -1);
   }
@@ -450,8 +457,7 @@ public class TestFileSystemCaching extends HadoopTestBase {
     // verify all the others are the same instance
     for (int i = 1; i < count; i++) {
       FileSystem fs = futures.get(i).get();
-      Assertions.assertThat(fs)
-          .isSameAs(createdFS);
+      assertThat(fs).isSameAs(createdFS);
     }
   }
 

@@ -22,9 +22,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,7 +53,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Tests for the committer factory creation/override process.
  */
-@RunWith(Parameterized.class)
 public final class ITestS3ACommitterFactory extends AbstractCommitITest {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestS3ACommitterFactory.class);
@@ -109,7 +107,6 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
    *
    * @return the committer binding for this run.
    */
-  @Parameterized.Parameters(name = "{3}-fs=[{0}]-task=[{1}]-[{2}]")
   public static Collection<Object[]> params() {
     return Arrays.asList(BINDINGS);
   }
@@ -117,40 +114,41 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
   /**
    * Name of committer to set in filesystem config. If "" do not set one.
    */
-  private final String fsCommitterName;
+  private String fsCommitterName;
 
   /**
    * Name of committer to set in job config.
    */
-  private final String jobCommitterName;
+  private String jobCommitterName;
 
   /**
    * Expected committer class.
    * If null: an exception is expected
    */
-  private final Class<? extends AbstractS3ACommitter> committerClass;
+  private Class<? extends AbstractS3ACommitter> committerClass;
 
   /**
    * Description from parameters, simply for thread names to be more informative.
    */
-  private final String description;
+  private String description;
 
   /**
    * Create a parameterized instance.
-   * @param fsCommitterName committer to set in filesystem config
-   * @param jobCommitterName committer to set in job config
-   * @param committerClass expected committer class
-   * @param description debug text for thread names.
+   * @param pFsCommitterName committer to set in filesystem config
+   * @param pJobCommitterName committer to set in job config
+   * @param pCommitterClass expected committer class
+   * @param pDescription debug text for thread names.
    */
-  public ITestS3ACommitterFactory(
-      final String fsCommitterName,
-      final String jobCommitterName,
-      final Class<? extends AbstractS3ACommitter> committerClass,
-      final String description) {
-    this.fsCommitterName = fsCommitterName;
-    this.jobCommitterName = jobCommitterName;
-    this.committerClass = committerClass;
-    this.description = description;
+  public void initITestS3ACommitterFactory(
+      final String pFsCommitterName,
+      final String pJobCommitterName,
+      final Class<? extends AbstractS3ACommitter> pCommitterClass,
+      final String pDescription) throws Exception {
+    this.fsCommitterName = pFsCommitterName;
+    this.jobCommitterName = pJobCommitterName;
+    this.committerClass = pCommitterClass;
+    this.description = pDescription;
+    setup();
   }
 
   @Override
@@ -212,8 +210,14 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
    * Verify that if all config options are unset, the FileOutputCommitter
    * is returned.
    */
-  @Test
-  public void testBinding() throws Throwable {
+  @MethodSource("params")
+  @ParameterizedTest(name = "{3}-fs=[{0}]-task=[{1}]-[{2}]")
+  public void testBinding(String pFsCommitterName,
+      String pJobCommitterName,
+      Class<? extends AbstractS3ACommitter> pCommitterClass,
+      String pDescription) throws Throwable {
+    initITestS3ACommitterFactory(pFsCommitterName, pJobCommitterName, pCommitterClass,
+        pDescription);
     assertFactoryCreatesExpectedCommitter(committerClass);
   }
 
@@ -229,9 +233,8 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
       throws Exception {
     describe("Creating committer: expected class \"%s\"", expected);
     if (expected != null) {
-      assertEquals("Wrong Committer from factory",
-          expected,
-          createCommitter().getClass());
+      assertEquals(expected, createCommitter().getClass(),
+          "Wrong Committer from factory");
     } else {
       intercept(PathCommitException.class, this::createCommitter);
     }

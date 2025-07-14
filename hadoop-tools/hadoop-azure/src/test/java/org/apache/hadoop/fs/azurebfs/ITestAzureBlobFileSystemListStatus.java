@@ -391,9 +391,9 @@ public class ITestAzureBlobFileSystemListStatus extends
         true, 2, 0);
     testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, EMPTY_STRING,
         false, 2, 1);
-    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, TEST_CONTINUATION_TOKEN,
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN + 1, true, TEST_CONTINUATION_TOKEN + 2,
         true, 3, 0);
-    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, true, TEST_CONTINUATION_TOKEN,
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN + 1, true, TEST_CONTINUATION_TOKEN + 2,
         false, 3, 1);
 
     testEmptyListingInSubsequentCallInternal(EMPTY_STRING, false, EMPTY_STRING,
@@ -409,9 +409,9 @@ public class ITestAzureBlobFileSystemListStatus extends
         true, 2, 1);
     testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, EMPTY_STRING,
         false, 2, 2);
-    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, TEST_CONTINUATION_TOKEN,
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN + 1, false, TEST_CONTINUATION_TOKEN + 2,
         true, 3, 1);
-    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN, false, TEST_CONTINUATION_TOKEN,
+    testEmptyListingInSubsequentCallInternal(TEST_CONTINUATION_TOKEN + 1, false, TEST_CONTINUATION_TOKEN + 2,
         false, 3, 2);
   }
 
@@ -453,9 +453,23 @@ public class ITestAzureBlobFileSystemListStatus extends
     listResponseData3.setFileStatusList(new ArrayList<>());
     listResponseData3.setOp(Mockito.mock(AbfsRestOperation.class));
 
-    Mockito.doReturn(listResponseData1).doReturn(listResponseData2).doReturn(listResponseData3)
-        .when(spiedClient).listPath(eq("/testPath"), eq(false), eq(1),
-        any(), any(), any());
+    final int[] itr = new int[1];
+    final String[] continuationTokenUsed = new String[3];
+
+    Mockito.doAnswer(invocationOnMock -> {
+      if (itr[0] == 0) {
+        itr[0]++;
+        continuationTokenUsed[0] = invocationOnMock.getArgument(3);
+        return listResponseData1;
+      } else if (itr[0] == 1) {
+        itr[0]++;
+        continuationTokenUsed[1] = invocationOnMock.getArgument(3);
+        return listResponseData2;
+      }
+      continuationTokenUsed[2] = invocationOnMock.getArgument(3);
+      return listResponseData3;
+    }).when(spiedClient).listPath(eq("/testPath"), eq(false), eq(1),
+        any(), any(TracingContext.class), any());
 
     FileStatus[] list = spiedFs.listStatus(new Path("/testPath"));
 
@@ -472,6 +486,22 @@ public class ITestAzureBlobFileSystemListStatus extends
     } else {
       Mockito.verify(spiedClient, times(0))
           .getPathStatus(eq("/testPath"), any(), eq(null), eq(false));
+    }
+
+    Assertions.assertThat(continuationTokenUsed[0])
+        .describedAs("First continuation token used is not as expected")
+        .isNull();
+
+    if (expectedInvocations > 1) {
+      Assertions.assertThat(continuationTokenUsed[1])
+          .describedAs("Second continuation token used is not as expected")
+          .isEqualTo(firstCT);
+    }
+
+    if (expectedInvocations > 2) {
+      Assertions.assertThat(continuationTokenUsed[2])
+          .describedAs("Third continuation token used is not as expected")
+          .isEqualTo(secondCT);
     }
   }
 

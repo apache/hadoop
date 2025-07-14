@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
+import org.junit.jupiter.api.AfterEach;
 
 import static org.apache.hadoop.fs.s3a.Constants.LIST_VERSION;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_LIST_V1_ENABLED;
@@ -41,6 +42,7 @@ public class ITestS3AContractGetFileStatusV1List
     return new S3AContract(conf);
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     getLogger().info("FS details {}", getFileSystem());

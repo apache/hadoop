@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractMultipartUploaderTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.junit.jupiter.api.BeforeEach;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.DEFAULT_SCALE_TESTS_ENABLED;
@@ -91,6 +92,7 @@ public class ITestS3AContractMultipartUploader extends
     return false;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();

@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.commit.ResilientCommitByRename;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
@@ -76,11 +75,8 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestAbfsRenameRetryRecovery.class);
 
-  private boolean isNamespaceEnabled;
-
   public TestAbfsRenameRetryRecovery() throws Exception {
-    isNamespaceEnabled = getConfiguration()
-            .getBoolean(TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
+    // do nothing
   }
 
   /**
@@ -461,10 +457,10 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testRenameRecoveryUnsupportedForFlatNamespace() throws Exception {
-    Assume.assumeTrue(!isNamespaceEnabled);
     // In DFS endpoint, renamePath is O(1) API call and idempotency issue can happen.
     // For blob endpoint, client orchestrates the rename operation.
     assumeDfsServiceType();
+    assumeHnsDisabled();
     AzureBlobFileSystem fs = getFileSystem();
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     TracingContext testTracingContext = getTestTracingContext(fs, false);

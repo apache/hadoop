@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.fs.statistics;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.util.JsonSerialization;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test the {@link MeanStatistic} class.
@@ -48,37 +48,37 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
 
   @Test
   public void testEmptiness() throws Throwable {
-    Assertions.assertThat(empty)
+    assertThat(empty)
         .matches(MeanStatistic::isEmpty, "is empty")
         .isEqualTo(new MeanStatistic(0, TEN))
         .isEqualTo(new MeanStatistic())
         .isNotEqualTo(tenFromOne);
-    Assertions.assertThat(empty.mean())
+    assertThat(empty.mean())
         .isEqualTo(ZEROD);
-    Assertions.assertThat(empty.toString())
+    assertThat(empty.toString())
         .contains("0.0");
   }
 
   @Test
   public void testTenFromOne() throws Throwable {
-    Assertions.assertThat(tenFromOne)
+    assertThat(tenFromOne)
         .matches(p -> !p.isEmpty(), "is not empty")
         .isEqualTo(tenFromOne)
         .isNotEqualTo(tenFromTen);
-    Assertions.assertThat(tenFromOne.mean())
+    assertThat(tenFromOne.mean())
         .isEqualTo(TEND);
   }
 
   @Test
   public void testNegativeSamplesAreEmpty() throws Throwable {
     MeanStatistic stat = new MeanStatistic(-10, 1);
-    Assertions.assertThat(stat)
+    assertThat(stat)
         .describedAs("stat with negative samples")
         .matches(MeanStatistic::isEmpty, "is empty")
         .isEqualTo(empty)
         .extracting(MeanStatistic::mean)
         .isEqualTo(ZEROD);
-    Assertions.assertThat(stat.toString())
+    assertThat(stat.toString())
         .contains("0.0");
 
   }
@@ -86,7 +86,7 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
   @Test
   public void testCopyNonEmpty() throws Throwable {
     MeanStatistic stat = tenFromOne.copy();
-    Assertions.assertThat(stat)
+    assertThat(stat)
         .describedAs("copy of " + tenFromOne)
         .isEqualTo(tenFromOne)
         .isNotSameAs(tenFromOne);
@@ -95,7 +95,7 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
   @Test
   public void testCopyEmpty() throws Throwable {
     MeanStatistic stat = empty.copy();
-    Assertions.assertThat(stat)
+    assertThat(stat)
         .describedAs("copy of " + empty)
         .isEqualTo(empty)
         .isNotSameAs(empty);
@@ -104,7 +104,7 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
   @Test
   public void testDoubleSamples() throws Throwable {
     MeanStatistic stat = tenFromOne.copy();
-    Assertions.assertThat(stat.add(tenFromOne))
+    assertThat(stat.add(tenFromOne))
         .isEqualTo(new MeanStatistic(2, 20))
         .extracting(MeanStatistic::mean)
         .isEqualTo(TEND);
@@ -113,21 +113,21 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
   @Test
   public void testAddEmptyR() throws Throwable {
     MeanStatistic stat = tenFromOne.copy();
-    Assertions.assertThat(stat.add(empty))
+    assertThat(stat.add(empty))
         .isEqualTo(tenFromOne);
   }
 
   @Test
   public void testAddEmptyL() throws Throwable {
     MeanStatistic stat = empty.copy();
-    Assertions.assertThat(stat.add(tenFromOne))
+    assertThat(stat.add(tenFromOne))
         .isEqualTo(tenFromOne);
   }
 
   @Test
   public void testAddEmptyLR() throws Throwable {
     MeanStatistic stat = empty.copy();
-    Assertions.assertThat(stat.add(empty))
+    assertThat(stat.add(empty))
         .isEqualTo(empty);
   }
 
@@ -135,7 +135,7 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
   public void testAddSampleToEmpty() throws Throwable {
     MeanStatistic stat = empty.copy();
     stat.addSample(TEN);
-    Assertions.assertThat(stat)
+    assertThat(stat)
         .isEqualTo(tenFromOne);
   }
 
@@ -145,7 +145,7 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
     for (int i = 0; i < 9; i++) {
       stat.addSample(0);
     }
-    Assertions.assertThat(stat)
+    assertThat(stat)
         .isEqualTo(tenFromTen);
   }
 
@@ -153,7 +153,7 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
   public void testSetSamples() throws Throwable {
     MeanStatistic stat = tenFromOne.copy();
     stat.setSamples(10);
-    Assertions.assertThat(stat)
+    assertThat(stat)
         .isEqualTo(tenFromTen);
   }
 
@@ -162,7 +162,7 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
     MeanStatistic stat = tenFromOne.copy();
     stat.setSum(100);
     stat.setSamples(20);
-    Assertions.assertThat(stat)
+    assertThat(stat)
         .isEqualTo(new MeanStatistic(20, 100))
         .extracting(MeanStatistic::mean)
         .isEqualTo(5.0d);
@@ -172,7 +172,7 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
   public void testSetNegativeSamplesMakesEmpty() throws Throwable {
     MeanStatistic stat = tenFromOne.copy();
     stat.setSamples(-3);
-    Assertions.assertThat(stat)
+    assertThat(stat)
         .isEqualTo(empty);
   }
 
@@ -182,14 +182,14 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
 
     String json = serializer.toJson(tenFromTen);
     LOG.info("serialized form\n{}", json);
-    Assertions.assertThat(json)
+    assertThat(json)
         .describedAs("JSON form of %s", tenFromTen)
         .doesNotContain("empty")
         .doesNotContain("mean");
 
     MeanStatistic deser = serializer.fromJson(json);
     LOG.info("deserialized {}", deser);
-    Assertions.assertThat(deser)
+    assertThat(deser)
         .isEqualTo(tenFromTen);
   }
 
@@ -205,7 +205,7 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
     JsonSerialization<MeanStatistic> serializer = serializer();
     MeanStatistic deser = serializer.fromJson(json);
     LOG.info("deserialized {}", deser);
-    Assertions.assertThat(deser)
+    assertThat(deser)
         .isEqualTo(empty);
   }
 

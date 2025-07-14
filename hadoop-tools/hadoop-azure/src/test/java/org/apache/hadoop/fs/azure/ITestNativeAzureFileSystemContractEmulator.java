@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.fs.azure;
 
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
+import org.apache.hadoop.test.TestName;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 /**
  * Run the {@code FileSystemContractBaseTest} tests against the emulator
@@ -36,21 +36,21 @@ public class ITestNativeAzureFileSystemContractEmulator extends
   private AzureBlobStorageTestAccount testAccount;
   private Path basePath;
 
-  @Rule
-  public TestName methodName = new TestName();
+  @RegisterExtension
+  private TestName methodName = new TestName();
 
   private void nameThread() {
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     nameThread();
     testAccount = AzureBlobStorageTestAccount.createForEmulator();
     if (testAccount != null) {
       fs = testAccount.getFileSystem();
     }
-    assumeNotNull(fs);
+    assumeTrue(fs != null);
     basePath = fs.makeQualified(
         AzureTestUtils.createTestPath(
             new Path("ITestNativeAzureFileSystemContractEmulator")));

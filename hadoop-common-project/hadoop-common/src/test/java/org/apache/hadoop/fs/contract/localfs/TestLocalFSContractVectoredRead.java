@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
@@ -35,14 +34,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 public class TestLocalFSContractVectoredRead extends AbstractContractVectoredReadTest {
 
-  public TestLocalFSContractVectoredRead(String bufferType) {
-    super(bufferType);
+  public TestLocalFSContractVectoredRead() {
   }
 
   @Override
@@ -50,8 +50,11 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     return new LocalFSContract(conf);
   }
 
-  @Test
-  public void testChecksumValidationDuringVectoredRead() throws Exception {
+  @MethodSource("params")
+  @ParameterizedTest(name = "Buffer type : {0}")
+  public void testChecksumValidationDuringVectoredRead(
+      String pBufferType) throws Exception {
+    initAbstractContractVectoredReadTest(pBufferType);
     Path testPath = path("big_range_checksum_file");
     List<FileRange> someRandomRanges = new ArrayList<>();
     someRandomRanges.add(FileRange.createFileRange(10, 1024));
@@ -64,8 +67,11 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
    * Test for file size less than checksum chunk size.
    * {@code ChecksumFileSystem#bytesPerChecksum}.
    */
-  @Test
-  public void testChecksumValidationDuringVectoredReadSmallFile() throws Exception {
+  @MethodSource("params")
+  @ParameterizedTest(name = "Buffer type : {0}")
+  public void testChecksumValidationDuringVectoredReadSmallFile(
+      String pBufferType) throws Exception {
+    initAbstractContractVectoredReadTest(pBufferType);
     Path testPath = path("big_range_checksum_file");
     final int length = 471;
     List<FileRange> smallFileRanges = new ArrayList<>();
@@ -104,8 +110,10 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
           () -> validateVectoredReadResult(ranges, datasetCorrupted, 0));
     }
   }
-  @Test
-  public void tesChecksumVectoredReadBoundaries() throws Exception {
+  @MethodSource("params")
+  @ParameterizedTest(name = "Buffer type : {0}")
+  public void tesChecksumVectoredReadBoundaries(String pBufferType) throws Exception {
+    initAbstractContractVectoredReadTest(pBufferType);
     Path testPath = path("boundary_range_checksum_file");
     final int length = 1071;
     LocalFileSystem localFs = (LocalFileSystem) getFileSystem();

@@ -66,9 +66,11 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidFileSystemPropertyException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
@@ -127,6 +129,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.PLUS_ENC
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.UTF_8;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType.BLOB;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
@@ -152,6 +155,7 @@ public abstract class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
   public static final String ABFS_CLIENT_TIMER_THREAD_NAME = "abfs-timer-client";
+  public static final String FNS_BLOB_USER_AGENT_IDENTIFIER = "FNS";
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
@@ -194,7 +198,6 @@ public abstract class AbfsClient implements Closeable {
   private KeepAliveCache keepAliveCache;
 
   private AbfsApacheHttpClient abfsApacheHttpClient;
-  private static boolean isNamespaceEnabled = false;
 
   /**
    * logging the rename failure if metadata is in an incomplete state.
@@ -440,7 +443,7 @@ public abstract class AbfsClient implements Closeable {
     requestHeaders.add(new AbfsHttpHeader(X_MS_VERSION, xMsVersion.toString()));
     requestHeaders.add(new AbfsHttpHeader(ACCEPT_CHARSET, UTF_8));
     requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, EMPTY_STRING));
-    requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgent));
+    requestHeaders.add(new AbfsHttpHeader(USER_AGENT, getUserAgent()));
     return requestHeaders;
   }
 
@@ -1319,6 +1322,15 @@ public abstract class AbfsClient implements Closeable {
     sb.append(FORWARD_SLASH);
     sb.append(abfsConfiguration.getClusterType());
 
+    // Add a unique identifier in FNS-Blob user agent string
+    // Current filesystem init restricts HNS-Blob combination
+    // so namespace check not required.
+    if (abfsConfiguration.getFsConfiguredServiceType() == BLOB) {
+      sb.append(SEMICOLON)
+          .append(SINGLE_WHITE_SPACE)
+          .append(FNS_BLOB_USER_AGENT_IDENTIFIER);
+    }
+
     sb.append(")");
 
     appendIfNotEmpty(sb, abfsConfiguration.getCustomUserAgentPrefix(), false);
@@ -1714,20 +1726,20 @@ public abstract class AbfsClient implements Closeable {
 
   /**
    * Checks if the namespace is enabled.
+   * Filesystem init will fail if namespace is not correctly configured,
+   * so instead of swallowing the exception, we should throw the exception
+   * in case namespace is not configured correctly.
    *
    * @return True if the namespace is enabled, false otherwise.
+   * @throws AzureBlobFileSystemException if the conversion fails.
    */
-  public static boolean getIsNamespaceEnabled() {
-    return isNamespaceEnabled;
-  }
-
-  /**
-   * Sets the namespace enabled status.
-   *
-   * @param namespaceEnabled True to enable the namespace, false to disable it.
-   */
-  public static void setIsNamespaceEnabled(final boolean namespaceEnabled) {
-    isNamespaceEnabled = namespaceEnabled;
+  public boolean getIsNamespaceEnabled() throws AzureBlobFileSystemException {
+    try {
+      return getAbfsConfiguration().getIsNamespaceEnabledAccount().toBoolean();
+    } catch (TrileanConversionException ex) {
+      LOG.error("Failed to convert namespace enabled account property to boolean", ex);
+      throw new InvalidConfigurationValueException("Failed to determine account type", ex);
+    }
   }
 
   protected boolean isRenameResilience() {

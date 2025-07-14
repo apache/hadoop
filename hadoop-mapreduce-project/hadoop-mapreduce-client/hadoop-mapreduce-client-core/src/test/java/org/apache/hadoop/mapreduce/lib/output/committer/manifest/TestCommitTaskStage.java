@@ -22,7 +22,8 @@ import java.io.FileNotFoundException;
 import java.net.SocketTimeoutException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -62,6 +63,7 @@ public class TestCommitTaskStage extends AbstractManifestCommitterTest {
   public static final String TASK1_ATTEMPT1 = String.format("%s_%02d",
       TASK1, 1);
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();

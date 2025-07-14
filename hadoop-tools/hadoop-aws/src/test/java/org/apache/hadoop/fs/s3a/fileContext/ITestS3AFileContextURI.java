@@ -17,9 +17,9 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContextURIBase;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 
@@ -30,7 +30,7 @@ public class ITestS3AFileContextURI extends FileContextURIBase {
 
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, Exception {
     conf = setPerformanceFlags(
         new Configuration(),
@@ -42,7 +42,7 @@ public class ITestS3AFileContextURI extends FileContextURIBase {
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void testFileStatus() throws IOException {
     // test disabled
     // (the statistics tested with this method are not relevant for an S3FS)

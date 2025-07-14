@@ -42,9 +42,10 @@ import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
@@ -52,10 +53,10 @@ import static org.apache.hadoop.hdfs.DFSTestUtil.verifyFilesEqual;
 import static org.apache.hadoop.hdfs.DFSTestUtil.verifyFilesNotEqual;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.GenericTestUtils.assertMatches;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestReservedRawPaths {
 
@@ -72,7 +73,7 @@ public class TestReservedRawPaths {
   protected static final EnumSet< CreateEncryptionZoneFlag > NO_TRASH =
       EnumSet.of(CreateEncryptionZoneFlag.NO_TRASH);
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new HdfsConfiguration();
     fsHelper = new FileSystemTestHelper();
@@ -98,7 +99,7 @@ public class TestReservedRawPaths {
     DFSTestUtil.createKey(TEST_KEY, cluster, conf);
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -110,7 +111,8 @@ public class TestReservedRawPaths {
    * Verify resolving path will return an iip that tracks if the original
    * path was a raw path.
    */
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testINodesInPath() throws IOException {
     FSDirectory fsd = cluster.getNamesystem().getFSDirectory();
     final String path = "/path";
@@ -134,7 +136,8 @@ public class TestReservedRawPaths {
    * Compare the raw and non-raw versions of the non-encrypted file to ensure
    *   they're the same.
    */
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testReadWriteRaw() throws Exception {
     // Create a base file for comparison
     final Path baseFile = new Path("/base");
@@ -164,21 +167,22 @@ public class TestReservedRawPaths {
      * Use accessTime and modificationTime as substitutes for INode to check
      * for resolution to the same underlying file.
      */
-    assertEquals("Access times not equal", p1Stat.getAccessTime(),
-        p2Stat.getAccessTime());
-    assertEquals("Modification times not equal", p1Stat.getModificationTime(),
-        p2Stat.getModificationTime());
-    assertEquals("pathname1 not equal", p1,
-        Path.getPathWithoutSchemeAndAuthority(p1Stat.getPath()));
-    assertEquals("pathname1 not equal", p2,
-            Path.getPathWithoutSchemeAndAuthority(p2Stat.getPath()));
+    assertEquals(p1Stat.getAccessTime(),
+        p2Stat.getAccessTime(), "Access times not equal");
+    assertEquals(p1Stat.getModificationTime(),
+        p2Stat.getModificationTime(), "Modification times not equal");
+    assertEquals(p1, Path.getPathWithoutSchemeAndAuthority(p1Stat.getPath()),
+        "pathname1 not equal");
+    assertEquals(p2, Path.getPathWithoutSchemeAndAuthority(p2Stat.getPath()),
+        "pathname1 not equal");
   }
 
   /**
    * Tests that getFileStatus on raw and non raw resolve to the same
    * file.
    */
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testGetFileStatus() throws Exception {
     final Path zone = new Path("zone");
     final Path slashZone = new Path("/", zone);
@@ -200,7 +204,8 @@ public class TestReservedRawPaths {
     assertPathEquals(ezEncFile, ezRawEncFile);
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testReservedRoot() throws Exception {
     final Path root = new Path("/");
     final Path rawRoot = new Path("/.reserved/raw");
@@ -210,7 +215,8 @@ public class TestReservedRawPaths {
   }
 
   /* Verify mkdir works ok in .reserved/raw directory. */
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testReservedRawMkdir() throws Exception {
     final Path zone = new Path("zone");
     final Path slashZone = new Path("/", zone);
@@ -229,7 +235,8 @@ public class TestReservedRawPaths {
     fs.delete(rawDir1EZ, true);
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testRelativePathnames() throws Exception {
     final Path baseFileRaw = new Path("/.reserved/raw/base");
     final int len = 8192;
@@ -248,7 +255,8 @@ public class TestReservedRawPaths {
         "/.reserved/../.reserved/raw/../raw/base"));
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testUserReadAccessOnly() throws Exception {
     final Path zone = new Path("zone");
     final Path slashZone = new Path("/", zone);
@@ -319,7 +327,8 @@ public class TestReservedRawPaths {
     });
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testListDotReserved() throws Exception {
     // Create a base file for comparison
     final Path baseFileRaw = new Path("/.reserved/raw/base");
@@ -343,11 +352,12 @@ public class TestReservedRawPaths {
     }
 
     final FileStatus[] fileStatuses = fs.listStatus(new Path("/.reserved/raw"));
-    assertEquals("expected 1 entry", fileStatuses.length, 1);
+    assertEquals(fileStatuses.length, 1, "expected 1 entry");
     assertMatches(fileStatuses[0].getPath().toString(), "/.reserved/raw/base");
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testListRecursive() throws Exception {
     Path rootPath = new Path("/");
     Path p = rootPath;

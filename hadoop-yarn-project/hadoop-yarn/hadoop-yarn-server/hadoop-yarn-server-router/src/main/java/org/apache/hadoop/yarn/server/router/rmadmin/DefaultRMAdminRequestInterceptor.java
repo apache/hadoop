@@ -23,7 +23,6 @@ import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.StandbyException;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -86,7 +85,6 @@ public class DefaultRMAdminRequestInterceptor
   private static final Logger LOG =
       LoggerFactory.getLogger(DefaultRMAdminRequestInterceptor.class);
   private ResourceManagerAdministrationProtocol rmAdminProxy;
-  private UserGroupInformation user = null;
 
   @Override
   public void init(String userName) {

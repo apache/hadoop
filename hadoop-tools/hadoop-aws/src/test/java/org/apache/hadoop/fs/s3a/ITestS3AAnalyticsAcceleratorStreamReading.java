@@ -23,8 +23,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.assertj.core.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
@@ -67,7 +67,7 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
 
   private Path externalTestFile;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setup();
     skipIfClientSideEncryption();

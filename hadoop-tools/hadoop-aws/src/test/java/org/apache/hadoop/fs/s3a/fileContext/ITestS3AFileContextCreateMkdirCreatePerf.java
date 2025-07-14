@@ -13,8 +13,8 @@
  */
 package org.apache.hadoop.fs.s3a.fileContext;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContextCreateMkdirBaseTest;
@@ -30,7 +30,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public class ITestS3AFileContextCreateMkdirCreatePerf
         extends FileContextCreateMkdirBaseTest {
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = setPerformanceFlags(
         new Configuration(),

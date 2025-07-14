@@ -22,9 +22,9 @@ import java.io.InputStream;
 import java.util.List;
 
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -41,8 +41,8 @@ import static org.apache.hadoop.io.compress.bzip2.BZip2TextFileWriter.BLOCK_SIZE
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public final class TestBZip2Codec {
 
@@ -54,7 +54,7 @@ public final class TestBZip2Codec {
   private Decompressor decompressor;
   private Path tempFile;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
 
@@ -71,7 +71,7 @@ public final class TestBZip2Codec {
     decompressor = CodecPool.getDecompressor(codec);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     CodecPool.returnDecompressor(decompressor);
     fs.delete(tempFile, /* recursive */ false);

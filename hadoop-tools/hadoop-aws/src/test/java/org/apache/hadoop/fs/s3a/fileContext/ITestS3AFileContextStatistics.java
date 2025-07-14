@@ -26,11 +26,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * S3a implementation of FCStatisticsBaseTest.
@@ -43,7 +43,7 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
   private Path testRootPath;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     // Analytics accelerator currently does not support IOStatistics, this will be added as
@@ -57,7 +57,7 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
     FileContext.clearStatistics();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     S3ATestUtils.callQuietly(LOG,
         () -> fc != null && fc.delete(testRootPath, true));
@@ -66,7 +66,7 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
   @Override
   protected void verifyReadBytes(FileSystem.Statistics stats) {
     // one blockSize for read, one for pread
-    Assert.assertEquals(2 * blockSize, stats.getBytesRead());
+    assertEquals(2 * blockSize, stats.getBytesRead());
   }
 
   /**
@@ -76,8 +76,8 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
   @Override
   protected void verifyWrittenBytes(FileSystem.Statistics stats) {
     //No extra bytes are written
-    Assert.assertEquals("Mismatch in bytes written", blockSize,
-        stats.getBytesWritten());
+    assertEquals(blockSize,
+        stats.getBytesWritten(), "Mismatch in bytes written");
   }
 
   @Override

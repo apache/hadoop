@@ -18,14 +18,16 @@
 
 package org.apache.hadoop.io.retry;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.RpcNoSuchMethodException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * This class mainly tests behaviors of various retry policies in connection
@@ -67,7 +69,8 @@ public class TestConnectionRetryPolicy {
         "");
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testDefaultRetryPolicyEquivalence() {
     RetryPolicy rp1 = null;
     RetryPolicy rp2 = null;
@@ -103,34 +106,29 @@ public class TestConnectionRetryPolicy {
     /* test enabled and different specifications */
     rp1 = getDefaultRetryPolicy(true, "20000,3");
     rp2 = getDefaultRetryPolicy(true, "30000,4");
-    assertNotEquals("should not be equal", rp1, rp2);
-    assertNotEquals(
-        "should not have the same hash code",
-        rp1.hashCode(),
-        rp2.hashCode());
+    assertNotEquals(rp1, rp2, "should not be equal");
+    assertNotEquals(rp1.hashCode(), rp2.hashCode(),
+        "should not have the same hash code");
 
     /* test disabled and the same specifications */
     rp1 = getDefaultRetryPolicy(false, "40000,5");
     rp2 = getDefaultRetryPolicy(false, "40000,5");
-    assertEquals("should be equal", rp1, rp2);
-    assertEquals(
-        "should have the same hash code",
-        rp1, rp2);
+    assertEquals(rp1, rp2, "should be equal");
+    assertEquals(rp1, rp2, "should have the same hash code");
 
     /* test the disabled and different specifications */
     rp1 = getDefaultRetryPolicy(false, "50000,6");
     rp2 = getDefaultRetryPolicy(false, "60000,7");
-    assertEquals("should be equal", rp1, rp2);
-    assertEquals(
-        "should have the same hash code",
-        rp1, rp2);
+    assertEquals(rp1, rp2, "should be equal");
+    assertEquals(rp1, rp2, "should have the same hash code");
   }
 
   public static RetryPolicy newTryOnceThenFail() {
     return new RetryPolicies.TryOnceThenFail();
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testTryOnceThenFailEquivalence() throws Exception {
     final RetryPolicy rp1 = newTryOnceThenFail();
     final RetryPolicy rp2 = newTryOnceThenFail();
@@ -142,11 +140,9 @@ public class TestConnectionRetryPolicy {
     for (int i = 0; i < polices.length; i++) {
       for (int j = 0; j < polices.length; j++) {
         if (i != j) {
-          assertEquals("should be equal", polices[i], polices[j]);
-          assertEquals(
-              "should have the same hash code",
-              polices[i].hashCode(),
-              polices[j].hashCode());
+          assertEquals(polices[i], polices[j], "should be equal");
+          assertEquals(polices[i].hashCode(),
+              polices[j].hashCode(), "should have the same hash code");
         }
       }
     }

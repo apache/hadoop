@@ -19,9 +19,9 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 
 import java.util.function.Supplier;
@@ -66,7 +66,8 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.util.Time;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 /**
@@ -245,7 +246,7 @@ public class TestReplication {
             cluster.corruptBlockOnDataNodesByDeletingBlockFile(block) :
               cluster.corruptBlockOnDataNodes(block);       
 
-    assertEquals("Corrupted too few blocks", replFactor, blockFilesCorrupted); 
+    assertEquals(replFactor, blockFilesCorrupted, "Corrupted too few blocks");
 
     // Increase replication factor, this should invoke transfer request
     // Receiving datanode fails on checksum and reports it to namenode
@@ -269,7 +270,8 @@ public class TestReplication {
     cluster.shutdown();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testBadBlockReportOnTransferCorruptFile() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_FSDATASET_FACTORY_KEY,
@@ -310,7 +312,7 @@ public class TestReplication {
       replicaCount = dfsClient.getNamenode()
           .getBlockLocations(file1.toString(), 0, Long.MAX_VALUE).get(0)
           .getLocations().length;
-      assertEquals("replication should not success", 1, replicaCount);
+      assertEquals(1, replicaCount, "replication should not success");
     } finally {
       cluster.shutdown();
     }
@@ -351,7 +353,7 @@ public class TestReplication {
     DFSClient client = new DFSClient(addr, conf);
     
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
-    assertEquals("Number of Datanodes ", numDatanodes, info.length);
+    assertEquals(numDatanodes, info.length, "Number of Datanodes ");
     FileSystem fileSys = cluster.getFileSystem();
     try {
       Path file1 = new Path("/smallblocktest.dat");
@@ -611,7 +613,8 @@ public class TestReplication {
    * Simulate rbw blocks by creating dummy copies, then a DN restart to detect
    * those corrupted blocks asap.
    */
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testReplicationWhenBlockCorruption() throws Exception {
     MiniDFSCluster cluster = null;
     try {
@@ -657,7 +660,8 @@ public class TestReplication {
    * the NameNode doesn't consider the block under-replicated too
    * aggressively. It is a regression test for HDFS-1172.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testNoExtraReplicationWhenBlockReceivedIsLate()
       throws Exception {
     LOG.info("Test block replication when blockReceived is late" );
@@ -736,7 +740,8 @@ public class TestReplication {
    * in the middle of that file are properly re-replicated if they
    * become corrupt.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testReplicationWhileUnderConstruction()
       throws Exception {
     LOG.info("Test block replication in under construction" );

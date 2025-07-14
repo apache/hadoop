@@ -123,8 +123,7 @@ public class ITestS3AHugeFilesStorageClass extends AbstractSTestS3AHugeFiles {
 
     String actual = getS3AInternals().getObjectMetadata(hugeFile).storageClassAsString();
 
-    assertTrue(
-        "Storage class of object is " + actual + ", expected " + STORAGE_CLASS_REDUCED_REDUNDANCY,
-        STORAGE_CLASS_REDUCED_REDUNDANCY.equalsIgnoreCase(actual));
+    assertTrue(STORAGE_CLASS_REDUCED_REDUNDANCY.equalsIgnoreCase(actual),
+        "Storage class of object is " + actual + ", expected " + STORAGE_CLASS_REDUCED_REDUNDANCY);
   }
 }

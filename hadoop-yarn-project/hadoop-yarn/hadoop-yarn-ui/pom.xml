@@ -270,6 +270,13 @@
             <groupId>ro.isdc.wro4j</groupId>
             <artifactId>wro4j-maven-plugin</artifactId>
             <version>1.8.0</version>
+            <dependencies>
+              <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>4.11.0</version>
+              </dependency>
+            </dependencies>
             <executions>
               <execution>
                 <phase>prepare-package</phase>

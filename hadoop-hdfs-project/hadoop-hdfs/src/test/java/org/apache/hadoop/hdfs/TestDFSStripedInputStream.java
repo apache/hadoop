@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -41,12 +40,9 @@ import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -57,15 +53,18 @@ import java.util.List;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 
+@Timeout(300)
 public class TestDFSStripedInputStream {
 
   public static final Logger LOG =
@@ -84,17 +83,15 @@ public class TestDFSStripedInputStream {
   private int blockSize;
   private int blockGroupSize;
 
-  @Rule
-  public Timeout globalTimeout = new Timeout(300000);
-
-  @Rule
-  public TemporaryFolder baseDir = new TemporaryFolder();
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  @TempDir
+  java.nio.file.Path baseDir;
 
   public ErasureCodingPolicy getEcPolicy() {
     return StripedFileTestUtil.getDefaultECPolicy();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     /*
      * Initialize erasure coding policy.
@@ -119,7 +116,7 @@ public class TestDFSStripedInputStream {
   }
 
   private void startUp() throws IOException {
-    cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(
+    cluster = new MiniDFSCluster.Builder(conf, baseDir.toFile()).numDataNodes(
         dataBlocks + parityBlocks).build();
     cluster.waitActive();
     for (DataNode dn : cluster.getDataNodes()) {
@@ -132,7 +129,7 @@ public class TestDFSStripedInputStream {
         .setErasureCodingPolicy(dirPath.toString(), ecPolicy.getName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -218,9 +215,8 @@ public class TestDFSStripedInputStream {
       int ret = in.read(startOffset, buf, 0, fileLen);
       assertEquals(remaining, ret);
       for (int i = 0; i < remaining; i++) {
-        Assert.assertEquals("Byte at " + (startOffset + i) + " should be the " +
-                "same",
-            expected[startOffset + i], buf[i]);
+        assertEquals(expected[startOffset + i], buf[i],
+            "Byte at " + (startOffset + i) + " should be the " + "same");
       }
     }
     in.close();

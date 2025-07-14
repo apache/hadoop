@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,8 +46,8 @@ public class ITestS3AMetrics extends AbstractS3ATestBase {
     MutableCounterLong fileCreated =
         (MutableCounterLong) fs.getInstrumentation().getRegistry()
             .get(Statistic.FILES_CREATED.getSymbol());
-    assertEquals("Metrics system should report single file created event",
-        1, fileCreated.value());
+    assertEquals(1, fileCreated.value(),
+        "Metrics system should report single file created event");
   }
 
   @Test
@@ -87,8 +87,8 @@ public class ITestS3AMetrics extends AbstractS3ATestBase {
     MutableCounterLong read = (MutableCounterLong)
         instrumentation.getRegistry()
         .get(statName);
-    assertEquals("Stream statistics were not merged", expectedBytesRead,
-        read.value());
+    assertEquals(expectedBytesRead,
+        read.value(), "Stream statistics were not merged");
   }
 
 

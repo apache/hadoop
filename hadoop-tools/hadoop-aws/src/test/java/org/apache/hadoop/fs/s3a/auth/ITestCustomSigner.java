@@ -27,8 +27,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.auth.signer.Aws4Signer;
 import software.amazon.awssdk.auth.signer.AwsS3V4Signer;
 import software.amazon.awssdk.auth.signer.internal.AbstractAwsS3V4Signer;
@@ -36,7 +37,6 @@ import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.signer.Signer;
 import software.amazon.awssdk.http.SdkHttpFullRequest;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,7 +65,6 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides
  * Because the v2 sdk has had some problems with bulk delete
  * and custom signing, this suite is parameterized.
  */
-@RunWith(Parameterized.class)
 public class ITestCustomSigner extends AbstractS3ATestBase {
 
   private static final Logger LOG = LoggerFactory
@@ -77,7 +76,6 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   /**
    * Parameterization.
    */
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {"bulk delete",  true},
@@ -85,7 +83,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     });
   }
 
-  private final boolean bulkDelete;
+  private boolean bulkDelete;
 
   private final UserGroupInformation ugi1 = UserGroupInformation.createRemoteUser("user1");
 
@@ -95,10 +93,11 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
 
   private String endpoint;
 
-  public ITestCustomSigner(
+  public void initITestCustomSigner(
       final String ignored,
-      final boolean bulkDelete) {
-    this.bulkDelete = bulkDelete;
+      final boolean pBulkDelete) throws Exception {
+    this.bulkDelete = pBulkDelete;
+    setup();
   }
 
   @Override
@@ -120,6 +119,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   /**
    * Teardown closes all filesystems for the test UGIs.
    */
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     super.teardown();
@@ -127,10 +127,11 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     FileSystem.closeAllForUGI(ugi2);
   }
 
-  @Test
-  public void testCustomSignerAndInitializer()
-      throws IOException, InterruptedException {
-
+  @MethodSource("params")
+  @ParameterizedTest(name = "{0}")
+  public void testCustomSignerAndInitializer(final String ignored,
+      final boolean pBulkDelete) throws Exception {
+    initITestCustomSigner(ignored, pBulkDelete);
     final Path basePath = path(getMethodName());
     FileSystem fs1 = runStoreOperationsAndVerify(ugi1,
         new Path(basePath, "customsignerpath1"), "id1");

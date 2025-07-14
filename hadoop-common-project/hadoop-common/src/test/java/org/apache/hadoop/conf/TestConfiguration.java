@@ -87,6 +87,7 @@ import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 
 public class TestConfiguration {
@@ -120,7 +121,7 @@ public class TestConfiguration {
 
   @BeforeEach
   public void setUp() throws Exception {
-    conf = new Configuration();
+    conf = new Configuration(false);
   }
 
   @AfterEach
@@ -354,6 +355,63 @@ public class TestConfiguration {
       // Make sure the appender is removed
       logger.removeAppender(appender);
     }
+  }
+
+  @Test
+  public void testDeprecatedPropertyInXMLFileGeneratesLogMessage(@TempDir java.nio.file.Path tmp) throws IOException {
+    String oldProp = "test.deprecation.old.conf.a";
+    String newProp = "test.deprecation.new.conf.a";
+    Configuration.addDeprecation(oldProp, newProp);
+    java.nio.file.Path confFile = Files.createFile(tmp.resolve("TestConfiguration.xml"));
+    String confXml = "<configuration><property><name>" + oldProp + "</name><value>a</value></property></configuration>";
+    Files.write(confFile, confXml.getBytes());
+
+    TestAppender appender = new TestAppender();
+    Logger deprecationLogger = Logger.getLogger("org.apache.hadoop.conf.Configuration.deprecation");
+    deprecationLogger.addAppender(appender);
+
+    try {
+      conf.addResource(new Path(confFile.toUri()));
+      // Properties are lazily initialized so access them to trigger the loading of the resource
+      conf.getProps();
+    } finally {
+      deprecationLogger.removeAppender(appender);
+    }
+
+    Pattern deprecationMsgPattern = Pattern.compile(oldProp + " in file:" + confFile + " is deprecated");
+    boolean hasDeprecationMessage = appender.log.stream().map(LoggingEvent::getRenderedMessage)
+            .anyMatch(msg -> deprecationMsgPattern.matcher(msg).find());
+    assertTrue(hasDeprecationMessage);
+  }
+
+  @Test
+  public void testDeprecatedPropertyLogsWarningOnEveryUse(){
+    String oldProp = "test.deprecation.old.conf.b";
+    String newProp = "test.deprecation.new.conf.b";
+    Configuration.addDeprecation(oldProp, newProp);
+
+    TestAppender appender = new TestAppender();
+    Logger deprecationLogger = Logger.getLogger("org.apache.hadoop.conf.Configuration.deprecation");
+    deprecationLogger.addAppender(appender);
+
+    try {
+      conf.set(oldProp, "b1");
+      conf.get(oldProp);
+      conf.set(oldProp, "b2");
+      conf.get(oldProp);
+      // Using the new property should not log a warning
+      conf.set(newProp, "b3");
+      conf.get(newProp);
+      conf.set(newProp, "b4");
+      conf.get(newProp);
+    } finally {
+      deprecationLogger.removeAppender(appender);
+    }
+
+    Pattern deprecationMsgPattern = Pattern.compile(oldProp + " is deprecated");
+    long count = appender.log.stream().map(LoggingEvent::getRenderedMessage)
+            .filter(msg -> deprecationMsgPattern.matcher(msg).find()).count();
+    assertEquals(4, count, "Expected exactly four warnings for deprecated property usage");
   }
 
   /**
@@ -845,8 +903,7 @@ public class TestConfiguration {
     conf.addResource(fileResource);
 
     String expectedOutput =
-      "Configuration: core-default.xml, core-site.xml, " +
-      fileResource.toString();
+      "Configuration: " + fileResource;
     assertEquals(expectedOutput, conf.toString());
   }
 
