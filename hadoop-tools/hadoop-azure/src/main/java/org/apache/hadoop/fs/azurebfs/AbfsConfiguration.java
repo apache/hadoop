@@ -1373,6 +1373,10 @@ public class AbfsConfiguration{
     return this.enabledReadAhead;
   }
 
+  /**
+   * Checks if the read-ahead v2 feature is enabled by user.
+   * @return true if read-ahead v2 is enabled, false otherwise.
+   */
   public boolean isReadAheadV2Enabled() {
     return this.isReadAheadV2Enabled;
   }

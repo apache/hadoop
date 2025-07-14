@@ -37,6 +37,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * The Read Buffer Manager for Rest AbfsClient.
+ * V1 implementation of ReadBufferManager.
  */
 final class ReadBufferManagerV1 implements ReadBufferManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(

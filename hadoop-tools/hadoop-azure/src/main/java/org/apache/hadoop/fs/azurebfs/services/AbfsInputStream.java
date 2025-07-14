@@ -176,11 +176,16 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.fsBackRef = abfsInputStreamContext.getFsBackRef();
     contextEncryptionAdapter = abfsInputStreamContext.getEncryptionAdapter();
 
-    // Propagate the config values to ReadBufferManager so that the first instance
-    // to initialize can set the readAheadBlockSize
+    /*
+     * Initialize the ReadBufferManager based on whether readAheadV2 is enabled or not.
+     * Precedence is given to ReadBufferManagerV2.
+     * If none of the V1 and V2 are enabled, then no read ahead will be done.
+     */
     if (readAheadV2Enabled) {
       readBufferManager = ReadBufferManagerV2.getBufferManager();
     } else {
+      // Propagate the config values to ReadBufferManager so that the first instance
+      // to initialize can set the readAheadBlockSize
       ReadBufferManagerV1.setReadBufferManagerConfigs(readAheadBlockSize);
       readBufferManager = ReadBufferManagerV1.getBufferManager();
     }
@@ -499,7 +504,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private int readInternal(final long position, final byte[] b, final int offset, final int length,
                            final boolean bypassReadAhead) throws IOException {
-    if (readAheadEnabled && !bypassReadAhead) {
+    if (isReadAheadEnabled() && !bypassReadAhead) {
       // try reading from read-ahead
       if (offset != 0) {
         throw new IllegalArgumentException("readahead buffers cannot have non-zero buffer offsets");
@@ -728,7 +733,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   public synchronized void close() throws IOException {
     LOG.debug("Closing {}", this);
     closed = true;
-    readBufferManager.purgeBuffersForStream(this);
+    if (readBufferManager != null) {
+      readBufferManager.purgeBuffersForStream(this);
+    }
     buffer = null; // de-reference the buffer so it can be GC'ed sooner
     if (contextEncryptionAdapter != null) {
       contextEncryptionAdapter.destroy();
@@ -781,9 +788,14 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return buffer;
   }
 
+  /**
+   * Checks if any version of read ahead is enabled.
+   * If both are disabled, then skip read ahead logic.
+   * @return true if read ahead is enabled, false otherwise.
+   */
   @VisibleForTesting
   public boolean isReadAheadEnabled() {
-    return readAheadEnabled;
+    return (readAheadEnabled || readAheadV2Enabled) && readBufferManager != null;
   }
 
   @VisibleForTesting
