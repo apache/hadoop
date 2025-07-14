@@ -90,6 +90,8 @@ message RpcRequestHeaderProto { // the header for the RpcRequest
   optional sint32 retryCount = 5 [default = -1];
   optional RPCTraceInfoProto traceInfo = 6; // tracing info
   optional RPCCallerContextProto callerContext = 7; // call context
+  // Authorization header for passing opaque credentials or tokens
+  optional bytes authorizationHeader = 10;
   optional int64 stateId = 8; // The last seen Global State ID
   // Alignment context info for use with routers.
   // The client should not interpret these bytes, but only forward bytes
