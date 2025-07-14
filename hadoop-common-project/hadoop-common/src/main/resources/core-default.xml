@@ -1452,6 +1452,7 @@
     org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider,
     org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
     software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider,
+    software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider,
     org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
   </value>
   <description>

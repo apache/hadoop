@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -45,6 +46,7 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.ANONYMOUS_CREDENTIALS_V1;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.EC2_CONTAINER_CREDENTIALS_V1;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.ENVIRONMENT_CREDENTIALS_V1;
+import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.WEB_IDENTITY_CREDENTIALS_V1;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.createAWSCredentialProviderList;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -72,12 +74,14 @@ public class TestV1CredentialsProvider {
         Arrays.asList(
             IAMInstanceCredentialsProvider.class,
             AnonymousAWSCredentialsProvider.class,
-            EnvironmentVariableCredentialsProvider.class);
+            EnvironmentVariableCredentialsProvider.class,
+            WebIdentityTokenFileCredentialsProvider.class);
     Configuration conf =
         createProviderConfiguration(buildClassList(
             EC2_CONTAINER_CREDENTIALS_V1,
             ANONYMOUS_CREDENTIALS_V1,
-            ENVIRONMENT_CREDENTIALS_V1));
+            ENVIRONMENT_CREDENTIALS_V1,
+            WEB_IDENTITY_CREDENTIALS_V1));
     AWSCredentialProviderList list1 = createAWSCredentialProviderList(
         uri1, conf);
     assertCredentialProviders(expectedClasses, list1);
