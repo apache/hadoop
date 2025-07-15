@@ -120,6 +120,7 @@
                         <exclude>org/apache/hadoop/yarn/factory/providers/package-info.class</exclude>
                         <exclude>org/apache/hadoop/yarn/client/api/impl/package-info.class</exclude>
                         <exclude>org/apache/hadoop/yarn/client/api/package-info.class</exclude>
+                        <exclude>webapps/static/**/*</exclude>
                       </excludes>
                     </filter>
                   </filters>
