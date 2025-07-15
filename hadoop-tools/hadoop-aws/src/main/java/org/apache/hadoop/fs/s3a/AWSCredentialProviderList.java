@@ -199,7 +199,7 @@ public final class AWSCredentialProviderList implements AwsCredentialsProvider,
         LOG.debug("No credentials provided by {}: {}",
             provider, e);
       } catch (Exception e) {
-        // convert any other generic exception into SDKException.
+        // convert any other exception into SDKException.
         // This is required because some credential provider like
         // WebIdentityTokenFileCredentialsProvider might throw
         // exceptions other than SdkException.

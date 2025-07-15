@@ -47,6 +47,7 @@ import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
+import software.amazon.awssdk.core.exception.SdkException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -185,6 +186,23 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
     List<Class<?>> expectedClasses = STANDARD_AWS_PROVIDERS;
     assertCredentialProviders(expectedClasses, list1);
     assertCredentialProviders(expectedClasses, list2);
+  }
+
+  @Test
+  public void testNonSdkExceptionConversion() throws Throwable {
+    // Create a mock credential provider that throws a non-SDK exception
+    AwsCredentialsProvider mockProvider = () -> {
+      throw new RuntimeException("Test credential error");
+    };
+
+    // Create the provider list with our mock provider
+    AWSCredentialProviderList providerList =
+        new AWSCredentialProviderList(Collections.singletonList(mockProvider));
+
+    // Attempt to get credentials, which should trigger the exception
+    intercept(NoAuthWithAWSException.class,
+        "No AWS Credentials provided",
+        () -> providerList.resolveCredentials());
   }
 
   @Test
