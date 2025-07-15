@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -68,7 +70,6 @@ import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -344,7 +345,7 @@ public class TestReconstructStripedFile {
   void assertFileBlocksReconstruction(String fileName, int fileLen,
       ReconstructionType type, int toRecoverBlockNum) throws Exception {
     if (toRecoverBlockNum < 1 || toRecoverBlockNum > parityBlkNum) {
-      Assertions.fail("toRecoverBlockNum should be between 1 ~ " + parityBlkNum);
+      fail("toRecoverBlockNum should be between 1 ~ " + parityBlkNum);
     }
     assertTrue(fileLen > 0, "File length must be positive.");
 
@@ -439,7 +440,7 @@ public class TestReconstructStripedFile {
       byte[] replicaContentAfterReconstruction =
           DFSTestUtil.readFileAsBytes(replicaAfterReconstruction);
 
-      Assertions.assertArrayEquals(replicaContents[i], replicaContentAfterReconstruction);
+      assertArrayEquals(replicaContents[i], replicaContentAfterReconstruction);
     }
   }
 
@@ -458,7 +459,7 @@ public class TestReconstructStripedFile {
         }
       }
       if (result[i] == -1) {
-        Assertions.fail("Failed to reconstruct striped block: "
+        fail("Failed to reconstruct striped block: "
             + blocks[i].getBlockId());
       }
     }
@@ -528,8 +529,8 @@ public class TestReconstructStripedFile {
     }
 
     // Inject data-loss by tear down desired number of DataNodes.
-    assumeTrue("Ignore case where num dead DNs > num parity units",
-        policy.getNumParityUnits() >= deadDN);
+    assumeTrue(policy.getNumParityUnits() >= deadDN,
+        "Ignore case where num dead DNs > num parity units");
     List<DataNode> dataNodes = new ArrayList<>(cluster.getDataNodes());
     Collections.shuffle(dataNodes);
     for (DataNode dn : dataNodes.subList(0, deadDN)) {
@@ -631,8 +632,8 @@ public class TestReconstructStripedFile {
   @Test
   @Timeout(value = 120)
   public void testTimeoutReadBlockInReconstruction() throws Exception {
-    assumeTrue("Ignore case where num parity units <= 1",
-        ecPolicy.getNumParityUnits() > 1);
+    assumeTrue(ecPolicy.getNumParityUnits() > 1,
+        "Ignore case where num parity units <= 1");
     int stripedBufferSize = conf.getInt(
         DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_KEY,
         cellSize);
@@ -649,7 +650,7 @@ public class TestReconstructStripedFile {
 
     LocatedBlocks locatedBlocks =
         StripedFileTestUtil.getLocatedBlocks(file, fs);
-    Assertions.assertEquals(1, locatedBlocks.getLocatedBlocks().size());
+    assertEquals(1, locatedBlocks.getLocatedBlocks().size());
     // The file only has one block group
     LocatedBlock lblock = locatedBlocks.get(0);
     DatanodeInfo[] datanodeinfos = lblock.getLocations();
@@ -661,7 +662,7 @@ public class TestReconstructStripedFile {
         DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_KEY,
         DFSConfigKeys.
             DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_DEFAULT);
-    Assertions.assertTrue(
+    assertTrue(
         stripedReadTimeoutInMills > 2000,
         DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_KEY
             + " must be greater than 2000");
@@ -684,7 +685,7 @@ public class TestReconstructStripedFile {
                 stripedReadTimeoutInMills * 3
             );
           } catch (TimeoutException e) {
-            Assertions.fail("Can't reconstruct the file's first part.");
+            fail("Can't reconstruct the file's first part.");
           } catch (InterruptedException e) {
           }
         }
@@ -720,8 +721,8 @@ public class TestReconstructStripedFile {
   @Test
   @Timeout(value = 120)
   public void testAbnormallyCloseDoesNotWriteBufferAgain() throws Exception {
-    assumeTrue("Ignore case where num parity units <= 1",
-        ecPolicy.getNumParityUnits() > 1);
+    assumeTrue(ecPolicy.getNumParityUnits() > 1,
+        "Ignore case where num parity units <= 1");
     int stripedBufferSize = conf.getInt(
         DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_KEY,
         cellSize);
@@ -734,7 +735,7 @@ public class TestReconstructStripedFile {
 
     LocatedBlocks locatedBlocks =
         StripedFileTestUtil.getLocatedBlocks(file, fs);
-    Assertions.assertEquals(1, locatedBlocks.getLocatedBlocks().size());
+    assertEquals(1, locatedBlocks.getLocatedBlocks().size());
     // The file only has one block group
     LocatedBlock lblock = locatedBlocks.get(0);
     DatanodeInfo[] datanodeinfos = lblock.getLocations();
@@ -746,7 +747,7 @@ public class TestReconstructStripedFile {
         DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_KEY,
         DFSConfigKeys.
             DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_DEFAULT);
-    Assertions.assertTrue(
+    assertTrue(
         stripedReadTimeoutInMills > 2000,
         DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_KEY
             + " must be greater than 2000");
@@ -778,7 +779,7 @@ public class TestReconstructStripedFile {
                 stripedReadTimeoutInMills * 3
             );
           } catch (TimeoutException e) {
-            Assertions.fail("Can't reconstruct the file's first part.");
+            fail("Can't reconstruct the file's first part.");
           } catch (InterruptedException e) {
           }
         }
@@ -793,7 +794,7 @@ public class TestReconstructStripedFile {
                 stripedReadTimeoutInMills * 3
             );
           } catch (TimeoutException e) {
-            Assertions.fail("Can't reconstruct the file's remaining part.");
+            fail("Can't reconstruct the file's remaining part.");
           } catch (InterruptedException e) {
           }
         }
@@ -819,7 +820,7 @@ public class TestReconstructStripedFile {
                 stripedReadTimeoutInMills * 3
             );
           } catch (TimeoutException e) {
-            Assertions.fail("Can't finish the file's reconstruction.");
+            fail("Can't finish the file's reconstruction.");
           } catch (InterruptedException e) {
           }
         }
@@ -847,7 +848,7 @@ public class TestReconstructStripedFile {
     while (bufferPool.size(direct) != 0) {
       // iterate all ByteBuffers in ElasticByteBufferPool
       ByteBuffer byteBuffer =  bufferPool.getBuffer(direct, 0);
-      Assertions.assertEquals(0, byteBuffer.position());
+      assertEquals(0, byteBuffer.position());
     }
   }
 

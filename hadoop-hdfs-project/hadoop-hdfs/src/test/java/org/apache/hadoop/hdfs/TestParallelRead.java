@@ -18,11 +18,11 @@
 package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 public class TestParallelRead extends TestParallelReadUtil {
-  @BeforeClass
+  @BeforeAll
   static public void setupCluster() throws Exception {
     // This is a test of the normal (TCP) read path.  For this reason, we turn
     // off both short-circuit local reads and UNIX domain socket data traffic.
@@ -37,7 +37,7 @@ public class TestParallelRead extends TestParallelReadUtil {
     setupCluster(DEFAULT_REPLICATION_FACTOR, conf);
   }
 
-  @AfterClass
+  @AfterAll
   static public void teardownCluster() throws Exception {
     TestParallelReadUtil.teardownCluster();
   }
