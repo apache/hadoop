@@ -174,6 +174,22 @@ class AbfsClientThrottlingAnalyzer implements Closeable {
     return false;
   }
 
+  /**
+ * Closes the throttling analyzer and releases associated resources.
+ * This method cancels the internal timer and cleans up any pending timer tasks.
+ * It is safe to call this method multiple times.
+ * 
+ * @throws IOException if an I/O error occurs during cleanup
+ */
+@Override
+public void close() throws IOException {
+  if (timer != null) {
+    timer.cancel();
+    timer.purge();
+    timer = null;
+  }
+}
+
   @VisibleForTesting
   int getSleepDuration() {
     return sleepDuration;
