@@ -197,7 +197,7 @@ public final class AWSCredentialProviderList implements AwsCredentialsProvider,
       } catch (SdkException e) {
         lastException = e;
         LOG.debug("No credentials provided by {}: {}",
-            provider, e);
+            provider, e.toString(), e);
       } catch (Exception e) {
         // convert any other exception into SDKException.
         // This is required because some credential provider like
@@ -207,7 +207,7 @@ public final class AWSCredentialProviderList implements AwsCredentialsProvider,
           lastException = SdkException.create(e.getMessage(), e);
         }
         LOG.debug("No credentials provided by {}: {}",
-            provider, e);
+            provider, e.toString(), e);
       }
     }
 
