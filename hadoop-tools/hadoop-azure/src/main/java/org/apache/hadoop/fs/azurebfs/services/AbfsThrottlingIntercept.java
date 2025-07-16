@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public interface AbfsThrottlingIntercept {
+public interface AbfsThrottlingIntercept extends Closable {
 
   /**
    * Updates the metrics for successful and failed read and write operations.
@@ -46,5 +46,12 @@ public interface AbfsThrottlingIntercept {
    */
   void sendingRequest(AbfsRestOperationType operationType,
       AbfsCounters abfsCounters);
+
+  /**
+   * Closes the throttling intercept and releases associated resources.
+   * @throws IOException if an I/O error occurs during cleanup
+   */
+  @Override
+  void close() throws IOException;
 
 }
