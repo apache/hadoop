@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol.DNA_ERASURE_CODING_RECONSTRUCTION;
 import static org.apache.hadoop.util.Time.monotonicNow;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
@@ -70,9 +69,12 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * Manage datanodes, include decommission and other activities.
@@ -211,6 +213,7 @@ public class DatanodeManager {
   @Nullable
   private SlowPeerTracker slowPeerTracker;
   private static Set<String> slowNodesUuidSet = Sets.newConcurrentHashSet();
+  public static Map<String, AtomicInteger> nodeReplicaSelectionCountUuidMap = new ConcurrentHashMap<>();
   private Daemon slowPeerCollectorDaemon;
   private volatile long slowPeerCollectionInterval;
   private volatile int maxSlowPeerReportNodes;
@@ -229,6 +232,7 @@ public class DatanodeManager {
   private final long timeBetweenResendingCachingDirectivesMs;
 
   private final boolean randomNodeOrderEnabled;
+  private final boolean replicaUniformReadDistribution;
 
   DatanodeManager(final BlockManager blockManager, final Namesystem namesystem,
       final Configuration conf) throws IOException {
@@ -245,7 +249,7 @@ public class DatanodeManager {
     }
     this.heartbeatManager = new HeartbeatManager(namesystem,
         blockManager, conf);
-    this.datanodeAdminManager = new DatanodeAdminManager(namesystem,
+    this.datanodeAdminManager = new DatanodeAdminManager(this, namesystem,
         blockManager, heartbeatManager);
     this.fsClusterStats = newFSClusterStats();
     this.dataNodeDiskStatsEnabled = Util.isDiskStatsEnabled(conf.getInt(
@@ -364,6 +368,24 @@ public class DatanodeManager {
     this.randomNodeOrderEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_RANDOM_NODE_ORDER_ENABLED,
         DFSConfigKeys.DFS_NAMENODE_RANDOM_NODE_ORDER_ENABLED_DEFAULT);
+    this.replicaUniformReadDistribution = conf.getBoolean(
+        DFSConfigKeys.DFS_READ_REPLICA_UNIFORM_DISTRIBUTION_ENABLED_KEY,
+        DFSConfigKeys
+            .DFS_READ_REPLICA_UNIFORM_DISTRIBUTION_ENABLED_DEFAULT);
+  }
+
+  public void incrementNodeSelectionCount(String uuid) {
+    nodeReplicaSelectionCountUuidMap
+        .computeIfAbsent(uuid, (id) -> new AtomicInteger()).incrementAndGet();
+  }
+
+  public void resetNodeSelectionCount() {
+    nodeReplicaSelectionCountUuidMap.forEach((id, count) -> count.set(0));
+  }
+
+  @VisibleForTesting
+  public AtomicInteger getNodeSelectionCount(String nodeUuid) {
+    return nodeReplicaSelectionCountUuidMap.get(nodeUuid);
   }
 
   /**
@@ -574,10 +596,13 @@ public class DatanodeManager {
   public void sortLocatedBlocks(final String targetHost,
       final List<LocatedBlock> locatedBlocks) {
     Comparator<DatanodeInfo> comparator =
-        avoidStaleDataNodesForRead || avoidSlowDataNodesForRead ?
+        avoidStaleDataNodesForRead || avoidSlowDataNodesForRead
+            || replicaUniformReadDistribution
+                ?
         new DFSUtil.StaleAndSlowComparator(
             avoidStaleDataNodesForRead, staleInterval,
-            avoidSlowDataNodesForRead, slowNodesUuidSet) :
+            avoidSlowDataNodesForRead, slowNodesUuidSet,
+            replicaUniformReadDistribution, nodeReplicaSelectionCountUuidMap) :
         new DFSUtil.ServiceComparator();
     // sort located block
     for (LocatedBlock lb : locatedBlocks) {
@@ -667,7 +692,14 @@ public class DatanodeManager {
       --lastActiveIndex;
     }
     int activeLen = lastActiveIndex + 1;
-    if (!randomNodeOrderEnabled) {
+    if (replicaUniformReadDistribution) {
+      if (LOG.isDebugEnabled()) {
+        String dnCountLogStr = Arrays.stream(di)
+            .map(dn -> "uuid:" + dn.getDatanodeUuid() + " count:" + nodeReplicaSelectionCountUuidMap.get(dn.getDatanodeUuid()))
+            .collect(Collectors.joining(", "));
+        LOG.debug("Uniform read replica distribution count {}.", dnCountLogStr);
+      }
+    } else if (!randomNodeOrderEnabled) {
       if(nonDatanodeReader) {
         networktopology.sortByDistanceUsingNetworkLocation(client,
             lb.getLocations(), activeLen, createSecondaryNodeSorter());
@@ -682,6 +714,23 @@ public class DatanodeManager {
     lb.moveProvidedToEnd(activeLen);
     // must update cache since we modified locations array
     lb.updateCachedStorageInfo();
+  }
+
+  public void incrementDataNodeBlockGetCount(
+      final List<LocatedBlock> locatedblocks) {
+    if (!replicaUniformReadDistribution || locatedblocks == null) {
+      return;
+    }
+    for (LocatedBlock b : locatedblocks) {
+      DatanodeInfo[] locations = b.getLocations();
+      DatanodeInfo dn = locations[0];
+      incrementNodeSelectionCount(dn.getDatanodeUuid());
+    }
+
+  }
+
+  public boolean isReplicaUniformReadDistribution() {
+    return replicaUniformReadDistribution;
   }
 
   private Consumer<List<DatanodeInfoWithStorage>> createSecondaryNodeSorter() {

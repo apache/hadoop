@@ -60,6 +60,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -178,6 +179,8 @@ public class DFSUtil {
     private final long staleInterval;
     private final boolean avoidSlowDataNodesForRead;
     private final Set<String> slowNodesUuidSet;
+    private final boolean enableUniformReadDistribution;
+    private Map<String, AtomicInteger> nodeReplicaSelectionCountUuidMap;
 
     /**
      * Constructor of ServiceAndStaleComparator
@@ -190,14 +193,22 @@ public class DFSUtil {
      *          Whether or not to avoid using slow DataNodes for reading.
      * @param slowNodesUuidSet
      *          Slow DataNodes UUID set.
+     * @param enableUniformReadDistribution
+     *          Flag to sort based on read-rate distribution of the replica datanodes.
+     * @param nodeReplicaSelectionCountUuidMap
+     *          Map to store read-rate distribution of the replica datanodes.
      */
     public StaleAndSlowComparator(
         boolean avoidStaleDataNodesForRead, long interval,
-        boolean avoidSlowDataNodesForRead, Set<String> slowNodesUuidSet) {
+        boolean avoidSlowDataNodesForRead, Set<String> slowNodesUuidSet,
+        boolean enableUniformReadDistribution,
+        Map<String, AtomicInteger> nodeReplicaSelectionCountUuidMap) {
       this.avoidStaleDataNodesForRead = avoidStaleDataNodesForRead;
       this.staleInterval = interval;
       this.avoidSlowDataNodesForRead = avoidSlowDataNodesForRead;
       this.slowNodesUuidSet = slowNodesUuidSet;
+      this.enableUniformReadDistribution = enableUniformReadDistribution;
+      this.nodeReplicaSelectionCountUuidMap = nodeReplicaSelectionCountUuidMap;
     }
 
     @Override
@@ -222,6 +233,19 @@ public class DFSUtil {
         boolean aSlow = slowNodesUuidSet.contains(a.getDatanodeUuid());
         boolean bSlow = slowNodesUuidSet.contains(b.getDatanodeUuid());
         ret = aSlow == bSlow ? 0 : (aSlow ? 1 : -1);
+        if (ret != 0) {
+          return ret;
+        }
+      }
+
+      // higher read served nodes will be moved behind based on read-distribution rate
+      if (enableUniformReadDistribution) {
+        AtomicInteger aCount = nodeReplicaSelectionCountUuidMap.get(a.getDatanodeUuid());
+        AtomicInteger bCount = nodeReplicaSelectionCountUuidMap.get(b.getDatanodeUuid());
+        ret = (aCount != null && bCount != null) ? (aCount.get() - bCount.get()) : 0;
+        if (ret != 0) {
+          return ret;
+        }
       }
       return ret;
     }

@@ -1122,6 +1122,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT = 1000;
   public static final String  DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED_KEY = "dfs.corruptfilesreturned.max";
   public static final int     DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED = 500;
+  /* Flag to uniformly distribute read across replica based on read rate */
+  public static final String  DFS_READ_REPLICA_UNIFORM_DISTRIBUTION_ENABLED_KEY = "dfs.read.replica.uniform.distribution.enabled";
+  public static final boolean DFS_READ_REPLICA_UNIFORM_DISTRIBUTION_ENABLED_DEFAULT = false;
   /* Maximum number of blocks to process for initializing replication queues */
   public static final String  DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT = "dfs.block.misreplication.processing.limit";
   public static final int     DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT_DEFAULT = 10000;

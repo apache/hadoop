@@ -81,12 +81,14 @@ public class DatanodeAdminManager {
   private final Namesystem namesystem;
   private final BlockManager blockManager;
   private final HeartbeatManager hbManager;
+  private final DatanodeManager dataManager;
   private final ScheduledExecutorService executor;
 
   private DatanodeAdminMonitorInterface monitor = null;
 
-  DatanodeAdminManager(final Namesystem namesystem,
+  DatanodeAdminManager(final DatanodeManager dm, final Namesystem namesystem,
       final BlockManager blockManager, final HeartbeatManager hbManager) {
+    this.dataManager = dm;
     this.namesystem = namesystem;
     this.blockManager = blockManager;
     this.hbManager = hbManager;
@@ -125,8 +127,16 @@ public class DatanodeAdminManager {
     }
     executor.scheduleWithFixedDelay(monitor, intervalSecs, intervalSecs,
         TimeUnit.SECONDS);
+    if (dataManager.isReplicaUniformReadDistribution()) {
+      executor.scheduleAtFixedRate(() -> resetDataNodeReadRate(), 60, 60,
+          TimeUnit.SECONDS);
+    }
 
     LOG.debug("Activating DatanodeAdminManager with interval {} seconds.", intervalSecs);
+  }
+
+  public void resetDataNodeReadRate() {
+    dataManager.resetNodeSelectionCount();
   }
 
   /**

@@ -6455,6 +6455,15 @@
   </property>
 
   <property>
+    <name>dfs.read.replica.uniform.distribution.enabled</name>
+    <value>false</value>
+    <description>
+      Sort DataNodes by their current read rate before returning them to clients,
+      enabling more balanced and uniform read distribution across DataNodes at all times.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.journalnode.edits.dir.perm</name>
     <value>700</value>
     <description>

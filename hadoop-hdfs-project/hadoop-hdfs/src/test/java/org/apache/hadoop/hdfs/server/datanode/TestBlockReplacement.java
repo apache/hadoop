@@ -27,7 +27,10 @@ import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
@@ -53,6 +56,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
@@ -480,6 +484,72 @@ public class TestBlockReplacement {
           locatedBlocks1.get(0).getLocations().length);
     } finally {
       IOUtils.cleanupWithLogger(null, client);
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * This test validates that uniform read replica distribution should select
+   * node read preference equally to all the replica nodes.
+   * @throws Exception
+   */
+  @Test
+  public void testUniformReadReplicaDistribution() throws Exception {
+    final Configuration CONF = new HdfsConfiguration();
+    final short REPLICATION_FACTOR = (short) 3;
+    final int DEFAULT_BLOCK_SIZE = 1024;
+    final Random r = new Random();
+
+    CONF.setBoolean(
+        DFSConfigKeys.DFS_READ_REPLICA_UNIFORM_DISTRIBUTION_ENABLED_KEY, true);
+    CONF.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY,
+        DEFAULT_BLOCK_SIZE / 10);
+    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
+    CONF.setInt(HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY,
+        DEFAULT_BLOCK_SIZE / 2);
+    CONF.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 500);
+    cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(REPLICATION_FACTOR)
+        .build();
+    try {
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+      Path file;
+      // Create a file and read the file to check first prefered datanode for
+      // the read.
+      // Uniform read throughput distribution should select each datanode for
+      // the first node preference in the result-set.
+      InetSocketAddress addr =
+          new InetSocketAddress("localhost", cluster.getNameNodePort());
+      DFSClient client = new DFSClient(addr, CONF);
+      DatanodeManager datamanager = cluster.getNamesystem().getBlockManager().getDatanodeManager();
+      Map<String, Integer> dataNodeCount = new HashMap<>();
+      for (int i = 0; i < 300; i++) {
+        String fileName = "/tmp" + i + ".txt";
+        file = new Path(fileName);
+        DFSTestUtil.createFile(fs, file, false, 1024, DEFAULT_BLOCK_SIZE,
+            fs.getDefaultBlockSize(file), REPLICATION_FACTOR, r.nextLong(),
+            true);
+        List<LocatedBlock> locatedBlocks = client.getNamenode()
+            .getBlockLocations(fileName, 0, DEFAULT_BLOCK_SIZE)
+            .getLocatedBlocks();
+        assertEquals(1, locatedBlocks.size());
+        LocatedBlock block = locatedBlocks.get(0);
+        DatanodeInfo[] nodes = block.getLocations();
+        assertEquals(nodes.length, 3);
+        int count = dataNodeCount.getOrDefault(nodes[0].getDatanodeUuid(), 0);
+        dataNodeCount.put(nodes[0].getDatanodeUuid(), count + 1);
+      }
+      Iterator<Integer> ite = dataNodeCount.values().iterator();
+      int node1SelectionCount = ite.next();
+      int node2SelectionCount = ite.next();
+      int node3SelectionCount = ite.next();
+      assertEquals(node1SelectionCount, node2SelectionCount);
+      assertEquals(node2SelectionCount, node3SelectionCount);
+      // reset the count
+      datamanager.resetNodeSelectionCount();
+      assertEquals(datamanager.getNodeSelectionCount(dataNodeCount.keySet().iterator().next()).get(), 0);
+      client.close();
+    } finally {
       cluster.shutdown();
     }
   }

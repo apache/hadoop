@@ -2284,6 +2284,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     LocatedBlocks blocks = res.blocks;
     sortLocatedBlocks(clientMachine, blocks);
+    blockManager.getDatanodeManager()
+        .incrementDataNodeBlockGetCount(blocks.getLocatedBlocks());
     return blocks;
   }
 
