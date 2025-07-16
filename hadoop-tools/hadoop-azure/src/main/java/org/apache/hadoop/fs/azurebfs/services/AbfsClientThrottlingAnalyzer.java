@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.Closeable;
+import java.io.IOException;
 
 import java.util.Timer;
 import java.util.TimerTask;
