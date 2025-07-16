@@ -1005,6 +1005,7 @@ public abstract class Server {
     final byte[] clientId;
     private final Span span; // the trace span on the server side
     private final CallerContext callerContext; // the call context
+    private  final byte[] authHeader; // the auth header
     private boolean deferredResponse = false;
     private int priorityLevel;
     // the priority level assigned by scheduler, 0 by default
@@ -1036,6 +1037,11 @@ public abstract class Server {
 
     Call(int id, int retryCount, RPC.RpcKind kind, byte[] clientId,
         Span span, CallerContext callerContext) {
+      this(id, retryCount, kind, clientId, span, callerContext, null);
+    }
+
+    Call(int id, int retryCount, RPC.RpcKind kind, byte[] clientId,
+        Span span, CallerContext callerContext, byte[] authHeader) {
       this.callId = id;
       this.retryCount = retryCount;
       this.timestampNanos = Time.monotonicNowNanos();
@@ -1044,6 +1050,7 @@ public abstract class Server {
       this.clientId = clientId;
       this.span = span;
       this.callerContext = callerContext;
+      this.authHeader = authHeader;
       this.clientStateId = Long.MIN_VALUE;
       this.isCallCoordinated = false;
     }
@@ -1244,7 +1251,14 @@ public abstract class Server {
     RpcCall(Connection connection, int id, int retryCount,
         Writable param, RPC.RpcKind kind, byte[] clientId,
         Span span, CallerContext context) {
-      super(id, retryCount, kind, clientId, span, context);
+      this(connection, id, retryCount, param, kind, clientId,
+          span, context, new byte[0]);
+    }
+
+    RpcCall(Connection connection, int id, int retryCount,
+        Writable param, RPC.RpcKind kind, byte[] clientId,
+        Span span, CallerContext context, byte[] authHeader) {
+      super(id, retryCount, kind, clientId, span, context, authHeader);
       this.connection = connection;
       this.rpcRequest = param;
     }
@@ -2977,17 +2991,18 @@ public abstract class Server {
       }
 
       // Set AuthorizationContext for this thread if present
+      byte[] authHeader = null;
       boolean authzSet = false;
       try {
         if (header.hasAuthorizationHeader()) {
-          AuthorizationContext.setCurrentAuthorizationHeader(header.getAuthorizationHeader().toByteArray());
+          authHeader = header.getAuthorizationHeader().toByteArray();
           authzSet = true;
         }
 
         RpcCall call = new RpcCall(this, header.getCallId(),
             header.getRetryCount(), rpcRequest,
             ProtoUtil.convert(header.getRpcKind()),
-            header.getClientId().toByteArray(), span, callerContext);
+            header.getClientId().toByteArray(), span, callerContext, authHeader);
 
         // Save the priority level assignment by the scheduler
         call.setPriorityLevel(callQueue.getPriorityLevel(call));
@@ -3259,6 +3274,7 @@ public abstract class Server {
           }
           // always update the current call context
           CallerContext.setCurrent(call.callerContext);
+          AuthorizationContext.setCurrentAuthorizationHeader(call.authHeader);
           UserGroupInformation remoteUser = call.getRemoteUser();
           connDropped = !call.isOpen();
           if (remoteUser != null) {
