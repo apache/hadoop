@@ -185,7 +185,7 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
     removeBaseAndBucketOverrides(conf);
     //Disable Sequential Prefetching
     conf.setInt(ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX +
-        "." + PHYSICAL_IO_PREFIX + ".blobstore.capacity", -1);
+        "." + PHYSICAL_IO_PREFIX + ".cache.timeout", -1);
 
     ConnectorConfiguration connectorConfiguration =
         new ConnectorConfiguration(conf, ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX);
