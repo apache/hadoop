@@ -363,6 +363,9 @@ public abstract class AbfsClient implements Closeable {
     if (abfsApacheHttpClient != null) {
       abfsApacheHttpClient.close();
     }
+    if (intercept != null) {
+      IOUtils.cleanupWithLogger(LOG, intercept);
+    }
     if (tokenProvider instanceof Closeable) {
       IOUtils.cleanupWithLogger(LOG,
           (Closeable) tokenProvider);
