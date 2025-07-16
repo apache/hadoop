@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.util.Time.now;
 
-class AbfsClientThrottlingAnalyzer {
+class AbfsClientThrottlingAnalyzer implements Closeable {  
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsClientThrottlingAnalyzer.class);
   private static final int MIN_ANALYSIS_PERIOD_MS = 1000;
