@@ -1264,7 +1264,10 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         userAssignable = canAssignToUser(clusterResource, application.getUser(),
             userLimit, application, candidates.getPartition(),
             currentResourceLimits);
-        if (!userAssignable && Resources.fitsIn(cul.reservation, appReserved)) {
+        if (!userAssignable
+            && Resources.fitsIn(cul.reservation, appReserved)
+            // Consider updating cul only if the application attempt is active.
+            && applicationAttemptMap.containsKey(application.getApplicationAttemptId())) {
           cul.canAssign = false;
           cul.reservation = appReserved;
         }
