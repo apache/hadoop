@@ -689,7 +689,7 @@ Checksum verification may be disabled by setting the option
 reading data may not be detected during the read operation.
 Use with care in production.)
 
-Filesystem instances which spit buffersduring vector read operations
+Filesystem instances which split buffers during vector read operations
 MUST declare this by returning `true`
 to the path capabilities probe `fs.capability.vectoredio.sliced`,
 and for the open stream in its `hasCapability()` method.

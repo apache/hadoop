@@ -42,6 +42,5 @@ public class LocalFileSystemConfigKeys extends CommonConfigurationKeys {
   public static final String  LOCAL_FS_CLIENT_WRITE_PACKET_SIZE_KEY =
                                                      "file.client-write-packet-size";
   public static final int     LOCAL_FS_CLIENT_WRITE_PACKET_SIZE_DEFAULT = 64*1024;
-
 }
   

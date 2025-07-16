@@ -87,6 +87,7 @@ public interface StreamCapabilities {
   String VECTOREDIO = "in:readvectored";
 
   /**
+   * Probe for vector IO implementation details: {@value}.
    * When performing vectored IO operations, are the buffers returned by readVectored()
    * potentially sliced subsets of buffers allocated by the allocate() function
    * passed in the read requests?

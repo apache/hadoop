@@ -505,4 +505,10 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String HADOOP_SECURITY_RESOLVER_IMPL =
       "hadoop.security.resolver.impl";
 
+  /**
+   * Verify checksums on read -default is true.
+   * <p>
+   * {@value}.
+   */
+  public static final String LOCAL_FS_VERIFY_CHECKSUM = "fs.file.checksum.verify";
 }
