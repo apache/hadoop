@@ -1212,6 +1212,11 @@ public class AbstractLeafQueue extends AbstractCSQueue {
          assignmentIterator.hasNext();) {
       FiCaSchedulerApp application = assignmentIterator.next();
 
+      // Skip processing if the application is already removed from the applicationAttemptMap
+      if (!applicationAttemptMap.containsKey(application.getApplicationAttemptId())) {
+        continue;
+      }
+
       ActivitiesLogger.APP.startAppAllocationRecording(activitiesManager,
           node, SystemClock.getInstance().getTime(), application);
 
