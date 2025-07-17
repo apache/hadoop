@@ -107,17 +107,29 @@ public class WebAppUtils {
    */
   public static <T, R> R execOnActiveRM(Configuration conf,
       ThrowingBiFunction<String, T, R> func, T arg) throws Exception {
-    int haIndex = 0;
+    int activeRMIndex = 0;
+    int rmCount = 1;
+
     if (HAUtil.isHAEnabled(conf)) {
+      ArrayList<String> rmIds = (ArrayList<String>) HAUtil.getRMHAIds(conf);
+      rmCount = rmIds.size();
       String activeRMId = RMHAUtils.findActiveRMHAId(conf);
       if (activeRMId != null) {
-        haIndex = new ArrayList<>(HAUtil.getRMHAIds(conf)).indexOf(activeRMId);
-      } else {
-        throw new ConnectException("No Active RM available");
+        activeRMIndex = rmIds.indexOf(activeRMId);
       }
     }
-    String rm1Address = getRMWebAppURLWithScheme(conf, haIndex);
-    return func.apply(rm1Address, arg);
+
+    // In HA mode activeRMId can be fetched only if user have permission to check service states.
+    // Otherwise, we find the active one by iterating through the RMs
+    for (int i = activeRMIndex; i < rmCount; i++) {
+      try {
+        String rmAddress = getRMWebAppURLWithScheme(conf, i);
+        return func.apply(rmAddress, arg);
+      } catch (Exception e) {
+        // Ignore and try next RM if there are any
+      }
+    }
+    throw new ConnectException("No active RM available to execute this command");
   }
 
   /** A BiFunction which throws on Exception. */
