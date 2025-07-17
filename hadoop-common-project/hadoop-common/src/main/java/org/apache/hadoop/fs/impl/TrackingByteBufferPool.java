@@ -24,6 +24,7 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +40,7 @@ import static java.util.Objects.requireNonNull;
  * It throws the related exception at {@link #close()} if any buffer remains un-released.
  * It also clears the buffers at release so if they continued being used it'll generate errors.
  * <p>
- * To be used for testing only.
+ * To be used for testing..
  * <p>
  * The stacktraces of the allocation are not stored by default because
  * it can significantly decrease the unit test performance.
@@ -48,6 +49,7 @@ import static java.util.Objects.requireNonNull;
  * <p>
  * Adapted from Parquet class {@code org.apache.parquet.bytes.TrackingByteBufferAllocator}.
  */
+@VisibleForTesting
 public final class TrackingByteBufferPool implements ByteBufferPool, AutoCloseable {
 
   private static final Logger LOG = LoggerFactory.getLogger(TrackingByteBufferPool.class);

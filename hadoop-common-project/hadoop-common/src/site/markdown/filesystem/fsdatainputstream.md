@@ -698,7 +698,7 @@ and for the open stream in its `hasCapability()` method.
 The local filesystem will not slice buffers if the checksum file
 of `filename + ".crc"` is not found. This is not declared in the
 filesystem `hasPathCapability(filename, "fs.capability.vectoredio.sliced")`
-call, as no checks for the checksum file are made then.ddddddddddddddddd
+call, as no checks for the checksum file are made then.
 This cannot be relied on in production, but it may be useful when
 testing for buffer recycling with Hadoop releases 3.4.1 and earlier.
 
