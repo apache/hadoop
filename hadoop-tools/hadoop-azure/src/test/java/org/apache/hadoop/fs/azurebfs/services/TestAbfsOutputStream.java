@@ -118,7 +118,7 @@ public final class TestAbfsOutputStream {
     AbfsConfiguration abfsConf;
     final Configuration conf = new Configuration();
     conf.set(accountKey1, accountValue1);
-    abfsConf = Mockito.spy(new AbfsConfiguration(conf, accountName1));
+    abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.getAbfsConfiguration()).thenReturn(abfsConf);
@@ -130,8 +130,7 @@ public final class TestAbfsOutputStream {
         isNull(), any(), any(TracingContext.class), anyString())).thenReturn(op);
     when(clientHandler.getClient(any())).thenReturn(client);
     when(clientHandler.getDfsClient()).thenReturn(client);
-    AbfsOutputStream out;
-    out = Mockito.spy(new AbfsOutputStream(
+    AbfsOutputStream out = Mockito.spy(new AbfsOutputStream(
         populateAbfsOutputStreamContext(
             BUFFER_SIZE,
             true,
@@ -186,7 +185,7 @@ public final class TestAbfsOutputStream {
     AbfsConfiguration abfsConf;
     final Configuration conf = new Configuration();
     conf.set(accountKey1, accountValue1);
-    abfsConf = Mockito.spy(new AbfsConfiguration(conf, accountName1));
+    abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.getAbfsConfiguration()).thenReturn(abfsConf);

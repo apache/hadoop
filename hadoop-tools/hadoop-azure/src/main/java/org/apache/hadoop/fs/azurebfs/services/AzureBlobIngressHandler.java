@@ -165,6 +165,7 @@ public class AzureBlobIngressHandler extends AzureIngressHandler {
       TracingContext tracingContext)
       throws IOException {
     AbfsRestOperation op;
+    AzureBlobBlockManager blobBlockManager = (AzureBlobBlockManager) getBlockManager();
     if (getAbfsOutputStream().isAppendBlob()) {
       return null;
     }

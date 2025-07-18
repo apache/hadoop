@@ -25,7 +25,9 @@ import java.net.ProtocolException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.Collections;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -48,10 +50,12 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect10
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.http.HttpResponse;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
+import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
@@ -425,5 +429,59 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     Mockito.verify(blobClient, Mockito.times(1)).
         flush(Mockito.any(byte[].class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.any(), Mockito.any(), Mockito.anyString(), Mockito.any(),
             Mockito.any(TracingContext.class), Mockito.anyString());
+  }
+
+  /**
+   * Tests that the message digest is reset when an exception occurs during remote flush.
+   * Simulates a failure in the flush operation and verifies reset is called on MessageDigest.
+   */
+  @Test
+  public void testResetCalledOnExceptionInRemoteFlush() throws Exception {
+    AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
+    Assume.assumeTrue(!getIsNamespaceEnabled(fs));
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    assumeBlobServiceType();
+    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+
+    // Create a file and spy on AbfsOutputStream
+    Path path = new Path("/testFile");
+    AbfsOutputStream realOs = (AbfsOutputStream) fs.create(path).getWrappedStream();
+    AbfsOutputStream os = Mockito.spy(realOs);
+    AzureIngressHandler ingressHandler = Mockito.spy(os.getIngressHandler());
+    Mockito.doReturn(ingressHandler).when(os).getIngressHandler();
+    AbfsClient spiedClient = Mockito.spy(ingressHandler.getClient());
+    Mockito.doReturn(spiedClient).when(ingressHandler).getClient();
+    AzureBlobBlockManager blockManager = Mockito.spy((AzureBlobBlockManager) os.getBlockManager());
+    Mockito.doReturn(blockManager).when(ingressHandler).getBlockManager();
+    Mockito.doReturn(true).when(blockManager).hasBlocksToCommit();
+    Mockito.doReturn("dummy-block-id").when(blockManager).getBlockIdToCommit();
+
+    MessageDigest mockMessageDigest = Mockito.mock(MessageDigest.class);
+    Mockito.doReturn(mockMessageDigest).when(os).getFullBlobContentMd5();
+    Mockito.doReturn(os).when(ingressHandler).getAbfsOutputStream();
+    Mockito.doReturn("dummyMd5").when(ingressHandler).computeFullBlobMd5();
+
+    // Simulating the exception in client flush call
+    Mockito.doThrow(
+            new AbfsRestOperationException(HTTP_UNAVAILABLE, "", "", new Exception()))
+        .when(spiedClient).flush(
+            Mockito.any(byte[].class),
+            Mockito.anyString(),
+            Mockito.anyBoolean(),
+            Mockito.nullable(String.class),
+            Mockito.nullable(String.class),
+            Mockito.anyString(),
+            Mockito.nullable(ContextEncryptionAdapter.class),
+            Mockito.any(TracingContext.class), Mockito.nullable(String.class));
+
+    // Triggering the flush to simulate exception
+    try {
+      ingressHandler.remoteFlush(0, false, false, null,
+          getTestTracingContext(fs, true));
+    } catch (AzureBlobFileSystemException e) {
+      //expected exception
+    }
+    // Verify that reset was called on the message digest
+    Mockito.verify(mockMessageDigest, Mockito.times(1)).reset();
   }
 }

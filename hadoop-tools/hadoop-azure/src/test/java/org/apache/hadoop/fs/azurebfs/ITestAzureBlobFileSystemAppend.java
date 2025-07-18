@@ -1040,18 +1040,6 @@ public class ITestAzureBlobFileSystemAppend extends
   }
 
   /**
-   * Helper method that generates blockId.
-   * @return String representing the block ID generated.
-   */
-  private String generateBlockId(AbfsOutputStream os) {
-    String streamId = os.getStreamID();
-    UUID streamIdGuid = UUID.nameUUIDFromBytes(streamId.getBytes(StandardCharsets.UTF_8));
-    long blockIndex = os.getBlockManager().getBlockCount();
-    String rawBlockId = String.format("%s-%06d", streamIdGuid, blockIndex);
-    return Base64.encodeBase64String(rawBlockId.getBytes(StandardCharsets.UTF_8));
-  }
-
-  /**
    * Test to simulate a successful flush operation followed by a connection reset
    * on the response, triggering a retry.
    *
@@ -1087,11 +1075,11 @@ public class ITestAzureBlobFileSystemAppend extends
           new Path("/test/file"), blobClient);
       AbfsOutputStream out = (AbfsOutputStream) os.getWrappedStream();
       String eTag = out.getIngressHandler().getETag();
-      byte[] bytes = new byte[1024 * 1024 * 8];
+      byte[] bytes = new byte[1024 * 1024 * 4];
       new Random().nextBytes(bytes);
       // Write some bytes and attempt to flush, which should retry
       out.write(bytes);
-      String blockId = generateBlockId(out);
+      String blockId = out.getBlockManager().getActiveBlock().getBlockId();
       String blockListXml = generateBlockListXml(blockId);
 
       Mockito.doAnswer(answer -> {
@@ -1184,11 +1172,11 @@ public class ITestAzureBlobFileSystemAppend extends
           new Path("/test/file"), blobClient);
       AbfsOutputStream out = (AbfsOutputStream) os.getWrappedStream();
       String eTag = out.getIngressHandler().getETag();
-      byte[] bytes = new byte[1024 * 1024 * 8];
+      byte[] bytes = new byte[1024 * 1024 * 4];
       new Random().nextBytes(bytes);
       // Write some bytes and attempt to flush, which should retry
       out.write(bytes);
-      String blockId = generateBlockId(out);
+      String blockId = out.getBlockManager().getActiveBlock().getBlockId();
       String blockListXml = generateBlockListXml(blockId);
 
       Mockito.doAnswer(answer -> {

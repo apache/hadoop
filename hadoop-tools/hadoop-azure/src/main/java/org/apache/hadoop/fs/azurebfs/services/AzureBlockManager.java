@@ -89,7 +89,7 @@ public abstract class AzureBlockManager {
    *
    * @return the active block
    */
-  protected synchronized AbfsBlock getActiveBlock() {
+  public synchronized AbfsBlock getActiveBlock() {
     return activeBlock;
   }
 
