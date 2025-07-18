@@ -24,10 +24,10 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.io.ByteBufferPool;
 
 import static java.lang.System.identityHashCode;

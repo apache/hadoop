@@ -469,7 +469,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
         final Consumer<ByteBuffer> release) throws IOException {
 
       // If the stream doesn't have checksums, just delegate.
-      if (delegateVectorReadsToInner()) {
+      if (dataStreamToHandleVectorIO()) {
         LOG.debug("No checksums for vectored read, delegating to inner stream");
         datas.readVectored(ranges, allocate);
         return;
@@ -512,7 +512,17 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       }
     }
 
-    private boolean delegateVectorReadsToInner() {
+    /**
+     * Predicate to determine whether vector reads should be directly
+     * handled by the data stream, rather than processing
+     * the ranges in this class, processing which includes checksum validation.
+     * <p>
+     * Vector reading is delegated whenever there are no checksums for
+     * the data file, or when validating checksums has been delegated.
+     * @return true if vector reads are to be directly handled by
+     * the data stream.
+     */
+    private boolean dataStreamToHandleVectorIO() {
       return sums == null;
     }
 
@@ -529,7 +539,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       switch (capability.toLowerCase(Locale.ENGLISH)) {
         // slicing can take place during coalescing and checksumming
       case StreamCapabilities.VECTOREDIO_BUFFERS_SLICED:
-        return !delegateVectorReadsToInner();
+        return !dataStreamToHandleVectorIO();
       default:
         return datas.hasCapability(capability);
       }
