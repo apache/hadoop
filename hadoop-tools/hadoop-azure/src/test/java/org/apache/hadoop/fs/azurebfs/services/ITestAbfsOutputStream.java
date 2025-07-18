@@ -27,7 +27,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.util.Arrays;
-import java.util.Collections;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
