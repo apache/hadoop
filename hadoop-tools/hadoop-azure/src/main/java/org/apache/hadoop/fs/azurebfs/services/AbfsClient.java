@@ -254,8 +254,7 @@ public abstract class AbfsClient implements Closeable {
 
       abfsApacheHttpClient = new AbfsApacheHttpClient(
           DelegatingSSLSocketFactory.getDefaultFactory(),
-          abfsConfiguration.getHttpReadTimeout(),
-          keepAliveCache);
+          abfsConfiguration, keepAliveCache, baseUrl);
     }
 
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);

@@ -75,6 +75,10 @@ class AbfsManagedApacheHttpConnection
     this.managedHttpContext = managedHttpContext;
   }
 
+  public HttpHost getTargetHost() {
+    return targetHost;
+  }
+
   /**{@inheritDoc}*/
   @Override
   public void close() throws IOException {
@@ -91,7 +95,14 @@ class AbfsManagedApacheHttpConnection
   /**{@inheritDoc}*/
   @Override
   public boolean isStale() {
-    return httpClientConnection.isStale();
+    try {
+      // This will throw an IOException if the connection is stale.
+      httpClientConnection.getSocket().getInputStream().available();
+      return false;
+    } catch (IOException e) {
+      // If an IOException is thrown, it indicates that the connection is stale.
+    }
+    return true;
   }
 
   /**{@inheritDoc}*/

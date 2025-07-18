@@ -178,9 +178,13 @@ public final class FileSystemConfigurations {
 
   public static final int DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = 3;
 
-  public static final long DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME = 5_000L;
+  public static final int DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS = 10;
 
-  public static final int DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS = 5;
+  public static final int MIN_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS = 5;
+
+  public static final int DEFAULT_APACHE_CACHE_WARMUP_CONNECTION_COUNT = 5;
+
+  public static final int DEFAULT_APACHE_CACHE_REFRESH_CONNECTION_COUNT = 5;
 
   public static final long DEFAULT_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS = 1_000L;
 

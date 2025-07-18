@@ -819,8 +819,7 @@ public class AzureBlobFileSystem extends FileSystem
               IOSTATISTICS_LOGGING_LEVEL_DEFAULT);
       logIOStatisticsAtLevel(LOG, iostatisticsLoggingLevel, getIOStatistics());
     }
-    IOUtils.cleanupWithLogger(LOG, abfsStore, delegationTokenManager,
-        getAbfsClient());
+    IOUtils.cleanupWithLogger(LOG, abfsStore, delegationTokenManager);
     this.isClosed = true;
     if (LOG.isDebugEnabled()) {
       LOG.debug("Closing Abfs: {}", toString());

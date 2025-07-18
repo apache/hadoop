@@ -363,8 +363,16 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = "fs.azure.apache.http.client.max.io.exception.retries";
   /**Maximum ApacheHttpClient-connection cache size at filesystem level: {@value}*/
   public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE = "fs.azure.apache.http.client.max.cache.connection.size";
-  /**Maximum idle time for a ApacheHttpClient-connection: {@value}*/
-  public static final String FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL = "fs.azure.apache.http.client.idle.connection.ttl";
+  /**
+   * Defines number of connections to establish during warmup phase
+   * of ApacheHttpClient connection cache: {@value}
+   */
+  public static final String FS_AZURE_CACHE_WARMUP_CONNECTION_COUNT = "fs.azure.apache.http.client.cache.warmup.connection.count";
+  /**
+   * Defines number of connections to establish during refresh phase
+   * of ApacheHttpClient connection cache: {@value}
+   */
+  public static final String FS_AZURE_CACHE_REFRESH_CONNECTION_COUNT = "fs.azure.apache.http.client.cache.refresh.connection.count";
   /**
    * Blob copy API is an async API, this configuration defines polling duration
    * for checking copy status: {@value}
