@@ -47,7 +47,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.O
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 
-public class ITestReadBufferManagerV1 extends AbstractAbfsIntegrationTest {
+public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
 
   /**
    * Time before the JUnit test times out for eventually() clauses
@@ -62,7 +62,7 @@ public class ITestReadBufferManagerV1 extends AbstractAbfsIntegrationTest {
    */
   public static final int PROBE_INTERVAL_MILLIS = 1_000;
 
-    public ITestReadBufferManagerV1() throws Exception {
+    public ITestReadBufferManager() throws Exception {
     }
 
     @Test

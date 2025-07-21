@@ -195,7 +195,6 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
   public ReadBuffer getNextBlockToRead() throws InterruptedException {
     ReadBuffer buffer = null;
     synchronized (this) {
-      //buffer = readAheadQueue.take();  // blocking method
       while (readAheadQueue.isEmpty()) {
         wait();
       }
