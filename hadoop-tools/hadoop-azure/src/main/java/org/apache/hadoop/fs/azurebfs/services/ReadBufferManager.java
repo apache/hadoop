@@ -38,12 +38,20 @@ public interface ReadBufferManager {
    * @param requestedLength the number of bytes to read from file
    * @param tracingContext the tracing context for diagnostics
    */
-  void queueReadAhead(final AbfsInputStream stream, final long requestedOffset,
-      final int requestedLength, TracingContext tracingContext);
+  void queueReadAhead(final AbfsInputStream stream,
+      final long requestedOffset,
+      final int requestedLength,
+      TracingContext tracingContext);
 
   /**
    * Gets a block of data from the prefetched data by ReadBufferManager.
-   * {@link AbfsInputStream} calls this method to read data
+   * {@link AbfsInputStream} calls this method read any bytes already available in a buffer (thereby saving a
+   * remote read). This returns the bytes if the data already exists in buffer. If there is a buffer that is reading
+   * the requested offset, then this method blocks until that read completes. If the data is queued in a read-ahead
+   * but not picked up by a worker thread yet, then it cancels that read-ahead and reports cache miss. This is because
+   * depending on worker thread availability, the read-ahead may take a while - the calling thread can do its own
+   * read to get the data faster (compared to the read waiting in queue for an indeterminate amount of time).
+   *
    * @param stream the input stream requesting the block
    * @param position the position in the file to read from
    * @param length the number of bytes to read
@@ -69,36 +77,31 @@ public interface ReadBufferManager {
   /**
    * Marks the specified buffer as done reading and updates its status.
    * Called by {@link ReadBufferWorker} after reading is complete.
+   *
    * @param buffer the buffer that was read by worker thread
    * @param result the status of the read operation
-   * @param bytesActuallyRead the number of bytes actually read
+   * @param bytesActuallyRead the number of bytes actually read by worker thread.
    */
   void doneReading(final ReadBuffer buffer, final ReadBufferStatus result,
       final int bytesActuallyRead);
 
   /**
-   * Purges all buffers associated with the calling {@link AbfsInputStream}.
+   * Purging the buffers associated with an {@link AbfsInputStream}
+   * from {@link ReadBufferManager} when stream is closed.
    *
-   * @param stream the input stream whose buffers should be purged
+   * @param stream the input stream whose buffers should be purged.
    */
   void purgeBuffersForStream(AbfsInputStream stream);
 
+
   // Following Methods are for testing purposes only and should not be used in production code.
-
   /**
-   * Resets the read buffer manager for testing purposes.
-   */
-  @VisibleForTesting
-  void testResetReadBufferManager();
-
-  /**
-   * Resets the read buffer manager for testing with the specified block size and threshold age.
+   * Gets the threshold age in milliseconds for buffer eviction.
    *
-   * @param readAheadBlockSize the block size for read-ahead
-   * @param thresholdAgeMilliseconds the threshold age in milliseconds
+   * @return the threshold age in milliseconds
    */
   @VisibleForTesting
-  void testResetReadBufferManager(int readAheadBlockSize, int thresholdAgeMilliseconds);
+  int getThresholdAgeMilliseconds();
 
   /**
    * Sets the threshold age in milliseconds for buffer eviction.
@@ -109,42 +112,44 @@ public interface ReadBufferManager {
   void setThresholdAgeMilliseconds(int thresholdAgeMs);
 
   /**
-   * Gets the threshold age in milliseconds for buffer eviction.
+   * Gets the block size used for read-ahead operations.
    *
-   * @return the threshold age in milliseconds
+   * @return the read-ahead block size in bytes
    */
   @VisibleForTesting
-  int getThresholdAgeMilliseconds();
+  int getReadAheadBlockSize();
 
   /**
-   * Gets the size of the completed read list.
+   * Sets the block size used for read-ahead operations.
    *
-   * @return the number of completed read buffers
+   * @param readAheadBlockSize the read-ahead block size in bytes
    */
   @VisibleForTesting
-  int getCompletedReadListSize();
+  void setReadAheadBlockSize(int readAheadBlockSize);
 
   /**
-   * Attempts to evict buffers based on the eviction policy.
-   */
-  @VisibleForTesting
-  void callTryEvict();
-
-  /**
-   * Simulates full buffer usage and adds a failed buffer for testing.
-   *
-   * @param buf the buffer to add as failed
-   */
-  @VisibleForTesting
-  void testMimicFullUseAndAddFailedBuffer(ReadBuffer buf);
-
-  /**
-   * Gets the total number of buffers managed.
+   * Gets the number of buffers currently managed by the read buffer manager.
    *
    * @return the number of buffers
    */
   @VisibleForTesting
   int getNumBuffers();
+
+  /**
+   * Gets a copy of the list of free buffer indices.
+   *
+   * @return a list of free buffer indices
+   */
+  @VisibleForTesting
+  List<Integer> getFreeListCopy();
+
+  /**
+   * Gets a copy of the read-ahead queue.
+   *
+   * @return a list of {@link ReadBuffer} objects in the read-ahead queue
+   */
+  @VisibleForTesting
+  List<ReadBuffer> getReadAheadQueueCopy();
 
   /**
    * Gets a copy of the list of in-progress read buffers.
@@ -163,18 +168,46 @@ public interface ReadBufferManager {
   List<ReadBuffer> getCompletedReadListCopy();
 
   /**
-   * Gets a copy of the list of free buffer indices.
+   * Gets the size of the completed read list.
    *
-   * @return a list of free buffer indices
+   * @return the number of completed read buffers
    */
   @VisibleForTesting
-  List<Integer> getFreeListCopy();
+  int getCompletedReadListSize();
 
   /**
-   * Gets the block size used for read-ahead operations.
-   *
-   * @return the read-ahead block size in bytes
+   * Attempts to evict buffers based on the eviction policy.
    */
   @VisibleForTesting
-  int getReadAheadBlockSize();
+  void callTryEvict();
+
+  /**
+   * Resets the read buffer manager for testing purposes. Clean up the current
+   * state of readAhead buffers and the lists. Will also trigger a fresh init.
+   */
+  @VisibleForTesting
+  void testResetReadBufferManager();
+
+  /**
+   * Resets the read buffer manager for testing with the specified block size and threshold age.
+   *
+   * @param readAheadBlockSize the block size for read-ahead
+   * @param thresholdAgeMilliseconds the threshold age in milliseconds
+   */
+  @VisibleForTesting
+  void testResetReadBufferManager(int readAheadBlockSize, int thresholdAgeMilliseconds);
+
+  /**
+   * Resets the buffer manager to its initial state for testing purposes.
+   */
+  @VisibleForTesting
+  void resetBufferManager();
+
+  /**
+   * Simulates full buffer usage and adds a failed buffer for testing.
+   *
+   * @param buf the buffer to add as failed
+   */
+  @VisibleForTesting
+  void testMimicFullUseAndAddFailedBuffer(ReadBuffer buf);
 }

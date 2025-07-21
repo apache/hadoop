@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
@@ -100,6 +101,106 @@ public class ReadBufferManagerV2 implements ReadBufferManager {
   /**
    * {@inheritDoc}
    */
+  @VisibleForTesting
+  @Override
+  public int getThresholdAgeMilliseconds() {
+    return 0;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public void setThresholdAgeMilliseconds(final int thresholdAgeMs) {
+
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public int getReadAheadBlockSize() {
+    return 0;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public void setReadAheadBlockSize(int readAheadBlockSize) {
+
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public int getNumBuffers() {
+    return 0;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public List<Integer> getFreeListCopy() {
+    return Collections.emptyList();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public List<ReadBuffer> getReadAheadQueueCopy() {
+    return Collections.emptyList();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public List<ReadBuffer> getInProgressCopiedList() {
+    return Collections.emptyList();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public List<ReadBuffer> getCompletedReadListCopy() {
+    return Collections.emptyList();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public int getCompletedReadListSize() {
+    return 0;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public void callTryEvict() {
+
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
   @Override
   public void testResetReadBufferManager() {
 
@@ -108,6 +209,7 @@ public class ReadBufferManagerV2 implements ReadBufferManager {
   /**
    * {@inheritDoc}
    */
+  @VisibleForTesting
   @Override
   public void testResetReadBufferManager(final int readAheadBlockSize,
       final int thresholdAgeMilliseconds) {
@@ -117,33 +219,10 @@ public class ReadBufferManagerV2 implements ReadBufferManager {
   /**
    * {@inheritDoc}
    */
+  @VisibleForTesting
   @Override
-  public void setThresholdAgeMilliseconds(final int thresholdAgeMs) {
-
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public int getThresholdAgeMilliseconds() {
-    return 0;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public int getCompletedReadListSize() {
-    return 0;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void callTryEvict() {
-
+  public void resetBufferManager() {
+    bufferManager = null;
   }
 
   /**
@@ -152,45 +231,5 @@ public class ReadBufferManagerV2 implements ReadBufferManager {
   @Override
   public void testMimicFullUseAndAddFailedBuffer(final ReadBuffer buf) {
 
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public int getNumBuffers() {
-    return 0;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public List<ReadBuffer> getInProgressCopiedList() {
-    return Collections.emptyList();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public List<ReadBuffer> getCompletedReadListCopy() {
-    return Collections.emptyList();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public List<Integer> getFreeListCopy() {
-    return Collections.emptyList();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public int getReadAheadBlockSize() {
-    return 0;
   }
 }

@@ -61,6 +61,10 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
   private static ReadBufferManagerV1 bufferManager; // singleton, initialized in static initialization block
   private static final ReentrantLock LOCK = new ReentrantLock();
 
+  /**
+   * Returns the singleton instance of ReadBufferManagerV1.
+   * @return the singleton instance of ReadBufferManagerV1
+   */
   static ReadBufferManagerV1 getBufferManager() {
     if (bufferManager == null) {
       LOCK.lock();
@@ -76,6 +80,10 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
     return bufferManager;
   }
 
+  /**
+   * Sets the read buffer manager configurations.
+   * @param readAheadBlockSize the size of the read-ahead block in bytes
+   */
   static void setReadBufferManagerConfigs(int readAheadBlockSize) {
     if (bufferManager == null) {
       LOGGER.debug(
@@ -85,6 +93,9 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
     }
   }
 
+  /**
+   * Initializes the ReadBufferManagerV1. Creates the buffers and starts worker threads.
+   */
   private void init() {
     buffers = new byte[NUM_BUFFERS][];
     for (int i = 0; i < NUM_BUFFERS; i++) {
@@ -107,11 +118,7 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
   }
 
   /**
-   * {@link AbfsInputStream} calls this method to queue read-aheads.
-   *
-   * @param stream          The {@link AbfsInputStream} for which to do the read-ahead
-   * @param requestedOffset The offset in the file which shoukd be read
-   * @param requestedLength The length to read
+   * {@inheritDoc}
    */
   @Override
   public void queueReadAhead(final AbfsInputStream stream, final long requestedOffset, final int requestedLength,
@@ -152,18 +159,7 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
   }
 
   /**
-   * {@link AbfsInputStream} calls this method read any bytes already available in a buffer (thereby saving a
-   * remote read). This returns the bytes if the data already exists in buffer. If there is a buffer that is reading
-   * the requested offset, then this method blocks until that read completes. If the data is queued in a read-ahead
-   * but not picked up by a worker thread yet, then it cancels that read-ahead and reports cache miss. This is because
-   * depending on worker thread availability, the read-ahead may take a while - the calling thread can do it's own
-   * read to get the data faster (copmared to the read waiting in queue for an indeterminate amount of time).
-   *
-   * @param stream   the file to read bytes for
-   * @param position the offset in the file to do a read for
-   * @param length   the length to read
-   * @param buffer   the buffer to read data into. Note that the buffer will be written into from offset 0.
-   * @return the number of bytes read
+   * {@inheritDoc}
    */
   @Override
   public int getBlock(final AbfsInputStream stream, final long position, final int length, final byte[] buffer)
@@ -193,17 +189,14 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
   }
 
   /**
-   * ReadBufferWorker thread calls this to get the next buffer that it should work on.
-   *
-   * @return {@link ReadBuffer}
-   * @throws InterruptedException if thread is interrupted
+   * {@inheritDoc}
    */
   @Override
   public ReadBuffer getNextBlockToRead() throws InterruptedException {
     ReadBuffer buffer = null;
     synchronized (this) {
       //buffer = readAheadQueue.take();  // blocking method
-      while (readAheadQueue.size() == 0) {
+      while (readAheadQueue.isEmpty()) {
         wait();
       }
       buffer = readAheadQueue.remove();
@@ -222,11 +215,7 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
   }
 
   /**
-   * ReadBufferWorker thread calls this method to post completion.
-   *
-   * @param buffer            the buffer whose read was completed
-   * @param result            the {@link ReadBufferStatus} after the read operation in the worker thread
-   * @param bytesActuallyRead the number of bytes that the worker thread was actually able to read
+   * {@inheritDoc}
    */
   @Override
   public void doneReading(final ReadBuffer buffer, final ReadBufferStatus result, final int bytesActuallyRead) {
@@ -259,9 +248,7 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
   }
 
   /**
-   * Purging the buffers associated with an {@link AbfsInputStream}
-   * from {@link ReadBufferManagerV1} when stream is closed.
-   * @param stream input stream.
+   * {@inheritDoc}
    */
   @Override
   public synchronized void purgeBuffersForStream(AbfsInputStream stream) {
@@ -270,6 +257,14 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
     purgeList(stream, completedReadList);
   }
 
+  /**
+   * Waits for the process to complete for the given stream and position.
+   * If the buffer is in progress, it waits for the latch to be released.
+   * If the buffer is not in progress, it clears it from the read-ahead queue.
+   *
+   * @param stream    the AbfsInputStream associated with the read request
+   * @param position  the position in the stream to wait for
+   */
   private void waitForProcess(final AbfsInputStream stream, final long position) {
     ReadBuffer readBuf;
     synchronized (this) {
@@ -369,6 +364,12 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
     return false;
   }
 
+  /**
+   * Evicts the given buffer by removing it from the completedReadList and adding its index to the freeList.
+   *
+   * @param buf the ReadBuffer to evict
+   * @return true if eviction was successful, false otherwise
+   */
   private boolean evict(final ReadBuffer buf) {
     // As failed ReadBuffers (bufferIndx = -1) are saved in completedReadList,
     // avoid adding it to freeList.
@@ -385,6 +386,12 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
     return true;
   }
 
+  /**
+   * Checks if the requested offset is already queued in any of the lists:
+   * @param stream the AbfsInputStream associated with the read request
+   * @param requestedOffset the offset in the stream to check
+   * @return true if the requested offset is already queued in any of the lists,
+   */
   private boolean isAlreadyQueued(final AbfsInputStream stream, final long requestedOffset) {
     // returns true if any part of the buffer is already queued
     return (isInList(readAheadQueue, stream, requestedOffset)
@@ -392,10 +399,25 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
         || isInList(completedReadList, stream, requestedOffset));
   }
 
+  /**
+   * Checks if the requested offset is in the given list.
+   * @param list the collection of ReadBuffer to check against
+   * @param stream the AbfsInputStream associated with the read request
+   * @param requestedOffset the offset in the stream to check
+   * @return true if the requested offset is in the list,
+   */
   private boolean isInList(final Collection<ReadBuffer> list, final AbfsInputStream stream, final long requestedOffset) {
     return (getFromList(list, stream, requestedOffset) != null);
   }
 
+  /**
+   * Returns the ReadBuffer from the given list that matches the stream and requested offset.
+   * If the buffer is found, it checks if the requested offset is within the buffer's range.
+   * @param list the collection of ReadBuffer to search in
+   * @param stream the AbfsInputStream associated with the read request
+   * @param requestedOffset the offset in the stream to check
+   * @return the ReadBuffer if found, null otherwise
+   */
   private ReadBuffer getFromList(final Collection<ReadBuffer> list, final AbfsInputStream stream, final long requestedOffset) {
     for (ReadBuffer buffer : list) {
       if (buffer.getStream() == stream) {
@@ -413,10 +435,13 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
   }
 
   /**
-   * Returns buffers that failed or passed from completed queue.
-   * @param stream
-   * @param requestedOffset
-   * @return
+   * Returns a ReadBuffer from the completedReadList that matches the stream and requested offset.
+   * The buffer is returned if the requestedOffset is at or above buffer's offset but less than buffer's length
+   * or the actual requestedLength.
+   *
+   * @param stream the AbfsInputStream associated with the read request
+   * @param requestedOffset the offset in the stream to check
+   * @return the ReadBuffer if found, null otherwise
    */
   private ReadBuffer getBufferFromCompletedQueue(final AbfsInputStream stream, final long requestedOffset) {
     for (ReadBuffer buffer : completedReadList) {
@@ -433,6 +458,14 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
     return null;
   }
 
+  /**
+   * Clears the buffer from the read-ahead queue for the given stream and requested offset.
+   * This method is called when the stream is waiting for a process to complete.
+   * It removes the buffer from the read-ahead queue and adds its index back to the free list.
+   *
+   * @param stream the AbfsInputStream associated with the read request
+   * @param requestedOffset the offset in the stream to check
+   */
   private void clearFromReadAheadQueue(final AbfsInputStream stream, final long requestedOffset) {
     ReadBuffer buffer = getFromList(readAheadQueue, stream, requestedOffset);
     if (buffer != null) {
@@ -442,6 +475,18 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
     }
   }
 
+  /**
+   * Gets a block of data from the completed read buffers.
+   * If the buffer is found, it copies the data to the provided buffer and updates the status of the ReadBuffer.
+   * If the buffer is not found or not available, it returns 0.
+   *
+   * @param stream the AbfsInputStream associated with the read request
+   * @param position the position in the file to read from
+   * @param length the number of bytes to read
+   * @param buffer the buffer to store the read data
+   * @return the number of bytes actually read
+   * @throws IOException if an I/O error occurs while reading from the buffer
+   */
   private int getBlockFromCompletedQueue(final AbfsInputStream stream, final long position, final int length,
       final byte[] buffer) throws IOException {
     ReadBuffer buf = getBufferFromCompletedQueue(stream, position);
@@ -492,46 +537,6 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
     return System.nanoTime() / 1000 / 1000;
   }
 
-  @VisibleForTesting
-  public int getThresholdAgeMilliseconds() {
-    return thresholdAgeMilliseconds;
-  }
-
-  @VisibleForTesting
-  public void setThresholdAgeMilliseconds(int thresholdAgeMs) {
-    thresholdAgeMilliseconds = thresholdAgeMs;
-  }
-
-  @VisibleForTesting
-  public int getCompletedReadListSize() {
-    return completedReadList.size();
-  }
-
-  @VisibleForTesting
-  public synchronized List<ReadBuffer> getCompletedReadListCopy() {
-    return new ArrayList<>(completedReadList);
-  }
-
-  @VisibleForTesting
-  public synchronized List<Integer> getFreeListCopy() {
-    return new ArrayList<>(freeList);
-  }
-
-  @VisibleForTesting
-  public synchronized List<ReadBuffer> getReadAheadQueueCopy() {
-    return new ArrayList<>(readAheadQueue);
-  }
-
-  @VisibleForTesting
-  public synchronized List<ReadBuffer> getInProgressCopiedList() {
-    return new ArrayList<>(inProgressList);
-  }
-
-  @VisibleForTesting
-  public void callTryEvict() {
-    tryEvict();
-  }
-
   /**
    * Method to remove buffers associated with a {@link AbfsInputStream}
    * when its close method is called.
@@ -556,8 +561,106 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
   }
 
   /**
-   * Test method that can clean up the current state of readAhead buffers and
-   * the lists. Will also trigger a fresh init.
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public int getThresholdAgeMilliseconds() {
+    return thresholdAgeMilliseconds;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public void setThresholdAgeMilliseconds(int thresholdAgeMs) {
+    thresholdAgeMilliseconds = thresholdAgeMs;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public int getReadAheadBlockSize() {
+    return blockSize;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public void setReadAheadBlockSize(int readAheadBlockSize) {
+    blockSize = readAheadBlockSize;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public int getNumBuffers() {
+    return NUM_BUFFERS;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public synchronized List<Integer> getFreeListCopy() {
+    return new ArrayList<>(freeList);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public synchronized List<ReadBuffer> getReadAheadQueueCopy() {
+    return new ArrayList<>(readAheadQueue);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public synchronized List<ReadBuffer> getInProgressCopiedList() {
+    return new ArrayList<>(inProgressList);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public synchronized List<ReadBuffer> getCompletedReadListCopy() {
+    return new ArrayList<>(completedReadList);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public int getCompletedReadListSize() {
+    return completedReadList.size();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @VisibleForTesting
+  @Override
+  public void callTryEvict() {
+    tryEvict();
+  }
+
+  /**
+   * {@inheritDoc}
    */
   @VisibleForTesting
   @Override
@@ -587,51 +690,32 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
   }
 
   /**
-   * Reset buffer manager to null.
-   */
-  @VisibleForTesting
-  static void resetBufferManager() {
-    bufferManager = null;
-  }
-
-  /**
-   * Reset readAhead buffer to needed readAhead block size and
-   * thresholdAgeMilliseconds.
-   * @param readAheadBlockSize
-   * @param thresholdAgeMilliseconds
+   * {@inheritDoc}
    */
   @VisibleForTesting
   @Override
   public void testResetReadBufferManager(int readAheadBlockSize, int thresholdAgeMilliseconds) {
-    setBlockSize(readAheadBlockSize);
+    setReadAheadBlockSize(readAheadBlockSize);
     setThresholdAgeMilliseconds(thresholdAgeMilliseconds);
     testResetReadBufferManager();
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @VisibleForTesting
-  static void setBlockSize(int readAheadBlockSize) {
-    blockSize = readAheadBlockSize;
-  }
-
-  @VisibleForTesting
-  public int getReadAheadBlockSize() {
-    return blockSize;
+  @Override
+  public void resetBufferManager() {
+    bufferManager = null;
   }
 
   /**
-   * Test method that can mimic no free buffers scenario and also add a ReadBuffer
-   * into completedReadList. This readBuffer will get picked up by TryEvict()
-   * next time a new queue request comes in.
-   * @param buf that needs to be added to completedReadlist
+   * {@inheritDoc}
    */
   @VisibleForTesting
+  @Override
   public void testMimicFullUseAndAddFailedBuffer(ReadBuffer buf) {
     freeList.clear();
     completedReadList.add(buf);
-  }
-
-  @VisibleForTesting
-  public int getNumBuffers() {
-    return NUM_BUFFERS;
   }
 }
