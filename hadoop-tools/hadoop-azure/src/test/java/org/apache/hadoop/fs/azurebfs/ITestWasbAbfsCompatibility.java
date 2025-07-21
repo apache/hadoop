@@ -422,10 +422,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
-    try (FSDataOutputStream nativeFsStream = abfs.create(path, true)) {
-      nativeFsStream.write(TEST_CONTEXT.getBytes());
-      nativeFsStream.flush();
-      nativeFsStream.hsync();
+    try (FSDataOutputStream abfsOutputStream = abfs.create(path, true)) {
+      abfsOutputStream.write(TEST_CONTEXT.getBytes());
+      abfsOutputStream.flush();
+      abfsOutputStream.hsync();
     }
 
     // Check file status
@@ -672,10 +672,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     Path testFile = path("/testReadFile");
     Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
-    try (FSDataOutputStream nativeFsStream = abfs.create(path, true)) {
-      nativeFsStream.write(TEST_CONTEXT.getBytes());
-      nativeFsStream.flush();
-      nativeFsStream.hsync();
+    try (FSDataOutputStream abfsOutputStream = abfs.create(path, true)) {
+      abfsOutputStream.write(TEST_CONTEXT.getBytes());
+      abfsOutputStream.flush();
+      abfsOutputStream.hsync();
     }
 
     // Check file status
@@ -715,10 +715,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     Path testFile = path("/testReadFile");
     Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
-    try (FSDataOutputStream nativeFsStream = abfs.create(path, true)) {
-      nativeFsStream.write(TEST_CONTEXT.getBytes());
-      nativeFsStream.flush();
-      nativeFsStream.hsync();
+    try (FSDataOutputStream abfsOutputStream = abfs.create(path, true)) {
+      abfsOutputStream.write(TEST_CONTEXT.getBytes());
+      abfsOutputStream.flush();
+      abfsOutputStream.hsync();
     }
 
     // Check file status
@@ -960,10 +960,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     // Write
     wasb.create(path, true);
-    try (FSDataOutputStream nativeFsStream = abfs.append(path)) {
-      nativeFsStream.write(TEST_CONTEXT.getBytes());
-      nativeFsStream.flush();
-      nativeFsStream.hsync();
+    try (FSDataOutputStream abfsOutputStream = abfs.append(path)) {
+      abfsOutputStream.write(TEST_CONTEXT.getBytes());
+      abfsOutputStream.flush();
+      abfsOutputStream.hsync();
     }
 
     // Check file status
@@ -994,10 +994,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
-    try (FSDataOutputStream nativeFsStream = abfs.create(path, true)) {
-      nativeFsStream.write(TEST_CONTEXT.getBytes());
-      nativeFsStream.flush();
-      nativeFsStream.hsync();
+    try (FSDataOutputStream abfsOutputStream = abfs.create(path, true)) {
+      abfsOutputStream.write(TEST_CONTEXT.getBytes());
+      abfsOutputStream.flush();
+      abfsOutputStream.hsync();
     }
     // --- VALIDATE FILE ---
     FileStatus status = abfs.getFileStatus(path);
@@ -1182,10 +1182,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
-    try (FSDataOutputStream nativeFsStream = abfs.create(path, true)) {
-      nativeFsStream.write(TEST_CONTEXT.getBytes());
-      nativeFsStream.flush();
-      nativeFsStream.hsync();
+    try (FSDataOutputStream abfsOutputStream = abfs.create(path, true)) {
+      abfsOutputStream.write(TEST_CONTEXT.getBytes());
+      abfsOutputStream.flush();
+      abfsOutputStream.hsync();
     }
     // --- VALIDATE FILE ---
     FileStatus status = wasb.getFileStatus(path);
@@ -1330,10 +1330,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
-    try (FSDataOutputStream nativeFsStream = abfs.create(path, true)) {
-      nativeFsStream.write(TEST_CONTEXT.getBytes());
-      nativeFsStream.flush();
-      nativeFsStream.hsync();
+    try (FSDataOutputStream abfsOutputStream = abfs.create(path, true)) {
+      abfsOutputStream.write(TEST_CONTEXT.getBytes());
+      abfsOutputStream.flush();
+      abfsOutputStream.hsync();
     }
     // --- VALIDATE FILE ---
     FileStatus status = wasb.getFileStatus(path);
@@ -1423,10 +1423,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
-    try (FSDataOutputStream nativeFsStream = abfs.create(path, true)) {
-      nativeFsStream.write(TEST_CONTEXT.getBytes());
-      nativeFsStream.flush();
-      nativeFsStream.hsync();
+    try (FSDataOutputStream abfsOutputStream = abfs.create(path, true)) {
+      abfsOutputStream.write(TEST_CONTEXT.getBytes());
+      abfsOutputStream.flush();
+      abfsOutputStream.hsync();
     }
     // --- VALIDATE FILE ---
     FileStatus status = abfs.getFileStatus(path);
@@ -1469,10 +1469,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     Path testPath2 = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
     // Write
-    try (FSDataOutputStream nativeFsStream = abfs.create(testPath1, true)) {
-      nativeFsStream.write(TEST_CONTEXT.getBytes());
-      nativeFsStream.flush();
-      nativeFsStream.hsync();
+    try (FSDataOutputStream abfsOutputStream = abfs.create(testPath1, true)) {
+      abfsOutputStream.write(TEST_CONTEXT.getBytes());
+      abfsOutputStream.flush();
+      abfsOutputStream.hsync();
     }
 
     // Check file status
@@ -1570,10 +1570,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     // Write
     wasb.create(testPath1, true);
-    try (FSDataOutputStream nativeFsStream = abfs.append(testPath1)) {
-      nativeFsStream.write(TEST_CONTEXT.getBytes());
-      nativeFsStream.flush();
-      nativeFsStream.hsync();
+    try (FSDataOutputStream abfsOutputStream = abfs.append(testPath1)) {
+      abfsOutputStream.write(TEST_CONTEXT.getBytes());
+      abfsOutputStream.flush();
+      abfsOutputStream.hsync();
     }
 
     // Check file status
@@ -1773,10 +1773,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     // Write
     abfs.mkdirs(testFile);
-    try (FSDataOutputStream nativeFsStream = abfs.create(testPath1, true)) {
-      nativeFsStream.write(TEST_CONTEXT.getBytes());
-      nativeFsStream.flush();
-      nativeFsStream.hsync();
+    try (FSDataOutputStream abfsOutputStream = abfs.create(testPath1, true)) {
+      abfsOutputStream.write(TEST_CONTEXT.getBytes());
+      abfsOutputStream.flush();
+      abfsOutputStream.hsync();
     }
     abfs.create(testPath2, true);
     abfs.create(testPath3, true);
@@ -1823,10 +1823,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     // Write
     abfs.mkdirs(testFile);
-    try (FSDataOutputStream nativeFsStream = abfs.create(testPath1, true)) {
-      nativeFsStream.write(TEST_CONTEXT.getBytes());
-      nativeFsStream.flush();
-      nativeFsStream.hsync();
+    try (FSDataOutputStream abfsOutputStream = abfs.create(testPath1, true)) {
+      abfsOutputStream.write(TEST_CONTEXT.getBytes());
+      abfsOutputStream.flush();
+      abfsOutputStream.hsync();
     }
     abfs.create(testPath3, true);
 
@@ -1965,10 +1965,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     // Write
     abfs.mkdirs(testFile);
-    try (FSDataOutputStream nativeFsStream = abfs.create(testPath1, true)) {
-      nativeFsStream.write(TEST_CONTEXT.getBytes());
-      nativeFsStream.flush();
-      nativeFsStream.hsync();
+    try (FSDataOutputStream abfsOutputStream = abfs.create(testPath1, true)) {
+      abfsOutputStream.write(TEST_CONTEXT.getBytes());
+      abfsOutputStream.flush();
+      abfsOutputStream.hsync();
     }
     abfs.create(testPath3, true);
 
