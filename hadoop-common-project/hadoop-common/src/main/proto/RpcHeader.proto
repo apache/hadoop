@@ -29,7 +29,7 @@ package hadoop.common;
 
 /**
  * This is the rpc request header. It is sent with every rpc call.
- *
+ * 
  * The format of RPC call is as follows:
  * +--------------------------------------------------------------+
  * | Rpc length in bytes (4 bytes int) sum of next two parts      |
@@ -47,12 +47,12 @@ package hadoop.common;
  */
 enum RpcKindProto {
   RPC_BUILTIN          = 0;  // Used for built in calls by tests
-  RPC_WRITABLE         = 1;  // Use WritableRpcEngine
+  RPC_WRITABLE         = 1;  // Use WritableRpcEngine 
   RPC_PROTOCOL_BUFFER  = 2;  // Use ProtobufRpcEngine
 }
 
 
-
+   
 /**
  * Used to pass through the information necessary to continue
  * a trace after an RPC is made. All we need is the traceid
@@ -117,12 +117,12 @@ message RpcRequestHeaderProto { // the header for the RpcRequest
  * |   The rpc response header contains the necessary info            |
  * +------------------------------------------------------------------+
  *
- * Note that rpc response header is also used when connection setup fails.
+ * Note that rpc response header is also used when connection setup fails. 
  * Ie the response looks like a rpc response with a fake callId.
  */
 message RpcResponseHeaderProto {
   /**
-    *
+    * 
     * RpcStastus - success or failure
     * The reponseHeader's errDetail,  exceptionClassName and errMsg contains
     * further details on the error
@@ -178,7 +178,7 @@ message RpcSaslProto {
     RESPONSE  = 4;
     WRAP = 5;
   }
-
+  
   message SaslAuth {
     required string method    = 1;
     required string mechanism = 2;
@@ -187,7 +187,7 @@ message RpcSaslProto {
     optional bytes  challenge = 5;
   }
 
-  optional uint32 version  = 1;
+  optional uint32 version  = 1;  
   required SaslState state = 2;
   optional bytes token     = 3;
   repeated SaslAuth auths  = 4;
