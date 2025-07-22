@@ -572,7 +572,6 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
    * {@inheritDoc}
    */
   @VisibleForTesting
-  @Override
   public void setThresholdAgeMilliseconds(int thresholdAgeMs) {
     thresholdAgeMilliseconds = thresholdAgeMs;
   }
@@ -590,7 +589,6 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
    * {@inheritDoc}
    */
   @VisibleForTesting
-  @Override
   public void setReadAheadBlockSize(int readAheadBlockSize) {
     blockSize = readAheadBlockSize;
   }
@@ -703,7 +701,6 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
    * {@inheritDoc}
    */
   @VisibleForTesting
-  @Override
   public void resetBufferManager() {
     bufferManager = null;
   }
