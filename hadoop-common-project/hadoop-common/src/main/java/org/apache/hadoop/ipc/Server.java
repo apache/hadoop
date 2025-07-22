@@ -2992,11 +2992,9 @@ public abstract class Server {
 
       // Set AuthorizationContext for this thread if present
       byte[] authHeader = null;
-      boolean authzSet = false;
       try {
         if (header.hasAuthorizationHeader()) {
           authHeader = header.getAuthorizationHeader().toByteArray();
-          authzSet = true;
         }
 
         RpcCall call = new RpcCall(this, header.getCallId(),
@@ -3045,9 +3043,7 @@ public abstract class Server {
         }
         incRpcCount();  // Increment the rpc count
       } finally {
-        if (authzSet) {
-          AuthorizationContext.clear();
-        }
+        AuthorizationContext.clear();
       }
     }
 
