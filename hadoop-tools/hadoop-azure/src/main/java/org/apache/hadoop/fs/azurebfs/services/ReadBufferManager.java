@@ -43,9 +43,9 @@ public abstract class ReadBufferManager {
   private static final int ONE_KB = 1024;
   private static final int ONE_MB = ONE_KB * ONE_KB;
 
-  protected static ReadBufferManager bufferManager;
-  protected static int thresholdAgeMilliseconds;
-  protected static int blockSize = 4 * ONE_MB; // default block size for read-ahead in bytes
+  static ReadBufferManager bufferManager;
+  static int thresholdAgeMilliseconds;
+  static int blockSize = 4 * ONE_MB; // default block size for read-ahead in bytes
 
   protected Stack<Integer> freeList = new Stack<>();   // indices in buffers[] array that are available
   protected Queue<ReadBuffer> readAheadQueue = new LinkedList<>(); // queue of requests that are not picked up by any worker thread yet
@@ -180,7 +180,7 @@ public abstract class ReadBufferManager {
    * @return the read-ahead block size in bytes
    */
   @VisibleForTesting
-  protected int getReadAheadBlockSize() {
+  protected static int getReadAheadBlockSize() {
     return blockSize;
   }
 
@@ -190,7 +190,7 @@ public abstract class ReadBufferManager {
    * @param readAheadBlockSize the read-ahead block size in bytes
    */
   @VisibleForTesting
-  protected void setReadAheadBlockSize(int readAheadBlockSize) {
+  protected static void setReadAheadBlockSize(int readAheadBlockSize) {
     if (readAheadBlockSize <= 0) {
       throw new IllegalArgumentException("Read-ahead block size must be positive");
     }
