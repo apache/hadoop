@@ -379,6 +379,7 @@ public class TestAbfsInputStream extends
     // Add a failed buffer to completed queue and set to no free buffers to read ahead.
     ReadBuffer buff = new ReadBuffer();
     buff.setStatus(ReadBufferStatus.READ_FAILED);
+    buff.setStream(inputStream);
     getBufferManager().testMimicFullUseAndAddFailedBuffer(buff);
 
     // if read failed buffer eviction is tagged as a valid eviction, it will lead to
