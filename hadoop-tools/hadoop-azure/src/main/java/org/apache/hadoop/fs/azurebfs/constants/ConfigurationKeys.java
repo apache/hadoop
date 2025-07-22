@@ -269,6 +269,37 @@ public final class ConfigurationKeys {
    */
   public static final String FS_AZURE_ENABLE_READAHEAD_V2 = "fs.azure.enable.readahead.v2";
 
+  /**
+   * Minimum number of prefetch threads in the thread pool for readahead V2.
+   * {@value }
+   */
+  public static final String FS_AZURE_READAHEAD_V2_MIN_THREAD_POOL_SIZE = "fs.azure.readahead.v2.min.thread.pool.size";
+  /**
+   * Maximum number of prefetch threads in the thread pool for readahead V2.
+   * {@value }
+   */
+  public static final String FS_AZURE_READAHEAD_V2_MAX_THREAD_POOL_SIZE = "fs.azure.readahead.v2.max.thread.pool.size";
+  /**
+   * Minimum size of the buffer pool for caching prefetched data for readahead V2.
+   * {@value }
+   */
+  public static final String FS_AZURE_READAHEAD_V2_MIN_BUFFER_POOL_SIZE = "fs.azure.readahead.v2.min.buffer.pool.size";
+  /**
+   * Maximum size of the buffer pool for caching prefetched data for readahead V2.
+   * {@value }
+   */
+  public static final String FS_AZURE_READAHEAD_V2_MAX_BUFFER_POOL_SIZE = "fs.azure.readahead.v2.max.buffer.pool.size";
+
+  /**
+   * TTL in milliseconds for the idle threads in executor service used by read ahead v2.
+   */
+  public static final String FS_AZURE_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLISECONDS = "fs.azure.readahead.v2.executor.service.ttl.seconds";
+
+  /**
+   * TTL in milliseconds for the cached buffers in buffer pool used by read ahead v2.
+   */
+  public static final String FS_AZURE_READAHEAD_V2_CACHED_BUFFER_TTL_MILLISECONDS = "fs.azure.readahead.v2.cachec.buffer.ttl.milliseconds";
+
   /** Setting this true will make the driver use it's own RemoteIterator implementation */
   public static final String FS_AZURE_ENABLE_ABFS_LIST_ITERATOR = "fs.azure.enable.abfslistiterator";
   /** Server side encryption key encoded in Base6format {@value}.*/

@@ -97,7 +97,7 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
       freeList.add(i);
     }
     for (int i = 0; i < NUM_THREADS; i++) {
-      Thread t = new Thread(new ReadBufferWorker(i));
+      Thread t = new Thread(new ReadBufferWorker(i, this));
       t.setDaemon(true);
       threads[i] = t;
       t.setName("ABFS-prefetch-" + i);

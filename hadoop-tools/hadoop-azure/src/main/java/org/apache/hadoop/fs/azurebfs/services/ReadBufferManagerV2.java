@@ -18,8 +18,13 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -29,6 +34,18 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 public class ReadBufferManagerV2 extends ReadBufferManager {
 
+  // Thread Pool Configurations
+  private static int minThreadPoolSize;
+  private static int maxThreadPoolSize;
+  private static int executorServiceKeepAliveTimeInMilliSec;
+  private ThreadPoolExecutor workerPool;
+
+  // Buffer Pool Configurations
+  private static int minBufferPoolSize;
+  private static int maxBufferPoolSize;
+  private int numberOfActiveBuffers = 0;
+  private byte[][] bufferPool;
+
   // hide instance constructor
   private ReadBufferManagerV2() {
     LOGGER.trace("Creating readbuffer manager with HADOOP-18546 patch");
@@ -37,10 +54,19 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
   /**
    * Sets the read buffer manager configurations.
    * @param readAheadBlockSize the size of the read-ahead block in bytes
-   * @param configuration the AbfsConfiguration instance for other configurations
+   * @param abfsConfiguration the AbfsConfiguration instance for other configurations
    */
-  static void setReadBufferManagerConfigs(int readAheadBlockSize, AbfsConfiguration configuration) {
+  static void setReadBufferManagerConfigs(int readAheadBlockSize, AbfsConfiguration abfsConfiguration) {
+    if (bufferManager == null) {
+      minThreadPoolSize = abfsConfiguration.getMinReadAheadV2ThreadPoolSize();
+      maxThreadPoolSize = abfsConfiguration.getMaxReadAheadV2ThreadPoolSize();
+      executorServiceKeepAliveTimeInMilliSec = abfsConfiguration.getReadAheadExecutorServiceTTLInMilliSeconds();
 
+      minBufferPoolSize = abfsConfiguration.getMinReadAheadV2BufferPoolSize();
+      maxBufferPoolSize = abfsConfiguration.getMaxReadAheadV2BufferPoolSize();
+      thresholdAgeMilliseconds = abfsConfiguration.getReadAheadV2CachedBufferTTLMilliseconds();
+      blockSize = readAheadBlockSize;
+    }
   }
 
   /**
@@ -67,7 +93,28 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
    */
   @Override
   void init() {
+    // Initialize Buffer Pool
+    bufferPool = new byte[maxBufferPoolSize][];
+    for (int i = 0; i < minBufferPoolSize; i++) {
+      bufferPool[i] = new byte[blockSize];  // same buffers are reused. The byte array never goes back to GC
+      freeList.add(i);
+      numberOfActiveBuffers++;
+    }
 
+    // Initialize a Fixed Size Thread Pool with minThreadPoolSize threads
+    workerPool = new ThreadPoolExecutor(
+        minThreadPoolSize,
+        maxThreadPoolSize,
+        executorServiceKeepAliveTimeInMilliSec,
+        TimeUnit.MILLISECONDS,
+        new SynchronousQueue<>(),
+        namedThreadFactory);
+    workerPool.allowCoreThreadTimeOut(true);
+    for (int i = 0; i < minThreadPoolSize; i++) {
+      ReadBufferWorker worker = new ReadBufferWorker(i, this);
+      workerPool.submit(worker);
+    }
+    ReadBufferWorker.UNLEASH_WORKERS.countDown();
   }
 
   /**
@@ -78,7 +125,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
       final long requestedOffset,
       final int requestedLength,
       final TracingContext tracingContext) {
-
+    // TODO: To be implemented
   }
 
   /**
@@ -89,6 +136,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
       final long position,
       final int length,
       final byte[] buffer) throws IOException {
+    // TODO: To be implemented
     return 0;
   }
 
@@ -97,6 +145,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
    */
   @Override
   public ReadBuffer getNextBlockToRead() throws InterruptedException {
+    // TODO: To be implemented
     return null;
   }
 
@@ -107,7 +156,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
   public void doneReading(final ReadBuffer buffer,
       final ReadBufferStatus result,
       final int bytesActuallyRead) {
-
+    // TODO: To be implemented
   }
 
   /**
@@ -115,7 +164,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
    */
   @Override
   public void purgeBuffersForStream(final AbfsInputStream stream) {
-
+    // TODO: To be implemented
   }
 
   /**
@@ -124,7 +173,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
   @VisibleForTesting
   @Override
   public int getNumBuffers() {
-    return 0;
+    return numberOfActiveBuffers;
   }
   /**
    * {@inheritDoc}
@@ -132,7 +181,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
   @VisibleForTesting
   @Override
   public void callTryEvict() {
-
+    // TODO: To be implemented
   }
 
   /**
@@ -141,7 +190,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
   @VisibleForTesting
   @Override
   public void testResetReadBufferManager() {
-
+    // TODO: To be implemented
   }
 
   /**
@@ -151,20 +200,22 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
   @Override
   public void testResetReadBufferManager(final int readAheadBlockSize,
       final int thresholdAgeMilliseconds) {
-
+    // TODO: To be implemented
   }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-
 
   /**
    * {@inheritDoc}
    */
   @Override
   public void testMimicFullUseAndAddFailedBuffer(final ReadBuffer buf) {
-
+    // TODO: To be implemented
   }
+
+  private final ThreadFactory namedThreadFactory = new ThreadFactory() {
+    private int count = 0;
+    @Override
+    public Thread newThread(Runnable r) {
+      return new Thread(r, "ReadAheadV2-Thread-" + count++);
+    }
+  };
 }
