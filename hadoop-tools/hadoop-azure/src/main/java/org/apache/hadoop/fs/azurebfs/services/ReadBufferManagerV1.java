@@ -50,7 +50,7 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
   private static final int DEFAULT_THRESHOLD_AGE_MILLISECONDS = 3000; // have to see if 3 seconds is a good threshold
 
   private static int blockSize = 4 * ONE_MB;
-  private static int thresholdAgeMilliseconds = DEFAULT_THRESHOLD_AGE_MILLISECONDS;
+  private int thresholdAgeMilliseconds = DEFAULT_THRESHOLD_AGE_MILLISECONDS;
   private Thread[] threads = new Thread[NUM_THREADS];
   private byte[][] buffers;    // array of byte[] buffers, to hold the data that is read
   private Stack<Integer> freeList = new Stack<>();   // indices in buffers[] array that are available

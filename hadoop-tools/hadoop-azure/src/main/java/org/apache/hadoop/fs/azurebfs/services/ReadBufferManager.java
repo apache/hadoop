@@ -104,6 +104,14 @@ public interface ReadBufferManager {
   int getThresholdAgeMilliseconds();
 
   /**
+   * Sets the threshold age in milliseconds for buffer eviction.
+   *
+   * @param thresholdAgeMs the threshold age in milliseconds
+   */
+  @VisibleForTesting
+  void setThresholdAgeMilliseconds(int thresholdAgeMs);
+
+  /**
    * Gets the block size used for read-ahead operations.
    *
    * @return the read-ahead block size in bytes
