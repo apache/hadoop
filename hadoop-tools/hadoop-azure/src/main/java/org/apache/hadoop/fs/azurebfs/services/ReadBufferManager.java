@@ -19,7 +19,15 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
+import java.util.Stack;
+import java.util.concurrent.locks.ReentrantLock;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
@@ -28,7 +36,27 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 /**
  * Interface for managing read buffers for Azure Blob File System input streams.
  */
-public interface ReadBufferManager {
+public abstract class ReadBufferManager {
+  protected static final Logger LOGGER = LoggerFactory.getLogger(
+      ReadBufferManager.class);
+  protected static final ReentrantLock LOCK = new ReentrantLock();
+  private static final int ONE_KB = 1024;
+  private static final int ONE_MB = ONE_KB * ONE_KB;
+
+  protected static ReadBufferManager bufferManager;
+  protected static int thresholdAgeMilliseconds;
+  protected static int blockSize = 4 * ONE_MB; // default block size for read-ahead in bytes
+
+  protected Stack<Integer> freeList = new Stack<>();   // indices in buffers[] array that are available
+  protected Queue<ReadBuffer> readAheadQueue = new LinkedList<>(); // queue of requests that are not picked up by any worker thread yet
+  protected LinkedList<ReadBuffer> inProgressList = new LinkedList<>(); // requests being processed by worker threads
+  protected LinkedList<ReadBuffer> completedReadList = new LinkedList<>(); // buffers available for reading
+
+  /**
+   * Initializes the ReadBufferManager singleton instance. Creates the read buffers and threads.
+   * This method should be called once to set up the read buffer manager.
+   */
+  abstract void init();
 
   /**
    * Queues a read-ahead request from {@link AbfsInputStream}
@@ -38,7 +66,7 @@ public interface ReadBufferManager {
    * @param requestedLength the number of bytes to read from file
    * @param tracingContext the tracing context for diagnostics
    */
-  void queueReadAhead(AbfsInputStream stream,
+  abstract void queueReadAhead(AbfsInputStream stream,
       long requestedOffset,
       int requestedLength,
       TracingContext tracingContext);
@@ -59,7 +87,7 @@ public interface ReadBufferManager {
    * @return the number of bytes actually read
    * @throws IOException if an I/O error occurs
    */
-  int getBlock(AbfsInputStream stream,
+  abstract int getBlock(AbfsInputStream stream,
       long position,
       int length,
       byte[] buffer) throws IOException;
@@ -71,7 +99,7 @@ public interface ReadBufferManager {
    * @return the next {@link ReadBuffer} to read
    * @throws InterruptedException if interrupted while waiting
    */
-  ReadBuffer getNextBlockToRead() throws InterruptedException;
+  abstract ReadBuffer getNextBlockToRead() throws InterruptedException;
 
   /**
    * Marks the specified buffer as done reading and updates its status.
@@ -81,7 +109,7 @@ public interface ReadBufferManager {
    * @param result the status of the read operation
    * @param bytesActuallyRead the number of bytes actually read by worker thread.
    */
-  void doneReading(ReadBuffer buffer,
+  abstract void doneReading(ReadBuffer buffer,
       ReadBufferStatus result,
       int bytesActuallyRead);
 
@@ -91,33 +119,10 @@ public interface ReadBufferManager {
    *
    * @param stream the input stream whose buffers should be purged.
    */
-  void purgeBuffersForStream(AbfsInputStream stream);
+  abstract void purgeBuffersForStream(AbfsInputStream stream);
 
 
   // Following Methods are for testing purposes only and should not be used in production code.
-  /**
-   * Gets the threshold age in milliseconds for buffer eviction.
-   *
-   * @return the threshold age in milliseconds
-   */
-  @VisibleForTesting
-  int getThresholdAgeMilliseconds();
-
-  /**
-   * Sets the threshold age in milliseconds for buffer eviction.
-   *
-   * @param thresholdAgeMs the threshold age in milliseconds
-   */
-  @VisibleForTesting
-  void setThresholdAgeMilliseconds(int thresholdAgeMs);
-
-  /**
-   * Gets the block size used for read-ahead operations.
-   *
-   * @return the read-ahead block size in bytes
-   */
-  @VisibleForTesting
-  int getReadAheadBlockSize();
 
   /**
    * Gets the number of buffers currently managed by the read buffer manager.
@@ -125,60 +130,20 @@ public interface ReadBufferManager {
    * @return the number of buffers
    */
   @VisibleForTesting
-  int getNumBuffers();
-
-  /**
-   * Gets a copy of the list of free buffer indices.
-   *
-   * @return a list of free buffer indices
-   */
-  @VisibleForTesting
-  List<Integer> getFreeListCopy();
-
-  /**
-   * Gets a copy of the read-ahead queue.
-   *
-   * @return a list of {@link ReadBuffer} objects in the read-ahead queue
-   */
-  @VisibleForTesting
-  List<ReadBuffer> getReadAheadQueueCopy();
-
-  /**
-   * Gets a copy of the list of in-progress read buffers.
-   *
-   * @return a list of in-progress {@link ReadBuffer} objects
-   */
-  @VisibleForTesting
-  List<ReadBuffer> getInProgressCopiedList();
-
-  /**
-   * Gets a copy of the list of completed read buffers.
-   *
-   * @return a list of completed {@link ReadBuffer} objects
-   */
-  @VisibleForTesting
-  List<ReadBuffer> getCompletedReadListCopy();
-
-  /**
-   * Gets the size of the completed read list.
-   *
-   * @return the number of completed read buffers
-   */
-  @VisibleForTesting
-  int getCompletedReadListSize();
+  abstract int getNumBuffers();
 
   /**
    * Attempts to evict buffers based on the eviction policy.
    */
   @VisibleForTesting
-  void callTryEvict();
+  abstract void callTryEvict();
 
   /**
    * Resets the read buffer manager for testing purposes. Clean up the current
    * state of readAhead buffers and the lists. Will also trigger a fresh init.
    */
   @VisibleForTesting
-  void testResetReadBufferManager();
+  abstract void testResetReadBufferManager();
 
   /**
    * Resets the read buffer manager for testing with the specified block size and threshold age.
@@ -187,7 +152,108 @@ public interface ReadBufferManager {
    * @param thresholdAgeMilliseconds the threshold age in milliseconds
    */
   @VisibleForTesting
-  void testResetReadBufferManager(int readAheadBlockSize, int thresholdAgeMilliseconds);
+  abstract void testResetReadBufferManager(int readAheadBlockSize, int thresholdAgeMilliseconds);
+
+  /**
+   * Gets the threshold age in milliseconds for buffer eviction.
+   *
+   * @return the threshold age in milliseconds
+   */
+  @VisibleForTesting
+  protected static int getThresholdAgeMilliseconds() {
+    return thresholdAgeMilliseconds;
+  }
+
+  /**
+   * Sets the threshold age in milliseconds for buffer eviction.
+   *
+   * @param thresholdAgeMs the threshold age in milliseconds
+   */
+  @VisibleForTesting
+  protected static void setThresholdAgeMilliseconds(int thresholdAgeMs) {
+    thresholdAgeMilliseconds = thresholdAgeMs;
+  }
+
+  /**
+   * Gets the block size used for read-ahead operations.
+   *
+   * @return the read-ahead block size in bytes
+   */
+  @VisibleForTesting
+  protected int getReadAheadBlockSize() {
+    return blockSize;
+  }
+
+  /**
+   * Sets the block size used for read-ahead operations.
+   *
+   * @param readAheadBlockSize the read-ahead block size in bytes
+   */
+  @VisibleForTesting
+  protected void setReadAheadBlockSize(int readAheadBlockSize) {
+    if (readAheadBlockSize <= 0) {
+      throw new IllegalArgumentException("Read-ahead block size must be positive");
+    }
+    blockSize = readAheadBlockSize;
+  }
+
+  /**
+   * Gets a copy of the list of free buffer indices.
+   *
+   * @return a list of free buffer indices
+   */
+  @VisibleForTesting
+  protected synchronized List<Integer> getFreeListCopy() {
+    return new ArrayList<>(freeList);
+  }
+
+  /**
+   * Gets a copy of the read-ahead queue.
+   *
+   * @return a list of {@link ReadBuffer} objects in the read-ahead queue
+   */
+  @VisibleForTesting
+  protected synchronized List<ReadBuffer> getReadAheadQueueCopy() {
+    return new ArrayList<>(readAheadQueue);
+  }
+
+  /**
+   * Gets a copy of the list of in-progress read buffers.
+   *
+   * @return a list of in-progress {@link ReadBuffer} objects
+   */
+  @VisibleForTesting
+  protected synchronized List<ReadBuffer> getInProgressCopiedList() {
+    return new ArrayList<>(inProgressList);
+  }
+
+  /**
+   * Gets a copy of the list of completed read buffers.
+   *
+   * @return a list of completed {@link ReadBuffer} objects
+   */
+  @VisibleForTesting
+  protected synchronized List<ReadBuffer> getCompletedReadListCopy() {
+    return new ArrayList<>(completedReadList);
+  }
+
+  /**
+   * Gets the size of the completed read list.
+   *
+   * @return the number of completed read buffers
+   */
+  @VisibleForTesting
+  protected int getCompletedReadListSize() {
+    return completedReadList.size();
+  }
+
+  /**
+   * Resets the buffer manager instance to null for testing purposes.
+   * This allows for reinitialization in tests.
+   */
+  protected static void resetBufferManager() {
+    bufferManager = null;
+  }
 
   /**
    * Simulates full buffer usage and adds a failed buffer for testing.
@@ -195,5 +261,8 @@ public interface ReadBufferManager {
    * @param buf the buffer to add as failed
    */
   @VisibleForTesting
-  void testMimicFullUseAndAddFailedBuffer(ReadBuffer buf);
+  protected void testMimicFullUseAndAddFailedBuffer(ReadBuffer buf) {
+    freeList.clear();
+    completedReadList.add(buf);
+  }
 }

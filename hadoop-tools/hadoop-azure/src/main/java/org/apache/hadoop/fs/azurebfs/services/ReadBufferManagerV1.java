@@ -39,27 +39,33 @@ import org.apache.hadoop.classification.VisibleForTesting;
  * The Read Buffer Manager for Rest AbfsClient.
  * V1 implementation of ReadBufferManager.
  */
-final class ReadBufferManagerV1 implements ReadBufferManager {
-  private static final Logger LOGGER = LoggerFactory.getLogger(
-      ReadBufferManagerV1.class);
-  private static final int ONE_KB = 1024;
-  private static final int ONE_MB = ONE_KB * ONE_KB;
+final class ReadBufferManagerV1 extends ReadBufferManager {
 
   private static final int NUM_BUFFERS = 16;
   private static final int NUM_THREADS = 8;
-  private static final int DEFAULT_THRESHOLD_AGE_MILLISECONDS = 3000; // have to see if 3 seconds is a good threshold
+  private static final int DEFAULT_THRESHOLD_AGE_MILLISECONDS = 3000;
 
-  private static int blockSize = 4 * ONE_MB;
-  private int thresholdAgeMilliseconds = DEFAULT_THRESHOLD_AGE_MILLISECONDS;
   private Thread[] threads = new Thread[NUM_THREADS];
-  private byte[][] buffers;    // array of byte[] buffers, to hold the data that is read
-  private Stack<Integer> freeList = new Stack<>();   // indices in buffers[] array that are available
+  private byte[][] buffers;
 
-  private Queue<ReadBuffer> readAheadQueue = new LinkedList<>(); // queue of requests that are not picked up by any worker thread yet
-  private LinkedList<ReadBuffer> inProgressList = new LinkedList<>(); // requests being processed by worker threads
-  private LinkedList<ReadBuffer> completedReadList = new LinkedList<>(); // buffers available for reading
-  private static ReadBufferManagerV1 bufferManager; // singleton, initialized in static initialization block
-  private static final ReentrantLock LOCK = new ReentrantLock();
+  // hide instance constructor
+  private ReadBufferManagerV1() {
+    LOGGER.trace("Creating readbuffer manager with HADOOP-18546 patch");
+  }
+
+  /**
+   * Sets the read buffer manager configurations.
+   * @param readAheadBlockSize the size of the read-ahead block in bytes
+   */
+  static void setReadBufferManagerConfigs(int readAheadBlockSize) {
+    if (bufferManager == null) {
+      LOGGER.debug(
+          "ReadBufferManagerV1 not initialized yet. Overriding readAheadBlockSize as {}",
+          readAheadBlockSize);
+      blockSize = readAheadBlockSize;
+      thresholdAgeMilliseconds = DEFAULT_THRESHOLD_AGE_MILLISECONDS;
+    }
+  }
 
   /**
    * Returns the singleton instance of ReadBufferManagerV1.
@@ -77,26 +83,14 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
         LOCK.unlock();
       }
     }
-    return bufferManager;
+    return (ReadBufferManagerV1) bufferManager;
   }
 
   /**
-   * Sets the read buffer manager configurations.
-   * @param readAheadBlockSize the size of the read-ahead block in bytes
+   * {@inheritDoc}
    */
-  static void setReadBufferManagerConfigs(int readAheadBlockSize) {
-    if (bufferManager == null) {
-      LOGGER.debug(
-          "ReadBufferManagerV1 not initialized yet. Overriding readAheadBlockSize as {}",
-          readAheadBlockSize);
-      blockSize = readAheadBlockSize;
-    }
-  }
-
-  /**
-   * Initializes the ReadBufferManagerV1. Creates the buffers and starts worker threads.
-   */
-  private void init() {
+  @Override
+  void init() {
     buffers = new byte[NUM_BUFFERS][];
     for (int i = 0; i < NUM_BUFFERS; i++) {
       buffers[i] = new byte[blockSize];  // same buffers are reused. The byte array never goes back to GC
@@ -110,11 +104,6 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
       t.start();
     }
     ReadBufferWorker.UNLEASH_WORKERS.countDown();
-  }
-
-  // hide instance constructor
-  private ReadBufferManagerV1() {
-    LOGGER.trace("Creating readbuffer manager with HADOOP-18546 patch");
   }
 
   /**
@@ -564,87 +553,8 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
    */
   @VisibleForTesting
   @Override
-  public int getThresholdAgeMilliseconds() {
-    return thresholdAgeMilliseconds;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  public void setThresholdAgeMilliseconds(int thresholdAgeMs) {
-    thresholdAgeMilliseconds = thresholdAgeMs;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  @Override
-  public int getReadAheadBlockSize() {
-    return blockSize;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  public void setReadAheadBlockSize(int readAheadBlockSize) {
-    blockSize = readAheadBlockSize;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  @Override
   public int getNumBuffers() {
     return NUM_BUFFERS;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  @Override
-  public synchronized List<Integer> getFreeListCopy() {
-    return new ArrayList<>(freeList);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  @Override
-  public synchronized List<ReadBuffer> getReadAheadQueueCopy() {
-    return new ArrayList<>(readAheadQueue);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  @Override
-  public synchronized List<ReadBuffer> getInProgressCopiedList() {
-    return new ArrayList<>(inProgressList);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  @Override
-  public synchronized List<ReadBuffer> getCompletedReadListCopy() {
-    return new ArrayList<>(completedReadList);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  @Override
-  public int getCompletedReadListSize() {
-    return completedReadList.size();
   }
 
   /**
@@ -695,23 +605,5 @@ final class ReadBufferManagerV1 implements ReadBufferManager {
     setReadAheadBlockSize(readAheadBlockSize);
     setThresholdAgeMilliseconds(thresholdAgeMilliseconds);
     testResetReadBufferManager();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  public void resetBufferManager() {
-    bufferManager = null;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  @Override
-  public void testMimicFullUseAndAddFailedBuffer(ReadBuffer buf) {
-    freeList.clear();
-    completedReadList.add(buf);
   }
 }

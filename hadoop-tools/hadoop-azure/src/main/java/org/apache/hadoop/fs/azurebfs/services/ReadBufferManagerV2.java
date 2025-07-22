@@ -23,14 +23,30 @@ import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
-public class ReadBufferManagerV2 implements ReadBufferManager {
+public class ReadBufferManagerV2 extends ReadBufferManager {
 
-  private static ReadBufferManagerV2 bufferManager; // singleton, initialized in static initialization block
-  private static final ReentrantLock LOCK = new ReentrantLock();
+  // hide instance constructor
+  private ReadBufferManagerV2() {
+    LOGGER.trace("Creating readbuffer manager with HADOOP-18546 patch");
+  }
 
+  /**
+   * Sets the read buffer manager configurations.
+   * @param readAheadBlockSize the size of the read-ahead block in bytes
+   * @param configuration the AbfsConfiguration instance for other configurations
+   */
+  static void setReadBufferManagerConfigs(int readAheadBlockSize, AbfsConfiguration configuration) {
+
+  }
+
+  /**
+   * Returns the singleton instance of ReadBufferManagerV2.
+   * @return the singleton instance of ReadBufferManagerV2
+   */
   static ReadBufferManagerV2 getBufferManager() {
     if (bufferManager == null) {
       LOCK.lock();
@@ -43,10 +59,14 @@ public class ReadBufferManagerV2 implements ReadBufferManager {
         LOCK.unlock();
       }
     }
-    return bufferManager;
+    return (ReadBufferManagerV2) bufferManager;
   }
 
-  private void init() {
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  void init() {
 
   }
 
@@ -103,89 +123,9 @@ public class ReadBufferManagerV2 implements ReadBufferManager {
    */
   @VisibleForTesting
   @Override
-  public int getThresholdAgeMilliseconds() {
-    return 0;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  public void setThresholdAgeMilliseconds(final int thresholdAgeMs) {
-
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  @Override
-  public int getReadAheadBlockSize() {
-    return 0;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  public void setReadAheadBlockSize(int readAheadBlockSize) {
-
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  @Override
   public int getNumBuffers() {
     return 0;
   }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  @Override
-  public List<Integer> getFreeListCopy() {
-    return Collections.emptyList();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  @Override
-  public List<ReadBuffer> getReadAheadQueueCopy() {
-    return Collections.emptyList();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  @Override
-  public List<ReadBuffer> getInProgressCopiedList() {
-    return Collections.emptyList();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  @Override
-  public List<ReadBuffer> getCompletedReadListCopy() {
-    return Collections.emptyList();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @VisibleForTesting
-  @Override
-  public int getCompletedReadListSize() {
-    return 0;
-  }
-
   /**
    * {@inheritDoc}
    */
@@ -218,9 +158,7 @@ public class ReadBufferManagerV2 implements ReadBufferManager {
    * {@inheritDoc}
    */
   @VisibleForTesting
-  public void resetBufferManager() {
-    bufferManager = null;
-  }
+
 
   /**
    * {@inheritDoc}
