@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Hashtable;
 import java.util.Map;
 
 import org.junit.Assume;
