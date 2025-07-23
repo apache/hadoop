@@ -1160,8 +1160,12 @@ public class AbfsBlobClient extends AbfsClient {
       // This path could be present as an implicit directory in FNS.
       if (op.getResult().getStatusCode() == HTTP_NOT_FOUND && isNonEmptyDirectory(path, tracingContext)) {
         // Implicit path found, create a marker blob at this path and set properties.
-        this.createPathRestOp(path, false, false, false, null,
-            contextEncryptionAdapter, tracingContext);
+        try {
+          this.createPathRestOp(path, false, false, false, null,
+              contextEncryptionAdapter, tracingContext);
+        } catch (AbfsRestOperationException exception) {
+          LOG.debug("Marker creation failed for path {} during setPathProperties", path);
+        }
         // Make sure hdi_isFolder is added to the list of properties to be set.
         boolean hdiIsFolderExists = properties.keySet()
             .stream().anyMatch(XML_TAG_HDI_ISFOLDER::equalsIgnoreCase);
@@ -1242,7 +1246,12 @@ public class AbfsBlobClient extends AbfsClient {
           && isImplicitCheckRequired && isNonEmptyDirectory(path, tracingContext)) {
         // Implicit path found.
         // Create a marker blob at this path.
-        this.createMarkerAtPath(path, null, contextEncryptionAdapter, tracingContext);
+        try {
+          this.createMarkerAtPath(path, null, contextEncryptionAdapter,
+              tracingContext);
+        } catch (AbfsRestOperationException exception) {
+          LOG.debug("Marker creation failed for path {} during getPathStatus ", path);
+        }
         AbfsRestOperation successOp = getSuccessOp(
             AbfsRestOperationType.GetPathStatus, HTTP_METHOD_HEAD,
             url, requestHeaders);

@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Hashtable;
 import java.util.Map;
 
 import org.junit.Assume;
@@ -47,6 +48,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatCode;
 
 /**
  * Test Azure Oauth with Blob Data contributor role and Blob Data Reader role.
@@ -165,6 +167,30 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
       IOUtils.cleanupWithLogger(LOG, abfsStore);
     }
 
+  }
+
+  /*
+   * BLOB DATA READER should have only READ access to the container and blobs in the container.
+   * */
+  @Test
+  public void testGetPathStatusWithReader() throws Exception {
+    String clientId = this.getConfiguration().get(TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_ID);
+    Assume.assumeTrue("Reader client id not provided", clientId != null);
+    String secret = this.getConfiguration().get(TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET);
+    Assume.assumeTrue("Reader client secret not provided", secret != null);
+
+    Path existedFolderPath = path(EXISTED_FOLDER_PATH);
+    createAzCopyFolder(existedFolderPath);
+    final AzureBlobFileSystem fs = getBlobReader();
+
+    // Use abfsStore in this test to verify the  ERROR code in AbfsRestOperationException
+    AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
+    TracingContext tracingContext = getTestTracingContext(fs, true);
+
+   // GETPATHSTATUS marker creation fail should not be propagated to the caller.
+    assertThatCode(() -> abfsStore.getPathStatus(existedFolderPath, tracingContext))
+        .as("Expected getPathStatus to complete without throwing an exception")
+        .doesNotThrowAnyException();
   }
 
   private void prepareFiles(Path existedFilePath, Path existedFolderPath) throws IOException {
