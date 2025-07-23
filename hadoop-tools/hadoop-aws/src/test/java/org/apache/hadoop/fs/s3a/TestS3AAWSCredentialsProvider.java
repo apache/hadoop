@@ -188,6 +188,23 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
   }
 
   @Test
+  public void testNonSdkExceptionConversion() throws Throwable {
+    // Create a mock credential provider that throws a non-SDK exception
+    AwsCredentialsProvider mockProvider = () -> {
+      throw new RuntimeException("Test credential error");
+    };
+
+    // Create the provider list with our mock provider
+    AWSCredentialProviderList providerList =
+        new AWSCredentialProviderList(Collections.singletonList(mockProvider));
+
+    // Attempt to get credentials, which should trigger the exception
+    intercept(NoAuthWithAWSException.class,
+        "No AWS Credentials provided",
+        () -> providerList.resolveCredentials());
+  }
+
+  @Test
   public void testDefaultChainNoURI() throws Exception {
     Configuration conf = new Configuration(false);
     // use the default credential provider chain

@@ -194,7 +194,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         = new AppendRequestParameters(
         BUFFER_OFFSET, BUFFER_OFFSET, BUFFER_LENGTH,
         AppendRequestParameters.Mode.APPEND_MODE, false, null,
-        expectHeaderEnabled);
+        expectHeaderEnabled, null);
 
     byte[] buffer = getRandomBytesArray(5);
 

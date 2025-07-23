@@ -89,7 +89,7 @@ public abstract class AzureBlockManager {
    *
    * @return the active block
    */
-  protected synchronized AbfsBlock getActiveBlock() {
+  public synchronized AbfsBlock getActiveBlock() {
     return activeBlock;
   }
 
@@ -125,7 +125,7 @@ public abstract class AzureBlockManager {
    *
    * @return the block count
    */
-  protected long getBlockCount() {
+  public long getBlockCount() {
     return blockCount;
   }
 
@@ -134,7 +134,7 @@ public abstract class AzureBlockManager {
    *
    * @param blockCount the count of blocks to set
    */
-  public void setBlockCount(final long blockCount) {
+  protected void setBlockCount(final long blockCount) {
     this.blockCount = blockCount;
   }
 

@@ -658,7 +658,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     AppendRequestParameters appendRequestParameters
         = new AppendRequestParameters(
         BUFFER_OFFSET, BUFFER_OFFSET, BUFFER_LENGTH,
-        AppendRequestParameters.Mode.APPEND_MODE, false, null, true);
+        AppendRequestParameters.Mode.APPEND_MODE, false, null, true, null);
 
     byte[] buffer = getRandomBytesArray(BUFFER_LENGTH);
 

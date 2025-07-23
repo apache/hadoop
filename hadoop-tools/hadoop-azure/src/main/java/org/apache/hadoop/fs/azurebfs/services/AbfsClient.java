@@ -879,27 +879,31 @@ public abstract class AbfsClient implements Closeable {
    * @param leaseId if there is an active lease on the path.
    * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the server calls.
+   * @param blobMd5  The Base64-encoded MD5 hash of the blob for data integrity validation.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
   public abstract AbfsRestOperation flush(String path, long position,
       boolean retainUncommittedData, boolean isClose,
       String cachedSasToken, String leaseId,
-      ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
+      ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext, String blobMd5)
       throws AzureBlobFileSystemException;
 
   /**
-   * Flush previously uploaded data to a file.
-   * @param buffer containing blockIds to be flushed.
-   * @param path on which data has to be flushed.
-   * @param isClose specify if this is the last flush to the file.
-   * @param cachedSasToken to be used for the authenticating operation.
-   * @param leaseId if there is an active lease on the path.
-   * @param eTag to specify conditional headers.
-   * @param contextEncryptionAdapter to provide encryption context.
-   * @param tracingContext for tracing the server calls.
-   * @return executed rest operation containing response from server.
-   * @throws AzureBlobFileSystemException if rest operation fails.
+   * Flushes previously uploaded data to the specified path.
+   *
+   * @param buffer The buffer containing block IDs to be flushed.
+   * @param path The file path to which data should be flushed.
+   * @param isClose True if this is the final flush (i.e., the file is being closed).
+   * @param cachedSasToken SAS token used for authentication (if applicable).
+   * @param leaseId Lease ID, if a lease is active on the file.
+   * @param eTag ETag used for conditional request headers (e.g., If-Match).
+   * @param contextEncryptionAdapter Adapter to provide encryption context, if encryption is enabled.
+   * @param tracingContext Context for tracing the server calls.
+   * @param blobMd5 The Base64-encoded MD5 hash of the blob for data integrity validation.
+   * @return The executed {@link AbfsRestOperation} containing the server response.
+   *
+   * @throws AzureBlobFileSystemException if the flush operation fails.
    */
   public abstract AbfsRestOperation flush(byte[] buffer,
       String path,
@@ -908,7 +912,7 @@ public abstract class AbfsClient implements Closeable {
       String leaseId,
       String eTag,
       ContextEncryptionAdapter contextEncryptionAdapter,
-      TracingContext tracingContext) throws AzureBlobFileSystemException;
+      TracingContext tracingContext, String blobMd5) throws AzureBlobFileSystemException;
 
   /**
    * Set the properties of a file or directory.
@@ -1352,17 +1356,15 @@ public abstract class AbfsClient implements Closeable {
 
   /**
    * Add MD5 hash as request header to the append request.
+   *
    * @param requestHeaders to be updated with checksum header
    * @param reqParams for getting offset and length
-   * @param buffer for getting input data for MD5 computation
-   * @throws AbfsRestOperationException if Md5 computation fails
    */
   protected void addCheckSumHeaderForWrite(List<AbfsHttpHeader> requestHeaders,
-      final AppendRequestParameters reqParams, final byte[] buffer)
-      throws AbfsRestOperationException {
-    String md5Hash = computeMD5Hash(buffer, reqParams.getoffset(),
-        reqParams.getLength());
-    requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, md5Hash));
+      final AppendRequestParameters reqParams) {
+    if (reqParams.getMd5() != null) {
+      requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, reqParams.getMd5()));
+    }
   }
 
   /**

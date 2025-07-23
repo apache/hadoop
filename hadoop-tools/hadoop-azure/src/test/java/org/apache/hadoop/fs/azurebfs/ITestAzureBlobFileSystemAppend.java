@@ -22,7 +22,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -39,7 +38,6 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -77,7 +75,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INFINITE_LEASE_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INGRESS_SERVICE_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_LEASE_THREADS;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_ID_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient.generateBlockListXml;
 import static org.apache.hadoop.fs.store.DataBlocks.DATA_BLOCKS_BUFFER_ARRAY;
@@ -1040,20 +1037,6 @@ public class ITestAzureBlobFileSystemAppend extends
   }
 
   /**
-   * Helper method that generates blockId.
-   * @param position The offset needed to generate blockId.
-   * @return String representing the block ID generated.
-   */
-  private String generateBlockId(AbfsOutputStream os, long position) {
-    String streamId = os.getStreamID();
-    String streamIdHash = Integer.toString(streamId.hashCode());
-    String blockId = String.format("%d_%s", position, streamIdHash);
-    byte[] blockIdByteArray = new byte[BLOCK_ID_LENGTH];
-    System.arraycopy(blockId.getBytes(), 0, blockIdByteArray, 0, Math.min(BLOCK_ID_LENGTH, blockId.length()));
-    return new String(Base64.encodeBase64(blockIdByteArray), StandardCharsets.UTF_8);
-  }
-
-  /**
    * Test to simulate a successful flush operation followed by a connection reset
    * on the response, triggering a retry.
    *
@@ -1089,17 +1072,17 @@ public class ITestAzureBlobFileSystemAppend extends
           new Path("/test/file"), blobClient);
       AbfsOutputStream out = (AbfsOutputStream) os.getWrappedStream();
       String eTag = out.getIngressHandler().getETag();
-      byte[] bytes = new byte[1024 * 1024 * 8];
+      byte[] bytes = new byte[1024 * 1024 * 4];
       new Random().nextBytes(bytes);
       // Write some bytes and attempt to flush, which should retry
       out.write(bytes);
-      String blockId = generateBlockId(out, 0);
+      String blockId = out.getBlockManager().getActiveBlock().getBlockId();
       String blockListXml = generateBlockListXml(blockId);
 
       Mockito.doAnswer(answer -> {
         // Set up the mock for the flush operation
         AbfsClientTestUtil.setMockAbfsRestOperationForFlushOperation(blobClient,
-            eTag, blockListXml,
+            eTag, blockListXml, out,
             (httpOperation) -> {
               Mockito.doAnswer(invocation -> {
                 // Call the real processResponse method
@@ -1132,7 +1115,7 @@ public class ITestAzureBlobFileSystemAppend extends
           Mockito.nullable(String.class),
           Mockito.anyString(),
           Mockito.nullable(ContextEncryptionAdapter.class),
-          Mockito.any(TracingContext.class)
+          Mockito.any(TracingContext.class), Mockito.nullable(String.class)
       );
 
       out.hsync();
@@ -1145,7 +1128,7 @@ public class ITestAzureBlobFileSystemAppend extends
           Mockito.nullable(String.class),
           Mockito.anyString(),
           Mockito.nullable(ContextEncryptionAdapter.class),
-          Mockito.any(TracingContext.class));
+          Mockito.any(TracingContext.class), Mockito.nullable(String.class));
     }
   }
 
@@ -1186,17 +1169,17 @@ public class ITestAzureBlobFileSystemAppend extends
           new Path("/test/file"), blobClient);
       AbfsOutputStream out = (AbfsOutputStream) os.getWrappedStream();
       String eTag = out.getIngressHandler().getETag();
-      byte[] bytes = new byte[1024 * 1024 * 8];
+      byte[] bytes = new byte[1024 * 1024 * 4];
       new Random().nextBytes(bytes);
       // Write some bytes and attempt to flush, which should retry
       out.write(bytes);
-      String blockId = generateBlockId(out, 0);
+      String blockId = out.getBlockManager().getActiveBlock().getBlockId();
       String blockListXml = generateBlockListXml(blockId);
 
       Mockito.doAnswer(answer -> {
         // Set up the mock for the flush operation
         AbfsClientTestUtil.setMockAbfsRestOperationForFlushOperation(blobClient,
-            eTag, blockListXml,
+            eTag, blockListXml, out,
             (httpOperation) -> {
               Mockito.doAnswer(invocation -> {
                 // Call the real processResponse method
@@ -1234,7 +1217,7 @@ public class ITestAzureBlobFileSystemAppend extends
           Mockito.nullable(String.class),
           Mockito.anyString(),
           Mockito.nullable(ContextEncryptionAdapter.class),
-          Mockito.any(TracingContext.class)
+          Mockito.any(TracingContext.class), Mockito.nullable(String.class)
       );
 
       FSDataOutputStream os1 = createMockedOutputStream(fs,
