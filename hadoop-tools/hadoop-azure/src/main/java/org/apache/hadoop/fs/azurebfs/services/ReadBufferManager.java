@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 /**
- * Interface for managing read buffers for Azure Blob File System input streams.
+ * Abstract class for managing read buffers for Azure Blob File System input streams.
  */
 public abstract class ReadBufferManager {
   protected static final Logger LOGGER = LoggerFactory.getLogger(

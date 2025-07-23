@@ -88,7 +88,7 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
   void init() {
     buffers = new byte[NUM_BUFFERS][];
     for (int i = 0; i < NUM_BUFFERS; i++) {
-      buffers[i] = new byte[getReadAheadBlockSize()];  // same buffers are reused. The byte array never goes back to GC
+      buffers[i] = new byte[getReadAheadBlockSize()];  // same buffers are reused. These byte arrays are never garbage collected
       getFreeList().add(i);
     }
     for (int i = 0; i < NUM_THREADS; i++) {
