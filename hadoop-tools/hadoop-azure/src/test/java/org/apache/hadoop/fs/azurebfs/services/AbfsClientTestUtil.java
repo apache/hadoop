@@ -24,7 +24,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -140,14 +142,31 @@ public final class AbfsClientTestUtil {
    * @throws Exception           If an error occurs while setting up the mock operation.
    */
   public static void setMockAbfsRestOperationForFlushOperation(
-      final AbfsClient spiedClient, String eTag, String blockListXml, FunctionRaisingIOE<AbfsHttpOperation, AbfsHttpOperation> functionRaisingIOE)
+      final AbfsClient spiedClient,
+      String eTag,
+      String blockListXml,
+      AbfsOutputStream os,
+      FunctionRaisingIOE<AbfsHttpOperation, AbfsHttpOperation> functionRaisingIOE)
       throws Exception {
-    List<AbfsHttpHeader> requestHeaders = ITestAbfsClient.getTestRequestHeaders(spiedClient);
+    List<AbfsHttpHeader> requestHeaders = ITestAbfsClient.getTestRequestHeaders(
+        spiedClient);
+    String blobMd5 = null;
+    MessageDigest blobDigest = os.getFullBlobContentMd5();
+    if (blobDigest != null) {
+      try {
+        MessageDigest clonedMd5 = (MessageDigest) blobDigest.clone();
+        byte[] digest = clonedMd5.digest();
+        if (digest != null && digest.length != 0) {
+          blobMd5 = Base64.getEncoder().encodeToString(digest);
+        }
+      } catch (CloneNotSupportedException ignored) {
+      }
+    }
     byte[] buffer = blockListXml.getBytes(StandardCharsets.UTF_8);
     requestHeaders.add(new AbfsHttpHeader(CONTENT_LENGTH, String.valueOf(buffer.length)));
     requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, APPLICATION_XML));
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
-    requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, spiedClient.computeMD5Hash(buffer, 0, buffer.length)));
+    requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, blobMd5));
     final AbfsUriQueryBuilder abfsUriQueryBuilder = spiedClient.createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCKLIST);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(false));

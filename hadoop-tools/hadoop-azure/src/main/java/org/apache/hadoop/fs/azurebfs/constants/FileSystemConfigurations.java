@@ -151,6 +151,36 @@ public final class FileSystemConfigurations {
   public static final int BLOCK_ID_LENGTH = 60;
 
   /**
+   * Format string for generating block IDs.
+   * Example: "%s-%06d" where %s is the stream ID and %06d is the block index.
+   */
+  public static final String BLOCK_ID_FORMAT = "%s-%06d";
+
+  /**
+   * Format string for padding block IDs.
+   * Example: "%-" specifies left alignment in the format string.
+   */
+  public static final String PADDING_FORMAT = "%-";
+
+  /**
+   * Suffix for string formatting.
+   * Example: "s" specifies the type as a string in the format string.
+   */
+  public static final String STRING_SUFFIX = "s";
+
+  /**
+   * Character used for padding spaces in block IDs.
+   * Example: ' ' represents a space character.
+   */
+  public static final char SPACE_CHARACTER = ' ';
+
+  /**
+   * Character used for padding block IDs.
+   * Example: '_' is used to replace spaces in padded block IDs.
+   */
+  public static final char PADDING_CHARACTER = '_';
+
+  /**
    * Buffer blocks to disk.
    * Capacity is limited to available disk space.
    */

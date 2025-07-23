@@ -26,6 +26,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.store.DataBlocks;
@@ -46,6 +47,7 @@ public class AzureBlobBlockManager extends AzureBlockManager {
   /** The list to store blockId, position, and status. */
   private final LinkedList<BlockEntry> blockEntryList = new LinkedList<>();
 
+  private int blockIdLength = 0;
 
   /**
    * Constructs an AzureBlobBlockManager.
@@ -71,6 +73,15 @@ public class AzureBlobBlockManager extends AzureBlockManager {
   }
 
   /**
+   * Retrieves the length of the block ID.
+   *
+   * @return the length of the block ID in bytes.
+   */
+  public int getBlockIdLength() {
+    return blockIdLength;
+  }
+
+  /**
    * Creates a new block.
    *
    * @param position the position
@@ -82,8 +93,9 @@ public class AzureBlobBlockManager extends AzureBlockManager {
       throws IOException {
     if (getActiveBlock() == null) {
       setBlockCount(getBlockCount() + 1);
-      AbfsBlock activeBlock = new AbfsBlobBlock(getAbfsOutputStream(), position);
+      AbfsBlock activeBlock = new AbfsBlobBlock(getAbfsOutputStream(), position, getBlockIdLength(), getBlockCount());
       activeBlock.setBlockEntry(addNewEntry(activeBlock.getBlockId(), activeBlock.getOffset()));
+      getAbfsOutputStream().getMessageDigest().reset();
       setActiveBlock(activeBlock);
     }
     return getActiveBlock();
@@ -104,6 +116,9 @@ public class AzureBlobBlockManager extends AzureBlockManager {
         .getBlockList(getAbfsOutputStream().getPath(), tracingContext);
     if (op != null && op.getResult() != null) {
       committedBlockIdList = op.getResult().getBlockIdList();
+      if (!committedBlockIdList.isEmpty()) {
+        blockIdLength = Base64.decodeBase64(committedBlockIdList.get(0)).length;
+      }
     }
     return committedBlockIdList;
   }
