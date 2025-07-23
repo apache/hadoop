@@ -43,14 +43,13 @@ public abstract class ReadBufferManager {
   private static final int ONE_KB = 1024;
   private static final int ONE_MB = ONE_KB * ONE_KB;
 
-  static ReadBufferManager bufferManager;
-  static int thresholdAgeMilliseconds;
-  static int blockSize = 4 * ONE_MB; // default block size for read-ahead in bytes
+  private static int thresholdAgeMilliseconds;
+  private static int blockSize = 4 * ONE_MB; // default block size for read-ahead in bytes
 
-  protected Stack<Integer> freeList = new Stack<>();   // indices in buffers[] array that are available
-  protected Queue<ReadBuffer> readAheadQueue = new LinkedList<>(); // queue of requests that are not picked up by any worker thread yet
-  protected LinkedList<ReadBuffer> inProgressList = new LinkedList<>(); // requests being processed by worker threads
-  protected LinkedList<ReadBuffer> completedReadList = new LinkedList<>(); // buffers available for reading
+  private Stack<Integer> freeList = new Stack<>();   // indices in buffers[] array that are available
+  private Queue<ReadBuffer> readAheadQueue = new LinkedList<>(); // queue of requests that are not picked up by any worker thread yet
+  private LinkedList<ReadBuffer> inProgressList = new LinkedList<>(); // requests being processed by worker threads
+  private LinkedList<ReadBuffer> completedReadList = new LinkedList<>(); // buffers available for reading
 
   /**
    * Initializes the ReadBufferManager singleton instance. Creates the read buffers and threads.
@@ -155,6 +154,12 @@ public abstract class ReadBufferManager {
   abstract void testResetReadBufferManager(int readAheadBlockSize, int thresholdAgeMilliseconds);
 
   /**
+   * Resets the buffer manager instance to null for testing purposes.
+   * This allows for reinitialization in tests.
+   */
+  abstract void resetBufferManager();
+
+  /**
    * Gets the threshold age in milliseconds for buffer eviction.
    *
    * @return the threshold age in milliseconds
@@ -196,6 +201,43 @@ public abstract class ReadBufferManager {
     }
     blockSize = readAheadBlockSize;
   }
+
+  /**
+   * Gets the stack of free buffer indices.
+   *
+   * @return the stack of free buffer indices
+   */
+  public Stack<Integer> getFreeList() {
+    return freeList;
+  }
+
+  /**
+   * Gets the queue of read-ahead requests.
+   *
+   * @return the queue of {@link ReadBuffer} objects in the read-ahead queue
+   */
+  public Queue<ReadBuffer> getReadAheadQueue() {
+    return readAheadQueue;
+  }
+
+  /**
+   * Gets the list of in-progress read buffers.
+   *
+   * @return the list of {@link ReadBuffer} objects that are currently being processed
+   */
+  public LinkedList<ReadBuffer> getInProgressList() {
+    return inProgressList;
+  }
+
+  /**
+   * Gets the list of completed read buffers.
+   *
+   * @return the list of {@link ReadBuffer} objects that have been read and are available for use
+   */
+  public LinkedList<ReadBuffer> getCompletedReadList() {
+    return completedReadList;
+  }
+
 
   /**
    * Gets a copy of the list of free buffer indices.
@@ -245,14 +287,6 @@ public abstract class ReadBufferManager {
   @VisibleForTesting
   protected int getCompletedReadListSize() {
     return completedReadList.size();
-  }
-
-  /**
-   * Resets the buffer manager instance to null for testing purposes.
-   * This allows for reinitialization in tests.
-   */
-  protected static void resetBufferManager() {
-    bufferManager = null;
   }
 
   /**

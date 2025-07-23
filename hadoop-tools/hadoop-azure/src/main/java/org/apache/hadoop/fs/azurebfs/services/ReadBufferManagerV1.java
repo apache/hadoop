@@ -18,19 +18,13 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
-import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -47,6 +41,7 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
 
   private Thread[] threads = new Thread[NUM_THREADS];
   private byte[][] buffers;
+  private static  ReadBufferManagerV1 bufferManager;
 
   // hide instance constructor
   private ReadBufferManagerV1() {
@@ -62,8 +57,8 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
       LOGGER.debug(
           "ReadBufferManagerV1 not initialized yet. Overriding readAheadBlockSize as {}",
           readAheadBlockSize);
-      blockSize = readAheadBlockSize;
-      thresholdAgeMilliseconds = DEFAULT_THRESHOLD_AGE_MILLISECONDS;
+      setReadAheadBlockSize(readAheadBlockSize);
+      setThresholdAgeMilliseconds(DEFAULT_THRESHOLD_AGE_MILLISECONDS);
     }
   }
 
@@ -83,7 +78,7 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
         LOCK.unlock();
       }
     }
-    return (ReadBufferManagerV1) bufferManager;
+    return bufferManager;
   }
 
   /**
@@ -93,8 +88,8 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
   void init() {
     buffers = new byte[NUM_BUFFERS][];
     for (int i = 0; i < NUM_BUFFERS; i++) {
-      buffers[i] = new byte[blockSize];  // same buffers are reused. The byte array never goes back to GC
-      freeList.add(i);
+      buffers[i] = new byte[getReadAheadBlockSize()];  // same buffers are reused. The byte array never goes back to GC
+      getFreeList().add(i);
     }
     for (int i = 0; i < NUM_THREADS; i++) {
       Thread t = new Thread(new ReadBufferWorker(i, this));
@@ -121,7 +116,7 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
       if (isAlreadyQueued(stream, requestedOffset)) {
         return; // already queued, do not queue again
       }
-      if (freeList.isEmpty() && !tryEvict()) {
+      if (getFreeList().isEmpty() && !tryEvict()) {
         return; // no buffers available, cannot queue anything
       }
 
@@ -134,11 +129,11 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
       buffer.setLatch(new CountDownLatch(1));
       buffer.setTracingContext(tracingContext);
 
-      Integer bufferIndex = freeList.pop();  // will return a value, since we have checked size > 0 already
+      Integer bufferIndex = getFreeList().pop();  // will return a value, since we have checked size > 0 already
 
       buffer.setBuffer(buffers[bufferIndex]);
       buffer.setBufferindex(bufferIndex);
-      readAheadQueue.add(buffer);
+      getReadAheadQueue().add(buffer);
       notifyAll();
       if (LOGGER.isTraceEnabled()) {
         LOGGER.trace("Done q-ing readAhead for file {} offset {} buffer idx {}",
@@ -184,16 +179,16 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
   public ReadBuffer getNextBlockToRead() throws InterruptedException {
     ReadBuffer buffer = null;
     synchronized (this) {
-      while (readAheadQueue.isEmpty()) {
+      while (getReadAheadQueue().isEmpty()) {
         wait();
       }
-      buffer = readAheadQueue.remove();
+      buffer = getReadAheadQueue().remove();
       notifyAll();
       if (buffer == null) {
         return null;            // should never happen
       }
       buffer.setStatus(ReadBufferStatus.READING_IN_PROGRESS);
-      inProgressList.add(buffer);
+      getInProgressList().add(buffer);
     }
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("ReadBufferWorker picked file {} for offset {}",
@@ -214,20 +209,20 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
     synchronized (this) {
       // If this buffer has already been purged during
       // close of InputStream then we don't update the lists.
-      if (inProgressList.contains(buffer)) {
-        inProgressList.remove(buffer);
+      if (getInProgressList().contains(buffer)) {
+        getInProgressList().remove(buffer);
         if (result == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
           buffer.setStatus(ReadBufferStatus.AVAILABLE);
           buffer.setLength(bytesActuallyRead);
         } else {
-          freeList.push(buffer.getBufferindex());
+          getFreeList().push(buffer.getBufferindex());
           // buffer will be deleted as per the eviction policy.
         }
         // completed list also contains FAILED read buffers
         // for sending exception message to clients.
         buffer.setStatus(result);
         buffer.setTimeStamp(currentTimeMillis());
-        completedReadList.add(buffer);
+        getCompletedReadList().add(buffer);
       }
     }
 
@@ -241,8 +236,8 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
   @Override
   public synchronized void purgeBuffersForStream(AbfsInputStream stream) {
     LOGGER.debug("Purging stale buffers for AbfsInputStream {} ", stream);
-    readAheadQueue.removeIf(readBuffer -> readBuffer.getStream() == stream);
-    purgeList(stream, completedReadList);
+    getReadAheadQueue().removeIf(readBuffer -> readBuffer.getStream() == stream);
+    purgeList(stream, getCompletedReadList());
   }
 
   /**
@@ -257,7 +252,7 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
     ReadBuffer readBuf;
     synchronized (this) {
       clearFromReadAheadQueue(stream, position);
-      readBuf = getFromList(inProgressList, stream, position);
+      readBuf = getFromList(getInProgressList(), stream, position);
     }
     if (readBuf != null) {         // if in in-progress queue, then block for it
       try {
@@ -290,14 +285,14 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
    */
   private synchronized boolean tryEvict() {
     ReadBuffer nodeToEvict = null;
-    if (completedReadList.size() <= 0) {
+    if (getCompletedReadList().size() <= 0) {
       return false;  // there are no evict-able buffers
     }
 
     long currentTimeInMs = currentTimeMillis();
 
     // first, try buffers where all bytes have been consumed (approximated as first and last bytes consumed)
-    for (ReadBuffer buf : completedReadList) {
+    for (ReadBuffer buf : getCompletedReadList()) {
       if (buf.isFirstByteConsumed() && buf.isLastByteConsumed()) {
         nodeToEvict = buf;
         break;
@@ -307,8 +302,8 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
       return evict(nodeToEvict);
     }
 
-    // next, try buffers where any bytes have been consumed (may be a bad idea? have to experiment and see)
-    for (ReadBuffer buf : completedReadList) {
+    // next, try buffers where any bytes have been consumed (maybe a bad idea? have to experiment and see)
+    for (ReadBuffer buf : getCompletedReadList()) {
       if (buf.isAnyByteConsumed()) {
         nodeToEvict = buf;
         break;
@@ -328,13 +323,13 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
     // its buffer when its status was set to READ_FAILED.
     long earliestBirthday = Long.MAX_VALUE;
     ArrayList<ReadBuffer> oldFailedBuffers = new ArrayList<>();
-    for (ReadBuffer buf : completedReadList) {
+    for (ReadBuffer buf : getCompletedReadList()) {
       if ((buf.getBufferindex() != -1)
           && (buf.getTimeStamp() < earliestBirthday)) {
         nodeToEvict = buf;
         earliestBirthday = buf.getTimeStamp();
       } else if ((buf.getBufferindex() == -1)
-          && (currentTimeInMs - buf.getTimeStamp()) > thresholdAgeMilliseconds) {
+          && (currentTimeInMs - buf.getTimeStamp()) > getThresholdAgeMilliseconds()) {
         oldFailedBuffers.add(buf);
       }
     }
@@ -343,7 +338,7 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
       evict(buf);
     }
 
-    if ((currentTimeInMs - earliestBirthday > thresholdAgeMilliseconds) && (nodeToEvict != null)) {
+    if ((currentTimeInMs - earliestBirthday > getThresholdAgeMilliseconds()) && (nodeToEvict != null)) {
       return evict(nodeToEvict);
     }
 
@@ -362,10 +357,10 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
     // As failed ReadBuffers (bufferIndx = -1) are saved in completedReadList,
     // avoid adding it to freeList.
     if (buf.getBufferindex() != -1) {
-      freeList.push(buf.getBufferindex());
+      getFreeList().push(buf.getBufferindex());
     }
 
-    completedReadList.remove(buf);
+    getCompletedReadList().remove(buf);
     buf.setTracingContext(null);
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("Evicting buffer idx {}; was used for file {} offset {} length {}",
@@ -382,9 +377,9 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
    */
   private boolean isAlreadyQueued(final AbfsInputStream stream, final long requestedOffset) {
     // returns true if any part of the buffer is already queued
-    return (isInList(readAheadQueue, stream, requestedOffset)
-        || isInList(inProgressList, stream, requestedOffset)
-        || isInList(completedReadList, stream, requestedOffset));
+    return (isInList(getReadAheadQueue(), stream, requestedOffset)
+        || isInList(getInProgressList(), stream, requestedOffset)
+        || isInList(getCompletedReadList(), stream, requestedOffset));
   }
 
   /**
@@ -432,7 +427,7 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
    * @return the ReadBuffer if found, null otherwise
    */
   private ReadBuffer getBufferFromCompletedQueue(final AbfsInputStream stream, final long requestedOffset) {
-    for (ReadBuffer buffer : completedReadList) {
+    for (ReadBuffer buffer : getCompletedReadList()) {
       // Buffer is returned if the requestedOffset is at or above buffer's
       // offset but less than buffer's length or the actual requestedLength
       if ((buffer.getStream() == stream)
@@ -455,11 +450,11 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
    * @param requestedOffset the offset in the stream to check
    */
   private void clearFromReadAheadQueue(final AbfsInputStream stream, final long requestedOffset) {
-    ReadBuffer buffer = getFromList(readAheadQueue, stream, requestedOffset);
+    ReadBuffer buffer = getFromList(getReadAheadQueue(), stream, requestedOffset);
     if (buffer != null) {
-      readAheadQueue.remove(buffer);
+      getReadAheadQueue().remove(buffer);
       notifyAll();   // lock is held in calling method
-      freeList.push(buffer.getBufferindex());
+      getFreeList().push(buffer.getBufferindex());
     }
   }
 
@@ -486,7 +481,7 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
     if (buf.getStatus() == ReadBufferStatus.READ_FAILED) {
       // To prevent new read requests to fail due to old read-ahead attempts,
       // return exception only from buffers that failed within last thresholdAgeMilliseconds
-      if ((currentTimeMillis() - (buf.getTimeStamp()) < thresholdAgeMilliseconds)) {
+      if ((currentTimeMillis() - (buf.getTimeStamp()) < getThresholdAgeMilliseconds())) {
         throw buf.getErrException();
       } else {
         return 0;
@@ -531,8 +526,7 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
    * NOTE: This method is not threadsafe and must be called inside a
    * synchronised block. See caller.
    * @param stream associated input stream.
-   * @param list list of buffers like {@link this#completedReadList}
-   *             or {@link this#inProgressList}.
+   * @param list list of buffers like completedReadList or inProgressList
    */
   private void purgeList(AbfsInputStream stream, LinkedList<ReadBuffer> list) {
     for (Iterator<ReadBuffer> it = list.iterator(); it.hasNext();) {
@@ -542,7 +536,7 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
         // As failed ReadBuffers (bufferIndex = -1) are already pushed to free
         // list in doneReading method, we will skip adding those here again.
         if (readBuffer.getBufferindex() != -1) {
-          freeList.push(readBuffer.getBufferindex());
+          getFreeList().push(readBuffer.getBufferindex());
         }
       }
     }
@@ -574,7 +568,7 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
   public void testResetReadBufferManager() {
     synchronized (this) {
       ArrayList<ReadBuffer> completedBuffers = new ArrayList<>();
-      for (ReadBuffer buf : completedReadList) {
+      for (ReadBuffer buf : getCompletedReadList()) {
         if (buf != null) {
           completedBuffers.add(buf);
         }
@@ -584,10 +578,10 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
         evict(buf);
       }
 
-      readAheadQueue.clear();
-      inProgressList.clear();
-      completedReadList.clear();
-      freeList.clear();
+      getReadAheadQueue().clear();
+      getInProgressList().clear();
+      getCompletedReadList().clear();
+      getFreeList().clear();
       for (int i = 0; i < NUM_BUFFERS; i++) {
         buffers[i] = null;
       }
@@ -605,5 +599,14 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
     setReadAheadBlockSize(readAheadBlockSize);
     setThresholdAgeMilliseconds(thresholdAgeMilliseconds);
     testResetReadBufferManager();
+  }
+
+  @Override
+  void resetBufferManager() {
+    setBufferManager(null); // reset the singleton instance
+  }
+
+  private static void setBufferManager(ReadBufferManagerV1 manager) {
+    bufferManager = manager;
   }
 }

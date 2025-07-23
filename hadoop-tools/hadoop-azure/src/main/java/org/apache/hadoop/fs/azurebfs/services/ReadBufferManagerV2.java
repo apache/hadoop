@@ -18,21 +18,17 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
-public class ReadBufferManagerV2 extends ReadBufferManager {
+final class ReadBufferManagerV2 extends ReadBufferManager {
 
   // Thread Pool Configurations
   private static int minThreadPoolSize;
@@ -45,6 +41,8 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
   private static int maxBufferPoolSize;
   private int numberOfActiveBuffers = 0;
   private byte[][] bufferPool;
+
+  private static ReadBufferManagerV2 bufferManager;
 
   // hide instance constructor
   private ReadBufferManagerV2() {
@@ -64,8 +62,8 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
 
       minBufferPoolSize = abfsConfiguration.getMinReadAheadV2BufferPoolSize();
       maxBufferPoolSize = abfsConfiguration.getMaxReadAheadV2BufferPoolSize();
-      thresholdAgeMilliseconds = abfsConfiguration.getReadAheadV2CachedBufferTTLMilliseconds();
-      blockSize = readAheadBlockSize;
+      setThresholdAgeMilliseconds(abfsConfiguration.getReadAheadV2CachedBufferTTLMilliseconds());
+      setReadAheadBlockSize(readAheadBlockSize);
     }
   }
 
@@ -96,8 +94,8 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     // Initialize Buffer Pool
     bufferPool = new byte[maxBufferPoolSize][];
     for (int i = 0; i < minBufferPoolSize; i++) {
-      bufferPool[i] = new byte[blockSize];  // same buffers are reused. The byte array never goes back to GC
-      freeList.add(i);
+      bufferPool[i] = new byte[getReadAheadBlockSize()];  // same buffers are reused. The byte array never goes back to GC
+      getFreeList().add(i);
       numberOfActiveBuffers++;
     }
 
@@ -218,4 +216,13 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
       return new Thread(r, "ReadAheadV2-Thread-" + count++);
     }
   };
+
+  @Override
+  void resetBufferManager() {
+    setBufferManager(null); // reset the singleton instance
+  }
+
+  private static void setBufferManager(ReadBufferManagerV2 manager) {
+    bufferManager = manager;
+  }
 }
