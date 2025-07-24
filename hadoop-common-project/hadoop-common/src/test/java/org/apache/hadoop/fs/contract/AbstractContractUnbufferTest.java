@@ -33,7 +33,12 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 
 /**
  * Contract tests for {@link org.apache.hadoop.fs.CanUnbuffer#unbuffer}.
+ * Some of these test cases can fail if the FS read() call returns less
+ * than requested, which is a valid (possibly correct) implementation
+ * of {@code InputStream.read(buffer[])} which may return only those bytes
+ * which can be returned without blocking for more data.
  */
+@FlakyTest("buffer underflow")
 public abstract class AbstractContractUnbufferTest extends AbstractFSContractTestBase {
 
   private Path file;
@@ -50,7 +55,6 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
   }
 
   @Test
-  @FlakyTest("buffer underflow")
   public void testUnbufferAfterRead() throws IOException {
     describe("unbuffer a file after a single read");
     try (FSDataInputStream stream = getFileSystem().open(file)) {
@@ -60,7 +64,6 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
   }
 
   @Test
-  @FlakyTest("buffer underflow")
   public void testUnbufferBeforeRead() throws IOException {
     describe("unbuffer a file before a read");
     try (FSDataInputStream stream = getFileSystem().open(file)) {
@@ -80,7 +83,6 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
   }
 
   @Test
-  @FlakyTest("buffer underflow")
   public void testUnbufferOnClosedFile() throws IOException {
     describe("unbuffer a file before a read");
     FSDataInputStream stream = null;
@@ -98,7 +100,6 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
   }
 
   @Test
-  @FlakyTest("buffer underflow")
   public void testMultipleUnbuffers() throws IOException {
     describe("unbuffer a file multiple times");
     try (FSDataInputStream stream = getFileSystem().open(file)) {
@@ -110,7 +111,7 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
     }
   }
 
-  @FlakyTest("buffer underflow")
+
   @Test
   public void testUnbufferMultipleReads() throws IOException {
     describe("unbuffer a file multiple times");
