@@ -144,7 +144,7 @@ public class HsWebServices extends WebServices {
       AMWebServices.getJobFromContainerIdString(containerIdStr, ctx);
       return true;
     } catch (NotFoundException e) {
-      LOG.trace("Container " + containerIdStr + " does not belong to a MapReduce job");
+      LOG.trace("Container {} does not belong to a MapReduce job", containerIdStr);
       return false;
     }
   }
