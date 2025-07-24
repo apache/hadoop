@@ -123,13 +123,13 @@ public class WebAppUtils {
     }
 
     // In HA mode activeRMId can be fetched only if user have permission to check service states.
-    // Otherwise, we find the active one by iterating through the RMs
+    // Otherwise, we find the active one by iterating through the RMs.
     for (int i = activeRMIndex; i < rmIds.size(); i++) {
       try {
         String rmAddress = getRMWebAppURLWithScheme(conf, i);
         return func.apply(rmAddress, arg);
       } catch (Exception e) {
-        // Log and try next RM if there are any
+        // Log and try next RM if there are any.
         LOG.trace("Exception while connecting to RM", e);
       }
     }
