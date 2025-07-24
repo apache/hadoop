@@ -28,61 +28,52 @@ public class TestSecurityManagerConfig {
 
     @Test
     public void testUpdateByConfig() {
-        Configuration conf = new Configuration();
-        conf.set(
-                CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_KEY,
-                strongAlgorithm);
-        conf.setInt(
-                CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_KEY,
-                strongLength);
-        SecretManagerConfig.update(conf);
+        SecretManagerConfig.update(createConfiguration(strongAlgorithm, strongLength));
         assertEquals(strongAlgorithm, SecretManagerConfig.getSelectedAlgorithm());
-        assertEquals(strongLength, SecretManagerConfig.getSelectedLength());
-    }
-
-    @Test
-    public void testUpdateAlgorithmBySetter() {
-        SecretManagerConfig.setSelectedAlgorithm(strongAlgorithm);
-        assertEquals(strongAlgorithm, SecretManagerConfig.getSelectedAlgorithm());
-        assertEquals(defaultLength, SecretManagerConfig.getSelectedLength());
-    }
-
-    @Test
-    public void testUpdateLengthBySetter() {
-        SecretManagerConfig.setSelectedLength(strongLength);
-        assertEquals(defaultAlgorithm, SecretManagerConfig.getSelectedAlgorithm());
         assertEquals(strongLength, SecretManagerConfig.getSelectedLength());
     }
 
     @Test
     public void testMacCreation() {
-        SecretManagerConfig.setSelectedAlgorithm(strongAlgorithm);
+        SecretManagerConfig.update(createConfiguration(strongAlgorithm, strongLength));
         Mac mac = SecretManagerConfig.createMac();
         assertEquals(strongAlgorithm, mac.getAlgorithm());
     }
 
     @Test
     public void testMacCreationUnknownAlgorithm() {
-        SecretManagerConfig.setSelectedAlgorithm("testMacCreationUnknownAlgorithm_NO_ALG");
+        SecretManagerConfig.update(
+                createConfiguration("testMacCreationUnknownAlgorithm_NO_ALG", defaultLength));
         assertThrows(IllegalArgumentException.class, SecretManagerConfig::createMac);
     }
 
     @Test
     public void testKeygenCreation() {
-        SecretManagerConfig.setSelectedAlgorithm(strongAlgorithm);
+        SecretManagerConfig.update(createConfiguration(strongAlgorithm, strongLength));
         KeyGenerator keyGenerator = SecretManagerConfig.createKeyGenerator();
         assertEquals(strongAlgorithm, keyGenerator.getAlgorithm());
     }
 
     @Test
     public void testKeygenCreationUnknownAlgorithm() {
-        SecretManagerConfig.setSelectedAlgorithm("testKeygenCreationUnknownAlgorithm_NO_ALG");
+        SecretManagerConfig.update(
+                createConfiguration("testKeygenCreationUnknownAlgorithm_NO_ALG", defaultLength));
         assertThrows(IllegalArgumentException.class, SecretManagerConfig::createKeyGenerator);
     }
 
     @AfterEach
     public void tearDown() {
-        SecretManagerConfig.setSelectedAlgorithm(defaultAlgorithm);
-        SecretManagerConfig.setSelectedLength(defaultLength);
+        SecretManagerConfig.update(createConfiguration(defaultAlgorithm, defaultLength));
+    }
+
+    private Configuration createConfiguration(String algorithm, int length) {
+        Configuration conf = new Configuration();
+        conf.set(
+                CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_KEY,
+                algorithm);
+        conf.setInt(
+                CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_KEY,
+                length);
+        return conf;
     }
 }

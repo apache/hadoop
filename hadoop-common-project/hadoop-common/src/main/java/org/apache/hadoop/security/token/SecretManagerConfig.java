@@ -67,26 +67,6 @@ public class SecretManagerConfig {
         return SELECTED_LENGTH;
     }
 
-    /**
-     * Sets the cryptographic algorithm to use.
-     *
-     * @param algorithm the algorithm name (e.g., "HmacSHA256", "AES")
-     */
-    public static void setSelectedAlgorithm(String algorithm) {
-        SELECTED_ALGORITHM = algorithm;
-        LOG.debug("Selected hash algorithm set to {}", algorithm);
-    }
-
-    /**
-     * Sets the cryptographic key length to use (in bits).
-     *
-     * @param length the key length
-     */
-    public static void setSelectedLength(int length) {
-        SELECTED_LENGTH = length;
-        LOG.debug("Selected hash key length set to{}", length);
-    }
-
 
     /**
      * Creates a new {@link KeyGenerator} instance configured with the currently selected
