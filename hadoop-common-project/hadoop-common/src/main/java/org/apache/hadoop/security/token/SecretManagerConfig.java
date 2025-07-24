@@ -1,6 +1,8 @@
 
 package org.apache.hadoop.security.token;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.slf4j.Logger;
@@ -21,6 +23,8 @@ import java.security.NoSuchAlgorithmException;
  * <p>
  * The {@link SecretManager} has some static method, so static configuration is required
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class SecretManagerConfig {
     private static final Logger LOG = LoggerFactory.getLogger(SecretManagerConfig.class);
     private static String SELECTED_ALGORITHM;
