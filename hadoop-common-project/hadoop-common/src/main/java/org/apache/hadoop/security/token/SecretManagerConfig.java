@@ -25,6 +25,7 @@ public class SecretManagerConfig {
     private static final Logger LOG = LoggerFactory.getLogger(SecretManagerConfig.class);
     private static String SELECTED_ALGORITHM;
     private static int SELECTED_LENGTH;
+    private static boolean INITIALIZED;
 
     static {
         update(new Configuration());
@@ -38,7 +39,10 @@ public class SecretManagerConfig {
      *
      * @param conf the configuration object containing cryptographic settings
      */
-    public static void update(Configuration conf) {
+    public static synchronized void update(Configuration conf) {
+        if (INITIALIZED) {
+            LOG.warn("Keygen or Mac was already initialized with older configuration, those will not be updated");
+        }
         SELECTED_ALGORITHM = conf.get(
                 CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_KEY,
                 CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_DEFAULT);
@@ -54,7 +58,7 @@ public class SecretManagerConfig {
      *
      * @return the name of the selected algorithm
      */
-    public static String getSelectedAlgorithm() {
+    public static synchronized String getSelectedAlgorithm() {
         return SELECTED_ALGORITHM;
     }
 
@@ -63,7 +67,7 @@ public class SecretManagerConfig {
      *
      * @return the selected key length
      */
-    public static int getSelectedLength() {
+    public static synchronized int getSelectedLength() {
         return SELECTED_LENGTH;
     }
 
@@ -75,8 +79,9 @@ public class SecretManagerConfig {
      * @return a new {@code KeyGenerator} instance
      * @throws IllegalArgumentException if the specified algorithm is not available
      */
-    public static KeyGenerator createKeyGenerator() {
+    public static synchronized KeyGenerator createKeyGenerator() {
         LOG.debug("Creating key generator instance {}, {}",  SELECTED_ALGORITHM, SELECTED_LENGTH);
+        INITIALIZED = true;
         try {
             KeyGenerator keyGen = KeyGenerator.getInstance(SELECTED_ALGORITHM);
             keyGen.init(SELECTED_LENGTH);
@@ -92,8 +97,9 @@ public class SecretManagerConfig {
      * @return a new {@code Mac} instance
      * @throws IllegalArgumentException if the specified algorithm is not available
      */
-    public static Mac createMac() {
+    public static synchronized Mac createMac() {
         LOG.debug("Creating mac instance {}", SELECTED_ALGORITHM);
+        INITIALIZED = true;
         try {
             return Mac.getInstance(SELECTED_ALGORITHM);
         } catch (NoSuchAlgorithmException nsa) {

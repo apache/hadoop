@@ -61,6 +61,14 @@ public class TestSecurityManagerConfig {
         assertThrows(IllegalArgumentException.class, SecretManagerConfig::createKeyGenerator);
     }
 
+    @Test
+    public void testConfigUpdateAfterKeygenCreation() {
+        SecretManagerConfig.update(createConfiguration(strongAlgorithm, strongLength));
+        KeyGenerator keyGenerator = SecretManagerConfig.createKeyGenerator();
+        SecretManagerConfig.update(createConfiguration(defaultAlgorithm, defaultLength));
+        assertEquals(strongAlgorithm, keyGenerator.getAlgorithm());
+    }
+
     @AfterEach
     public void tearDown() {
         SecretManagerConfig.update(createConfiguration(defaultAlgorithm, defaultLength));
