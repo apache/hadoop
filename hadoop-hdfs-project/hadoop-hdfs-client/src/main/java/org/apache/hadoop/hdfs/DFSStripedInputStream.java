@@ -430,7 +430,7 @@ public class DFSStripedInputStream extends DFSInputStream {
           retries--;
           if (retries > 0) {
             DFSClient.LOG.info(
-                "DFSStripedInputStream read meets exception: {},will retry again.",
+                "DFSStripedInputStream read meets exception:{}, will retry again.",
                 ioe.toString());
             isRetryRead = true;
           } else {
