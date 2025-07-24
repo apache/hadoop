@@ -763,9 +763,9 @@ public class TestDFSStripedInputStream {
         fsdos.write(writeBuf, 0, writeBuf.length);
         Thread.sleep(1000);
       }
-      FileStatus fileStatus = dfs.getFileStatus(new Path(testBaseDir + Path.SEPARATOR + testfileName));
+      FileStatus fileStatus = dfs.getFileStatus(
+          new Path(testBaseDir + Path.SEPARATOR + testfileName));
       assertEquals(writeBufSize, fileStatus.getLen());
-      
 
       DFSClientFaultInjector.set(new DFSClientFaultInjector() {
         @Override
