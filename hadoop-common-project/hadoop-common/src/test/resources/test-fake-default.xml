@@ -26,5 +26,4 @@
     <value>tests.fake-default.value</value>
     <description>a default value for the "new" key of a deprecated pair.</description>
   </property>
-
 </configuration>
