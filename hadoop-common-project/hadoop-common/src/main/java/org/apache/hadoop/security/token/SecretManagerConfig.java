@@ -80,7 +80,7 @@ public class SecretManagerConfig {
      * @throws IllegalArgumentException if the specified algorithm is not available
      */
     public static synchronized KeyGenerator createKeyGenerator() {
-        LOG.debug("Creating key generator instance {}, {}",  SELECTED_ALGORITHM, SELECTED_LENGTH);
+        LOG.debug("Creating key generator instance {}, {}", SELECTED_ALGORITHM, SELECTED_LENGTH);
         INITIALIZED = true;
         try {
             KeyGenerator keyGen = KeyGenerator.getInstance(SELECTED_ALGORITHM);
