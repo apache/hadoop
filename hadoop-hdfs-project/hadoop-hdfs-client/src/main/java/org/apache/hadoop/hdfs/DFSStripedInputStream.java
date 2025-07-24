@@ -395,7 +395,7 @@ public class DFSStripedInputStream extends DFSInputStream {
       throw new IOException("Stream closed");
     }
 
-    /** Number of bytes already read into buffer */
+    // Number of bytes already read into buffer.
     int result = 0;
     int len = strategy.getTargetLength();
     CorruptedBlocks corruptedBlocks = new CorruptedBlocks();
