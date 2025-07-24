@@ -417,6 +417,7 @@ public class DFSStripedInputStream extends DFSInputStream {
 
           while (result < realLen) {
             if (!curStripeRange.include(getOffsetInBlockGroup())) {
+              DFSClientFaultInjector.get().failWhenReadWithStrategy(isRetryRead);
               readOneStripe(corruptedBlocks);
             }
             int ret = copyToTargetBuf(strategy, realLen - result);
