@@ -738,7 +738,6 @@ public class TestDFSStripedInputStream {
     assertEquals(rangesExpected, ranges);
   }
 
-  @SuppressWarnings("checkstyle:EmptyBlock")
   @Test
   public void testStatefulReadRetryWhenMoreThanParityFailOnce() throws Exception {
     HdfsConfiguration hdfsConf = new HdfsConfiguration();
@@ -788,8 +787,8 @@ public class TestDFSStripedInputStream {
           System.arraycopy(readBuf, 0, totalReadBuf, totalReadBytes, ret);
           totalReadBytes += ret;
         }
-        
-        // Compare the read data with the original writeBuf
+
+        // Compare the read data with the original writeBuf.
         assertEquals(writeBufSize, totalReadBytes, "Total bytes read should match writeBuf size");
         assertArrayEquals(writeBuf, totalReadBuf, "Read data should match original write data");
       }
