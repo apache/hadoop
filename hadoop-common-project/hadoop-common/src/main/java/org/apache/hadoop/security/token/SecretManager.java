@@ -20,7 +20,6 @@ package org.apache.hadoop.security.token;
 
 import java.io.IOException;
 import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.Mac;
@@ -32,8 +31,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 
@@ -115,61 +112,29 @@ public abstract class SecretManager<T extends TokenIdentifier> {
     // Default to being available for read.
   }
 
-  private static final String SELECTED_ALGORITHM;
-  private static final int SELECTED_LENGTH;
-
-  static {
-    Configuration conf = new Configuration();
-    String algorithm = conf.get(
-      CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_KEY,
-      CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_DEFAULT);
-    LOG.debug("Selected hash algorithm: {}", algorithm);
-    SELECTED_ALGORITHM = algorithm;
-    int length = conf.getInt(
-      CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_KEY,
-      CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_DEFAULT);
-    LOG.debug("Selected hash key length:{}", length);
-    SELECTED_LENGTH = length;
-  }
-
   /**
    * A thread local store for the Macs.
    */
   private static final ThreadLocal<Mac> threadLocalMac =
-    new ThreadLocal<Mac>(){
-    @Override
-    protected Mac initialValue() {
-      try {
-        return Mac.getInstance(SELECTED_ALGORITHM);
-      } catch (NoSuchAlgorithmException nsa) {
-        throw new IllegalArgumentException("Can't find " + SELECTED_ALGORITHM, nsa);
-      }
-    }
-  };
+          ThreadLocal.withInitial(SecretManagerConfig::createMac);
 
   /**
    * Key generator to use.
    */
-  private final KeyGenerator keyGen;
-  {
-    try {
-      keyGen = KeyGenerator.getInstance(SELECTED_ALGORITHM);
-      keyGen.init(SELECTED_LENGTH);
-    } catch (NoSuchAlgorithmException nsa) {
-      throw new IllegalArgumentException("Can't find " + SELECTED_ALGORITHM, nsa);
-    }
-  }
+  private volatile KeyGenerator keyGen;
+  private final Object keyGenLock = new Object();
 
   /**
    * Generate a new random secret key.
    * @return the new key
    */
   protected SecretKey generateSecret() {
-    SecretKey key;
-    synchronized (keyGen) {
-      key = keyGen.generateKey();
+    synchronized (keyGenLock) {
+      if (keyGen == null) {
+        keyGen = SecretManagerConfig.createKeyGenerator();
+      }
+      return keyGen.generateKey();
     }
-    return key;
   }
 
   /**
@@ -197,6 +162,6 @@ public abstract class SecretManager<T extends TokenIdentifier> {
    * @return the secret key
    */
   protected static SecretKey createSecretKey(byte[] key) {
-    return new SecretKeySpec(key, SELECTED_ALGORITHM);
+    return new SecretKeySpec(key, SecretManagerConfig.getSelectedAlgorithm());
   }
 }
