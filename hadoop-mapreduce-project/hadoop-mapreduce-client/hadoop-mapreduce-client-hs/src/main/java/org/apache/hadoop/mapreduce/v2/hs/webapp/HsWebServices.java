@@ -85,6 +85,8 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 @Singleton
