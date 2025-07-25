@@ -28,6 +28,8 @@ import org.slf4j.LoggerFactory;
 import javax.crypto.KeyGenerator;
 import javax.crypto.Mac;
 import java.security.NoSuchAlgorithmException;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * Provides configuration and utility methods for managing cryptographic key generation
@@ -42,11 +44,13 @@ import java.security.NoSuchAlgorithmException;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class SecretManagerConfig {
+public final class SecretManagerConfig {
   private static final Logger LOG = LoggerFactory.getLogger(SecretManagerConfig.class);
   private static String selectedAlgorithm;
   private static int selectedLength;
-  private static boolean initialized;
+
+  private static final Map<Thread, KeyGenerator> KEYGENS = new WeakHashMap<>();
+  public static final Map<Thread, Mac> MACS = new WeakHashMap<>();
 
   static {
     update(new Configuration());
@@ -64,9 +68,13 @@ public class SecretManagerConfig {
    * @param conf the configuration object containing cryptographic settings
    */
   public static synchronized void update(Configuration conf) {
-    if (initialized) {
-      LOG.warn(
-        "Keygen or Mac was already initialized with older config, those will not be updated");
+    if (!KEYGENS.isEmpty()) {
+      LOG.warn("Keygen was already initialized with older config, those will not be updated." +
+          "Hint: If you turn on debug log you can see when it happened. Keygens: {}", KEYGENS);
+    }
+    if (!MACS.isEmpty()) {
+      LOG.warn("Mac was already initialized with older config, those will not be updated." +
+          "Hint: If you turn on debug log you can see when it happened. Macs: {}", MACS);
     }
     selectedAlgorithm = conf.get(
       CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_KEY,
@@ -104,11 +112,12 @@ public class SecretManagerConfig {
    * @throws IllegalArgumentException if the specified algorithm is not available
    */
   public static synchronized KeyGenerator createKeyGenerator() {
-    LOG.debug("Creating key generator instance {}, {}", selectedAlgorithm, selectedLength);
-    initialized = true;
+    LOG.debug("Creating key generator instance {} - {} bit with thread {}",
+        selectedAlgorithm, selectedLength, Thread.currentThread());
     try {
       KeyGenerator keyGen = KeyGenerator.getInstance(selectedAlgorithm);
       keyGen.init(selectedLength);
+      KEYGENS.put(Thread.currentThread(), keyGen);
       return keyGen;
     } catch (NoSuchAlgorithmException nsa) {
       throw new IllegalArgumentException("Can't find " + selectedAlgorithm, nsa);
@@ -122,10 +131,11 @@ public class SecretManagerConfig {
    * @throws IllegalArgumentException if the specified algorithm is not available
    */
   public static synchronized Mac createMac() {
-    LOG.debug("Creating mac instance {}", selectedAlgorithm);
-    initialized = true;
+    LOG.debug("Creating mac instance {} with thread {}", selectedAlgorithm, Thread.currentThread());
     try {
-      return Mac.getInstance(selectedAlgorithm);
+      Mac mac = Mac.getInstance(selectedAlgorithm);
+      MACS.put(Thread.currentThread(), mac);
+      return mac;
     } catch (NoSuchAlgorithmException nsa) {
       throw new IllegalArgumentException("Can't find " + selectedAlgorithm, nsa);
     }
