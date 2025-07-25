@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.auth;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.assertj.core.api.Assertions;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -78,13 +79,33 @@ public class TestMarshalledCredentials extends HadoopTestBase {
 
   @Test
   public void testRoundTripEncryptionData() throws Throwable {
+    final String context = "encryptionContext";
     EncryptionSecrets secrets = new EncryptionSecrets(
         S3AEncryptionMethods.SSE_KMS,
         "key",
-        "encryptionContext");
+        context);
     EncryptionSecrets result = S3ATestUtils.roundTrip(secrets,
         new Configuration());
     assertEquals(secrets, result, "round trip");
+    Assertions.assertThat(result .getEncryptionContext())
+        .describedAs("encryptionContext")
+        .isEqualTo(context);
+  }
+
+  @Test
+  public void testRoundTripEncryptionSecretsNoContext() throws Throwable {
+    EncryptionSecrets secrets = new EncryptionSecrets(
+        S3AEncryptionMethods.SSE_KMS,
+        "key");
+    EncryptionSecrets result = S3ATestUtils.roundTrip(secrets,
+        new Configuration());
+    assertEquals(secrets, result, "round trip");
+    // not equal to secrets with a context
+    Assertions.assertThat(result)
+        .isNotEqualTo(new EncryptionSecrets(
+            S3AEncryptionMethods.SSE_KMS,
+            "key",
+            "encryptionContext"));
   }
 
   @Test

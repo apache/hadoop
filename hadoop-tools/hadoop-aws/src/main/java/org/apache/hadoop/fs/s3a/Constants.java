@@ -786,6 +786,13 @@ public final class Constants {
       "fs.s3a.encryption.context";
 
   /**
+   * Default S3-SSE encryption context.
+   * value:{@value}
+   */
+  public static final String DEFAULT_S3_ENCRYPTION_CONTEXT =
+      "";
+
+  /**
    * Client side encryption (CSE-CUSTOM) with custom cryptographic material manager class name.
    * Custom keyring class name for CSE-KMS.
    * value:{@value}

@@ -31,6 +31,8 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_S3_ENCRYPTION_CONTEXT;
+
 /**
  * Encryption options in a form which can serialized or marshalled as a hadoop
  * Writeable.
@@ -54,7 +56,10 @@ public class EncryptionSecrets implements Writable, Serializable {
 
   public static final int MAX_SECRET_LENGTH = 2048;
 
-  private static final long serialVersionUID = 1208329045511296375L;
+  /**
+   * Change this after any change to the payload: {@value}.
+   */
+  private static final long serialVersionUID = 8834417969966697162L;
 
   /**
    * Encryption algorithm to use: must match one in
@@ -70,7 +75,7 @@ public class EncryptionSecrets implements Writable, Serializable {
   /**
    * Encryption context: base64-encoded UTF-8 string.
    */
-  private String encryptionContext = "";
+  private String encryptionContext = DEFAULT_S3_ENCRYPTION_CONTEXT;
 
   /**
    * This field isn't serialized/marshalled; it is rebuilt from the
@@ -86,7 +91,24 @@ public class EncryptionSecrets implements Writable, Serializable {
   }
 
   /**
-   * Create a pair of secrets.
+   * Create a tuple of secrets. The encryption context is set to "".
+   * This constructor is used in external implementations of S3A delegation
+   * tokens, sp MUST be retained even if there is no use in our own
+   * production code.
+   * @param encryptionAlgorithm algorithm enumeration.
+   * @param encryptionKey key/key reference.
+   * @throws IOException failure to initialize.
+   * @deprecated use {@link #EncryptionSecrets(S3AEncryptionMethods, String, String)}
+   * which takes an encryption context.
+   */
+  public EncryptionSecrets(final S3AEncryptionMethods encryptionAlgorithm,
+      final String encryptionKey) throws IOException {
+    this(encryptionAlgorithm.getMethod(), encryptionKey,
+        DEFAULT_S3_ENCRYPTION_CONTEXT);
+  }
+
+  /**
+   * Create a 3/tuple of secrets.
    * @param encryptionAlgorithm algorithm enumeration.
    * @param encryptionKey key/key reference.
    * @param encryptionContext  base64-encoded string with the encryption context key-value pairs.
@@ -99,7 +121,7 @@ public class EncryptionSecrets implements Writable, Serializable {
   }
 
   /**
-   * Create a pair of secrets.
+   * Create a 3/tuple of secrets.
    * @param encryptionAlgorithm algorithm name
    * @param encryptionKey key/key reference.
    * @param encryptionContext  base64-encoded string with the encryption context key-value pairs.
