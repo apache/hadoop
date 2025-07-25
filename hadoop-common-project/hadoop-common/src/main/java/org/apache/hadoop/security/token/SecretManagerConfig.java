@@ -50,7 +50,7 @@ public final class SecretManagerConfig {
   private static int selectedLength;
 
   private static final Map<Thread, KeyGenerator> KEYGENS = new WeakHashMap<>();
-  public static final Map<Thread, Mac> MACS = new WeakHashMap<>();
+  private static final Map<Thread, Mac> MACS = new WeakHashMap<>();
 
   static {
     update(new Configuration());
