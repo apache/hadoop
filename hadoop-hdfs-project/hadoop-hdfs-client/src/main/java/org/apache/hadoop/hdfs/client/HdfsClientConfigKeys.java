@@ -427,7 +427,8 @@ public interface HdfsClientConfigKeys {
           PREFIX + "count-reset-time-period-ms";
       long    COUNT_RESET_TIME_PERIOD_MS_DEFAULT = 10 * MS_PER_SECOND;
     }
-    
+
+    @SuppressWarnings("checkstyle:InterfaceIsType")
     interface ECRedunency {
       String DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED =
           "dfs.client.ec.write.failed.blocks.tolerated";
