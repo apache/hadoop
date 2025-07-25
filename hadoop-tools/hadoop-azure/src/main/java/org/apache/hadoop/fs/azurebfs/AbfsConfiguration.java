@@ -436,7 +436,7 @@ public class AbfsConfiguration{
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE, DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS,
-      MinValue = MIN_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS, MaxValue = 20) // TODO: Need to check if max value is needed
+      MinValue = MIN_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS, MaxValue = MAX_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS)
   private int maxApacheHttpClientCacheConnections;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =

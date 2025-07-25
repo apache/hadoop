@@ -20,8 +20,10 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.UUID;
 
 import org.apache.http.HttpConnectionMetrics;
@@ -96,13 +98,26 @@ class AbfsManagedApacheHttpConnection
   @Override
   public boolean isStale() {
     try {
-      // This will throw an IOException if the connection is stale.
-      httpClientConnection.getSocket().getInputStream().available();
-      return false;
+      Socket socket = httpClientConnection.getSocket();
+      if (socket == null || socket.isClosed()) {
+        return true;
+      }
+
+      InputStream in = socket.getInputStream();
+      if (in == null) {
+        return true;
+      }
+
+      socket.setSoTimeout(1); // temporarily lower timeout for test
+      int b = in.read();
+      return b == -1; // end of stream
+
+      // If we read a byte, it’s a problem (we didn’t expect data)
+    } catch (SocketTimeoutException e) {
+      return false; // No data but connection is alive
     } catch (IOException e) {
-      // If an IOException is thrown, it indicates that the connection is stale.
+      return true; // Definitely stale
     }
-    return true;
   }
 
   /**{@inheritDoc}*/

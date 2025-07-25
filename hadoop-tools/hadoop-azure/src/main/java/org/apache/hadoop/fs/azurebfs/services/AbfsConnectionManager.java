@@ -83,7 +83,7 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
 
   private final Object connectionLock = new Object();
 
-  private HttpHost baseHost;// lock for waiting threads
+  private HttpHost baseHost;
 
   AbfsConnectionManager(Registry<ConnectionSocketFactory> socketFactoryRegistry,
       AbfsHttpClientConnectionFactory connectionFactory, KeepAliveCache kac,
@@ -95,7 +95,7 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
         socketFactoryRegistry, null, null);
     if (abfsConfiguration.getCacheWarmupConnections() > 0) {
       // Warm up the cache with connections.
-      LOG.debug("Warming up the KeepAliveCache with {} connections",
+      logDebug("Warming up the KeepAliveCache with {} connections",
           abfsConfiguration.getCacheWarmupConnections());
       this.baseHost = new HttpHost(baseUrl.getHost(),
           baseUrl.getDefaultPort(), baseUrl.getProtocol());
@@ -149,7 +149,9 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
             while ((conn = kac.get()) == null
                 && System.currentTimeMillis() < deadline) {
               long waitTime = deadline - System.currentTimeMillis();
-              if (waitTime <= 0) break;
+              if (waitTime <= 0) {
+                break;
+              }
 
               try {
                 connectionLock.wait(waitTime);
@@ -277,7 +279,7 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
 
   private void logDebug(String message, Object... args) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug(message, args);
+      logDebug(message, args);
     }
   }
 
@@ -289,7 +291,9 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
    * @param numberOfConnections the number of connections to create
    */
   private void cacheExtraConnection(final HttpRoute route, final int numberOfConnections) {
-    if (!isCaching.getAndSet(true)) { // Only one thread allowed at a time
+    if (!isCaching.getAndSet(true)) {
+      long start = System.currentTimeMillis();
+      // Only one thread allowed at a time
       ExecutorService executorService = Executors.newFixedThreadPool(Math.min(numberOfConnections, 5));
 
       for (int i = 0; i < numberOfConnections; i++) {
@@ -299,7 +303,7 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
             connect(conn, route, connectionTimeout, new AbfsManagedHttpClientContext());
             addConnectionToCache(conn);
           } catch (Exception e) {
-            LOG.debug("Error creating connection: {}", e.getMessage());
+           logDebug("Error creating connection: {}", e.getMessage());
           }
         });
       }
@@ -314,9 +318,8 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
         Thread.currentThread().interrupt();
       } finally {
         isCaching.set(false);
+        logDebug("Connection warmup completed in {} ms", System.currentTimeMillis() - start);
       }
-    } else {
-      LOG.debug("Skipping connection warmup — another thread is already caching.");
     }
   }
 

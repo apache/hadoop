@@ -174,13 +174,15 @@ public final class FileSystemConfigurations {
   public static final long THOUSAND = 1000L;
 
   public static final HttpOperationType DEFAULT_NETWORKING_LIBRARY
-      = HttpOperationType.JDK_HTTP_URL_CONNECTION;
+      = HttpOperationType.APACHE_HTTP_CLIENT;
 
   public static final int DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = 3;
 
   public static final int DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS = 10;
 
   public static final int MIN_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS = 5;
+
+  public static final int MAX_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS = 20;
 
   public static final int DEFAULT_APACHE_CACHE_WARMUP_CONNECTION_COUNT = 5;
 
