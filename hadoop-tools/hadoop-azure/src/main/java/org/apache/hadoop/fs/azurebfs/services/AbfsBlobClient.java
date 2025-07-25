@@ -129,6 +129,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_BLOCK_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_COMMITTED_BLOCKS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_HDI_ISFOLDER;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_HDI_PERMISSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XMS_PROPERTIES_ENCODING_ASCII;
@@ -898,7 +899,7 @@ public class AbfsBlobClient extends AbfsClient {
       requestHeaders.add(new AbfsHttpHeader(EXPECT, HUNDRED_CONTINUE));
     }
     if (isChecksumValidationEnabled()) {
-      addCheckSumHeaderForWrite(requestHeaders, reqParams, buffer);
+      addCheckSumHeaderForWrite(requestHeaders, reqParams);
     }
     if (reqParams.isRetryDueToExpect()) {
       String userAgentRetry = getUserAgent();
@@ -982,6 +983,9 @@ public class AbfsBlobClient extends AbfsClient {
     if (requestParameters.getLeaseId() != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, requestParameters.getLeaseId()));
     }
+    if (isChecksumValidationEnabled()) {
+      addCheckSumHeaderForWrite(requestHeaders, requestParameters);
+    }
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, APPEND_BLOCK);
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION, abfsUriQueryBuilder);
@@ -1021,6 +1025,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param leaseId if there is an active lease on the path.
    * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the server calls.
+   * @param blobMd5 the MD5 hash of the blob for integrity verification.
    * @return exception as this operation is not supported on Blob Endpoint.
    * @throws UnsupportedOperationException always.
    */
@@ -1032,7 +1037,7 @@ public class AbfsBlobClient extends AbfsClient {
       final String cachedSasToken,
       final String leaseId,
       final ContextEncryptionAdapter contextEncryptionAdapter,
-      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+      final TracingContext tracingContext, String blobMd5) throws AzureBlobFileSystemException {
     throw new UnsupportedOperationException(
         "Flush without blockIds not supported on Blob Endpoint");
   }
@@ -1049,6 +1054,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param eTag The etag of the blob.
    * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the service call.
+   * @param blobMd5 the MD5 hash of the blob for integrity verification.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -1060,7 +1066,7 @@ public class AbfsBlobClient extends AbfsClient {
       final String leaseId,
       final String eTag,
       ContextEncryptionAdapter contextEncryptionAdapter,
-      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+      final TracingContext tracingContext, String blobMd5) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(path, requestHeaders, false,
         contextEncryptionAdapter, tracingContext);
@@ -1070,9 +1076,9 @@ public class AbfsBlobClient extends AbfsClient {
     if (leaseId != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
     }
-    String md5Hash = computeMD5Hash(buffer, 0, buffer.length);
-    requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, md5Hash));
-
+    if (blobMd5 != null) {
+      requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, blobMd5));
+    }
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCKLIST);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(isClose));
@@ -1097,7 +1103,7 @@ public class AbfsBlobClient extends AbfsClient {
         AbfsRestOperation op1 = getPathStatus(path, true, tracingContext,
             contextEncryptionAdapter);
         String metadataMd5 = op1.getResult().getResponseHeader(CONTENT_MD5);
-        if (!md5Hash.equals(metadataMd5)) {
+        if (blobMd5 != null && !blobMd5.equals(metadataMd5)) {
           throw ex;
         }
         return op;
@@ -1914,7 +1920,11 @@ public class AbfsBlobClient extends AbfsClient {
       // AzureBlobFileSystem supports only ASCII Characters in property values.
       if (isPureASCII(value)) {
         try {
-          value = encodeMetadataAttribute(value);
+          // URL encoding this JSON metadata, set by the WASB Client during file creation, causes compatibility issues.
+          // Therefore, we need to avoid encoding this metadata.
+          if (!XML_TAG_HDI_PERMISSION.equalsIgnoreCase(entry.getKey())) {
+            value = encodeMetadataAttribute(value);
+          }
         } catch (UnsupportedEncodingException e) {
           throw new InvalidAbfsRestOperationException(e);
         }
@@ -2057,7 +2067,7 @@ public class AbfsBlobClient extends AbfsClient {
 
     // Split the block ID string by commas and generate XML for each block ID
     if (!blockIdString.isEmpty()) {
-      String[] blockIds = blockIdString.split(",");
+      String[] blockIds = blockIdString.split(COMMA);
       for (String blockId : blockIds) {
         stringBuilder.append(String.format(LATEST_BLOCK_FORMAT, blockId));
       }

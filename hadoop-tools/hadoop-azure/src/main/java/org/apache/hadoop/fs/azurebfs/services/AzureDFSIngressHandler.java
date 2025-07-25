@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.store.DataBlocks;
@@ -178,13 +179,24 @@ public class AzureDFSIngressHandler extends AzureIngressHandler {
       tracingContextFlush.setIngressHandler(DFS_FLUSH);
       tracingContextFlush.setPosition(String.valueOf(offset));
     }
+    String fullBlobMd5 = computeFullBlobMd5();
     LOG.trace("Flushing data at offset {} and path {}", offset, getAbfsOutputStream().getPath());
-    return getClient()
-        .flush(getAbfsOutputStream().getPath(), offset, retainUncommitedData,
-            isClose,
-            getAbfsOutputStream().getCachedSasTokenString(), leaseId,
-            getAbfsOutputStream().getContextEncryptionAdapter(),
-            tracingContextFlush);
+    AbfsRestOperation op;
+    try {
+      op = getClient()
+          .flush(getAbfsOutputStream().getPath(), offset, retainUncommitedData,
+              isClose,
+              getAbfsOutputStream().getCachedSasTokenString(), leaseId,
+              getAbfsOutputStream().getContextEncryptionAdapter(),
+              tracingContextFlush, fullBlobMd5);
+    } catch (AbfsRestOperationException ex) {
+      LOG.error("Error in remote flush for path {} and offset {}",
+          getAbfsOutputStream().getPath(), offset, ex);
+      throw ex;
+    } finally {
+      getAbfsOutputStream().getFullBlobContentMd5().reset();
+    }
+    return op;
   }
 
   /**
@@ -225,7 +237,9 @@ public class AzureDFSIngressHandler extends AzureIngressHandler {
       LOG.trace("Writing current buffer to service at offset {} and path {}", offset, getAbfsOutputStream().getPath());
       AppendRequestParameters reqParams = new AppendRequestParameters(
           offset, 0, bytesLength, AppendRequestParameters.Mode.APPEND_MODE,
-          true, getAbfsOutputStream().getLeaseId(), getAbfsOutputStream().isExpectHeaderEnabled());
+          true, getAbfsOutputStream().getLeaseId(),
+          getAbfsOutputStream().isExpectHeaderEnabled(),
+          getAbfsOutputStream().getMd5());
 
       // Perform the remote write operation.
       AbfsRestOperation op = remoteWrite(activeBlock, uploadData, reqParams,

@@ -209,19 +209,21 @@ public class RenameAtomicity {
     String eTag = extractEtagHeader(putBlobOp.getResult());
 
     String blockId = generateBlockId();
+    String blockList = generateBlockListXml(blockId);
+    byte[] buffer = blockList.getBytes(StandardCharsets.UTF_8);
+    String computedMd5 = abfsClient.computeMD5Hash(buffer, 0,  buffer.length);
+
     AppendRequestParameters appendRequestParameters
         = new AppendRequestParameters(0, 0,
         bytes.length, AppendRequestParameters.Mode.APPEND_MODE, false, null,
         abfsClient.getAbfsConfiguration().isExpectHeaderEnabled(),
-        new BlobAppendRequestParameters(blockId, eTag));
+        new BlobAppendRequestParameters(blockId, eTag), abfsClient.computeMD5Hash(bytes, 0,  bytes.length));
 
     abfsClient.append(path.toUri().getPath(), bytes,
         appendRequestParameters, null, null, tracingContext);
 
-    String blockList = generateBlockListXml(blockId);
-    // PutBlockList on the path.
-    abfsClient.flush(blockList.getBytes(StandardCharsets.UTF_8),
-        path.toUri().getPath(), true, null, null, eTag, null, tracingContext);
+    abfsClient.flush(buffer,
+        path.toUri().getPath(), true, null, null, eTag, null, tracingContext, computedMd5);
   }
 
   /**
