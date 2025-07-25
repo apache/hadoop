@@ -108,7 +108,7 @@ class NameCache<K> {
       if (useCount != null) {
         useCount.increment();
         if (useCount.get() >= useThreshold) {
-          promote(name);
+          promote(useCount.value);
         }
         return useCount.value;
       }
