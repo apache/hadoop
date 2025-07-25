@@ -19,14 +19,13 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.hdfs.protocol.Block.BLOCK_FILE_PREFIX;
 import static org.apache.hadoop.util.Shell.getMemlockLimit;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -88,8 +87,9 @@ import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.SimpleLayout;
 import org.apache.log4j.WriterAppender;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -123,7 +123,7 @@ public class TestDirectoryScanner {
     return configuration;
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     LazyPersistTestCase.initCacheManipulator();
   }
@@ -375,7 +375,8 @@ public class TestDirectoryScanner {
     assertEquals(duplicateBlocks, stats.duplicateBlocks);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testRetainBlockOnPersistentStorage() throws Exception {
     Configuration conf = getConfiguration();
     cluster = new MiniDFSCluster.Builder(conf)
@@ -418,7 +419,8 @@ public class TestDirectoryScanner {
   /**
    * test scan only meta file NOT generate wrong folder structure warn log.
    */
-  @Test(timeout=600000)
+  @Test
+  @Timeout(value = 600)
   public void testScanDirectoryStructureWarn() throws Exception {
 
     //add a logger stream to check what has printed to log
@@ -464,10 +466,9 @@ public class TestDirectoryScanner {
           " for the deleted block";
       String dirStructureWarnLog = " found in invalid directory." +
           "  Expected directory: ";
-      assertFalse("directory check print meaningless warning message",
-          logContent.contains(dirStructureWarnLog));
-      assertTrue("missing block warn log not appear",
-          logContent.contains(missingBlockWarn));
+      assertFalse(logContent.contains(dirStructureWarnLog),
+          "directory check print meaningless warning message");
+      assertTrue(logContent.contains(missingBlockWarn), "missing block warn log not appear");
       LOG.info("check pass");
 
     } finally {
@@ -480,7 +481,8 @@ public class TestDirectoryScanner {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testDeleteBlockOnTransientStorage() throws Exception {
     Configuration conf = getConfiguration();
     cluster = new MiniDFSCluster.Builder(conf)
@@ -522,7 +524,8 @@ public class TestDirectoryScanner {
     }
   }
 
-  @Test(timeout = 600000)
+  @Test
+  @Timeout(value = 600)
   public void testRegularBlock() throws Exception {
     Configuration conf = getConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).build();
@@ -569,7 +572,8 @@ public class TestDirectoryScanner {
     }
   }
 
-  @Test(timeout = 600000)
+  @Test
+  @Timeout(value = 600)
   public void testDirectoryScannerDuringUpdateBlockMeta() throws Exception {
     Configuration conf = getConfiguration();
     DataNodeFaultInjector oldDnInjector = DataNodeFaultInjector.get();
@@ -651,7 +655,8 @@ public class TestDirectoryScanner {
     }
   }
 
-  @Test(timeout = 600000)
+  @Test
+  @Timeout(value = 600)
   public void testDirectoryScanner() throws Exception {
     // Run the test with and without parallel scanning
     for (int parallelism = 1; parallelism < 3; parallelism++) {
@@ -792,10 +797,9 @@ public class TestDirectoryScanner {
       scan(totalBlocks + 1, 0, 0, 0, 0, 0);
 
       // Test14: make sure no throttling is happening
-      assertTrue("Throttle appears to be engaged",
-          scanner.timeWaitingMs.get() < 10L);
-      assertTrue("Report complier threads logged no execution time",
-          scanner.timeRunningMs.get() > 0L);
+      assertTrue(scanner.timeWaitingMs.get() < 10L, "Throttle appears to be engaged");
+      assertTrue(scanner.timeRunningMs.get() > 0L,
+          "Report complier threads logged no execution time");
 
       scanner.shutdown();
       assertFalse(scanner.getRunStatus());
@@ -862,8 +866,8 @@ public class TestDirectoryScanner {
 
       // Waiting should be about 9x running.
       LOG.info("RATIO: " + ratio);
-      assertTrue("Throttle is too restrictive", ratio <= 10f);
-      assertTrue("Throttle is too permissive" + ratio, ratio >= 7f);
+      assertTrue(ratio <= 10f, "Throttle is too restrictive");
+      assertTrue(ratio >= 7f, "Throttle is too permissive" + ratio);
 
       // Test with a different limit
       conf.setInt(
@@ -880,8 +884,8 @@ public class TestDirectoryScanner {
 
       // Waiting should be about 4x running.
       LOG.info("RATIO: " + ratio);
-      assertTrue("Throttle is too restrictive", ratio <= 4.5f);
-      assertTrue("Throttle is too permissive", ratio >= 2.75f);
+      assertTrue(ratio <= 4.5f, "Throttle is too restrictive");
+      assertTrue(ratio >= 2.75f, "Throttle is too permissive");
 
       // Test with more than 1 thread
       conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY, 3);
@@ -899,8 +903,8 @@ public class TestDirectoryScanner {
 
       // Waiting should be about 9x running.
       LOG.info("RATIO: " + ratio);
-      assertTrue("Throttle is too restrictive", ratio <= 10f);
-      assertTrue("Throttle is too permissive", ratio >= 7f);
+      assertTrue(ratio <= 10f, "Throttle is too restrictive");
+      assertTrue(ratio >= 7f, "Throttle is too permissive");
 
       // Test with no limit
       scanner = new DirectoryScanner(fds, getConfiguration());
@@ -909,10 +913,9 @@ public class TestDirectoryScanner {
       scanner.shutdown();
       assertFalse(scanner.getRunStatus());
 
-      assertTrue("Throttle appears to be engaged",
-          scanner.timeWaitingMs.get() < 10L);
-      assertTrue("Report complier threads logged no execution time",
-          scanner.timeRunningMs.get() > 0L);
+      assertTrue(scanner.timeWaitingMs.get() < 10L, "Throttle appears to be engaged");
+      assertTrue(scanner.timeRunningMs.get() > 0L,
+          "Report complier threads logged no execution time");
 
       // Test with a 1ms limit. This also tests whether the scanner can be
       // shutdown cleanly in mid stride.
@@ -951,8 +954,8 @@ public class TestDirectoryScanner {
           if (finalMs > 0) {
             LOG.info("Scanner took " + (Time.monotonicNow() - finalMs)
                 + "ms to shutdown");
-            assertTrue("Scanner took too long to shutdown",
-                Time.monotonicNow() - finalMs < 1000L);
+            assertTrue(Time.monotonicNow() - finalMs < 1000L,
+                "Scanner took too long to shutdown");
           }
 
           ratio =
@@ -965,9 +968,9 @@ public class TestDirectoryScanner {
 
       // We just want to test that it waits a lot, but it also runs some
       LOG.info("RATIO: " + ratio);
-      assertTrue("Throttle is too permissive", ratio > 8);
-      assertTrue("Report complier threads logged no execution time",
-          scanner.timeRunningMs.get() > 0L);
+      assertTrue(ratio > 8, "Throttle is too permissive");
+      assertTrue(scanner.timeRunningMs.get() > 0L,
+          "Report complier threads logged no execution time");
 
       // Test with a 0 limit, i.e. disabled
       conf.setInt(
@@ -979,10 +982,9 @@ public class TestDirectoryScanner {
       scanner.shutdown();
       assertFalse(scanner.getRunStatus());
 
-      assertTrue("Throttle appears to be engaged",
-          scanner.timeWaitingMs.get() < 10L);
-      assertTrue("Report complier threads logged no execution time",
-          scanner.timeRunningMs.get() > 0L);
+      assertTrue(scanner.timeWaitingMs.get() < 10L, "Throttle appears to be engaged");
+      assertTrue(scanner.timeRunningMs.get() > 0L,
+          "Report complier threads logged no execution time");
 
       // Test with a 1000 limit, i.e. disabled
       conf.setInt(
@@ -994,10 +996,9 @@ public class TestDirectoryScanner {
       scanner.shutdown();
       assertFalse(scanner.getRunStatus());
 
-      assertTrue("Throttle appears to be engaged",
-          scanner.timeWaitingMs.get() < 10L);
-      assertTrue("Report complier threads logged no execution time",
-          scanner.timeRunningMs.get() > 0L);
+      assertTrue(scanner.timeWaitingMs.get() < 10L, "Throttle appears to be engaged");
+      assertTrue(scanner.timeRunningMs.get() > 0L,
+          "Report complier threads logged no execution time");
 
       // Test that throttle works from regular start
       conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY, 1);
@@ -1018,7 +1019,7 @@ public class TestDirectoryScanner {
 
       scanner.shutdown();
       assertFalse(scanner.getRunStatus());
-      assertTrue("Throttle does not appear to be engaged", count > 0);
+      assertTrue(count > 0, "Throttle does not appear to be engaged");
     } finally {
       cluster.shutdown();
     }
@@ -1041,8 +1042,7 @@ public class TestDirectoryScanner {
 
     // Added block has the same file as the one created by the test
     File file = new File(getBlockFile(blockId));
-    assertEquals(file.getName(),
-        FsDatasetTestUtil.getFile(fds, bpid, blockId).getName());
+    assertEquals(file.getName(), FsDatasetTestUtil.getFile(fds, bpid, blockId).getName());
 
     // Generation stamp is same as that of created file
     assertEquals(genStamp, replicainfo.getGenerationStamp());
@@ -1067,7 +1067,7 @@ public class TestDirectoryScanner {
     final ReplicaInfo memBlock;
     memBlock = FsDatasetTestUtil.fetchReplicaInfo(fds, bpid, blockId);
     assertNotNull(memBlock);
-    assertThat(memBlock.getVolume().isTransientStorage(), is(expectTransient));
+    assertThat(memBlock.getVolume().isTransientStorage()).isEqualTo(expectTransient);
   }
 
   private static class TestFsVolumeSpi implements FsVolumeSpi {
@@ -1219,7 +1219,8 @@ public class TestDirectoryScanner {
     assertNull(scanInfo.getMetaFile());
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void TestScanInfo() throws Exception {
     testScanInfoObject(123,
         new File(TEST_VOLUME.getFinalizedDir(BPID_1).getAbsolutePath()),
@@ -1242,7 +1243,8 @@ public class TestDirectoryScanner {
    * Directory scanner shouldn't abort the scan on every directory just because
    * one had an error.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testExceptionHandlingWhileDirectoryScan() throws Exception {
     Configuration conf = getConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).build();
@@ -1334,7 +1336,8 @@ public class TestDirectoryScanner {
    * Test parsing LocalReplica. We should be able to find the replica's path
    * even if the replica's dir doesn't match the idToBlockDir.
    */
-  @Test(timeout = 3000)
+  @Test
+  @Timeout(value = 3)
   public void testLocalReplicaParsing() {
     String baseDir = GenericTestUtils.getRandomizedTempPath();
     long blkId = getRandomBlockId();
@@ -1369,7 +1372,8 @@ public class TestDirectoryScanner {
    * Test whether can LocalReplica.updateWithReplica() correct the wrongly
    * recorded replica location.
    */
-  @Test(timeout = 3000)
+  @Test
+  @Timeout(value = 3)
   public void testLocalReplicaUpdateWithReplica() throws Exception {
     String baseDir = GenericTestUtils.getRandomizedTempPath();
     long blkId = getRandomBlockId();
@@ -1393,7 +1397,8 @@ public class TestDirectoryScanner {
     assertEquals(realBlkFile, localReplica.getBlockFile());
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testLastDirScannerFinishTimeIsUpdated() throws Exception {
     Configuration conf = getConfiguration();
     conf.setLong(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 3L);
@@ -1423,7 +1428,8 @@ public class TestDirectoryScanner {
     }
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testNullStorage() throws Exception {
     DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
 

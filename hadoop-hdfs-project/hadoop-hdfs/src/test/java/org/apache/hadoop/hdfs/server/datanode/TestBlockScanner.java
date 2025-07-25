@@ -24,10 +24,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SCANNER_VOLUME_BYTE
 import static org.apache.hadoop.hdfs.server.datanode.BlockScanner.Conf.INTERNAL_DFS_DATANODE_SCAN_PERIOD_MS;
 import static org.apache.hadoop.hdfs.server.datanode.BlockScanner.Conf.INTERNAL_VOLUME_SCANNER_SCAN_RESULT_HANDLER;
 import static org.apache.hadoop.hdfs.server.datanode.BlockScanner.Conf.INTERNAL_DFS_BLOCK_SCANNER_CURSOR_SAVE_INTERVAL_MS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.Closeable;
 import java.io.File;
@@ -62,9 +62,10 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.datanode.VolumeScanner.Statistics;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -73,7 +74,7 @@ public class TestBlockScanner {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestBlockScanner.class);
 
-  @Before
+  @BeforeEach
   public void before() {
     BlockScanner.Conf.allowUnitTestSettings = true;
     GenericTestUtils.setLogLevel(BlockScanner.LOG, Level.TRACE);
@@ -220,7 +221,7 @@ public class TestBlockScanner {
             assertEquals(savedBlock, loadedBlock);
           }
           boolean blockRemoved = blocks.remove(block);
-          assertTrue("Found unknown block " + block, blockRemoved);
+          assertTrue(blockRemoved, "Found unknown block " + block);
           if (blocksProcessed > (numFiles / 3)) {
             if (!testedSave) {
               LOG.info("Processed {} blocks out of {}.  Saving iterator.",
@@ -268,17 +269,20 @@ public class TestBlockScanner {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testVolumeIteratorWithoutCaching() throws Exception {
     testVolumeIteratorImpl(5, 0);
   }
 
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testVolumeIteratorWithCaching() throws Exception {
     testVolumeIteratorImpl(600, 100);
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testDisableVolumeScanner() throws Exception {
     Configuration conf = new Configuration();
     disableBlockScanner(conf);
@@ -287,7 +291,8 @@ public class TestBlockScanner {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testDisableVolumeScanner2() throws Exception {
     Configuration conf = new Configuration();
     conf.setLong(DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND, -1L);
@@ -444,7 +449,8 @@ public class TestBlockScanner {
    * Test scanning all blocks.  Set the scan period high enough that
    * we shouldn't rescan any block during this test.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testScanAllBlocksNoRescan() throws Exception {
     testScanAllBlocksImpl(false);
   }
@@ -453,7 +459,8 @@ public class TestBlockScanner {
    * Test scanning all blocks.  Set the scan period high enough that
    * we should rescan all blocks at least twice during this test.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testScanAllBlocksWithRescan() throws Exception {
     testScanAllBlocksImpl(true);
   }
@@ -461,7 +468,8 @@ public class TestBlockScanner {
   /**
    * Test that we don't scan too many blocks per second.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testScanRateLimit() throws Exception {
     Configuration conf = new Configuration();
     // Limit scan bytes per second dramatically
@@ -494,15 +502,16 @@ public class TestBlockScanner {
       // Should scan no more than one block a second.
       long seconds = ((endMs + 999 - startMs) / 1000);
       long maxBlocksScanned = seconds * 1;
-      assertTrue("The number of blocks scanned is too large.  Scanned " +
-          info.blocksScanned + " blocks; only expected to scan at most " +
-          maxBlocksScanned + " in " + seconds + " seconds.",
-          info.blocksScanned <= maxBlocksScanned);
+      assertTrue(info.blocksScanned <= maxBlocksScanned,
+          "The number of blocks scanned is too large.  Scanned " +
+              info.blocksScanned + " blocks; only expected to scan at most " +
+              maxBlocksScanned + " in " + seconds + " seconds.");
     }
     ctx.close();
   }
 
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testCorruptBlockHandling() throws Exception {
     Configuration conf = new Configuration();
     conf.setLong(DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, 100L);
@@ -544,7 +553,8 @@ public class TestBlockScanner {
    * Test that we save the scan cursor when shutting down the datanode, and
    * restart scanning from there when the datanode is restarted.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testDatanodeCursor() throws Exception {
     Configuration conf = new Configuration();
     conf.setLong(DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, 100L);
@@ -579,8 +589,8 @@ public class TestBlockScanner {
     URI vURI = ctx.volumes.get(0).getStorageLocation().getUri();
     File cursorPath = new File(new File(new File(new File(vURI), "current"),
           ctx.bpids[0]), "scanner.cursor");
-    assertTrue("Failed to find cursor save file in " +
-        cursorPath.getAbsolutePath(), cursorPath.exists());
+    assertTrue(cursorPath.exists(),
+        "Failed to find cursor save file in " + cursorPath.getAbsolutePath());
     Set<ExtendedBlock> prevGoodBlocks = new HashSet<ExtendedBlock>();
     synchronized (info) {
       info.sem = new Semaphore(4);
@@ -636,7 +646,8 @@ public class TestBlockScanner {
     ctx.close();
   }
 
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testMultipleBlockPoolScanning() throws Exception {
     Configuration conf = new Configuration();
     conf.setLong(DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, 100L);
@@ -681,47 +692,48 @@ public class TestBlockScanner {
     Statistics stats = ctx.blockScanner.getVolumeStats(
         ctx.volumes.get(0).getStorageID());
     assertEquals(TOTAL_FILES, stats.blocksScannedSinceRestart);
-    assertEquals(BYTES_SCANNED_PER_FILE * TOTAL_FILES,
-        stats.bytesScannedInPastHour);
+    assertEquals(BYTES_SCANNED_PER_FILE * TOTAL_FILES, stats.bytesScannedInPastHour);
     ctx.close();
   }
 
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testNextSorted() throws Exception {
     List<String> arr = new LinkedList<String>();
     arr.add("1");
     arr.add("3");
     arr.add("5");
     arr.add("7");
-    Assert.assertEquals("3", FsVolumeImpl.nextSorted(arr, "2"));
-    Assert.assertEquals("3", FsVolumeImpl.nextSorted(arr, "1"));
-    Assert.assertEquals("1", FsVolumeImpl.nextSorted(arr, ""));
-    Assert.assertEquals("1", FsVolumeImpl.nextSorted(arr, null));
-    Assert.assertEquals(null, FsVolumeImpl.nextSorted(arr, "9"));
+    Assertions.assertEquals("3", FsVolumeImpl.nextSorted(arr, "2"));
+    Assertions.assertEquals("3", FsVolumeImpl.nextSorted(arr, "1"));
+    Assertions.assertEquals("1", FsVolumeImpl.nextSorted(arr, ""));
+    Assertions.assertEquals("1", FsVolumeImpl.nextSorted(arr, null));
+    Assertions.assertEquals(null, FsVolumeImpl.nextSorted(arr, "9"));
   }
 
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testCalculateNeededBytesPerSec() throws Exception {
     // If we didn't check anything the last hour, we should scan now.
-    Assert.assertTrue(
+    Assertions.assertTrue(
         VolumeScanner.calculateShouldScan("test", 100, 0, 0, 60));
 
     // If, on average, we checked 101 bytes/s checked during the last hour,
     // stop checking now.
-    Assert.assertFalse(VolumeScanner.
+    Assertions.assertFalse(VolumeScanner.
         calculateShouldScan("test", 100, 101 * 3600, 1000, 5000));
 
     // Target is 1 byte / s, but we didn't scan anything in the last minute.
     // Should scan now.
-    Assert.assertTrue(VolumeScanner.
+    Assertions.assertTrue(VolumeScanner.
         calculateShouldScan("test", 1, 3540, 0, 60));
 
     // Target is 1000000 byte / s, but we didn't scan anything in the last
     // minute.  Should scan now.
-    Assert.assertTrue(VolumeScanner.
+    Assertions.assertTrue(VolumeScanner.
         calculateShouldScan("test", 100000L, 354000000L, 0, 60));
 
-    Assert.assertFalse(VolumeScanner.
+    Assertions.assertFalse(VolumeScanner.
         calculateShouldScan("test", 100000L, 365000000L, 0, 60));
   }
 
@@ -729,7 +741,8 @@ public class TestBlockScanner {
    * Test that we can mark certain blocks as suspect, and get them quickly
    * rescanned that way.  See HDFS-7686 and HDFS-7548.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testMarkSuspectBlock() throws Exception {
     Configuration conf = new Configuration();
     // Set a really long scan period.
@@ -766,10 +779,10 @@ public class TestBlockScanner {
     }, 50, 30000);
     // We should have scanned 4 blocks
     synchronized (info) {
-      assertEquals("Expected 4 good blocks.", 4, info.goodBlocks.size());
+      assertEquals(4, info.goodBlocks.size(), "Expected 4 good blocks.");
       info.goodBlocks.clear();
-      assertEquals("Expected 4 blocksScanned", 4, info.blocksScanned);
-      assertEquals("Did not expect bad blocks.", 0, info.badBlocks.size());
+      assertEquals(4, info.blocksScanned, "Expected 4 blocksScanned");
+      assertEquals(0, info.badBlocks.size(), "Did not expect bad blocks.");
       info.blocksScanned = 0;
     }
     ExtendedBlock first = ctx.getFileBlock(0, 0);
@@ -799,11 +812,11 @@ public class TestBlockScanner {
     }, 50, 30000);
 
     synchronized (info) {
-      assertTrue("Expected block " + first + " to have been scanned.",
-          info.goodBlocks.contains(first));
+      assertTrue(info.goodBlocks.contains(first),
+          "Expected block " + first + " to have been scanned.");
       assertEquals(2, info.goodBlocks.size());
       info.goodBlocks.clear();
-      assertEquals("Did not expect bad blocks.", 0, info.badBlocks.size());
+      assertEquals(0, info.badBlocks.size(), "Did not expect bad blocks.");
       assertEquals(2, info.blocksScanned);
       info.blocksScanned = 0;
     }
@@ -834,9 +847,9 @@ public class TestBlockScanner {
       // We should not have rescanned the "suspect block",
       // because it was recently rescanned by the suspect block system.
       // This is a test of the "suspect block" rate limiting.
-      Assert.assertFalse("We should not " +
+      Assertions.assertFalse(info.goodBlocks.contains(first), "We should not " +
           "have rescanned block " + first + ", because it should have been " +
-          "in recentSuspectBlocks.", info.goodBlocks.contains(first));
+          "in recentSuspectBlocks.");
       info.blocksScanned = 0;
     }
     ctx.close();
@@ -845,7 +858,8 @@ public class TestBlockScanner {
   /**
    * Test that blocks which are in the wrong location are ignored.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testIgnoreMisplacedBlock() throws Exception {
     Configuration conf = new Configuration();
     // Set a really long scan period.
@@ -889,10 +903,10 @@ public class TestBlockScanner {
     synchronized (info) {
       assertFalse(info.goodBlocks.contains(unreachableBlock));
       assertFalse(info.badBlocks.contains(unreachableBlock));
-      assertEquals("Expected 3 good blocks.", 3, info.goodBlocks.size());
+      assertEquals(3, info.goodBlocks.size(), "Expected 3 good blocks.");
       info.goodBlocks.clear();
-      assertEquals("Expected 3 blocksScanned", 3, info.blocksScanned);
-      assertEquals("Did not expect bad blocks.", 0, info.badBlocks.size());
+      assertEquals(3, info.blocksScanned, "Expected 3 blocksScanned");
+      assertEquals(0, info.badBlocks.size(), "Did not expect bad blocks.");
       info.blocksScanned = 0;
     }
     info.sem.release(1);
@@ -903,7 +917,8 @@ public class TestBlockScanner {
    * Test concurrent append and scan.
    * @throws Exception
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testAppendWhileScanning() throws Exception {
     GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);
     Configuration conf = new Configuration();
@@ -985,12 +1000,12 @@ public class TestBlockScanner {
     }, 1000, 30000);
 
     synchronized (info) {
-      assertEquals("Expected 1 good block.",
-          numExpectedBlocks, info.goodBlocks.size());
+      assertEquals(numExpectedBlocks, info.goodBlocks.size(),
+          "Expected 1 good block.");
       info.goodBlocks.clear();
-      assertEquals("Expected 1 blocksScanned",
-          numExpectedBlocks, info.blocksScanned);
-      assertEquals("Did not expect bad blocks.", 0, info.badBlocks.size());
+      assertEquals(numExpectedBlocks, info.blocksScanned, "Expected 1 blocksScanned");
+      assertEquals(0, info.badBlocks.size(),
+          "Did not expect bad blocks.");
       info.blocksScanned = 0;
     }
   }
@@ -1029,8 +1044,8 @@ public class TestBlockScanner {
       info.shouldRun = false;
       info.notify();
     }
-    assertEquals("Should not scan block accessed in last period",
-        0, info.blocksScanned);
+    assertEquals(0, info.blocksScanned,
+        "Should not scan block accessed in last period");
     ctx.close();
   }
 
@@ -1040,7 +1055,8 @@ public class TestBlockScanner {
    *
    * @throws Exception
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testFastDatanodeShutdown() throws Exception {
     // set the joinTimeOut to a value smaller than the completion time of the
     // VolumeScanner.
@@ -1052,7 +1068,8 @@ public class TestBlockScanner {
    *
    * @throws Exception
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testSlowDatanodeShutdown() throws Exception {
     // Set the joinTimeOut to a value larger than the completion time of the
     // volume scanner
@@ -1101,18 +1118,19 @@ public class TestBlockScanner {
       long totalTimeShutdown = endShutdownTime - startShutdownTime;
 
       if (isFastShutdown) {
-        assertTrue("total shutdown time of DN must be smaller than "
-                + "VolumeScanner Response time: " + totalTimeShutdown,
-            totalTimeShutdown < delayMS
-                && totalTimeShutdown >= joinTimeOutMS);
+        assertTrue(totalTimeShutdown < delayMS
+                && totalTimeShutdown >= joinTimeOutMS,
+            "total shutdown time of DN must be smaller than "
+                + "VolumeScanner Response time: " + totalTimeShutdown
+        );
         // wait for scanners to terminate before we move to the next test.
         injectDelay.waitForScanners();
         return;
       }
-      assertTrue("total shutdown time of DN must be larger than " +
-              "VolumeScanner Response time: " + totalTimeShutdown,
-          totalTimeShutdown >= delayMS
-              && totalTimeShutdown < joinTimeOutMS);
+      assertTrue(totalTimeShutdown >= delayMS
+              && totalTimeShutdown < joinTimeOutMS,
+          "total shutdown time of DN must be larger than " +
+              "VolumeScanner Response time: " + totalTimeShutdown);
     } finally {
       // restore the VolumeScanner callback injector.
       VolumeScannerCBInjector.set(prevVolumeScannerCBInject);
