@@ -208,7 +208,7 @@ public abstract class SecretManager<T extends TokenIdentifier> {
    * @return the secret key
    */
   protected static SecretKey createSecretKey(byte[] key) {
-    LOG.debug("Creating secretKey {} bit with thread {}",
+    LOG.debug("Creating secretKey with algorithm {} with thread {}",
         selectedAlgorithm, Thread.currentThread());
     secretKeyInitialized = true;
     return new SecretKeySpec(key, selectedAlgorithm);
