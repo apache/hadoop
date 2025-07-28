@@ -293,12 +293,12 @@ public final class ConfigurationKeys {
   /**
    * TTL in milliseconds for the idle threads in executor service used by read ahead v2.
    */
-  public static final String FS_AZURE_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLISECONDS = "fs.azure.readahead.v2.executor.service.ttl.seconds";
+  public static final String FS_AZURE_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS = "fs.azure.readahead.v2.executor.service.ttl.millis";
 
   /**
    * TTL in milliseconds for the cached buffers in buffer pool used by read ahead v2.
    */
-  public static final String FS_AZURE_READAHEAD_V2_CACHED_BUFFER_TTL_MILLISECONDS = "fs.azure.readahead.v2.cached.buffer.ttl.milliseconds";
+  public static final String FS_AZURE_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS = "fs.azure.readahead.v2.cached.buffer.ttl.millis";
 
   /** Setting this true will make the driver use it's own RemoteIterator implementation */
   public static final String FS_AZURE_ENABLE_ABFS_LIST_ITERATOR = "fs.azure.enable.abfslistiterator";

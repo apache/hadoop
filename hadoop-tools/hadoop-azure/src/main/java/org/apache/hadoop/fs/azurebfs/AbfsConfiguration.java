@@ -407,14 +407,14 @@ public class AbfsConfiguration{
   private int maxReadAheadV2BufferPoolSize;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLISECONDS,
-      DefaultValue = DEFAULT_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLISECONDS)
-  private int readAheadExecutorServiceTTLInMilliSeconds;
+      FS_AZURE_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS,
+      DefaultValue = DEFAULT_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS)
+  private int readAheadExecutorServiceTTLMillis;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_READAHEAD_V2_CACHED_BUFFER_TTL_MILLISECONDS,
-      DefaultValue = DEFAULT_READAHEAD_V2_CACHED_BUFFER_TTL_MILLISECONDS)
-  private int readAheadV2CachedBufferTTLMilliseconds;
+      FS_AZURE_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS,
+      DefaultValue = DEFAULT_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS)
+  private int readAheadV2CachedBufferTTLMillis;
 
   @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS,
       MinValue = 0,
@@ -1435,12 +1435,12 @@ public class AbfsConfiguration{
     return maxReadAheadV2BufferPoolSize;
   }
 
-  public int getReadAheadExecutorServiceTTLInMilliSeconds() {
-    return readAheadExecutorServiceTTLInMilliSeconds;
+  public int getReadAheadExecutorServiceTTLInMillis() {
+    return readAheadExecutorServiceTTLMillis;
   }
 
-  public int getReadAheadV2CachedBufferTTLMilliseconds() {
-    return readAheadV2CachedBufferTTLMilliseconds;
+  public int getReadAheadV2CachedBufferTTLMillis() {
+    return readAheadV2CachedBufferTTLMillis;
   }
 
   /**

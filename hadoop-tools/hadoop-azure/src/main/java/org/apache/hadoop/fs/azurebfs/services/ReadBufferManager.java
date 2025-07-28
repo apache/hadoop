@@ -33,6 +33,8 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_AHEAD_BLOCK_SIZE;
+
 /**
  * Abstract class for managing read buffers for Azure Blob File System input streams.
  */
@@ -40,11 +42,8 @@ public abstract class ReadBufferManager {
   protected static final Logger LOGGER = LoggerFactory.getLogger(
       ReadBufferManager.class);
   protected static final ReentrantLock LOCK = new ReentrantLock();
-  private static final int ONE_KB = 1024;
-  private static final int ONE_MB = ONE_KB * ONE_KB;
-
   private static int thresholdAgeMilliseconds;
-  private static int blockSize = 4 * ONE_MB; // default block size for read-ahead in bytes
+  private static int blockSize = DEFAULT_READ_AHEAD_BLOCK_SIZE; // default block size for read-ahead in bytes
 
   private Stack<Integer> freeList = new Stack<>();   // indices in buffers[] array that are available
   private Queue<ReadBuffer> readAheadQueue = new LinkedList<>(); // queue of requests that are not picked up by any worker thread yet
