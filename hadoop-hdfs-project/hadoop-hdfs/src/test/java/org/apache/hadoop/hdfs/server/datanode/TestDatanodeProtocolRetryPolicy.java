@@ -50,10 +50,11 @@ import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.event.Level;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -85,7 +86,7 @@ public class TestDatanodeProtocolRetryPolicy {
    * Starts an instance of DataNode
    * @throws IOException
    */
-  @Before
+  @BeforeEach
   public void startUp() throws IOException, URISyntaxException {
     tearDownDone = false;
     conf = new HdfsConfiguration();
@@ -107,7 +108,7 @@ public class TestDatanodeProtocolRetryPolicy {
    * Cleans the resources and closes the instance of datanode
    * @throws IOException if an error occurred
    */
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (!tearDownDone && dn != null) {
       try {
@@ -117,8 +118,8 @@ public class TestDatanodeProtocolRetryPolicy {
       } finally {
         File dir = new File(DATA_DIR);
         if (dir.exists())
-          Assert.assertTrue(
-              "Cannot delete data-node dirs", FileUtil.fullyDelete(dir));
+          Assertions.assertTrue(FileUtil.fullyDelete(dir),
+              "Cannot delete data-node dirs");
       }
       tearDownDone = true;
     }
@@ -154,7 +155,8 @@ public class TestDatanodeProtocolRetryPolicy {
    * 6. DN retries.
    * 7. DatanodeProtocol.registerDatanode succeeds.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testDatanodeRegistrationRetry() throws Exception {
     final DatanodeProtocolClientSideTranslatorPB namenode =
         mock(DatanodeProtocolClientSideTranslatorPB.class);
@@ -222,7 +224,7 @@ public class TestDatanodeProtocolRetryPolicy {
       @Override
       DatanodeProtocolClientSideTranslatorPB connectToNN(
           InetSocketAddress nnAddr) throws IOException {
-        Assert.assertEquals(NN_ADDR, nnAddr);
+        Assertions.assertEquals(NN_ADDR, nnAddr);
         return namenode;
       }
     };

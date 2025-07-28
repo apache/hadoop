@@ -83,11 +83,14 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.WebApp;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 @Singleton
 @Path("/ws/v1/history")
 public class HsWebServices extends WebServices {
+  private static final Logger LOG = LoggerFactory.getLogger(HsWebServices.class);
   private final HistoryContext ctx;
   private WebApp webapp;
   private LogServlet logServlet;
@@ -127,8 +130,22 @@ public class HsWebServices extends WebServices {
     }
   }
   private void checkAccess(String containerIdStr, HttpServletRequest hsr) {
-    if (mrAclsEnabled) {
-      checkAccess(AMWebServices.getJobFromContainerIdString(containerIdStr, ctx), hsr);
+    // Apply MR ACLs only if the container belongs to a MapReduce job.
+    // For non-MapReduce jobs, no corresponding Job will be found,
+    // so ACLs are not enforced.
+    if (mrAclsEnabled && isMRJobContainer(containerIdStr)) {
+      Job job = AMWebServices.getJobFromContainerIdString(containerIdStr, ctx);
+      checkAccess(job, hsr);
+    }
+  }
+
+  private boolean isMRJobContainer(String containerIdStr) {
+    try {
+      AMWebServices.getJobFromContainerIdString(containerIdStr, ctx);
+      return true;
+    } catch (NotFoundException e) {
+      LOG.trace("Container {} does not belong to a MapReduce job", containerIdStr);
+      return false;
     }
   }
 

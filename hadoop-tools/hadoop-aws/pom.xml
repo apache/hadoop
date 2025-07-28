@@ -107,7 +107,6 @@
             <configuration>
               <forkCount>${testsThreadCount}</forkCount>
               <reuseForks>false</reuseForks>
-              <trimStackTrace>false</trimStackTrace>
               <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
               <systemPropertyVariables>
                 <testsThreadCount>${testsThreadCount}</testsThreadCount>
@@ -141,7 +140,6 @@
                   <reuseForks>false</reuseForks>
                   <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
                   <forkedProcessTimeoutInSeconds>${fs.s3a.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed in parallel -->
                     <test.parallel.execution>true</test.parallel.execution>
@@ -202,7 +200,6 @@
                 </goals>
                 <configuration>
                   <forkedProcessTimeoutInSeconds>${fs.s3a.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed sequentially -->
                     <test.parallel.execution>false</test.parallel.execution>
@@ -266,7 +263,6 @@
                   <goal>verify</goal>
                 </goals>
                 <configuration>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Propagate scale parameters -->
                     <fs.s3a.scale.test.enabled>${fs.s3a.scale.test.enabled}</fs.s3a.scale.test.enabled>
