@@ -21,15 +21,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import javax.crypto.KeyGenerator;
-import javax.crypto.Mac;
+import javax.crypto.SecretKey;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class TestSecurityManagerConfig {
+public class TestSecretManager {
 
   private final String defaultAlgorithm =
       CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_DEFAULT;
@@ -37,59 +37,64 @@ public class TestSecurityManagerConfig {
       CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_DEFAULT;
   private final String strongAlgorithm = "HmacSHA256";
   private final int strongLength = 256;
+  private SecretManager<TokenIdentifier> secretManager;
 
   @Test
   public void testDefaults() {
-    assertEquals(defaultAlgorithm, SecretManagerConfig.getSelectedAlgorithm());
-    assertEquals(defaultLength, SecretManagerConfig.getSelectedLength());
+    assertKey(secretManager.generateSecret(), defaultAlgorithm, defaultLength);
   }
 
   @Test
-  public void testUpdateByConfig() {
-    SecretManagerConfig.update(createConfiguration(strongAlgorithm, strongLength));
-    assertEquals(strongAlgorithm, SecretManagerConfig.getSelectedAlgorithm());
-    assertEquals(strongLength, SecretManagerConfig.getSelectedLength());
+  public void testUpdate() {
+    SecretManager.update(createConfiguration(strongAlgorithm, strongLength));
+    assertKey(secretManager.generateSecret(), strongAlgorithm, strongLength);
   }
 
   @Test
-  public void testMacCreation() {
-    SecretManagerConfig.update(createConfiguration(strongAlgorithm, strongLength));
-    Mac mac = SecretManagerConfig.createMac();
-    assertEquals(strongAlgorithm, mac.getAlgorithm());
+  public void testUnknownAlgorithm() {
+    SecretManager.update(createConfiguration("testUnknownAlgorithm_NO_ALG", strongLength));
+    assertThrows(IllegalArgumentException.class, secretManager::generateSecret);
   }
 
   @Test
-  public void testMacCreationUnknownAlgorithm() {
-    SecretManagerConfig.update(
-        createConfiguration("testMacCreationUnknownAlgorithm_NO_ALG", defaultLength));
-    assertThrows(IllegalArgumentException.class, SecretManagerConfig::createMac);
+  public void testUpdateAfterInitialisation() {
+    SecretKey oldSecretKey = secretManager.generateSecret();
+    SecretManager.update(createConfiguration(strongAlgorithm, strongLength));
+    SecretKey newSecretKey = secretManager.generateSecret();
+    assertKey(oldSecretKey, defaultAlgorithm, defaultLength);
+    assertKey(newSecretKey, defaultAlgorithm, defaultLength);
   }
 
-  @Test
-  public void testKeygenCreation() {
-    SecretManagerConfig.update(createConfiguration(strongAlgorithm, strongLength));
-    KeyGenerator keyGenerator = SecretManagerConfig.createKeyGenerator();
-    assertEquals(strongAlgorithm, keyGenerator.getAlgorithm());
-  }
+  @BeforeEach
+  public void setUp() {
+    secretManager = new SecretManager<TokenIdentifier>() {
+      @Override
+      protected byte[] createPassword(TokenIdentifier identifier) {
+        return new byte[0];
+      }
 
-  @Test
-  public void testKeygenCreationUnknownAlgorithm() {
-    SecretManagerConfig.update(
-        createConfiguration("testKeygenCreationUnknownAlgorithm_NO_ALG", defaultLength));
-    assertThrows(IllegalArgumentException.class, SecretManagerConfig::createKeyGenerator);
-  }
+      @Override
+      public byte[] retrievePassword(TokenIdentifier identifier) throws InvalidToken {
+        return new byte[0];
+      }
 
-  @Test
-  public void testConfigUpdateAfterKeygenCreation() {
-    SecretManagerConfig.update(createConfiguration(strongAlgorithm, strongLength));
-    KeyGenerator keyGenerator = SecretManagerConfig.createKeyGenerator();
-    SecretManagerConfig.update(createConfiguration(defaultAlgorithm, defaultLength));
-    assertEquals(strongAlgorithm, keyGenerator.getAlgorithm());
+      @Override
+      public TokenIdentifier createIdentifier() {
+        return null;
+      }
+    };
   }
 
   @AfterEach
   public void tearDown() {
-    SecretManagerConfig.update(createConfiguration(defaultAlgorithm, defaultLength));
+    SecretManager.update(createConfiguration(defaultAlgorithm, defaultLength));
+  }
+
+  private void assertKey(SecretKey secretKey, String algorithm, int length) {
+    assertEquals(algorithm, secretKey.getAlgorithm(),
+        "Algorithm of created key is not as expected.");
+    assertEquals(length, secretKey.getEncoded().length * 8,
+        "Length of created key is not as expected.");
   }
 
   private Configuration createConfiguration(String algorithm, int length) {
