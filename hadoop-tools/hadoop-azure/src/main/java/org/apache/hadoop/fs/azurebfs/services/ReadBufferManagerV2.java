@@ -58,11 +58,11 @@ final class ReadBufferManagerV2 extends ReadBufferManager {
     if (bufferManager == null) {
       minThreadPoolSize = abfsConfiguration.getMinReadAheadV2ThreadPoolSize();
       maxThreadPoolSize = abfsConfiguration.getMaxReadAheadV2ThreadPoolSize();
-      executorServiceKeepAliveTimeInMilliSec = abfsConfiguration.getReadAheadExecutorServiceTTLInMilliSeconds();
+      executorServiceKeepAliveTimeInMilliSec = abfsConfiguration.getReadAheadExecutorServiceTTLInMillis();
 
       minBufferPoolSize = abfsConfiguration.getMinReadAheadV2BufferPoolSize();
       maxBufferPoolSize = abfsConfiguration.getMaxReadAheadV2BufferPoolSize();
-      setThresholdAgeMilliseconds(abfsConfiguration.getReadAheadV2CachedBufferTTLMilliseconds());
+      setThresholdAgeMilliseconds(abfsConfiguration.getReadAheadV2CachedBufferTTLMillis());
       setReadAheadBlockSize(readAheadBlockSize);
     }
   }

@@ -26,7 +26,6 @@ import org.junit.Test;
 import org.assertj.core.api.Assertions;
 import org.mockito.Mockito;
 
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
