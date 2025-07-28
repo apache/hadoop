@@ -25,7 +25,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 
 import org.apache.hadoop.conf.Configuration;
@@ -97,6 +98,7 @@ public class ITestTreewalkProblems extends AbstractS3ACostTest {
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();

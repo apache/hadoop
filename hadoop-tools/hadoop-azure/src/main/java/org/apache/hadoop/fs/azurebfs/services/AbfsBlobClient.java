@@ -51,6 +51,7 @@ import org.xml.sax.SAXException;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.Path;
@@ -77,6 +78,7 @@ import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
+import org.apache.hadoop.fs.azurebfs.utils.ListUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
@@ -127,6 +129,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_BLOCK_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_COMMITTED_BLOCKS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_HDI_ISFOLDER;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_HDI_PERMISSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XMS_PROPERTIES_ENCODING_ASCII;
@@ -348,13 +351,9 @@ public class AbfsBlobClient extends AbfsClient {
    */
   @Override
   public ListResponseData listPath(final String relativePath, final boolean recursive,
-      final int listMaxResults, final String continuation, TracingContext tracingContext, URI uri) throws IOException {
-    return listPath(relativePath, recursive, listMaxResults, continuation, tracingContext, uri, true);
-  }
-
-  public ListResponseData listPath(final String relativePath, final boolean recursive,
-      final int listMaxResults, final String continuation, TracingContext tracingContext, URI uri, boolean is404CheckRequired)
+      final int listMaxResults, final String continuation, TracingContext tracingContext, URI uri)
       throws AzureBlobFileSystemException {
+
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -400,37 +399,46 @@ public class AbfsBlobClient extends AbfsClient {
         listResponseData.setOp(retryListOp);
       }
     }
-
-    if (isEmptyListResults(listResponseData) && is404CheckRequired) {
-      // If the list operation returns no paths, we need to check if the path is a file.
-      // If it is a file, we need to return the file in the list.
-      // If it is a non-existing path, we need to throw a FileNotFoundException.
-      if (relativePath.equals(ROOT_PATH)) {
-        // Root Always exists as directory. It can be an empty listing.
-        return listResponseData;
-      }
-      AbfsRestOperation pathStatus = this.getPathStatus(relativePath, tracingContext, null, false);
-      BlobListResultSchema listResultSchema = getListResultSchemaFromPathStatus(relativePath, pathStatus);
-      LOG.debug("ListBlob attempted on a file path. Returning file status.");
-      List<VersionedFileStatus> fileStatusList = new ArrayList<>();
-      for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
-        fileStatusList.add(getVersionedFileStatusFromEntry(entry, uri));
-      }
-      AbfsRestOperation listOp = getAbfsRestOperation(
-          AbfsRestOperationType.ListBlobs,
-          HTTP_METHOD_GET,
-          url,
-          requestHeaders);
-      listOp.hardSetGetListStatusResult(HTTP_OK, listResultSchema);
-      listResponseData.setFileStatusList(fileStatusList);
-      listResponseData.setContinuationToken(null);
-      listResponseData.setRenamePendingJsonPaths(null);
-      listResponseData.setOp(listOp);
-      return listResponseData;
-    }
     return listResponseData;
   }
 
+  /**
+   * Post-processing of the list operation on Blob endpoint.
+   * There are two client handing to be done on list output.
+   * 1. Empty List returned on server could potentially mean path is a file.
+   * 2. There can be duplicates returned from the server for explicit non-empty directory.
+   * @param relativePath relative path to be listed.
+   * @param fileStatuses list of file statuses returned from the server.
+   * @param tracingContext tracing context to trace server calls.
+   * @param uri URI to be used for path conversion.
+   * @return rectified list of file statuses.
+   * @throws AzureBlobFileSystemException if any failure occurs.
+   */
+  @Override
+  public List<FileStatus> postListProcessing(String relativePath, List<FileStatus> fileStatuses,
+      TracingContext tracingContext, URI uri) throws AzureBlobFileSystemException {
+    List<FileStatus> rectifiedFileStatuses = new ArrayList<>();
+    if (fileStatuses.isEmpty() && !ROOT_PATH.equals(relativePath)) {
+      // If the list operation returns no paths, we need to check if the path is a file.
+      // If it is a file, we need to return the file in the list.
+      // If it is a directory or root path, we need to return an empty list.
+      // If it is a non-existing path, we need to throw a FileNotFoundException.
+      AbfsRestOperation pathStatus = this.getPathStatus(relativePath, tracingContext, null, false);
+      BlobListResultSchema listResultSchema = getListResultSchemaFromPathStatus(relativePath, pathStatus);
+      LOG.debug("ListStatus attempted on a file path {}. Returning file status.", relativePath);
+      for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
+        rectifiedFileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
+      }
+    } else {
+      // Remove duplicates from the non-empty list output only.
+      rectifiedFileStatuses.addAll(ListUtils.getUniqueListResult(fileStatuses));
+      LOG.debug(
+          "ListBlob API returned a total of {} elements including duplicates."
+              + "Number of unique Elements are {}", fileStatuses.size(),
+          rectifiedFileStatuses.size());
+    }
+    return rectifiedFileStatuses;
+  }
   /**
    * Filter the paths for which no rename redo operation is performed.
    * Update BlobListResultSchema path with filtered entries.
@@ -891,7 +899,7 @@ public class AbfsBlobClient extends AbfsClient {
       requestHeaders.add(new AbfsHttpHeader(EXPECT, HUNDRED_CONTINUE));
     }
     if (isChecksumValidationEnabled()) {
-      addCheckSumHeaderForWrite(requestHeaders, reqParams, buffer);
+      addCheckSumHeaderForWrite(requestHeaders, reqParams);
     }
     if (reqParams.isRetryDueToExpect()) {
       String userAgentRetry = getUserAgent();
@@ -975,6 +983,9 @@ public class AbfsBlobClient extends AbfsClient {
     if (requestParameters.getLeaseId() != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, requestParameters.getLeaseId()));
     }
+    if (isChecksumValidationEnabled()) {
+      addCheckSumHeaderForWrite(requestHeaders, requestParameters);
+    }
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, APPEND_BLOCK);
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION, abfsUriQueryBuilder);
@@ -1014,6 +1025,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param leaseId if there is an active lease on the path.
    * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the server calls.
+   * @param blobMd5 the MD5 hash of the blob for integrity verification.
    * @return exception as this operation is not supported on Blob Endpoint.
    * @throws UnsupportedOperationException always.
    */
@@ -1025,7 +1037,7 @@ public class AbfsBlobClient extends AbfsClient {
       final String cachedSasToken,
       final String leaseId,
       final ContextEncryptionAdapter contextEncryptionAdapter,
-      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+      final TracingContext tracingContext, String blobMd5) throws AzureBlobFileSystemException {
     throw new UnsupportedOperationException(
         "Flush without blockIds not supported on Blob Endpoint");
   }
@@ -1042,6 +1054,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param eTag The etag of the blob.
    * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the service call.
+   * @param blobMd5 the MD5 hash of the blob for integrity verification.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -1053,7 +1066,7 @@ public class AbfsBlobClient extends AbfsClient {
       final String leaseId,
       final String eTag,
       ContextEncryptionAdapter contextEncryptionAdapter,
-      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+      final TracingContext tracingContext, String blobMd5) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(path, requestHeaders, false,
         contextEncryptionAdapter, tracingContext);
@@ -1063,9 +1076,9 @@ public class AbfsBlobClient extends AbfsClient {
     if (leaseId != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
     }
-    String md5Hash = computeMD5Hash(buffer, 0, buffer.length);
-    requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, md5Hash));
-
+    if (blobMd5 != null) {
+      requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, blobMd5));
+    }
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCKLIST);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(isClose));
@@ -1090,7 +1103,7 @@ public class AbfsBlobClient extends AbfsClient {
         AbfsRestOperation op1 = getPathStatus(path, true, tracingContext,
             contextEncryptionAdapter);
         String metadataMd5 = op1.getResult().getResponseHeader(CONTENT_MD5);
-        if (!md5Hash.equals(metadataMd5)) {
+        if (blobMd5 != null && !blobMd5.equals(metadataMd5)) {
           throw ex;
         }
         return op;
@@ -1907,7 +1920,11 @@ public class AbfsBlobClient extends AbfsClient {
       // AzureBlobFileSystem supports only ASCII Characters in property values.
       if (isPureASCII(value)) {
         try {
-          value = encodeMetadataAttribute(value);
+          // URL encoding this JSON metadata, set by the WASB Client during file creation, causes compatibility issues.
+          // Therefore, we need to avoid encoding this metadata.
+          if (!XML_TAG_HDI_PERMISSION.equalsIgnoreCase(entry.getKey())) {
+            value = encodeMetadataAttribute(value);
+          }
         } catch (UnsupportedEncodingException e) {
           throw new InvalidAbfsRestOperationException(e);
         }
@@ -2013,6 +2030,8 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Checks if the listing of the specified path is non-empty.
+   * Since listing is incomplete as long as continuation token is returned by server,
+   * we need to iterate until either we get one entry or continuation token becomes null.
    *
    * @param path The path to be listed.
    * @param tracingContext The tracing context for tracking the operation.
@@ -2024,26 +2043,15 @@ public class AbfsBlobClient extends AbfsClient {
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     // This method is only called internally to determine state of a path
     // and hence don't need identity transformation to happen.
-    ListResponseData listResponseData = listPath(path, false, 1, null, tracingContext, null, false);
-    return !isEmptyListResults(listResponseData);
-  }
-
-  /**
-   * Check if the list call returned empty results without any continuation token.
-   * @param listResponseData The response of listing API from the server.
-   * @return True if empty results without continuation token.
-   */
-  private boolean isEmptyListResults(ListResponseData listResponseData) {
-    AbfsHttpOperation result = listResponseData.getOp().getResult();
-    boolean isEmptyList = result != null && result.getStatusCode() == HTTP_OK && // List Call was successful
-        result.getListResultSchema() != null && // Parsing of list response was successful
-        listResponseData.getFileStatusList().isEmpty() && listResponseData.getRenamePendingJsonPaths().isEmpty() &&// No paths were returned
-        StringUtils.isEmpty(listResponseData.getContinuationToken()); // No continuation token was returned
-    if (isEmptyList) {
-      LOG.debug("List call returned empty results without any continuation token.");
-      return true;
-    }
-    return false;
+    String continuationToken = null;
+    List<FileStatus> fileStatusList = new ArrayList<>();
+    // We need to loop on continuation token until we get an entry or continuation token becomes null.
+    do {
+      ListResponseData listResponseData = listPath(path, false, 1, continuationToken, tracingContext, null);
+      fileStatusList.addAll(listResponseData.getFileStatusList());
+      continuationToken = listResponseData.getContinuationToken();
+    } while (StringUtils.isNotEmpty(continuationToken) && fileStatusList.isEmpty());
+    return !fileStatusList.isEmpty();
   }
 
   /**
@@ -2059,7 +2067,7 @@ public class AbfsBlobClient extends AbfsClient {
 
     // Split the block ID string by commas and generate XML for each block ID
     if (!blockIdString.isEmpty()) {
-      String[] blockIds = blockIdString.split(",");
+      String[] blockIds = blockIdString.split(COMMA);
       for (String blockId : blockIds) {
         stringBuilder.append(String.format(LATEST_BLOCK_FORMAT, blockId));
       }

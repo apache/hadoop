@@ -259,7 +259,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
     fs.getFileStatus(implicitPath);
 
     Mockito.verify(abfsClient, Mockito.times(1)).getPathStatus(any(), eq(false), any(), any());
-    Mockito.verify(abfsClient, Mockito.times(1)).listPath(any(), eq(false), eq(1), any(), any(), any(), eq(false));
+    Mockito.verify(abfsClient, Mockito.times(1)).listPath(any(), eq(false), eq(1), any(), any(), any());
   }
 
   /**

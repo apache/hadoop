@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.contract.AbstractContractUnbufferTest;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Contract test for unbuffer operation.
@@ -36,6 +37,7 @@ public class ITestAbfsContractUnbuffer extends AbstractContractUnbufferTest {
     this.isSecure = binding.isSecureMode();
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     binding.setup();

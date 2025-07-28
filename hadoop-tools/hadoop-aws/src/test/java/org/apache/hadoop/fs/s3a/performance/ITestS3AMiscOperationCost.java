@@ -20,13 +20,9 @@ package org.apache.hadoop.fs.s3a.performance;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,51 +46,27 @@ import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
 /**
  * Use metrics to assert about the cost of misc operations.
  */
-@RunWith(Parameterized.class)
 public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AMiscOperationCost.class);
 
-  /**
-   * Parameter: should auditing be enabled?
-   */
-  private final boolean auditing;
-
-  /**
-   * Parameterization.
-   */
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> params() {
-    return Arrays.asList(new Object[][]{
-        {"auditing", true},
-        {"unaudited", false}
-    });
-  }
-
-  public ITestS3AMiscOperationCost(final String name,
-      final boolean auditing) {
-    this.auditing = auditing;
-  }
-
   @Override
   public Configuration createConfiguration() {
     final Configuration conf = super.createConfiguration();
     removeBaseAndBucketOverrides(conf, AUDIT_ENABLED);
-    conf.setBoolean(AUDIT_ENABLED, auditing);
+    conf.setBoolean(AUDIT_ENABLED, true);
     return conf;
   }
 
   /**
-   * Expected audit count when auditing is enabled; expect 0
-   * when disabled.
+   * Expected audit count.
    * @param expected expected value.
    * @return the probe.
    */
   protected OperationCostValidator.ExpectedProbe withAuditCount(
       final int expected) {
-    return probe(AUDIT_SPAN_CREATION,
-        auditing ? expected : 0);
+    return probe(AUDIT_SPAN_CREATION, expected);
 
   }
 

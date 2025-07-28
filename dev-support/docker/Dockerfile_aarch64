@@ -46,6 +46,7 @@ RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
 RUN apt-get -q update \
     && apt-get -q install -y --no-install-recommends wget apt-transport-https gpg gpg-agent gawk ca-certificates \
     && apt-get -q install -y --no-install-recommends python3 \
+    && apt-get -q install -y --no-install-recommends phantomjs \
     && echo "deb https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print$2}' /etc/os-release) main" > /etc/apt/sources.list.d/adoptium.list \
     && wget -q -O - https://packages.adoptium.net/artifactory/api/gpg/key/public > /etc/apt/trusted.gpg.d/adoptium.asc  \
     && apt-get -q update \

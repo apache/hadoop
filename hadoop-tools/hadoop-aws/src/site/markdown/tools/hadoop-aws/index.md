@@ -947,6 +947,31 @@ The switch to turn S3A auditing on or off.
 </property>
 
 ```
+
+### Configuring Custom Headers for AWS Service Clients
+
+You can set custom headers for S3 and STS requests. These headers are set on client level, and will be sent for all requests made to these services.
+
+**Configuration Properties:**
+- `fs.s3a.client.s3.custom.headers`: Custom headers for S3 service requests.
+- `fs.s3a.client.sts.custom.headers`: Sets custom headers for all requests to AWS STS.
+
+**Header Format:**
+Custom headers should be specified as key-value pairs, separated by `=`. Multiple values for a single header can be separated by `;`. Multiple headers can be separated by `,`.
+
+
+```xml
+<property>
+    <name>fs.s3a.client.s3.custom.headers</name>
+    <value>Header1=Value1</value>
+</property>
+
+<property>
+<name>fs.s3a.client.sts.custom.headers</name>
+<value>Header1=Value1;Value2,Header2=Value1</value>
+</property>
+```
+
 ## <a name="retry_and_recovery"></a>Retry and Recovery
 
 The S3A client makes a best-effort attempt at recovering from network failures;

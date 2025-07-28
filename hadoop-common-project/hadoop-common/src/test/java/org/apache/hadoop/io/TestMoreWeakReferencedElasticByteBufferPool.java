@@ -21,12 +21,12 @@ package org.apache.hadoop.io;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.test.HadoopTestBase;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Non parameterized tests for {@code WeakReferencedElasticByteBufferPool}.
@@ -87,10 +87,10 @@ public class TestMoreWeakReferencedElasticByteBufferPool
   private void assertBufferCounts(WeakReferencedElasticByteBufferPool pool,
                                   int numDirectBuffersExpected,
                                   int numHeapBuffersExpected) {
-    Assertions.assertThat(pool.getCurrentBuffersCount(true))
+    assertThat(pool.getCurrentBuffersCount(true))
             .describedAs("Number of direct buffers in pool")
             .isEqualTo(numDirectBuffersExpected);
-    Assertions.assertThat(pool.getCurrentBuffersCount(false))
+    assertThat(pool.getCurrentBuffersCount(false))
             .describedAs("Number of heap buffers in pool")
             .isEqualTo(numHeapBuffersExpected);
   }

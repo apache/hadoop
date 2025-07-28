@@ -22,6 +22,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -33,9 +34,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntFunction;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +51,6 @@ import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.io.WeakReferencedElasticByteBufferPool;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
-import static java.util.Arrays.asList;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_VECTOR;
@@ -58,7 +60,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.range;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoolPostRead;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
-  import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
@@ -68,7 +70,8 @@ import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
  * Both the original readVectored(allocator) and the readVectored(allocator, release)
  * operations are tested.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="buffer-{0}")
+@MethodSource("params")
 public abstract class AbstractContractVectoredReadTest extends AbstractFSContractTestBase {
 
   private static final Logger LOG =
@@ -103,9 +106,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
    */
   private final AtomicInteger bufferReleases = new AtomicInteger();
 
-  @Parameterized.Parameters(name = "Buffer type : {0}")
   public static List<String> params() {
-    return asList("direct", "array");
+    return Arrays.asList("direct", "array");
   }
 
   protected AbstractContractVectoredReadTest(String bufferType) {
@@ -140,6 +142,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     return pool;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -148,6 +151,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     createFile(fs, vectorPath, true, DATASET);
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     pool.release();
@@ -457,7 +461,6 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   public void testNullReleaseOperation()  throws Exception {
 
     final List<FileRange> range = range(0, 10);
-
     try (FSDataInputStream in = openVectorFile()) {
       intercept(NullPointerException.class, () ->
           in.readVectored(range, allocate, null));

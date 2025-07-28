@@ -24,14 +24,15 @@ import java.util.concurrent.Callable;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Before;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.Mock;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.when;
 import org.mockito.MockitoAnnotations;
 
@@ -54,12 +55,12 @@ public class TestCombinedHostsFileReader {
   @Mock
   private Callable<DatanodeAdminProperties[]> callable;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     // Delete test file after running tests
     newFile.delete();
@@ -115,7 +116,7 @@ public class TestCombinedHostsFileReader {
    * When timeout is enabled, test for IOException when reading file exceeds
    * timeout limits
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testReadFileWithTimeoutTimeoutException() throws Exception {
     when(callable.call()).thenAnswer(new Answer<Void>() {
       @Override
@@ -124,15 +125,16 @@ public class TestCombinedHostsFileReader {
         return null;
       }
     });
-
-    CombinedHostsFileReader.readFileWithTimeout(
-        jsonFile.getAbsolutePath(), 1);
+    assertThrows(IOException.class, () -> {
+      CombinedHostsFileReader.readFileWithTimeout(
+          jsonFile.getAbsolutePath(), 1);
+    });
   }
 
   /*
    * When timeout is enabled, test for IOException when execution is interrupted
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testReadFileWithTimeoutInterruptedException() throws Exception {
     when(callable.call()).thenAnswer(new Answer<Void>() {
       @Override
@@ -140,8 +142,9 @@ public class TestCombinedHostsFileReader {
         throw new InterruptedException();
       }
     });
-
-    CombinedHostsFileReader.readFileWithTimeout(
-        jsonFile.getAbsolutePath(), 1);
+    assertThrows(IOException.class, () -> {
+      CombinedHostsFileReader.readFileWithTimeout(
+          jsonFile.getAbsolutePath(), 1);
+    });
   }
 }

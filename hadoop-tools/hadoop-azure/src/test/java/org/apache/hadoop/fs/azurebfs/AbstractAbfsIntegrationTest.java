@@ -64,8 +64,10 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX;
+import static org.apache.hadoop.fs.azure.NativeAzureFileSystem.APPEND_SUPPORT_ENABLE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
@@ -210,6 +212,7 @@ public abstract class AbstractAbfsIntegrationTest extends
       if (rawConfig.get(keyProperty) == null) {
         rawConfig.set(keyProperty, getAccountKey());
       }
+      rawConfig.set(APPEND_SUPPORT_ENABLE_PROPERTY_NAME, TRUE);
 
       azureNativeFileSystemStore.initialize(
           wasbUri,

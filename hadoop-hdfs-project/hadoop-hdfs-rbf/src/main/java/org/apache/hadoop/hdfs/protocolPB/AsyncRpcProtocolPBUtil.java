@@ -26,6 +26,7 @@ import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.ProtobufRpcEngineCallback2;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.internal.ShadedProtobufHelper;
 import org.apache.hadoop.thirdparty.protobuf.Message;
 import org.apache.hadoop.util.concurrent.AsyncGet;
@@ -93,6 +94,8 @@ public final class AsyncRpcProtocolPBUtil {
       }
       try {
         T res = asyncReqMessage.get(-1, null);
+        LOG.debug("Async IPC Request, Call={}, CallerContext={}, Result={}",
+            Server.getCurCall().get(), CallerContext.getCurrent(), res);
         return response.apply(res);
       } catch (Exception ex) {
         throw warpCompletionException(ex);

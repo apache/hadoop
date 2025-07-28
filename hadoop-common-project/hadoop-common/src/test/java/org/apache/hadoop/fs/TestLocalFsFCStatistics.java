@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.fs;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.net.URI;
 
 import org.apache.hadoop.fs.FileSystem.Statistics;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * <p>
@@ -34,13 +35,13 @@ public class TestLocalFsFCStatistics extends FCStatisticsBaseTest {
   
   static final String LOCAL_FS_ROOT_URI =  "file:///tmp/test";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fc = FileContext.getLocalFSFileContext();
     fc.mkdir(fileContextTestHelper.getTestRootPath(fc, "test"), FileContext.DEFAULT_PERM, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     fc.delete(fileContextTestHelper.getTestRootPath(fc, "test"), true);
   }
@@ -48,13 +49,13 @@ public class TestLocalFsFCStatistics extends FCStatisticsBaseTest {
   @Override
   protected void verifyReadBytes(Statistics stats) {
     // one blockSize for read, one for pread
-    Assert.assertEquals(2*blockSize, stats.getBytesRead());
+    assertEquals(2*blockSize, stats.getBytesRead());
   }
 
   @Override
   protected void verifyWrittenBytes(Statistics stats) {
     //Extra 12 bytes are written apart from the block.
-    Assert.assertEquals(blockSize + 12, stats.getBytesWritten());
+    assertEquals(blockSize + 12, stats.getBytesWritten());
   }
   
   @Override

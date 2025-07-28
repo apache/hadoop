@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractRootDirectoryTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.junit.Ignore;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Contract test for root directory operation.
@@ -34,6 +35,7 @@ public class ITestAbfsFileSystemContractRootDirectory extends AbstractContractRo
     this.isSecure = binding.isSecureMode();
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     binding.setup();

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -70,9 +71,8 @@ import org.apache.hadoop.util.functional.FutureIO;
 
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Assumptions;
-import org.junit.Assert;
 import org.junit.Assume;
-import org.junit.AssumptionViolatedException;
+import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -126,7 +126,10 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.FunctionalIO.uncheckIOExceptions;
 import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
 import static org.apache.hadoop.util.functional.RemoteIterators.toList;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Utilities for the S3A tests.
@@ -199,7 +202,7 @@ public final class S3ATestUtils {
    * @param conf configuration
    * @return the FS
    * @throws IOException IO Problems
-   * @throws AssumptionViolatedException if the FS is not named
+   * @throws TestAbortedException if the FS is not named
    */
   public static S3AFileSystem createTestFileSystem(Configuration conf)
       throws IOException {
@@ -1196,6 +1199,17 @@ public final class S3ATestUtils {
   }
 
   /**
+   * CLose the filesystem if it not in the cache.
+   * @param fs filesystem to check. May be null
+   */
+  public static void maybeCloseFilesystem(final S3AFileSystem fs) {
+    if (fs != null && fs.getConf().getBoolean(FS_S3A_IMPL_DISABLE_CACHE,
+        false)) {
+      IOUtils.closeQuietly(fs);
+    }
+  }
+
+  /**
    * Helper class to do diffs of metrics.
    */
   public static final class MetricDiff {
@@ -1264,8 +1278,7 @@ public final class S3ATestUtils {
         // Log in error ensures that the details appear in the test output
         LOG.error(text + " expected {}, actual {}", expected, diff);
       }
-      Assert.assertEquals(text,
-          expected, diff);
+      assertEquals(expected, diff, text);
     }
 
     /**
@@ -1282,8 +1295,8 @@ public final class S3ATestUtils {
      * @param that the other metric diff instance.
      */
     public void assertDiffEquals(MetricDiff that) {
-      Assert.assertEquals(this.toString() + " != " + that,
-          this.diff(), that.diff());
+      assertEquals(this.diff(), that.diff(),
+          this.toString() + " != " + that);
     }
 
     /**
@@ -1337,9 +1350,9 @@ public final class S3ATestUtils {
    * @param obj object to check
    */
   public static void assertInstanceOf(Class<?> expectedClass, Object obj) {
-    Assert.assertTrue(String.format("Expected instance of class %s, but is %s.",
-        expectedClass, obj.getClass()),
-        expectedClass.isAssignableFrom(obj.getClass()));
+    assertTrue(expectedClass.isAssignableFrom(obj.getClass()),
+        String.format("Expected instance of class %s, but is %s.",
+        expectedClass, obj.getClass()));
   }
 
   /**
@@ -1399,17 +1412,17 @@ public final class S3ATestUtils {
       String group,
       FsPermission permission) {
     String details = status.toString();
-    assertFalse("Not a dir: " + details, status.isDirectory());
-    assertEquals("Mod time: " + details, modTime, status.getModificationTime());
-    assertEquals("File size: " + details, size, status.getLen());
-    assertEquals("Block size: " + details, blockSize, status.getBlockSize());
+    assertFalse(status.isDirectory(), "Not a dir: " + details);
+    assertEquals(modTime, status.getModificationTime(), "Mod time: " + details);
+    assertEquals(size, status.getLen(), "File size: " + details);
+    assertEquals(blockSize, status.getBlockSize(), "Block size: " + details);
     if (replication > 0) {
-      assertEquals("Replication value: " + details, replication,
-          status.getReplication());
+      assertEquals(replication, status.getReplication(),
+          "Replication value: " + details);
     }
     if (accessTime != 0) {
-      assertEquals("Access time: " + details, accessTime,
-          status.getAccessTime());
+      assertEquals(accessTime, status.getAccessTime(),
+          "Access time: " + details);
     }
     if (owner != null) {
       assertEquals("Owner: " + details, owner, status.getOwner());
@@ -1418,8 +1431,8 @@ public final class S3ATestUtils {
       assertEquals("Group: " + details, group, status.getGroup());
     }
     if (permission != null) {
-      assertEquals("Permission: " + details, permission,
-          status.getPermission());
+      assertEquals(permission, status.getPermission(),
+          "Permission: " + details);
     }
   }
 
@@ -1433,19 +1446,20 @@ public final class S3ATestUtils {
       int replication,
       String owner) {
     String details = status.toString();
-    assertTrue("Is a dir: " + details, status.isDirectory());
-    assertEquals("zero length: " + details, 0, status.getLen());
+    assertTrue(status.isDirectory(), "Is a dir: " + details);
+    assertEquals(0, status.getLen(), "zero length: " + details);
     // S3AFileStatus always assigns modTime = System.currentTimeMillis()
-    assertTrue("Mod time: " + details, status.getModificationTime() > 0);
-    assertEquals("Replication value: " + details, replication,
-        status.getReplication());
-    assertEquals("Access time: " + details, 0, status.getAccessTime());
+    assertTrue(status.getModificationTime() > 0, "Mod time: " + details);
+    assertEquals(replication, status.getReplication(),
+        "Replication value: " + details);
+    assertEquals(0, status.getAccessTime(),
+        "Access time: " + details);
     assertEquals("Owner: " + details, owner, status.getOwner());
     // S3AFileStatus always assigns group=owner
     assertEquals("Group: " + details, owner, status.getGroup());
     // S3AFileStatus always assigns permission = default
-    assertEquals("Permission: " + details,
-        FsPermission.getDefault(), status.getPermission());
+    assertEquals(FsPermission.getDefault(), status.getPermission(),
+        "Permission: " + details);
   }
 
   /**
@@ -1468,7 +1482,7 @@ public final class S3ATestUtils {
 
   /**
    * Assume that a condition is met. If not: log at WARN and
-   * then throw an {@link AssumptionViolatedException}.
+   * then throw an {@link TestAbortedException}.
    * @param message
    * @param condition
    */
@@ -1486,7 +1500,7 @@ public final class S3ATestUtils {
    * @param t thrown exception.
    */
   public static void raiseAsAssumption(Throwable t) {
-    throw new AssumptionViolatedException(t.toString(), t);
+    throw new TestAbortedException(t.toString(), t);
   }
 
   /**
@@ -1590,15 +1604,15 @@ public final class S3ATestUtils {
         fs.listFiles(filePath.getParent(), false);
     while (listIter.hasNext()) {
       final LocatedFileStatus lfs = listIter.next();
-      assertNotEquals("Listing was not supposed to include " + filePath,
-            filePath, lfs.getPath());
+      assertNotEquals(filePath, lfs.getPath(),
+          "Listing was not supposed to include " + filePath);
     }
     LOG.info("{}; file omitted from listFiles listing as expected.", filePath);
 
     final FileStatus[] fileStatuses = fs.listStatus(filePath.getParent());
     for (FileStatus fileStatus : fileStatuses) {
-      assertNotEquals("Listing was not supposed to include " + filePath,
-            filePath, fileStatus.getPath());
+      assertNotEquals(filePath, fileStatus.getPath(),
+          "Listing was not supposed to include " + filePath);
     }
     LOG.info("{}; file omitted from listStatus as expected.", filePath);
   }
@@ -1626,10 +1640,10 @@ public final class S3ATestUtils {
         listStatusHasIt = true;
       }
     }
-    assertTrue("fs.listFiles didn't include " + filePath,
-          listFilesHasIt);
-    assertTrue("fs.listStatus didn't include " + filePath,
-          listStatusHasIt);
+    assertTrue(listFilesHasIt,
+        "fs.listFiles didn't include " + filePath);
+    assertTrue(listStatusHasIt,
+        "fs.listStatus didn't include " + filePath);
   }
 
   /**

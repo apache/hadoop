@@ -18,9 +18,10 @@
 package org.apache.hadoop.io.compress.snappy;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -42,9 +43,8 @@ import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.snappy.SnappyDecompressor.SnappyDirectDecompressor;
 import org.apache.hadoop.test.MultithreadedTestUtil;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +53,7 @@ public class TestSnappyCompressorDecompressor {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestSnappyCompressorDecompressor.class);
 
-  @Before
+  @BeforeEach
   public void before() {
   }
 
@@ -175,11 +175,10 @@ public class TestSnappyCompressorDecompressor {
     byte[] bytes = BytesGenerator.get(BYTE_SIZE);
     SnappyCompressor compressor = new SnappyCompressor();
     compressor.setInput(bytes, 0, bytes.length);
-    assertTrue("SnappyCompressDecompress getBytesRead error !!!",
-        compressor.getBytesRead() > 0);
-    assertEquals(
-        "SnappyCompressDecompress getBytesWritten before compress error !!!",
-        0, compressor.getBytesWritten());
+    assertTrue(compressor.getBytesRead() > 0,
+        "SnappyCompressDecompress getBytesRead error !!!");
+    assertEquals(0, compressor.getBytesWritten(),
+        "SnappyCompressDecompress getBytesWritten before compress error !!!");
 
     // snappy compression may increase data size.
     // This calculation comes from "Snappy::MaxCompressedLength(size_t)"
@@ -188,9 +187,8 @@ public class TestSnappyCompressorDecompressor {
     int cSize = compressor.compress(compressed, 0, compressed.length);
     LOG.info("input size: {}", BYTE_SIZE);
     LOG.info("compressed size: {}", cSize);
-    assertTrue(
-        "SnappyCompressDecompress getBytesWritten after compress error !!!",
-        compressor.getBytesWritten() > 0);
+    assertTrue(compressor.getBytesWritten() > 0,
+        "SnappyCompressDecompress getBytesWritten after compress error !!!");
 
     SnappyDecompressor decompressor = new SnappyDecompressor();
     // set as input for decompressor only compressed data indicated with cSize
@@ -198,13 +196,13 @@ public class TestSnappyCompressorDecompressor {
     byte[] decompressed = new byte[BYTE_SIZE];
     decompressor.decompress(decompressed, 0, decompressed.length);
 
-    assertTrue("testSnappyCompressDecompress finished error !!!",
-        decompressor.finished());
-    Assert.assertArrayEquals(bytes, decompressed);
+    assertTrue(decompressor.finished(),
+        "testSnappyCompressDecompress finished error !!!");
+    assertArrayEquals(bytes, decompressed);
     compressor.reset();
     decompressor.reset();
-    assertEquals("decompressor getRemaining error !!!",
-        0, decompressor.getRemaining());
+    assertEquals(0, decompressor.getRemaining(),
+        "decompressor getRemaining error !!!");
   }
 
   @Test
@@ -223,7 +221,7 @@ public class TestSnappyCompressorDecompressor {
 
       // check compressed output
       buf = bytesOut.toByteArray();
-      assertEquals("empty stream compressed output size != 4", 4, buf.length);
+      assertEquals(4, buf.length, "empty stream compressed output size != 4");
 
       // use compressed output as input for decompression
       bytesIn = new ByteArrayInputStream(buf);
@@ -233,7 +231,7 @@ public class TestSnappyCompressorDecompressor {
           new SnappyDecompressor(), 1024);
 
       // no byte is available because stream was closed
-      assertEquals("return value is not -1", -1, blockDecompressorStream.read());
+      assertEquals(-1, blockDecompressorStream.read(), "return value is not -1");
     } catch (Exception e) {
       fail("testCompressorDecompressorEmptyStreamLogic ex error !!!"
           + e.getMessage());
@@ -276,8 +274,8 @@ public class TestSnappyCompressorDecompressor {
           len -= bufLen;
         } while (len > 0);
       }
-      assertTrue("testSnappyBlockCompression error !!!",
-          out.toByteArray().length > 0);
+      assertTrue(out.toByteArray().length > 0,
+          "testSnappyBlockCompression error !!!");
     } catch (Exception ex) {
       fail("testSnappyBlockCompression ex error !!!");
     }
@@ -397,9 +395,8 @@ public class TestSnappyCompressorDecompressor {
       byte[] result = new byte[BYTE_SIZE];
       inflateIn.read(result);
 
-      Assert.assertArrayEquals(
-          "original array not equals compress/decompressed array", result,
-          bytes);
+      assertArrayEquals(result, bytes,
+          "original array not equals compress/decompressed array");
     } catch (IOException e) {
       fail("testSnappyCompressorDecopressorLogicWithCompressionStreams ex error !!!");
     } finally {

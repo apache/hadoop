@@ -23,7 +23,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -42,14 +42,14 @@ public class TestS3AResourceScope extends HadoopTestBase {
   @Test
   public void testS3AFilesArePrivate() throws Throwable {
     S3AFileStatus status = new S3AFileStatus(false, PATH, "self");
-    assertTrue("Not encrypted: " + status, status.isEncrypted());
+    assertTrue(status.isEncrypted(), "Not encrypted: " + status);
     assertNotExecutable(status);
   }
 
   @Test
   public void testS3AFilesArePrivateOtherContstructor() throws Throwable {
     S3AFileStatus status = new S3AFileStatus(0, 0, PATH, 1, "self", null, null);
-    assertTrue("Not encrypted: " + status, status.isEncrypted());
+    assertTrue(status.isEncrypted(), "Not encrypted: " + status);
     assertNotExecutable(status);
   }
 
@@ -57,8 +57,7 @@ public class TestS3AResourceScope extends HadoopTestBase {
       throws IOException {
     Map<URI, FileStatus> cache = new HashMap<>();
     cache.put(PATH.toUri(), status);
-    assertFalse("Should not have been executable " + status,
-        ClientDistributedCacheManager.ancestorsHaveExecutePermissions(
-            null, PATH, cache));
+    assertFalse(ClientDistributedCacheManager.ancestorsHaveExecutePermissions(
+        null, PATH, cache), "Should not have been executable " + status);
   }
 }

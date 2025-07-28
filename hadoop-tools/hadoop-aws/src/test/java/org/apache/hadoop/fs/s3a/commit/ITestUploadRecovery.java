@@ -27,9 +27,11 @@ import java.util.function.Function;
 
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Assumptions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.interceptor.Context;
@@ -75,7 +77,8 @@ import static org.apache.hadoop.fs.s3a.test.SdkFaultInjector.setRequestFailureCo
  * <p>
  * Fault injection is implemented in {@link SdkFaultInjector}.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="buffer={0}-commit-test={1}")
+@MethodSource("params")
 public class ITestUploadRecovery extends AbstractS3ACostTest {
 
   private static final Logger LOG =
@@ -84,7 +87,6 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
   /**
    * Parameterization.
    */
-  @Parameterized.Parameters(name = "{0}-commit-{1}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {FAST_UPLOAD_BUFFER_ARRAY, true},
@@ -152,12 +154,14 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
   /**
    * Setup MUST set up the evaluator before the FS is created.
    */
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     SdkFaultInjector.resetFaultInjector();
     super.setup();
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     // safety check in case the evaluation is failing any

@@ -140,6 +140,7 @@ import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
+import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.util.Clock;
@@ -1001,8 +1002,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     NodeInfo nodeInfo = null;
     for (Entry<SubClusterInfo, NodeInfo> entry : results.entrySet()) {
       NodeInfo nodeResponse = entry.getValue();
-      if (nodeInfo == null || nodeInfo.getLastHealthUpdate() <
-          nodeResponse.getLastHealthUpdate()) {
+      if (nodeInfo == null || (nodeResponse != null &&
+          nodeInfo.getLastHealthUpdate() < nodeResponse.getLastHealthUpdate())) {
         subcluster = entry.getKey();
         nodeInfo = nodeResponse;
       }
@@ -1137,6 +1138,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       }
     } catch (YarnException | IllegalArgumentException e) {
       LOG.error("getHomeSubClusterInfoByAppId error, applicationId = {}.", appId, e);
+      return null;
     }
     return new AppState();
   }
@@ -1385,8 +1387,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       String groupBy) {
     try {
       // Check the parameters to ensure that the parameters are not empty
-      // Validate.checkNotNullAndNotEmpty(nodeId, "nodeId");
-      // Validate.checkNotNullAndNotEmpty(groupBy, "groupBy");
+      Validate.checkNotNullAndNotEmpty(nodeId, "nodeId");
+      Validate.checkNotNullAndNotEmpty(groupBy, "groupBy");
 
       // Query SubClusterInfo according to id,
       // if the nodeId cannot get SubClusterInfo, an exception will be thrown directly.
@@ -3356,11 +3358,22 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         } catch (Exception e) {
           LOG.error("SubCluster {} failed to call {} method.",
               info.getSubClusterId(), request.getMethodName(), e);
+          Throwable cause = e.getCause();
+          if (cause instanceof YarnException) {
+            return new SubClusterResult<>(info, null, (YarnException) cause);
+          }
+          if (cause instanceof IllegalArgumentException) {
+            return new SubClusterResult<>(info, null, (IllegalArgumentException) cause);
+          }
+          if(cause instanceof ForbiddenException) {
+            return new SubClusterResult<>(info, null, (ForbiddenException) cause);
+          }
           return new SubClusterResult<>(info, null, e);
         }
       });
     }
 
+    Exception lastException = null;
     for (int i = 0; i < clusterIds.size(); i++) {
       SubClusterInfo subClusterInfo = null;
       try {
@@ -3375,6 +3388,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
         Exception exception = result.getException();
         if (exception != null) {
+          lastException = exception;
           throw exception;
         }
       } catch (Throwable e) {
@@ -3390,6 +3404,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       }
     }
 
+    if (results.isEmpty() && lastException != null) {
+      Throwable cause = lastException.getCause();
+      if (cause != null) {
+        throw new YarnRuntimeException(cause.getMessage());
+      }
+      throw new YarnRuntimeException(lastException.getMessage());
+    }
     return results;
   }
 

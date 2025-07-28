@@ -23,8 +23,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import org.apache.commons.io.IOUtils;
@@ -97,6 +98,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
   }
 
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
     Configuration conf = getConfiguration();
@@ -469,8 +471,11 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
             .as("ETag should not be null after file creation")
             .isNotNull();
 
+    String updatedFileContent = "Updated content";
+    byte[] updatedData = updatedFileContent.getBytes(StandardCharsets.UTF_8);
+
     // Overwrite the file. Will update the etag, making the previously fetched etag outdated.
-    createFileWithFlags(fs, path, SMALL_FILE_BYTES, false, null);
+    createFileWithFlags(fs, path, updatedData, false, null);
 
     // overwrite file with outdated etag. Should throw RemoteFileChangedException
     RemoteFileChangedException exception = intercept(RemoteFileChangedException.class,
@@ -552,7 +557,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
     assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
   }
 
-  @Ignore("conditional_write statistics not yet fully implemented")
+  @Disabled("conditional_write statistics not yet fully implemented")
   @Test
   public void testConditionalWriteStatisticsWithoutIfNoneMatch() throws Throwable {
     FileSystem fs = getFileSystem();
@@ -598,7 +603,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
     verifyStatisticCounterValue(statistics.getIOStatistics(), Statistic.CONDITIONAL_CREATE_FAILED.getSymbol(), 0);
   }
 
-  @Ignore("conditional_write statistics not yet fully implemented")
+  @Disabled("conditional_write statistics not yet fully implemented")
   @Test
   public void testConditionalWriteStatisticsWithIfNoneMatch() throws Throwable {
     FileSystem fs = getFileSystem();

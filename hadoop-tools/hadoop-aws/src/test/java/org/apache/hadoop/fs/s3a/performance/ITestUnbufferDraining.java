@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.time.Duration;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,6 +116,7 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -140,6 +143,7 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
     }
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     super.teardown();

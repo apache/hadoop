@@ -26,8 +26,7 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Collections;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.awscore.retry.conditions.RetryOnErrorCodeCondition;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -42,6 +41,7 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractIOException;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeProcessEncryptionClientException;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests related to the {@link ErrorTranslation} class.
@@ -178,7 +178,7 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
         .build();
     RetryOnErrorCodeCondition retry = RetryOnErrorCodeCondition.create("");
 
-    Assertions.assertThat(retry.shouldRetry(context))
+    assertThat(retry.shouldRetry(context))
         .describedAs("retry policy of MultiObjectException")
         .isFalse();
   }

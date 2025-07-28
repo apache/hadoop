@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -59,9 +60,8 @@ import org.apache.hadoop.yarn.server.router.webapp.RouterWebServices.RequestInte
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 
 /**
@@ -89,7 +89,7 @@ public abstract class BaseRouterWebServicesTest {
 
   private RouterWebServices routerWebService;
 
-  @Before
+  @BeforeEach
   public void setUp() throws YarnException, IOException {
 
     this.conf = createConfiguration();
@@ -121,7 +121,7 @@ public abstract class BaseRouterWebServicesTest {
     return config;
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (router != null) {
       router.stop();
@@ -137,7 +137,7 @@ public abstract class BaseRouterWebServicesTest {
   }
 
   protected RouterWebServices getRouterWebServices() {
-    Assert.assertNotNull(this.routerWebService);
+    assertNotNull(this.routerWebService);
     return this.routerWebService;
   }
 

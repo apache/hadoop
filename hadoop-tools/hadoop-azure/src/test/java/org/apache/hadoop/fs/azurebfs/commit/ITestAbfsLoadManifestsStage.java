@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestLoadManifestsStage;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * ABFS storage test of saving and loading a large number
@@ -38,6 +39,7 @@ public class ITestAbfsLoadManifestsStage extends TestLoadManifestsStage {
     binding = new ABFSContractTestBinding();
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     binding.setup();

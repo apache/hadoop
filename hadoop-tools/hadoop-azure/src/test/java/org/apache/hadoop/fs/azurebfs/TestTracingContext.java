@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
-import org.junit.AssumptionViolatedException;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -47,6 +46,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Preconditions;
+import org.opentest4j.TestAbortedException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
@@ -181,7 +181,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         testClasses.get(testClass).invoke(testClass);
         testClass.teardown();
       } catch (InvocationTargetException e) {
-        if (!(e.getCause() instanceof AssumptionViolatedException)) {
+        if (!(e.getCause() instanceof TestAbortedException)) {
           throw new IOException(testClasses.get(testClass).getName()
               + " failed tracing context validation test");
         }
@@ -200,7 +200,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         0));
 
     // unset namespaceEnabled to call getAcl -> trigger tracing header validator
-    fs.getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
+    fs.getAbfsStore().getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
     fs.hasPathCapability(new Path("/"), CommonPathCapabilities.FS_ACLS);
 
     Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
@@ -208,7 +208,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     Assume.assumeTrue(getAuthType() == AuthType.OAuth);
 
     fs.setListenerOperation(FSOperationType.ACCESS);
-    fs.getAbfsStore().setNamespaceEnabled(Trilean.TRUE);
+    fs.getAbfsStore().getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.TRUE);
     fs.access(new Path("/"), FsAction.READ);
   }
 

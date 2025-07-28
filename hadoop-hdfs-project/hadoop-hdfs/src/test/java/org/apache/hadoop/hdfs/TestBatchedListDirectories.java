@@ -32,12 +32,9 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Lists;
-import org.hamcrest.core.StringContains;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -46,9 +43,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for the batched listing API.
@@ -58,9 +56,6 @@ public class TestBatchedListDirectories {
   private static MiniDFSCluster cluster;
   private static Configuration conf;
   private static DistributedFileSystem dfs;
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   private static final List<Path> SUBDIR_PATHS = Lists.newArrayList();
   private static final List<Path> FILE_PATHS = Lists.newArrayList();
@@ -85,15 +80,15 @@ public class TestBatchedListDirectories {
   private static void assertSubDirEquals(int i, int j, Path p) {
     assertTrue(p.toString().startsWith("hdfs://"));
     Path expected = getSubDirName(i, j);
-    assertEquals("Unexpected subdir name",
-        expected.toString(), p.toUri().getPath());
+    assertEquals(expected.toString(), p.toUri().getPath(),
+        "Unexpected subdir name");
   }
 
   private static void assertFileEquals(int i, int j, int k, Path p) {
     assertTrue(p.toString().startsWith("hdfs://"));
     Path expected = getFileName(i, j, k);
-    assertEquals("Unexpected file name",
-        expected.toString(), p.toUri().getPath());
+    assertEquals(expected.toString(), p.toUri().getPath(),
+        "Unexpected file name");
   }
 
   private static void loadData() throws Exception {
@@ -119,7 +114,7 @@ public class TestBatchedListDirectories {
     dfs.setPermission(INACCESSIBLE_DIR_PATH, new FsPermission(0000));
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 7);
@@ -132,7 +127,7 @@ public class TestBatchedListDirectories {
     loadData();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() {
     if (cluster != null) {
       cluster.shutdown();
@@ -167,9 +162,10 @@ public class TestBatchedListDirectories {
 
   @Test
   public void testEmptyPath() throws Exception {
-    thrown.expect(FileNotFoundException.class);
-    List<Path> paths = Lists.newArrayList();
-    getStatuses(paths);
+    assertThrows(FileNotFoundException.class, () -> {
+      List<Path> paths = Lists.newArrayList();
+      getStatuses(paths);
+    });
   }
 
   @Test
@@ -192,10 +188,11 @@ public class TestBatchedListDirectories {
 
   @Test
   public void listDoesNotExist() throws Exception {
-    thrown.expect(FileNotFoundException.class);
-    List<Path> paths = Lists.newArrayList();
-    paths.add(new Path("/does/not/exist"));
-    getStatuses(paths);
+    assertThrows(FileNotFoundException.class, () -> {
+      List<Path> paths = Lists.newArrayList();
+      paths.add(new Path("/does/not/exist"));
+      getStatuses(paths);
+    });
   }
 
   @Test
@@ -233,8 +230,8 @@ public class TestBatchedListDirectories {
     dfs.setWorkingDirectory(new Path("/dir0"));
     List<Path> paths = Lists.newArrayList(new Path("."));
     List<FileStatus> statuses = getStatuses(paths);
-    assertEquals("Wrong number of items",
-        SECOND_LEVEL_DIRS, statuses.size());
+    assertEquals(SECOND_LEVEL_DIRS, statuses.size(),
+        "Wrong number of items");
     for (int i = 0; i < SECOND_LEVEL_DIRS; i++) {
       FileStatus stat = statuses.get(i);
       assertSubDirEquals(0, i, stat.getPath());
@@ -246,8 +243,8 @@ public class TestBatchedListDirectories {
     dfs.setWorkingDirectory(new Path("/dir0"));
     List<Path> paths = Lists.newArrayList(new Path("subdir0"));
     List<FileStatus> statuses = getStatuses(paths);
-    assertEquals("Wrong number of items",
-        FILES_PER_DIR, statuses.size());
+    assertEquals(FILES_PER_DIR, statuses.size(),
+        "Wrong number of items");
     for (int i = 0; i < FILES_PER_DIR; i++) {
       FileStatus stat = statuses.get(i);
       assertFileEquals(0, 0, i, stat.getPath());
@@ -256,9 +253,9 @@ public class TestBatchedListDirectories {
 
   @Test
   public void testDFSHasCapability() throws Throwable {
-    assertTrue("FS does not declare PathCapability support",
-        dfs.hasPathCapability(new Path("/"),
-            CommonPathCapabilities.FS_EXPERIMENTAL_BATCH_LISTING));
+    assertTrue(dfs.hasPathCapability(new Path("/"),
+            CommonPathCapabilities.FS_EXPERIMENTAL_BATCH_LISTING),
+        "FS does not declare PathCapability support");
   }
 
   private void listFilesInternal(int numFiles) throws Exception {
@@ -328,12 +325,12 @@ public class TestBatchedListDirectories {
 
   @Test
   public void listTooManyDirectories() throws Exception {
-    thrown.expect(RemoteException.class);
-    thrown.expectMessage(
-        StringContains.containsString("Too many source paths"));
-    List<Path> paths = Lists.newArrayList(FILE_PATHS);
-    paths.add(SUBDIR_PATHS.get(0));
-    getStatuses(paths);
+    RemoteException ex = assertThrows(RemoteException.class, () -> {
+      List<Path> paths = Lists.newArrayList(FILE_PATHS);
+      paths.add(SUBDIR_PATHS.get(0));
+      getStatuses(paths);
+    });
+    assertTrue(ex.getMessage().contains("Too many source paths"));
   }
 
   @Test
@@ -405,15 +402,17 @@ public class TestBatchedListDirectories {
 
   @Test
   public void listInaccessibleDir() throws Exception {
-    thrown.expect(AccessControlException.class);
-    List<Path> paths = Lists.newArrayList(INACCESSIBLE_DIR_PATH);
-    listAsNormalUser(paths);
+    assertThrows(AccessControlException.class, () -> {
+      List<Path> paths = Lists.newArrayList(INACCESSIBLE_DIR_PATH);
+      listAsNormalUser(paths);
+    });
   }
 
   @Test
   public void listInaccessibleFile() throws Exception {
-    thrown.expect(AccessControlException.class);
-    List<Path> paths = Lists.newArrayList(INACCESSIBLE_FILE_PATH);
-    listAsNormalUser(paths);
+    assertThrows(AccessControlException.class, () -> {
+      List<Path> paths = Lists.newArrayList(INACCESSIBLE_FILE_PATH);
+      listAsNormalUser(paths);
+    });
   }
 }

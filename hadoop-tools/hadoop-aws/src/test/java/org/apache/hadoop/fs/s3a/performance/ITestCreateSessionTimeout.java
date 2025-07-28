@@ -25,7 +25,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.http.SdkHttpRequest;
@@ -114,6 +115,7 @@ public class ITestCreateSessionTimeout extends AbstractS3ACostTest {
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     // remove the safety check on minimum durations.

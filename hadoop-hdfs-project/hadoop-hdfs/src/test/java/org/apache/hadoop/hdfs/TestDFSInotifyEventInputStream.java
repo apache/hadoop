@@ -35,8 +35,8 @@ import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.util.ExitUtil;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -45,6 +45,11 @@ import java.util.EnumSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDFSInotifyEventInputStream {
 
@@ -60,8 +65,8 @@ public class TestDFSInotifyEventInputStream {
   }
 
   private static long checkTxid(EventBatch batch, long prevTxid){
-    Assert.assertTrue("Previous txid " + prevTxid + " was not less than " +
-        "new txid " + batch.getTxid(), prevTxid < batch.getTxid());
+    assertTrue(prevTxid < batch.getTxid(), "Previous txid " + prevTxid + " was not less than " +
+        "new txid " + batch.getTxid());
     return batch.getTxid();
   }
 
@@ -73,15 +78,16 @@ public class TestDFSInotifyEventInputStream {
    */
   @Test
   public void testOpcodeCount() {
-    Assert.assertEquals(54, FSEditLogOpCodes.values().length);
+    assertEquals(54, FSEditLogOpCodes.values().length);
   }
 
 
   /**
    * Tests all FsEditLogOps that are converted to inotify events.
    */
-  @Test(timeout = 120000)
-  @SuppressWarnings("deprecation")
+  @Test
+  @Timeout(value = 120)
+  @SuppressWarnings({"deprecation", "checkstyle:MethodLength"})
   public void testBasic() throws IOException, URISyntaxException,
       InterruptedException, MissingEventsException {
     Configuration conf = new HdfsConfiguration();
@@ -146,294 +152,294 @@ public class TestDFSInotifyEventInputStream {
 
       // RenameOp
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       long txid = batch.getTxid();
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.RENAME);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.RENAME);
       Event.RenameEvent re = (Event.RenameEvent) batch.getEvents()[0];
-      Assert.assertEquals("/file4", re.getDstPath());
-      Assert.assertEquals("/file", re.getSrcPath());
-      Assert.assertTrue(re.getTimestamp() > 0);
+      assertEquals("/file4", re.getDstPath());
+      assertEquals("/file", re.getSrcPath());
+      assertTrue(re.getTimestamp() > 0);
       LOG.info(re.toString());
-      Assert.assertTrue(re.toString().startsWith("RenameEvent [srcPath="));
+      assertTrue(re.toString().startsWith("RenameEvent [srcPath="));
 
       long eventsBehind = eis.getTxidsBehindEstimate();
 
       // RenameOldOp
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.RENAME);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.RENAME);
       Event.RenameEvent re2 = (Event.RenameEvent) batch.getEvents()[0];
-      Assert.assertTrue(re2.getDstPath().equals("/file2"));
-      Assert.assertTrue(re2.getSrcPath().equals("/file4"));
-      Assert.assertTrue(re2.getTimestamp() > 0);
+      assertTrue(re2.getDstPath().equals("/file2"));
+      assertTrue(re2.getSrcPath().equals("/file4"));
+      assertTrue(re2.getTimestamp() > 0);
       LOG.info(re2.toString());
 
       // AddOp with overwrite
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
       Event.CreateEvent ce = (Event.CreateEvent) batch.getEvents()[0];
-      Assert.assertTrue(ce.getiNodeType() == Event.CreateEvent.INodeType.FILE);
-      Assert.assertTrue(ce.getPath().equals("/file2"));
-      Assert.assertTrue(ce.getCtime() > 0);
-      Assert.assertTrue(ce.getReplication() > 0);
-      Assert.assertTrue(ce.getSymlinkTarget() == null);
-      Assert.assertTrue(ce.getOverwrite());
-      Assert.assertEquals(BLOCK_SIZE, ce.getDefaultBlockSize());
-      Assert.assertTrue(ce.isErasureCoded().isPresent());
-      Assert.assertFalse(ce.isErasureCoded().get());
+      assertTrue(ce.getiNodeType() == Event.CreateEvent.INodeType.FILE);
+      assertTrue(ce.getPath().equals("/file2"));
+      assertTrue(ce.getCtime() > 0);
+      assertTrue(ce.getReplication() > 0);
+      assertTrue(ce.getSymlinkTarget() == null);
+      assertTrue(ce.getOverwrite());
+      assertEquals(BLOCK_SIZE, ce.getDefaultBlockSize());
+      assertTrue(ce.isErasureCoded().isPresent());
+      assertFalse(ce.isErasureCoded().get());
       LOG.info(ce.toString());
-      Assert.assertTrue(ce.toString().startsWith("CreateEvent [INodeType="));
+      assertTrue(ce.toString().startsWith("CreateEvent [INodeType="));
 
       // CloseOp
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CLOSE);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CLOSE);
       Event.CloseEvent ce2 = (Event.CloseEvent) batch.getEvents()[0];
-      Assert.assertTrue(ce2.getPath().equals("/file2"));
-      Assert.assertTrue(ce2.getFileSize() > 0);
-      Assert.assertTrue(ce2.getTimestamp() > 0);
+      assertTrue(ce2.getPath().equals("/file2"));
+      assertTrue(ce2.getFileSize() > 0);
+      assertTrue(ce2.getTimestamp() > 0);
       LOG.info(ce2.toString());
-      Assert.assertTrue(ce2.toString().startsWith("CloseEvent [path="));
+      assertTrue(ce2.toString().startsWith("CloseEvent [path="));
 
       // AppendOp
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.APPEND);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.APPEND);
       Event.AppendEvent append2 = (Event.AppendEvent)batch.getEvents()[0];
-      Assert.assertEquals("/file2", append2.getPath());
-      Assert.assertFalse(append2.toNewBlock());
+      assertEquals("/file2", append2.getPath());
+      assertFalse(append2.toNewBlock());
       LOG.info(append2.toString());
-      Assert.assertTrue(append2.toString().startsWith("AppendEvent [path="));
+      assertTrue(append2.toString().startsWith("AppendEvent [path="));
 
       // CloseOp
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CLOSE);
-      Assert.assertTrue(((Event.CloseEvent) batch.getEvents()[0]).getPath().equals("/file2"));
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CLOSE);
+      assertTrue(((Event.CloseEvent) batch.getEvents()[0]).getPath().equals("/file2"));
 
       // TimesOp
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.METADATA);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.METADATA);
       Event.MetadataUpdateEvent mue = (Event.MetadataUpdateEvent) batch.getEvents()[0];
-      Assert.assertTrue(mue.getPath().equals("/file2"));
-      Assert.assertTrue(mue.getMetadataType() ==
+      assertTrue(mue.getPath().equals("/file2"));
+      assertTrue(mue.getMetadataType() ==
           Event.MetadataUpdateEvent.MetadataType.TIMES);
       LOG.info(mue.toString());
-      Assert.assertTrue(mue.toString().startsWith("MetadataUpdateEvent [path="));
+      assertTrue(mue.toString().startsWith("MetadataUpdateEvent [path="));
 
       // SetReplicationOp
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.METADATA);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.METADATA);
       Event.MetadataUpdateEvent mue2 = (Event.MetadataUpdateEvent) batch.getEvents()[0];
-      Assert.assertTrue(mue2.getPath().equals("/file2"));
-      Assert.assertTrue(mue2.getMetadataType() ==
+      assertTrue(mue2.getPath().equals("/file2"));
+      assertTrue(mue2.getMetadataType() ==
           Event.MetadataUpdateEvent.MetadataType.REPLICATION);
-      Assert.assertTrue(mue2.getReplication() == 1);
+      assertTrue(mue2.getReplication() == 1);
       LOG.info(mue2.toString());
 
       // ConcatDeleteOp
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(3, batch.getEvents().length);
+      assertEquals(3, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.APPEND);
-      Assert.assertTrue(((Event.AppendEvent) batch.getEvents()[0]).getPath().equals("/file2"));
-      Assert.assertTrue(batch.getEvents()[1].getEventType() == Event.EventType.UNLINK);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.APPEND);
+      assertTrue(((Event.AppendEvent) batch.getEvents()[0]).getPath().equals("/file2"));
+      assertTrue(batch.getEvents()[1].getEventType() == Event.EventType.UNLINK);
       Event.UnlinkEvent ue2 = (Event.UnlinkEvent) batch.getEvents()[1];
-      Assert.assertTrue(ue2.getPath().equals("/file3"));
-      Assert.assertTrue(ue2.getTimestamp() > 0);
+      assertTrue(ue2.getPath().equals("/file3"));
+      assertTrue(ue2.getTimestamp() > 0);
       LOG.info(ue2.toString());
-      Assert.assertTrue(ue2.toString().startsWith("UnlinkEvent [path="));
-      Assert.assertTrue(batch.getEvents()[2].getEventType() == Event.EventType.CLOSE);
+      assertTrue(ue2.toString().startsWith("UnlinkEvent [path="));
+      assertTrue(batch.getEvents()[2].getEventType() == Event.EventType.CLOSE);
       Event.CloseEvent ce3 = (Event.CloseEvent) batch.getEvents()[2];
-      Assert.assertTrue(ce3.getPath().equals("/file2"));
-      Assert.assertTrue(ce3.getTimestamp() > 0);
+      assertTrue(ce3.getPath().equals("/file2"));
+      assertTrue(ce3.getTimestamp() > 0);
 
       // DeleteOp
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.UNLINK);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.UNLINK);
       Event.UnlinkEvent ue = (Event.UnlinkEvent) batch.getEvents()[0];
-      Assert.assertTrue(ue.getPath().equals("/file2"));
-      Assert.assertTrue(ue.getTimestamp() > 0);
+      assertTrue(ue.getPath().equals("/file2"));
+      assertTrue(ue.getTimestamp() > 0);
       LOG.info(ue.toString());
 
       // MkdirOp
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
       Event.CreateEvent ce4 = (Event.CreateEvent) batch.getEvents()[0];
-      Assert.assertTrue(ce4.getiNodeType() ==
+      assertTrue(ce4.getiNodeType() ==
           Event.CreateEvent.INodeType.DIRECTORY);
-      Assert.assertTrue(ce4.getPath().equals("/dir"));
-      Assert.assertTrue(ce4.getCtime() > 0);
-      Assert.assertTrue(ce4.getReplication() == 0);
-      Assert.assertTrue(ce4.getSymlinkTarget() == null);
+      assertTrue(ce4.getPath().equals("/dir"));
+      assertTrue(ce4.getCtime() > 0);
+      assertTrue(ce4.getReplication() == 0);
+      assertTrue(ce4.getSymlinkTarget() == null);
       LOG.info(ce4.toString());
 
       // SetPermissionsOp
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.METADATA);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.METADATA);
       Event.MetadataUpdateEvent mue3 = (Event.MetadataUpdateEvent) batch.getEvents()[0];
-      Assert.assertTrue(mue3.getPath().equals("/dir"));
-      Assert.assertTrue(mue3.getMetadataType() ==
+      assertTrue(mue3.getPath().equals("/dir"));
+      assertTrue(mue3.getMetadataType() ==
           Event.MetadataUpdateEvent.MetadataType.PERMS);
-      Assert.assertTrue(mue3.getPerms().toString().contains("rw-rw-rw-"));
+      assertTrue(mue3.getPerms().toString().contains("rw-rw-rw-"));
       LOG.info(mue3.toString());
 
       // SetOwnerOp
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.METADATA);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.METADATA);
       Event.MetadataUpdateEvent mue4 = (Event.MetadataUpdateEvent) batch.getEvents()[0];
-      Assert.assertTrue(mue4.getPath().equals("/dir"));
-      Assert.assertTrue(mue4.getMetadataType() ==
+      assertTrue(mue4.getPath().equals("/dir"));
+      assertTrue(mue4.getMetadataType() ==
           Event.MetadataUpdateEvent.MetadataType.OWNER);
-      Assert.assertTrue(mue4.getOwnerName().equals("username"));
-      Assert.assertTrue(mue4.getGroupName().equals("groupname"));
+      assertTrue(mue4.getOwnerName().equals("username"));
+      assertTrue(mue4.getGroupName().equals("groupname"));
       LOG.info(mue4.toString());
 
       // SymlinkOp
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
       Event.CreateEvent ce5 = (Event.CreateEvent) batch.getEvents()[0];
-      Assert.assertTrue(ce5.getiNodeType() ==
+      assertTrue(ce5.getiNodeType() ==
           Event.CreateEvent.INodeType.SYMLINK);
-      Assert.assertTrue(ce5.getPath().equals("/dir2"));
-      Assert.assertTrue(ce5.getCtime() > 0);
-      Assert.assertTrue(ce5.getReplication() == 0);
-      Assert.assertTrue(ce5.getSymlinkTarget().equals("/dir"));
+      assertTrue(ce5.getPath().equals("/dir2"));
+      assertTrue(ce5.getCtime() > 0);
+      assertTrue(ce5.getReplication() == 0);
+      assertTrue(ce5.getSymlinkTarget().equals("/dir"));
       LOG.info(ce5.toString());
 
       // SetXAttrOp
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.METADATA);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.METADATA);
       Event.MetadataUpdateEvent mue5 = (Event.MetadataUpdateEvent) batch.getEvents()[0];
-      Assert.assertTrue(mue5.getPath().equals("/file5"));
-      Assert.assertTrue(mue5.getMetadataType() ==
+      assertTrue(mue5.getPath().equals("/file5"));
+      assertTrue(mue5.getMetadataType() ==
           Event.MetadataUpdateEvent.MetadataType.XATTRS);
-      Assert.assertTrue(mue5.getxAttrs().size() == 1);
-      Assert.assertTrue(mue5.getxAttrs().get(0).getName().contains("field"));
-      Assert.assertTrue(!mue5.isxAttrsRemoved());
+      assertTrue(mue5.getxAttrs().size() == 1);
+      assertTrue(mue5.getxAttrs().get(0).getName().contains("field"));
+      assertTrue(!mue5.isxAttrsRemoved());
       LOG.info(mue5.toString());
 
       // RemoveXAttrOp
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.METADATA);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.METADATA);
       Event.MetadataUpdateEvent mue6 = (Event.MetadataUpdateEvent) batch.getEvents()[0];
-      Assert.assertTrue(mue6.getPath().equals("/file5"));
-      Assert.assertTrue(mue6.getMetadataType() ==
+      assertTrue(mue6.getPath().equals("/file5"));
+      assertTrue(mue6.getMetadataType() ==
           Event.MetadataUpdateEvent.MetadataType.XATTRS);
-      Assert.assertTrue(mue6.getxAttrs().size() == 1);
-      Assert.assertTrue(mue6.getxAttrs().get(0).getName().contains("field"));
-      Assert.assertTrue(mue6.isxAttrsRemoved());
+      assertTrue(mue6.getxAttrs().size() == 1);
+      assertTrue(mue6.getxAttrs().get(0).getName().contains("field"));
+      assertTrue(mue6.isxAttrsRemoved());
       LOG.info(mue6.toString());
 
       // SetAclOp (1)
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.METADATA);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.METADATA);
       Event.MetadataUpdateEvent mue7 = (Event.MetadataUpdateEvent) batch.getEvents()[0];
-      Assert.assertTrue(mue7.getPath().equals("/file5"));
-      Assert.assertTrue(mue7.getMetadataType() ==
+      assertTrue(mue7.getPath().equals("/file5"));
+      assertTrue(mue7.getMetadataType() ==
           Event.MetadataUpdateEvent.MetadataType.ACLS);
-      Assert.assertTrue(mue7.getAcls().contains(
+      assertTrue(mue7.getAcls().contains(
           AclEntry.parseAclEntry("user::rwx", true)));
       LOG.info(mue7.toString());
 
       // SetAclOp (2)
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.METADATA);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.METADATA);
       Event.MetadataUpdateEvent mue8 = (Event.MetadataUpdateEvent) batch.getEvents()[0];
-      Assert.assertTrue(mue8.getPath().equals("/file5"));
-      Assert.assertTrue(mue8.getMetadataType() ==
+      assertTrue(mue8.getPath().equals("/file5"));
+      assertTrue(mue8.getMetadataType() ==
           Event.MetadataUpdateEvent.MetadataType.ACLS);
-      Assert.assertTrue(mue8.getAcls() == null);
+      assertTrue(mue8.getAcls() == null);
       LOG.info(mue8.toString());
 
       // RenameOp (2)
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.RENAME);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.RENAME);
       Event.RenameEvent re3 = (Event.RenameEvent) batch.getEvents()[0];
-      Assert.assertTrue(re3.getDstPath().equals("/dir/file5"));
-      Assert.assertTrue(re3.getSrcPath().equals("/file5"));
-      Assert.assertTrue(re3.getTimestamp() > 0);
+      assertTrue(re3.getDstPath().equals("/dir/file5"));
+      assertTrue(re3.getSrcPath().equals("/file5"));
+      assertTrue(re3.getTimestamp() > 0);
       LOG.info(re3.toString());
 
       // TruncateOp
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert
-          .assertTrue(batch.getEvents()[0].getEventType() ==
+      assertTrue(batch.getEvents()[0].getEventType() ==
           Event.EventType.TRUNCATE);
       Event.TruncateEvent et = ((Event.TruncateEvent) batch.getEvents()[0]);
-      Assert.assertTrue(et.getPath().equals("/truncate_file"));
-      Assert.assertTrue(et.getFileSize() == BLOCK_SIZE);
-      Assert.assertTrue(et.getTimestamp() > 0);
+      assertTrue(et.getPath().equals("/truncate_file"));
+      assertTrue(et.getFileSize() == BLOCK_SIZE);
+      assertTrue(et.getTimestamp() > 0);
       LOG.info(et.toString());
-      Assert.assertTrue(et.toString().startsWith("TruncateEvent [path="));
+      assertTrue(et.toString().startsWith("TruncateEvent [path="));
 
       // CreateEvent without overwrite
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType()
+      assertTrue(batch.getEvents()[0].getEventType()
               == Event.EventType.CREATE);
       ce = (Event.CreateEvent) batch.getEvents()[0];
-      Assert.assertTrue(ce.getiNodeType() == Event.CreateEvent.INodeType.FILE);
-      Assert.assertTrue(ce.getPath().equals("/file_ec_test1"));
-      Assert.assertTrue(ce.getCtime() > 0);
-      Assert.assertTrue(ce.getReplication() > 0);
-      Assert.assertTrue(ce.getSymlinkTarget() == null);
-      Assert.assertFalse(ce.getOverwrite());
-      Assert.assertEquals(BLOCK_SIZE, ce.getDefaultBlockSize());
-      Assert.assertTrue(ce.isErasureCoded().isPresent());
-      Assert.assertFalse(ce.isErasureCoded().get());
+      assertTrue(ce.getiNodeType() == Event.CreateEvent.INodeType.FILE);
+      assertTrue(ce.getPath().equals("/file_ec_test1"));
+      assertTrue(ce.getCtime() > 0);
+      assertTrue(ce.getReplication() > 0);
+      assertTrue(ce.getSymlinkTarget() == null);
+      assertFalse(ce.getOverwrite());
+      assertEquals(BLOCK_SIZE, ce.getDefaultBlockSize());
+      assertTrue(ce.isErasureCoded().isPresent());
+      assertFalse(ce.isErasureCoded().get());
       LOG.info(ce.toString());
-      Assert.assertTrue(ce.toString().startsWith("CreateEvent [INodeType="));
+      assertTrue(ce.toString().startsWith("CreateEvent [INodeType="));
 
       // Returns null when there are no further events
-      Assert.assertTrue(eis.poll() == null);
+      assertTrue(eis.poll() == null);
 
       // make sure the estimate hasn't changed since the above assertion
       // tells us that we are fully caught up to the current namesystem state
       // and we should not have been behind at all when eventsBehind was set
       // either, since there were few enough events that they should have all
       // been read to the client during the first poll() call
-      Assert.assertTrue(eis.getTxidsBehindEstimate() == eventsBehind);
+      assertTrue(eis.getTxidsBehindEstimate() == eventsBehind);
 
     } finally {
       cluster.shutdown();
     }
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testErasureCodedFiles() throws Exception {
     ErasureCodingPolicy ecPolicy = StripedFileTestUtil.getDefaultECPolicy();
     final int dataUnits = ecPolicy.getNumDataUnits();
@@ -470,47 +476,48 @@ public class TestDFSInotifyEventInputStream {
       EventBatch batch = null;
 
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       long txid = batch.getTxid();
       long eventsBehind = eis.getTxidsBehindEstimate();
-      Assert.assertTrue(batch.getEvents()[0].getEventType()
+      assertTrue(batch.getEvents()[0].getEventType()
               == Event.EventType.CREATE);
       Event.CreateEvent ce = (Event.CreateEvent) batch.getEvents()[0];
-      Assert.assertTrue(ce.getiNodeType() == Event.CreateEvent.INodeType.FILE);
-      Assert.assertTrue(ce.getPath().equals("/ecdir/file_ec_test2"));
-      Assert.assertTrue(ce.getCtime() > 0);
-      Assert.assertEquals(1, ce.getReplication());
-      Assert.assertTrue(ce.getSymlinkTarget() == null);
-      Assert.assertTrue(ce.getOverwrite());
-      Assert.assertEquals(ecPolicy.getCellSize(), ce.getDefaultBlockSize());
-      Assert.assertTrue(ce.isErasureCoded().isPresent());
-      Assert.assertTrue(ce.isErasureCoded().get());
+      assertTrue(ce.getiNodeType() == Event.CreateEvent.INodeType.FILE);
+      assertTrue(ce.getPath().equals("/ecdir/file_ec_test2"));
+      assertTrue(ce.getCtime() > 0);
+      assertEquals(1, ce.getReplication());
+      assertTrue(ce.getSymlinkTarget() == null);
+      assertTrue(ce.getOverwrite());
+      assertEquals(ecPolicy.getCellSize(), ce.getDefaultBlockSize());
+      assertTrue(ce.isErasureCoded().isPresent());
+      assertTrue(ce.isErasureCoded().get());
       LOG.info(ce.toString());
-      Assert.assertTrue(ce.toString().startsWith("CreateEvent [INodeType="));
+      assertTrue(ce.toString().startsWith("CreateEvent [INodeType="));
 
       batch = waitForNextEvents(eis);
-      Assert.assertEquals(1, batch.getEvents().length);
+      assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
-      Assert.assertTrue(batch.getEvents()[0].getEventType()
+      assertTrue(batch.getEvents()[0].getEventType()
               == Event.EventType.CLOSE);
-      Assert.assertTrue(((Event.CloseEvent) batch.getEvents()[0]).getPath()
+      assertTrue(((Event.CloseEvent) batch.getEvents()[0]).getPath()
               .equals("/ecdir/file_ec_test2"));
 
       // Returns null when there are no further events
-      Assert.assertTrue(eis.poll() == null);
+      assertTrue(eis.poll() == null);
 
       // make sure the estimate hasn't changed since the above assertion
       // tells us that we are fully caught up to the current namesystem state
       // and we should not have been behind at all when eventsBehind was set
       // either, since there were few enough events that they should have all
       // been read to the client during the first poll() call
-      Assert.assertTrue(eis.getTxidsBehindEstimate() == eventsBehind);
+      assertTrue(eis.getTxidsBehindEstimate() == eventsBehind);
     } finally {
       cluster.shutdown();
     }
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testNNFailover() throws IOException, URISyntaxException,
       MissingEventsException {
     Configuration conf = new HdfsConfiguration();
@@ -532,18 +539,19 @@ public class TestDFSInotifyEventInputStream {
       // active
       for (int i = 0; i < 10; i++) {
         batch = waitForNextEvents(eis);
-        Assert.assertEquals(1, batch.getEvents().length);
-        Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
-        Assert.assertTrue(((Event.CreateEvent) batch.getEvents()[0]).getPath().equals("/dir" +
+        assertEquals(1, batch.getEvents().length);
+        assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
+        assertTrue(((Event.CreateEvent) batch.getEvents()[0]).getPath().equals("/dir" +
             i));
       }
-      Assert.assertTrue(eis.poll() == null);
+      assertTrue(eis.poll() == null);
     } finally {
       cluster.shutdown();
     }
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testTwoActiveNNs() throws IOException, MissingEventsException {
     Configuration conf = new HdfsConfiguration();
     MiniQJMHACluster cluster = new MiniQJMHACluster.Builder(conf).build();
@@ -571,12 +579,12 @@ public class TestDFSInotifyEventInputStream {
       EventBatch batch = null;
       for (int i = 0; i < 10; i++) {
         batch = waitForNextEvents(eis);
-        Assert.assertEquals(1, batch.getEvents().length);
-        Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
-        Assert.assertTrue(((Event.CreateEvent) batch.getEvents()[0]).getPath().equals("/dir" +
+        assertEquals(1, batch.getEvents().length);
+        assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
+        assertTrue(((Event.CreateEvent) batch.getEvents()[0]).getPath().equals("/dir" +
             i));
       }
-      Assert.assertTrue(eis.poll() == null);
+      assertTrue(eis.poll() == null);
     } finally {
       try {
         cluster.shutdown();
@@ -587,7 +595,8 @@ public class TestDFSInotifyEventInputStream {
     }
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testReadEventsWithTimeout() throws IOException,
       InterruptedException, MissingEventsException {
     Configuration conf = new HdfsConfiguration();
@@ -615,10 +624,10 @@ public class TestDFSInotifyEventInputStream {
       // a very generous wait period -- the edit will definitely have been
       // processed by the time this is up
       EventBatch batch = eis.poll(5, TimeUnit.SECONDS);
-      Assert.assertNotNull(batch);
-      Assert.assertEquals(1, batch.getEvents().length);
-      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
-      Assert.assertEquals("/dir", ((Event.CreateEvent) batch.getEvents()[0]).getPath());
+      assertNotNull(batch);
+      assertEquals(1, batch.getEvents().length);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
+      assertEquals("/dir", ((Event.CreateEvent) batch.getEvents()[0]).getPath());
     } finally {
       cluster.shutdown();
     }

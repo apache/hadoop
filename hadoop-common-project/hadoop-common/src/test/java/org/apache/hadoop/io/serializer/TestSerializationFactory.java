@@ -19,10 +19,10 @@ package org.apache.hadoop.io.serializer;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertNotNull;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -38,7 +38,7 @@ public class TestSerializationFactory {
   static Configuration conf;
   static SerializationFactory factory;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     conf = new Configuration();
     factory = new SerializationFactory(conf);
@@ -74,21 +74,21 @@ public class TestSerializationFactory {
   @Test
   public void testGetSerializer() {
     // Test that a valid serializer class is returned when its present
-    assertNotNull("A valid class must be returned for default Writable SerDe",
-        factory.getSerializer(Writable.class));
+    assertNotNull(factory.getSerializer(Writable.class),
+        "A valid class must be returned for default Writable SerDe");
     // Test that a null is returned when none can be found.
-    assertNull("A null should be returned if there are no serializers found.",
-        factory.getSerializer(TestSerializationFactory.class));
+    assertNull(factory.getSerializer(TestSerializationFactory.class),
+        "A null should be returned if there are no serializers found.");
   }
 
   @Test
   public void testGetDeserializer() {
     // Test that a valid serializer class is returned when its present
-    assertNotNull("A valid class must be returned for default Writable SerDe",
-        factory.getDeserializer(Writable.class));
+    assertNotNull(factory.getDeserializer(Writable.class),
+        "A valid class must be returned for default Writable SerDe");
     // Test that a null is returned when none can be found.
-    assertNull("A null should be returned if there are no deserializers found",
-        factory.getDeserializer(TestSerializationFactory.class));
+    assertNull(factory.getDeserializer(TestSerializationFactory.class),
+        "A null should be returned if there are no deserializers found");
   }
 
   @Test
@@ -96,7 +96,7 @@ public class TestSerializationFactory {
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.IO_SERIALIZATIONS_KEY, " org.apache.hadoop.io.serializer.WritableSerialization ");
     SerializationFactory factory = new SerializationFactory(conf);
-    assertNotNull("Valid class must be returned",
-     factory.getSerializer(LongWritable.class));
+    assertNotNull(factory.getSerializer(LongWritable.class),
+        "Valid class must be returned");
    }
 }

@@ -43,9 +43,10 @@ import org.apache.hadoop.io.nativeio.NativeIOException;
 
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_DONTNEED;
 
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestCachingStrategy {
   private static final Logger LOG =
@@ -56,7 +57,7 @@ public class TestCachingStrategy {
   private final static TestRecordingCacheTracker tracker =
       new TestRecordingCacheTracker();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupTest() {
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
 
@@ -211,7 +212,8 @@ public class TestCachingStrategy {
     throw new RuntimeException("unreachable");
   }
  
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testFadviseAfterWriteThenRead() throws Exception {
     // start a cluster
     LOG.info("testFadviseAfterWriteThenRead");
@@ -239,7 +241,7 @@ public class TestCachingStrategy {
       // read file
       readHdfsFile(fs, new Path(TEST_PATH), Long.MAX_VALUE, true);
       // verify that we dropped everything from the cache.
-      Assert.assertNotNull(stats);
+      Assertions.assertNotNull(stats);
       stats.assertDroppedInRange(0, TEST_PATH_LEN - WRITE_PACKET_SIZE);
     } finally {
       if (cluster != null) {
@@ -252,7 +254,8 @@ public class TestCachingStrategy {
    * Test the scenario where the DataNode defaults to not dropping the cache,
    * but our client defaults are set.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testClientDefaults() throws Exception {
     // start a cluster
     LOG.info("testClientDefaults");
@@ -284,7 +287,7 @@ public class TestCachingStrategy {
       // read file
       readHdfsFile(fs, new Path(TEST_PATH), Long.MAX_VALUE, null);
       // verify that we dropped everything from the cache.
-      Assert.assertNotNull(stats);
+      Assertions.assertNotNull(stats);
       stats.assertDroppedInRange(0, TEST_PATH_LEN - WRITE_PACKET_SIZE);
     } finally {
       if (cluster != null) {
@@ -293,7 +296,8 @@ public class TestCachingStrategy {
     }
   }
 
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testFadviseSkippedForSmallReads() throws Exception {
     // start a cluster
     LOG.info("testFadviseSkippedForSmallReads");
@@ -339,7 +343,8 @@ public class TestCachingStrategy {
     }
   }
   
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testNoFadviseAfterWriteThenRead() throws Exception {
     // start a cluster
     LOG.info("testNoFadviseAfterWriteThenRead");
@@ -361,7 +366,7 @@ public class TestCachingStrategy {
           TEST_PATH, 0, Long.MAX_VALUE).get(0).getBlock();
       String fadvisedFileName = cluster.getBlockFile(0, block).getName();
       Stats stats = tracker.getStats(fadvisedFileName);
-      Assert.assertNull(stats);
+      Assertions.assertNull(stats);
       
       // read file
       readHdfsFile(fs, new Path(TEST_PATH), Long.MAX_VALUE, false);
@@ -372,7 +377,8 @@ public class TestCachingStrategy {
     }
   }
 
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testSeekAfterSetDropBehind() throws Exception {
     // start a cluster
     LOG.info("testSeekAfterSetDropBehind");
@@ -388,7 +394,7 @@ public class TestCachingStrategy {
       createHdfsFile(fs, new Path(TEST_PATH), TEST_PATH_LEN, false);
       // verify that we can seek after setDropBehind
       try (FSDataInputStream fis = fs.open(new Path(TEST_PATH))) {
-        Assert.assertTrue(fis.read() != -1); // create BlockReader
+        Assertions.assertTrue(fis.read() != -1); // create BlockReader
         fis.setDropBehind(false); // clear BlockReader
         fis.seek(2); // seek
       }

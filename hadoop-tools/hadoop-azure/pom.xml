@@ -484,7 +484,6 @@
                   <reuseForks>false</reuseForks>
                   <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed in parallel -->
                     <test.parallel.execution>true</test.parallel.execution>
@@ -525,7 +524,6 @@
                 </goals>
                 <configuration>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <test.parallel.execution>false</test.parallel.execution>
                     <fs.azure.scale.test.enabled>${fs.azure.scale.test.enabled}</fs.azure.scale.test.enabled>
@@ -619,7 +617,6 @@
                   <threadCount>${testsThreadCount}</threadCount>
                   <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed in parallel -->
                     <test.parallel.execution>true</test.parallel.execution>
@@ -668,7 +665,6 @@
                   <!--NOTICE: hadoop contract tests methods can not be ran in parallel-->
                   <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed in parallel -->
                     <test.parallel.execution>true</test.parallel.execution>
@@ -706,7 +702,6 @@
                 <configuration>
                   <!--NOTICE: hadoop contract tests methods can not be run in parallel-->
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed sequentially -->
                     <test.parallel.execution>false</test.parallel.execution>
@@ -830,7 +825,6 @@
                   <reuseForks>false</reuseForks>
                   <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed in parallel -->
                     <test.parallel.execution>true</test.parallel.execution>
@@ -893,7 +887,6 @@
                 </goals>
                 <configuration>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <test.parallel.execution>false</test.parallel.execution>
                     <fs.azure.scale.test.enabled>${fs.azure.scale.test.enabled}</fs.azure.scale.test.enabled>
@@ -956,7 +949,6 @@
                     <http.maxConnections>${http.maxConnections}</http.maxConnections>
                   </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                 </configuration>
               </execution>
             </executions>

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -255,10 +255,10 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     S3AInputStreamStatistics inputStreamStatistics =
         ((S3APrefetchingInputStream) (in.getWrappedStream())).getS3AStreamStatistics();
 
-    assertNotNull("Prefetching input IO stats should not be null", ioStats);
-    assertNotNull("Prefetching input stream stats should not be null", inputStreamStatistics);
-    assertNotEquals("Position retrieved from prefetching input stream should be greater than 0", 0,
-        pos);
+    assertNotNull(ioStats, "Prefetching input IO stats should not be null");
+    assertNotNull(inputStreamStatistics, "Prefetching input stream stats should not be null");
+    assertNotEquals(0, pos,
+        "Position retrieved from prefetching input stream should be greater than 0");
 
     in.close();
 
@@ -268,21 +268,22 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     S3AInputStreamStatistics newInputStreamStatistics =
         ((S3APrefetchingInputStream) (in.getWrappedStream())).getS3AStreamStatistics();
 
-    assertNotNull("Prefetching input IO stats should not be null", newIoStats);
-    assertNotNull("Prefetching input stream stats should not be null", newInputStreamStatistics);
-    assertNotEquals("Position retrieved from prefetching input stream should be greater than 0", 0,
-        newPos);
+    assertNotNull(newIoStats, "Prefetching input IO stats should not be null");
+    assertNotNull(newInputStreamStatistics, "Prefetching input stream stats should not be null");
+    assertNotEquals(0, newPos,
+        "Position retrieved from prefetching input stream should be greater than 0");
 
     // compare status probes after closing of the stream with status probes done before
     // closing the stream
-    assertEquals("Position retrieved through stream before and after closing should match", pos,
-        newPos);
-    assertEquals("IO stats retrieved through stream before and after closing should match", ioStats,
-        newIoStats);
-    assertEquals("Stream stats retrieved through stream before and after closing should match",
-        inputStreamStatistics, newInputStreamStatistics);
+    assertEquals(pos, newPos,
+        "Position retrieved through stream before and after closing should match");
+    assertEquals(ioStats, newIoStats,
+        "IO stats retrieved through stream before and after closing should match");
+    assertEquals(inputStreamStatistics, newInputStreamStatistics,
+        "Stream stats retrieved through stream before and after closing should match");
 
-    assertFalse("seekToNewSource() not supported with prefetch", in.seekToNewSource(10));
+    assertFalse(in.seekToNewSource(10),
+        "seekToNewSource() not supported with prefetch");
   }
 
 }

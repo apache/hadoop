@@ -21,6 +21,10 @@ package org.apache.hadoop.fs.contract.s3a;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.test.tags.IntegrationTest;
+
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.enableAnalyticsAccelerator;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipForAnyEncryptionExceptSSES3;
@@ -33,6 +37,9 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipForAnyEncryptionExceptSS
  * implementation of readVectored {@link org.apache.hadoop.fs.PositionedReadable}
  * still works.
  */
+@IntegrationTest
+@ParameterizedClass(name="buffer-{0}")
+@MethodSource("params")
 public class ITestS3AContractAnalyticsStreamVectoredRead extends AbstractContractVectoredReadTest {
 
   public ITestS3AContractAnalyticsStreamVectoredRead(String bufferType) {

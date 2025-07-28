@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.contract;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractEtagTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Contract test for etag support.
@@ -34,6 +35,7 @@ public class ITestAbfsFileSystemContractEtag extends AbstractContractEtagTest {
     this.isSecure = binding.isSecureMode();
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     binding.setup();

@@ -20,12 +20,9 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 import org.apache.hadoop.io.erasurecode.ECChunk;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -34,17 +31,19 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test {@link DecodingValidator} under various decoders.
  */
-@RunWith(Parameterized.class)
 public class TestDecodingValidator extends TestRawCoderBase {
 
   private DecodingValidator validator;
 
-  @Parameterized.Parameters
   public static Collection<Object[]> data() {
     return Arrays.asList(new Object[][] {
         {RSRawErasureCoderFactory.class, 6, 3, new int[]{1}, new int[]{}},
@@ -57,7 +56,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
     });
   }
 
-  public TestDecodingValidator(
+  public void initTestDecodingValidator(
       Class<? extends RawErasureCoderFactory> factoryClass, int numDataUnits,
       int numParityUnits, int[] erasedDataIndexes, int[] erasedParityIndexes) {
     this.encoderFactoryClass = factoryClass;
@@ -66,13 +65,13 @@ public class TestDecodingValidator extends TestRawCoderBase {
     this.numParityUnits = numParityUnits;
     this.erasedDataIndexes = erasedDataIndexes;
     this.erasedParityIndexes = erasedParityIndexes;
+    setup();
   }
 
-  @Before
   public void setup() {
     if (encoderFactoryClass == NativeRSRawErasureCoderFactory.class
         || encoderFactoryClass == NativeXORRawErasureCoderFactory.class) {
-      Assume.assumeTrue(ErasureCodeNative.isNativeCodeLoaded());
+      assumeTrue(ErasureCodeNative.isNativeCodeLoaded());
     }
     setAllowDump(false);
   }
@@ -80,8 +79,12 @@ public class TestDecodingValidator extends TestRawCoderBase {
   /**
    * Test if the same validator can process direct and non-direct buffers.
    */
-  @Test
-  public void testValidate() {
+  @ParameterizedTest
+  @MethodSource("data")
+  public void testValidate(Class<? extends RawErasureCoderFactory> factoryClass,
+      int numDataUnits, int numParityUnits, int[] erasedDataIndexes, int[] erasedParityIndexes) {
+    initTestDecodingValidator(factoryClass, numDataUnits, numParityUnits,
+        erasedDataIndexes, erasedParityIndexes);
     prepare(null, numDataUnits, numParityUnits, erasedDataIndexes,
         erasedParityIndexes);
     testValidate(true);
@@ -119,7 +122,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
     try {
       encoder.encode(dataChunks, parityChunks);
     } catch (Exception e) {
-      Assert.fail("Should not get Exception: " + e.getMessage());
+      fail("Should not get Exception: " + e.getMessage());
     }
 
     // decode
@@ -133,7 +136,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
     try {
       decoder.decode(inputChunks, erasedIndexes, recoveredChunks);
     } catch (Exception e) {
-      Assert.fail("Should not get Exception: " + e.getMessage());
+      fail("Should not get Exception: " + e.getMessage());
     }
 
     // validate
@@ -146,7 +149,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
       validator.validate(clonedInputChunks, clonedErasedIndexes,
           clonedRecoveredChunks);
     } catch (Exception e) {
-      Assert.fail("Should not get Exception: " + e.getMessage());
+      fail("Should not get Exception: " + e.getMessage());
     }
 
     // Check if input buffers' positions are moved to the end
@@ -154,8 +157,8 @@ public class TestDecodingValidator extends TestRawCoderBase {
 
     // Check if validator does not change recovered chunks and erased indexes
     verifyChunksEqual(recoveredChunks, clonedRecoveredChunks);
-    Assert.assertArrayEquals("Erased indexes should not be changed",
-        erasedIndexes, clonedErasedIndexes);
+    assertArrayEquals(erasedIndexes, clonedErasedIndexes,
+        "Erased indexes should not be changed");
 
     // Check if validator uses correct indexes for validation
     List<Integer> validIndexesList =
@@ -167,31 +170,33 @@ public class TestDecodingValidator extends TestRawCoderBase {
     List<Integer> erasedIndexesList =
         IntStream.of(erasedIndexes).boxed().collect(Collectors.toList());
     int newErasedIndex = validator.getNewErasedIndex();
-    Assert.assertTrue(
+    assertTrue(newValidIndexesList.containsAll(erasedIndexesList),
         "Valid indexes for validation should contain"
-        + " erased indexes for decoding",
-        newValidIndexesList.containsAll(erasedIndexesList));
-    Assert.assertTrue(
+        + " erased indexes for decoding");
+    assertTrue(validIndexesList.contains(newErasedIndex),
         "An erased index for validation should be contained"
-        + " in valid indexes for decoding",
-        validIndexesList.contains(newErasedIndex));
-    Assert.assertFalse(
+        + " in valid indexes for decoding");
+    assertFalse(newValidIndexesList.contains(newErasedIndex),
         "An erased index for validation should not be contained"
-        + " in valid indexes for validation",
-        newValidIndexesList.contains(newErasedIndex));
+        + " in valid indexes for validation");
   }
 
   private void verifyChunksEqual(ECChunk[] chunks1, ECChunk[] chunks2) {
     boolean result = Arrays.deepEquals(toArrays(chunks1), toArrays(chunks2));
-    assertTrue("Recovered chunks should not be changed", result);
+    assertTrue(result, "Recovered chunks should not be changed");
   }
 
   /**
    * Test if validator throws {@link InvalidDecodingException} when
    * a decoded output buffer is polluted.
    */
-  @Test
-  public void testValidateWithBadDecoding() throws IOException {
+  @ParameterizedTest
+  @MethodSource("data")
+  public void testValidateWithBadDecoding(Class<? extends RawErasureCoderFactory> factoryClass,
+      int numDataUnits, int numParityUnits, int[] erasedDataIndexes, int[] erasedParityIndexes)
+      throws IOException {
+    initTestDecodingValidator(factoryClass, numDataUnits, numParityUnits,
+        erasedDataIndexes, erasedParityIndexes);
     prepare(null, numDataUnits, numParityUnits, erasedDataIndexes,
         erasedParityIndexes);
     this.usingDirectBuffer = true;
@@ -206,7 +211,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
     try {
       encoder.encode(dataChunks, parityChunks);
     } catch (Exception e) {
-      Assert.fail("Should not get Exception: " + e.getMessage());
+      fail("Should not get Exception: " + e.getMessage());
     }
 
     // decode
@@ -220,7 +225,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
     try {
       decoder.decode(inputChunks, erasedIndexes, recoveredChunks);
     } catch (Exception e) {
-      Assert.fail("Should not get Exception: " + e.getMessage());
+      fail("Should not get Exception: " + e.getMessage());
     }
 
     // validate
@@ -228,10 +233,28 @@ public class TestDecodingValidator extends TestRawCoderBase {
     polluteSomeChunk(recoveredChunks);
     try {
       validator.validate(inputChunks, erasedIndexes, recoveredChunks);
-      Assert.fail("Validation should fail due to bad decoding");
+      fail("Validation should fail due to bad decoding");
     } catch (InvalidDecodingException e) {
       String expected = "Failed to validate decoding";
       GenericTestUtils.assertExceptionContains(expected, e);
     }
+  }
+
+  @ParameterizedTest
+  @MethodSource("data")
+  public void testIdempotentReleases(Class<? extends RawErasureCoderFactory> factoryClass,
+      int numDataUnits, int numParityUnits, int[] erasedDataIndexes, int[] erasedParityIndexes) {
+    initTestDecodingValidator(factoryClass, numDataUnits, numParityUnits,
+        erasedDataIndexes, erasedParityIndexes);
+    prepareCoders(true);
+
+    for (int i = 0; i < 3; i++) {
+      encoder.release();
+      decoder.release();
+    }
+  }
+
+  @Test
+  public void testIdempotentReleases() {
   }
 }

@@ -67,7 +67,7 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
 
     @Test
     public void testPurgeBufferManagerForParallelStreams() throws Exception {
-        describe("Testing purging of buffers from ReadBufferManager for "
+        describe("Testing purging of buffers from ReadBufferManagerV1 for "
                 + "parallel input streams");
         final int numBuffers = 16;
         final LinkedList<Integer> freeList = new LinkedList<>();
@@ -99,7 +99,7 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
             executorService.awaitTermination(1, TimeUnit.MINUTES);
         }
 
-        ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
+        ReadBufferManagerV1 bufferManager = ReadBufferManagerV1.getBufferManager();
         // readahead queue is empty
         assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
         // verify the in progress list eventually empties out.
@@ -115,7 +115,7 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
 
     @Test
     public void testPurgeBufferManagerForSequentialStream() throws Exception {
-        describe("Testing purging of buffers in ReadBufferManager for "
+        describe("Testing purging of buffers in ReadBufferManagerV1 for "
                 + "sequential input streams");
         AzureBlobFileSystem fs = getABFSWithReadAheadConfig();
         final String fileName = methodName.getMethodName();
@@ -131,7 +131,7 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         } finally {
             IOUtils.closeStream(iStream1);
         }
-        ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
+        ReadBufferManagerV1 bufferManager = ReadBufferManagerV1.getBufferManager();
         AbfsInputStream iStream2 = null;
         try {
             iStream2 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();

@@ -22,8 +22,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 import org.apache.hadoop.conf.Configuration;
@@ -74,7 +73,7 @@ public class TestStreamFactories extends AbstractHadoopTestBase {
         load(INPUT_STREAM_TYPE_CLASSIC, DEFAULT_STREAM_TYPE,
             ClassicObjectInputStreamFactory.class);
     final StreamFactoryRequirements requirements = f.factoryRequirements();
-    Assertions.assertThat(requirements.requiresFuturePool())
+    assertThat(requirements.requiresFuturePool())
         .describedAs("requires future pool of %s", requirements)
         .isFalse();
     assertRequirement(requirements,
@@ -92,7 +91,7 @@ public class TestStreamFactories extends AbstractHadoopTestBase {
       final StreamFactoryRequirements requirements,
       final StreamFactoryRequirements.Requirements probe,
       final boolean shouldMatch) {
-    Assertions.assertThat(requirements.requires(probe))
+    assertThat(requirements.requires(probe))
         .describedAs("%s of %s", probe, requirements)
         .isEqualTo(shouldMatch);
   }
@@ -107,7 +106,7 @@ public class TestStreamFactories extends AbstractHadoopTestBase {
         InputStreamType.Prefetch,
         PrefetchingInputStreamFactory.class);
     final StreamFactoryRequirements requirements = f.factoryRequirements();
-    Assertions.assertThat(requirements.requiresFuturePool())
+    assertThat(requirements.requiresFuturePool())
         .describedAs("requires future pool of %s", requirements)
         .isTrue();
     assertRequirement(requirements,
@@ -146,16 +145,16 @@ public class TestStreamFactories extends AbstractHadoopTestBase {
         new StreamFactoryRequirements(1, 2, vertex);
     assertRequirement(r1, ExpectUnauditedGetRequests, false);
     assertRequirement(r1, RequiresFuturePool, false);
-    Assertions.assertThat(r1.requiresFuturePool())
+    assertThat(r1.requiresFuturePool())
         .describedAs("requiresFuturePool() %s", r1)
         .isFalse();
-    Assertions.assertThat(r1)
+    assertThat(r1)
         .describedAs("%s", r1)
         .matches(r -> !r.requiresFuturePool(), "requiresFuturePool")
         .satisfies(r ->
-            Assertions.assertThat(r.sharedThreads()).isEqualTo(1))
+            assertThat(r.sharedThreads()).isEqualTo(1))
         .satisfies(r ->
-            Assertions.assertThat(r.streamThreads()).isEqualTo(2));
+            assertThat(r.streamThreads()).isEqualTo(2));
   }
 
   @Test
@@ -166,7 +165,7 @@ public class TestStreamFactories extends AbstractHadoopTestBase {
         new StreamFactoryRequirements(1, 2, vertex, RequiresFuturePool);
     assertRequirement(r1, ExpectUnauditedGetRequests, false);
     assertRequirement(r1, RequiresFuturePool, true);
-    Assertions.assertThat(r1.requiresFuturePool())
+    assertThat(r1.requiresFuturePool())
         .describedAs("requiresFuturePool() %s", r1)
         .isTrue();
   }

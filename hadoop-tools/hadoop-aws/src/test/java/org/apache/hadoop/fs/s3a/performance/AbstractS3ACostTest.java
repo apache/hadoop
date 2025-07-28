@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
+import org.junit.jupiter.api.BeforeEach;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
@@ -98,6 +99,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();

@@ -28,8 +28,7 @@ import software.amazon.awssdk.core.interceptor.InterceptorContext;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.http.SdkHttpRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3ARetryPolicy;
@@ -87,7 +86,7 @@ public class TestAuditIntegration extends AbstractHadoopTestBase {
     });
     final S3ARetryPolicy retryPolicy = new S3ARetryPolicy(new Configuration(false));
     final RetryPolicy.RetryAction action = retryPolicy.shouldRetry(ex, 0, 0, true);
-    Assertions.assertThat(action.action)
+    assertThat(action.action)
         .describedAs("retry policy %s for %s", action, ex)
         .isEqualTo(RetryPolicy.RetryAction.RetryDecision.FAIL);
   }

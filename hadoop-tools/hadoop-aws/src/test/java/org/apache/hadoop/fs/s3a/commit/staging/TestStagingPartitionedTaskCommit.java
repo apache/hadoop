@@ -27,9 +27,8 @@ import java.util.UUID;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
-import org.assertj.core.api.Assertions;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,7 +38,8 @@ import org.apache.hadoop.mapreduce.JobContext;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.reset;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.*;
 
 /** Mocking test of the partitioned committer. */
@@ -60,7 +60,7 @@ public class TestStagingPartitionedTaskCommit
   // The set of files used by this test
   private static List<String> relativeFiles = Lists.newArrayList();
 
-  @BeforeClass
+  @BeforeAll
   public static void createRelativeFileList() {
     for (String dateint : Arrays.asList("20161115", "20161116")) {
       for (String hour : Arrays.asList("14", "15")) {
@@ -152,12 +152,12 @@ public class TestStagingPartitionedTaskCommit
       assertEquals(BUCKET, request.bucket());
       files.add(request.key());
     }
-    Assertions.assertThat(files)
+    assertThat(files)
         .describedAs("Should have the right number of uploads")
         .hasSize(relativeFiles.size());
 
     Set<String> expected = buildExpectedList(committer);
-    Assertions.assertThat(files)
+    assertThat(files)
         .describedAs("Should have correct paths")
         .containsExactlyInAnyOrderElementsOf(expected);
   }

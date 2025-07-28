@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.Before;
+import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Unit test for Abfs read footer metrics
@@ -33,7 +33,7 @@ public class TestAbfsReadFooterMetrics {
     private static final String TEST_FILE2 = "TestFile2";
     private AbfsReadFooterMetrics metrics;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         metrics = new AbfsReadFooterMetrics();
     }
@@ -44,7 +44,7 @@ public class TestAbfsReadFooterMetrics {
     @Test
     public void metricsUpdateForFirstRead() {
         metrics.updateReadMetrics(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
-        Assertions.assertThat(metrics.getTotalFiles())
+        assertThat(metrics.getTotalFiles())
                 .describedAs("Total number of files")
                 .isEqualTo(0);
     }
@@ -56,7 +56,7 @@ public class TestAbfsReadFooterMetrics {
     public void metricsUpdateForSecondRead() {
         metrics.updateReadMetrics(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
         metrics.updateReadMetrics(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+LENGTH);
-        Assertions.assertThat(metrics.getTotalFiles())
+        assertThat(metrics.getTotalFiles())
                 .describedAs("Total number of files")
                 .isEqualTo(1);
     }
@@ -69,10 +69,10 @@ public class TestAbfsReadFooterMetrics {
         metrics.updateReadMetrics(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
         metrics.updateReadMetrics(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+LENGTH);
         metrics.updateReadMetrics(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+2*LENGTH);
-        Assertions.assertThat(metrics.getTotalFiles())
+        assertThat(metrics.getTotalFiles())
                 .describedAs("Total number of files")
                 .isEqualTo(1);
-        Assertions.assertThat(metrics.toString())
+        assertThat(metrics.toString())
                 .describedAs("Metrics after reading 3 reads of the same file")
                 .isEqualTo("$NON_PARQUET:$FR=10000.000_20000.000$SR=10000.000_10000.000$FL=50000.000$RL=10000.000");
     }
@@ -88,10 +88,10 @@ public class TestAbfsReadFooterMetrics {
         metrics.updateReadMetrics(TEST_FILE2, LENGTH, CONTENT_LENGTH/2, NEXT_READ_POS);
         metrics.updateReadMetrics(TEST_FILE2, LENGTH, CONTENT_LENGTH/2, NEXT_READ_POS+LENGTH);
         metrics.updateReadMetrics(TEST_FILE2, LENGTH, CONTENT_LENGTH/2, NEXT_READ_POS+2*LENGTH);
-        Assertions.assertThat(metrics.getTotalFiles())
+        assertThat(metrics.getTotalFiles())
                 .describedAs("Total number of files")
                 .isEqualTo(2);
-        Assertions.assertThat(metrics.toString())
+        assertThat(metrics.toString())
                 .describedAs("Metrics after reading 3 reads of the same file")
                 .isEqualTo("$NON_PARQUET:$FR=10000.000_12500.000$SR=10000.000_10000.000$FL=37500.000$RL=10000.000");
     }

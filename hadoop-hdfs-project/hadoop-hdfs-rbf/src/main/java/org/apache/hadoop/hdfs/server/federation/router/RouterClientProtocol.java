@@ -2524,4 +2524,8 @@ public class RouterClientProtocol implements ClientProtocol {
   public RouterFederationRename getRbfRename() {
     return rbfRename;
   }
+
+  public RouterSecurityManager getSecurityManager() {
+    return securityManager;
+  }
 }
