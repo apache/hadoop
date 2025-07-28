@@ -139,6 +139,10 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
       throw new PathIOException(getUrl().toString(),
           "Unsupported HTTP method: " + getMethod());
     }
+
+    for (AbfsHttpHeader header : requestHeaders) {
+      setRequestProperty(header.getName(), header.getValue());
+    }
   }
 
   /**
@@ -163,11 +167,8 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   /**{@inheritDoc}*/
   @Override
   String getConnProperty(final String key) {
-    for (AbfsHttpHeader header : getRequestHeaders()) {
-      if (header.getName().equals(key)) {
-        return header.getValue();
-      }
-    }
+    Header header = httpRequestBase.getFirstHeader(key);
+    if (header != null) return header.getValue();
     return null;
   }
 
@@ -196,7 +197,6 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
       final int length) throws IOException {
     try {
       if (!isPayloadRequest) {
-        prepareRequest();
         LOG.debug("Sending request: {}", httpRequestBase);
         httpResponse = executeRequest();
         LOG.debug("Request sent: {}; response {}", httpRequestBase,
@@ -280,23 +280,22 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   /**{@inheritDoc}*/
   @Override
   public void setRequestProperty(final String key, final String value) {
-    List<AbfsHttpHeader> headers = getRequestHeaders();
-    if (headers != null) {
-      headers.add(new AbfsHttpHeader(key, value));
+    if (httpRequestBase instanceof HttpEntityEnclosingRequestBase
+        && CONTENT_LENGTH.equals(key)) {
+      return;
     }
+    httpRequestBase.setHeader(key, value);
   }
 
   /**{@inheritDoc}*/
   @Override
   Map<String, List<String>> getRequestProperties() {
-    Map<String, List<String>> map = new HashMap<>();
-    for (AbfsHttpHeader header : getRequestHeaders()) {
-      map.put(header.getName(),
-          new ArrayList<String>() {{
-            add(header.getValue());
-          }});
+    Map<String, List<String>> headers = new HashMap<>();
+    for (Header header : httpRequestBase.getAllHeaders()) {
+      headers.computeIfAbsent(header.getName(), k -> new ArrayList<>())
+          .add(header.getValue());
     }
-    return map;
+    return headers;
   }
 
   /**{@inheritDoc}*/
@@ -370,7 +369,6 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
           httpEntity);
     }
 
-    prepareRequest();
     try {
       LOG.debug("Sending request: {}", httpRequestBase);
       httpResponse = executeRequest();
@@ -398,24 +396,10 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
     }
   }
 
-  /**
-   * Sets the header on the request.
-   */
-  private void prepareRequest() {
-    final boolean isEntityBasedRequest
-        = httpRequestBase instanceof HttpEntityEnclosingRequestBase;
-    for (AbfsHttpHeader header : getRequestHeaders()) {
-      if (CONTENT_LENGTH.equals(header.getName()) && isEntityBasedRequest) {
-        continue;
-      }
-      httpRequestBase.setHeader(header.getName(), header.getValue());
-    }
-  }
-
   /**{@inheritDoc}*/
   @Override
   public String getRequestProperty(String name) {
-    for (AbfsHttpHeader header : getRequestHeaders()) {
+    for (Header header : httpRequestBase.getAllHeaders()) {
       if (header.getName().equals(name)) {
         String val = header.getValue();
         val = val == null ? EMPTY_STRING : val;

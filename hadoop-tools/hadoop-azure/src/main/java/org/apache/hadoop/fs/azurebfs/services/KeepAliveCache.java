@@ -34,36 +34,56 @@ import org.apache.http.HttpClientConnection;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KEEP_ALIVE_CACHE_CLOSED;
 
 /**
- * Thread-safe, bounded connection cache used by {@link AbfsConnectionManager}.
- * Supports reuse of open, non-stale Apache HttpClient connections.
- * Replaces oldest connection if capacity is full.
+ * Connection-pooling heuristics used by {@link AbfsConnectionManager}. Each
+ * instance of FileSystem has its own KeepAliveCache.
  * <p>
- * Backed by a LinkedBlockingDeque, with bounded capacity.
  * Why this implementation is required in comparison to {@link org.apache.http.impl.conn.PoolingHttpClientConnectionManager}
  * connection-pooling:
  * <ol>
  * <li>PoolingHttpClientConnectionManager heuristic caches all the reusable connections it has created.
  * JDK's implementation only caches a limited number of connections. The limit is given by JVM system
  * property "http.maxConnections". If there is no system-property, it defaults to 5.</li>
- * <li>In PoolingHttpClientConnectionManager, it expects the application to provide `setMaxPerRoute` and `setMaxTotal`,
+ * <li>In PoolingHttpClientConnectionManager, it expects the application to provide setMaxPerRoute and setMaxTotal,
  * which the implementation uses as the total number of connections it can create. For application using ABFS, it is not
  * feasible to provide a value in the initialisation of the connectionManager. JDK's implementation has no cap on the
  * number of connections it can create.</li>
  * </ol>
  */
-class KeepAliveCache implements Closeable {
+class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
+    implements Closeable {
 
   private static final Logger LOG = LoggerFactory.getLogger(KeepAliveCache.class);
 
-  private final LinkedBlockingDeque<HttpClientConnection> deque;
+  /**
+   * Flag to indicate if the cache is closed.
+   */
   private final AtomicBoolean isClosed = new AtomicBoolean(false);
+
+  /**
+   * Maximum number of connections that can be cached.
+   */
   private final int maxCacheConnections;
+
+  /**
+   * Account name for which the cache is created. To be used only in exception
+   * messages.
+   */
   private final String accountNamePath;
 
+  /**
+   * Creates an {@link KeepAliveCache} instance using filesystem's configuration.
+   * <p>
+   * The size of the cache is determined by the configuration
+   * {@value org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys#FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE}.
+   * If the configuration is not set, the default value is
+   * {@value org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations#DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS}.
+   * <p>.
+   */
   KeepAliveCache(AbfsConfiguration abfsConfiguration) {
-    this.accountNamePath = abfsConfiguration.getAccountName();
-    this.maxCacheConnections = abfsConfiguration.getMaxApacheHttpClientCacheConnections();
-    this.deque = new LinkedBlockingDeque<>(maxCacheConnections);
+    this.accountNamePath =
+        abfsConfiguration.getAccountName();
+    this.maxCacheConnections =
+        abfsConfiguration.getMaxApacheHttpClientCacheConnections();
   }
 
   /**
@@ -75,30 +95,19 @@ class KeepAliveCache implements Closeable {
     try {
       hc.close();
     } catch (IOException ex) {
-      LOG.debug("Failed to close connection: {}", hc, ex);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Close failed for connection: {}", hc, ex);
+      }
     }
   }
 
   /**
-   * Check if the connection is stale or closed.
-   *
-   * @param conn HttpClientConnection to check
-   * @return true if stale or closed, false otherwise
-   */
-  private boolean isConnectionStale(HttpClientConnection conn) {
-    try {
-      return !conn.isOpen() || conn.isStale();
-    } catch (Exception e) {
-      return true;
-    }
-  }
-
-  /**
-   * Close the cache and all cached connections.
+   * Close all connections in cache.
    */
   @Override
   public void close() {
-    if (isClosed.getAndSet(true)) {
+    boolean closed = isClosed.getAndSet(true);
+    if (closed) {
       return;
     }
     closeInternal();
@@ -106,73 +115,60 @@ class KeepAliveCache implements Closeable {
 
   @VisibleForTesting
   void closeInternal() {
-    HttpClientConnection conn;
-    while ((conn = deque.pollFirst()) != null) {
-      closeHttpClientConnection(conn);
+    while (size() != 0) {
+      closeHttpClientConnection(removeFirst());
     }
   }
 
   /**
-   * Get the oldest usable connection from the cache.
+   * Gets the oldest added HttpClientConnection from the cache. The returned connection
+   * is open.
    *
-   * @return HttpClientConnection if available and valid, otherwise null.
-   * @throws IOException if the cache is closed
+   * The cache follows the FIFO strategy. If the connection is not open, it will
+   * be closed and the next connection is checked. Once a valid connection is found,
+   * it is returned.
+   * @return HttpClientConnection: if a valid connection is found, else null.
+   * @throws IOException if the cache is closed.
    */
   public HttpClientConnection get() throws IOException {
     if (isClosed.get()) {
       throw new ClosedIOException(accountNamePath, KEEP_ALIVE_CACHE_CLOSED);
     }
-    HttpClientConnection conn;
-    while ((conn = deque.pollFirst()) != null) {
-      if (isConnectionStale(conn)) {
-        closeHttpClientConnection(conn);
+    HttpClientConnection httpClientConnection;
+    while ((httpClientConnection = pollFirst()) != null) {
+      if (!httpClientConnection.isOpen() || httpClientConnection.isStale()) {
+        closeHttpClientConnection(httpClientConnection);
         continue;
       }
-      LOG.debug("Reusing cached connection: {}", conn);
-      return conn;
+      return httpClientConnection;
     }
     return null;
   }
 
   /**
-   * Attempt to add a connection to the cache.
-   * If full, evicts the oldest one first.
+   * Puts the HttpClientConnection in the cache. If the size of cache is equal to
+   * maxConn, the oldest connection is closed and removed from the cache, which
+   * will make space for the new connection. If the cache is closed or of zero size,
+   * the connection is closed and not added to the cache.
    *
-   * @param conn connection to add
-   * @return true if added, false if closed or rejected
+   * @param conn HttpClientConnection to be cached
+   * @return true if the HttpClientConnection is added in active cache, false otherwise.
    */
   public boolean add(HttpClientConnection conn) {
-    if (isClosed.get() || maxCacheConnections <= 0 || isConnectionStale(conn)) {
+    if (isClosed.get() || maxCacheConnections <= 0
+        || !conn.isOpen() || conn.isStale()) {
       closeHttpClientConnection(conn);
       return false;
     }
-
-    // Remove oldest if full
-    if (!deque.offerLast(conn)) {
-      HttpClientConnection evicted = deque.pollFirst();
-      if (evicted != null) {
-        closeHttpClientConnection(evicted);
-      }
-      boolean offered = deque.offerLast(conn);
-      if (!offered) {
-        closeHttpClientConnection(conn);
-        return false;
+    while (size() > maxCacheConnections) {
+      HttpClientConnection httpClientConnection = pollFirst();
+      if (httpClientConnection != null) {
+        closeHttpClientConnection(httpClientConnection);
+      } else {
+        break;
       }
     }
-    LOG.debug("Cached new connection: {}", conn);
-    return true;
-  }
-
-  public int size() {
-    return deque.size();
-  }
-
-  public void clear() {
-    if (isClosed.get()) {
-      return;
-    }
-    closeInternal();
-    deque.clear();
+    return offerLast(conn);
   }
 
   @VisibleForTesting
@@ -183,6 +179,6 @@ class KeepAliveCache implements Closeable {
   @Override
   public String toString() {
     return String.format("KeepAliveCache[closed=%s, size=%d, max=%d]",
-        isClosed.get(), deque.size(), maxCacheConnections);
+        isClosed.get(), size(), maxCacheConnections);
   }
 }
