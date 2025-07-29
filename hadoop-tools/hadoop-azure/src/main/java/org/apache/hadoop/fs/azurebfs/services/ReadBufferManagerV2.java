@@ -584,6 +584,15 @@ final class ReadBufferManagerV2 extends ReadBufferManager {
         evict(buf);
       }
     }
+
+    /*
+     * Scheduled eviction does not clear up acquired memory, it only marks buffer
+     * to be available and reused for future read ahead requests.
+
+     * To actually free up memory, we need to remove the extra buffer from all
+     * the queues and available list and nullify its reference in bufferPool.
+     */
+    // TODO: Check Memory Utilization and adjust buffer pool size if needed.
   }
 
   private boolean manualEviction(final ReadBuffer buf) {
