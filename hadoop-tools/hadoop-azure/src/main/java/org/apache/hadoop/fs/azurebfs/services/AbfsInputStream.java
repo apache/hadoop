@@ -348,14 +348,20 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       if (alwaysReadBufferSize) {
         bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
       } else {
-        // Enable readAhead when reading sequentially
-        if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
-          LOG.debug("Sequential read with read ahead size of {}", bufferSize);
+        // Switch between enabling and disabling read ahead based on the workload read pattern.
+        // First Read on input stream should always bypass read ahead.
+        if (firstRead) {
+          int lengthToRead = Math.min(b.length, bufferSize);
+          LOG.debug("First read with read size of {} and read ahead disabled", lengthToRead);
+          bytesRead = readInternal(fCursor, buffer, 0, lengthToRead, true);
+        } else if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
+          // Sequential read pattern detected. Enable read ahead.
+          LOG.debug("Sequential read with read size of {} and read ahead enabled", bufferSize);
           bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
         } else {
-          // Enabling read ahead for random reads as well to reduce number of remote calls.
+          // Random read pattern detected. Disable read ahead.
           int lengthWithReadAhead = Math.min(b.length + readAheadRange, bufferSize);
-          LOG.debug("Random read with read ahead size of {}", lengthWithReadAhead);
+          LOG.debug("Random read with read size of {} and read ahead disabled", lengthWithReadAhead);
           bytesRead = readInternal(fCursor, buffer, 0, lengthWithReadAhead, true);
         }
       }
