@@ -23,12 +23,14 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.TestFileContext;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Implementation of TestFileContext for S3a.
  */
+@IntegrationTest
 public class ITestS3AFileContext extends TestFileContext {
 
   @Test

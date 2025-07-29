@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,9 +55,13 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Tests for the committer factory creation/override process.
  */
+@ParameterizedClass(name="committer={3}")
+@MethodSource("params")
 public final class ITestS3ACommitterFactory extends AbstractCommitITest {
+
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestS3ACommitterFactory.class);
+
   /**
    * Name for invalid committer: {@value}.
    */
@@ -114,18 +120,18 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
   /**
    * Name of committer to set in filesystem config. If "" do not set one.
    */
-  private String fsCommitterName;
+  private final String fsCommitterName;
 
   /**
    * Name of committer to set in job config.
    */
-  private String jobCommitterName;
+  private final String jobCommitterName;
 
   /**
    * Expected committer class.
    * If null: an exception is expected
    */
-  private Class<? extends AbstractS3ACommitter> committerClass;
+  private final Class<? extends AbstractS3ACommitter> committerClass;
 
   /**
    * Description from parameters, simply for thread names to be more informative.
@@ -134,21 +140,20 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
 
   /**
    * Create a parameterized instance.
-   * @param pFsCommitterName committer to set in filesystem config
-   * @param pJobCommitterName committer to set in job config
-   * @param pCommitterClass expected committer class
-   * @param pDescription debug text for thread names.
+   * @param fsCommitterName committer to set in filesystem config
+   * @param jobCommitterName committer to set in job config
+   * @param committerClass expected committer class
+   * @param description debug text for thread names.
    */
-  public void initITestS3ACommitterFactory(
-      final String pFsCommitterName,
-      final String pJobCommitterName,
-      final Class<? extends AbstractS3ACommitter> pCommitterClass,
-      final String pDescription) throws Exception {
-    this.fsCommitterName = pFsCommitterName;
-    this.jobCommitterName = pJobCommitterName;
-    this.committerClass = pCommitterClass;
-    this.description = pDescription;
-    setup();
+  public ITestS3ACommitterFactory(
+      final String fsCommitterName,
+      final String jobCommitterName,
+      final Class<? extends AbstractS3ACommitter> committerClass,
+      final String description) {
+    this.fsCommitterName = fsCommitterName;
+    this.jobCommitterName = jobCommitterName;
+    this.committerClass = committerClass;
+    this.description = description;
   }
 
   @Override
@@ -176,6 +181,7 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
   }
 
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     // destroy all filesystems from previous runs.
     FileSystem.closeAllForUGI(UserGroupInformation.getCurrentUser());
@@ -210,14 +216,8 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
    * Verify that if all config options are unset, the FileOutputCommitter
    * is returned.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "{3}-fs=[{0}]-task=[{1}]-[{2}]")
-  public void testBinding(String pFsCommitterName,
-      String pJobCommitterName,
-      Class<? extends AbstractS3ACommitter> pCommitterClass,
-      String pDescription) throws Throwable {
-    initITestS3ACommitterFactory(pFsCommitterName, pJobCommitterName, pCommitterClass,
-        pDescription);
+  @Test
+  public void testBinding() throws Throwable {
     assertFactoryCreatesExpectedCommitter(committerClass);
   }
 

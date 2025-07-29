@@ -26,13 +26,19 @@ import java.util.Arrays;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.tags.FlakyTest;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 
 /**
  * Contract tests for {@link org.apache.hadoop.fs.CanUnbuffer#unbuffer}.
+ * Some of these test cases can fail if the FS read() call returns less
+ * than requested, which is a valid (possibly correct) implementation
+ * of {@code InputStream.read(buffer[])} which may return only those bytes
+ * which can be returned without blocking for more data.
  */
+@FlakyTest("buffer underflow")
 public abstract class AbstractContractUnbufferTest extends AbstractFSContractTestBase {
 
   private Path file;
@@ -104,6 +110,7 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
       unbuffer(stream);
     }
   }
+
 
   @Test
   public void testUnbufferMultipleReads() throws IOException {

@@ -31,8 +31,9 @@ import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +50,7 @@ import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter;
 import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitter;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.test.tags.ScaleTest;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -56,7 +58,9 @@ import org.apache.hadoop.util.ToolRunner;
 
 import static java.util.Optional.empty;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 
 /**
  * Runs Terasort against S3A.
@@ -72,7 +76,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * Before anyone calls that out as slow: try running the test with the file
  * committer.
  */
+@ScaleTest
+@ParameterizedClass(name="-{0}")
 @TestMethodOrder(MethodOrderer.Alphanumeric.class)
+@MethodSource("params")
 @SuppressWarnings("StaticNonFinalField")
 public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
 
@@ -87,7 +94,7 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
 
   /**
    * Duration tracker created in the first of the test cases and closed
-   * in {@link #test_140_teracomplete(String, boolean)}.
+   * in {@link #test_140_teracomplete()}.
    */
   private static Optional<DurationInfo> terasortDuration = empty();
 
@@ -97,10 +104,10 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
   private static Map<String, DurationInfo> completedStages = new HashMap<>();
 
   /** Name of the committer for this run. */
-  private String committerName;
+  private final String committerName;
 
   /** Should Magic committer track pending commits in-memory. */
-  private boolean trackCommitsInMemory;
+  private final boolean trackCommitsInMemory;
 
   /** Base path for all the terasort input and output paths. */
   private Path terasortPath;
@@ -126,10 +133,9 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
         {MagicS3GuardCommitter.NAME, true}});
   }
 
-  public void initITestTerasortOnS3A(
-      final String pCommitterName, final boolean pTrackCommitsInMemory) throws Exception {
-    this.committerName = pCommitterName;
-    this.trackCommitsInMemory = pTrackCommitsInMemory;
+  public ITestTerasortOnS3A(final String committerName, final boolean trackCommitsInMemory) {
+    this.committerName = committerName;
+    this.trackCommitsInMemory = trackCommitsInMemory;
   }
 
   @Override
@@ -242,9 +248,11 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
       d.close();
     }
     dumpOutputTree(dest);
-    assertEquals(0, result, stage
-        + "(" + StringUtils.join(", ", args) + ")"
-        + " failed");
+    assertThat(result)
+        .describedAs(stage
+            + "(" + StringUtils.join(", ", args) + ")"
+            + " failed")
+        .isEqualTo(0);
     validateSuccessFile(dest, committerName(), getFileSystem(), stage,
         minimumFileCount, "");
     completedStage(stage, d);
@@ -258,11 +266,8 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
    * It is where all variables which need to be reset for each run need
    * to be reset.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}-memory={1}")
-  public void test_100_terasort_setup(String pCommitterName,
-      boolean pTrackCommitsInMemory) throws Throwable {
-    initITestTerasortOnS3A(pCommitterName, pTrackCommitsInMemory);
+  @Test
+  public void test_100_terasort_setup() throws Throwable {
     describe("Setting up for a terasort with path of %s", terasortPath);
 
     getFileSystem().delete(terasortPath, true);
@@ -270,11 +275,8 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
     terasortDuration = Optional.of(new DurationInfo(LOG, false, "Terasort"));
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}-memory={1}")
-  public void test_110_teragen(String pCommitterName,
-      boolean pTrackCommitsInMemory) throws Throwable {
-    initITestTerasortOnS3A(pCommitterName, pTrackCommitsInMemory);
+  @Test
+  public void test_110_teragen() throws Throwable {
     describe("Teragen to %s", sortInput);
     getFileSystem().delete(sortInput, true);
 
@@ -289,11 +291,8 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
   }
 
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}-memory={1}")
-  public void test_120_terasort(String pCommitterName,
-      boolean pTrackCommitsInMemory) throws Throwable {
-    initITestTerasortOnS3A(pCommitterName, pTrackCommitsInMemory);
+  @Test
+  public void test_120_terasort() throws Throwable {
     describe("Terasort from %s to %s", sortInput, sortOutput);
     requireStage("teragen");
     getFileSystem().delete(sortOutput, true);
@@ -309,11 +308,8 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
         1);
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}-memory={1}")
-  public void test_130_teravalidate(String pCommitterName,
-      boolean pTrackCommitsInMemory) throws Throwable {
-    initITestTerasortOnS3A(pCommitterName, pTrackCommitsInMemory);
+  @Test
+  public void test_130_teravalidate() throws Throwable {
     describe("TeraValidate from %s to %s", sortOutput, sortValidate);
     requireStage("terasort");
     getFileSystem().delete(sortValidate, true);
@@ -332,11 +328,8 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
    * Print the results, and save to the base dir as a CSV file.
    * Why there? Makes it easy to list and compare.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}-memory={1}")
-  public void test_140_teracomplete(String pCommitterName,
-      boolean pTrackCommitsInMemory) throws Throwable {
-    initITestTerasortOnS3A(pCommitterName, pTrackCommitsInMemory);
+  @Test
+  public void test_140_teracomplete() throws Throwable {
     terasortDuration.ifPresent(d -> {
       d.close();
       completedStage("overall", d);
@@ -371,19 +364,13 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
    * Without this the total execution time is reported as from the start of
    * the first test suite to the end of the second.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}-memory={1}")
-  public void test_150_teracleanup(String pCommitterName,
-      boolean pTrackCommitsInMemory) throws Throwable {
-    initITestTerasortOnS3A(pCommitterName, pTrackCommitsInMemory);
+  @Test
+  public void test_150_teracleanup() throws Throwable {
     terasortDuration = Optional.empty();
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}-memory={1}")
-  public void test_200_directory_deletion(String pCommitterName,
-      boolean pTrackCommitsInMemory) throws Throwable {
-    initITestTerasortOnS3A(pCommitterName, pTrackCommitsInMemory);
+  @Test
+  public void test_200_directory_deletion() throws Throwable {
     getFileSystem().delete(terasortPath, true);
   }
 

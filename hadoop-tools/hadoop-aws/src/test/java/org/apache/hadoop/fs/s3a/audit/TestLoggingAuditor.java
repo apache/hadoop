@@ -61,6 +61,7 @@ public class TestLoggingAuditor extends AbstractAuditingTest {
   private LoggingAuditor auditor;
 
   @BeforeEach
+  @Override
   public void setup() throws Exception {
     super.setup();
     auditor = (LoggingAuditor) getManager().getAuditor();

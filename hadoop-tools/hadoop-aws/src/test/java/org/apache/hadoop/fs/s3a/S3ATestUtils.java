@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -1195,6 +1196,17 @@ public final class S3ATestUtils {
       conf.set(FS_S3A_PERFORMANCE_FLAGS, flagStr);
     }
     return conf;
+  }
+
+  /**
+   * CLose the filesystem if it not in the cache.
+   * @param fs filesystem to check. May be null
+   */
+  public static void maybeCloseFilesystem(final S3AFileSystem fs) {
+    if (fs != null && fs.getConf().getBoolean(FS_S3A_IMPL_DISABLE_CACHE,
+        false)) {
+      IOUtils.closeQuietly(fs);
+    }
   }
 
   /**

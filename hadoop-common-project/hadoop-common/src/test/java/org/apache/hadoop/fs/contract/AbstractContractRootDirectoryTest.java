@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.test.tags.RootFilesystemTest;
 
 import static org.apache.commons.lang3.StringUtils.join;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
@@ -52,6 +53,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.treeWalk;
  * Only subclass this for tests against transient filesystems where
  * you don't care about the data.
  */
+@RootFilesystemTest
 public abstract class AbstractContractRootDirectoryTest extends AbstractFSContractTestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractContractRootDirectoryTest.class);

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -97,6 +98,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
   }
 
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
     Configuration conf = getConfiguration();
