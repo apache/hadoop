@@ -35,9 +35,7 @@ public class
       ParameterizedTestDFSStripedOutputStreamWithFailureWithRandomECPolicy
           .class.getName());
 
-  public ParameterizedTestDFSStripedOutputStreamWithFailureWithRandomECPolicy(
-      int base) {
-    super(base);
+  public ParameterizedTestDFSStripedOutputStreamWithFailureWithRandomECPolicy() {
     schema = StripedFileTestUtil.getRandomNonDefaultECPolicy().getSchema();
     LOG.info(schema.toString());
   }

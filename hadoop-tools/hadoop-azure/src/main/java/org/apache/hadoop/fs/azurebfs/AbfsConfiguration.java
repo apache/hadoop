@@ -381,6 +381,41 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ENABLE_READAHEAD)
   private boolean enabledReadAhead;
 
+  @BooleanConfigurationValidatorAnnotation(
+      ConfigurationKey = FS_AZURE_ENABLE_READAHEAD_V2,
+      DefaultValue = DEFAULT_ENABLE_READAHEAD_V2)
+  private boolean isReadAheadV2Enabled;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_MIN_THREAD_POOL_SIZE,
+      DefaultValue = DEFAULT_READAHEAD_V2_MIN_THREAD_POOL_SIZE)
+  private int minReadAheadV2ThreadPoolSize;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_MAX_THREAD_POOL_SIZE,
+      DefaultValue = DEFAULT_READAHEAD_V2_MAX_THREAD_POOL_SIZE)
+  private int maxReadAheadV2ThreadPoolSize;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_MIN_BUFFER_POOL_SIZE,
+      DefaultValue = DEFAULT_READAHEAD_V2_MIN_BUFFER_POOL_SIZE)
+  private int minReadAheadV2BufferPoolSize;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_MAX_BUFFER_POOL_SIZE,
+      DefaultValue = DEFAULT_READAHEAD_V2_MAX_BUFFER_POOL_SIZE)
+  private int maxReadAheadV2BufferPoolSize;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS,
+      DefaultValue = DEFAULT_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS)
+  private int readAheadExecutorServiceTTLMillis;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS,
+      DefaultValue = DEFAULT_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS)
+  private int readAheadV2CachedBufferTTLMillis;
+
   @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS,
       MinValue = 0,
       DefaultValue = DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS)
@@ -1366,6 +1401,54 @@ public class AbfsConfiguration{
 
   public boolean isReadAheadEnabled() {
     return this.enabledReadAhead;
+  }
+
+  public int getMinReadAheadV2ThreadPoolSize() {
+    if (minReadAheadV2ThreadPoolSize <= 0) {
+      // If the minReadAheadV2ThreadPoolSize is not set, use the default value
+      return 2 * Runtime.getRuntime().availableProcessors();
+    }
+    return minReadAheadV2ThreadPoolSize;
+  }
+
+  public int getMaxReadAheadV2ThreadPoolSize() {
+    if (maxReadAheadV2ThreadPoolSize <= 0) {
+      // If the maxReadAheadV2ThreadPoolSize is not set, use the default value
+      return 4 * Runtime.getRuntime().availableProcessors();
+    }
+    return maxReadAheadV2ThreadPoolSize;
+  }
+
+  public int getMinReadAheadV2BufferPoolSize() {
+    if (minReadAheadV2BufferPoolSize <= 0) {
+      // If the minReadAheadV2BufferPoolSize is not set, use the default value
+      return 2 * Runtime.getRuntime().availableProcessors();
+    }
+    return minReadAheadV2BufferPoolSize;
+  }
+
+  public int getMaxReadAheadV2BufferPoolSize() {
+    if (maxReadAheadV2BufferPoolSize <= 0) {
+      // If the maxReadAheadV2BufferPoolSize is not set, use the default value
+      return 4 * Runtime.getRuntime().availableProcessors();
+    }
+    return maxReadAheadV2BufferPoolSize;
+  }
+
+  public int getReadAheadExecutorServiceTTLInMillis() {
+    return readAheadExecutorServiceTTLMillis;
+  }
+
+  public int getReadAheadV2CachedBufferTTLMillis() {
+    return readAheadV2CachedBufferTTLMillis;
+  }
+
+  /**
+   * Checks if the read-ahead v2 feature is enabled by user.
+   * @return true if read-ahead v2 is enabled, false otherwise.
+   */
+  public boolean isReadAheadV2Enabled() {
+    return this.isReadAheadV2Enabled;
   }
 
   @VisibleForTesting

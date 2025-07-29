@@ -30,13 +30,13 @@ import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -87,11 +87,11 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
-import org.junit.Before;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -122,8 +122,9 @@ public class TestBPOfferService {
     GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);
   }
 
-  @Rule
-  public TemporaryFolder baseDir = new TemporaryFolder();
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  @TempDir
+  java.nio.file.Path baseDir;
 
   private DatanodeProtocolClientSideTranslatorPB mockNN1;
   private DatanodeProtocolClientSideTranslatorPB mockNN2;
@@ -138,7 +139,7 @@ public class TestBPOfferService {
   private boolean isSlownode;
   private String mockStorageID;
 
-  @Before
+  @BeforeEach
   public void setupMocks() throws Exception {
     mockNN1 = setupNNMock(0);
     mockNN2 = setupNNMock(1);
@@ -166,7 +167,7 @@ public class TestBPOfferService {
     Mockito.doReturn(dataSetLockManager).when(mockDn).getDataSetLockManager();
   }
 
-  @After
+  @AfterEach
   public void checkDataSetLockManager() {
     dataSetLockManager.lockLeakCheck();
     // make sure no lock Leak.
@@ -831,9 +832,8 @@ public class TestBPOfferService {
           .getStorageType());
       Thread.sleep(10000);
       long difference = secondCallTime - firstCallTime;
-      assertTrue("Active namenode reportBadBlock processing should be "
-          + "independent of standby namenode reportBadBlock processing ",
-          difference < 5000);
+      assertTrue(difference < 5000, "Active namenode reportBadBlock processing should be "
+          + "independent of standby namenode reportBadBlock processing ");
     } finally {
       bpos.stop();
       bpos.join();
@@ -871,9 +871,9 @@ public class TestBPOfferService {
       bpos.trySendErrorReport(DatanodeProtocol.INVALID_BLOCK, errorString);
       Thread.sleep(10000);
       long difference = secondCallTime - firstCallTime;
-      assertTrue("Active namenode trySendErrorReport processing "
+      assertTrue(difference < 5000, "Active namenode trySendErrorReport processing "
           + "should be independent of standby namenode trySendErrorReport"
-          + " processing ", difference < 5000);
+          + " processing ");
     } finally {
       bpos.stop();
       bpos.join();
@@ -911,8 +911,8 @@ public class TestBPOfferService {
       String errorString = "Can't send invalid block " + FAKE_BLOCK;
       bpos.trySendErrorReport(DatanodeProtocol.INVALID_BLOCK, errorString);
       GenericTestUtils.waitFor(() -> secondCallTime != 0, 100, 20000);
-      assertTrue("Active namenode didn't add the report back to the queue "
-          + "when errorReport threw IOException", secondCallTime != 0);
+      assertTrue(secondCallTime != 0, "Active namenode didn't add the report back to the queue "
+          + "when errorReport threw IOException");
     } finally {
       bpos.stop();
       bpos.join();
@@ -1025,9 +1025,7 @@ public class TestBPOfferService {
       // Send register command back to Datanode to reRegister().
       // After reRegister IBRs should be cleared.
       datanodeCommands[1] = new DatanodeCommand[] { new RegisterCommand() };
-      assertEquals(
-          "IBR size before reRegister should be non-0", 1, getStandbyIBRSize(
-              bpos));
+      assertEquals(1, getStandbyIBRSize(bpos), "IBR size before reRegister should be non-0");
       bpos.triggerHeartbeatForTests();
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
         @Override
@@ -1082,7 +1080,8 @@ public class TestBPOfferService {
 
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRefreshNameNodes() throws Exception {
 
     BPOfferService bpos = setupBPOSForNNs(mockDn, mockNN1, mockNN2);
@@ -1156,7 +1155,8 @@ public class TestBPOfferService {
     }
   }
 
-  @Test(timeout = 15000)
+  @Test
+  @Timeout(value = 15)
   public void testRefreshLeaseId() throws Exception {
     Mockito.when(mockNN1.sendHeartbeat(
         Mockito.any(DatanodeRegistration.class),
@@ -1221,7 +1221,8 @@ public class TestBPOfferService {
     }
   }
 
-  @Test(timeout = 15000)
+  @Test
+  @Timeout(value = 15)
   public void testSetIsSlownode() throws Exception {
     assertEquals(mockDn.isSlownode(), false);
     Mockito.when(mockNN1.sendHeartbeat(
@@ -1259,10 +1260,11 @@ public class TestBPOfferService {
     }
   }
 
-  @Test(timeout = 15000)
+  @Test
+  @Timeout(value = 15)
   public void testCommandProcessingThread() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).build()) {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, baseDir.toFile()).build()) {
       List<DataNode> datanodes = cluster.getDataNodes();
       assertEquals(datanodes.size(), 1);
       DataNode datanode = datanodes.get(0);
@@ -1273,8 +1275,8 @@ public class TestBPOfferService {
       DFSTestUtil.createFile(fs, file, 10240L, (short)1, 0L);
 
       MetricsRecordBuilder mrb = getMetrics(datanode.getMetrics().name());
-      assertTrue("Process command nums is not expected.",
-          getLongCounter("NumProcessedCommands", mrb) > 0);
+      assertTrue(getLongCounter("NumProcessedCommands", mrb) > 0,
+          "Process command nums is not expected.");
       assertEquals(0, getLongCounter("SumOfActorCommandQueueLength", mrb));
       // Check new metric result about processedCommandsOp.
       // One command send back to DataNode here is #FinalizeCommand.
@@ -1282,10 +1284,11 @@ public class TestBPOfferService {
     }
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testCommandProcessingThreadExit() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, baseDir.toFile()).
         numDataNodes(1).build()) {
       List<DataNode> datanodes = cluster.getDataNodes();
       DataNode dataNode = datanodes.get(0);

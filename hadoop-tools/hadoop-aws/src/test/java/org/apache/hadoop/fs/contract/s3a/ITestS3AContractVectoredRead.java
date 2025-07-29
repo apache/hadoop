@@ -30,7 +30,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +46,6 @@ import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.Constants;
-import org.apache.hadoop.fs.s3a.RangeNotSatisfiableEOFException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
@@ -53,6 +54,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
@@ -77,11 +79,15 @@ import static org.apache.hadoop.test.MoreAsserts.assertEqual;
  * This is a complex suite as it really is testing the store, so measurements of
  * what IO took place is also performed if the input stream is suitable for this.
  */
+@IntegrationTest
+@ParameterizedClass(name="buffer-{0}")
+@MethodSource("params")
 public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(ITestS3AContractVectoredRead.class);
 
-  public ITestS3AContractVectoredRead() {
+  public ITestS3AContractVectoredRead(String bufferType) {
+    super(bufferType);
   }
 
   @Override
@@ -93,6 +99,7 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
    * Analytics Accelerator Library for Amazon S3 does not support Vectored Reads.
    * @throws Exception
    */
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -107,10 +114,8 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
    * this test thinks the file is longer than it is, so the call
    * fails in the GET request.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testEOFRanges416Handling(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testEOFRanges416Handling() throws Exception {
     FileSystem fs = getFileSystem();
 
     final int extendedLen = DATASET_LEN + 1024;
@@ -153,10 +158,8 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
 
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testMinSeekAndMaxSizeConfigsPropagation(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testMinSeekAndMaxSizeConfigsPropagation() throws Exception {
     Configuration conf = getFileSystem().getConf();
     S3ATestUtils.removeBaseAndBucketOverrides(conf,
             AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE,
@@ -178,11 +181,8 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testMinSeekAndMaxSizeDefaultValues(String pBufferType)
-      throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testMinSeekAndMaxSizeDefaultValues() throws Exception {
     Configuration conf = getFileSystem().getConf();
     S3ATestUtils.removeBaseAndBucketOverrides(conf,
             AWS_S3_VECTOR_READS_MIN_SEEK_SIZE,
@@ -199,10 +199,9 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testStopVectoredIoOperationsCloseStream(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testStopVectoredIoOperationsCloseStream() throws Exception {
+
     List<FileRange> fileRanges = createSampleNonOverlappingRanges();
     try (FSDataInputStream in = openVectorFile()){
       in.readVectored(fileRanges, getAllocate());
@@ -222,10 +221,9 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
    * There's a small risk of a race condition where the unbuffer() call
    * is made after the vector reads have completed.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testStopVectoredIoOperationsUnbuffer(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testStopVectoredIoOperationsUnbuffer() throws Exception {
+
     List<FileRange> fileRanges = createSampleNonOverlappingRanges();
     try (FSDataInputStream in = openVectorFile()){
       in.readVectored(fileRanges, getAllocate());
@@ -243,10 +241,9 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
    * As the minimum seek value is 4*1024, the first three ranges will be
    * merged into and other two will remain as it is.
    * */
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testNormalReadVsVectoredReadStatsCollection(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testNormalReadVsVectoredReadStatsCollection() throws Exception {
+
     try (S3AFileSystem fs = getTestFileSystemWithReadAheadDisabled()) {
       List<FileRange> fileRanges = new ArrayList<>();
       range(fileRanges, 10 * 1024, 100);
@@ -364,10 +361,8 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testMultiVectoredReadStatsCollection(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testMultiVectoredReadStatsCollection() throws Exception {
     try (S3AFileSystem fs = getTestFileSystemWithReadAheadDisabled()) {
       List<FileRange> ranges1 = getConsecutiveRanges();
       List<FileRange> ranges2 = getConsecutiveRanges();

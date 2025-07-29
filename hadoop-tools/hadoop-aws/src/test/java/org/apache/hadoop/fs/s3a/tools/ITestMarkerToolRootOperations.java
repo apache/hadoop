@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.tags.RootFilesystemTest;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeSkipRootTests;
 import static org.apache.hadoop.fs.s3a.tools.MarkerTool.AUDIT;
@@ -36,7 +37,9 @@ import static org.apache.hadoop.fs.s3a.tools.MarkerTool.OPT_OUT;
 /**
  * Marker tool tests against the root FS; run in the sequential phase.
  */
+@RootFilesystemTest
 @TestMethodOrder(MethodOrderer.Alphanumeric.class)
+
 public class ITestMarkerToolRootOperations extends AbstractMarkerToolTest {
 
   private Path rootPath;

@@ -25,7 +25,6 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
-import org.assertj.core.api.Assertions;
 
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -41,8 +40,10 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
@@ -50,10 +51,13 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.listAndFilter;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.impl.CommitUtilsWithMR.getMagicJobPath;
 import static org.apache.hadoop.util.functional.RemoteIterators.toList;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test the magic committer's commit protocol.
  */
+@ParameterizedClass(name="track-commit-in-memory-{0}")
+@MethodSource("params")
 public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
 
   private boolean trackCommitsInMemory;
@@ -74,6 +78,7 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   }
 
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
     CommitUtils.verifyIsMagicCommitFS(getFileSystem());
@@ -86,10 +91,8 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     });
   }
 
-  public void initITestMagicCommitProtocol(boolean pTrackCommitsInMemory)
-      throws Exception {
-    this.trackCommitsInMemory = pTrackCommitsInMemory;
-    setup();
+  public ITestMagicCommitProtocol(boolean trackCommitsInMemory) {
+    this.trackCommitsInMemory = trackCommitsInMemory;
   }
 
   @Override
@@ -128,7 +131,7 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
       final long expectedLength,
       String jobId) throws IOException {
     String pathStr = p.toString();
-    Assertions.assertThat(pathStr)
+    assertThat(pathStr)
         .describedAs("Magic path")
         .contains("/" + MAGIC_PATH_PREFIX + jobId + "/");
     assertPathDoesNotExist("task attempt visible", p);
@@ -149,9 +152,9 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     List<LocatedFileStatus> filtered = toList(listAndFilter(fs,
         marker.getParent(), false,
         (path) -> path.getName().equals(name)));
-    Assertions.assertThat(filtered)
+    assertThat(filtered)
         .hasSize(1);
-    Assertions.assertThat(filtered.get(0))
+    assertThat(filtered.get(0))
         .matches(lst -> lst.getLen() == 0,
             "Listing should return 0 byte length");
 
@@ -174,7 +177,7 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     assertEquals("s3a", wd.getScheme(),
         "Wrong schema for working dir " + wd
         + " with committer " + committer);
-    Assertions.assertThat(wd.getPath())
+    assertThat(wd.getPath())
         .contains("/" + MAGIC_PATH_PREFIX + committer.getUUID() + "/");
   }
 
@@ -183,10 +186,8 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
    * committer UUID to ensure uniqueness in the case of more than
    * one job writing to the same destination path.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "track-commit-in-memory-{0}")
-  public void testCommittersPathsHaveUUID(boolean pTrackCommitsInMemory) throws Throwable {
-    initITestMagicCommitProtocol(pTrackCommitsInMemory);
+  @Test
+  public void testCommittersPathsHaveUUID() throws Throwable {
     TaskAttemptContext tContext = new TaskAttemptContextImpl(
         getConfiguration(),
         getTaskAttempt0());
@@ -195,7 +196,7 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     String ta0 = getTaskAttempt0().toString();
     // magic path for the task attempt
     Path taskAttemptPath = committer.getTaskAttemptPath(tContext);
-    Assertions.assertThat(taskAttemptPath.toString())
+    assertThat(taskAttemptPath.toString())
         .describedAs("task path of %s", committer)
         .contains(committer.getUUID())
         .contains("/" + MAGIC_PATH_PREFIX + committer.getUUID() + "/")
@@ -206,7 +207,7 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     // temp path for files which the TA will create with an absolute path
     // and which need renaming into place.
     Path tempTaskAttemptPath = committer.getTempTaskAttemptPath(tContext);
-    Assertions.assertThat(tempTaskAttemptPath.toString())
+    assertThat(tempTaskAttemptPath.toString())
         .describedAs("Temp task path of %s", committer)
         .contains(committer.getUUID())
         .contains(TEMP_DATA)

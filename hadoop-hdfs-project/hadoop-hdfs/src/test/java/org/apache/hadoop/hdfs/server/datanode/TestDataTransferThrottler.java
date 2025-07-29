@@ -22,12 +22,12 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests throttle the data transfers related functions.
@@ -54,10 +54,10 @@ public class TestDataTransferThrottler {
       DataNode dataNode = cluster.getDataNodes().get(0);
       // DataXceiverServer#readThrottler is null if
       // dfs.datanode.data.read.bandwidthPerSec default value is 0.
-      Assert.assertNull(dataNode.xserver.getReadThrottler());
+      Assertions.assertNull(dataNode.xserver.getReadThrottler());
 
       // Read file.
-      Assert.assertEquals(fileLength, DFSTestUtil.readFileAsBytes(fs, file).length);
+      Assertions.assertEquals(fileLength, DFSTestUtil.readFileAsBytes(fs, file).length);
 
       // Set dfs.datanode.data.read.bandwidthPerSec.
       long bandwidthPerSec = 1024 * 1024 * 8;
@@ -67,11 +67,11 @@ public class TestDataTransferThrottler {
       cluster.stopDataNode(0);
       cluster.startDataNodes(conf, 1, true, null, null);
       dataNode = cluster.getDataNodes().get(0);
-      Assert.assertEquals(bandwidthPerSec, dataNode.xserver.getReadThrottler().getBandwidth());
+      Assertions.assertEquals(bandwidthPerSec, dataNode.xserver.getReadThrottler().getBandwidth());
 
       // Read file with throttler.
       long start = monotonicNow();
-      Assert.assertEquals(fileLength, DFSTestUtil.readFileAsBytes(fs, file).length);
+      Assertions.assertEquals(fileLength, DFSTestUtil.readFileAsBytes(fs, file).length);
       long elapsedTime = monotonicNow() - start;
       // Ensure throttler is effective, read 1024 * 1024 * 10 * 8 bytes,
       // should take approximately 10 seconds (1024 * 1024 * 8 bytes per second).

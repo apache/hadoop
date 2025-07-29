@@ -154,7 +154,7 @@
 
     <protobuf-compile.version>3.5.1</protobuf-compile.version>
     <grpc.version>1.10.0</grpc.version>
-    <os-maven-plugin.version>1.7.0</os-maven-plugin.version>
+    <os-maven-plugin.version>1.7.1</os-maven-plugin.version>
 
     <!-- define the Java language version used by the compiler -->
     <javac.version>1.8</javac.version>
@@ -187,9 +187,18 @@
     </extraJavaTestArgs>
     <!-- Plugin versions and config -->
     <maven-surefire-plugin.argLine>-Xmx4096m -Xss2m -XX:+HeapDumpOnOutOfMemoryError ${extraJavaTestArgs}</maven-surefire-plugin.argLine>
-    <maven-surefire-plugin.version>3.0.0-M4</maven-surefire-plugin.version>
+    <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
+    <!--
+     Surefire option to not fail a build if -Dtest=NAME doesn't find a
+     test called NAME. This is needed when running integration tests through
+     failsafe, as setting -Dtest=none is the way to stop surefire
+     running all unit tests before the it.test option is picked up.
+    -->
+    <surefire.failIfNoSpecifiedTests>false</surefire.failIfNoSpecifiedTests>
+    <!-- Flag to stop surefire from shortening test stacks  -->
+    <trimStackTrace>false</trimStackTrace>
 
     <maven-clean-plugin.version>3.1.0</maven-clean-plugin.version>
     <maven-install-plugin.version>2.5.1</maven-install-plugin.version>
@@ -207,7 +216,7 @@
     <aws-java-sdk.version>1.12.720</aws-java-sdk.version>
     <aws-java-sdk-v2.version>2.29.52</aws-java-sdk-v2.version>
     <amazon-s3-encryption-client-java.version>3.1.1</amazon-s3-encryption-client-java.version>
-    <amazon-s3-analyticsaccelerator-s3.version>1.0.0</amazon-s3-analyticsaccelerator-s3.version>
+    <amazon-s3-analyticsaccelerator-s3.version>1.2.1</amazon-s3-analyticsaccelerator-s3.version>
     <aws.eventstream.version>1.0.1</aws.eventstream.version>
     <hsqldb.version>2.7.1</hsqldb.version>
     <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
@@ -225,9 +234,9 @@
     <sshd.version>2.11.0</sshd.version>
     <hbase.version>2.6.1-hadoop3</hbase.version>
     <junit.version>4.13.2</junit.version>
-    <junit.jupiter.version>5.8.2</junit.jupiter.version>
-    <junit.vintage.version>5.8.2</junit.vintage.version>
-    <junit.platform.version>1.8.2</junit.platform.version>
+    <junit.jupiter.version>5.13.3</junit.jupiter.version>
+    <junit.vintage.version>5.13.3</junit.vintage.version>
+    <junit.platform.version>1.13.3</junit.platform.version>
     <assertj.version>3.12.2</assertj.version>
     <jline.version>3.9.0</jline.version>
     <powermock.version>2.0.9</powermock.version>
@@ -1314,11 +1323,6 @@
         <groupId>org.mockito</groupId>
         <artifactId>mockito-all</artifactId>
         <version>1.10.19</version>
-      </dependency>
-      <dependency>
-        <groupId>org.mockito</groupId>
-        <artifactId>mockito-junit-jupiter</artifactId>
-        <version>3.12.4</version>
       </dependency>
       <dependency>
         <groupId>org.objenesis</groupId>
@@ -2498,7 +2502,6 @@
             <DYLD_LIBRARY_PATH>${env.DYLD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${hadoop.common.build.dir}/native/target/usr/local/lib</DYLD_LIBRARY_PATH>
             <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
           </environmentVariables>
-          <trimStackTrace>false</trimStackTrace>
           <systemPropertyVariables>
 
             <hadoop.log.dir>${project.build.directory}/log</hadoop.log.dir>
@@ -2579,30 +2582,6 @@
   </build>
 
   <profiles>
-    <profile>
-      <id>os.linux</id>
-      <activation>
-        <os>
-          <family>!Mac</family>
-        </os>
-      </activation>
-      <properties>
-        <build.platform>${os.name}-${os.arch}-${sun.arch.data.model}</build.platform>
-      </properties>
-    </profile>
-    <profile>
-      <id>os.mac</id>
-      <activation>
-        <os>
-          <family>Mac</family>
-        </os>
-      </activation>
-      <properties>
-        <build.platform>Mac_OS_X-${sun.arch.data.model}</build.platform>
-        <!-- To make protoc work on Apple Silicon via fallback -->
-        <os.detected.classifier>osx-x86_64</os.detected.classifier>
-      </properties>
-    </profile>
     <profile>
       <id>native-win</id>
       <activation>
