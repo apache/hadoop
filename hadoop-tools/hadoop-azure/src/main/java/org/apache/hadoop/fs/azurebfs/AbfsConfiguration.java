@@ -386,6 +386,11 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ENABLE_READAHEAD_V2)
   private boolean isReadAheadV2Enabled;
 
+  @BooleanConfigurationValidatorAnnotation(
+      ConfigurationKey = FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING,
+      DefaultValue = DEFAULT_ENABLE_READAHEAD_V2_DYNAMIC_SCALING)
+  private boolean isReadAheadV2DynamicScalingEnabled;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_READAHEAD_V2_MIN_THREAD_POOL_SIZE,
       DefaultValue = DEFAULT_READAHEAD_V2_MIN_THREAD_POOL_SIZE)
@@ -407,6 +412,26 @@ public class AbfsConfiguration{
   private int maxReadAheadV2BufferPoolSize;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_CPU_MONITORING_INTERVAL_MILLIS,
+      DefaultValue = DEFAULT_READAHEAD_V2_CPU_MONITORING_INTERVAL_MILLIS)
+  private int readAheadV2CpuMonitoringIntervalMillis;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_THREAD_POOL_UPSCALE_PERCENTAGE,
+      DefaultValue = DEFAULT_READAHEAD_V2_THREAD_POOL_UPSCALE_PERCENTAGE)
+  private int readAheadV2ThreadPoolUpscalePercentage;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_THREAD_POOL_DOWNSCALE_PERCENTAGE,
+      DefaultValue = DEFAULT_READAHEAD_V2_THREAD_POOL_DOWNSCALE_PERCENTAGE)
+  private int readAheadV2ThreadPoolDownscalePercentage;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_MEMORY_MONITORING_INTERVAL_MILLIS,
+      DefaultValue = DEFAULT_READAHEAD_V2_MEMORY_MONITORING_INTERVAL_MILLIS)
+  private int readAheadV2MemoryMonitoringIntervalMillis;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS,
       DefaultValue = DEFAULT_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS)
   private int readAheadExecutorServiceTTLMillis;
@@ -415,6 +440,16 @@ public class AbfsConfiguration{
       FS_AZURE_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS,
       DefaultValue = DEFAULT_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS)
   private int readAheadV2CachedBufferTTLMillis;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENT)
+  private int readAheadV2CpuUsageThresholdPercent;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENT)
+  private int readAheadV2MemoryUsageThresholdPercent;
 
   @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS,
       MinValue = 0,
@@ -1403,6 +1438,18 @@ public class AbfsConfiguration{
     return this.enabledReadAhead;
   }
 
+  /**
+   * Checks if the read-ahead v2 feature is enabled by user.
+   * @return true if read-ahead v2 is enabled, false otherwise.
+   */
+  public boolean isReadAheadV2Enabled() {
+    return this.isReadAheadV2Enabled;
+  }
+
+  public boolean isReadAheadV2DynamicScalingEnabled() {
+    return isReadAheadV2DynamicScalingEnabled;
+  }
+
   public int getMinReadAheadV2ThreadPoolSize() {
     if (minReadAheadV2ThreadPoolSize <= 0) {
       // If the minReadAheadV2ThreadPoolSize is not set, use the default value
@@ -1435,6 +1482,22 @@ public class AbfsConfiguration{
     return maxReadAheadV2BufferPoolSize;
   }
 
+  public int getReadAheadV2CpuMonitoringIntervalMillis() {
+    return readAheadV2CpuMonitoringIntervalMillis;
+  }
+
+  public int getReadAheadV2ThreadPoolUpscalePercentage() {
+    return readAheadV2ThreadPoolUpscalePercentage;
+  }
+
+  public int getReadAheadV2ThreadPoolDownscalePercentage() {
+    return readAheadV2ThreadPoolDownscalePercentage;
+  }
+
+  public int getReadAheadV2MemoryMonitoringIntervalMillis() {
+    return readAheadV2MemoryMonitoringIntervalMillis;
+  }
+
   public int getReadAheadExecutorServiceTTLInMillis() {
     return readAheadExecutorServiceTTLMillis;
   }
@@ -1443,12 +1506,12 @@ public class AbfsConfiguration{
     return readAheadV2CachedBufferTTLMillis;
   }
 
-  /**
-   * Checks if the read-ahead v2 feature is enabled by user.
-   * @return true if read-ahead v2 is enabled, false otherwise.
-   */
-  public boolean isReadAheadV2Enabled() {
-    return this.isReadAheadV2Enabled;
+  public int getReadAheadV2CpuUsageThresholdPercent() {
+    return readAheadV2CpuUsageThresholdPercent;
+  }
+
+  public int getReadAheadV2MemoryUsageThresholdPercent() {
+    return readAheadV2MemoryUsageThresholdPercent;
   }
 
   @VisibleForTesting

@@ -813,6 +813,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return inputStreamId;
   }
 
+  public String getETag() {
+    return eTag;
+  }
+
   /**
    * Getter for AbfsInputStreamStatistics.
    *

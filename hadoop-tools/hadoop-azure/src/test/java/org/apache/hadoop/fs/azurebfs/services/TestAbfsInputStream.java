@@ -546,7 +546,7 @@ public class TestAbfsInputStream extends
       //Sleeping to give ReadBufferWorker to pick the readBuffers for processing.
       Thread.sleep(readBufferTransferToInProgressProbableTime);
 
-      Assertions.assertThat(readBufferManager.getInProgressCopiedList())
+      Assertions.assertThat(readBufferManager.getInProgressListCopy())
           .describedAs(String.format("InProgressList should have %d elements",
               readBufferQueuedCount))
           .hasSize(readBufferQueuedCount);
@@ -559,7 +559,7 @@ public class TestAbfsInputStream extends
           .hasSize(0);
     }
 
-    Assertions.assertThat(readBufferManager.getInProgressCopiedList())
+    Assertions.assertThat(readBufferManager.getInProgressListCopy())
         .describedAs(String.format("InProgressList should have %d elements",
             readBufferQueuedCount))
         .hasSize(readBufferQueuedCount);
