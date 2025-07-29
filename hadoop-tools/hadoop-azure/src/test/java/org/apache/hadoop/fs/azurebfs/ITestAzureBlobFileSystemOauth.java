@@ -173,9 +173,9 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
    * */
   @Test
   public void testGetPathStatusWithReader() throws Exception {
-    String clientId = this.getConfiguration().get(TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_ID);
+    String clientId = this.getConfiguration().get(FS_AZURE_BLOB_DATA_READER_CLIENT_ID);
     Assume.assumeTrue("Reader client id not provided", clientId != null);
-    String secret = this.getConfiguration().get(TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET);
+    String secret = this.getConfiguration().get(FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET);
     Assume.assumeTrue("Reader client secret not provided", secret != null);
 
     Path existedFolderPath = path(EXISTED_FOLDER_PATH);
