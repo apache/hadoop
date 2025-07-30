@@ -2832,9 +2832,6 @@ public abstract class Server {
               stateId = alignmentContext.receiveRequestState(
                   header, getMaxIdleTime());
               call.setClientStateId(stateId);
-              if (header.hasRouterFederatedState()) {
-                call.setFederatedNamespaceState(header.getRouterFederatedState());
-              }
             }
           } catch (IOException ioe) {
             throw new RpcServerException("Processing RPC request caught ", ioe);
