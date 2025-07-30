@@ -532,7 +532,7 @@ public class AbfsBlobClient extends AbfsClient {
    *
    * @throws AzureBlobFileSystemException if an error occurs during the operation.
    */
-  protected AbfsRestOperation createMarkerAtPath(final String path,
+  public AbfsRestOperation createMarkerAtPath(final String path,
       final String eTag,
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
