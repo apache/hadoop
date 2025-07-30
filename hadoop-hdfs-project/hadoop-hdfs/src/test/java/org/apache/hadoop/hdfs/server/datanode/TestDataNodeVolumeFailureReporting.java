@@ -58,7 +58,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.event.Level;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -532,7 +531,7 @@ public class TestDataNodeVolumeFailureReporting {
         "Hadoop:service=DataNode,name=FSDatasetState-" + dn0.getDatanodeUuid());
     int numFailedVolumes = (int) mbs.getAttribute(mxbeanName,
         "NumFailedVolumes");
-    Assertions.assertEquals(dn0.getFSDataset().getNumFailedVolumes(), numFailedVolumes);
+    assertEquals(dn0.getFSDataset().getNumFailedVolumes(), numFailedVolumes);
     checkFailuresAtDataNode(dn0, 0, false, new String[] {});
 
     // Fail dn0Vol1 first.
@@ -541,8 +540,8 @@ public class TestDataNodeVolumeFailureReporting {
     DataNodeTestUtils.waitForDiskError(dn0,
         DataNodeTestUtils.getVolume(dn0, dn0Vol1));
     numFailedVolumes = (int) mbs.getAttribute(mxbeanName, "NumFailedVolumes");
-    Assertions.assertEquals(1, numFailedVolumes);
-    Assertions.assertEquals(dn0.getFSDataset().getNumFailedVolumes(), numFailedVolumes);
+    assertEquals(1, numFailedVolumes);
+    assertEquals(dn0.getFSDataset().getNumFailedVolumes(), numFailedVolumes);
     checkFailuresAtDataNode(dn0, 1, true,
         new String[] {dn0Vol1.getAbsolutePath()});
 
@@ -553,12 +552,12 @@ public class TestDataNodeVolumeFailureReporting {
           oldDataDirs);
       fail("Reconfigure with failed disk should throw exception.");
     } catch (ReconfigurationException e) {
-      Assertions.assertTrue(e.getCause().getMessage().contains(dn0Vol1.getAbsolutePath()),
+      assertTrue(e.getCause().getMessage().contains(dn0Vol1.getAbsolutePath()),
           "Reconfigure exception doesn't have expected path!");
     }
     numFailedVolumes = (int) mbs.getAttribute(mxbeanName, "NumFailedVolumes");
-    Assertions.assertEquals(1, numFailedVolumes);
-    Assertions.assertEquals(dn0.getFSDataset().getNumFailedVolumes(), numFailedVolumes);
+    assertEquals(1, numFailedVolumes);
+    assertEquals(dn0.getFSDataset().getNumFailedVolumes(), numFailedVolumes);
     checkFailuresAtDataNode(dn0, 1, true,
         new String[] {dn0Vol1.getAbsolutePath()});
 
@@ -568,8 +567,8 @@ public class TestDataNodeVolumeFailureReporting {
     dn0.reconfigurePropertyImpl(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
             dataDirs);
     numFailedVolumes = (int) mbs.getAttribute(mxbeanName, "NumFailedVolumes");
-    Assertions.assertEquals(0, numFailedVolumes);
-    Assertions.assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
+    assertEquals(0, numFailedVolumes);
+    assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
         numFailedVolumes);
     checkFailuresAtDataNode(dn0, 0, true, new String[] {});
 
@@ -579,8 +578,8 @@ public class TestDataNodeVolumeFailureReporting {
     dn0.reconfigurePropertyImpl(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
             oldDataDirs);
     numFailedVolumes = (int) mbs.getAttribute(mxbeanName, "NumFailedVolumes");
-    Assertions.assertEquals(0, numFailedVolumes);
-    Assertions.assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
+    assertEquals(0, numFailedVolumes);
+    assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
         numFailedVolumes);
     checkFailuresAtDataNode(dn0, 0, true, new String[] {});
 
@@ -590,8 +589,8 @@ public class TestDataNodeVolumeFailureReporting {
     DataNodeTestUtils.waitForDiskError(dn0,
         DataNodeTestUtils.getVolume(dn0, dn0Vol2));
     numFailedVolumes = (int) mbs.getAttribute(mxbeanName, "NumFailedVolumes");
-    Assertions.assertEquals(1, numFailedVolumes);
-    Assertions.assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
+    assertEquals(1, numFailedVolumes);
+    assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
         numFailedVolumes);
     checkFailuresAtDataNode(dn0, 1, true,
         new String[] {dn0Vol2.getAbsolutePath()});

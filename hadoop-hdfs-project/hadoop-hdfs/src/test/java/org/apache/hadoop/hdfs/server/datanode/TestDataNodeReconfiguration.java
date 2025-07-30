@@ -58,6 +58,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -82,7 +83,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.BlockPoolSlice;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -114,7 +114,7 @@ public class TestDataNodeReconfiguration {
 
     File dir = new File(DATA_DIR);
     if (dir.exists())
-      Assertions.assertTrue(FileUtil.fullyDelete(dir),
+      assertTrue(FileUtil.fullyDelete(dir),
           "Cannot delete data-node dirs");
   }
 
@@ -260,7 +260,7 @@ public class TestDataNodeReconfiguration {
       // Attempt to set new maximum to 1
       final boolean success =
           dataNode.xserver.updateBalancerMaxConcurrentMovers(1);
-      Assertions.assertFalse(success);
+      assertFalse(success);
     } finally {
       dataNode.shutdown();
     }
@@ -272,7 +272,7 @@ public class TestDataNodeReconfiguration {
   @Test
   public void testFailedDecreaseConcurrentMoversReconfiguration()
       throws IOException, ReconfigurationException {
-    Assertions.assertThrows(ReconfigurationException.class, () -> {
+    assertThrows(ReconfigurationException.class, () -> {
       final DataNode[] dns = createDNsForTest(1);
       final DataNode dataNode = dns[0];
       try {
@@ -289,9 +289,9 @@ public class TestDataNodeReconfiguration {
         dataNode.reconfigurePropertyImpl(
             DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, "1");
       } catch (ReconfigurationException e) {
-        Assertions.assertEquals(DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
+        assertEquals(DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
             e.getProperty());
-        Assertions.assertEquals("1", e.getNewValue());
+        assertEquals("1", e.getNewValue());
         throw e;
       } finally {
         dataNode.shutdown();

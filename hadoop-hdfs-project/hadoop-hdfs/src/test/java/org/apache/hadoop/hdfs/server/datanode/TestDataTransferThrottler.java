@@ -22,11 +22,12 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -54,10 +55,10 @@ public class TestDataTransferThrottler {
       DataNode dataNode = cluster.getDataNodes().get(0);
       // DataXceiverServer#readThrottler is null if
       // dfs.datanode.data.read.bandwidthPerSec default value is 0.
-      Assertions.assertNull(dataNode.xserver.getReadThrottler());
+      assertNull(dataNode.xserver.getReadThrottler());
 
       // Read file.
-      Assertions.assertEquals(fileLength, DFSTestUtil.readFileAsBytes(fs, file).length);
+      assertEquals(fileLength, DFSTestUtil.readFileAsBytes(fs, file).length);
 
       // Set dfs.datanode.data.read.bandwidthPerSec.
       long bandwidthPerSec = 1024 * 1024 * 8;
@@ -67,11 +68,11 @@ public class TestDataTransferThrottler {
       cluster.stopDataNode(0);
       cluster.startDataNodes(conf, 1, true, null, null);
       dataNode = cluster.getDataNodes().get(0);
-      Assertions.assertEquals(bandwidthPerSec, dataNode.xserver.getReadThrottler().getBandwidth());
+      assertEquals(bandwidthPerSec, dataNode.xserver.getReadThrottler().getBandwidth());
 
       // Read file with throttler.
       long start = monotonicNow();
-      Assertions.assertEquals(fileLength, DFSTestUtil.readFileAsBytes(fs, file).length);
+      assertEquals(fileLength, DFSTestUtil.readFileAsBytes(fs, file).length);
       long elapsedTime = monotonicNow() - start;
       // Ensure throttler is effective, read 1024 * 1024 * 10 * 8 bytes,
       // should take approximately 10 seconds (1024 * 1024 * 8 bytes per second).

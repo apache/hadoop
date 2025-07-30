@@ -23,10 +23,10 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PMEM_CACHE_DIRS_KEY;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,12 +54,12 @@ import org.apache.hadoop.io.nativeio.NativeIO.POSIX.NoMlockCacheManipulator;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.event.Level;
 
 import java.util.function.Supplier;
@@ -103,7 +103,7 @@ public class TestCacheByPmemMappableBlockLoader {
         LoggerFactory.getLogger(FsDatasetCache.class), Level.DEBUG);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass() throws Exception {
     assumeTrue("Requires PMDK", NativeIO.POSIX.isPmdkAvailable());
 
@@ -121,12 +121,12 @@ public class TestCacheByPmemMappableBlockLoader {
     });
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws Exception {
     DataNodeFaultInjector.set(oldInjector);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new HdfsConfiguration();
     conf.setLong(
@@ -155,7 +155,7 @@ public class TestCacheByPmemMappableBlockLoader {
     cacheManager = ((FsDatasetImpl) dn.getFSDataset()).cacheManager;
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (fs != null) {
       fs.close();
@@ -209,12 +209,13 @@ public class TestCacheByPmemMappableBlockLoader {
     return keys;
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testCacheAndUncache() throws Exception {
     final int maxCacheBlocksNum =
         Ints.checkedCast(CACHE_CAPACITY / BLOCK_SIZE);
     BlockReaderTestUtil.enableHdfsCachingTracing();
-    Assert.assertEquals(0, CACHE_CAPACITY % BLOCK_SIZE);
+    assertEquals(0, CACHE_CAPACITY % BLOCK_SIZE);
     assertEquals(CACHE_CAPACITY, cacheManager.getCacheCapacity());
     // DRAM cache is expected to be disabled.
     assertEquals(0L, cacheManager.getMemCacheCapacity());
