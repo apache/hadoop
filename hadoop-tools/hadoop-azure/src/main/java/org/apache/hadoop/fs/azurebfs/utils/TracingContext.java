@@ -69,7 +69,7 @@ public class TracingContext {
   private String position = EMPTY_STRING;
   private String metricResults = EMPTY_STRING;
   private String metricHeader = EMPTY_STRING;
-  private ReadType readType;
+  private ReadType readType = ReadType.UNKNOWN_READ;
 
   /**
    * If {@link #primaryRequestId} is null, this field shall be set equal
@@ -232,12 +232,16 @@ public class TracingContext {
       metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : "";
       break;
     case TWO_ID_FORMAT:
-      header = clientCorrelationID + ":" + clientRequestId;
+      header =
+          AbfsHttpConstants.TracingHeaderVersion.V1 + ":" +
+          clientCorrelationID + ":" + clientRequestId;
       metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : "";
       break;
     default:
       //case SINGLE_ID_FORMAT
-      header = clientRequestId;
+      header =
+          AbfsHttpConstants.TracingHeaderVersion.V1 + ":" +
+          clientRequestId;
       metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : "";
     }
     if (listener != null) { //for testing
@@ -309,7 +313,7 @@ public class TracingContext {
   private String readSpecificHeader() {
     // More information on read can be added to this header in the future.
     // As underscore separated values.
-    String readHeader = String.format("%d", readType.toString());
+    String readHeader = String.format("%s", readType.toString());
     return readHeader;
   }
 
