@@ -24,13 +24,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
 
-import org.apache.hadoop.fs.FileRange;
-import org.apache.hadoop.fs.VectoredReadUtils;
 import software.amazon.s3.analyticsaccelerator.S3SeekableInputStreamFactory;
 import software.amazon.s3.analyticsaccelerator.S3SeekableInputStream;
 import software.amazon.s3.analyticsaccelerator.common.ObjectRange;
@@ -47,6 +44,8 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.VectoredReadUtils;
 
 import static org.apache.hadoop.fs.VectoredReadUtils.LOG_BYTE_BUFFER_RELEASED;
 
@@ -142,12 +141,9 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
   }
 
   /**
-   * {@inheritDoc}
    * Pass to {@link #readVectored(List, IntFunction, Consumer)}
    * with the {@link VectoredReadUtils#LOG_BYTE_BUFFER_RELEASED} releaser.
-   * @param ranges the byte ranges to read.
-   * @param allocate the function to allocate ByteBuffer.
-   * @throws IOException IOE if any.
+   * {@inheritDoc}
    */
   @Override
   public void readVectored(List<? extends FileRange> ranges,
@@ -156,12 +152,9 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
   }
 
   /**
-   * {@inheritDoc}
    * Pass to {@link #readVectored(List, IntFunction, Consumer)}
    * with the {@link VectoredReadUtils#LOG_BYTE_BUFFER_RELEASED} releaser.
-   * @param ranges the byte ranges to read.
-   * @param allocate the function to allocate ByteBuffer.
-   * @throws IOException IOE if any.
+   * {@inheritDoc}
    */
   @Override
   public void readVectored(final List<? extends FileRange> ranges,
