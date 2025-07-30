@@ -203,6 +203,27 @@ public final class AbfsHttpConstants {
     }
   }
 
+  public enum TracingHeaderVersion {
+
+    V0(""),
+    V1("v1");
+
+    private final String tracingHeaderVersion;
+
+    TracingHeaderVersion(String tracingHeaderVersion) {
+      this.tracingHeaderVersion = tracingHeaderVersion;
+    }
+
+    @Override
+    public String toString() {
+      return tracingHeaderVersion;
+    }
+
+    public static TracingHeaderVersion getCurrentVersion() {
+      return V1;
+    }
+  }
+
   /**
    * List of Constants Used by Blob Endpoint Rest APIs.
    */

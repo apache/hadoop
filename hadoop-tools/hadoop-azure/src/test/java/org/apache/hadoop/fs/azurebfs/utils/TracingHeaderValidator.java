@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.utils;
 import org.assertj.core.api.Assertions;
 
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 
@@ -41,6 +42,7 @@ public class TracingHeaderValidator implements Listener {
   private static final String GUID_PATTERN = "^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$";
   private String ingressHandler = null;
   private String position = null;
+  private ReadType readType = null;
 
   private Integer operatedBlobCount = null;
 
@@ -184,6 +186,11 @@ public class TracingHeaderValidator implements Listener {
   @Override
   public void updatePosition(String position) {
     this.position = position;
+  }
+
+  @Override
+  public void updateReadType(ReadType readType) {
+    this.readType = readType;
   }
 
   /**

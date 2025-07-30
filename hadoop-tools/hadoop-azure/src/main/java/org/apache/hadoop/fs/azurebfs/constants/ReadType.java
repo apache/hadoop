@@ -16,22 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.utils;
+package org.apache.hadoop.fs.azurebfs.constants;
 
-import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
-import org.apache.hadoop.fs.azurebfs.constants.ReadType;
+public enum ReadType {
+  DIRECT_READ("DR"),
+  NORMAL_READ("NR"),
+  PREFETCH_READ("PR"),
+  MISSEDCACHE_READ("MR"),
+  FOOTER_READ("FR"),
+  SMALLFILE_READ("SR"),
+  UNKNOWN_READ("UR");
 
-/**
- * Interface for testing identifiers tracked via TracingContext
- * Implemented in TracingHeaderValidator
- */
+  private final String readType;
 
-public interface Listener {
-  void callTracingHeaderValidator(String header, TracingHeaderFormat format);
-  void updatePrimaryRequestID(String primaryRequestID);
-  Listener getClone();
-  void setOperation(FSOperationType operation);
-  void updateIngressHandler(String ingressHandler);
-  void updatePosition(String position);
-  void updateReadType(ReadType readType);
+  ReadType(String readType) {
+    this.readType = readType;
+  }
+
+  @Override
+  public String toString() {
+    return readType;
+  }
 }

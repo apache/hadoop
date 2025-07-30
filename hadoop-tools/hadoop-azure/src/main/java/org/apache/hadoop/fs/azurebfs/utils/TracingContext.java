@@ -23,8 +23,10 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 
@@ -67,6 +69,7 @@ public class TracingContext {
   private String position = EMPTY_STRING;
   private String metricResults = EMPTY_STRING;
   private String metricHeader = EMPTY_STRING;
+  private ReadType readType;
 
   /**
    * If {@link #primaryRequestId} is null, this field shall be set equal
@@ -142,6 +145,7 @@ public class TracingContext {
       this.listener = originalTracingContext.listener.getClone();
     }
     this.metricResults = originalTracingContext.metricResults;
+    this.readType = originalTracingContext.readType;
   }
   public static String validateClientCorrelationID(String clientCorrelationID) {
     if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH)
@@ -181,8 +185,24 @@ public class TracingContext {
   }
 
   /**
-   * Concatenate all identifiers separated by (:) into a string and set into
+   * Concatenate all components separated by (:) into a string and set into
    * X_MS_CLIENT_REQUEST_ID header of the http operation
+   * Following are the components in order of concatenation:
+   * <ul>
+   *   <li>version - not present for versions less than < 1</li>
+   *   <li>clientCorrelationId</li>
+   *   <li>clientRequestId</li>
+   *   <li>fileSystemId</li>
+   *   <li>primaryRequestId</li>
+   *   <li>streamId</li>
+   *   <li>opType</li>
+   *   <li>retryHeader - this contains retryCount, failureReason and retryPolicy underscore separated</li>
+   *   <li>ingressHandler</li>
+   *   <li>position of read/write in the remote file</li>
+   *   <li>operatedBlobCount - number of blobs operated on by this request</li>
+   *   <li>httpOperationHeader - suffix for network library used</li>
+   *   <li>operationSpecificHeader - different operation types can publish info relevant to that operation</li>
+   * </ul>
    * @param httpOperation AbfsHttpOperation instance to set header into
    *                      connection
    * @param previousFailure Failure seen before this API trigger on same operation
@@ -193,22 +213,22 @@ public class TracingContext {
   public void constructHeader(AbfsHttpOperation httpOperation, String previousFailure, String retryPolicyAbbreviation) {
     clientRequestId = UUID.randomUUID().toString();
     switch (format) {
-    case ALL_ID_FORMAT: // Optional IDs (e.g. streamId) may be empty
+    case ALL_ID_FORMAT:
       header =
-          clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID + ":"
-              + getPrimaryRequestIdForHeader(retryCount > 0) + ":" + streamID
-              + ":" + opType + ":" + retryCount;
-      header = addFailureReasons(header, previousFailure, retryPolicyAbbreviation);
-      if (!(ingressHandler.equals(EMPTY_STRING))) {
-        header += ":" + ingressHandler;
-      }
-      if (!(position.equals(EMPTY_STRING))) {
-        header += ":" + position;
-      }
-      if (operatedBlobCount != null) {
-        header += (":" + operatedBlobCount);
-      }
-      header += (":" + httpOperation.getTracingContextSuffix());
+          AbfsHttpConstants.TracingHeaderVersion.V1 + ":" +
+          clientCorrelationID + ":" +
+          clientRequestId + ":" +
+          fileSystemID + ":" +
+          getPrimaryRequestIdForHeader(retryCount > 0) + ":" +
+          streamID + ":" +
+          opType + ":" +
+          getRetryHeader(previousFailure, retryPolicyAbbreviation) + ":" +
+          ingressHandler + ":" +
+          position + ":" +
+          operatedBlobCount + ":" +
+          httpOperation.getTracingContextSuffix() + ":" +
+          getOperationSpecificHeader(opType);
+
       metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : "";
       break;
     case TWO_ID_FORMAT:
@@ -263,6 +283,34 @@ public class TracingContext {
       return String.format("%s_%s_%s", header, previousFailure, retryPolicyAbbreviation);
     }
     return String.format("%s_%s", header, previousFailure);
+  }
+
+  private String getRetryHeader(final String previousFailure, String retryPolicyAbbreviation) {
+    String retryHeader = String.format("%d", retryCount);
+    if (previousFailure == null) {
+      return retryHeader;
+    }
+    if (CONNECTION_TIMEOUT_ABBREVIATION.equals(previousFailure) && retryPolicyAbbreviation != null) {
+      return String.format("%s_%s_%s", retryHeader, previousFailure, retryPolicyAbbreviation);
+    }
+    return String.format("%s_%s", retryHeader, previousFailure);
+  }
+
+  private String getOperationSpecificHeader(FSOperationType opType) {
+    // Similar header can be added for other operations in the future.
+    switch (opType) {
+      case READ:
+        return readSpecificHeader();
+      default:
+        return EMPTY_STRING; // no operation specific header
+    }
+  }
+
+  private String readSpecificHeader() {
+    // More information on read can be added to this header in the future.
+    // As underscore separated values.
+    String readHeader = String.format("%d", readType.toString());
+    return readHeader;
   }
 
   public void setOperatedBlobCount(Integer count) {
@@ -321,5 +369,16 @@ public class TracingContext {
     if (listener != null) {
       listener.updatePosition(position);
     }
+  }
+
+  public void setReadType(ReadType readType) {
+    this.readType = readType;
+    if (listener != null) {
+      listener.updateReadType(readType);
+    }
+  }
+
+  public ReadType getReadType() {
+    return readType;
   }
 }
