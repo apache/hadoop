@@ -25,6 +25,10 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.Objects;
 
+import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.io.LongWritable;
@@ -54,12 +58,24 @@ import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_S3_ENCRYPTION_CONTEXT;
  */
 public class EncryptionSecrets implements Writable, Serializable {
 
+  private static final Logger LOG =
+          LoggerFactory.getLogger(EncryptionSecrets.class);
+
   public static final int MAX_SECRET_LENGTH = 2048;
 
   /**
    * Change this after any change to the payload: {@value}.
    */
   private static final long serialVersionUID = 8834417969966697162L;
+
+  @VisibleForTesting
+  public static final long SERIAL_VERSION_UID_CURRENT = serialVersionUID;
+
+  /**
+   * Serial version ID prior to {@link #encryptionContext} field being added: {@value}.
+   */
+  @VisibleForTesting
+  public static final long SERIAL_VERSION_UID_1 = 1208329045511296375L;
 
   /**
    * Encryption algorithm to use: must match one in
@@ -159,13 +175,25 @@ public class EncryptionSecrets implements Writable, Serializable {
   public void readFields(final DataInput in) throws IOException {
     final LongWritable version = new LongWritable();
     version.readFields(in);
-    if (version.get() != serialVersionUID) {
+    boolean readContext;
+
+    final long versionId = version.get();
+    if (versionId == SERIAL_VERSION_UID_1) {
+      LOG.info("Unmarshalling Encryption Secrets from older client; setting encryption context to \"\"");
+      readContext = false;
+    } else if (versionId == serialVersionUID) {
+        readContext = true;
+    } else {
       throw new DelegationTokenIOException(
-          "Incompatible EncryptionSecrets version");
+          "Incompatible EncryptionSecrets version: " + versionId);
     }
     encryptionAlgorithm = Text.readString(in, MAX_SECRET_LENGTH);
     encryptionKey = Text.readString(in, MAX_SECRET_LENGTH);
-    encryptionContext = Text.readString(in);
+    if (readContext) {
+      encryptionContext = Text.readString(in);
+    } else {
+      encryptionContext = DEFAULT_S3_ENCRYPTION_CONTEXT;
+    }
     init();
   }
 
