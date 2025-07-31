@@ -31,7 +31,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
@@ -81,6 +83,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * The main unit test suite of the staging committer.
  * Parameterized on thread count and unique filename policy.
  */
+@ParameterizedClass(name="threads-{0}-unique-{1}")
+@MethodSource("params")
 public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
   private static final JobID JOB_ID = new JobID("job", 1);
@@ -94,8 +98,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestStagingCommitter.class);
 
-  private int numThreads;
-  private boolean uniqueFilenames;
+  private final int numThreads;
+  private final boolean uniqueFilenames;
   private JobContext job = null;
   private TaskAttemptContext tac = null;
   private Configuration conf = null;
@@ -134,12 +138,12 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     });
   }
 
-  public void initTestStagingCommitter(int pNumThreads, boolean pNniqueFilenames) throws Exception {
-    this.numThreads = pNumThreads;
-    this.uniqueFilenames = pNniqueFilenames;
-    setupCommitter();
+  public TestStagingCommitter(int numThreads, boolean uniqueFilenames) {
+    this.numThreads = numThreads;
+    this.uniqueFilenames = uniqueFilenames;
   }
 
+  @BeforeEach
   public void setupCommitter() throws Exception {
     JobConf jobConf = getConfiguration();
     jobConf.setInt(FS_S3A_COMMITTER_THREADS, numThreads);
@@ -198,10 +202,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     return new Configuration(false);
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testMockFSclientWiredUp(int pNumThreads, boolean pNniqueFilenames) throws Throwable {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testMockFSclientWiredUp() throws Throwable {
     final S3Client client = mockFS.getS3AInternals().getAmazonS3Client("test");
     assertThat(client)
         .describedAs("S3Client from FS")
@@ -209,10 +211,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         .isSameAs(mockClient);
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testUUIDPropagation(int pNumThreads, boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testUUIDPropagation() throws Exception {
     Configuration config = newConfig();
     String uuid = uuid();
     config.set(SPARK_WRITE_UUID, uuid);
@@ -228,10 +228,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
    * If the Spark UUID is required, then binding will fail
    * if a UUID did not get passed in.
    */
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testUUIDValidation(int pNumThreads, boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testUUIDValidation() throws Exception {
     Configuration config = newConfig();
     config.setBoolean(FS_S3A_COMMITTER_REQUIRE_UUID, true);
     intercept(PathCommitException.class, E_NO_SPARK_UUID, () ->
@@ -241,10 +239,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
   /**
    * Validate ordering of UUID retrieval.
    */
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testUUIDLoadOrdering(int pNumThreads, boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testUUIDLoadOrdering() throws Exception {
     Configuration config = newConfig();
     config.setBoolean(FS_S3A_COMMITTER_REQUIRE_UUID, true);
     String uuid = uuid();
@@ -262,10 +258,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
    * Verify that unless the config enables self-generation, JobIDs
    * are used.
    */
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testJobIDIsUUID(int pNumThreads, boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testJobIDIsUUID() throws Exception {
     Configuration config = newConfig();
     Pair<String, AbstractS3ACommitter.JobUUIDSource> t3 = AbstractS3ACommitter
         .buildJobUUID(config, JOB_ID);
@@ -279,10 +273,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
    * Verify self-generated UUIDs are supported when enabled,
    * and come before JobID.
    */
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testSelfGeneratedUUID(int pNumThreads, boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testSelfGeneratedUUID() throws Exception {
     Configuration config = newConfig();
     config.setBoolean(FS_S3A_COMMITTER_GENERATE_UUID, true);
     Pair<String, AbstractS3ACommitter.JobUUIDSource> t3 = AbstractS3ACommitter
@@ -312,11 +304,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     return UUID.randomUUID().toString();
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testAttemptPathConstructionNoSchema(int pNumThreads, boolean pNniqueFilenames)
-      throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testAttemptPathConstructionNoSchema() throws Exception {
     Configuration config = newConfig();
     final String jobUUID = addUUID(config);
     config.set(BUFFER_DIR, "/tmp/mr-local-0,/tmp/mr-local-1");
@@ -328,11 +317,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         .contains(jobUUID);
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testAttemptPathsDifferentByTaskAttempt(int pNumThreads, boolean pNniqueFilenames)
-      throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testAttemptPathsDifferentByTaskAttempt() throws Exception {
     Configuration config = newConfig();
     final String jobUUID = addUUID(config);
     config.set(BUFFER_DIR, "file:/tmp/mr-local-0");
@@ -345,11 +331,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         .isNotEqualTo(attempt1Path);
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testAttemptPathConstructionWithSchema(int pNumThreads, boolean pNniqueFilenames)
-      throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testAttemptPathConstructionWithSchema() throws Exception {
     Configuration config = newConfig();
     final String jobUUID = addUUID(config);
     String commonPath = "file:/tmp/mr-local-";
@@ -364,11 +347,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         .startsWith(commonPath);
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testAttemptPathConstructionWrongSchema(int pNumThreads,
-      boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testAttemptPathConstructionWrongSchema() throws Exception {
     Configuration config = newConfig();
     final String jobUUID = addUUID(config);
     config.set(BUFFER_DIR,
@@ -378,11 +358,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         tac.getTaskAttemptID()));
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testCommitPathConstruction(int pNumThreads,
-      boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testCommitPathConstruction() throws Exception {
     Path committedTaskPath = committer.getCommittedTaskPath(tac);
     assertEquals("hdfs", committedTaskPath.toUri().getScheme(),
         "Path should be in HDFS: " + committedTaskPath);
@@ -391,11 +368,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         "Did not end with \"" + ending +"\" :" + committedTaskPath);
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testSingleTaskCommit(int pNumThreads,
-      boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testSingleTaskCommit() throws Exception {
     Path file = new Path(commitTask(committer, tac, 1).iterator().next());
 
     List<String> uploads = results.getUploads();
@@ -425,11 +399,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
    * This originally verified that empty files weren't PUT. They are now.
    * @throws Exception on a failure
    */
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testSingleTaskEmptyFileCommit(int pNumThreads,
-      boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testSingleTaskEmptyFileCommit() throws Exception {
     committer.setupTask(tac);
 
     Path attemptPath = committer.getTaskAttemptPath(tac);
@@ -457,11 +428,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     assertEquals(1, pending.size(), "Should have one pending commit");
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testSingleTaskMultiFileCommit(int pNumThreads,
-      boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testSingleTaskMultiFileCommit() throws Exception {
     int numFiles = 3;
     Set<String> files = commitTask(committer, tac, numFiles);
 
@@ -494,11 +462,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     assertEquals(files, keys, "Should write to the correct key");
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testTaskInitializeFailure(int pNumThreads,
-      boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testTaskInitializeFailure() throws Exception {
     committer.setupTask(tac);
 
     errors.failOnInit(1);
@@ -525,11 +490,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         attemptPath);
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testTaskSingleFileUploadFailure(int pNumThreads,
-      boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testTaskSingleFileUploadFailure() throws Exception {
     describe("Set up a single file upload to fail on upload 2");
     committer.setupTask(tac);
 
@@ -557,11 +519,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         attemptPath);
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testTaskMultiFileUploadFailure(int pNumThreads,
-      boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testTaskMultiFileUploadFailure() throws Exception {
     committer.setupTask(tac);
 
     errors.failOnUpload(5);
@@ -590,11 +549,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         attemptPath);
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testTaskUploadAndAbortFailure(int pNumThreads,
-      boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testTaskUploadAndAbortFailure() throws Exception {
     committer.setupTask(tac);
 
     errors.failOnUpload(5);
@@ -623,11 +579,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     assertPathDoesNotExist(fs, "Should remove the attempt path", attemptPath);
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testSingleTaskAbort(int pNumThreads,
-      boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testSingleTaskAbort() throws Exception {
     committer.setupTask(tac);
 
     Path attemptPath = committer.getTaskAttemptPath(tac);
@@ -646,11 +599,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testJobCommit(int pNumThreads,
-      boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testJobCommit() throws Exception {
     Path jobAttemptPath = jobCommitter.getJobAttemptPath(job);
     FileSystem fs = jobAttemptPath.getFileSystem(conf);
 
@@ -673,11 +623,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testJobCommitFailure(int pNumThreads,
-      boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testJobCommitFailure() throws Exception {
     Path jobAttemptPath = jobCommitter.getJobAttemptPath(job);
     FileSystem fs = jobAttemptPath.getFileSystem(conf);
 
@@ -724,11 +671,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     assertPathDoesNotExist(fs, "jobAttemptPath not deleted", jobAttemptPath);
   }
 
-  @ParameterizedTest(name = "threads-{0}-unique-{1}")
-  @MethodSource("params")
-  public void testJobAbort(int pNumThreads,
-      boolean pNniqueFilenames) throws Exception {
-    initTestStagingCommitter(pNumThreads, pNniqueFilenames);
+  @Test
+  public void testJobAbort() throws Exception {
     Path jobAttemptPath = jobCommitter.getJobAttemptPath(job);
     FileSystem fs = jobAttemptPath.getFileSystem(conf);
 

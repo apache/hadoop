@@ -21,11 +21,14 @@ package org.apache.hadoop.fs.s3a.statistics;
 import java.util.Arrays;
 import java.util.List;
 
+import org.junit.jupiter.api.Test;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractStreamIOStatisticsTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.*;
@@ -33,6 +36,7 @@ import static org.apache.hadoop.fs.statistics.StreamStatisticNames.*;
 /**
  * Test the S3A Streams IOStatistics support.
  */
+@IntegrationTest
 public class ITestS3AContractStreamIOStatistics extends
     AbstractContractStreamIOStatisticsTest {
 
@@ -79,6 +83,7 @@ public class ITestS3AContractStreamIOStatistics extends
         STREAM_WRITE_EXCEPTIONS);
   }
 
+  @Test
   @Override
   public void testInputStreamStatisticRead() throws Throwable {
     // Analytics accelerator currently does not support IOStatistics, this will be added as

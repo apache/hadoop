@@ -955,6 +955,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withReadAheadQueueDepth(getAbfsConfiguration().getReadAheadQueueDepth())
             .withTolerateOobAppends(getAbfsConfiguration().getTolerateOobAppends())
             .isReadAheadEnabled(getAbfsConfiguration().isReadAheadEnabled())
+            .isReadAheadV2Enabled(getAbfsConfiguration().isReadAheadV2Enabled())
             .withReadSmallFilesCompletely(getAbfsConfiguration().readSmallFilesCompletely())
             .withOptimizeFooterRead(getAbfsConfiguration().optimizeFooterRead())
             .withFooterReadBufferSize(footerReadBufferSize)

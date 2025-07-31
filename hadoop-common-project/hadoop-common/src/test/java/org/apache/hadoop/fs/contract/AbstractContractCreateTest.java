@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
 
 import org.junit.jupiter.api.Test;
-import org.junit.AssumptionViolatedException;
+import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -172,7 +172,7 @@ public abstract class AbstractContractCreateTest extends
     } catch (AssertionError failure) {
       if (isSupported(CREATE_OVERWRITES_DIRECTORY)) {
         // file/directory hack surfaces here
-        throw new AssumptionViolatedException(failure.toString(), failure);
+        throw new TestAbortedException(failure.toString(), failure);
       }
       // else: rethrow
       throw failure;

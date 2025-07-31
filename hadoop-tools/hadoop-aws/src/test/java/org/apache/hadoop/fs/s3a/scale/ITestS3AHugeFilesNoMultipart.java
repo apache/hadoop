@@ -19,9 +19,11 @@
 package org.apache.hadoop.fs.s3a.scale;
 
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.test.tags.ScaleTest;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.IO_CHUNK_BUFFER_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_EXPECT_CONTINUE;
@@ -37,6 +39,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides
  * Use a single PUT for the whole upload/rename/delete workflow; include verification
  * that the transfer manager will fail fast unless the multipart threshold is huge.
  */
+@ScaleTest
 public class ITestS3AHugeFilesNoMultipart extends AbstractSTestS3AHugeFiles {
 
   public static final String SINGLE_PUT_REQUEST_TIMEOUT = "1h";
@@ -98,6 +101,7 @@ public class ITestS3AHugeFilesNoMultipart extends AbstractSTestS3AHugeFiles {
   /**
    * Verify multipart copy is disabled.
    */
+  @Test
   @Override
   public void test_030_postCreationAssertions() throws Throwable {
     super.test_030_postCreationAssertions();

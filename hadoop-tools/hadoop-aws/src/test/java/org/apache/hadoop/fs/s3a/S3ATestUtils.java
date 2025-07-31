@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -71,7 +72,7 @@ import org.apache.hadoop.util.functional.FutureIO;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Assumptions;
 import org.junit.Assume;
-import org.junit.AssumptionViolatedException;
+import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -201,7 +202,7 @@ public final class S3ATestUtils {
    * @param conf configuration
    * @return the FS
    * @throws IOException IO Problems
-   * @throws AssumptionViolatedException if the FS is not named
+   * @throws TestAbortedException if the FS is not named
    */
   public static S3AFileSystem createTestFileSystem(Configuration conf)
       throws IOException {
@@ -1198,6 +1199,17 @@ public final class S3ATestUtils {
   }
 
   /**
+   * CLose the filesystem if it not in the cache.
+   * @param fs filesystem to check. May be null
+   */
+  public static void maybeCloseFilesystem(final S3AFileSystem fs) {
+    if (fs != null && fs.getConf().getBoolean(FS_S3A_IMPL_DISABLE_CACHE,
+        false)) {
+      IOUtils.closeQuietly(fs);
+    }
+  }
+
+  /**
    * Helper class to do diffs of metrics.
    */
   public static final class MetricDiff {
@@ -1470,7 +1482,7 @@ public final class S3ATestUtils {
 
   /**
    * Assume that a condition is met. If not: log at WARN and
-   * then throw an {@link AssumptionViolatedException}.
+   * then throw an {@link TestAbortedException}.
    * @param message
    * @param condition
    */
@@ -1488,7 +1500,7 @@ public final class S3ATestUtils {
    * @param t thrown exception.
    */
   public static void raiseAsAssumption(Throwable t) {
-    throw new AssumptionViolatedException(t.toString(), t);
+    throw new TestAbortedException(t.toString(), t);
   }
 
   /**

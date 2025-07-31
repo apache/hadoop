@@ -27,9 +27,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractContentSummaryTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 
+@IntegrationTest
 public class ITestS3AContractContentSummary extends AbstractContractContentSummaryTest {
 
   @Test

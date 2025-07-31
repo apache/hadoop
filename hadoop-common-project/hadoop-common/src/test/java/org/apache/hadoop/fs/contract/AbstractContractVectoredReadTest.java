@@ -34,8 +34,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntFunction;
 
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +70,8 @@ import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
  * Both the original readVectored(allocator) and the readVectored(allocator, release)
  * operations are tested.
  */
+@ParameterizedClass(name="buffer-{0}")
+@MethodSource("params")
 public abstract class AbstractContractVectoredReadTest extends AbstractFSContractTestBase {
 
   private static final Logger LOG =
@@ -80,15 +84,15 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   /**
    * Buffer allocator for vector IO.
    */
-  protected IntFunction<ByteBuffer> allocate;
+  private final IntFunction<ByteBuffer> allocate;
 
   /**
    * Buffer pool for vector IO.
    */
-  protected final ElasticByteBufferPool pool =
+  private final ElasticByteBufferPool pool =
           new WeakReferencedElasticByteBufferPool();
 
-  protected String bufferType;
+  private final String bufferType;
 
   /**
    * Path to the vector file.
@@ -106,8 +110,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     return Arrays.asList("direct", "array");
   }
 
-  public void initAbstractContractVectoredReadTest(String pBufferType) {
-    this.bufferType = pBufferType;
+  protected AbstractContractVectoredReadTest(String bufferType) {
+    this.bufferType = bufferType;
     final boolean isDirect = !"array".equals(bufferType);
     this.allocate = size -> pool.getBuffer(isDirect, size);
   }
@@ -147,6 +151,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     createFile(fs, vectorPath, true, DATASET);
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     pool.release();
@@ -177,10 +182,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
             .build());
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testVectoredReadMultipleRanges(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testVectoredReadMultipleRanges() throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       FileRange fileRange = FileRange.createFileRange(i * 100, 100);
@@ -201,10 +204,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testVectoredReadAndReadFully(String pBufferType)  throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testVectoredReadAndReadFully()  throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
     range(fileRanges, 100, 100);
     try (FSDataInputStream in = openVectorFile()) {
@@ -219,10 +220,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testVectoredReadWholeFile(String pBufferType)  throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testVectoredReadWholeFile()  throws Exception {
     describe("Read the whole file in one single vectored read");
     List<FileRange> fileRanges = new ArrayList<>();
     range(fileRanges, 0, DATASET_LEN);
@@ -240,10 +239,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
    * As the minimum seek value is 4*1024,none of the below ranges
    * will get merged.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testDisjointRanges(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testDisjointRanges() throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
     range(fileRanges, 0, 100);
     range(fileRanges, 4_000 + 101, 100);
@@ -259,10 +256,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
    * As the minimum seek value is 4*1024, all the below ranges
    * will get merged into one.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testAllRangesMergedIntoOne(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testAllRangesMergedIntoOne() throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
     final int length = 100;
     range(fileRanges, 0, length);
@@ -279,10 +274,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
    * As the minimum seek value is 4*1024, the first three ranges will be
    * merged into and other two will remain as it is.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testSomeRangesMergedSomeUnmerged(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testSomeRangesMergedSomeUnmerged() throws Exception {
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = new ArrayList<>();
     range(fileRanges, 8 * 1024, 100);
@@ -306,10 +299,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
    * Most file systems won't support overlapping ranges.
    * Currently, only Raw Local supports it.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testOverlappingRanges(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testOverlappingRanges() throws Exception {
     if (!isSupported(VECTOR_IO_OVERLAPPING_RANGES)) {
       verifyExceptionalVectoredRead(
               getSampleOverlappingRanges(),
@@ -327,10 +318,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   /**
    * Same ranges are special case of overlapping.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testSameRanges(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testSameRanges() throws Exception {
     if (!isSupported(VECTOR_IO_OVERLAPPING_RANGES)) {
       verifyExceptionalVectoredRead(
               getSampleSameRanges(),
@@ -348,10 +337,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   /**
    * A null range is not permitted.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testNullRange(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testNullRange() throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
     range(fileRanges, 500, 100);
     fileRanges.add(null);
@@ -362,19 +349,15 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   /**
    * A null range is not permitted.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testNullRangeList(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testNullRangeList() throws Exception {
     verifyExceptionalVectoredRead(
         null,
         NullPointerException.class);
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testSomeRandomNonOverlappingRanges(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testSomeRandomNonOverlappingRanges() throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
     range(fileRanges, 500, 100);
     range(fileRanges, 1000, 200);
@@ -387,10 +370,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testConsecutiveRanges(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testConsecutiveRanges() throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
     final int offset = 500;
     final int length = 2011;
@@ -403,10 +384,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testEmptyRanges(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testEmptyRanges() throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, allocate);
@@ -425,10 +404,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
    * The contract option {@link ContractOptions#VECTOR_IO_EARLY_EOF_CHECK} is used
    * to determine which check to perform.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testEOFRanges(String pBufferType)  throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testEOFRanges()  throws Exception {
     describe("Testing reading with an offset past the end of the file");
     List<FileRange> fileRanges = range(DATASET_LEN + 1, 100);
 
@@ -441,10 +418,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   }
 
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testVectoredReadWholeFilePlusOne(String pBufferType)  throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testVectoredReadWholeFilePlusOne()  throws Exception {
     describe("Try to read whole file plus 1 byte");
     List<FileRange> fileRanges = range(0, DATASET_LEN + 1);
 
@@ -471,35 +446,29 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testNegativeLengthRange(String pBufferType)  throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testNegativeLengthRange()  throws Exception {
+
     verifyExceptionalVectoredRead(range(0, -50), IllegalArgumentException.class);
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testNegativeOffsetRange(String pBufferType)  throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testNegativeOffsetRange()  throws Exception {
     verifyExceptionalVectoredRead(range(-1, 50), EOFException.class);
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testNullReleaseOperation(String pBufferType)  throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testNullReleaseOperation()  throws Exception {
+
     final List<FileRange> range = range(0, 10);
     try (FSDataInputStream in = openVectorFile()) {
-        intercept(NullPointerException.class, () ->
-            in.readVectored(range, allocate, null));
+      intercept(NullPointerException.class, () ->
+          in.readVectored(range, allocate, null));
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testNormalReadAfterVectoredRead(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testNormalReadAfterVectoredRead() throws Exception {
     List<FileRange> fileRanges = createSampleNonOverlappingRanges();
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, allocate);
@@ -514,10 +483,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testVectoredReadAfterNormalRead(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testVectoredReadAfterNormalRead() throws Exception {
     List<FileRange> fileRanges = createSampleNonOverlappingRanges();
     try (FSDataInputStream in = openVectorFile()) {
       // read starting 200 bytes
@@ -532,10 +499,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testMultipleVectoredReads(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testMultipleVectoredReads() throws Exception {
     List<FileRange> fileRanges1 = createSampleNonOverlappingRanges();
     List<FileRange> fileRanges2 = createSampleNonOverlappingRanges();
     try (FSDataInputStream in = openVectorFile()) {
@@ -553,10 +518,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
    * operation and then uses a separate thread pool to process the
    * results asynchronously.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "Buffer type : {0}")
-  public void testVectoredIOEndToEnd(String pBufferType) throws Exception {
-    initAbstractContractVectoredReadTest(pBufferType);
+  @Test
+  public void testVectoredIOEndToEnd() throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
     range(fileRanges, 8 * 1024, 100);
     range(fileRanges, 14 * 1024, 100);

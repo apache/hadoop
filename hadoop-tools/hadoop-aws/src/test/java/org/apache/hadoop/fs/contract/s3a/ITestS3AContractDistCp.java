@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import org.junit.jupiter.api.Test;
+
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.SCALE_TEST_TIMEOUT_MILLIS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageStatistics;
+import org.apache.hadoop.test.tags.IntegrationTest;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
 
 /**
@@ -31,6 +34,7 @@ import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
  * Uses the block output stream, buffered to disk. This is the
  * recommended output mechanism for DistCP due to its scalability.
  */
+@IntegrationTest
 public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
 
   private static final long MULTIPART_SETTING = MULTIPART_MIN_SIZE;
@@ -62,6 +66,7 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
     return new S3AContract(conf);
   }
 
+  @Test
   @Override
   public void testDistCpWithIterator() throws Exception {
     final long renames = getRenameOperationCount();
@@ -70,6 +75,7 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
         renames, "Expected no renames for a direct write distcp");
   }
 
+  @Test
   @Override
   public void testNonDirectWrite() throws Exception {
     final long renames = getRenameOperationCount();
@@ -78,6 +84,7 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
         "Expected 2 renames for a non-direct write distcp");
   }
 
+  @Test
   @Override
   public void testDistCpUpdateCheckFileSkip() throws Exception {
     // Currently analytics accelerator does not support reading of files that have been overwritten.

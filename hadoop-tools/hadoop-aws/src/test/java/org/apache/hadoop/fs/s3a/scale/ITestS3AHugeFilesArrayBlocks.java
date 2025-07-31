@@ -19,10 +19,12 @@
 package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.test.tags.ScaleTest;
 
 /**
  * Use {@link Constants#FAST_UPLOAD_BUFFER_ARRAY} for buffering.
  */
+@ScaleTest
 public class ITestS3AHugeFilesArrayBlocks extends AbstractSTestS3AHugeFiles {
 
   protected String getBlockOutputBufferName() {

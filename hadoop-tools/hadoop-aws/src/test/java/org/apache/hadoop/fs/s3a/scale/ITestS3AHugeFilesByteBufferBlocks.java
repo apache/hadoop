@@ -25,6 +25,7 @@ import org.assertj.core.api.Assertions;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.test.tags.ScaleTest;
 
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BYTEBUFFER;
 
@@ -33,6 +34,7 @@ import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BYTEBUFFER;
  * This also renames by parent directory, so validates parent
  * dir renaming of huge files.
  */
+@ScaleTest
 public class ITestS3AHugeFilesByteBufferBlocks
     extends AbstractSTestS3AHugeFiles {
 
