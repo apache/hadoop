@@ -79,6 +79,7 @@ final class ReadBufferManagerV2 extends ReadBufferManager {
   private static double memoryThreshold;
   private int numberOfActiveBuffers = 0;
   private byte[][] bufferPool;
+  private Stack<Integer> removedBufferList = new Stack<>();   // indices in buffers[] array that are available
 
   // Buffer Manager Structures
   private static ReadBufferManagerV2 bufferManager;
@@ -255,9 +256,10 @@ final class ReadBufferManagerV2 extends ReadBufferManager {
         stream.getPath(), stream.getETag(), position, length, stream.hashCode());
 
     String requestedETag = stream.getETag();
+    boolean isFirstRead = stream.isFirstRead();
 
     // Wait for any in-progress read to complete.
-    waitForProcess(requestedETag, position);
+    waitForProcess(requestedETag, position, isFirstRead);
 
     int bytesRead = 0;
     synchronized (this) {
@@ -457,7 +459,9 @@ final class ReadBufferManagerV2 extends ReadBufferManager {
     // As failed ReadBuffers (bufferIndx = -1) are saved in getCompletedReadList(),
     // avoid adding it to availableBufferList.
     if (buf.getBufferindex() != -1) {
-      getFreeList().push(buf.getBufferindex());
+      synchronized (this) {
+        getFreeList().push(buf.getBufferindex());
+      }
     }
     getCompletedReadList().remove(buf);
     buf.setTracingContext(null);
@@ -466,10 +470,10 @@ final class ReadBufferManagerV2 extends ReadBufferManager {
     return true;
   }
 
-  private void waitForProcess(final String eTag, final long position) {
+  private void waitForProcess(final String eTag, final long position, boolean isFirstRead) {
     ReadBuffer readBuf;
     synchronized (this) {
-      clearFromReadAheadQueue(eTag, position);
+      clearFromReadAheadQueue(eTag, position, isFirstRead);
       readBuf = getFromList(getInProgressList(), eTag, position);
     }
     if (readBuf != null) {         // if in in-progress queue, then block for it
@@ -491,12 +495,18 @@ final class ReadBufferManagerV2 extends ReadBufferManager {
     }
   }
 
-  private void clearFromReadAheadQueue(final String eTag, final long requestedOffset) {
+  private void clearFromReadAheadQueue(final String eTag, final long requestedOffset, boolean isFirstRead) {
     ReadBuffer buffer = getFromList(getReadAheadQueue(), eTag, requestedOffset);
-    if (buffer != null) {
-      getReadAheadQueue().remove(buffer);
-      notifyAll();   // lock is held in calling method
-      getFreeList().push(buffer.getBufferindex());
+    /*
+     * If this prefetch was triggered by first read of this input stream,
+     * we should not remove it from queue and cache it for future purpose.
+     */
+    if (buffer != null && !isFirstRead) {
+      synchronized (this) {
+        getReadAheadQueue().remove(buffer);
+        notifyAll();   // lock is held in calling method
+        getFreeList().push(buffer.getBufferindex());
+      }
     }
   }
 
@@ -555,8 +565,9 @@ final class ReadBufferManagerV2 extends ReadBufferManager {
     return null;
   }
 
-  private boolean tryMemoryUpscale() {
+  private synchronized boolean tryMemoryUpscale() {
     if (!isDynamicScalingEnabled) {
+      printTraceLog("Dynamic scaling is disabled, skipping memory upscale");
       return false; // Dynamic scaling is disabled, so no upscaling.
     }
     MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
@@ -564,14 +575,26 @@ final class ReadBufferManagerV2 extends ReadBufferManager {
     double memoryLoad = (double) memoryUsage.getUsed() / memoryUsage.getMax();
     if (memoryLoad < memoryThreshold && numberOfActiveBuffers < maxBufferPoolSize) {
       // Create and Add more buffers in getFreeList().
-      bufferPool[numberOfActiveBuffers] = new byte[getReadAheadBlockSize()];
-      getFreeList().add(numberOfActiveBuffers);
+      if (removedBufferList.isEmpty()) {
+        bufferPool[numberOfActiveBuffers] = new byte[getReadAheadBlockSize()];
+        getFreeList().add(numberOfActiveBuffers);
+      } else {
+        // Reuse a removed buffer index.
+        int freeIndex = removedBufferList.pop();
+        if (freeIndex >= bufferPool.length) {
+          printTraceLog("Invalid free index: {}. Current buffer pool size: {}",
+              freeIndex, bufferPool.length);
+          return false;
+        }
+        bufferPool[freeIndex] = new byte[getReadAheadBlockSize()];
+        getFreeList().add(freeIndex);
+      }
       numberOfActiveBuffers++;
-      printTraceLog("Current Memory Usage: {}. Incrementing buffer pool size to {}", memoryUsage, numberOfActiveBuffers);
+      printTraceLog("Current Memory Load: {}. Incrementing buffer pool size to {}", memoryLoad, numberOfActiveBuffers);
       return true;
     }
-    printTraceLog("Could not Upscale memory. Total buffers: {} Memory Usage: {}",
-        numberOfActiveBuffers, memoryUsage);
+    printTraceLog("Could not Upscale memory. Total buffers: {} Memory Load: {}",
+        numberOfActiveBuffers, memoryLoad);
     return false;
   }
 
@@ -585,14 +608,18 @@ final class ReadBufferManagerV2 extends ReadBufferManager {
       }
     }
 
-    /*
-     * Scheduled eviction does not clear up acquired memory, it only marks buffer
-     * to be available and reused for future read ahead requests.
-
-     * To actually free up memory, we need to remove the extra buffer from all
-     * the queues and available list and nullify its reference in bufferPool.
-     */
-    // TODO: Check Memory Utilization and adjust buffer pool size if needed.
+    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
+    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
+    double memoryLoad = (double) memoryUsage.getUsed() / memoryUsage.getMax();
+    if (memoryLoad > memoryThreshold) {
+      synchronized (this) {
+        int freeIndex = getFreeList().pop();
+        bufferPool[freeIndex] = null;
+        removedBufferList.add(freeIndex);
+        numberOfActiveBuffers--;
+      }
+      printTraceLog("Current Memory Load: {}. Decrementing buffer pool size to {}", memoryLoad, numberOfActiveBuffers);
+    }
   }
 
   private boolean manualEviction(final ReadBuffer buf) {
@@ -655,7 +682,9 @@ final class ReadBufferManagerV2 extends ReadBufferManager {
         // As failed ReadBuffers (bufferIndex = -1) are already pushed to free
         // list in doneReading method, we will skip adding those here again.
         if (readBuffer.getBufferindex() != -1) {
-          getFreeList().push(readBuffer.getBufferindex());
+          synchronized (this) {
+            getFreeList().push(readBuffer.getBufferindex());
+          }
         }
       }
     }
