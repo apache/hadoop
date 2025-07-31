@@ -349,12 +349,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
       } else {
         // Switch between enabling and disabling read ahead based on the workload read pattern.
-        // First Read on input stream should always bypass read ahead.
-        if (firstRead) {
-          int lengthToRead = Math.min(b.length, bufferSize);
-          LOG.debug("First read with read size of {} and read ahead disabled", lengthToRead);
-          bytesRead = readInternal(fCursor, buffer, 0, lengthToRead, true);
-        } else if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
+        if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
           // Sequential read pattern detected. Enable read ahead.
           LOG.debug("Sequential read with read size of {} and read ahead enabled", bufferSize);
           bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
@@ -517,8 +512,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
       int receivedBytes;
 
-      // queue read-aheads
-      int numReadAheads = this.readAheadQueueDepth;
+      /*
+       * Number of prefetches to queue for each request is configurable.
+       * For the first read of this input stream, we don't read ahead but keep
+       * the current read data in cache as pattern might not be sequential.
+       */
+      int numReadAheads = firstRead? 1 : this.readAheadQueueDepth;
       long nextOffset = position;
       // First read to queue needs to be of readBufferSize and later
       // of readAhead Block size
@@ -914,6 +913,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @VisibleForTesting
   long getLimit() {
     return this.limit;
+  }
+
+  boolean isFirstRead() {
+    return this.firstRead;
   }
 
   @VisibleForTesting

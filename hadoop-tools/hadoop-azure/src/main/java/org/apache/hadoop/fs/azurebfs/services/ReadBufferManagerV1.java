@@ -451,7 +451,11 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
    */
   private void clearFromReadAheadQueue(final AbfsInputStream stream, final long requestedOffset) {
     ReadBuffer buffer = getFromList(getReadAheadQueue(), stream, requestedOffset);
-    if (buffer != null) {
+    /*
+     * If this prefetch was triggered by first read of this input stream,
+     * we should not remove it from queue and cache it for future purpose.
+     */
+    if (buffer != null && !stream.isFirstRead()) {
       getReadAheadQueue().remove(buffer);
       notifyAll();   // lock is held in calling method
       getFreeList().push(buffer.getBufferindex());
