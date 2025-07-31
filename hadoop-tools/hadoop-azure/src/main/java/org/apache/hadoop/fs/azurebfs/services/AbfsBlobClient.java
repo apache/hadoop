@@ -532,7 +532,7 @@ public class AbfsBlobClient extends AbfsClient {
    *
    * @throws AzureBlobFileSystemException if an error occurs during the operation.
    */
-  protected AbfsRestOperation createMarkerAtPath(final String path,
+  public AbfsRestOperation createMarkerAtPath(final String path,
       final String eTag,
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
@@ -1241,8 +1241,16 @@ public class AbfsBlobClient extends AbfsClient {
       if (op.getResult().getStatusCode() == HTTP_NOT_FOUND
           && isImplicitCheckRequired && isNonEmptyDirectory(path, tracingContext)) {
         // Implicit path found.
-        // Create a marker blob at this path.
-        this.createMarkerAtPath(path, null, contextEncryptionAdapter, tracingContext);
+        // Create a marker blob at this path. Marker creation might fail due to permission issues, so we swallow exception in case of failure.
+        try {
+          this.createMarkerAtPath(path, null, contextEncryptionAdapter,
+              tracingContext);
+        } catch (AbfsRestOperationException exception) {
+          LOG.debug("Marker creation failed for path {} during getPathStatus. StatusCode: {}, ErrorCode: {}",
+              path,
+              exception.getStatusCode(),
+              exception.getErrorCode());
+        }
         AbfsRestOperation successOp = getSuccessOp(
             AbfsRestOperationType.GetPathStatus, HTTP_METHOD_HEAD,
             url, requestHeaders);
