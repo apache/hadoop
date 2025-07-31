@@ -22,6 +22,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSUnsupportedFeatureException;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
+import org.apache.hadoop.test.tags.ScaleTest;
+
 import org.junit.jupiter.api.BeforeEach;
 
 import java.nio.file.AccessDeniedException;
@@ -40,6 +42,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionTestsDisable
  * and tests huge files operations with SSE-C encryption enabled.
  * Skipped if the SSE tests are disabled.
  */
+@ScaleTest
 public class ITestS3AHugeFilesSSECDiskBlocks
     extends ITestS3AHugeFilesDiskBlocks {
 

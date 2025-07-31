@@ -32,6 +32,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tracing.Span;
 import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.tracing.TraceUtils;
+import org.apache.hadoop.security.AuthorizationContext;
 
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
@@ -201,6 +202,12 @@ public abstract class ProtoUtil {
             ByteString.copyFrom(callerContext.getSignature()));
       }
       result.setCallerContext(contextBuilder);
+    }
+
+    // Add authorization header if present
+    byte[] authzHeader = AuthorizationContext.getCurrentAuthorizationHeader();
+    if (authzHeader != null) {
+      result.setAuthorizationHeader(ByteString.copyFrom(authzHeader));
     }
 
     // Add alignment context if it is not null

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,29 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.fs.s3a.auth.delegation;
-
-import org.apache.hadoop.test.tags.LoadTest;
-import org.apache.hadoop.test.tags.ScaleTest;
-
-import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_ROLE_BINDING;
+package org.apache.hadoop.security;
 
 /**
- * This looks at the cost of assume role, to see if it is more expensive
- * than creating simple session credentials.
+ * Utility for managing a thread-local authorization header for RPC calls.
  */
-@LoadTest
-@ScaleTest
-public class ILoadTestRoleCredentials extends ILoadTestSessionCredentials {
+public final class AuthorizationContext {
+    private static final ThreadLocal<byte[]> AUTH_HEADER = new ThreadLocal<>();
 
-  @Override
-  protected String getDelegationBinding() {
-    return DELEGATION_TOKEN_ROLE_BINDING;
-  }
+    private AuthorizationContext() {}
 
-  @Override
-  protected String getFilePrefix() {
-    return "role";
-  }
+    public static void setCurrentAuthorizationHeader(byte[] header) {
+        AUTH_HEADER.set(header);
+    }
+
+    public static byte[] getCurrentAuthorizationHeader() {
+        return AUTH_HEADER.get();
+    }
+
+    public static void clear() {
+        AUTH_HEADER.remove();
+    }
 }

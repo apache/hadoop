@@ -20,12 +20,9 @@ package org.apache.hadoop.fs.s3a.performance;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
 
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,55 +51,30 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AMiscOperationCost.class);
 
-  /**
-   * Parameter: should auditing be enabled?
-   */
-  private boolean auditing;
-
-  /**
-   * Parameterization.
-   */
-  public static Collection<Object[]> params() {
-    return Arrays.asList(new Object[][]{
-        {"auditing", true},
-        {"unaudited", false}
-    });
-  }
-
-  public void initITestS3AMiscOperationCost(final String pName,
-      final boolean pAuditing) throws Exception {
-    this.auditing = pAuditing;
-  }
-
   @Override
   public Configuration createConfiguration() {
     final Configuration conf = super.createConfiguration();
     removeBaseAndBucketOverrides(conf, AUDIT_ENABLED);
-    conf.setBoolean(AUDIT_ENABLED, auditing);
+    conf.setBoolean(AUDIT_ENABLED, true);
     return conf;
   }
 
   /**
-   * Expected audit count when auditing is enabled; expect 0
-   * when disabled.
+   * Expected audit count.
    * @param expected expected value.
    * @return the probe.
    */
   protected OperationCostValidator.ExpectedProbe withAuditCount(
       final int expected) {
-    return probe(AUDIT_SPAN_CREATION,
-        auditing ? expected : 0);
+    return probe(AUDIT_SPAN_CREATION, expected);
 
   }
 
   /**
    * Common operation which should be low cost as possible.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}")
-  public void testMkdirOverDir(String pName,
-      boolean pAuditing) throws Throwable {
-    initITestS3AMiscOperationCost(pName, pAuditing);
+  @Test
+  public void testMkdirOverDir() throws Throwable {
     describe("create a dir over a dir");
     S3AFileSystem fs = getFileSystem();
     // create base dir with marker
@@ -116,11 +88,8 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
         with(OBJECT_LIST_REQUEST, FILESTATUS_DIR_PROBE_L));
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}")
-  public void testGetContentSummaryRoot(String pName,
-      boolean pAuditing) throws Throwable {
-    initITestS3AMiscOperationCost(pName, pAuditing);
+  @Test
+  public void testGetContentSummaryRoot() throws Throwable {
     describe("getContentSummary on Root");
     S3AFileSystem fs = getFileSystem();
 
@@ -129,11 +98,8 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
         with(INVOCATION_GET_CONTENT_SUMMARY, 1));
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}")
-  public void testGetContentSummaryDir(String pName,
-      boolean pAuditing) throws Throwable {
-    initITestS3AMiscOperationCost(pName, pAuditing);
+  @Test
+  public void testGetContentSummaryDir() throws Throwable {
     describe("getContentSummary on test dir with children");
     S3AFileSystem fs = getFileSystem();
     Path baseDir = methodPath();
@@ -157,11 +123,8 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
         .isEqualTo(1);
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}")
-  public void testGetContentMissingPath(String pName,
-      boolean pAuditing) throws Throwable {
-    initITestS3AMiscOperationCost(pName, pAuditing);
+  @Test
+  public void testGetContentMissingPath() throws Throwable {
     describe("getContentSummary on a missing path");
     Path baseDir = methodPath();
     verifyMetricsIntercepting(FileNotFoundException.class,

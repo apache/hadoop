@@ -28,7 +28,9 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.auth.signer.Aws4Signer;
 import software.amazon.awssdk.auth.signer.AwsS3V4Signer;
@@ -53,6 +55,7 @@ import org.apache.hadoop.fs.s3a.auth.ITestCustomSigner.CustomSignerInitializer.S
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
@@ -65,6 +68,8 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides
  * Because the v2 sdk has had some problems with bulk delete
  * and custom signing, this suite is parameterized.
  */
+@ParameterizedClass(name="bulk-delete={0}")
+@MethodSource("params")
 public class ITestCustomSigner extends AbstractS3ATestBase {
 
   private static final Logger LOG = LoggerFactory
@@ -83,7 +88,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     });
   }
 
-  private boolean bulkDelete;
+  private final boolean bulkDelete;
 
   private final UserGroupInformation ugi1 = UserGroupInformation.createRemoteUser("user1");
 
@@ -93,14 +98,22 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
 
   private String endpoint;
 
-  public void initITestCustomSigner(
+  public ITestCustomSigner(
       final String ignored,
-      final boolean pBulkDelete) throws Exception {
-    this.bulkDelete = pBulkDelete;
-    setup();
+      final boolean bulkDelete) {
+    this.bulkDelete = bulkDelete;
   }
 
   @Override
+  protected Configuration createConfiguration() {
+    final Configuration conf = super.createConfiguration();
+    // customer signer doesn't work
+    removeBaseAndBucketOverrides(conf, CHECKSUM_ALGORITHM);
+    return conf;
+  }
+
+  @Override
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
     final S3AFileSystem fs = getFileSystem();
@@ -127,11 +140,10 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     FileSystem.closeAllForUGI(ugi2);
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}")
-  public void testCustomSignerAndInitializer(final String ignored,
-      final boolean pBulkDelete) throws Exception {
-    initITestCustomSigner(ignored, pBulkDelete);
+  @Test
+  public void testCustomSignerAndInitializer()
+      throws IOException, InterruptedException {
+
     final Path basePath = path(getMethodName());
     FileSystem fs1 = runStoreOperationsAndVerify(ugi1,
         new Path(basePath, "customsignerpath1"), "id1");
@@ -221,7 +233,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     // Having the checksum algorithm in this test causes
     // x-amz-sdk-checksum-algorithm specified, but no corresponding
     // x-amz-checksum-* or x-amz-trailer headers were found
-    conf.unset(Constants.CHECKSUM_ALGORITHM);
+    conf.unset(CHECKSUM_ALGORITHM);
 
     // make absolutely sure there is no caching.
     disableFilesystemCaching(conf);

@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.test.tags.ScaleTest;
 import org.apache.hadoop.util.DurationInfo;
 
 import org.assertj.core.api.Assertions;
@@ -47,6 +48,7 @@ import static org.apache.hadoop.test.GenericTestUtils.filenameOfIndex;
  * issue multiple delete requests during a delete sequence -so test that
  * operation more efficiently.
  */
+@ScaleTest
 public class ITestS3ADeleteManyFiles extends S3AScaleTestBase {
 
   private static final Logger LOG =

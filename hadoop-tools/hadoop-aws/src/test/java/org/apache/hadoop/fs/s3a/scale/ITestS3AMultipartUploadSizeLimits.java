@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.auth.ProgressCounter;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
+import org.apache.hadoop.test.tags.ScaleTest;
 
 import static org.apache.hadoop.fs.StreamCapabilities.ABORTABLE_STREAM;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
@@ -57,6 +58,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Testing S3 multipart upload for s3.
  */
+@ScaleTest
 public class ITestS3AMultipartUploadSizeLimits extends S3AScaleTestBase {
 
   public static final int MPU_SIZE = 5 * _1MB;

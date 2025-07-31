@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractMkdirTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
@@ -36,6 +37,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 /**
  * Test mkdir operations on S3A with create performance mode.
  */
+@IntegrationTest
 public class ITestS3AContractMkdirWithCreatePerf extends AbstractContractMkdirTest {
 
   @Override
