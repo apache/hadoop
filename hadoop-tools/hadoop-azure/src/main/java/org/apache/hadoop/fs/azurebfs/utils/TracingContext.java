@@ -23,16 +23,15 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYPHEN;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HYPHEN;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
 /**
@@ -256,7 +255,7 @@ public class TracingContext {
     * of the x-ms-client-request-id header in case of retry of the same API-request.
     */
     if (primaryRequestId.isEmpty() && previousFailure == null) {
-      String[] clientRequestIdParts = clientRequestId.split(HYPHEN);
+      String[] clientRequestIdParts = clientRequestId.split(String.valueOf(CHAR_HYPHEN));
       primaryRequestIdForRetry = clientRequestIdParts[
           clientRequestIdParts.length - 1];
     }
@@ -302,13 +301,13 @@ public class TracingContext {
     // Similar header can be added for other operations in the future.
     switch (opType) {
       case READ:
-        return readSpecificHeader();
+        return getReadSpecificHeader();
       default:
         return EMPTY_STRING; // no operation specific header
     }
   }
 
-  private String readSpecificHeader() {
+  private String getReadSpecificHeader() {
     // More information on read can be added to this header in the future.
     // As underscore separated values.
     String readHeader = String.format("%s", readType.toString());

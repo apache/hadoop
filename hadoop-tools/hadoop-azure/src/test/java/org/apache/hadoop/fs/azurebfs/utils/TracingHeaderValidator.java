@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs.utils;
 
 import org.assertj.core.api.Assertions;
 
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 

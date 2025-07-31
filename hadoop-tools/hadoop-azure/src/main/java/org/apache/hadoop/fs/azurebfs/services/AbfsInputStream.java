@@ -349,6 +349,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         buffer = new byte[bufferSize];
       }
 
+      // Reset Read Type back to normal and set again based on code flow.
       tracingContext.setReadType(ReadType.NORMAL_READ);
       if (alwaysReadBufferSize) {
         bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);

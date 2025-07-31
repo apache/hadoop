@@ -18,13 +18,39 @@
 
 package org.apache.hadoop.fs.azurebfs.constants;
 
+/**
+ * Enumeration for different types of read operations triggered by AbfsInputStream.
+ */
 public enum ReadType {
+  /**
+   * Synchronous read from the storage service. No optimization is being applied.
+   */
   DIRECT_READ("DR"),
+  /**
+   * Synchronous read from the storage service where optimization were considered but found disabled.
+   */
   NORMAL_READ("NR"),
+  /**
+   * Asynchronous read from the storage service for filling up cache.
+   */
   PREFETCH_READ("PR"),
+  /**
+   * Synchronous read from the storage service when nothing was found in cache.
+   */
   MISSEDCACHE_READ("MR"),
+  /**
+   * Synchronous read from the storage service for reading the footer of a file.
+   * Only triggered when footer read optimization kicks in.
+   */
   FOOTER_READ("FR"),
+  /**
+   * Synchronous read from the storage service for reading a small file fully.
+   * Only triggered when small file read optimization kicks in.
+   */
   SMALLFILE_READ("SR"),
+  /**
+   * None of the above read types were applicable.
+   */
   UNKNOWN_READ("UR");
 
   private final String readType;

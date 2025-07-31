@@ -51,10 +51,12 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.TestCachedSASToken;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderVersion;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SPLIT_NO_LIMIT;
 import static org.apache.hadoop.fs.azurebfs.constants.ReadType.FOOTER_READ;
 import static org.apache.hadoop.fs.azurebfs.constants.ReadType.MISSEDCACHE_READ;
 import static org.apache.hadoop.fs.azurebfs.constants.ReadType.NORMAL_READ;
@@ -896,12 +898,13 @@ public class TestAbfsInputStream extends
     AbfsHttpOperation mockOp = Mockito.mock(AbfsHttpOperation.class);
     doReturn(EMPTY_STRING).when(mockOp).getTracingContextSuffix();
     tracingContext.constructHeader(mockOp, null, null);
-    String[] idList = tracingContext.getHeader().split(COLON, -1);
-    Assertions.assertThat(idList).describedAs("Client Request Id should have all fields").hasSize(13);
-    Assertions.assertThat(idList[6]).describedAs("Operation Type Shoudl Be Read")
-        .isEqualTo(FSOperationType.READ.toString());
-    Assertions.assertThat(idList[12]).describedAs("Read type in tracing context header should match")
-        .isEqualTo(readType.toString());
+    String[] idList = tracingContext.getHeader().split(COLON, SPLIT_NO_LIMIT);
+    Assertions.assertThat(idList).describedAs("Client Request Id should have all fields").hasSize(
+        TracingHeaderVersion.getCurrentVersion().getFieldCount());
+    Assertions.assertThat(tracingContext.getHeader()).describedAs("Operation Type Should Be Read")
+        .contains(FSOperationType.READ.toString());
+    Assertions.assertThat(tracingContext.getHeader()).describedAs("Read type in tracing context header should match")
+        .contains(readType.toString());
   }
 
 //  private testReadTypeInTracingContextHeaderInternal(ReadType readType) throws Exception {
