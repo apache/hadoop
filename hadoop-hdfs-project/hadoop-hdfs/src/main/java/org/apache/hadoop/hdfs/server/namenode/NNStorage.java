@@ -472,6 +472,7 @@ public class NNStorage extends Storage implements Closeable,
    * @param time time of the last checkpoint, in millis since the epoch
    */
   void setMostRecentCheckpointInfo(long txid, long time) {
+    LOG.info("setMostRecentCheckpointInfo txid is {}, time is {}", txid, time);
     this.mostRecentCheckpointTxId = txid;
     this.mostRecentCheckpointTime = time;
   }
