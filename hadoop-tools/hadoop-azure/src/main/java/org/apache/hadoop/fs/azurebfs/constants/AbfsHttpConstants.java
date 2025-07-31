@@ -128,6 +128,7 @@ public final class AbfsHttpConstants {
   public static final String STAR = "*";
   public static final String COMMA = ",";
   public static final String COLON = ":";
+  public static final String HYPHEN = "-";
   public static final String EQUAL = "=";
   public static final String QUESTION_MARK = "?";
   public static final String AND_MARK = "&";
@@ -200,27 +201,6 @@ public final class AbfsHttpConstants {
 
     public static ApiVersion getCurrentVersion() {
       return NOV_04_2024;
-    }
-  }
-
-  public enum TracingHeaderVersion {
-
-    V0(""),
-    V1("v1");
-
-    private final String tracingHeaderVersion;
-
-    TracingHeaderVersion(String tracingHeaderVersion) {
-      this.tracingHeaderVersion = tracingHeaderVersion;
-    }
-
-    @Override
-    public String toString() {
-      return tracingHeaderVersion;
-    }
-
-    public static TracingHeaderVersion getCurrentVersion() {
-      return V1;
     }
   }
 

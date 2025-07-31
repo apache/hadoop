@@ -140,17 +140,6 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     super();
   }
 
-  /**
-   * Test helper method to get random bytes array.
-   * @param length The length of byte buffer
-   * @return byte buffer
-   */
-  private byte[] getRandomBytesArray(int length) {
-    final byte[] b = new byte[length];
-    new Random().nextBytes(b);
-    return b;
-  }
-
   @Override
   public AzureBlobFileSystem getFileSystem(final Configuration configuration)
       throws Exception {

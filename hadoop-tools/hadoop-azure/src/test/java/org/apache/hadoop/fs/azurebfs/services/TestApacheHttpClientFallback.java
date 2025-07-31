@@ -60,17 +60,16 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
     Mockito.doAnswer(answer -> {
           answer.callRealMethod();
           AbfsHttpOperation op = answer.getArgument(0);
-          String httpOperationHeader = tc.getHeader().split(":", -1)[11];
           if (op instanceof AbfsAHCHttpOperation) {
-            Assertions.assertThat(httpOperationHeader).isEqualTo(APACHE_IMPL);
+            Assertions.assertThat(tc.getHeader()).contains(APACHE_IMPL);
             apacheCallsRegister[0]++;
           }
           if (op instanceof AbfsJdkHttpOperation) {
             jdkCallsRegister[0]++;
             if (AbfsApacheHttpClient.usable()) {
-              Assertions.assertThat(httpOperationHeader).isEqualTo(JDK_IMPL);
+              Assertions.assertThat(tc.getHeader()).contains(JDK_IMPL);
             } else {
-              Assertions.assertThat(httpOperationHeader).isEqualTo(JDK_FALLBACK);
+              Assertions.assertThat(tc.getHeader()).contains(JDK_FALLBACK);
             }
           }
           return null;

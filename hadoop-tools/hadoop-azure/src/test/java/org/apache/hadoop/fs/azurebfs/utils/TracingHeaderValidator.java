@@ -116,10 +116,10 @@ public class TracingHeaderValidator implements Listener {
   private void validateBasicFormat(String[] idList) {
     // Validate Version and Number of fields in the header
     Assertions.assertThat(idList[0]).describedAs("Version should be present")
-        .isEqualTo(AbfsHttpConstants.TracingHeaderVersion.getCurrentVersion().toString());
+        .isEqualTo(TracingHeaderVersion.getCurrentVersion().getVersion());
     int expectedSize = 0;
     if (format == TracingHeaderFormat.ALL_ID_FORMAT) {
-      expectedSize = 13;
+      expectedSize = TracingHeaderVersion.getCurrentVersion().getFieldCount();
     } else if (format == TracingHeaderFormat.TWO_ID_FORMAT) {
       expectedSize = 3;
     } else {

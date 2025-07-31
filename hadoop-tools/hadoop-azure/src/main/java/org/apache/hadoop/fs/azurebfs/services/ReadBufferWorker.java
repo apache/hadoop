@@ -22,9 +22,7 @@ import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 class ReadBufferWorker implements Runnable {
 

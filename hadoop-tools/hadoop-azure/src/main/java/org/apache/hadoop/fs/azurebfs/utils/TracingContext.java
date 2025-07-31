@@ -30,7 +30,9 @@ import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HYPHEN;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
 /**
@@ -80,8 +82,7 @@ public class TracingContext {
    * this field shall not be set.
    */
   private String primaryRequestIdForRetry;
-
-  private Integer operatedBlobCount = null;
+  private Integer operatedBlobCount = 1; // Only relevant for rename-delete over blob endpoint where it will be explicitly set.
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
@@ -189,7 +190,7 @@ public class TracingContext {
    * X_MS_CLIENT_REQUEST_ID header of the http operation
    * Following are the components in order of concatenation:
    * <ul>
-   *   <li>version - not present for versions less than < 1</li>
+   *   <li>version - not present for versions less than v1</li>
    *   <li>clientCorrelationId</li>
    *   <li>clientRequestId</li>
    *   <li>fileSystemId</li>
@@ -214,35 +215,32 @@ public class TracingContext {
     clientRequestId = UUID.randomUUID().toString();
     switch (format) {
     case ALL_ID_FORMAT:
-      header =
-          AbfsHttpConstants.TracingHeaderVersion.V1 + ":" +
-          clientCorrelationID + ":" +
-          clientRequestId + ":" +
-          fileSystemID + ":" +
-          getPrimaryRequestIdForHeader(retryCount > 0) + ":" +
-          streamID + ":" +
-          opType + ":" +
-          getRetryHeader(previousFailure, retryPolicyAbbreviation) + ":" +
-          ingressHandler + ":" +
-          position + ":" +
-          operatedBlobCount + ":" +
-          httpOperation.getTracingContextSuffix() + ":" +
-          getOperationSpecificHeader(opType);
+      header = TracingHeaderVersion.V1.getVersion() + COLON
+          + clientCorrelationID + COLON
+          + clientRequestId + COLON
+          + fileSystemID + COLON
+          + getPrimaryRequestIdForHeader(retryCount > 0) + COLON
+          + streamID + COLON
+          + opType + COLON
+          + getRetryHeader(previousFailure, retryPolicyAbbreviation) + COLON
+          + ingressHandler + COLON
+          + position + COLON
+          + operatedBlobCount + COLON
+          + httpOperation.getTracingContextSuffix() + COLON
+          + getOperationSpecificHeader(opType);
 
-      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : "";
+      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : EMPTY_STRING;
       break;
     case TWO_ID_FORMAT:
-      header =
-          AbfsHttpConstants.TracingHeaderVersion.V1 + ":" +
-          clientCorrelationID + ":" + clientRequestId;
-      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : "";
+      header = TracingHeaderVersion.V1.getVersion() + COLON
+          + clientCorrelationID + COLON + clientRequestId;
+      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : EMPTY_STRING;
       break;
     default:
       //case SINGLE_ID_FORMAT
-      header =
-          AbfsHttpConstants.TracingHeaderVersion.V1 + ":" +
-          clientRequestId;
-      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : "";
+      header = TracingHeaderVersion.V1.getVersion() + COLON
+          + clientRequestId;
+      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : EMPTY_STRING;
     }
     if (listener != null) { //for testing
       listener.callTracingHeaderValidator(header, format);
@@ -258,7 +256,7 @@ public class TracingContext {
     * of the x-ms-client-request-id header in case of retry of the same API-request.
     */
     if (primaryRequestId.isEmpty() && previousFailure == null) {
-      String[] clientRequestIdParts = clientRequestId.split("-");
+      String[] clientRequestIdParts = clientRequestId.split(HYPHEN);
       primaryRequestIdForRetry = clientRequestIdParts[
           clientRequestIdParts.length - 1];
     }
