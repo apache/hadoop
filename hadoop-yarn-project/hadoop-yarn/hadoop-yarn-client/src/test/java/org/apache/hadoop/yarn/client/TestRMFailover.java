@@ -124,7 +124,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
 
   private void verifyConnections() throws InterruptedException, YarnException {
     assertTrue(
-       cluster.waitForNodeManagersToConnect(20000), "NMs failed to connect to the RM");
+        cluster.waitForNodeManagersToConnect(20000), "NMs failed to connect to the RM");
     verifyClientConnection();
   }
 
@@ -145,7 +145,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
     int activeRMIndex = cluster.getActiveRMIndex();
     cluster.stopResourceManager(activeRMIndex);
     assertEquals(
-       (activeRMIndex + 1) % 2, cluster.getActiveRMIndex(), "Failover failed");
+        (activeRMIndex + 1) % 2, cluster.getActiveRMIndex(), "Failover failed");
     cluster.restartResourceManager(activeRMIndex);
   }
 
