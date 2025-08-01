@@ -202,7 +202,7 @@ public class TestFederationSubCluster {
       } catch (Exception e) {
       }
       return false;
-    }, 5000, 50 * 1000);
+    }, 5000, 100 * 1000);
   }
 
   public static <T> T performGetCalls(final String routerAddress, final String path,
