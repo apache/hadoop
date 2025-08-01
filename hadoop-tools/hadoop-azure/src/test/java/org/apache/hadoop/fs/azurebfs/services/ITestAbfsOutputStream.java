@@ -33,6 +33,7 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -427,7 +428,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
             Mockito.any(TracingContext.class));
     Mockito.verify(blobClient, Mockito.times(1)).
         flush(Mockito.any(byte[].class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.any(), Mockito.any(), Mockito.anyString(), Mockito.any(),
-            Mockito.any(TracingContext.class), Mockito.anyString());
+            Mockito.any(TracingContext.class), Mockito.nullable(String.class));
   }
 
   /**
@@ -481,6 +482,8 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
       //expected exception
     }
     // Verify that reset was called on the message digest
-    Mockito.verify(mockMessageDigest, Mockito.times(1)).reset();
+    if (spiedClient.isChecksumValidationEnabled()) {
+      Mockito.verify(mockMessageDigest, Mockito.times(1)).reset();
+    }
   }
 }

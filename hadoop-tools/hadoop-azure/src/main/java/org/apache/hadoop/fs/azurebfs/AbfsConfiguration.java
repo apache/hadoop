@@ -434,6 +434,10 @@ public class AbfsConfiguration{
   private boolean isChecksumValidationEnabled;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ABFS_ENABLE_FULL_BLOB_CHECKSUM_VALIDATION, DefaultValue = DEFAULT_ENABLE_FULL_BLOB_ABFS_CHECKSUM_VALIDATION)
+  private boolean isFullBlobChecksumValidationEnabled;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_ENABLE_PAGINATED_DELETE, DefaultValue = DEFAULT_ENABLE_PAGINATED_DELETE)
   private boolean isPaginatedDeleteEnabled;
 
@@ -1690,6 +1694,10 @@ public class AbfsConfiguration{
   @VisibleForTesting
   public void setIsChecksumValidationEnabled(boolean isChecksumValidationEnabled) {
     this.isChecksumValidationEnabled = isChecksumValidationEnabled;
+  }
+
+  public boolean isFullBlobChecksumValidationEnabled() {
+    return isFullBlobChecksumValidationEnabled;
   }
 
   public long getBlobCopyProgressPollWaitMillis() {

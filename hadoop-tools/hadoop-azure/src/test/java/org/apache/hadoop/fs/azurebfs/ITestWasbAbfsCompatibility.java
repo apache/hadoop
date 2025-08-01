@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ABFS_ENABLE_FULL_BLOB_CHECKSUM_VALIDATION;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDeleted;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsDirectory;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
@@ -113,7 +114,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     boolean[] createFileWithAbfs = new boolean[]{false, true, false, true};
     boolean[] readFileWithAbfs = new boolean[]{false, true, true, false};
 
-    AzureBlobFileSystem abfs = getFileSystem();
+    Configuration conf = getRawConfiguration();
+    conf.setBoolean(FS_AZURE_ABFS_ENABLE_FULL_BLOB_CHECKSUM_VALIDATION, true);
+    FileSystem fileSystem = FileSystem.newInstance(conf);
+    AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
     // test only valid for non-namespace enabled account
     Assume.assumeFalse("Namespace enabled account does not support this test",
         getIsNamespaceEnabled(abfs));
@@ -412,7 +416,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario3() throws Exception {
-    AzureBlobFileSystem abfs = getFileSystem();
+    Configuration conf = getRawConfiguration();
+    conf.setBoolean(FS_AZURE_ABFS_ENABLE_FULL_BLOB_CHECKSUM_VALIDATION, true);
+    FileSystem fileSystem = FileSystem.newInstance(conf);
+    AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
     Assume.assumeFalse("Namespace enabled account does not support this test",
         getIsNamespaceEnabled(abfs));
     Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
