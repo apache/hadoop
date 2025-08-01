@@ -330,7 +330,9 @@ public class DFSStripedOutputStream extends DFSOutputStream
     int failedBlocksToleratedTmp = dfsClient.getConfiguration().getInt(
         DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED,
         DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED_DEFAILT);
-
+    if (failedBlocksToleratedTmp < 0) {
+      failedBlocksToleratedTmp = ecPolicy.getNumParityUnits();
+    }
     failedBlocksTolerated = Math.min(failedBlocksToleratedTmp,
         ecPolicy.getNumParityUnits());
   }
