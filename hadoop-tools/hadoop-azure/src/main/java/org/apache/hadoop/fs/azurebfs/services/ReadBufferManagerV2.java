@@ -570,9 +570,7 @@ final class ReadBufferManagerV2 extends ReadBufferManager {
       printTraceLog("Dynamic scaling is disabled, skipping memory upscale");
       return false; // Dynamic scaling is disabled, so no upscaling.
     }
-    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
-    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
-    double memoryLoad = (double) memoryUsage.getUsed() / memoryUsage.getMax();
+    double memoryLoad = getMemoryLoad();
     if (memoryLoad < memoryThreshold && numberOfActiveBuffers < maxBufferPoolSize) {
       // Create and Add more buffers in getFreeList().
       if (removedBufferList.isEmpty()) {
@@ -608,9 +606,7 @@ final class ReadBufferManagerV2 extends ReadBufferManager {
       }
     }
 
-    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
-    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
-    double memoryLoad = (double) memoryUsage.getUsed() / memoryUsage.getMax();
+    double memoryLoad = getMemoryLoad();
     if (memoryLoad > memoryThreshold) {
       synchronized (this) {
         int freeIndex = getFreeList().pop();
@@ -765,5 +761,12 @@ final class ReadBufferManagerV2 extends ReadBufferManager {
 
   private void printDebugLog(String message, Object... args) {
     LOGGER.debug(message, args);
+  }
+
+  @VisibleForTesting
+  double getMemoryLoad() {
+    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
+    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
+    return (double) memoryUsage.getUsed() / memoryUsage.getMax();
   }
 }
