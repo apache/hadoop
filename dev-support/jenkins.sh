@@ -124,8 +124,7 @@ function run_ci() {
     YETUS_ARGS+=("--mvn-custom-repos")
     YETUS_ARGS+=("--dockermemlimit=22g")
 
-    # test with Java 11 and 17
-    YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-11-openjdk-amd64")
+    # test with Java 17
     YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-17-openjdk-amd64")
     YETUS_ARGS+=("--multijdktests=compile")
   fi
