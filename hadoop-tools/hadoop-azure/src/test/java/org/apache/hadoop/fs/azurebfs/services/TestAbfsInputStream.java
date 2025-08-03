@@ -100,6 +100,9 @@ public class TestAbfsInputStream extends
   private static final int INCREASED_READ_BUFFER_AGE_THRESHOLD =
       REDUCED_READ_BUFFER_AGE_THRESHOLD * 10; // 30 sec
   private static final int ALWAYS_READ_BUFFER_SIZE_TEST_FILE_SIZE = 16 * ONE_MB;
+  private static final int POSITION_INDEX = 9;
+  private static final int OPERATION_INDEX = 6;
+  private static final int READTYPE_INDEX = 11;
 
   @Override
   public void teardown() throws Exception {
@@ -929,27 +932,36 @@ public class TestAbfsInputStream extends
     if (readType == PREFETCH_READ) {
       // For Prefetch Enabled, first read can be Normal or Missed Cache Read.
       // We will assert only for last 2 calls.
+      // Since calls are asynchronous, we can not guarantee the order of calls.
+      // Therefore we cannot assert on position here.
       for (int i = tracingContextList.size() - (numOfReadCalls - 1); i < tracingContextList.size(); i++) {
-        verifyHeaderForReadTypeInTracingContextHeader(tracingContextList.get(i), readType);
+        verifyHeaderForReadTypeInTracingContextHeader(tracingContextList.get(i), readType, -1);
       }
     } else {
+      int expectedReadPos = 0;
       for (int i = tracingContextList.size() - numOfReadCalls; i < tracingContextList.size(); i++) {
-        verifyHeaderForReadTypeInTracingContextHeader(tracingContextList.get(i), readType);
+        verifyHeaderForReadTypeInTracingContextHeader(tracingContextList.get(i), readType, expectedReadPos);
+        expectedReadPos += ONE_MB;
       }
     }
   }
 
-  private void verifyHeaderForReadTypeInTracingContextHeader(TracingContext tracingContext, ReadType readType) {
+  private void verifyHeaderForReadTypeInTracingContextHeader(TracingContext tracingContext, ReadType readType, int expectedReadPos) {
     AbfsHttpOperation mockOp = Mockito.mock(AbfsHttpOperation.class);
     doReturn(EMPTY_STRING).when(mockOp).getTracingContextSuffix();
     tracingContext.constructHeader(mockOp, null, null);
     String[] idList = tracingContext.getHeader().split(COLON, SPLIT_NO_LIMIT);
     Assertions.assertThat(idList).describedAs("Client Request Id should have all fields").hasSize(
         TracingHeaderVersion.getCurrentVersion().getFieldCount());
-    Assertions.assertThat(tracingContext.getHeader()).describedAs("Operation Type Should Be Read")
-        .contains(FSOperationType.READ.toString());
-    Assertions.assertThat(tracingContext.getHeader()).describedAs("Read type in tracing context header should match")
-        .contains(readType.toString());
+    if (expectedReadPos > 0) {
+      Assertions.assertThat(idList[POSITION_INDEX])
+          .describedAs("Read Position should match")
+          .isEqualTo(Integer.toString(expectedReadPos));
+    }
+    Assertions.assertThat(idList[OPERATION_INDEX]).describedAs("Operation Type Should Be Read")
+        .isEqualTo(FSOperationType.READ.toString());
+    Assertions.assertThat(idList[READTYPE_INDEX]).describedAs("Read type in tracing context header should match")
+        .isEqualTo(readType.toString());
   }
 
 
