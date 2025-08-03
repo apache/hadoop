@@ -119,13 +119,6 @@ public abstract class ReadBufferManager {
    */
   abstract void purgeBuffersForStream(AbfsInputStream stream);
 
-  public void close() {
-    closeReadBufferManager();
-  }
-
-  abstract void closeReadBufferManager();
-
-
   // Following Methods are for testing purposes only and should not be used in production code.
 
   /**

@@ -352,11 +352,9 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     purgeList(stream, getCompletedReadList());
   }
 
-  @Override
   public void closeReadBufferManager() {
     printTraceLog("Closing ReadBufferManagerV2");
-    HadoopExecutors.shutdown(workerPool, LOGGER,
-        30, TimeUnit.SECONDS);
+    workerPool.shutdownNow();
     workerPool = null;
     if (bufferPool != null) {
       // help GC

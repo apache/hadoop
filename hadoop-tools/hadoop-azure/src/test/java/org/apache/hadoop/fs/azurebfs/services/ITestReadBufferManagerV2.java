@@ -51,7 +51,7 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
   public void testReadBufferManagerV2() throws Exception {
     Map<String, String> configMap = new HashMap<>();
     configMap.put(FS_AZURE_READ_AHEAD_BLOCK_SIZE, String.valueOf(4 * ONE_MB));
-    try (AzureBlobFileSystem fs = getConfiguredFileSystem(false, configMap)) {
+    try (AzureBlobFileSystem fs = getConfiguredFileSystem(true, configMap)) {
       int numOfFiles = LESS_NUM_FILES;
       Path[] testPaths = createFilesWithContent(fs, numOfFiles);
       ExecutorService executorService = Executors.newFixedThreadPool(

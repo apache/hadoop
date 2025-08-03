@@ -327,10 +327,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       HadoopExecutors.shutdown(boundedThreadPool, LOG,
           30, TimeUnit.SECONDS);
       boundedThreadPool = null;
-      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
-      ReadBufferManagerV1 bufferManagerV1 = ReadBufferManagerV1.getBufferManager();
-      bufferManagerV1.close();
-      bufferManagerV2.close();
+      if (getAbfsConfiguration().isReadAheadV2Enabled()) {
+        ReadBufferManagerV2.getBufferManager().closeReadBufferManager();
+      }
     } catch (InterruptedException e) {
       LOG.error("Interrupted freeing leases", e);
       Thread.currentThread().interrupt();

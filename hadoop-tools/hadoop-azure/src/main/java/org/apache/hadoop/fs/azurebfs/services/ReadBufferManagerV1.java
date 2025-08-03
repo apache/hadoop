@@ -542,13 +542,6 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
     }
   }
 
-  @Override
-  public void closeReadBufferManager() {
-    // no-op, as this is a singleton and should not be closed
-    // the buffers will be cleaned up when the JVM exits
-    LOGGER.debug("ReadBufferManagerV1 close called, but no action taken as it is a singleton.");
-  }
-
   /**
    * {@inheritDoc}
    */
