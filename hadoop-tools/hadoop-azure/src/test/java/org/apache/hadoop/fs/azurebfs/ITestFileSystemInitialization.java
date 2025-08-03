@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.net.URI;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -34,7 +34,6 @@ import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_AVAILABLE;
 import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME;
 import static org.apache.hadoop.fs.CommonPathCapabilities.FS_ACLS;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
-import static org.junit.Assume.assumeTrue;
 
 /**
  * Test AzureBlobFileSystem initialization.
@@ -52,13 +51,8 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
 
     String scheme = this.getAuthType() == AuthType.SharedKey ? FileSystemUriSchemes.ABFS_SCHEME
             : FileSystemUriSchemes.ABFS_SECURE_SCHEME;
-    assertEquals(fs.getUri(),
-        new URI(scheme,
-            filesystem + "@" + accountName,
-            null,
-            null,
-            null));
-    assertNotNull("working directory", fs.getWorkingDirectory());
+    assertEquals(fs.getUri(), new URI(scheme,filesystem + "@" + accountName,null,null,null));
+    assertNotNull(fs.getWorkingDirectory(), "working directory");
   }
 
   @Test
@@ -74,12 +68,10 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
     rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri.toString());
 
     try(SecureAzureBlobFileSystem fs = (SecureAzureBlobFileSystem) FileSystem.newInstance(rawConfig)) {
-      assertEquals(fs.getUri(), new URI(FileSystemUriSchemes.ABFS_SECURE_SCHEME,
-          filesystem + "@" + accountName,
-          null,
-          null,
-          null));
-      assertNotNull("working directory", fs.getWorkingDirectory());
+      assertEquals(fs.getUri(),
+          new URI(FileSystemUriSchemes.ABFS_SECURE_SCHEME,filesystem + "@" +
+          accountName,null,null,null));
+      assertNotNull(fs.getWorkingDirectory(), "working directory");
     }
   }
 

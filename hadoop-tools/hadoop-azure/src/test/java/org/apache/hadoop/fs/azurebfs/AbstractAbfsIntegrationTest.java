@@ -29,9 +29,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Assume;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +74,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.FILE_SYSTEM_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Base for AzureBlobFileSystem Integration tests.
@@ -113,8 +113,8 @@ public abstract class AbstractAbfsIntegrationTest extends
       // check if accountName is set using different config key
       accountName = rawConfig.get(FS_AZURE_ABFS_ACCOUNT_NAME);
     }
-    assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT_NAME,
-            accountName != null && !accountName.isEmpty());
+    assumeTrue(accountName != null && !accountName.isEmpty(),
+        "Not set: " + FS_AZURE_ABFS_ACCOUNT_NAME);
 
     final String abfsUrl = this.getFileSystemName() + "@" + this.getAccountName();
     URI defaultUri = null;
@@ -190,7 +190,7 @@ public abstract class AbstractAbfsIntegrationTest extends
         FSOperationType.TEST_OP, needsPrimaryReqId, format, null);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     //Create filesystem first to make sure getWasbFileSystem() can return an existing filesystem.
     createFileSystem();
@@ -224,7 +224,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     }
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     try {
       IOUtils.closeStream(wasb);
@@ -568,23 +568,22 @@ public abstract class AbstractAbfsIntegrationTest extends
    */
   protected long assertAbfsStatistics(AbfsStatistic statistic,
       long expectedValue, Map<String, Long> metricMap) {
-    assertEquals("Mismatch in " + statistic.getStatName(), expectedValue,
-        (long) metricMap.get(statistic.getStatName()));
+    assertEquals(expectedValue, (long) metricMap.get(statistic.getStatName()),
+        "Mismatch in " + statistic.getStatName());
     return expectedValue;
   }
 
   protected void assumeValidTestConfigPresent(final Configuration conf, final String key) {
     String configuredValue = conf.get(accountProperty(key, accountName),
         conf.get(key, ""));
-    Assume.assumeTrue(String.format("Missing Required Test Config: %s.", key),
-        !configuredValue.isEmpty());
+    assumeTrue(!configuredValue.isEmpty(),
+        String.format("Missing Required Test Config: %s.", key));
   }
 
   protected void assumeValidAuthConfigsPresent() {
     final AuthType currentAuthType = getAuthType();
-    Assume.assumeFalse(
-        "SAS Based Authentication Not Allowed For Integration Tests",
-        currentAuthType == AuthType.SAS);
+    assumeFalse(currentAuthType == AuthType.SAS,
+        "SAS Based Authentication Not Allowed For Integration Tests");
     if (currentAuthType == AuthType.SharedKey) {
       assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_ACCOUNT_KEY);
     } else {
@@ -615,7 +614,7 @@ public abstract class AbstractAbfsIntegrationTest extends
    * @param path path to create. Can be relative or absolute.
    */
   protected void createAzCopyFolder(Path path) throws Exception {
-    Assume.assumeTrue(getAbfsServiceType() == AbfsServiceType.BLOB);
+    assumeTrue(getAbfsServiceType() == AbfsServiceType.BLOB);
     assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_FIXED_SAS_TOKEN);
     String sasToken = getRawConfiguration().get(FS_AZURE_TEST_FIXED_SAS_TOKEN);
     AzcopyToolHelper azcopyHelper = AzcopyToolHelper.getInstance(sasToken);
@@ -627,7 +626,7 @@ public abstract class AbstractAbfsIntegrationTest extends
    * @param path path to create. Can be relative or absolute.
    */
   protected void createAzCopyFile(Path path) throws Exception {
-    Assume.assumeTrue(getAbfsServiceType() == AbfsServiceType.BLOB);
+    assumeTrue(getAbfsServiceType() == AbfsServiceType.BLOB);
     assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_FIXED_SAS_TOKEN);
     String sasToken = getRawConfiguration().get(FS_AZURE_TEST_FIXED_SAS_TOKEN);
     AzcopyToolHelper azcopyHelper = AzcopyToolHelper.getInstance(sasToken);
@@ -645,8 +644,8 @@ public abstract class AbstractAbfsIntegrationTest extends
    * Otherwise, the test will be skipped.
    */
   protected void assumeBlobServiceType() {
-    Assume.assumeTrue("Blob service type is required for this test",
-        getAbfsServiceType() == AbfsServiceType.BLOB);
+    assumeTrue(getAbfsServiceType() == AbfsServiceType.BLOB,
+        "Blob service type is required for this test");
   }
 
   /**
@@ -654,8 +653,8 @@ public abstract class AbstractAbfsIntegrationTest extends
    * Otherwise, the test will be skipped.
    */
   protected void assumeDfsServiceType() {
-    Assume.assumeTrue("DFS service type is required for this test",
-        getAbfsServiceType() == AbfsServiceType.DFS);
+    assumeTrue(getAbfsServiceType() == AbfsServiceType.DFS,
+        "DFS service type is required for this test");
   }
 
   /**
@@ -673,7 +672,7 @@ public abstract class AbstractAbfsIntegrationTest extends
    * @throws IOException if an error occurs while checking the account type.
    */
   protected void assumeHnsEnabled(String errorMessage) throws IOException {
-    Assume.assumeTrue(errorMessage, getIsNamespaceEnabled(getFileSystem()));
+    assumeTrue(getIsNamespaceEnabled(getFileSystem()), errorMessage);
   }
 
   /**
@@ -691,7 +690,7 @@ public abstract class AbstractAbfsIntegrationTest extends
    * @throws IOException if an error occurs while checking the account type.
    */
   protected void assumeHnsDisabled(String message) throws IOException {
-    Assume.assumeFalse(message, getIsNamespaceEnabled(getFileSystem()));
+    assumeFalse(getIsNamespaceEnabled(getFileSystem()), message);
   }
 
   /**
@@ -748,19 +747,18 @@ public abstract class AbstractAbfsIntegrationTest extends
   protected void assumeRecoveryThroughClientTransactionID(boolean isCreate)
       throws IOException {
     // Assumes that recovery through client transaction ID is enabled.
-    Assume.assumeTrue("Recovery through client transaction ID is not enabled",
-        getConfiguration().getIsClientTransactionIdEnabled());
+    assumeTrue(getConfiguration().getIsClientTransactionIdEnabled(),
+        "Recovery through client transaction ID is not enabled");
     // Assumes that service type is DFS.
     assumeDfsServiceType();
     // Assumes that namespace is enabled for the given AzureBlobFileSystem.
     assumeHnsEnabled();
     if (isCreate) {
       // Assume that create client is DFS client.
-      Assume.assumeTrue("Ingress service type is not DFS",
-          AbfsServiceType.DFS.equals(getIngressServiceType()));
+      assumeTrue(AbfsServiceType.DFS.equals(getIngressServiceType()),
+          "Ingress service type is not DFS");
       // Assume that append blob is not enabled in DFS client.
-      Assume.assumeFalse("Append blob is enabled in DFS client",
-          isAppendBlobEnabled());
+      assumeFalse(isAppendBlobEnabled(), "Append blob is enabled in DFS client");
     }
   }
 }

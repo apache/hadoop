@@ -25,8 +25,7 @@ import java.util.EnumSet;
 import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +46,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDeleted;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsDirectory;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test compatibility between ABFS client and WASB client.
@@ -68,7 +69,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       LoggerFactory.getLogger(ITestWasbAbfsCompatibility.class);
 
   public ITestWasbAbfsCompatibility() throws Exception {
-    Assume.assumeFalse("Emulator is not supported", isIPAddress());
+    assumeFalse(isIPAddress(), "Emulator is not supported");
   }
 
   @Test
@@ -76,9 +77,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     // crate file using abfs
     AzureBlobFileSystem fs = getFileSystem();
     // test only valid for non-namespace enabled account
-    Assume.assumeFalse("Namespace enabled account does not support this test,",
-        getIsNamespaceEnabled(fs));
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(getIsNamespaceEnabled(fs),
+        "Namespace enabled account does not support this test,");
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
@@ -115,9 +116,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     AzureBlobFileSystem abfs = getFileSystem();
     // test only valid for non-namespace enabled account
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
@@ -140,8 +141,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(readFs.open(path)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + readFs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + readFs);
       }
 
       // Remove file
@@ -156,10 +156,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
   @Test
   public void testwriteFile() throws Exception {
     AzureBlobFileSystem abfs = getFileSystem();
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -177,8 +177,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     try (FSDataOutputStream abfsOutputStream = abfs.append(path)) {
       abfsOutputStream.write(TEST_CONTEXT.getBytes());
@@ -197,10 +196,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
   @Test
   public void testwriteFile1() throws Exception {
     AzureBlobFileSystem abfs = getFileSystem();
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -237,9 +236,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
   @Test
   public void testazcopywasbcompatibility() throws Exception {
     AzureBlobFileSystem abfs = getFileSystem();
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
 
     Path testFile = path("/testReadFile");
     Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
@@ -262,8 +261,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     AzureBlobFileSystem abfs = getFileSystem();
     // test only valid for non-namespace enabled account
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
@@ -301,8 +300,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     //create folders
     AzureBlobFileSystem abfs = getFileSystem();
     // test only valid for non-namespace enabled account
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
@@ -336,8 +335,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
   @Test
   public void testScenario1() throws Exception {
     AzureBlobFileSystem abfs = getFileSystem();
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -355,8 +354,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
 
     // Remove file
@@ -370,10 +368,11 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
   @Test
   public void testScenario2() throws Exception {
     AzureBlobFileSystem abfs = getFileSystem();
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(isAppendBlobEnabled(),
+        "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -391,8 +390,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
 
     // Write
@@ -413,9 +411,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
   @Test
   public void testScenario3() throws Exception {
     AzureBlobFileSystem abfs = getFileSystem();
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -434,8 +432,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(wasb.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + wasb,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + wasb);
     }
     // Remove file
     assertDeleted(abfs, path, true);
@@ -448,10 +445,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
   @Test
   public void testScenario4() throws Exception {
     AzureBlobFileSystem abfs = getFileSystem();
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -487,10 +484,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, false);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -510,8 +507,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
 
     // Remove file
@@ -528,9 +524,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     assumeBlobServiceType();
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
@@ -551,8 +547,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
 
     // Remove file
@@ -569,9 +564,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -589,8 +584,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     abfs.create(path, true);
     FileStatus fileStatus = abfs.getFileStatus(path);
@@ -612,9 +606,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(getIsNamespaceEnabled(abfs));
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -632,8 +625,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     try {
       abfs.create(path, false);
@@ -663,10 +655,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -684,8 +676,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     wasb.create(path, true);
     FileStatus fileStatus = abfs.getFileStatus(path);
@@ -708,8 +699,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -727,8 +718,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     try {
       wasb.create(path, false);
@@ -759,10 +749,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -782,8 +772,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     abfs.delete(path, true);
   }
@@ -799,8 +788,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -819,8 +808,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     wasb.delete(path, true);
   }
@@ -835,10 +823,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -858,8 +846,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(wasb.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + wasb,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + wasb);
     }
     abfs.delete(path, true);
   }
@@ -874,10 +861,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -897,8 +884,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(wasb.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + wasb,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + wasb);
     }
     wasb.delete(path, true);
   }
@@ -913,8 +899,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -933,8 +919,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(wasb.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + wasb,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + wasb);
     }
     abfs.delete(path, true);
   }
@@ -949,10 +934,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -972,8 +957,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     wasb.delete(path, true);
   }
@@ -988,8 +972,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     Path testFile = path("/testReadFile");
     Path path = new Path(testFile + "/~12/!008/testfile_" + UUID.randomUUID());
 
@@ -1030,8 +1014,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1074,8 +1058,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1120,9 +1104,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1172,10 +1156,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1225,8 +1209,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1276,8 +1260,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1321,9 +1305,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1368,8 +1352,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1414,9 +1398,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1459,9 +1443,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1481,8 +1465,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(testPath1)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     // --- RENAME FILE ---
     boolean renamed = wasb.rename(testPath1, testPath2);
@@ -1509,8 +1492,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1530,8 +1513,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(testPath1)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     // --- RENAME FILE ---
     boolean renamed = abfs.rename(testPath1, testPath2);
@@ -1558,10 +1540,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1582,8 +1564,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(testPath1)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     // --- RENAME FILE ---
     boolean renamed = abfs.rename(testPath1, testPath2);
@@ -1610,8 +1591,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1632,8 +1613,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(testPath1)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     // --- RENAME FILE ---
     boolean renamed = wasb.rename(testPath1, testPath2);
@@ -1666,8 +1646,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1687,8 +1667,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(testPath1)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     wasb.delete(testPath1, true);
 
@@ -1709,8 +1688,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1735,8 +1714,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(testPath1)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     // --- RENAME DIR ---
     boolean renamed = abfs.rename(testFile, testFile1);
@@ -1760,9 +1738,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
+    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1787,8 +1765,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(testPath1)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     // --- RENAME DIR ---
     boolean renamed = wasb.rename(testFile, testFile1);
@@ -1812,8 +1789,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1836,8 +1813,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(testPath1)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     // --- RENAME DIR ---
     boolean renamed = wasb.rename(testPath1, testPath2);
@@ -1861,8 +1837,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1885,8 +1861,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(testPath1)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     // --- RENAME DIR ---
     boolean renamed = abfs.rename(testPath1, testPath2);
@@ -1911,8 +1886,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1934,8 +1909,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(testPath1)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     // --- RENAME DIR ---
     boolean renamed = abfs.rename(testFile, testFile);
@@ -1954,8 +1928,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -1978,8 +1952,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(testPath1)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     // --- RENAME NON EXISTENT FILE ---
     boolean renamed = wasb.rename(testPath2, testPath3);
@@ -1998,8 +1971,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");
@@ -2047,8 +2020,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeFalse("Namespace enabled account does not support this test",
-        getIsNamespaceEnabled(abfs));
+    assumeFalse(getIsNamespaceEnabled(abfs),
+        "Namespace enabled account does not support this test");
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     String testRunId = UUID.randomUUID().toString();
@@ -2073,8 +2046,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(testPath1)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     // --- RENAME DIR ---
     boolean renamed = wasb.rename(testPath1, testPath2);

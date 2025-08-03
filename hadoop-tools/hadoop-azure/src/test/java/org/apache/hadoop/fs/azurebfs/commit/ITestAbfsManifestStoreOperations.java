@@ -40,7 +40,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestSt
 
 import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME;
 import static org.apache.hadoop.fs.azurebfs.commit.AbfsCommitTestHelper.prepareTestConfiguration;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test {@link AbfsManifestStoreOperations}.
@@ -68,10 +68,8 @@ public class ITestAbfsManifestStoreOperations extends AbstractManifestCommitterT
     super.setup();
 
     // skip tests on non-HNS stores
-    assumeTrue("Resilient rename not available",
-        getFileSystem().hasPathCapability(getContract().getTestPath(),
-            ETAGS_PRESERVED_IN_RENAME));
-
+    assumeTrue(getFileSystem().hasPathCapability(getContract().getTestPath(),
+        ETAGS_PRESERVED_IN_RENAME), "Resilient rename not available");
   }
 
   @Override

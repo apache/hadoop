@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.UUID;
 
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -44,6 +44,7 @@ import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test Perform Authorization Check operation
@@ -58,14 +59,15 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
 
   public ITestAzureBlobFileSystemAuthorization() throws Exception {
     // The mock SAS token provider relies on the account key to generate SAS.
-    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
+    assumeTrue(this.getAuthType() == AuthType.SharedKey);
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     boolean isHNSEnabled = getConfiguration().getBoolean(
         TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
-    Assume.assumeTrue(isHNSEnabled);
+    assumeTrue(isHNSEnabled);
     loadConfiguredFileSystem();
     getConfiguration().set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_AUTHZ_CLASS);
     getConfiguration().set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SAS.toString());
@@ -216,55 +218,55 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
 
   @Test
   public void testSetOwnerUnauthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.SetOwner, true);
   }
 
   @Test
   public void testSetPermissionUnauthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.SetPermissions, true);
   }
 
   @Test
   public void testModifyAclEntriesUnauthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.ModifyAclEntries, true);
   }
 
   @Test
   public void testRemoveAclEntriesUnauthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.RemoveAclEntries, true);
   }
 
   @Test
   public void testRemoveDefaultAclUnauthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.RemoveDefaultAcl, true);
   }
 
   @Test
   public void testRemoveAclUnauthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.RemoveAcl, true);
   }
 
   @Test
   public void testSetAclUnauthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.SetAcl, true);
   }
 
   @Test
   public void testGetAclStatusAuthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.GetAcl, false);
   }
 
   @Test
   public void testGetAclStatusUnauthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.GetAcl, true);
   }
 

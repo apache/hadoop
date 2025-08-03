@@ -27,9 +27,8 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.CommonPathCapabilities;
@@ -57,6 +56,7 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.EXPONE
 import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.STATIC_RETRY_POLICY_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_ABBREVIATION;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestTracingContext extends AbstractAbfsIntegrationTest {
   private static final String[] CLIENT_CORRELATIONID_LIST = {
@@ -128,7 +128,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     }
   }
 
-  @Ignore
+  @Disabled
   @Test
   //call test methods from the respective test classes
   //can be ignored when running all tests as these get covered
@@ -203,9 +203,9 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     fs.getAbfsStore().getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
     fs.hasPathCapability(new Path("/"), CommonPathCapabilities.FS_ACLS);
 
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
-    Assume.assumeTrue(getConfiguration().isCheckAccessEnabled());
-    Assume.assumeTrue(getAuthType() == AuthType.OAuth);
+    assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeTrue(getConfiguration().isCheckAccessEnabled());
+    assumeTrue(getAuthType() == AuthType.OAuth);
 
     fs.setListenerOperation(FSOperationType.ACCESS);
     fs.getAbfsStore().getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.TRUE);

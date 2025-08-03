@@ -27,7 +27,6 @@ import java.net.URI;
 import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.Assume;
 import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX;
@@ -394,7 +394,7 @@ public final class AzureTestUtils extends Assertions {
     if (!condition) {
       LOG.warn(message);
     }
-    Assume.assumeTrue(message, condition);
+    assumeTrue(condition, message);
   }
 
   /**
@@ -550,7 +550,7 @@ public final class AzureTestUtils extends Assertions {
    * Assume hierarchical namespace is disabled for test account.
    */
   public static void assumeNamespaceDisabled(Configuration conf) {
-    Assume.assumeFalse("Hierarchical namespace is enabled for test account.",
-        conf.getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false));
+    assumeFalse(conf.getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false),
+        "Hierarchical namespace is enabled for test account.");
   }
 }

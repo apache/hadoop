@@ -43,8 +43,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Random;
@@ -57,6 +56,8 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
 
@@ -73,8 +74,8 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
   private void checkIfConfigIsSet(String configKey){
     AbfsConfiguration conf = getConfiguration();
     String value = conf.get(configKey);
-    Assume.assumeTrue(configKey + " config is mandatory for the test to run",
-        value != null && value.trim().length() > 1);
+    assumeTrue(value != null && value.trim().length() > 1,
+        configKey + " config is mandatory for the test to run");
   }
 
   private static final String TEST_PATH = "/testfile";
@@ -127,8 +128,9 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
    */
   private void assertMetricsEquality(AzureBlobFileSystem fs, String expectedMetrics) {
     AbfsReadFooterMetrics actualMetrics = fs.getAbfsClient().getAbfsCounters().getAbfsReadFooterMetrics();
-    assertNotNull("AbfsReadFooterMetrics is null", actualMetrics);
-    assertEquals("The computed metrics differs from the actual metrics", expectedMetrics, actualMetrics.toString());
+    assertNotNull(actualMetrics, "AbfsReadFooterMetrics is null");
+    assertEquals(expectedMetrics, actualMetrics.toString(),
+        "The computed metrics differs from the actual metrics");
   }
 
   /**
@@ -188,7 +190,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
             IOSTATISTICS_LOGGING_LEVEL_INFO, statisticsSource);
 
     // Ensure data is read successfully and matches the written data.
-    assertNotEquals("data read in final read()", -1, result);
+    assertNotEquals(-1, result, "data read in final read()");
     assertArrayEquals(readBuffer, b);
 
     // Get non-Parquet metrics and assert metrics equality.

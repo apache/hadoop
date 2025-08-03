@@ -23,9 +23,8 @@ import java.util.Collection;
 import java.util.UUID;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -35,6 +34,8 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.azurebfs.utils.Parallelized;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test permission operations.
@@ -77,8 +78,8 @@ public class ITestAzureBlobFileSystemPermission extends AbstractAbfsIntegrationT
   public void testFilePermission() throws Exception {
 
     final AzureBlobFileSystem fs = this.getFileSystem();
-    Assume.assumeTrue(getIsNamespaceEnabled(fs));
-    Assume.assumeTrue(getIngressServiceType() == AbfsServiceType.DFS);
+    assumeTrue(getIsNamespaceEnabled(fs));
+    assumeTrue(getIngressServiceType() == AbfsServiceType.DFS);
     fs.getConf().set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, DEFAULT_UMASK_VALUE);
     path = new Path(testRoot, UUID.randomUUID().toString());
 
@@ -89,14 +90,14 @@ public class ITestAzureBlobFileSystemPermission extends AbstractAbfsIntegrationT
     fs.create(path, permission, true, KILOBYTE, (short) 1, KILOBYTE - 1,
         null).close();
     FileStatus status = fs.getFileStatus(path);
-    Assert.assertEquals(permission.applyUMask(DEFAULT_UMASK_PERMISSION), status.getPermission());
+    Assertions.assertEquals(permission.applyUMask(DEFAULT_UMASK_PERMISSION), status.getPermission());
   }
 
   @Test
   public void testFolderPermission() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    Assume.assumeTrue(getIsNamespaceEnabled(fs));
-    Assume.assumeTrue(getIngressServiceType() == AbfsServiceType.DFS);
+    assumeTrue(getIsNamespaceEnabled(fs));
+    assumeTrue(getIngressServiceType() == AbfsServiceType.DFS);
     fs.getConf().set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "027");
 
     path = new Path(testRoot, UUID.randomUUID().toString());
@@ -107,6 +108,6 @@ public class ITestAzureBlobFileSystemPermission extends AbstractAbfsIntegrationT
 
     fs.mkdirs(path, permission);
     FileStatus status = fs.getFileStatus(path);
-    Assert.assertEquals(permission.applyUMask(DEFAULT_UMASK_PERMISSION), status.getPermission());
+    Assertions.assertEquals(permission.applyUMask(DEFAULT_UMASK_PERMISSION), status.getPermission());
   }
 }

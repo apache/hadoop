@@ -35,7 +35,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -917,7 +917,7 @@ public class ITestAzureBlobFileSystemCreate extends
           // the exception raised in close() must be in the caught exception's
           // suppressed list
           Throwable[] suppressed = fnfe.getSuppressed();
-          assertEquals("suppressed count", 1, suppressed.length);
+          assertEquals(1, suppressed.length, "suppressed count");
           Throwable inner = suppressed[0];
           if (!(inner instanceof IOException)) {
             throw inner;
