@@ -220,10 +220,10 @@ public class DataNodeTestUtils {
     }
     try {
       assertEquals(
-          dn.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY),
           dn.reconfigurePropertyImpl(
               DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
-              dnNewDataDirs.toString())
+              dnNewDataDirs.toString()),
+          dn.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY)
       );
     } catch (ReconfigurationException e) {
       // This can be thrown if reconfiguration tries to use a failed volume.

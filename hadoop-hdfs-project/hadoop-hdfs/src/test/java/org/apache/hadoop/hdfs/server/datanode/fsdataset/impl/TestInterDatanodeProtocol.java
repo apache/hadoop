@@ -223,7 +223,8 @@ public class TestInterDatanodeProtocol {
     return new FinalizedReplica(b, new ExternalVolumeImpl(), null);
   }
 
-  private static void assertReplicaEquals(ReplicaInfo originalInfo, ReplicaRecoveryInfo recoveryInfo) {
+  private static void assertReplicaEquals(ReplicaInfo originalInfo, ReplicaRecoveryInfo
+      recoveryInfo) {
     assertEquals(originalInfo.getBlockId(), recoveryInfo.getBlockId());
     assertEquals(originalInfo.getGenerationStamp(), recoveryInfo.getGenerationStamp());
     assertEquals(originalInfo.getBytesOnDisk(), recoveryInfo.getNumBytes());
