@@ -110,6 +110,9 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.ListingSupport;
+import org.apache.hadoop.fs.azurebfs.services.ReadBufferManager;
+import org.apache.hadoop.fs.azurebfs.services.ReadBufferManagerV1;
+import org.apache.hadoop.fs.azurebfs.services.ReadBufferManagerV2;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.services.StaticRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.VersionedFileStatus;
@@ -324,6 +327,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       HadoopExecutors.shutdown(boundedThreadPool, LOG,
           30, TimeUnit.SECONDS);
       boundedThreadPool = null;
+      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
+      ReadBufferManagerV1 bufferManagerV1 = ReadBufferManagerV1.getBufferManager();
+      bufferManagerV1.close();
+      bufferManagerV2.close();
     } catch (InterruptedException e) {
       LOG.error("Interrupted freeing leases", e);
       Thread.currentThread().interrupt();

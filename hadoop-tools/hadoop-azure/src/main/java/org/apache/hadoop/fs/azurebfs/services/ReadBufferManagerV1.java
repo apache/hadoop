@@ -33,7 +33,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
  * The Read Buffer Manager for Rest AbfsClient.
  * V1 implementation of ReadBufferManager.
  */
-final class ReadBufferManagerV1 extends ReadBufferManager {
+public final class ReadBufferManagerV1 extends ReadBufferManager {
 
   private static final int NUM_BUFFERS = 16;
   private static final int NUM_THREADS = 8;
@@ -66,7 +66,7 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
    * Returns the singleton instance of ReadBufferManagerV1.
    * @return the singleton instance of ReadBufferManagerV1
    */
-  static ReadBufferManagerV1 getBufferManager() {
+  public static ReadBufferManagerV1 getBufferManager() {
     if (bufferManager == null) {
       LOCK.lock();
       try {
@@ -540,6 +540,13 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
         }
       }
     }
+  }
+
+  @Override
+  public void closeReadBufferManager() {
+    // no-op, as this is a singleton and should not be closed
+    // the buffers will be cleaned up when the JVM exits
+    LOGGER.debug("ReadBufferManagerV1 close called, but no action taken as it is a singleton.");
   }
 
   /**

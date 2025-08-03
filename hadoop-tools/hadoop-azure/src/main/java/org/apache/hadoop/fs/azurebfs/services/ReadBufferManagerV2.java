@@ -29,6 +29,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -47,6 +48,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_HUNDRED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
@@ -54,7 +56,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.O
 /**
  * The Improved Read Buffer Manager for Rest AbfsClient.
  */
-final class ReadBufferManagerV2 extends ReadBufferManager {
+public final class ReadBufferManagerV2 extends ReadBufferManager {
   // Internal constants
   private static final Logger LOGGER = LoggerFactory.getLogger(ReadBufferManagerV2.class);
   private static final ReentrantLock LOCK = new ReentrantLock();
@@ -348,6 +350,21 @@ final class ReadBufferManagerV2 extends ReadBufferManager {
     printDebugLog("Purging stale buffers for AbfsInputStream {} ", stream);
     getReadAheadQueue().removeIf(readBuffer -> readBuffer.getStream() == stream);
     purgeList(stream, getCompletedReadList());
+  }
+
+  @Override
+  public void closeReadBufferManager() {
+    printTraceLog("Closing ReadBufferManagerV2");
+    HadoopExecutors.shutdown(workerPool, LOGGER,
+        30, TimeUnit.SECONDS);
+    workerPool = null;
+    if (bufferPool != null) {
+      // help GC
+      Arrays.fill(bufferPool, null);
+      bufferPool = null;
+    }
+    setBufferManager(null); // reset the singleton instance
+    printTraceLog("ReadBufferManagerV2 closed");
   }
 
   private boolean isAlreadyQueued(final String eTag, final long requestedOffset) {
