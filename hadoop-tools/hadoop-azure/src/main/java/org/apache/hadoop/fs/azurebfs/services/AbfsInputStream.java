@@ -436,7 +436,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
     } catch (IOException e) {
       LOG.debug("Optimized read failed. Defaulting to readOneBlock {}", e);
-      tracingContext.setReadType(ReadType.NORMAL_READ);
       restorePointerState();
       return readOneBlock(b, off, len);
     } finally {
@@ -451,7 +450,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     //  bCursor that means the user requested data has not been read.
     if (fCursor < contentLength && bCursor > limit) {
       restorePointerState();
-      tracingContext.setReadType(ReadType.NORMAL_READ);
       return readOneBlock(b, off, len);
     }
     return copyToUserBuffer(b, off, len);

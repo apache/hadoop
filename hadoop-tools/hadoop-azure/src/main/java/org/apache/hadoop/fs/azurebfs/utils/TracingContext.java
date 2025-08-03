@@ -214,7 +214,7 @@ public class TracingContext {
     clientRequestId = UUID.randomUUID().toString();
     switch (format) {
     case ALL_ID_FORMAT:
-      header = TracingHeaderVersion.V1.getVersion() + COLON
+      header = TracingHeaderVersion.getCurrentVersion() + COLON
           + clientCorrelationID + COLON
           + clientRequestId + COLON
           + fileSystemID + COLON
@@ -225,19 +225,19 @@ public class TracingContext {
           + ingressHandler + COLON
           + position + COLON
           + operatedBlobCount + COLON
-          + httpOperation.getTracingContextSuffix() + COLON
-          + getOperationSpecificHeader(opType);
+          + getOperationSpecificHeader(opType) + COLON
+          + httpOperation.getTracingContextSuffix();
 
       metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : EMPTY_STRING;
       break;
     case TWO_ID_FORMAT:
-      header = TracingHeaderVersion.V1.getVersion() + COLON
+      header = TracingHeaderVersion.getCurrentVersion() + COLON
           + clientCorrelationID + COLON + clientRequestId;
       metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : EMPTY_STRING;
       break;
     default:
       //case SINGLE_ID_FORMAT
-      header = TracingHeaderVersion.V1.getVersion() + COLON
+      header = TracingHeaderVersion.getCurrentVersion() + COLON
           + clientRequestId;
       metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : EMPTY_STRING;
     }
@@ -273,17 +273,6 @@ public class TracingContext {
       return primaryRequestId;
     }
     return primaryRequestIdForRetry;
-  }
-
-  private String addFailureReasons(final String header,
-      final String previousFailure, String retryPolicyAbbreviation) {
-    if (previousFailure == null) {
-      return header;
-    }
-    if (CONNECTION_TIMEOUT_ABBREVIATION.equals(previousFailure) && retryPolicyAbbreviation != null) {
-      return String.format("%s_%s_%s", header, previousFailure, retryPolicyAbbreviation);
-    }
-    return String.format("%s_%s", header, previousFailure);
   }
 
   private String getRetryHeader(final String previousFailure, String retryPolicyAbbreviation) {

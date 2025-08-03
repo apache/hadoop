@@ -128,7 +128,6 @@ public final class AbfsHttpConstants {
   public static final String STAR = "*";
   public static final String COMMA = ",";
   public static final String COLON = ":";
-  public static final String HYPHEN = "-";
   public static final String EQUAL = "=";
   public static final String QUESTION_MARK = "?";
   public static final String AND_MARK = "&";

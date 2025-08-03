@@ -267,7 +267,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito.anyString(), Mockito.anyString());
     tracingContext.constructHeader(abfsHttpOperation, null, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
     String header = tracingContext.getHeader();
-    String assertionPrimaryId = header.split(":")[3];
+    String assertionPrimaryId = header.split(COLON)[3];
 
     tracingContext.setRetryCount(1);
     tracingContext.setListener(new TracingHeaderValidator(
@@ -277,7 +277,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
 
     tracingContext.constructHeader(abfsHttpOperation, READ_TIMEOUT_ABBREVIATION, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
     header = tracingContext.getHeader();
-    String primaryRequestId = header.split(":")[3];
+    String primaryRequestId = header.split(COLON)[3];
 
     Assertions.assertThat(primaryRequestId)
         .describedAs("PrimaryRequestId in a retried request's tracingContext "
@@ -329,7 +329,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
   }
 
   private void checkHeaderForRetryPolicyAbbreviation(String header, String expectedFailureReason, String expectedRetryPolicyAbbreviation) {
-    String[] headerContents = header.split(":", SPLIT_NO_LIMIT);
+    String[] headerContents = header.split(COLON, SPLIT_NO_LIMIT);
     String previousReqContext = headerContents[7];
 
     if (expectedFailureReason != null) {
