@@ -24,6 +24,9 @@ import java.util.Collection;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -34,8 +37,6 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 
 
 import static java.util.Objects.requireNonNull;
@@ -62,6 +63,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * with the FS_S3A_CREATE_PERFORMANCE option.
  */
 @SuppressWarnings("resource")
+@ParameterizedClass(name="performance-{0}")
+@MethodSource("params")
 public class ITestCreateFileCost extends AbstractS3ACostTest {
 
   /**
@@ -79,14 +82,14 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
   /**
    * Flag for performance creation; all cost asserts need changing.
    */
-  private boolean createPerformance;
+  private final boolean createPerformance;
 
   /**
    * Create.
-   * @param pCreatePerformance use the performance flag
+   * @param createPerformance use the performance flag
    */
-  public void initITestCreateFileCost(final boolean pCreatePerformance) {
-    this.createPerformance = pCreatePerformance;
+  public ITestCreateFileCost(final boolean createPerformance) {
+    this.createPerformance = createPerformance;
   }
 
   /**
@@ -108,10 +111,8 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     return conf;
   }
 
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testCreateNoOverwrite(boolean pCreatePerformance) throws Throwable {
-    initITestCreateFileCost(pCreatePerformance);
+  @Test
+  public void testCreateNoOverwrite() throws Throwable {
     describe("Test file creation without overwrite");
     Path testFile = methodPath();
     // when overwrite is false, the path is checked for existence.
@@ -119,20 +120,16 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
         expected(CREATE_FILE_NO_OVERWRITE));
   }
 
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testCreateOverwrite(boolean pCreatePerformance) throws Throwable {
-    initITestCreateFileCost(pCreatePerformance);
+  @Test
+  public void testCreateOverwrite() throws Throwable {
     describe("Test file creation with overwrite");
     Path testFile = methodPath();
     // when overwrite is true: only the directory checks take place.
     create(testFile, true, expected(CREATE_FILE_OVERWRITE));
   }
 
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testCreateNoOverwriteFileExists(boolean pCreatePerformance) throws Throwable {
-    initITestCreateFileCost(pCreatePerformance);
+  @Test
+  public void testCreateNoOverwriteFileExists() throws Throwable {
     describe("Test cost of create file failing with existing file");
     Path testFile = file(methodPath());
 
@@ -147,10 +144,8 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testCreateFileOverDirNoOverwrite(boolean pCreatePerformance) throws Throwable {
-    initITestCreateFileCost(pCreatePerformance);
+  @Test
+  public void testCreateFileOverDirNoOverwrite() throws Throwable {
     describe("Test cost of create file overwrite=false failing with existing dir");
     Path testFile = dir(methodPath());
 
@@ -165,10 +160,8 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testCreateFileOverDirWithOverwrite(boolean pCreatePerformance) throws Throwable {
-    initITestCreateFileCost(pCreatePerformance);
+  @Test
+  public void testCreateFileOverDirWithOverwrite() throws Throwable {
     describe("Test cost of create file overwrite=false failing with existing dir");
     Path testFile = dir(methodPath());
 
@@ -187,10 +180,8 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
    * Use the builder API.
    * on s3a this skips parent checks, always.
    */
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testCreateBuilderSequence(boolean pCreatePerformance) throws Throwable {
-    initITestCreateFileCost(pCreatePerformance);
+  @Test
+  public void testCreateBuilderSequence() throws Throwable {
     describe("Test builder file creation cost");
     Path testFile = methodPath();
     dir(testFile.getParent());
@@ -216,10 +207,8 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testCreateFilePerformanceFlag(boolean pCreatePerformance) throws Throwable {
-    initITestCreateFileCost(pCreatePerformance);
+  @Test
+  public void testCreateFilePerformanceFlag() throws Throwable {
     describe("createFile with performance flag skips safety checks");
     S3AFileSystem fs = getFileSystem();
 
@@ -245,10 +234,8 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
         .isGreaterThanOrEqualTo(1);
   }
 
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testCreateFileRecursive(boolean pCreatePerformance) throws Throwable {
-    initITestCreateFileCost(pCreatePerformance);
+  @Test
+  public void testCreateFileRecursive() throws Throwable {
     describe("createFile without performance flag performs overwrite safety checks");
     S3AFileSystem fs = getFileSystem();
 
@@ -274,10 +261,8 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
         .isEqualTo(custom);
   }
 
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testCreateFileNonRecursive(boolean pCreatePerformance) throws Throwable {
-    initITestCreateFileCost(pCreatePerformance);
+  @Test
+  public void testCreateFileNonRecursive() throws Throwable {
     describe("nonrecursive createFile does not check parents");
     S3AFileSystem fs = getFileSystem();
 
@@ -287,10 +272,8 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
   }
 
 
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testCreateNonRecursive(boolean pCreatePerformance) throws Throwable {
-    initITestCreateFileCost(pCreatePerformance);
+  @Test
+  public void testCreateNonRecursive() throws Throwable {
     describe("nonrecursive createFile does not check parents");
     S3AFileSystem fs = getFileSystem();
 
@@ -313,10 +296,8 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
   /**
    * Shows how the performance option allows the FS to become ill-formed.
    */
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testPerformanceFlagPermitsInvalidStores(boolean pCreatePerformance) throws Throwable {
-    initITestCreateFileCost(pCreatePerformance);
+  @Test
+  public void testPerformanceFlagPermitsInvalidStores() throws Throwable {
     describe("createFile with performance flag over a directory");
     S3AFileSystem fs = getFileSystem();
 

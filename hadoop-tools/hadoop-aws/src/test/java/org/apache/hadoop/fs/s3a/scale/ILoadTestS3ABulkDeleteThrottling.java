@@ -29,9 +29,14 @@ import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+
+import org.apache.hadoop.test.tags.LoadTest;
+import org.apache.hadoop.test.tags.ScaleTest;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.assertj.core.api.Assertions;
@@ -68,6 +73,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * Note: UA field includes the configuration tested for the benefit
  * of anyone looking through the server logs.
  */
+@LoadTest
+@ScaleTest
+@ParameterizedClass(name="bulk-delete-aws-retry={0}-requests={2}-size={1}")
+@MethodSource("params")
 @TestMethodOrder(MethodOrderer.Alphanumeric.class)
 public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
 
@@ -99,9 +108,9 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
 
   private File dataDir;
 
-  private boolean throttle;
-  private int pageSize;
-  private int requests;
+  private final boolean throttle;
+  private final int pageSize;
+  private final int requests;
 
   /**
    * Test array for parameterized test runs.
@@ -123,21 +132,20 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
 
   /**
    * Parameterized constructor.
-   * @param pThrottle AWS client throttle on/off
-   * @param pPageSize Page size
-   * @param pRequests request count;
+   * @param throttle AWS client throttle on/off
+   * @param pageSize Page size
+   * @param requests request count;
    */
-  public void initILoadTestS3ABulkDeleteThrottling(
-      final boolean pThrottle,
-      final int pPageSize,
-      final int pRequests) throws Exception {
-    this.throttle = pThrottle;
+  public ILoadTestS3ABulkDeleteThrottling(
+      final boolean throttle,
+      final int pageSize,
+      final int requests) {
+    this.throttle = throttle;
     Preconditions.checkArgument(pageSize > 0,
         "page size too low %s", pageSize);
 
-    this.pageSize = pPageSize;
-    this.requests = pRequests;
-    setup();
+    this.pageSize = pageSize;
+    this.requests = requests;
   }
 
   @Override
@@ -160,9 +168,10 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
   }
 
   @Override
+  @BeforeEach
   public void setup() throws Exception {
-    final Configuration conf = getConf();
     super.setup();
+    final Configuration conf = getConf();
     assumeTrue(conf.getBoolean(ENABLE_MULTI_DELETE, true),
         "multipart delete disabled");
     dataDir = GenericTestUtils.getTestDir("throttling");
@@ -177,19 +186,13 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
 
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "bulk-delete-aws-retry={0}-requests={2}-size={1}")
-  public void test_010_Reset(final boolean pThrottle,
-      final int pPageSize, final int pRequests) throws Throwable {
-    initILoadTestS3ABulkDeleteThrottling(pThrottle, pPageSize, pRequests);
+  @Test
+  public void test_010_Reset() throws Throwable {
     testWasThrottled = false;
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "bulk-delete-aws-retry={0}-requests={2}-size={1}")
-  public void test_020_DeleteThrottling(final boolean pThrottle,
-      final int pPageSize, final int pRequests) throws Throwable {
-    initILoadTestS3ABulkDeleteThrottling(pThrottle, pPageSize, pRequests);
+  @Test
+  public void test_020_DeleteThrottling() throws Throwable {
     describe("test how S3 reacts to massive multipart deletion requests");
     final File results = deleteFiles(requests, pageSize);
     LOG.info("Test run completed against {}:\n see {}", getFileSystem(),
@@ -201,11 +204,8 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "bulk-delete-aws-retry={0}-requests={2}-size={1}")
-  public void test_030_Sleep(final boolean pThrottle,
-      final int pPageSize, final int pRequests) throws Throwable {
-    initILoadTestS3ABulkDeleteThrottling(pThrottle, pPageSize, pRequests);
+  @Test
+  public void test_030_Sleep() throws Throwable {
     maybeSleep();
   }
 

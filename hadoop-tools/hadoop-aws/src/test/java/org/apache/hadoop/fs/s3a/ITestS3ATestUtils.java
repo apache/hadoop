@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.tags.IntegrationTest;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +33,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
  * Test the test utils. Why an integration test? it's needed to
  * verify property pushdown.
  */
+@IntegrationTest
 public class ITestS3ATestUtils extends Assertions {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3ATestUtils.class);

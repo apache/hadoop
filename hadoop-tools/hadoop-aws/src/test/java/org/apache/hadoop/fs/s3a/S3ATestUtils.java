@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -107,6 +108,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.impl.FlagSet.createFlagSet;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_S3;
 import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Analytics;
+import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Classic;
 import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Prefetch;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
@@ -1198,6 +1200,17 @@ public final class S3ATestUtils {
   }
 
   /**
+   * CLose the filesystem if it not in the cache.
+   * @param fs filesystem to check. May be null
+   */
+  public static void maybeCloseFilesystem(final S3AFileSystem fs) {
+    if (fs != null && fs.getConf().getBoolean(FS_S3A_IMPL_DISABLE_CACHE,
+        false)) {
+      IOUtils.closeQuietly(fs);
+    }
+  }
+
+  /**
    * Helper class to do diffs of metrics.
    */
   public static final class MetricDiff {
@@ -1867,6 +1880,18 @@ public final class S3ATestUtils {
     removeBaseAndBucketOverrides(conf,
         INPUT_STREAM_TYPE);
     conf.setEnum(INPUT_STREAM_TYPE, Analytics);
+    return conf;
+  }
+
+  /**
+   * Disable analytics stream for S3A S3AFileSystem in tests.
+   * @param conf Configuration to update
+   * @return patched config
+   */
+  public static Configuration disableAnalyticsAccelerator(Configuration conf) {
+    removeBaseAndBucketOverrides(conf,
+        INPUT_STREAM_TYPE);
+    conf.setEnum(INPUT_STREAM_TYPE, Classic);
     return conf;
   }
 
