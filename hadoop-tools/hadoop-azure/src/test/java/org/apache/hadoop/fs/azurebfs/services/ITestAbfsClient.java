@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import org.assertj.core.api.Assertions;
@@ -880,5 +881,107 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     Mockito.verify(spiedClient, times(expectedInvocations))
         .listPath(eq("/testPath"), eq(false), eq(1),
             any(), any(TracingContext.class), any());
+  }
+
+  /**
+   * Test to verify that the KeepAliveCache is initialized with the correct number of connections.
+   * This test is applicable only for ApacheHttpClient.
+   */
+  @Test
+  public void testKeepAliveCacheInitializationWithApacheHttpClient() throws Exception {
+    Assume.assumeTrue(APACHE_HTTP_CLIENT == httpOperationType);
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
+
+    AbfsClient dfsClient = abfsClientHandler.getDfsClient();
+    AbfsClient blobClient = abfsClientHandler.getBlobClient();
+
+    checkKacOnBothClientsAfterFSInit(dfsClient);
+    checkKacOnBothClientsAfterFSInit(blobClient);
+  }
+
+  /**
+   * Test to verify the behavior of stale connections in the KeepAliveCache.
+   * This test is applicable only for ApacheHttpClient.
+   */
+  @Test
+  public void testStaleConnectionBehavior() throws Exception {
+    Assume.assumeTrue(APACHE_HTTP_CLIENT == httpOperationType);
+
+    // Initialize the file system
+    AzureBlobFileSystemStore store = Mockito.spy(this.getFileSystem().getAbfsStore());
+    AbfsClientHandler abfsClientHandler = Mockito.spy(store.getClientHandler());
+
+    AbfsClient dfsClient = Mockito.spy(abfsClientHandler.getDfsClient());
+    AbfsClient blobClient = abfsClientHandler.getBlobClient();
+
+    // Mock the getMetricCall method to do nothing
+    // This is to avoid actual metric calls during the test
+    Mockito.doNothing().when(dfsClient)
+        .getMetricCall(getTestTracingContext(this.getFileSystem(), true));
+
+    checkKacOnBothClientsAfterFSInit(dfsClient);
+    checkKacOnBothClientsAfterFSInit(blobClient);
+
+    // Wait for 5 minutes to make the cached connections stale
+    // This will ensure all the connections in the KeepAliveCache are stale
+    // and will be removed by the Apache HttpClient's KeepAliveStrategy.
+    Thread.sleep(TimeUnit.MINUTES.toMillis(5));
+
+    // Verify that the KeepAliveCache returns null after making connections stale
+    // This is because the connections are stale and should not be reused.
+    // The size of the KeepAliveCache should also be 0.
+    // This indicates that the cache has been cleared of stale connections.
+    checkKacAfterMakingConnectionsStale(dfsClient);
+    checkKacAfterMakingConnectionsStale(blobClient);
+  }
+
+  /**
+   * Helper method to check the KeepAliveCache on both clients.
+   * @param abfsClient AbfsClient instance to check
+   *
+   * @throws IOException if an error occurs while checking the cache
+   */
+  private void checkKacOnBothClientsAfterFSInit(AbfsClient abfsClient) throws IOException {
+    AbfsApacheHttpClient abfsApacheHttpClient = abfsClient.getAbfsApacheHttpClient();
+    Assertions.assertThat(abfsApacheHttpClient)
+        .describedAs("AbfsApacheHttpClient should not be null")
+        .isNotNull();
+
+    KeepAliveCache keepAliveCache = abfsClient.getKeepAliveCache();
+
+    Assertions.assertThat(keepAliveCache.size())
+        .describedAs("KeepAliveCache should be warm with default connection count")
+        .isEqualTo(DEFAULT_APACHE_CACHE_WARMUP_CONNECTION_COUNT);
+
+    Assertions.assertThat(keepAliveCache.get())
+        .describedAs("KeepAliveCache should not be null")
+        .isNotNull();
+
+    // 1 connection is taken in above get call, so size should be
+    // DEFAULT_APACHE_CACHE_WARMUP_CONNECTION_COUNT - 1
+    // after the get call.
+    Assertions.assertThat(keepAliveCache.size())
+        .describedAs("KeepAliveCache size should be one less than the warmup count")
+        .isEqualTo(DEFAULT_APACHE_CACHE_WARMUP_CONNECTION_COUNT - 1);
+  }
+
+  /**
+   * Helper method to check the KeepAliveCache after making connections stale.
+   * @param abfsClient AbfsClient instance to check
+   *
+   * @throws IOException if an error occurs while checking the cache
+   */
+  private void checkKacAfterMakingConnectionsStale(AbfsClient abfsClient)
+      throws IOException {
+    KeepAliveCache keepAliveCache = abfsClient.getKeepAliveCache();
+    Assertions.assertThat(keepAliveCache.get())
+        .describedAs("KeepAliveCache should return null")
+        .isNull();
+
+    // Verify that the cache is empty after making connections stale
+    Assertions.assertThat(keepAliveCache.size())
+        .describedAs("KeepAliveCache should be empty after making connections stale")
+        .isEqualTo(0);
   }
 }
