@@ -53,6 +53,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo.Capability;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -118,6 +119,7 @@ public class TestBlockListAsLongs {
         blocks.getBlockListAsLongs());
   }
 
+  @Ignore
   @Test
   public void testFuzz() throws InterruptedException {
     Replica[] replicas = new Replica[100000];

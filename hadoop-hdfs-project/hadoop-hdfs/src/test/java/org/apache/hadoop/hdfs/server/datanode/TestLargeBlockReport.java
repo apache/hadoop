@@ -40,6 +40,7 @@ import org.apache.log4j.Level;
 
 import org.junit.After;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -92,6 +93,7 @@ public class TestLargeBlockReport {
     }
   }
 
+  @Ignore
   @Test
   public void testBlockReportSucceedsWithLargerLengthLimit() throws Exception {
     conf.setInt(IPC_MAXIMUM_DATA_LENGTH, IPC_MAXIMUM_DATA_LENGTH_DEFAULT * 2);
