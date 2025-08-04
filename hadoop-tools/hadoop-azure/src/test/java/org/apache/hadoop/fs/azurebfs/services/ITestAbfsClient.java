@@ -67,6 +67,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_1
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_HTTP_METHOD_OVERRIDE;
@@ -907,18 +908,17 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   public void testStaleConnectionBehavior() throws Exception {
     Assume.assumeTrue(APACHE_HTTP_CLIENT == httpOperationType);
+    Configuration conf = this.getFileSystem().getConf();
+
+    // This is to avoid actual metric calls during the test
+    conf.unset(FS_AZURE_METRIC_ACCOUNT_NAME);
 
     // Initialize the file system
-    AzureBlobFileSystemStore store = Mockito.spy(this.getFileSystem().getAbfsStore());
-    AbfsClientHandler abfsClientHandler = Mockito.spy(store.getClientHandler());
+    AzureBlobFileSystemStore store = this.getFileSystem(conf).getAbfsStore();
+    AbfsClientHandler abfsClientHandler = store.getClientHandler();
 
-    AbfsClient dfsClient = Mockito.spy(abfsClientHandler.getDfsClient());
+    AbfsClient dfsClient = abfsClientHandler.getDfsClient();
     AbfsClient blobClient = abfsClientHandler.getBlobClient();
-
-    // Mock the getMetricCall method to do nothing
-    // This is to avoid actual metric calls during the test
-    Mockito.doNothing().when(dfsClient)
-        .getMetricCall(getTestTracingContext(this.getFileSystem(), true));
 
     checkKacOnBothClientsAfterFSInit(dfsClient);
     checkKacOnBothClientsAfterFSInit(blobClient);
