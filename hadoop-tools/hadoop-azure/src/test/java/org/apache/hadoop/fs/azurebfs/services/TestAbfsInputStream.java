@@ -936,7 +936,7 @@ public class TestAbfsInputStream extends
     if (readType == PREFETCH_READ) {
       /*
        * For Prefetch Enabled, first read can be Normal or Missed Cache Read.
-       * Sow e will assert only for last 2 calls which should be Prefetched Read.
+       * So we will assert only for last 2 calls which should be Prefetched Read.
        * Since calls are asynchronous, we can not guarantee the order of calls.
        * Therefore, we cannot assert on exact position here.
        */

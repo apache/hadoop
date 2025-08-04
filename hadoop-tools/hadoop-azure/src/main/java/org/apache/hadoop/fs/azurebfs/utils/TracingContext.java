@@ -67,7 +67,7 @@ public class TracingContext {
   //final concatenated ID list set into x-ms-client-request-id header
   private String header = EMPTY_STRING;
   private String ingressHandler = EMPTY_STRING;
-  private String position = String.valueOf(0); // position of read/write in remote file
+  private String position = EMPTY_STRING; // position of read/write in remote file
   private String metricResults = EMPTY_STRING;
   private String metricHeader = EMPTY_STRING;
   private ReadType readType = ReadType.UNKNOWN_READ;

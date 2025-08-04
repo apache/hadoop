@@ -207,7 +207,7 @@ public class TracingHeaderValidator implements Listener {
   }
 
   /**
-   * Sets the value of the number of blobs operated on976345
+   * Sets the value of the number of blobs operated on.
    * @param operatedBlobCount number of blobs operated on
    */
   public void setOperatedBlobCount(Integer operatedBlobCount) {
