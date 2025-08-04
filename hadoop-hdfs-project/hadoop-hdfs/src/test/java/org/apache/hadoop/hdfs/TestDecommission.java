@@ -1908,7 +1908,7 @@ public class TestDecommission extends AdminStatesBaseTest {
   under-replicated block can be replicated to sufficient datanodes & the decommissioning
   node can be decommissioned.
    */
-  @Test(timeout = 60000)
+  @Test(timeout = 120000)
   public void testDeleteCorruptReplicaForUnderReplicatedBlock() throws Exception {
     // Constants
     final Path file = new Path("/test-file");

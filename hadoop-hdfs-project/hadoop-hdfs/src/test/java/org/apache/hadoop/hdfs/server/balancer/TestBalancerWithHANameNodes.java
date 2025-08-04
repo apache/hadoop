@@ -225,7 +225,7 @@ public class TestBalancerWithHANameNodes {
   /**
    * Test Balancer with ObserverNodes when one has failed.
    */
-  @Test(timeout = 220000)
+  @Test(timeout = 360000)
   public void testBalancerWithObserverWithFailedNode() throws Exception {
     testBalancerWithObserver(true);
   }

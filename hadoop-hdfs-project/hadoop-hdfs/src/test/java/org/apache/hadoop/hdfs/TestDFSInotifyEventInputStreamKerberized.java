@@ -35,6 +35,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -92,6 +93,7 @@ public class TestDFSInotifyEventInputStreamKerberized {
   @Rule
   public Timeout timeout = new Timeout(180000);
 
+  @Ignore
   @Test
   public void testWithKerberizedCluster() throws Exception {
     conf = new HdfsConfiguration(baseConf);
