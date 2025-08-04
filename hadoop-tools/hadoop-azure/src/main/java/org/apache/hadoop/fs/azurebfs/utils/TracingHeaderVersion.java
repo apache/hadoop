@@ -34,6 +34,9 @@ public enum TracingHeaderVersion {
   /**
    * Version 1 of the tracing header, which includes a version prefix and has 13 permanent fields.
    * This version is used for the current tracing header schema.
+   * Schema: version:clientCorrelationId:clientRequestId:fileSystemId
+   *         :primaryRequestId:streamId:opType:retryHeader:ingressHandler
+   *         :position:operatedBlobCount:operationSpecificHeader:httpOperationHeader
    */
   V1("v1", 13);
 

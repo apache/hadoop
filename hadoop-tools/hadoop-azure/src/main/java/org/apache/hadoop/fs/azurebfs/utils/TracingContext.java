@@ -67,7 +67,7 @@ public class TracingContext {
   //final concatenated ID list set into x-ms-client-request-id header
   private String header = EMPTY_STRING;
   private String ingressHandler = EMPTY_STRING;
-  private String position = EMPTY_STRING;
+  private String position = String.valueOf(0); // position of read/write in remote file
   private String metricResults = EMPTY_STRING;
   private String metricHeader = EMPTY_STRING;
   private ReadType readType = ReadType.UNKNOWN_READ;
@@ -80,7 +80,7 @@ public class TracingContext {
    * will not change this field. In case {@link  #primaryRequestId} is non-null,
    * this field shall not be set.
    */
-  private String primaryRequestIdForRetry;
+  private String primaryRequestIdForRetry = EMPTY_STRING;
   private Integer operatedBlobCount = 1; // Only relevant for rename-delete over blob endpoint where it will be explicitly set.
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
@@ -200,8 +200,8 @@ public class TracingContext {
    *   <li>ingressHandler</li>
    *   <li>position of read/write in the remote file</li>
    *   <li>operatedBlobCount - number of blobs operated on by this request</li>
-   *   <li>httpOperationHeader - suffix for network library used</li>
    *   <li>operationSpecificHeader - different operation types can publish info relevant to that operation</li>
+   *   <li>httpOperationHeader - suffix for network library used</li>
    * </ul>
    * @param httpOperation AbfsHttpOperation instance to set header into
    *                      connection
@@ -275,6 +275,15 @@ public class TracingContext {
     return primaryRequestIdForRetry;
   }
 
+  /**
+   * Get the retry header string in format retryCount_failureReason_retryPolicyAbbreviation
+   * retryCount is always there and 0 for first request.
+   * failureReason is null for first request
+   * retryPolicyAbbreviation is only present when request fails with ConnectionTimeout
+   * @param previousFailure Previous failure reason, null if not a retried request
+   * @param retryPolicyAbbreviation Abbreviation of retry policy used to get retry interval
+   * @return String representing the retry header
+   */
   private String getRetryHeader(final String previousFailure, String retryPolicyAbbreviation) {
     String retryHeader = String.format("%d", retryCount);
     if (previousFailure == null) {
@@ -286,6 +295,11 @@ public class TracingContext {
     return String.format("%s_%s", retryHeader, previousFailure);
   }
 
+  /**
+   * Get the operation specific header for the current operation type.
+   * @param opType The operation type for which the header is needed
+   * @return String representing the operation specific header
+   */
   private String getOperationSpecificHeader(FSOperationType opType) {
     // Similar header can be added for other operations in the future.
     switch (opType) {
@@ -296,6 +310,10 @@ public class TracingContext {
     }
   }
 
+  /**
+   * Get the operation specific header for read operations.
+   * @return String representing the read specific header
+   */
   private String getReadSpecificHeader() {
     // More information on read can be added to this header in the future.
     // As underscore separated values.
@@ -361,14 +379,14 @@ public class TracingContext {
     }
   }
 
+  /**
+   * Sets the read type for the current operation.
+   * @param readType the read type to set, must not be null.
+   */
   public void setReadType(ReadType readType) {
     this.readType = readType;
     if (listener != null) {
       listener.updateReadType(readType);
     }
-  }
-
-  public ReadType getReadType() {
-    return readType;
   }
 }

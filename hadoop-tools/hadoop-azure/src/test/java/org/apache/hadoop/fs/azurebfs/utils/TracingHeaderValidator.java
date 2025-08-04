@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SPLIT_NO_LIMIT;
 
 /**
  * Used to validate correlation identifiers provided during testing against
@@ -41,8 +42,8 @@ public class TracingHeaderValidator implements Listener {
 
   private static final String GUID_PATTERN = "^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$";
   private String ingressHandler = null;
-  private String position = null;
-  private ReadType readType = null;
+  private String position = String.valueOf(0);
+  private ReadType readType = ReadType.UNKNOWN_READ;
 
   private Integer operatedBlobCount = null;
 
@@ -84,7 +85,7 @@ public class TracingHeaderValidator implements Listener {
   }
 
   private void validateTracingHeader(String tracingContextHeader) {
-    String[] idList = tracingContextHeader.split(":", -1);
+    String[] idList = tracingContextHeader.split(":", SPLIT_NO_LIMIT);
     validateBasicFormat(idList);
     if (format != TracingHeaderFormat.ALL_ID_FORMAT) {
       return;
@@ -206,7 +207,7 @@ public class TracingHeaderValidator implements Listener {
   }
 
   /**
-   * Sets the value of the number of blobs operated on
+   * Sets the value of the number of blobs operated on976345
    * @param operatedBlobCount number of blobs operated on
    */
   public void setOperatedBlobCount(Integer operatedBlobCount) {

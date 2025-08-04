@@ -59,6 +59,11 @@ public enum ReadType {
     this.readType = readType;
   }
 
+  /**
+   * Get the read type as a string.
+   *
+   * @return the read type string
+   */
   @Override
   public String toString() {
     return readType;

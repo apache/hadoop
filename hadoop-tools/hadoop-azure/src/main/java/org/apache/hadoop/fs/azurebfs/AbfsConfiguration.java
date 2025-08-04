@@ -958,6 +958,10 @@ public class AbfsConfiguration{
     return this.footerReadBufferSize;
   }
 
+  /**
+   * Returns whether the buffered pread is disabled.
+   * @return true if buffered pread is disabled, false otherwise.
+   */
   public boolean isBufferedPReadDisabled() {
     return this.isBufferedPReadDisabled;
   }

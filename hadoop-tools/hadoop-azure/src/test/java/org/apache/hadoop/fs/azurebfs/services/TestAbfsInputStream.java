@@ -799,6 +799,11 @@ public class TestAbfsInputStream extends
     in.close();
   }
 
+  /**
+   * Test to verify that the read type and position are correctly set in the
+   * client request id header for various type of read operations performed.
+   * @throws Exception if any error occurs during the test
+   */
   @Test
   public void testReadTypeInTracingContextHeader() throws Exception {
     AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
@@ -811,7 +816,7 @@ public class TestAbfsInputStream extends
     Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
     Mockito.doReturn(spiedConfig).when(spiedStore).getAbfsConfiguration();
     int totalReadCalls = 0;
-    int fileSize = 0;
+    int fileSize;
 
     /*
      * Test to verify Normal Read Type.
@@ -828,11 +833,11 @@ public class TestAbfsInputStream extends
      * Setting read ahead depth to 0 ensure that nothing can be got from prefetch.
      * In such a case Input Stream will do a sequential read with missed cache read type.
      */
-    fileSize = ONE_MB; // To make sure only one block is read.
-    totalReadCalls += 1; // 1 block of 1MB.
+    fileSize = 3 * ONE_MB; // To make sure multiple blocks are read with MR
+    totalReadCalls += 3; // 3 block of 1MB.
     Mockito.doReturn(0).when(spiedConfig).getReadAheadQueueDepth();
     doReturn(true).when(spiedConfig).isReadAheadEnabled();
-    testReadTypeInTracingContextHeaderInternal(spiedFs, fileSize, MISSEDCACHE_READ, 1, totalReadCalls);
+    testReadTypeInTracingContextHeaderInternal(spiedFs, fileSize, MISSEDCACHE_READ, 3, totalReadCalls);
 
     /*
      * Test to verify Prefetch Read Type.
@@ -857,16 +862,15 @@ public class TestAbfsInputStream extends
 
     /*
      * Test to verify Small File Read Type.
-     * Having file size less than footer read size and disabling small file opt
+     * Having file size less than block size and disabling footer read opt
      */
-    fileSize = 8 * ONE_KB;
     totalReadCalls += 1; // Full file will be read along with footer.
     doReturn(true).when(spiedConfig).readSmallFilesCompletely();
     doReturn(false).when(spiedConfig).optimizeFooterRead();
     testReadTypeInTracingContextHeaderInternal(spiedFs, fileSize, SMALLFILE_READ, 1, totalReadCalls);
 
     /*
-     * Test to verify Direct Read Type.
+     * Test to verify Direct Read Type and a read from random position.
      * Separate AbfsInputStream method needs to be called.
      */
     fileSize = ONE_MB;
@@ -876,9 +880,9 @@ public class TestAbfsInputStream extends
     Path testPath = createTestFile(spiedFs, fileSize);
     try (FSDataInputStream iStream = spiedFs.open(testPath)) {
       AbfsInputStream stream = (AbfsInputStream) iStream.getWrappedStream();
-      int bytesRead = stream.read(0, new byte[fileSize], 0,
+      int bytesRead = stream.read(ONE_MB/3, new byte[fileSize], 0,
           fileSize);
-      Assertions.assertThat(fileSize)
+      Assertions.assertThat(fileSize - ONE_MB/3)
           .describedAs("Read size should match file size")
           .isEqualTo(bytesRead);
     }
@@ -930,12 +934,20 @@ public class TestAbfsInputStream extends
         captor7.capture(), captor8.capture(), captor9.capture());
     List<TracingContext> tracingContextList = captor9.getAllValues();
     if (readType == PREFETCH_READ) {
-      // For Prefetch Enabled, first read can be Normal or Missed Cache Read.
-      // We will assert only for last 2 calls.
-      // Since calls are asynchronous, we can not guarantee the order of calls.
-      // Therefore we cannot assert on position here.
+      /*
+       * For Prefetch Enabled, first read can be Normal or Missed Cache Read.
+       * Sow e will assert only for last 2 calls which should be Prefetched Read.
+       * Since calls are asynchronous, we can not guarantee the order of calls.
+       * Therefore, we cannot assert on exact position here.
+       */
       for (int i = tracingContextList.size() - (numOfReadCalls - 1); i < tracingContextList.size(); i++) {
         verifyHeaderForReadTypeInTracingContextHeader(tracingContextList.get(i), readType, -1);
+      }
+    } else if (readType == DIRECT_READ) {
+      int expectedReadPos = ONE_MB/3;
+      for (int i = tracingContextList.size() - numOfReadCalls; i < tracingContextList.size(); i++) {
+        verifyHeaderForReadTypeInTracingContextHeader(tracingContextList.get(i), readType, expectedReadPos);
+        expectedReadPos += ONE_MB;
       }
     } else {
       int expectedReadPos = 0;
