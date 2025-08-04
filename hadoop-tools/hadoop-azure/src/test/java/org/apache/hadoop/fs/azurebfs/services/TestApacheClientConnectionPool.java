@@ -270,7 +270,7 @@ public class TestApacheClientConnectionPool extends
    * an exception.
    */
   @Test
-  public void keepAliveCacheClosedTwiceShouldNotThrowException () throws Exception {
+  public void keepAliveCacheClosedTwiceShouldNotThrowException() throws Exception {
     KeepAliveCache keepAliveCache = Mockito.spy(new KeepAliveCache(
         new AbfsConfiguration(new Configuration(), EMPTY_STRING)));
     keepAliveCache.close();
@@ -302,8 +302,7 @@ public class TestApacheClientConnectionPool extends
    * Closed connections should be cleaned up and not added to the cache.
    */
   @Test
-  public void testKeepAliveCacheShouldNotAddClosedConnections() throws Exception
-  {
+  public void testKeepAliveCacheShouldNotAddClosedConnections() throws Exception {
     try (KeepAliveCache keepAliveCache = new KeepAliveCache(
         new AbfsConfiguration(new Configuration(), EMPTY_STRING))) {
       keepAliveCache.clear();
