@@ -81,7 +81,7 @@ public class TracingContext {
    * this field shall not be set.
    */
   private String primaryRequestIdForRetry = EMPTY_STRING;
-  private Integer operatedBlobCount = 1; // Only relevant for rename-delete over blob endpoint where it will be explicitly set.
+  private Integer operatedBlobCount = 0; // Only relevant for rename-delete over blob endpoint where it will be explicitly set.
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
