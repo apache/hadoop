@@ -41,6 +41,7 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
 
   public ITestReadBufferManagerV2() throws Exception {
     super();
+    getConfiguration().setBoolean(FS_AZURE_ENABLE_READAHEAD_V2, true);
   }
 
   /**
@@ -87,48 +88,47 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testMultipleInputStreamReadingSameFile() throws Exception {
-    Map<String, String> configMap = new HashMap<>();
-    try(AzureBlobFileSystem spiedFs = Mockito.spy(getConfiguredFileSystem(true, configMap))) {
-      AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
-      AbfsClient spiedClient = Mockito.spy(spiedStore.getClient());
-      Mockito.doReturn(spiedClient).when(spiedStore).getClient();
-      Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
-      int numOfFiles = MORE_NUM_FILES;
-      int fileSize = SMALL_FILE_SIZE;
-      int blockSize = 4 * ONE_MB;
+    AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
+    AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
+    AbfsClient spiedClient = Mockito.spy(spiedStore.getClient());
+    Mockito.doReturn(spiedClient).when(spiedStore).getClient();
+    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
+    int numOfFiles = MORE_NUM_FILES;
+    int fileSize = SMALL_FILE_SIZE;
+    int blockSize = 4 * ONE_MB;
 
-      Path[] testPaths = createFilesWithContent(spiedFs, 1);
-      Path testPath = testPaths[0];
-      ExecutorService executorService = Executors.newFixedThreadPool(
-          LESS_NUM_FILES);
+    Path[] testPaths = createFilesWithContent(spiedFs, 1);
+    Path testPath = testPaths[0];
+    ExecutorService executorService = Executors.newFixedThreadPool(
+        LESS_NUM_FILES);
 
-      try {
-        for (int i = 0; i < LESS_NUM_FILES; i++) {
-          executorService.submit((Callable<Void>) () -> {
-            try (FSDataInputStream iStream = spiedFs.open(testPath)) {
-              int bytesRead = iStream.read(new byte[LARGE_FILE_SIZE], 0,
-                  LARGE_FILE_SIZE);
-              Assertions.assertEquals(LARGE_FILE_SIZE, bytesRead,
-                  "Read size should match file size");
-            }
-            return null;
-          });
-        }
-      } finally {
-        shutdownExecutorService(executorService);
+    try {
+      for (int i = 0; i < LESS_NUM_FILES; i++) {
+        executorService.submit((Callable<Void>) () -> {
+          try (FSDataInputStream iStream = spiedFs.open(testPath)) {
+            int bytesRead = iStream.read(new byte[LARGE_FILE_SIZE], 0,
+                LARGE_FILE_SIZE);
+            Assertions.assertEquals(LARGE_FILE_SIZE, bytesRead,
+                "Read size should match file size");
+          }
+          return null;
+        });
       }
-
-      int leastReadOpnCount = (numOfFiles * fileSize) / blockSize;
-
-      verify(spiedClient, Mockito.atLeast(leastReadOpnCount))
-          .read(eq(testPath.toString()), Mockito.anyLong(), Mockito.any(),
-              Mockito.anyInt(), Mockito.anyInt(), Mockito.anyString(),
-              Mockito.anyString(), Mockito.any(), Mockito.any());
-      verify(spiedClient, Mockito.atMost(2 * leastReadOpnCount))
-          .read(eq(testPath.toString()), Mockito.anyLong(), Mockito.any(),
-              Mockito.anyInt(), Mockito.anyInt(), Mockito.anyString(),
-              Mockito.anyString(), Mockito.any(), Mockito.any());
+    } finally {
+      shutdownExecutorService(executorService);
     }
+
+    int leastReadOpnCount = fileSize/blockSize;
+
+    verify(spiedClient, Mockito.atLeast(leastReadOpnCount))
+        .read(Mockito.anyString(), Mockito.anyLong(), Mockito.any(),
+            Mockito.anyInt(), Mockito.anyInt(), Mockito.anyString(),
+            Mockito.anyString(), Mockito.any(), Mockito.any());
+    verify(spiedClient, Mockito.atMost(2 * leastReadOpnCount))
+        .read(eq(testPath.toString()), Mockito.anyLong(), Mockito.any(),
+            Mockito.anyInt(), Mockito.anyInt(), Mockito.anyString(),
+            Mockito.anyString(), Mockito.any(), Mockito.any());
+
   }
 
   /**
@@ -138,7 +138,6 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScheduledEviction() throws Exception {
-
   }
 
   private AzureBlobFileSystem getConfiguredFileSystem(boolean isRAV2Enabled,

@@ -58,7 +58,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.O
  */
 public final class ReadBufferManagerV2 extends ReadBufferManager {
   // Internal constants
-  private static final Logger LOGGER = LoggerFactory.getLogger(ReadBufferManagerV2.class);
   private static final ReentrantLock LOCK = new ReentrantLock();
 
   // Thread Pool Configurations
@@ -107,6 +106,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       }
     }
     return (ReadBufferManagerV2) bufferManager;
+  }
+
+  public static ReadBufferManagerV2 getInstance() {
+    return bufferManager;
   }
 
   /**
@@ -352,7 +355,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     purgeList(stream, getCompletedReadList());
   }
 
-  public void closeReadBufferManager() {
+  public void close() {
     printTraceLog("Closing ReadBufferManagerV2");
     workerPool.shutdownNow();
     workerPool = null;
