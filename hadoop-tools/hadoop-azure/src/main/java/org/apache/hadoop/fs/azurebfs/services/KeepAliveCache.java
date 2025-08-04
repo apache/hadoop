@@ -155,12 +155,17 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
    * @return true if the HttpClientConnection is added in active cache, false otherwise.
    */
   public boolean add(HttpClientConnection conn) {
+    if (conn == null) {
+      LOG.warn("Attempt to add null HttpClientConnection to the cache for account: {}",
+          accountNamePath);
+      return false;
+    }
     if (isClosed.get() || maxCacheConnections <= 0
         || !conn.isOpen() || conn.isStale()) {
       closeHttpClientConnection(conn);
       return false;
     }
-    while (size() > maxCacheConnections) {
+    while (size() >= maxCacheConnections) {
       HttpClientConnection httpClientConnection = pollFirst();
       if (httpClientConnection != null) {
         closeHttpClientConnection(httpClientConnection);

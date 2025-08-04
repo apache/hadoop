@@ -28,7 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ClosedIOException;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsTestWithTimeout;
-
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.http.HttpClientConnection;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
@@ -242,5 +242,172 @@ public class TestApacheClientConnectionPool extends
     Mockito.verify(conn, Mockito.times(1)).close();
     keepAliveCache.close();
     Mockito.verify(keepAliveCache, Mockito.times(1)).closeInternal();
+  }
+
+  /**
+   * Tests that the KeepAliveCache removes stale connections when adding a new
+   * connection.
+   */
+  @Test
+  public void keepAliveCacheShouldRemoveStaleConnectionsOnAdd() throws Exception {
+    try (KeepAliveCache keepAliveCache = new KeepAliveCache(
+        new AbfsConfiguration(new Configuration(), EMPTY_STRING))) {
+      keepAliveCache.clear();
+      // This will ensure that the connection is open
+      HttpClientConnection staleConnection = getValidMockConnection();
+      Mockito.doReturn(true).when(staleConnection).isStale();
+      keepAliveCache.add(staleConnection);
+      Assertions.assertThat(keepAliveCache.get())
+          .describedAs(
+              "Getting from cache after adding stale connection should return null")
+          .isNull();
+      Mockito.verify(staleConnection, Mockito.times(1)).close();
+    }
+  }
+
+  /**
+   * Tests that the KeepAliveCache can be closed multiple times without throwing
+   * an exception.
+   */
+  @Test
+  public void keepAliveCacheClosedTwiceShouldNotThrowException () throws Exception {
+    KeepAliveCache keepAliveCache = Mockito.spy(new KeepAliveCache(
+        new AbfsConfiguration(new Configuration(), EMPTY_STRING)));
+    keepAliveCache.close();
+    keepAliveCache.close();
+    // Verify that closeInternal is called only once even if close is called multiple times.
+    Mockito.verify(keepAliveCache, Mockito.times(1)).closeInternal();
+  }
+
+  /**
+   * Tests that the KeepAliveCache can handle null connections gracefully.
+   */
+  @Test
+  public void testKeepAliveCacheShouldHandleNullConnectionsGracefully() throws Exception {
+    try (KeepAliveCache keepAliveCache = new KeepAliveCache(
+        new AbfsConfiguration(new Configuration(), EMPTY_STRING))) {
+      keepAliveCache.clear();
+      Assertions.assertThat(keepAliveCache.add(null))
+          .describedAs("Adding null connection should return false")
+          .isFalse();
+      Assertions.assertThat(keepAliveCache.get())
+          .describedAs(
+              "Getting from cache with no valid connections should return null")
+          .isNull();
+    }
+  }
+
+  /**
+   * Tests that the KeepAliveCache does not add closed connections.
+   * Closed connections should be cleaned up and not added to the cache.
+   */
+  @Test
+  public void testKeepAliveCacheShouldNotAddClosedConnections() throws Exception
+  {
+    try (KeepAliveCache keepAliveCache = new KeepAliveCache(
+        new AbfsConfiguration(new Configuration(), EMPTY_STRING))) {
+      keepAliveCache.clear();
+      // This will ensure that the connection is open.
+      HttpClientConnection connection = getValidMockConnection();
+      Mockito.doReturn(false).when(connection).isOpen();
+      Assertions.assertThat(keepAliveCache.add(connection))
+          .describedAs("Adding closed connection should return false")
+          .isFalse();
+      Mockito.verify(connection, Mockito.times(1)).close();
+    }
+  }
+
+  /**
+   * Tests that the KeepAliveCache closes all connections when closed.
+   * This is to ensure that all connections are properly cleaned up.
+   */
+  @Test
+  public void testKeepAliveCacheCloseWithMultipleConnections() throws Exception {
+    try (KeepAliveCache keepAliveCache = new KeepAliveCache(
+      new AbfsConfiguration(new Configuration(), EMPTY_STRING))) {
+      keepAliveCache.clear();
+      HttpClientConnection[] connections = new HttpClientConnection[10];
+
+      // Add multiple connections to the cache.
+      for (int i = 0; i < connections.length; i++) {
+          connections[i] = getValidMockConnection();
+          keepAliveCache.add(connections[i]);
+      }
+
+      // Close the cache and verify all connections are closed.
+      keepAliveCache.close();
+      for (HttpClientConnection connection : connections) {
+          Mockito.verify(connection, Mockito.times(1)).close();
+      }
+
+      // Verify the cache size is 0.
+      Assertions.assertThat(keepAliveCache.size())
+          .describedAs("Cache should be empty after closing")
+          .isEqualTo(0);
+
+      // Attempt to get a connection after closing the cache.
+      // This should throw a ClosedIOException.
+      LambdaTestUtils.intercept(ClosedIOException.class,
+          KEEP_ALIVE_CACHE_CLOSED, keepAliveCache::get);
+    }
+  }
+
+  /**
+   * Tests that the KeepAliveCache handles stale connections correctly.
+   * If a connection becomes stale, it should not be returned from the cache.
+   */
+  @Test
+  public void testKeepAliveCacheStaleConnectionHandling() throws Exception {
+    try (KeepAliveCache keepAliveCache = new KeepAliveCache(
+        new AbfsConfiguration(new Configuration(), EMPTY_STRING))) {
+      keepAliveCache.clear();
+
+      // Create a valid connection and add it to the cache.
+      HttpClientConnection connection = getValidMockConnection();
+      keepAliveCache.add(connection);
+
+      // Verify size of the cache is 1.
+      Assertions.assertThat(keepAliveCache.size())
+          .describedAs("Cache size should be 1 after adding a connection")
+          .isEqualTo(1);
+
+      // Simulate the connection becoming stale.
+      Mockito.doReturn(true).when(connection).isStale();
+
+      // Verify that the stale connection is not returned.
+      Assertions.assertThat(keepAliveCache.get())
+          .describedAs("Getting from cache after connection becomes stale should return null")
+          .isNull();
+
+      // Verify that the stale connection is closed.
+      Mockito.verify(connection, Mockito.times(1)).close();
+    }
+  }
+
+  /**
+   * Tests that the KeepAliveCache does not contain connections exceeding the maximum size.
+   */
+  @Test
+  public void testKeepAliveCacheMaxSizeLimit() throws Exception {
+    try (KeepAliveCache keepAliveCache = new KeepAliveCache(
+        new AbfsConfiguration(new Configuration(), EMPTY_STRING))) {
+      keepAliveCache.clear();
+
+      // Add connections up to the maximum size.
+      HttpClientConnection[] connections =
+          new HttpClientConnection[DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS + 1];
+      for (int i = 0; i < connections.length; i++) {
+        connections[i] = getValidMockConnection();
+        keepAliveCache.add(connections[i]);
+      }
+
+      // Verify that the cache size does not exceed the maximum size.
+      Assertions.assertThat(keepAliveCache.size())
+          .describedAs("Cache size should not exceed the maximum allowed size")
+          .isEqualTo(DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS);
+
+      // Verify that the oldest connection is closed when the cache exceeds the maximum size.
+      Mockito.verify(connections[0], Mockito.times(1)).close();
+    }
   }
 }
