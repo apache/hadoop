@@ -168,8 +168,10 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   @Override
   String getConnProperty(final String key) {
     Header header = httpRequestBase.getFirstHeader(key);
-    if (header != null) return header.getValue();
-    return null;
+    if (header == null) {
+      return null;
+    }
+    return header.getValue();
   }
 
   /**{@inheritDoc}*/
@@ -290,12 +292,14 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   /**{@inheritDoc}*/
   @Override
   Map<String, List<String>> getRequestProperties() {
-    Map<String, List<String>> headers = new HashMap<>();
+    Map<String, List<String>> map = new HashMap<>();
     for (Header header : httpRequestBase.getAllHeaders()) {
-      headers.computeIfAbsent(header.getName(), k -> new ArrayList<>())
-          .add(header.getValue());
+      map.put(header.getName(),
+          new ArrayList<String>() {{
+            add(header.getValue());
+          }});
     }
-    return headers;
+    return map;
   }
 
   /**{@inheritDoc}*/
@@ -305,10 +309,10 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
       return null;
     }
     Header header = httpResponse.getFirstHeader(headerName);
-    if (header != null) {
-      return header.getValue();
+    if (header == null) {
+      return null;
     }
-    return null;
+    return header.getValue();
   }
 
   /**{@inheritDoc}*/
