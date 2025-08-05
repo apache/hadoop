@@ -129,7 +129,7 @@ public class TestDTManagerLifecycle extends AbstractAbfsTestWithTimeout {
     AbfsDelegationTokenManager manager = new AbfsDelegationTokenManager(conf);
     manager.bind(FSURI, conf);
     StubDelegationTokenManager stub = getTokenManager(manager);
-    assertEquals(ABFS, stub.createServiceText().toString(),"Service in " + manager);
+    assertEquals(ABFS, stub.createServiceText().toString(), "Service in " + manager);
     assertEquals(FSURI, stub.getFsURI(), "Binding URI of " + stub);
 
     Token<DelegationTokenIdentifier> token = manager.getDelegationToken(

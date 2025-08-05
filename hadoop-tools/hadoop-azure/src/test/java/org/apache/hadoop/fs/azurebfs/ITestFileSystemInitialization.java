@@ -51,7 +51,8 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
 
     String scheme = this.getAuthType() == AuthType.SharedKey ? FileSystemUriSchemes.ABFS_SCHEME
             : FileSystemUriSchemes.ABFS_SECURE_SCHEME;
-    assertEquals(fs.getUri(), new URI(scheme,filesystem + "@" + accountName,null,null,null));
+    assertEquals(fs.getUri(), new URI(scheme,
+        filesystem + "@" + accountName, null, null, null));
     assertNotNull(fs.getWorkingDirectory(), "working directory");
   }
 
@@ -69,8 +70,8 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
 
     try(SecureAzureBlobFileSystem fs = (SecureAzureBlobFileSystem) FileSystem.newInstance(rawConfig)) {
       assertEquals(fs.getUri(),
-          new URI(FileSystemUriSchemes.ABFS_SECURE_SCHEME,filesystem + "@" +
-          accountName,null,null,null));
+          new URI(FileSystemUriSchemes.ABFS_SECURE_SCHEME, filesystem + "@" +
+          accountName, null, null, null));
       assertNotNull(fs.getWorkingDirectory(), "working directory");
     }
   }

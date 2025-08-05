@@ -112,8 +112,7 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
         .getFilesystemProperties(tracingContext);
           assertEquals(properties, fetchedProperties);
       });
-  
-}
+  }
 
   @Test
   public void testBase64InvalidPathProperties() throws Exception {
@@ -129,8 +128,7 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
         .getPathStatus(testPath, tracingContext);
           assertEquals(properties, fetchedProperties);
       });
-  
-}
+  }
 
   @Test
   public void testSetFileSystemProperties() throws Exception {

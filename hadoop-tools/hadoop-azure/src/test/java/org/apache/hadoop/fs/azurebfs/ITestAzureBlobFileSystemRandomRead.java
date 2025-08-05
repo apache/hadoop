@@ -217,11 +217,9 @@ public class ITestAzureBlobFileSystemRandomRead extends
               }
       );
       long elapsedTimeMs = timer.elapsedTimeMs();
-      assertTrue(
-      
-             elapsedTimeMs < MAX_ELAPSEDTIMEMS, String.format(
-                      "There should not be any network I/O (elapsedTimeMs=%1$d).",
-                      elapsedTimeMs));
+      assertTrue(elapsedTimeMs < MAX_ELAPSEDTIMEMS, String.format(
+          "There should not be any network I/O (elapsedTimeMs=%1$d).",
+          elapsedTimeMs));
     }
   }
 
@@ -268,11 +266,9 @@ public class ITestAzureBlobFileSystemRandomRead extends
       );
 
       long elapsedTimeMs = timer.elapsedTimeMs();
-      assertTrue(
-      
-             elapsedTimeMs < MAX_ELAPSEDTIMEMS, String.format(
-                      "There should not be any network I/O (elapsedTimeMs=%1$d).",
-                      elapsedTimeMs));
+      assertTrue(elapsedTimeMs < MAX_ELAPSEDTIMEMS, String.format(
+          "There should not be any network I/O (elapsedTimeMs=%1$d).",
+          elapsedTimeMs));
     }
   }
 

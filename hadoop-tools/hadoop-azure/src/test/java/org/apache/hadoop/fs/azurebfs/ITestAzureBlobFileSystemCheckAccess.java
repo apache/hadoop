@@ -330,16 +330,14 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   private void assertAccessible(Path testFilePath, FsAction fsAction)
       throws IOException {
-    assertTrue(
-    
-       isAccessible(testUserFs, testFilePath, fsAction), "Should have been given access  " + fsAction + " on " + testFilePath);
+    assertTrue(isAccessible(testUserFs, testFilePath, fsAction),
+        "Should have been given access  " + fsAction + " on " + testFilePath);
   }
 
   private void assertInaccessible(Path testFilePath, FsAction fsAction)
       throws IOException {
-    assertFalse(
-    
-       isAccessible(testUserFs, testFilePath, fsAction), "Should have been denied access  " + fsAction + " on " + testFilePath);
+    assertFalse(isAccessible(testUserFs, testFilePath, fsAction),
+        "Should have been denied access  " + fsAction + " on " + testFilePath);
   }
 
   private void setExecuteAccessForParentDirs(Path dir) throws IOException {

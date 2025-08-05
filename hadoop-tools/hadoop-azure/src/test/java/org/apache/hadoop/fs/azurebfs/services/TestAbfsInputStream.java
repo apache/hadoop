@@ -232,9 +232,9 @@ public class TestAbfsInputStream extends
     builder.withFileStatus(fileStatus);
     FSDataInputStream in = builder.build().get();
     assertEquals(buf.length, in.read(readBuf),
-        String.format("Open with fileStatus [from %s result]: Incorrect number of bytes read",source));
+        String.format("Open with fileStatus [from %s result]: Incorrect number of bytes read", source));
     assertArrayEquals(readBuf, buf,
-        String.format("Open with fileStatus [from %s result]: Incorrect read data",source));
+        String.format("Open with fileStatus [from %s result]: Incorrect read data", source));
   }
 
   private void checkGetPathStatusCalls(Path testFile, FileStatus fileStatus,

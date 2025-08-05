@@ -51,8 +51,7 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
     int bytesToRead = 10;
     try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
       assertTrue(inputStream.getWrappedStream() instanceof AbfsInputStream,
-          "unexpected stream type " +
-           inputStream.getWrappedStream().getClass().getSimpleName());
+          "unexpected stream type " + inputStream.getWrappedStream().getClass().getSimpleName());
       byte[] readBuffer = new byte[bytesToRead];
       int readPos = 0;
       Assertions

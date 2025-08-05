@@ -250,7 +250,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     FileStatus[] testFiles = fs.listStatus(testFile0Path);
     assertEquals(1, testFiles.length, "Wrong listing size of file " + testFile0Path);
     FileStatus file0 = testFiles[0];
-    assertEquals(new Path(getTestUrl(),testFolder + "/testFolder2/testFolder3/testFile"),
+    assertEquals(new Path(getTestUrl(), testFolder + "/testFolder2/testFolder3/testFile"),
         file0.getPath(), "Wrong path for " + file0);
     assertIsFileReference(file0);
   }
