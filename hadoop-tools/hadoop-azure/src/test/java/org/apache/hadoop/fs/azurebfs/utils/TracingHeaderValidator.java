@@ -21,8 +21,10 @@ package org.apache.hadoop.fs.azurebfs.utils;
 import org.assertj.core.api.Assertions;
 
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SPLIT_NO_LIMIT;
 
 /**
  * Used to validate correlation identifiers provided during testing against
@@ -40,7 +42,8 @@ public class TracingHeaderValidator implements Listener {
 
   private static final String GUID_PATTERN = "^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$";
   private String ingressHandler = null;
-  private String position = null;
+  private String position = String.valueOf(0);
+  private ReadType readType = ReadType.UNKNOWN_READ;
 
   private Integer operatedBlobCount = null;
 
@@ -59,6 +62,7 @@ public class TracingHeaderValidator implements Listener {
     tracingHeaderValidator.primaryRequestId = primaryRequestId;
     tracingHeaderValidator.ingressHandler = ingressHandler;
     tracingHeaderValidator.position = position;
+    tracingHeaderValidator.readType = readType;
     tracingHeaderValidator.operatedBlobCount = operatedBlobCount;
     return tracingHeaderValidator;
   }
@@ -81,45 +85,43 @@ public class TracingHeaderValidator implements Listener {
   }
 
   private void validateTracingHeader(String tracingContextHeader) {
-    String[] idList = tracingContextHeader.split(":");
+    String[] idList = tracingContextHeader.split(":", SPLIT_NO_LIMIT);
     validateBasicFormat(idList);
     if (format != TracingHeaderFormat.ALL_ID_FORMAT) {
       return;
     }
-    if (idList.length >= 8) {
-      if (operatedBlobCount != null) {
-        Assertions.assertThat(Integer.parseInt(idList[7]))
-                .describedAs("OperatedBlobCount is incorrect")
-                .isEqualTo(operatedBlobCount);
-      }
+
+    // Validate Operated Blob Count
+    if (operatedBlobCount != null) {
+      Assertions.assertThat(Integer.parseInt(idList[10]))
+          .describedAs("OperatedBlobCount is incorrect")
+          .isEqualTo(operatedBlobCount);
     }
-    if (!primaryRequestId.isEmpty() && !idList[3].isEmpty()) {
-      Assertions.assertThat(idList[3])
+
+    // Validate Primary Request ID
+    if (!primaryRequestId.isEmpty() && !idList[4].isEmpty()) {
+      Assertions.assertThat(idList[4])
           .describedAs("PrimaryReqID should be common for these requests")
           .isEqualTo(primaryRequestId);
     }
+
+    // Validate Stream ID
     if (!streamID.isEmpty()) {
-      Assertions.assertThat(idList[4])
+      Assertions.assertThat(idList[5])
           .describedAs("Stream id should be common for these requests")
           .isEqualTo(streamID);
     }
   }
 
   private void validateBasicFormat(String[] idList) {
+    // Validate Version and Number of fields in the header
+    Assertions.assertThat(idList[0]).describedAs("Version should be present")
+        .isEqualTo(TracingHeaderVersion.getCurrentVersion().toString());
+    int expectedSize = 0;
     if (format == TracingHeaderFormat.ALL_ID_FORMAT) {
-      int expectedSize = 8;
-      if (operatedBlobCount != null) {
-        expectedSize += 1;
-      }
-      if (ingressHandler != null) {
-        expectedSize += 2;
-      }
-      Assertions.assertThat(idList)
-          .describedAs("header should have " + expectedSize + " elements")
-          .hasSize(expectedSize);
+      expectedSize = TracingHeaderVersion.getCurrentVersion().getFieldCount();
     } else if (format == TracingHeaderFormat.TWO_ID_FORMAT) {
-      Assertions.assertThat(idList)
-          .describedAs("header should have 2 elements").hasSize(2);
+      expectedSize = 3;
     } else {
       Assertions.assertThat(idList).describedAs("header should have 1 element")
           .hasSize(1);
@@ -127,36 +129,49 @@ public class TracingHeaderValidator implements Listener {
           .describedAs("Client request ID is a guid").matches(GUID_PATTERN);
       return;
     }
+    Assertions.assertThat(idList)
+        .describedAs("header should have " + expectedSize + " elements")
+        .hasSize(expectedSize);
 
+    // Validate Client Correlation ID
     if (clientCorrelationId.matches("[a-zA-Z0-9-]*")) {
-      Assertions.assertThat(idList[0])
+      Assertions.assertThat(idList[1])
           .describedAs("Correlation ID should match config")
           .isEqualTo(clientCorrelationId);
     } else {
-      Assertions.assertThat(idList[0])
+      Assertions.assertThat(idList[1])
           .describedAs("Invalid config should be replaced with empty string")
           .isEmpty();
     }
-    Assertions.assertThat(idList[1]).describedAs("Client request ID is a guid")
+
+    // Validate Client Request ID
+    Assertions.assertThat(idList[2]).describedAs("Client request ID is a guid")
         .matches(GUID_PATTERN);
 
     if (format != TracingHeaderFormat.ALL_ID_FORMAT) {
       return;
     }
 
-    Assertions.assertThat(idList[2]).describedAs("Filesystem ID incorrect")
+    // Validate FileSystem ID
+    Assertions.assertThat(idList[3]).describedAs("Filesystem ID incorrect")
         .isEqualTo(fileSystemId);
+
+    // Validate Primary Request ID
     if (needsPrimaryRequestId && !operation
         .equals(FSOperationType.READ)) {
-      Assertions.assertThat(idList[3]).describedAs("should have primaryReqId")
+      Assertions.assertThat(idList[4]).describedAs("should have primaryReqId")
           .isNotEmpty();
     }
-    Assertions.assertThat(idList[5]).describedAs("Operation name incorrect")
+
+    // Validate Operation Type
+    Assertions.assertThat(idList[6]).describedAs("Operation name incorrect")
         .isEqualTo(operation.toString());
-    if (idList[6].contains("_")) {
-      idList[6] = idList[6].split("_")[0];
+
+    // Validate Retry Header
+    if (idList[7].contains("_")) {
+      idList[7] = idList[7].split("_")[0];
     }
-    int retryCount = Integer.parseInt(idList[6]);
+    int retryCount = Integer.parseInt(idList[7]);
     Assertions.assertThat(retryCount)
         .describedAs("Retry was required due to issue on server side")
         .isEqualTo(retryNum);
@@ -186,8 +201,13 @@ public class TracingHeaderValidator implements Listener {
     this.position = position;
   }
 
+  @Override
+  public void updateReadType(ReadType readType) {
+    this.readType = readType;
+  }
+
   /**
-   * Sets the value of the number of blobs operated on
+   * Sets the value of the number of blobs operated on.
    * @param operatedBlobCount number of blobs operated on
    */
   public void setOperatedBlobCount(Integer operatedBlobCount) {
