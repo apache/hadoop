@@ -151,12 +151,6 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     return (AzureBlobFileSystem) FileSystem.newInstance(conf);
   }
 
-  private byte[] getRandomBytesArray(int length) {
-    final byte[] b = new byte[length];
-    new Random().nextBytes(b);
-    return b;
-  }
-
   private Path createFileWithContent(FileSystem fs, String fileName,
       byte[] fileContent) throws
       IOException {
