@@ -24,7 +24,6 @@ import java.net.ProtocolException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -139,17 +138,6 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     this.responseMessage = pResponseMessage;
     this.errorType = pErrorType;
     this.httpOperationType = phttpOperationType;
-  }
-
-  /**
-   * Test helper method to get random bytes array.
-   * @param length The length of byte buffer
-   * @return byte buffer
-   */
-  private byte[] getRandomBytesArray(int length) {
-    final byte[] b = new byte[length];
-    new Random().nextBytes(b);
-    return b;
   }
 
   @Override

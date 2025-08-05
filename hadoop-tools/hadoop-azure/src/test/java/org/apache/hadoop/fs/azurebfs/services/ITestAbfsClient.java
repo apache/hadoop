@@ -26,7 +26,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 import java.util.regex.Pattern;
 
 import org.assertj.core.api.Assertions;
@@ -602,17 +601,6 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   public static AccessTokenProvider getAccessTokenProvider(AbfsClient client) {
     return client.getTokenProvider();
-  }
-
-  /**
-   * Test helper method to get random bytes array.
-   * @param length The length of byte buffer.
-   * @return byte buffer.
-   */
-  private byte[] getRandomBytesArray(int length) {
-    final byte[] b = new byte[length];
-    new Random().nextBytes(b);
-    return b;
   }
 
   @Override
