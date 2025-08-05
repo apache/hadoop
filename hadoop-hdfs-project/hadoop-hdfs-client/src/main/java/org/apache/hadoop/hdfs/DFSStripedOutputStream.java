@@ -559,7 +559,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
   private boolean shouldEndblockGroupInAdvance() {
     Set<StripedDataStreamer> slowStreamers = checkSlowStreamersWithoutThrowException();
     boolean meetSlowStreamer = !slowStreamers.isEmpty() &&
-        getEndBlockGroupInAdvanceCount() < getMaxEndBlockGroupInAdvanceCount();;
+        getEndBlockGroupInAdvanceCount() < getMaxEndBlockGroupInAdvanceCount();
     boolean stripeFull = currentBlockGroup.getNumBytes() > 0 &&
         currentBlockGroup.getNumBytes() % ((long) numDataBlocks * cellSize) == 0;
     if (meetSlowStreamer && stripeFull) {

@@ -540,8 +540,8 @@ class DataStreamer extends Daemon {
   private final String[] favoredNodes;
   private final EnumSet<AddBlockFlag> addBlockFlags;
 
-  protected volatile boolean endBlockFlag = false;
-  protected volatile boolean currentStreamerSlow = false;
+  private volatile boolean endBlockFlag = false;
+  private volatile boolean currentStreamerSlow = false;
 
   private DataStreamer(HdfsFileStatus stat, ExtendedBlock block,
                        DFSClient dfsClient, String src,
