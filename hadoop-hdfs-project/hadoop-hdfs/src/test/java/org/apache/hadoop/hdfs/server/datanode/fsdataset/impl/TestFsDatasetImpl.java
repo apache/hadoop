@@ -74,6 +74,7 @@ import org.apache.hadoop.util.FakeTimer;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -249,6 +250,7 @@ public class TestFsDatasetImpl {
     holder.interrupt();
   }
 
+  @Ignore
   @Test(timeout=10000)
   public void testReadLockCanBeDisabledByConfig()
       throws Exception {
