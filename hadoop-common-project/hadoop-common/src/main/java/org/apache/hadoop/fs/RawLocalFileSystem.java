@@ -72,6 +72,7 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.VectoredReadUtils.LOG_BYTE_BUFFER_RELEASED;
+import static org.apache.hadoop.fs.VectoredReadUtils.hasVectorIOCapability;
 import static org.apache.hadoop.fs.VectoredReadUtils.sortRangeList;
 import static org.apache.hadoop.fs.VectoredReadUtils.validateRangeRequest;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
@@ -293,15 +294,12 @@ public class RawLocalFileSystem extends FileSystem {
 
     @Override
     public boolean hasCapability(String capability) {
-      // a bit inefficient, but intended to make it easier to add
-      // new capabilities.
       switch (capability.toLowerCase(Locale.ENGLISH)) {
       case StreamCapabilities.IOSTATISTICS:
       case StreamCapabilities.IOSTATISTICS_CONTEXT:
-      case StreamCapabilities.VECTOREDIO:
         return true;
       default:
-        return false;
+        return hasVectorIOCapability(capability);
       }
     }
 
@@ -400,7 +398,9 @@ public class RawLocalFileSystem extends FileSystem {
       for(int i = 0; i < ranges.size(); ++i) {
         FileRange range = ranges.get(i);
         buffers[i] = allocateRelease.getBuffer(false, range.getLength());
-        channel.read(buffers[i], range.getOffset(), i, this);
+        final ByteBuffer buffer = buffers[i];
+        LOG.debug("Reading file range {} into buffer {}", range, System.identityHashCode(buffer));
+        channel.read(buffer, range.getOffset(), i, this);
       }
     }
 
@@ -416,6 +416,8 @@ public class RawLocalFileSystem extends FileSystem {
     public void completed(Integer result, Integer rangeIndex) {
       FileRange range = ranges.get(rangeIndex);
       ByteBuffer buffer = buffers[rangeIndex];
+      LOG.debug("Completed read range {} into buffer {} outcome={} remaining={}",
+          range, System.identityHashCode(buffer), result, buffer.remaining());
       if (result == -1) {
         // no data was read back.
         failed(new EOFException("Read past End of File"), rangeIndex);
