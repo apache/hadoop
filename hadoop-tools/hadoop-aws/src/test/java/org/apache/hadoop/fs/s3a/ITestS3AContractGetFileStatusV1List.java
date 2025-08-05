@@ -22,6 +22,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
+import org.apache.hadoop.test.tags.IntegrationTest;
+
 import org.junit.jupiter.api.AfterEach;
 
 import static org.apache.hadoop.fs.s3a.Constants.LIST_VERSION;
@@ -33,6 +35,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfS3ExpressBucket;
 /**
  * S3A contract tests for getFileStatus, using the v1 List Objects API.
  */
+@IntegrationTest
 public class ITestS3AContractGetFileStatusV1List
     extends AbstractContractGetFileStatusTest {
 

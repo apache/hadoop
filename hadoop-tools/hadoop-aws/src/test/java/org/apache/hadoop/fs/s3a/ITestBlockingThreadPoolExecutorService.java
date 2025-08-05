@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.StopWatch;
@@ -40,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * Basic test for S3A's blocking executor service.
  */
 @Timeout(60)
-public class ITestBlockingThreadPoolExecutorService {
+public class ITestBlockingThreadPoolExecutorService extends AbstractHadoopTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestBlockingThreadPoolExecutorService.class);

@@ -75,6 +75,7 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_READ_SMALL_FILES_COMPLETELY = false;
   public static final boolean DEFAULT_OPTIMIZE_FOOTER_READ = true;
   public static final int DEFAULT_FOOTER_READ_BUFFER_SIZE = 512 * ONE_KB;
+  public static final boolean DEFAULT_BUFFERED_PREAD_DISABLE = false;
   public static final boolean DEFAULT_ALWAYS_READ_BUFFER_SIZE = false;
   public static final int DEFAULT_READ_AHEAD_BLOCK_SIZE = 4 * ONE_MB;
   public static final int DEFAULT_READ_AHEAD_RANGE = 64 * ONE_KB; // 64 KB

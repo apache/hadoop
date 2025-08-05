@@ -1404,6 +1404,24 @@
 </property>
 
 <property>
+  <name>fs.file.checksum.verify</name>
+  <value>true</value>
+  <description>
+    Should data read through the local filesystem (file://) URLs be verified aginst
+    the checksums stored in the associated checksum files?
+    Setting this to false skips loading the checksum files, reading data in checksum-aligned
+    blocks and verifying checksums. This may improve performance
+    when reading data, though it pushes the responsibility of detecting errors
+    into the file formats themselves, or the underlying storage system.
+    Even when verification is enabled, files without associated checksum files
+    .$FILENAME.crc are never verified.
+    When fs.file.checksum.verify is false, vector reads of data will always return
+    buffers that are the buffers allocated through the buffer allocator
+    passed in to the API call and not sliced subsets thereof.
+  </description>
+</property>
+
+<property>
   <name>fs.automatic.close</name>
   <value>true</value>
   <description>By default, FileSystem instances are automatically closed at program

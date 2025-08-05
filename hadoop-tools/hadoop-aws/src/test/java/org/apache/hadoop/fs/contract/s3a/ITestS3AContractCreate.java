@@ -21,13 +21,15 @@ package org.apache.hadoop.fs.contract.s3a;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractCreateTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_PERFORMANCE_TESTS_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_EXPECT_CONTINUE;
@@ -41,6 +43,9 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
  * Parameterized on the create performance flag as all overwrite
  * tests are required to fail in create performance mode.
  */
+@IntegrationTest
+@ParameterizedClass(name="performance-{0}-continue={1}")
+@MethodSource("params")
 public class ITestS3AContractCreate extends AbstractContractCreateTest {
 
   /**
@@ -58,17 +63,17 @@ public class ITestS3AContractCreate extends AbstractContractCreateTest {
   /**
    * Is this test run in create performance mode?
    */
-  private boolean createPerformance;
+  private final boolean createPerformance;
 
   /**
    * Expect a 100-continue response?
    */
-  private boolean expectContinue;
+  private final boolean expectContinue;
 
-  public void initITestS3AContractCreate(final boolean pCreatePerformance,
-      final boolean pExpectContinue) {
-    this.createPerformance = pCreatePerformance;
-    this.expectContinue = pExpectContinue;
+  public ITestS3AContractCreate(final boolean createPerformance,
+      final boolean expectContinue) {
+    this.createPerformance = createPerformance;
+    this.expectContinue = expectContinue;
   }
 
   @Override
@@ -92,11 +97,8 @@ public class ITestS3AContractCreate extends AbstractContractCreateTest {
     return conf;
   }
 
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testOverwriteNonEmptyDirectory(boolean pCreatePerformance,
-      boolean pExpectContinue) throws Throwable {
-    initITestS3AContractCreate(pCreatePerformance, pExpectContinue);
+  @Test
+  public void testOverwriteNonEmptyDirectory() throws Throwable {
     try {
        // Currently analytics accelerator does not support reading of files that have been overwritten.
        // This is because the analytics accelerator library caches metadata, and when a file is
@@ -112,11 +114,9 @@ public class ITestS3AContractCreate extends AbstractContractCreateTest {
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testOverwriteEmptyDirectory(boolean pCreatePerformance,
-      boolean pExpectContinue) throws Throwable {
-    initITestS3AContractCreate(pCreatePerformance, pExpectContinue);
+  @Override
+  @Test
+  public void testOverwriteEmptyDirectory() throws Throwable {
     try {
       super.testOverwriteEmptyDirectory();
       failWithCreatePerformance();
@@ -125,11 +125,9 @@ public class ITestS3AContractCreate extends AbstractContractCreateTest {
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testCreateFileOverExistingFileNoOverwrite(boolean pCreatePerformance,
-      boolean pExpectContinue) throws Throwable {
-    initITestS3AContractCreate(pCreatePerformance, pExpectContinue);
+  @Test
+  @Override
+  public void testCreateFileOverExistingFileNoOverwrite() throws Throwable {
     try {
       super.testCreateFileOverExistingFileNoOverwrite();
       failWithCreatePerformance();

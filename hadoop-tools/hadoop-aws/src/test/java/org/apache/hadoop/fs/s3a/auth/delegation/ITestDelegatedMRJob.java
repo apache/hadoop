@@ -23,7 +23,9 @@ import java.util.Collection;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +88,8 @@ import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireAnonym
  * This is needed to verify that job resources have their tokens extracted
  * too.
  */
+@ParameterizedClass(name="token={0}")
+@MethodSource("params")
 public class ITestDelegatedMRJob extends AbstractDelegationIT {
 
   private static final Logger LOG =
@@ -97,11 +101,11 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
   @SuppressWarnings("StaticNonFinalField")
   private static MiniKerberizedHadoopCluster cluster;
 
-  private String name;
+  private final String name;
 
-  private String tokenBinding;
+  private final String tokenBinding;
 
-  private Text tokenKind;
+  private final Text tokenKind;
 
   /**
    * Created in test setup.
@@ -134,12 +138,10 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
     });
   }
 
-  public void initITestDelegatedMRJob(String pName, String pTokenBinding, Text pTokenKind)
-      throws Exception {
-    this.name = pName;
-    this.tokenBinding = pTokenBinding;
-    this.tokenKind = pTokenKind;
-    setup();
+  public ITestDelegatedMRJob(String name, String tokenBinding, Text tokenKind) {
+    this.name = name;
+    this.tokenBinding = tokenBinding;
+    this.tokenKind = tokenKind;
   }
 
   /***
@@ -191,6 +193,7 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
   }
 
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     cluster.loginPrincipal();
     super.setup();
@@ -242,11 +245,8 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
     return getTestTimeoutSeconds() * 1000;
   }
 
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testCommonCrawlLookup(String pName, String pTokenBinding,
-      Text pTokenKind) throws Throwable {
-    initITestDelegatedMRJob(pName, pTokenBinding, pTokenKind);
+  @Test
+  public void testCommonCrawlLookup() throws Throwable {
     FileSystem resourceFS = extraJobResourcePath.getFileSystem(
         getConfiguration());
     FileStatus status = resourceFS.getFileStatus(extraJobResourcePath);
@@ -254,11 +254,8 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
     assertTrue(status.isEncrypted(), "Not encrypted: " + status);
   }
 
-  @MethodSource("params")
-  @ParameterizedTest
-  public void testJobSubmissionCollectsTokens(String pName, String pTokenBinding,
-      Text pTokenKind) throws Exception {
-    initITestDelegatedMRJob(pName, pTokenBinding, pTokenKind);
+  @Test
+  public void testJobSubmissionCollectsTokens() throws Exception {
     describe("Mock Job test");
     JobConf conf = new JobConf(getConfiguration());
     if (isUsingDefaultExternalDataFile(conf)) {

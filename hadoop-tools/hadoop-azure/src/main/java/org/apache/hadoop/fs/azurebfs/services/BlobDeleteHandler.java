@@ -126,7 +126,7 @@ public class BlobDeleteHandler extends ListActionTaker {
        */
       deleted = recursive ? safeDelete(path) : deleteInternal(path);
     } finally {
-      tracingContext.setOperatedBlobCount(null);
+      tracingContext.setOperatedBlobCount(0);
     }
     if (deleteCount.get() == 0) {
       /*

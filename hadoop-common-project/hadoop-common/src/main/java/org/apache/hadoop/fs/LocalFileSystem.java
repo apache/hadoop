@@ -27,6 +27,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.LOCAL_FS_VERIFY_CHECKSUM;
+
 /****************************************************************
  * Implement the FileSystem API for the checksumed local filesystem.
  *
@@ -50,6 +52,10 @@ public class LocalFileSystem extends ChecksumFileSystem {
     if (!scheme.equals(fs.getUri().getScheme())) {
       swapScheme = scheme;
     }
+    final boolean checksum = conf.getBoolean(LOCAL_FS_VERIFY_CHECKSUM, true);
+    setVerifyChecksum(checksum);
+    LOG.debug("Checksum verification enabled={}", checksum);
+
   }
 
   /**
