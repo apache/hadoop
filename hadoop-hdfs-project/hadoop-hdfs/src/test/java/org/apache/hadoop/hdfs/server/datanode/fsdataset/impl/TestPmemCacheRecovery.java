@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -104,7 +104,7 @@ public class TestPmemCacheRecovery {
 
   @BeforeAll
   public static void setUpClass() throws Exception {
-    assumeTrue("Requires PMDK", NativeIO.POSIX.isPmdkAvailable());
+    assumeTrue(NativeIO.POSIX.isPmdkAvailable(), "Requires PMDK");
 
     oldInjector = DataNodeFaultInjector.get();
     DataNodeFaultInjector.set(new DataNodeFaultInjector() {
