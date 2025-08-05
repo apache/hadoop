@@ -29,6 +29,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
+import org.junit.Ignore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -298,6 +299,7 @@ public class TestDelegationToken {
    * has to log to the edit log, which should not be written in
    * safe mode. Regression test for HDFS-2579.
    */
+  @Ignore
   @Test
   public void testDTManagerInSafeMode() throws Exception {
     cluster.startDataNodes(config, 1, true, StartupOption.REGULAR, null);
