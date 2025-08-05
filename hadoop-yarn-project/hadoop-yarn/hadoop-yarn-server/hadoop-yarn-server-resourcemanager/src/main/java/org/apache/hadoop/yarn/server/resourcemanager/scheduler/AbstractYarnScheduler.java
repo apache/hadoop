@@ -724,9 +724,7 @@ public abstract class AbstractYarnScheduler
           if (extraContainers > 0) {
             // Change the state of the container from ALLOCATED to EXPIRED since it is not required.
             LOG.debug("Removing extra container:{}", rmContainer.getContainer());
-            completedContainer(rmContainer, SchedulerUtils.createAbnormalContainerStatus(
-                rmContainer.getContainerId(), SchedulerUtils.EXPIRED_CONTAINER),
-                RMContainerEventType.EXPIRE);
+            asyncContainerRelease(rmContainer);
             application.newlyAllocatedContainers.remove(rmContainer);
             extraContainers--;
           }
