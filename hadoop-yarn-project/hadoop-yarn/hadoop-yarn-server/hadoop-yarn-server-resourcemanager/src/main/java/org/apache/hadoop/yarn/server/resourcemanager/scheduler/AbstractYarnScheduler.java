@@ -722,7 +722,7 @@ public abstract class AbstractYarnScheduler
       if (allocatedContainers != null) {
         for (RMContainer rmContainer : allocatedContainers) {
           if (extraContainers > 0) {
-            // Change the state of the container from ALLOCATED to EXPIRED since it is not required.
+            // Change the state of the container from ALLOCATED to RELEASED since it is not required.
             LOG.debug("Removing extra container:{}", rmContainer.getContainer());
             asyncContainerRelease(rmContainer);
             application.newlyAllocatedContainers.remove(rmContainer);
