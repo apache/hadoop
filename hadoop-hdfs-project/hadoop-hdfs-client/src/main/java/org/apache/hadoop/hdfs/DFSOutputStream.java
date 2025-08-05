@@ -570,10 +570,11 @@ public class DFSOutputStream extends FSOutputSummer
    * @throws IOException
    */
   void endBlock() throws IOException {
-    if (getStreamer().getBytesCurBlock() == blockSize) {
+    if (getStreamer().getBytesCurBlock() == blockSize || getStreamer().isEndBlockFlag()) {
       setCurrentPacketToEmpty();
       enqueueCurrentPacket();
       getStreamer().setBytesCurBlock(0);
+      getStreamer().setEndBlockFlag(false);
       lastFlushOffset = 0;
     }
   }

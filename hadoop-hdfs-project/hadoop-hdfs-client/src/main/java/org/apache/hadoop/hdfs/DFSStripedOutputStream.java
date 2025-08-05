@@ -73,6 +73,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_EC_MAX_END_BLOCKGROUP_INADVANCE_COUNT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_EC_MAX_END_BLOCKGROUP_INADVANCE_COUNT_DEFAULT;
+
 /**
  * This class supports writing files in striped layout and erasure coded format.
  * Each stripe contains a sequence of cells.
@@ -283,6 +286,9 @@ public class DFSStripedOutputStream extends DFSOutputStream
   private CompletionService<Void> flushAllExecutorCompletionService;
   private int blockGroupIndex;
   private long datanodeRestartTimeout;
+  private boolean endBlockGroupInAdvanceFlag = false;
+  private int endBlockGroupInAdvanceCount;
+  private int maxEndBlockGroupInAdvanceCount;
 
   /** Construct a new output stream for creating a file. */
   DFSStripedOutputStream(DFSClient dfsClient, String src, HdfsFileStatus stat,
@@ -322,6 +328,10 @@ public class DFSStripedOutputStream extends DFSOutputStream
     currentPackets = new DFSPacket[streamers.size()];
     datanodeRestartTimeout = dfsClient.getConf().getDatanodeRestartTimeout();
     setCurrentStreamer(0);
+
+    maxEndBlockGroupInAdvanceCount = dfsClient.getConfiguration().getInt(
+        DFS_CLIENT_EC_MAX_END_BLOCKGROUP_INADVANCE_COUNT,
+        DFS_CLIENT_EC_MAX_END_BLOCKGROUP_INADVANCE_COUNT_DEFAULT);
   }
 
   /** Construct a new output stream for appending to a file. */
@@ -546,6 +556,34 @@ public class DFSStripedOutputStream extends DFSOutputStream
         currentBlockGroup.getNumBytes() == blockSize * numDataBlocks;
   }
 
+  private boolean shouldEndblockGroupInAdvance() {
+    Set<StripedDataStreamer> slowStreamers = checkSlowStreamersWithoutThrowException();
+    boolean meetSlowStreamer = !slowStreamers.isEmpty() &&
+        getEndBlockGroupInAdvanceCount() < getMaxEndBlockGroupInAdvanceCount();;
+    boolean stripeFull = currentBlockGroup.getNumBytes() > 0 &&
+        currentBlockGroup.getNumBytes() % ((long) numDataBlocks * cellSize) == 0;
+    if (meetSlowStreamer && stripeFull) {
+      LOG.info("Block group {} ends in advance.", currentBlockGroup);
+      this.endBlockGroupInAdvanceFlag = true;
+      this.endBlockGroupInAdvanceCount++;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * @return slow stripedDataStreamer set.
+   */
+  private Set<StripedDataStreamer> checkSlowStreamersWithoutThrowException() {
+    Set<StripedDataStreamer> slowStreamers = new HashSet<>();
+    for (StripedDataStreamer s : streamers) {
+      if (s.isHealthy() && s.isCurrentStreamerSlow()) {
+        slowStreamers.add(s);
+      }
+    }
+    return slowStreamers;
+  }
+
   @Override
   protected synchronized void writeChunk(byte[] bytes, int offset, int len,
       byte[] checksum, int ckoff, int cklen) throws IOException {
@@ -553,7 +591,8 @@ public class DFSStripedOutputStream extends DFSOutputStream
     final int pos = cellBuffers.addTo(index, bytes, offset, len);
     final boolean cellFull = pos == cellSize;
 
-    if (currentBlockGroup == null || shouldEndBlockGroup()) {
+    if (currentBlockGroup == null || shouldEndBlockGroup() || endBlockGroupInAdvanceFlag) {
+      this.endBlockGroupInAdvanceFlag = false;
       // the incoming data should belong to a new block. Allocate a new block.
       allocateNewBlock();
     }
@@ -583,13 +622,14 @@ public class DFSStripedOutputStream extends DFSOutputStream
         next = 0;
 
         // if this is the end of the block group, end each internal block
-        if (shouldEndBlockGroup()) {
+        if (shouldEndBlockGroup() || shouldEndblockGroupInAdvance()) {
           flushAllInternals();
           checkStreamerFailures(false);
           for (int i = 0; i < numAllBlocks; i++) {
             final StripedDataStreamer s = setCurrentStreamer(i);
             if (s.isHealthy()) {
               try {
+                getStreamer().setEndBlockFlag(true);
                 endBlock();
               } catch (IOException ignored) {}
             }
@@ -1366,5 +1406,13 @@ public class DFSStripedOutputStream extends DFSOutputStream
   @Override
   ExtendedBlock getBlock() {
     return currentBlockGroup;
+  }
+
+  public int getEndBlockGroupInAdvanceCount() {
+    return endBlockGroupInAdvanceCount;
+  }
+
+  public int getMaxEndBlockGroupInAdvanceCount() {
+    return maxEndBlockGroupInAdvanceCount;
   }
 }

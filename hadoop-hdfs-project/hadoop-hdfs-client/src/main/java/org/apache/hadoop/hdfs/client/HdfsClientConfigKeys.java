@@ -159,6 +159,9 @@ public interface HdfsClientConfigKeys {
   String  DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_KEY =
       "dfs.client.mark.slownode.as.badnode.threshold";
   int DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_DEFAULT = 10;
+  String DFS_CLIENT_EC_MAX_END_BLOCKGROUP_INADVANCE_COUNT =
+      "dfs.client.ec.max.end.blockgroup.inadvance.count";
+  int DFS_CLIENT_EC_MAX_END_BLOCKGROUP_INADVANCE_COUNT_DEFAULT = 10;
   String  DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS =
           "dfs.client.key.provider.cache.expiry";
   long    DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT =

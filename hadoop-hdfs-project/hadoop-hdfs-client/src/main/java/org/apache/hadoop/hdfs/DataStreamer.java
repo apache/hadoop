@@ -540,6 +540,9 @@ class DataStreamer extends Daemon {
   private final String[] favoredNodes;
   private final EnumSet<AddBlockFlag> addBlockFlags;
 
+  protected volatile boolean endBlockFlag = false;
+  protected volatile boolean currentStreamerSlow = false;
+
   private DataStreamer(HdfsFileStatus stat, ExtendedBlock block,
                        DFSClient dfsClient, String src,
                        Progressable progress, DataChecksum checksum,
@@ -1326,10 +1329,16 @@ class DataStreamer extends Daemon {
       }
       for (DatanodeInfo discontinuousNode : discontinuousNodes) {
         slowNodeMap.remove(discontinuousNode);
+        if (DataStreamer.this instanceof StripedDataStreamer) {
+          currentStreamerSlow = false;
+        }
       }
 
       if (!slowNodeMap.isEmpty()) {
         for (Map.Entry<DatanodeInfo, Integer> entry : slowNodeMap.entrySet()) {
+          if (DataStreamer.this instanceof StripedDataStreamer) {
+            currentStreamerSlow = true;
+          }
           if (entry.getValue() >= markSlowNodeAsBadNodeThreshold) {
             DatanodeInfo slowNode = entry.getKey();
             int index = getDatanodeIndex(slowNode);
@@ -2284,5 +2293,17 @@ class DataStreamer extends Daemon {
     final ExtendedBlock extendedBlock = block.getCurrentBlock();
     return extendedBlock == null ?
         "block==null" : "" + extendedBlock.getLocalBlock();
+  }
+
+  public boolean isEndBlockFlag() {
+    return endBlockFlag;
+  }
+
+  public void setEndBlockFlag(boolean endBlockFlag) {
+    this.endBlockFlag = endBlockFlag;
+  }
+
+  public boolean isCurrentStreamerSlow() {
+    return currentStreamerSlow;
   }
 }

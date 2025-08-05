@@ -6632,6 +6632,15 @@
   </property>
 
   <property>
+    <name>dfs.client.ec.max.end.blockgroup.inadvance.count</name>
+    <value>10</value>
+    <description>
+      The maximum number of end block group in advance that one DFSStripedOutputStream
+      can reach.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.datanode.lockmanager.trace</name>
     <value>false</value>
     <description>
