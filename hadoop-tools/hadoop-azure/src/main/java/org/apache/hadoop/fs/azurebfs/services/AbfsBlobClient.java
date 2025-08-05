@@ -1114,7 +1114,7 @@ public class AbfsBlobClient extends AbfsClient {
          */
         if (getAbfsConfiguration().isFullBlobChecksumValidationEnabled() && blobMd5 != null) {
           // Full blob content MD5 mismatch — integrity check failed
-          if ( !blobMd5.equals(metadataMd5)) {
+          if (!blobMd5.equals(metadataMd5)) {
             throw ex;
           }
         } else {
