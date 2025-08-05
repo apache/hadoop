@@ -469,8 +469,11 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
             .as("ETag should not be null after file creation")
             .isNotNull();
 
+    String updatedFileContent = "Updated content";
+    byte[] updatedData = updatedFileContent.getBytes(StandardCharsets.UTF_8);
+
     // Overwrite the file. Will update the etag, making the previously fetched etag outdated.
-    createFileWithFlags(fs, path, SMALL_FILE_BYTES, false, null);
+    createFileWithFlags(fs, path, updatedData, false, null);
 
     // overwrite file with outdated etag. Should throw RemoteFileChangedException
     RemoteFileChangedException exception = intercept(RemoteFileChangedException.class,

@@ -1007,15 +1007,6 @@ Here are some the S3A properties for use in production.
 </property>
 
 <property>
-    <name>fs.s3a.encryption.context</name>
-    <description>Specific encryption context to use if fs.s3a.encryption.algorithm
-      has been set to 'SSE-KMS' or 'DSSE-KMS'. The value of this property is a set
-      of non-secret comma-separated key-value pairs of additional contextual
-      information about the data that are separated by equal operator (=).
-    </description>
-</property>
-
-<property>
   <name>fs.s3a.signing-algorithm</name>
   <description>Override the default signing algorithm so legacy
     implementations can still be used</description>
@@ -1690,11 +1681,6 @@ For a site configuration of:
 
 <property>
   <name>fs.s3a.encryption.key</name>
-  <value>unset</value>
-</property>
-
-<property>
-  <name>fs.s3a.encryption.context</name>
   <value>unset</value>
 </property>
 

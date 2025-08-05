@@ -1022,7 +1022,6 @@ public class CommonConfigurationKeysPublic {
           "fs.s3a.*.server-side-encryption.key",
           "fs.s3a.encryption.algorithm",
           "fs.s3a.encryption.key",
-          "fs.s3a.encryption.context",
           "fs.azure\\.account.key.*",
           "credential$",
           "oauth.*secret",

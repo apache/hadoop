@@ -19,12 +19,10 @@
 package org.apache.hadoop.fs.s3a.auth.delegation;
 
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
@@ -72,17 +70,13 @@ public class TestS3ADelegationTokenSupport {
   public void testSessionTokenDecode() throws Throwable {
     Text alice = new Text("alice");
     Text renewer = new Text("yarn");
-    String encryptionKey = "encryptionKey";
-    String encryptionContextJson = "{\"key\":\"value\", \"key2\": \"value3\"}";
-    String encryptionContextEncoded = Base64.encodeBase64String(encryptionContextJson.getBytes(
-        StandardCharsets.UTF_8));
     AbstractS3ATokenIdentifier identifier
         = new SessionTokenIdentifier(SESSION_TOKEN_KIND,
         alice,
         renewer,
         new URI("s3a://anything/"),
         new MarshalledCredentials("a", "b", ""),
-        new EncryptionSecrets(S3AEncryptionMethods.SSE_S3, encryptionKey, encryptionContextEncoded),
+        new EncryptionSecrets(S3AEncryptionMethods.SSE_S3, ""),
         "origin");
     Token<AbstractS3ATokenIdentifier> t1 =
         new Token<>(identifier,
@@ -106,10 +100,6 @@ public class TestS3ADelegationTokenSupport {
     assertEquals("origin", decoded.getOrigin());
     assertEquals("issue date", identifier.getIssueDate(),
         decoded.getIssueDate());
-    EncryptionSecrets encryptionSecrets = decoded.getEncryptionSecrets();
-    assertEquals(S3AEncryptionMethods.SSE_S3, encryptionSecrets.getEncryptionMethod());
-    assertEquals(encryptionKey, encryptionSecrets.getEncryptionKey());
-    assertEquals(encryptionContextEncoded, encryptionSecrets.getEncryptionContext());
   }
 
   @Test
@@ -122,19 +112,13 @@ public class TestS3ADelegationTokenSupport {
   @Test
   public void testSessionTokenIdentifierRoundTrip() throws Throwable {
     Text renewer = new Text("yarn");
-    String encryptionKey = "encryptionKey";
-    String encryptionContextJson = "{\"key\":\"value\", \"key2\": \"value3\"}";
-    String encryptionContextEncoded = Base64.encodeBase64String(encryptionContextJson.getBytes(
-        StandardCharsets.UTF_8));
     SessionTokenIdentifier id = new SessionTokenIdentifier(
         SESSION_TOKEN_KIND,
         new Text(),
         renewer,
         externalUri,
         new MarshalledCredentials("a", "b", "c"),
-        new EncryptionSecrets(S3AEncryptionMethods.DSSE_KMS, encryptionKey,
-            encryptionContextEncoded),
-        "");
+        new EncryptionSecrets(), "");
 
     SessionTokenIdentifier result = S3ATestUtils.roundTrip(id, null);
     String ids = id.toString();
@@ -143,10 +127,6 @@ public class TestS3ADelegationTokenSupport {
         id.getMarshalledCredentials(),
         result.getMarshalledCredentials());
     assertEquals("renewer in " + ids, renewer, id.getRenewer());
-    EncryptionSecrets encryptionSecrets = result.getEncryptionSecrets();
-    assertEquals(S3AEncryptionMethods.DSSE_KMS, encryptionSecrets.getEncryptionMethod());
-    assertEquals(encryptionKey, encryptionSecrets.getEncryptionKey());
-    assertEquals(encryptionContextEncoded, encryptionSecrets.getEncryptionContext());
   }
 
   @Test

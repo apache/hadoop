@@ -80,8 +80,7 @@ public class TestMarshalledCredentials extends HadoopTestBase {
   public void testRoundTripEncryptionData() throws Throwable {
     EncryptionSecrets secrets = new EncryptionSecrets(
         S3AEncryptionMethods.SSE_KMS,
-        "key",
-        "encryptionContext");
+        "key");
     EncryptionSecrets result = S3ATestUtils.roundTrip(secrets,
         new Configuration());
     assertEquals("round trip", secrets, result);

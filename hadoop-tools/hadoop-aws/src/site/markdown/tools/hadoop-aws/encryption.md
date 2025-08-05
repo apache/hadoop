@@ -243,21 +243,6 @@ The ID of the specific key used to encrypt the data should also be set in the pr
 </property>
 ```
 
-Optionally, you can specify the encryption context in the property `fs.s3a.encryption.context`:
-
-```xml
-<property>
-  <name>fs.s3a.encryption.context</name>
-    <value>
-        key1=value1,
-        key2=value2,
-        key3=value3,
-        key4=value4,
-        key5=value5
-    </value>
-</property>
-```
-
 Organizations may define a default key in the Amazon KMS; if a default key is set,
 then it will be used whenever SSE-KMS encryption is chosen and the value of `fs.s3a.encryption.key` is empty.
 
@@ -390,21 +375,6 @@ The ID of the specific key used to encrypt the data should also be set in the pr
 <property>
   <name>fs.s3a.encryption.key</name>
   <value>arn:aws:kms:us-west-2:360379543683:key/071a86ff-8881-4ba0-9230-95af6d01ca01</value>
-</property>
-```
-
-Optionally, you can specify the encryption context in the property `fs.s3a.encryption.context`:
-
-```xml
-<property>
-  <name>fs.s3a.encryption.context</name>
-    <value>
-        key1=value1,
-        key2=value2,
-        key3=value3,
-        key4=value4,
-        key5=value5
-    </value>
 </property>
 ```
 

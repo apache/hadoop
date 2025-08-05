@@ -87,7 +87,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
         .withBucket("bucket")
         .withEncryptionSecrets(
             new EncryptionSecrets(S3AEncryptionMethods.SSE_KMS,
-                "kms:key", ""))
+                "kms:key"))
         .build();
     createFactoryObjects(factory);
   }
@@ -348,7 +348,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
         .encodeToString(encryptionKey);
     final String encryptionKeyMd5 = Md5Utils.md5AsBase64(encryptionKey);
     final EncryptionSecrets encryptionSecrets = new EncryptionSecrets(S3AEncryptionMethods.SSE_C,
-        encryptionKeyBase64, null);
+        encryptionKeyBase64);
     RequestFactory factory = RequestFactoryImpl.builder()
         .withBucket("bucket")
         .withChecksumAlgorithm(ChecksumAlgorithm.CRC32_C)

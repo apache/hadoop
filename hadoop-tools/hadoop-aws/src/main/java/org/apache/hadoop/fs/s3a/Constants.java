@@ -775,16 +775,6 @@ public final class Constants {
       "fs.s3a.encryption.key";
 
   /**
-   * Set S3-SSE encryption context.
-   * The value of this property is a set of non-secret comma-separated key-value pairs
-   * of additional contextual information about the data that are separated by equal
-   * operator (=).
-   * value:{@value}
-   */
-  public static final String S3_ENCRYPTION_CONTEXT =
-      "fs.s3a.encryption.context";
-
-  /**
    * Client side encryption (CSE-CUSTOM) with custom cryptographic material manager class name.
    * Custom keyring class name for CSE-KMS.
    * value:{@value}

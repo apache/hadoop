@@ -61,20 +61,4 @@ public final class EncryptionSecretOperations {
       return Optional.empty();
     }
   }
-
-  /**
-   * Gets the SSE-KMS context if present, else don't set it in the S3 request.
-   *
-   * @param secrets source of the encryption secrets.
-   * @return an optional AWS KMS encryption context to attach to a request.
-   */
-  public static Optional<String> getSSEAwsKMSEncryptionContext(final EncryptionSecrets secrets) {
-    if ((secrets.getEncryptionMethod() == S3AEncryptionMethods.SSE_KMS
-        || secrets.getEncryptionMethod() == S3AEncryptionMethods.DSSE_KMS)
-        && secrets.hasEncryptionContext()) {
-      return Optional.of(secrets.getEncryptionContext());
-    } else {
-      return Optional.empty();
-    }
-  }
 }
