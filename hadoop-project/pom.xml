@@ -186,7 +186,7 @@
       --enable-native-access=ALL-UNNAMED
     </extraJavaTestArgs>
     <!-- Plugin versions and config -->
-    <maven-surefire-plugin.argLine>-Xmx4096m -Xss2m -XX:+HeapDumpOnOutOfMemoryError ${extraJavaTestArgs}</maven-surefire-plugin.argLine>
+    <maven-surefire-plugin.argLine>-Xmx4096m -Xss4m -XX:+HeapDumpOnOutOfMemoryError ${extraJavaTestArgs}</maven-surefire-plugin.argLine>
     <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>

@@ -23,6 +23,7 @@ import java.net.URI;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -705,6 +706,12 @@ public abstract class AbstractAbfsIntegrationTest extends
     Assertions.assertThat(path.toString())
         .describedAs("Path does not contain expected DNS")
         .contains(expectedDns);
+  }
+
+  protected byte[] getRandomBytesArray(int length) {
+    final byte[] b = new byte[length];
+    new Random().nextBytes(b);
+    return b;
   }
 
   /**
