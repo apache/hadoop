@@ -174,6 +174,8 @@ public final class AbfsHttpConstants {
   public static final char CHAR_STAR = '*';
   public static final char CHAR_PLUS = '+';
 
+  public static final int SPLIT_NO_LIMIT = -1;
+
   /**
    * Specifies the version of the REST protocol used for processing the request.
    * Versions should be added in enum list in ascending chronological order.
