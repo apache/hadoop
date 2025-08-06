@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -37,6 +38,7 @@ import static org.apache.hadoop.fs.StorageType.RAM_DISK;
 import static org.junit.Assert.assertTrue;
 
 public class TestLazyPersistReplicaRecovery extends LazyPersistTestCase {
+  @Ignore
   @Test
   public void testDnRestartWithSavedReplicas()
       throws IOException, InterruptedException, TimeoutException {

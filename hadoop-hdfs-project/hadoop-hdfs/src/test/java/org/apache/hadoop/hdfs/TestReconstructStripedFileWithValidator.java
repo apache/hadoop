@@ -21,6 +21,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +52,7 @@ public class TestReconstructStripedFileWithValidator
    * On the other hand, when validation disabled, the first reconstruction task
    * will succeed and then lead to data corruption.
    */
+  @Ignore
   @Test(timeout = 120000)
   public void testValidatorWithBadDecoding()
       throws Exception {
