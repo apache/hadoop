@@ -84,6 +84,9 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
   // Buffer Manager Structures
   private static ReadBufferManagerV2 bufferManager;
+  private static ScheduledExecutorService memoryMonitorThread;
+  private static ScheduledExecutorService cpuMonitorThread;
+
 
   /**
    * Private constructor to prevent instantiation as this needs to be singleton.
@@ -150,7 +153,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       getFreeList().add(i);
       numberOfActiveBuffers++;
     }
-    ScheduledExecutorService memoryMonitorThread
+    memoryMonitorThread
         = Executors.newSingleThreadScheduledExecutor();
     memoryMonitorThread.scheduleAtFixedRate(this::scheduledEviction,
         memoryMonitoringIntervalInMilliSec, memoryMonitoringIntervalInMilliSec, TimeUnit.MILLISECONDS);
@@ -172,7 +175,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     ReadBufferWorker.UNLEASH_WORKERS.countDown();
 
     if (isDynamicScalingEnabled) {
-      ScheduledExecutorService cpuMonitorThread
+      cpuMonitorThread
           = Executors.newSingleThreadScheduledExecutor();
       cpuMonitorThread.scheduleAtFixedRate(this::adjustThreadPool,
           cpuMonitoringIntervalInMilliSec, cpuMonitoringIntervalInMilliSec,
@@ -358,6 +361,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   public void close() {
     printTraceLog("Closing ReadBufferManagerV2");
     workerPool.shutdownNow();
+    memoryMonitorThread.shutdownNow();
+    cpuMonitorThread.shutdownNow();
     workerPool = null;
     if (bufferPool != null) {
       // help GC

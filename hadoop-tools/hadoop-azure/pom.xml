@@ -29,7 +29,6 @@
     Currently this consists of a filesystem client to read data from
     and write data to Azure Storage.
   </description>
-  <version>prefetchPR</version>
   <packaging>jar</packaging>
 
   <properties>
