@@ -69,9 +69,8 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
     rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri.toString());
 
     try(SecureAzureBlobFileSystem fs = (SecureAzureBlobFileSystem) FileSystem.newInstance(rawConfig)) {
-      assertEquals(fs.getUri(),
-          new URI(FileSystemUriSchemes.ABFS_SECURE_SCHEME, filesystem + "@" +
-          accountName, null, null, null));
+      assertEquals(fs.getUri(), new URI(FileSystemUriSchemes.ABFS_SECURE_SCHEME,
+          filesystem + "@" + accountName, null, null, null));
       assertNotNull(fs.getWorkingDirectory(), "working directory");
     }
   }

@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -881,7 +882,7 @@ public class TestAbfsInputStream extends
       AbfsInputStream stream = (AbfsInputStream) iStream.getWrappedStream();
       int bytesRead = stream.read(ONE_MB/3, new byte[fileSize], 0,
           fileSize);
-      Assertions.assertThat(fileSize - ONE_MB/3)
+      assertThat(fileSize - ONE_MB/3)
           .describedAs("Read size should match file size")
           .isEqualTo(bytesRead);
     }
@@ -909,7 +910,7 @@ public class TestAbfsInputStream extends
     try (FSDataInputStream iStream = fs.open(testPath)) {
       int bytesRead = iStream.read(new byte[fileSize], 0,
           fileSize);
-      Assertions.assertThat(fileSize)
+      assertThat(fileSize)
           .describedAs("Read size should match file size")
           .isEqualTo(bytesRead);
     }
@@ -962,16 +963,16 @@ public class TestAbfsInputStream extends
     doReturn(EMPTY_STRING).when(mockOp).getTracingContextSuffix();
     tracingContext.constructHeader(mockOp, null, null);
     String[] idList = tracingContext.getHeader().split(COLON, SPLIT_NO_LIMIT);
-    Assertions.assertThat(idList).describedAs("Client Request Id should have all fields").hasSize(
+    assertThat(idList).describedAs("Client Request Id should have all fields").hasSize(
         TracingHeaderVersion.getCurrentVersion().getFieldCount());
     if (expectedReadPos > 0) {
-      Assertions.assertThat(idList[POSITION_INDEX])
+      assertThat(idList[POSITION_INDEX])
           .describedAs("Read Position should match")
           .isEqualTo(Integer.toString(expectedReadPos));
     }
-    Assertions.assertThat(idList[OPERATION_INDEX]).describedAs("Operation Type Should Be Read")
+    assertThat(idList[OPERATION_INDEX]).describedAs("Operation Type Should Be Read")
         .isEqualTo(FSOperationType.READ.toString());
-    Assertions.assertThat(idList[READTYPE_INDEX]).describedAs("Read type in tracing context header should match")
+    assertThat(idList[READTYPE_INDEX]).describedAs("Read type in tracing context header should match")
         .isEqualTo(readType.toString());
   }
 
