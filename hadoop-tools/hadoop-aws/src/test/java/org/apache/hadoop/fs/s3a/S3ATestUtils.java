@@ -71,7 +71,6 @@ import org.apache.hadoop.util.functional.FutureIO;
 
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Assumptions;
-import org.junit.Assume;
 import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -234,8 +233,7 @@ public final class S3ATestUtils {
     }
     // This doesn't work with our JUnit 3 style test cases, so instead we'll
     // make this whole class not run by default
-    Assume.assumeTrue("No test filesystem in " + TEST_FS_S3A_NAME,
-        liveTest);
+    Assumptions.assumeThat(liveTest).isTrue().as("No test filesystem in " + TEST_FS_S3A_NAME);
 
     S3AFileSystem fs1 = new S3AFileSystem();
     //enable purging in tests
@@ -276,8 +274,7 @@ public final class S3ATestUtils {
     }
     // This doesn't work with our JUnit 3 style test cases, so instead we'll
     // make this whole class not run by default
-    Assume.assumeTrue("No test filesystem in " + TEST_FS_S3A_NAME,
-        liveTest);
+    Assumptions.assumeThat(liveTest).isTrue().as("No test filesystem in " + TEST_FS_S3A_NAME);
     FileContext fc = FileContext.getFileContext(testURI, conf);
     return fc;
   }

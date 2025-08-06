@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.test;
 
-import org.junit.Assume;
+import org.junit.jupiter.api.Assumptions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -128,8 +128,8 @@ public final class PublicDatasetTestUtils {
    */
   public static String requireDefaultExternalDataFile(Configuration conf) {
     String filename = getExternalData(conf).toUri().toString();
-    Assume.assumeTrue("External test file is not the default",
-        DEFAULT_EXTERNAL_FILE.equals(filename));
+    Assumptions.assumeTrue(DEFAULT_EXTERNAL_FILE.equals(filename),
+        "External test file is not the default");
     return filename;
   }
 

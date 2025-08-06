@@ -26,7 +26,7 @@ import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.apache.hadoop.test.LambdaTestUtils;
 
-import org.junit.Assume;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
@@ -68,9 +68,8 @@ public class ITestS3ADelayedFNF extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     ChangeDetectionPolicy changeDetectionPolicy =
         fs.getChangeDetectionPolicy();
-    Assume.assumeFalse("FNF not expected when using a bucket with"
-            + " object versioning",
-        changeDetectionPolicy.getSource() == Source.VersionId);
+    Assumptions.assumeFalse(changeDetectionPolicy.getSource() == Source.VersionId,
+        "FNF not expected when using a bucket with object versioning");
 
     Path p = path("some-file");
     ContractTestUtils.createFile(fs, p, false, new byte[] {20, 21, 22});

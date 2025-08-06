@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.junit.Assume;
+import org.junit.jupiter.api.Assumptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -212,8 +212,7 @@ public final class RoleTestUtils {
    */
   public static String probeForAssumedRoleARN(Configuration conf) {
     String arn = conf.getTrimmed(ASSUMED_ROLE_ARN, "");
-    Assume.assumeTrue("No ARN defined in " + ASSUMED_ROLE_ARN,
-        !arn.isEmpty());
+    Assumptions.assumeTrue(!arn.isEmpty(), "No ARN defined in " + ASSUMED_ROLE_ARN);
     return arn;
   }
 
