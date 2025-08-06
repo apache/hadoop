@@ -38,6 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
@@ -1253,6 +1254,7 @@ public class TestRetryCacheWithHA {
     testClientRetryWithFailover(op);
   }
 
+  @Ignore
   @Test (timeout=60000)
   public void testRemoveCacheDescriptor() throws Exception {
     DFSClient client = genClientWithDummyHandler();

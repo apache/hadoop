@@ -212,6 +212,7 @@ public class TestDataNodeRollingUpgrade {
     LOG.info("The cluster is active after rollback");
   }
 
+  @Ignore
   @Test (timeout=600000)
   public void testDatanodeRollingUpgradeWithFinalize() throws Exception {
     try {

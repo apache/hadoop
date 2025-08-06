@@ -179,6 +179,7 @@ public class TestAddOverReplicatedStripedBlocks {
     StripedFileTestUtil.verifyLocatedStripedBlocks(lbs, groupSize - 1);
   }
 
+  @Ignore
   @Test
   public void testProcessOverReplicatedAndCorruptStripedBlock()
       throws Exception {

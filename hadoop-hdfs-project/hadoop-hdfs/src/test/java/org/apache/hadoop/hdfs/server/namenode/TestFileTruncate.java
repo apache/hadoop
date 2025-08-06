@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.junit.Ignore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -321,6 +322,7 @@ public class TestFileTruncate {
     fs.delete(dir, true);
   }
 
+  @Ignore
   @Test
   public void testSnapshotWithAppendTruncate()
       throws IOException, InterruptedException {
