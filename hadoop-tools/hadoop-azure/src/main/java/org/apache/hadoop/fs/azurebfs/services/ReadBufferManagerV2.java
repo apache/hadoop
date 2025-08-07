@@ -21,8 +21,6 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 
 import com.sun.management.OperatingSystemMXBean;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -34,11 +32,9 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
 import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
@@ -48,10 +44,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_HUNDRED;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 
 /**
  * The Improved Read Buffer Manager for Rest AbfsClient.
@@ -68,6 +62,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   private static int threadPoolUpscalePercentage;
   private static int threadPoolDownscalePercentage;
   private static int executorServiceKeepAliveTimeInMilliSec;
+  private static final double threadPoolRequirementBuffer = 1.2; // 20% more threads than the queue size
   private static boolean isDynamicScalingEnabled;
 
   private ThreadPoolExecutor workerPool;
@@ -108,10 +103,6 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         LOCK.unlock();
       }
     }
-    return (ReadBufferManagerV2) bufferManager;
-  }
-
-  public static ReadBufferManagerV2 getInstance() {
     return bufferManager;
   }
 
@@ -513,8 +504,9 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
       }
-      printTraceLog("Latch done for file: {}, with eTag: {}, for offset: {}, buffer index: {} queued by stream: {}",
-          readBuf.getPath(), readBuf.getETag(), readBuf.getOffset(), readBuf.getBufferindex(), readBuf.getStream().hashCode());
+      printTraceLog("Latch done for file: {}, with eTag: {}, for offset: {}, "
+          + "buffer index: {} queued by stream: {}", readBuf.getPath(), readBuf.getETag(),
+          readBuf.getOffset(), readBuf.getBufferindex(), readBuf.getStream().hashCode());
     }
   }
 
@@ -636,8 +628,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         bufferPool[freeIndex] = null;
         removedBufferList.add(freeIndex);
         numberOfActiveBuffers--;
+        printTraceLog("Current Memory Load: {}. Decrementing buffer pool size to {}", memoryLoad, numberOfActiveBuffers);
       }
-      printTraceLog("Current Memory Load: {}. Decrementing buffer pool size to {}", memoryLoad, numberOfActiveBuffers);
     }
   }
 
@@ -652,7 +644,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         OperatingSystemMXBean.class);
     double cpuLoad = osBean.getSystemCpuLoad();
     int currentPoolSize = workerRefs.size();
-    int requiredPoolSize = (int) Math.ceil(1.2 * (getReadAheadQueue().size() + getInProgressList().size())); // 20% more for buffer
+    int requiredPoolSize = (int) Math.ceil(threadPoolRequirementBuffer
+        * (getReadAheadQueue().size() + getInProgressList().size())); // 20% more for buffer
     int newThreadPoolSize;
     printTraceLog("Current CPU load: {}, Current worker pool size: {}, Current queue size: {}", cpuLoad, currentPoolSize, requiredPoolSize);
     if (currentPoolSize < requiredPoolSize && cpuLoad < cpuThreshold) {
@@ -756,7 +749,9 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
   @VisibleForTesting
   public int getNumBuffers() {
-    return numberOfActiveBuffers;
+    synchronized (this) {
+      return numberOfActiveBuffers;
+    }
   }
 
   @Override
@@ -791,5 +786,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
     MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
     return (double) memoryUsage.getUsed() / memoryUsage.getMax();
+  }
+
+  @VisibleForTesting
+  public static ReadBufferManagerV2 getInstance() {
+    return bufferManager;
   }
 }

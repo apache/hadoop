@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -29,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
@@ -168,22 +165,6 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
     conf.setInt(AZURE_READ_BUFFER_SIZE, MIN_BUFFER_SIZE);
     conf.setInt(FS_AZURE_READ_AHEAD_BLOCK_SIZE, MIN_BUFFER_SIZE);
     return (AzureBlobFileSystem) FileSystem.newInstance(conf);
-  }
-
-  protected byte[] getRandomBytesArray(int length) {
-    final byte[] b = new byte[length];
-    new Random().nextBytes(b);
-    return b;
-  }
-
-  protected Path createFileWithContent(FileSystem fs, String fileName,
-      byte[] fileContent) throws IOException {
-    Path testFilePath = path(fileName);
-    try (FSDataOutputStream oStream = fs.create(testFilePath)) {
-      oStream.write(fileContent);
-      oStream.flush();
-    }
-    return testFilePath;
   }
 
   private ReadBufferManager getBufferManager(AzureBlobFileSystem fs) {

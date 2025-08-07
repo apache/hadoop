@@ -110,8 +110,6 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.ListingSupport;
-import org.apache.hadoop.fs.azurebfs.services.ReadBufferManager;
-import org.apache.hadoop.fs.azurebfs.services.ReadBufferManagerV1;
 import org.apache.hadoop.fs.azurebfs.services.ReadBufferManagerV2;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.services.StaticRetryPolicy;

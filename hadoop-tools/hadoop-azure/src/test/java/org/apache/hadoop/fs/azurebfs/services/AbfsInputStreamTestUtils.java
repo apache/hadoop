@@ -49,29 +49,6 @@ public class AbfsInputStreamTestUtils {
     this.abstractAbfsIntegrationTest = abstractAbfsIntegrationTest;
   }
 
-  private Path path(String filepath) throws IOException {
-    return abstractAbfsIntegrationTest.getFileSystem().makeQualified(
-        new Path(getTestPath(), getUniquePath(filepath)));
-  }
-
-  private Path getTestPath() {
-    Path path = new Path(UriUtils.generateUniqueTestPath());
-    return path;
-  }
-
-  /**
-   * Generate a unique path using the given filepath.
-   * @param filepath path string
-   * @return unique path created from filepath and a GUID
-   */
-  private Path getUniquePath(String filepath) {
-    if (filepath.equals("/")) {
-      return new Path(filepath);
-    }
-    return new Path(filepath + StringUtils
-        .right(UUID.randomUUID().toString(), SHORTENED_GUID_LEN));
-  }
-
   /**
    * Returns AzureBlobFileSystem instance with the required
    * readFullFileOptimization configuration.
@@ -88,38 +65,6 @@ public class AbfsInputStreamTestUtils {
         readSmallFilesCompletely);
     configuration.setBoolean(AZURE_READ_OPTIMIZE_FOOTER_READ, false);
     return (AzureBlobFileSystem) FileSystem.newInstance(configuration);
-  }
-
-  /**
-   * Return array of random bytes of the given length.
-   *
-   * @param length length of the byte array
-   * @return byte array
-   */
-  public byte[] getRandomBytesArray(int length) {
-    final byte[] b = new byte[length];
-    new Random().nextBytes(b);
-    return b;
-  }
-
-  /**
-   * Create a file on the file system with the given file name and content.
-   *
-   * @param fs fileSystem that stores the file
-   * @param fileName name of the file
-   * @param fileContent content of the file
-   *
-   * @return path of the file created
-   * @throws IOException exception in writing file on fileSystem
-   */
-  public Path createFileWithContent(FileSystem fs, String fileName,
-      byte[] fileContent) throws IOException {
-    Path testFilePath = path(fileName);
-    try (FSDataOutputStream oStream = fs.create(testFilePath)) {
-      oStream.write(fileContent);
-      oStream.flush();
-    }
-    return testFilePath;
   }
 
   /**

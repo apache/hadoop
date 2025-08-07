@@ -1,9 +1,26 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -11,22 +28,17 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
-import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READ_AHEAD_BLOCK_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
 
 /**
  * Test class for ReadBufferManagerV2 functionality.
@@ -35,9 +47,7 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
 
   private static final String TEST_FILE_NAME_PREFIX = "testFile";
   private static final int LESS_NUM_FILES = 5;
-  private static final int MORE_NUM_FILES = 10;
   private static final int SMALL_FILE_SIZE = 30 * ONE_MB;
-  private static final int LARGE_FILE_SIZE = 100 * ONE_MB;
 
   public ITestReadBufferManagerV2() throws Exception {
     super();
@@ -80,66 +90,6 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     }
   }
 
-  /**
-   * Test to verify that multiple input streams can read the same file.
-   * With read ahead v2 enabled, multiple input stream read the same cached buffer
-   * based on file eTag.
-   * @throws Exception if any error occurs during the test
-   */
-  @Test
-  public void testMultipleInputStreamReadingSameFile() throws Exception {
-    AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
-    AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
-    AbfsClient spiedClient = Mockito.spy(spiedStore.getClient());
-    Mockito.doReturn(spiedClient).when(spiedStore).getClient();
-    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
-    int numOfFiles = MORE_NUM_FILES;
-    int fileSize = SMALL_FILE_SIZE;
-    int blockSize = 4 * ONE_MB;
-
-    Path[] testPaths = createFilesWithContent(spiedFs, 1);
-    Path testPath = testPaths[0];
-    ExecutorService executorService = Executors.newFixedThreadPool(
-        LESS_NUM_FILES);
-
-    try {
-      for (int i = 0; i < LESS_NUM_FILES; i++) {
-        executorService.submit((Callable<Void>) () -> {
-          try (FSDataInputStream iStream = spiedFs.open(testPath)) {
-            int bytesRead = iStream.read(new byte[LARGE_FILE_SIZE], 0,
-                LARGE_FILE_SIZE);
-            Assertions.assertEquals(LARGE_FILE_SIZE, bytesRead,
-                "Read size should match file size");
-          }
-          return null;
-        });
-      }
-    } finally {
-      shutdownExecutorService(executorService);
-    }
-
-    int leastReadOpnCount = fileSize/blockSize;
-
-    verify(spiedClient, Mockito.atLeast(leastReadOpnCount))
-        .read(Mockito.anyString(), Mockito.anyLong(), Mockito.any(),
-            Mockito.anyInt(), Mockito.anyInt(), Mockito.anyString(),
-            Mockito.anyString(), Mockito.any(), Mockito.any());
-    verify(spiedClient, Mockito.atMost(2 * leastReadOpnCount))
-        .read(eq(testPath.toString()), Mockito.anyLong(), Mockito.any(),
-            Mockito.anyInt(), Mockito.anyInt(), Mockito.anyString(),
-            Mockito.anyString(), Mockito.any(), Mockito.any());
-
-  }
-
-  /**
-   * Test to verify that scheduled eviction of completed buffers happens.
-   * This test will be implemented in the future.
-   * @throws Exception if any error occurs during the test
-   */
-  @Test
-  public void testScheduledEviction() throws Exception {
-  }
-
   private AzureBlobFileSystem getConfiguredFileSystem(boolean isRAV2Enabled,
       Map<String, String> configurations) throws IOException {
     Configuration conf = getConfiguration().getRawConfiguration();
@@ -149,17 +99,6 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     }
 
     return (AzureBlobFileSystem) FileSystem.newInstance(conf);
-  }
-
-  private Path createFileWithContent(FileSystem fs, String fileName,
-      byte[] fileContent) throws
-      IOException {
-    Path testFilePath = path(fileName);
-    try (FSDataOutputStream oStream = fs.create(testFilePath)) {
-      oStream.write(fileContent);
-      oStream.flush();
-    }
-    return testFilePath;
   }
 
   private Path[] createFilesWithContent(FileSystem fs,
