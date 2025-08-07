@@ -79,8 +79,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
   // Buffer Manager Structures
   private static ReadBufferManagerV2 bufferManager;
-  private static ScheduledExecutorService memoryMonitorThread;
-  private static ScheduledExecutorService cpuMonitorThread;
+  private ScheduledExecutorService memoryMonitorThread;
+  private ScheduledExecutorService cpuMonitorThread;
 
 
   /**
@@ -108,6 +108,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
   /**
    * Set the ReadBufferManagerV2 configurations based on the provided before singleton initialization.
+   * @param readAheadBlockSize the block size for read-ahead operations.
    * @param abfsConfiguration the configuration to set for the ReadBufferManagerV2.
    */
   public static void setReadBufferManagerConfigs(final int readAheadBlockSize,
@@ -144,8 +145,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       getFreeList().add(i);
       numberOfActiveBuffers++;
     }
-    memoryMonitorThread
-        = Executors.newSingleThreadScheduledExecutor();
+    memoryMonitorThread = Executors.newSingleThreadScheduledExecutor();
     memoryMonitorThread.scheduleAtFixedRate(this::scheduledEviction,
         memoryMonitoringIntervalInMilliSec, memoryMonitoringIntervalInMilliSec, TimeUnit.MILLISECONDS);
 
@@ -166,8 +166,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     ReadBufferWorker.UNLEASH_WORKERS.countDown();
 
     if (isDynamicScalingEnabled) {
-      cpuMonitorThread
-          = Executors.newSingleThreadScheduledExecutor();
+      cpuMonitorThread = Executors.newSingleThreadScheduledExecutor();
       cpuMonitorThread.scheduleAtFixedRate(this::adjustThreadPool,
           cpuMonitoringIntervalInMilliSec, cpuMonitoringIntervalInMilliSec,
           TimeUnit.MILLISECONDS);
