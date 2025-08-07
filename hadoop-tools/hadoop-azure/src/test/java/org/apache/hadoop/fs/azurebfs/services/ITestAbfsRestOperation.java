@@ -24,7 +24,6 @@ import java.net.ProtocolException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -140,17 +139,6 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     super();
   }
 
-  /**
-   * Test helper method to get random bytes array.
-   * @param length The length of byte buffer
-   * @return byte buffer
-   */
-  private byte[] getRandomBytesArray(int length) {
-    final byte[] b = new byte[length];
-    new Random().nextBytes(b);
-    return b;
-  }
-
   @Override
   public AzureBlobFileSystem getFileSystem(final Configuration configuration)
       throws Exception {
@@ -194,7 +182,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         = new AppendRequestParameters(
         BUFFER_OFFSET, BUFFER_OFFSET, BUFFER_LENGTH,
         AppendRequestParameters.Mode.APPEND_MODE, false, null,
-        expectHeaderEnabled);
+        expectHeaderEnabled, null);
 
     byte[] buffer = getRandomBytesArray(5);
 

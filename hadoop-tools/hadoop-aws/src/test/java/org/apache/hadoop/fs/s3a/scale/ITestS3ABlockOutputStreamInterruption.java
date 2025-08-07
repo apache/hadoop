@@ -28,7 +28,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.conf.Configuration;
@@ -83,6 +85,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * Marked as a scale test even though it tries to aggressively abort streams being written
  * and should, if working, complete fast.
  */
+@ParameterizedClass(name = "{0}-{1}")
+@MethodSource("params")
 public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
 
   public static final int MAX_RETRIES_IN_SDK = 2;
@@ -104,23 +108,22 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
   /**
    * Buffer type.
    */
-  private String bufferType;
+  private final String bufferType;
 
   /**
    * How many blocks can a stream have uploading?
    */
-  private int activeBlocks;
+  private final int activeBlocks;
 
   /**
    * Constructor.
-   * @param pBufferType buffer type
-   * @param pActiveBlocks number of active blocks which can be uploaded
+   * @param bufferType buffer type
+   * @param activeBlocks number of active blocks which can be uploaded
    */
-  public void initITestS3ABlockOutputStreamInterruption(final String pBufferType,
-      int pActiveBlocks) throws Exception {
-    this.bufferType = requireNonNull(pBufferType);
-    this.activeBlocks = pActiveBlocks;
-    setup();
+  public ITestS3ABlockOutputStreamInterruption(final String bufferType,
+      int activeBlocks) {
+    this.bufferType = requireNonNull(bufferType);
+    this.activeBlocks = activeBlocks;
   }
 
   /**
@@ -164,6 +167,7 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
    * Setup MUST set up the evaluator before the FS is created.
    */
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     SdkFaultInjector.resetFaultInjector();
     super.setup();
@@ -179,11 +183,8 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
     super.teardown();
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}-{1}")
-  public void testInterruptMultipart(String pBufferType,
-      int pActiveBlocks) throws Throwable {
-    initITestS3ABlockOutputStreamInterruption(pBufferType, pActiveBlocks);
+  @Test
+  public void testInterruptMultipart() throws Throwable {
     describe("Interrupt a thread performing close() on a multipart upload");
 
     interruptMultipartUpload(methodPath(), 6 * _1MB);
@@ -228,11 +229,8 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
    * then go on to simulate an NPE in the part upload and verify
    * that this does not get escalated.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}-{1}")
-  public void testAbortDuringUpload(String pBufferType,
-      int pActiveBlocks) throws Throwable {
-    initITestS3ABlockOutputStreamInterruption(pBufferType, pActiveBlocks);
+  @Test
+  public void testAbortDuringUpload() throws Throwable {
     describe("Abort during multipart upload");
     int len = 6 * _1MB;
     final byte[] dataset = dataset(len, 'a', 'z' - 'a');
@@ -286,11 +284,8 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
    * Test that a part upload failure is propagated to
    * the close() call.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}-{1}")
-  public void testPartUploadFailure(String pBufferType,
-      int pActiveBlocks) throws Throwable {
-    initITestS3ABlockOutputStreamInterruption(pBufferType, pActiveBlocks);
+  @Test
+  public void testPartUploadFailure() throws Throwable {
     describe("Trigger a failure during a multipart upload");
     int len = 6 * _1MB;
     final byte[] dataset = dataset(len, 'a', 'z' - 'a');
@@ -339,11 +334,8 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
   /**
    * Write a small dataset and interrupt the close() operation.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}-{1}")
-  public void testInterruptMagicWrite(String pBufferType,
-      int pActiveBlocks) throws Throwable {
-    initITestS3ABlockOutputStreamInterruption(pBufferType, pActiveBlocks);
+  @Test
+  public void testInterruptMagicWrite() throws Throwable {
     describe("Interrupt a thread performing close() on a magic upload");
 
     // write a smaller file to a magic path and assert multipart outcome
@@ -354,11 +346,8 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
   /**
    * Write a small dataset and interrupt the close() operation.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}-{1}")
-  public void testInterruptWhenAbortingAnUpload(String pBufferType,
-      int pActiveBlocks) throws Throwable {
-    initITestS3ABlockOutputStreamInterruption(pBufferType, pActiveBlocks);
+  @Test
+  public void testInterruptWhenAbortingAnUpload() throws Throwable {
     describe("Interrupt a thread performing close() on a magic upload");
 
     // fail more than the SDK will retry
@@ -384,11 +373,8 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
    * a {@code InterruptedIOException} and the count of interrupted events
    * to increase.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}-{1}")
-  public void testInterruptSimplePut(String pBufferType,
-      int pActiveBlocks) throws Throwable {
-    initITestS3ABlockOutputStreamInterruption(pBufferType, pActiveBlocks);
+  @Test
+  public void testInterruptSimplePut() throws Throwable {
     describe("Interrupt simple object PUT");
 
     // dataset is less than one block

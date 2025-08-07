@@ -67,7 +67,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     // after creating a file, it must be possible to create a new xAttr
     touch(testFile);
     fs.setXAttr(testFile, attributeName, attributeValue, CREATE_FLAG);
-    assertAttributeEqual(fs.getXAttr(testFile, attributeName), attributeValue, decodedAttributeValue);
+    assertAttributeEqual(fs, fs.getXAttr(testFile, attributeName), attributeValue, decodedAttributeValue);
 
     // however after the xAttr is created, creating it again must fail
     intercept(IOException.class, () -> fs.setXAttr(testFile, attributeName, attributeValue, CREATE_FLAG));
@@ -92,7 +92,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     // however after the xAttr is created, replacing it must succeed
     fs.setXAttr(testFile, attributeName, attributeValue1, CREATE_FLAG);
     fs.setXAttr(testFile, attributeName, attributeValue2, REPLACE_FLAG);
-    assertAttributeEqual(fs.getXAttr(testFile, attributeName), attributeValue2,
+    assertAttributeEqual(fs, fs.getXAttr(testFile, attributeName), attributeValue2,
         decodedAttribute2);
   }
 
@@ -176,7 +176,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
 
     // Check if the attribute is retrievable
     byte[] rv = fs.getXAttr(path, attributeName);
-    assertAttributeEqual(rv, attributeValue, decodedAttributeValue);
+    assertAttributeEqual(fs, rv, attributeValue, decodedAttributeValue);
   }
 
   /**
@@ -220,7 +220,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     // Check if the attribute is retrievable
     fs.setListenerOperation(FSOperationType.GET_ATTR);
     byte[] rv = fs.getXAttr(testPath, attributeName1);
-    assertAttributeEqual(rv, attributeValue1, decodedAttributeValue1);
+    assertAttributeEqual(fs, rv, attributeValue1, decodedAttributeValue1);
     fs.registerListener(null);
 
     // Set the second Attribute
@@ -228,10 +228,10 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
 
     // Check all the attributes present and previous Attribute not overridden
     rv = fs.getXAttr(testPath, attributeName1);
-    assertAttributeEqual(rv, attributeValue1, decodedAttributeValue1);
+    assertAttributeEqual(fs, rv, attributeValue1, decodedAttributeValue1);
 
     rv = fs.getXAttr(testPath, attributeName2);
-    assertAttributeEqual(rv, attributeValue2, decodedAttributeValue2);
+    assertAttributeEqual(fs, rv, attributeValue2, decodedAttributeValue2);
   }
 
   private void assertAttributeNull(byte[] rv) {
@@ -240,12 +240,12 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
         .isNull();
   }
 
-  private void assertAttributeEqual(byte[] rv, byte[] attributeValue,
+  public static void assertAttributeEqual(AzureBlobFileSystem fs, byte[] rv, byte[] attributeValue,
       String decodedAttributeValue) throws Exception {
     Assertions.assertThat(rv)
         .describedAs("Retrieved Attribute Does not Matches in Encoded Form")
         .containsExactly(attributeValue);
-    Assertions.assertThat(getFileSystem().getAbfsStore().decodeAttribute(rv))
+    Assertions.assertThat(fs.getAbfsStore().decodeAttribute(rv))
         .describedAs("Retrieved Attribute Does not Matches in Decoded Form")
         .isEqualTo(decodedAttributeValue);
   }

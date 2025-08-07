@@ -121,10 +121,10 @@ public class TestYarnFederationWithCapacityScheduler {
   public static void setUp()
       throws IOException, InterruptedException, YarnException, TimeoutException {
     testFederationSubCluster = new TestFederationSubCluster();
-    testFederationSubCluster.startFederationSubCluster(2181,
-        "18032,18030,18031,18088,18033,SC-1,127.0.0.1:2181,capacity-scheduler",
-        "28032,28030,28031,28088,28033,SC-2,127.0.0.1:2181,capacity-scheduler",
-        "18050,18052,18089,127.0.0.1:2181");
+    testFederationSubCluster.startFederationSubCluster(2183,
+        "18032,18030,18031,18088,18033,SC-1,127.0.0.1:2183,capacity-scheduler",
+        "28032,28030,28031,28088,28033,SC-2,127.0.0.1:2183,capacity-scheduler",
+        "18050,18052,18089,127.0.0.1:2183");
     subClusters = Sets.newHashSet();
     subClusters.add("SC-1");
     subClusters.add("SC-2");

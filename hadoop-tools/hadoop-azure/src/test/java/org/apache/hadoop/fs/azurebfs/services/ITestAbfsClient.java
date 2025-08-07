@@ -26,7 +26,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 import java.util.regex.Pattern;
 
 import org.assertj.core.api.Assertions;
@@ -604,17 +603,6 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     return client.getTokenProvider();
   }
 
-  /**
-   * Test helper method to get random bytes array.
-   * @param length The length of byte buffer.
-   * @return byte buffer.
-   */
-  private byte[] getRandomBytesArray(int length) {
-    final byte[] b = new byte[length];
-    new Random().nextBytes(b);
-    return b;
-  }
-
   @Override
   public AzureBlobFileSystem getFileSystem(final Configuration configuration)
       throws Exception {
@@ -658,7 +646,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     AppendRequestParameters appendRequestParameters
         = new AppendRequestParameters(
         BUFFER_OFFSET, BUFFER_OFFSET, BUFFER_LENGTH,
-        AppendRequestParameters.Mode.APPEND_MODE, false, null, true);
+        AppendRequestParameters.Mode.APPEND_MODE, false, null, true, null);
 
     byte[] buffer = getRandomBytesArray(BUFFER_LENGTH);
 

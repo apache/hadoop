@@ -114,6 +114,7 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_READ_SMALL_FILES_COMPLETELY = false;
   public static final boolean DEFAULT_OPTIMIZE_FOOTER_READ = true;
   public static final int DEFAULT_FOOTER_READ_BUFFER_SIZE = 512 * ONE_KB;
+  public static final boolean DEFAULT_BUFFERED_PREAD_DISABLE = false;
   public static final boolean DEFAULT_ALWAYS_READ_BUFFER_SIZE = false;
   public static final int DEFAULT_READ_AHEAD_BLOCK_SIZE = 4 * ONE_MB;
   public static final int DEFAULT_READ_AHEAD_RANGE = 64 * ONE_KB; // 64 KB
@@ -166,6 +167,14 @@ public final class FileSystemConfigurations {
   public static final long DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS = 120;
 
   public static final boolean DEFAULT_ENABLE_READAHEAD = true;
+  public static final boolean DEFAULT_ENABLE_READAHEAD_V2 = false;
+  public static final int DEFAULT_READAHEAD_V2_MIN_THREAD_POOL_SIZE = -1;
+  public static final int DEFAULT_READAHEAD_V2_MAX_THREAD_POOL_SIZE = -1;
+  public static final int DEFAULT_READAHEAD_V2_MIN_BUFFER_POOL_SIZE = -1;
+  public static final int DEFAULT_READAHEAD_V2_MAX_BUFFER_POOL_SIZE = -1;
+  public static final int DEFAULT_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS = 3_000;
+  public static final int DEFAULT_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS = 6_000;
+
   public static final String DEFAULT_FS_AZURE_USER_AGENT_PREFIX = EMPTY_STRING;
   public static final String DEFAULT_VALUE_UNKNOWN = "UNKNOWN";
 
@@ -188,6 +197,36 @@ public final class FileSystemConfigurations {
    * Length of the block ID used for appends.
    */
   public static final int BLOCK_ID_LENGTH = 60;
+
+  /**
+   * Format string for generating block IDs.
+   * Example: "%s-%06d" where %s is the stream ID and %06d is the block index.
+   */
+  public static final String BLOCK_ID_FORMAT = "%s-%06d";
+
+  /**
+   * Format string for padding block IDs.
+   * Example: "%-" specifies left alignment in the format string.
+   */
+  public static final String PADDING_FORMAT = "%-";
+
+  /**
+   * Suffix for string formatting.
+   * Example: "s" specifies the type as a string in the format string.
+   */
+  public static final String STRING_SUFFIX = "s";
+
+  /**
+   * Character used for padding spaces in block IDs.
+   * Example: ' ' represents a space character.
+   */
+  public static final char SPACE_CHARACTER = ' ';
+
+  /**
+   * Character used for padding block IDs.
+   * Example: '_' is used to replace spaces in padded block IDs.
+   */
+  public static final char PADDING_CHARACTER = '_';
 
   /**
    * Buffer blocks to disk.

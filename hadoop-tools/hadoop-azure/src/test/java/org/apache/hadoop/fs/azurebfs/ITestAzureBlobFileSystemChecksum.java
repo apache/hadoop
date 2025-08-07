@@ -84,10 +84,10 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     byte[] data = generateRandomBytes(MB_4);
     int pos = 0;
 
-    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, 0);
-    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, ONE_MB);
-    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, MB_2);
-    appendWithOffsetHelper(os, client, path, data, fs, pos, MB_4 - 1);
+    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, 0, client.computeMD5Hash(data, 0, data.length));
+    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, ONE_MB, client.computeMD5Hash(data, ONE_MB, data.length - ONE_MB));
+    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, MB_2, client.computeMD5Hash(data, MB_2, data.length-MB_2));
+    appendWithOffsetHelper(os, client, path, data, fs, pos, MB_4 - 1, client.computeMD5Hash(data, MB_4 - 1, data.length - (MB_4 - 1)));
     fs.close();
   }
 
@@ -118,14 +118,15 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true);
     AbfsClient spiedClient = Mockito.spy(fs.getAbfsStore().getClientHandler().getIngressClient());
     Path path = path("testPath" + getMethodName());
-    AbfsOutputStream os = (AbfsOutputStream) fs.create(path).getWrappedStream();
+    AbfsOutputStream os = Mockito.spy((AbfsOutputStream) fs.create(path).getWrappedStream());
     byte[] data= generateRandomBytes(MB_4);
     String invalidMD5Hash = spiedClient.computeMD5Hash(
             INVALID_MD5_TEXT.getBytes(), 0, INVALID_MD5_TEXT.length());
     Mockito.doReturn(invalidMD5Hash).when(spiedClient).computeMD5Hash(any(),
         any(Integer.class), any(Integer.class));
+    Mockito.doReturn(invalidMD5Hash).when(os).getMd5();
     AbfsRestOperationException ex = intercept(AbfsInvalidChecksumException.class, () -> {
-      appendWithOffsetHelper(os, spiedClient, path, data, fs, 0, 0);
+      appendWithOffsetHelper(os, spiedClient, path, data, fs, 0, 0, invalidMD5Hash);
     });
 
     Assertions.assertThat(ex.getErrorCode())
@@ -197,12 +198,12 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
    * @throws Exception
    */
   private int appendWithOffsetHelper(AbfsOutputStream os, AbfsClient client, Path path,
-      byte[] data, AzureBlobFileSystem fs, final int pos, final int offset) throws Exception {
+      byte[] data, AzureBlobFileSystem fs, final int pos, final int offset, String md5) throws Exception {
     String blockId = generateBlockId(os, pos);
     String eTag = os.getIngressHandler().getETag();
     AppendRequestParameters reqParams = new AppendRequestParameters(
         pos, offset, data.length - offset, APPEND_MODE, isAppendBlobEnabled(), null, true,
-        new BlobAppendRequestParameters(blockId, eTag));
+        new BlobAppendRequestParameters(blockId, eTag), md5);
     client.append(path.toUri().getPath(), data, reqParams, null, null,
         getTestTracingContext(fs, false));
     return reqParams.getLength();

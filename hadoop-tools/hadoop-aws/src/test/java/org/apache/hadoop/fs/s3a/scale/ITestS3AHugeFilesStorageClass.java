@@ -20,6 +20,9 @@ package org.apache.hadoop.fs.s3a.scale;
 
 import java.io.IOException;
 
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.test.tags.ScaleTest;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.bandwidth;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.toHuman;
@@ -42,6 +46,8 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfStorageClassTestsDisab
  * Class to verify that {@link Constants#STORAGE_CLASS} is set correctly
  * for creating and renaming huge files with multipart upload requests.
  */
+@ScaleTest
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
 public class ITestS3AHugeFilesStorageClass extends AbstractSTestS3AHugeFiles {
 
   private static final Logger LOG = LoggerFactory.getLogger(ITestS3AHugeFilesStorageClass.class);
@@ -62,12 +68,14 @@ public class ITestS3AHugeFilesStorageClass extends AbstractSTestS3AHugeFiles {
     return Constants.FAST_UPLOAD_BUFFER_ARRAY;
   }
 
+  @Test
   @Override
   public void test_010_CreateHugeFile() throws IOException {
     super.test_010_CreateHugeFile();
     assertStorageClass(getPathOfFileToCreate());
   }
 
+  @Test
   @Override
   public void test_030_postCreationAssertions() throws Throwable {
     super.test_030_postCreationAssertions();
@@ -75,20 +83,24 @@ public class ITestS3AHugeFilesStorageClass extends AbstractSTestS3AHugeFiles {
   }
 
   @Override
+  @Test
   public void test_040_PositionedReadHugeFile() throws Throwable {
     skipQuietly("PositionedReadHugeFile");
   }
 
+  @Test
   @Override
   public void test_050_readHugeFile() throws Throwable {
     skipQuietly("readHugeFile");
   }
 
+  @Test
   @Override
   public void test_090_verifyRenameSourceEncryption() throws IOException {
     skipQuietly("verifyRenameSourceEncryption");
   }
 
+  @Test
   @Override
   public void test_100_renameHugeFile() throws Throwable {
     Path hugefile = getHugefile();
@@ -110,6 +122,7 @@ public class ITestS3AHugeFilesStorageClass extends AbstractSTestS3AHugeFiles {
     assertStorageClass(hugefileRenamed);
   }
 
+  @Test
   @Override
   public void test_110_verifyRenameDestEncryption() throws IOException {
     skipQuietly("verifyRenameDestEncryption");
