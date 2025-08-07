@@ -4659,7 +4659,7 @@
       yarn.nodemanager.resource-plugins.gpu.discovery-max-errors.
     </description>
     <name>yarn.nodemanager.resource-plugins.gpu.discovery-timeout</name>
-    <value>10000ms</value>
+    <value>10s</value>
   </property>
 
   <property>

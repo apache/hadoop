@@ -1925,7 +1925,7 @@ public class YarnConfiguration extends Configuration {
       NM_GPU_RESOURCE_PREFIX + "discovery-timeout";
 
   @Private
-  public static final String NM_GPU_DISCOVERY_TIMEOUT_DEFAULT = "10000ms";
+  public static final String NM_GPU_DISCOVERY_TIMEOUT_DEFAULT = "10s";
 
   /**
    * Sets the maximum number of errors allowed from the discovery binary.
