@@ -68,7 +68,14 @@ public class NMTokenSecretManagerInNM extends BaseNMTokenSecretManager {
         new HashMap<ApplicationId, List<ApplicationAttemptId>>();
     this.stateStore = stateStore;
   }
-  
+
+  public Map<ApplicationId, List<ApplicationAttemptId>> getAppToAppAttemptMap() {
+    if (appToAppAttemptMap == null) {
+      return new HashMap<ApplicationId, List<ApplicationAttemptId>>();
+    }
+    return appToAppAttemptMap;
+  }
+
   public synchronized void recover()
       throws IOException {
     RecoveredNMTokensState state = stateStore.loadNMTokensState();

@@ -1759,6 +1759,8 @@ public class ContainerManagerImpl extends CompositeService implements
           diagnostic = "Application killed on shutdown";
         } else if (appsFinishedEvent.getReason() == CMgrCompletedAppsEvent.Reason.BY_RESOURCEMANAGER) {
           diagnostic = "Application killed by ResourceManager";
+        } else if (appsFinishedEvent.getReason() == CMgrCompletedAppsEvent.Reason.BY_NODEMANAGER) {
+          diagnostic = "Application cleaned by NodeManager";
         }
         this.dispatcher.getEventHandler().handle(
             new ApplicationFinishEvent(appID,

@@ -52,6 +52,11 @@ public class CMgrCompletedAppsEvent extends ContainerManagerEvent {
     /**
      * Application is killed by ResourceManager
      */
-    BY_RESOURCEMANAGER
+    BY_RESOURCEMANAGER,
+
+    /**
+     * Application is marked as Cleaned because NodeManager restart and Recovery, and it is already finished
+     */
+    BY_NODEMANAGER
   }
 }

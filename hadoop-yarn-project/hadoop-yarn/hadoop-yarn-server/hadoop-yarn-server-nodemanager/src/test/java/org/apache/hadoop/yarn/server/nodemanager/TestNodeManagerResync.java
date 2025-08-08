@@ -477,8 +477,8 @@ public class TestNodeManagerResync {
       }
 
       @Override
-      protected void registerWithRM() throws YarnException, IOException {
-        super.registerWithRM();
+      protected void registerWithRM(boolean isStarted) throws YarnException, IOException {
+        super.registerWithRM(false);
         registrationCount++;
       }
 
@@ -565,8 +565,8 @@ public class TestNodeManagerResync {
       }
 
       @Override
-      protected void registerWithRM() throws YarnException, IOException {
-        super.registerWithRM();
+      protected void registerWithRM(boolean isStarted) throws YarnException, IOException {
+        super.registerWithRM(false);
         registrationCount++;
         if (registrationCount > 1) {
           throw new YarnRuntimeException("Registration with RM failed.");
