@@ -27,6 +27,8 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -56,9 +58,12 @@ import org.apache.http.HttpResponse;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_FULL_BLOB_CHECKSUM_VALIDATION;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatCode;
 
 /**
  * Test create operation.
@@ -482,7 +487,102 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     }
     // Verify that reset was called on the message digest
     if (spiedClient.isChecksumValidationEnabled()) {
-      Mockito.verify(mockMessageDigest, Mockito.times(1)).reset();
+      Assertions.assertThat(Mockito.mockingDetails(mockMessageDigest).getInvocations()
+          .stream()
+          .filter(i -> i.getMethod().getName().equals("reset"))
+          .count())
+          .as("Expected MessageDigest.reset() to be called exactly once when checksum validation is enabled")
+          .isEqualTo(1);
     }
+  }
+
+  /**
+   * Tests that the message digest is reset when an exception occurs during remote flush.
+   * Simulates a failure in the flush operation and verifies reset is called on MessageDigest.
+   */
+  @Test
+  public void testNoChecksumComputedWhenConfigFalse()  throws Exception {
+    Configuration conf = getRawConfiguration();
+    conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, false);
+    FileSystem fileSystem = FileSystem.newInstance(conf);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) fileSystem;
+    Assume.assumeTrue(!getIsNamespaceEnabled(fs));
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    assumeBlobServiceType();
+    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+
+    // Create spies for the client handler and blob client
+    AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
+    AbfsBlobClient blobClient = Mockito.spy(clientHandler.getBlobClient());
+
+    // Set up the spies to return the mocked objects
+    Mockito.doReturn(clientHandler).when(store).getClientHandler();
+    Mockito.doReturn(blobClient).when(clientHandler).getBlobClient();
+    Mockito.doReturn(blobClient).when(clientHandler).getIngressClient();
+    AbfsOutputStream abfsOutputStream = Mockito.spy(
+        (AbfsOutputStream) fs.create(new Path("/test/file")).getWrappedStream());
+    AzureIngressHandler ingressHandler = Mockito.spy(
+        abfsOutputStream.getIngressHandler());
+    Mockito.doReturn(ingressHandler).when(abfsOutputStream).getIngressHandler();
+    Mockito.doReturn(blobClient).when(ingressHandler).getClient();
+    FSDataOutputStream os = Mockito.spy(
+        new FSDataOutputStream(abfsOutputStream, null));
+    AbfsOutputStream out = (AbfsOutputStream) os.getWrappedStream();
+    byte[] bytes = new byte[1024 * 1024 * 4];
+    new Random().nextBytes(bytes);
+    // Write some bytes and attempt to flush, which should retry
+    out.write(bytes);
+    out.hsync();
+    Assertions.assertThat(Mockito.mockingDetails(blobClient).getInvocations()
+        .stream()
+        .filter(i -> i.getMethod().getName().equals("addCheckSumHeaderForWrite"))
+        .count())
+        .as("Expected addCheckSumHeaderForWrite() to be called exactly 0 times")
+        .isZero();
+  }
+
+  /**
+   * Tests that the message digest is reset when an exception occurs during remote flush.
+   * Simulates a failure in the flush operation and verifies reset is called on MessageDigest.
+   */
+  @Test
+  public void testChecksumComputedWhenConfigTrue()  throws Exception {
+    Configuration conf = getRawConfiguration();
+    conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
+    FileSystem fileSystem = FileSystem.newInstance(conf);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) fileSystem;
+    Assume.assumeTrue(!getIsNamespaceEnabled(fs));
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    assumeBlobServiceType();
+    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+
+    // Create spies for the client handler and blob client
+    AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
+    AbfsBlobClient blobClient = Mockito.spy(clientHandler.getBlobClient());
+
+    // Set up the spies to return the mocked objects
+    Mockito.doReturn(clientHandler).when(store).getClientHandler();
+    Mockito.doReturn(blobClient).when(clientHandler).getBlobClient();
+    Mockito.doReturn(blobClient).when(clientHandler).getIngressClient();
+    AbfsOutputStream abfsOutputStream = Mockito.spy(
+        (AbfsOutputStream) fs.create(new Path("/test/file")).getWrappedStream());
+    AzureIngressHandler ingressHandler = Mockito.spy(
+        abfsOutputStream.getIngressHandler());
+    Mockito.doReturn(ingressHandler).when(abfsOutputStream).getIngressHandler();
+    Mockito.doReturn(blobClient).when(ingressHandler).getClient();
+    FSDataOutputStream os = Mockito.spy(
+        new FSDataOutputStream(abfsOutputStream, null));
+    AbfsOutputStream out = (AbfsOutputStream) os.getWrappedStream();
+    byte[] bytes = new byte[1024 * 1024 * 4];
+    new Random().nextBytes(bytes);
+    // Write some bytes and attempt to flush, which should retry
+    out.write(bytes);
+    out.hsync();
+    Assertions.assertThat(Mockito.mockingDetails(blobClient).getInvocations()
+        .stream()
+        .filter(i -> i.getMethod().getName().equals("addCheckSumHeaderForWrite"))
+        .count())
+        .as("Expected addCheckSumHeaderForWrite() to be called exactly once")
+        .isEqualTo(1);
   }
 }

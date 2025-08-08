@@ -547,12 +547,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     outputStreamStatistics.bytesToUpload(bytesLength);
     outputStreamStatistics.writeCurrentBuffer();
     DataBlocks.BlockUploadData blockUploadData = blockToUpload.startUpload();
-    String md5Hash;
-    if (getClient().getAbfsConfiguration().getIsChecksumValidationEnabled()) {
-      md5Hash = getMd5();
-    } else {
-      md5Hash = null;
-    }
+    String md5Hash = getClient().isChecksumValidationEnabled() ? getMd5() : null;
     final Future<Void> job =
         executorService.submit(() -> {
           AbfsPerfTracker tracker =
