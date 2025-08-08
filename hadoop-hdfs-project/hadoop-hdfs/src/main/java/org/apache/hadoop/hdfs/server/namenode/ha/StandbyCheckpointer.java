@@ -248,9 +248,10 @@ public class StandbyCheckpointer {
     // Do this in a separate thread to avoid blocking transition to active, but don't allow more
     // than the expected number of tasks to run or queue up
     // See HDFS-4816
-    ExecutorService executor = new ThreadPoolExecutor(0, activeNNAddresses.size(), 100,
-        TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(activeNNAddresses.size()),
-        uploadThreadFactory);
+    ExecutorService executor =
+        new ThreadPoolExecutor(activeNNAddresses.size(), activeNNAddresses.size(), 100,
+            TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(activeNNAddresses.size()),
+            uploadThreadFactory);
     // for right now, just match the upload to the nn address by convention. There is no need to
     // directly tie them together by adding a pair class.
     HashMap<String, Future<TransferFsImage.TransferResult>> uploads =

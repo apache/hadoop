@@ -458,6 +458,21 @@ public class TestStandbyCheckpoints {
     cluster.transitionToStandby(0);
     cluster.transitionToActive(1);
 
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        int transferThreadCount = 0;
+        ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+        ThreadInfo[] threads = threadBean.getThreadInfo(
+            threadBean.getAllThreadIds(), 1);
+        for (ThreadInfo thread: threads) {
+          if (thread.getThreadName().startsWith("TransferFsImageUpload")) {
+            transferThreadCount++;
+          }
+        }
+        return transferThreadCount == NUM_NNS - 1;
+      }
+    }, 1000, 30000);
 
     // Wait to make sure background TransferFsImageUpload thread was cancelled.
     // This needs to be done before the next test in the suite starts, so that a
