@@ -305,18 +305,12 @@ public class TestGpuDiscoverer {
     conf.setInt(YarnConfiguration.NM_GPU_DISCOVERY_MAX_ERRORS, 11);
 
     File fakeBinary = createFakeNvidiaSmiScriptAsRunnableFile(
-        this::createNvidiaSmiScript);
+        this::createFaultyNvidiaSmiScript);
 
     GpuDiscoverer discoverer = creatediscovererWithGpuPathDefined(conf);
     assertEquals(fakeBinary.getAbsolutePath(),
         discoverer.getPathOfGpuBinary());
     assertNull(discoverer.getEnvironmentToRunCommand().get(PATH));
-
-    LOG.debug("Querying nvidia-smi correctly, once...");
-    discoverer.getGpuDeviceInformation();
-
-    LOG.debug("Replacing script with faulty version!");
-    createFaultyNvidiaSmiScript(fakeBinary);
 
     final String terminateMsg = "Failed to execute GPU device " +
         "detection script (" + fakeBinary.getAbsolutePath() + ") for 10 times";
@@ -375,8 +369,8 @@ public class TestGpuDiscoverer {
     // never see the termination message.
     for (int i = 0; i < 20; ++i) {
       YarnException exception = assertThrows(YarnException.class, () -> {
-            discoverer.getGpuDeviceInformation();
-          });
+        discoverer.getGpuDeviceInformation();
+      });
 
       assertThat(exception.getMessage()).contains(msg);
       assertThat(exception.getMessage()).doesNotContain(terminateMsg);
