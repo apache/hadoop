@@ -186,6 +186,7 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE = true;
   public static final boolean DEFAULT_ENABLE_PAGINATED_DELETE = false;
   public static final boolean DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION = false;
+  public static final boolean DEFAULT_ENABLE_FULL_BLOB_ABFS_CHECKSUM_VALIDATION = false;
 
   /**
    * Limit of queued block upload operations before writes
@@ -276,7 +277,9 @@ public final class FileSystemConfigurations {
 
   public static final int DEFAULT_FS_AZURE_BLOB_DELETE_THREAD = DEFAULT_FS_AZURE_LISTING_ACTION_THREADS;
 
-  public static final int DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME = 60;
+  public static final int DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME = 30;
+
+  public static final int DEFAULT_WRITE_CPU_MONITORING_INTERVAL = 15;
 
   public static final int DEFAULT_WRITE_THREADPOOL_CORE_POOL_SIZE = 1;
 
