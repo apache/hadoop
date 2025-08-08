@@ -459,9 +459,9 @@ public class StandbyCheckpointer {
                 uncheckpointed, checkpointConf.getTxnCount());
             needCheckpoint = true;
           } else if (secsSinceLast >= checkpointConf.getPeriod()) {
-            LOG.info("Triggering checkpoint because it has been {} seconds "
-                    + "since the last checkpoint, which exceeds the configured "
-                    + "interval {}, And now is {}, lastCheckpointTime is {}.",
+            LOG.info("Triggering checkpoint because it has been {} seconds " +
+                "since the last checkpoint, which exceeds the configured " +
+                "interval {}, And now is {}, lastCheckpointTime is {}.",
                 secsSinceLast, checkpointConf.getPeriod(), now, lastCheckpointTime);
             needCheckpoint = true;
           }
