@@ -369,7 +369,7 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
         } else {
           blkLocations = fs.getFileBlockLocations(file, 0, length);
         }
-        if(blkLocations.length == 0){
+        if (blkLocations.length == 0){
           continue;
         }
         if (isSplitable(fs, path)) {
