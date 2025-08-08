@@ -28,7 +28,6 @@ import java.net.URL;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -60,10 +59,8 @@ import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_FULL_BLOB_CHECKSUM_VALIDATION;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatCode;
 
 /**
  * Test create operation.
@@ -443,7 +440,6 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
   public void testResetCalledOnExceptionInRemoteFlush() throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
     Assume.assumeTrue(!getIsNamespaceEnabled(fs));
-    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     assumeBlobServiceType();
     Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
 
@@ -486,7 +482,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
       //expected exception
     }
     // Verify that reset was called on the message digest
-    if (spiedClient.isChecksumValidationEnabled()) {
+    if (spiedClient.isFullBlobChecksumValidationEnabled()) {
       Assertions.assertThat(Mockito.mockingDetails(mockMessageDigest).getInvocations()
           .stream()
           .filter(i -> i.getMethod().getName().equals("reset"))

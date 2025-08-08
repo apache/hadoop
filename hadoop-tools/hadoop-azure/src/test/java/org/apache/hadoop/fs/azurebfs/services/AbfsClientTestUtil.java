@@ -168,7 +168,7 @@ public final class AbfsClientTestUtil {
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
     requestHeaders.add(new AbfsHttpHeader(
         X_MS_BLOB_CONTENT_MD5,
-        spiedClient.isFullBlobChecksumValidationEnabled()
+        (spiedClient.isFullBlobChecksumValidationEnabled() && blobMd5 != null)
             ? blobMd5
             : spiedClient.computeMD5Hash(buffer, 0, buffer.length)
     ));

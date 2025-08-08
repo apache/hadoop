@@ -1076,7 +1076,7 @@ public class AbfsBlobClient extends AbfsClient {
     if (leaseId != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
     }
-    String md5Value = isFullBlobChecksumValidationEnabled()
+    String md5Value = (isFullBlobChecksumValidationEnabled() && blobMd5 != null)
         ? blobMd5
         : computeMD5Hash(buffer, 0, buffer.length);
     requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, md5Value));
