@@ -313,7 +313,7 @@ public class TestGpuDiscoverer {
     assertNull(discoverer.getEnvironmentToRunCommand().get(PATH));
 
     final String terminateMsg = "Failed to execute GPU device " +
-        "detection script (" + fakeBinary.getAbsolutePath() + ") for 10 times";
+        "detection script (" + fakeBinary.getAbsolutePath() + ") for 11 times";
     final String msg = "Failed to execute GPU device detection script";
 
     // We expect 11 attempts (not the default of 10).
