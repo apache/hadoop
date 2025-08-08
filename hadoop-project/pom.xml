@@ -1176,11 +1176,11 @@
       </dependency>
       <dependency>
         <groupId>com.amazonaws</groupId>
-        <artifactId>aws-java-sdk-core</artifactId>
+        <artifactId>aws-java-sdk-bundle</artifactId>
         <version>${aws-java-sdk.version}</version>
         <exclusions>
           <exclusion>
-            <groupId>*</groupId>
+            <groupId>io.netty</groupId>
             <artifactId>*</artifactId>
           </exclusion>
         </exclusions>
