@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.junit.jupiter.api.Assumptions;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Use {@link Constants#FAST_UPLOAD_BUFFER_DISK} for buffering.
@@ -36,7 +36,9 @@ public class ITestS3ABlockOutputDisk extends ITestS3ABlockOutputArray {
    * @return null
    */
   protected S3ADataBlocks.BlockFactory createFactory(S3AFileSystem fileSystem) {
-    Assumptions.assumeTrue(false, "mark/reset not supported");
+    assumeThat(false)
+        .as("mark/reset not supported")
+        .isTrue();
     return null;
   }
 }

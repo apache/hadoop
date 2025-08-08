@@ -126,6 +126,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.FunctionalIO.uncheckIOExceptions;
 import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
 import static org.apache.hadoop.util.functional.RemoteIterators.toList;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -233,7 +234,9 @@ public final class S3ATestUtils {
     }
     // This doesn't work with our JUnit 3 style test cases, so instead we'll
     // make this whole class not run by default
-    Assumptions.assumeThat(liveTest).isTrue().as("No test filesystem in " + TEST_FS_S3A_NAME);
+    assumeThat(liveTest)
+        .as("No test filesystem in " + TEST_FS_S3A_NAME)
+        .isTrue();
 
     S3AFileSystem fs1 = new S3AFileSystem();
     //enable purging in tests
@@ -274,7 +277,9 @@ public final class S3ATestUtils {
     }
     // This doesn't work with our JUnit 3 style test cases, so instead we'll
     // make this whole class not run by default
-    Assumptions.assumeThat(liveTest).isTrue().as("No test filesystem in " + TEST_FS_S3A_NAME);
+    assumeThat(liveTest)
+        .as("No test filesystem in " + TEST_FS_S3A_NAME)
+        .isTrue();
     FileContext fc = FileContext.getFileContext(testURI, conf);
     return fc;
   }
