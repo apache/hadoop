@@ -79,6 +79,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
   // Buffer Manager Structures
   private static ReadBufferManagerV2 bufferManager;
+  private static boolean isConfigured = false;
   private ScheduledExecutorService memoryMonitorThread;
   private ScheduledExecutorService cpuMonitorThread;
 
@@ -91,6 +92,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   public static ReadBufferManagerV2 getBufferManager() {
+    if (!isConfigured) {
+      throw new IllegalStateException("ReadBufferManagerV2 is not configured. "
+          + "Please call setReadBufferManagerConfigs() before calling getBufferManager().");
+    }
     if (bufferManager == null) {
       LOCK.lock();
       try {
@@ -130,6 +135,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       setThresholdAgeMilliseconds(abfsConfiguration.getReadAheadV2CachedBufferTTLMillis());
       isDynamicScalingEnabled = abfsConfiguration.isReadAheadV2DynamicScalingEnabled();
       setReadAheadBlockSize(readAheadBlockSize);
+      isConfigured = true;
     }
   }
 
@@ -790,5 +796,35 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   @VisibleForTesting
   public static ReadBufferManagerV2 getInstance() {
     return bufferManager;
+  }
+
+  @VisibleForTesting
+  public int getMinThreadPoolSize() {
+    return minThreadPoolSize;
+  }
+
+  @VisibleForTesting
+  public int getMaxThreadPoolSize() {
+    return maxThreadPoolSize;
+  }
+
+  @VisibleForTesting
+  public int getMinBufferPoolSize() {
+    return minBufferPoolSize;
+  }
+
+  @VisibleForTesting
+  public int getMaxBufferPoolSize() {
+    return maxBufferPoolSize;
+  }
+
+  @VisibleForTesting
+  public int getCurrentThreadPoolSize() {
+    return workerRefs.size();
+  }
+
+  @VisibleForTesting
+  public int getCpuMonitoringIntervalInMilliSec() {
+    return cpuMonitoringIntervalInMilliSec;
   }
 }
