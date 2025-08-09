@@ -304,13 +304,18 @@ public class TestGpuDiscoverer {
     // The default is 10 max errors. Override to 11.
     conf.setInt(YarnConfiguration.NM_GPU_DISCOVERY_MAX_ERRORS, 11);
 
+    // Initial creation will call the script once. Start out with a successful
+    // script. Otherwise, our error count assertions will be off by one later.
     File fakeBinary = createFakeNvidiaSmiScriptAsRunnableFile(
-        this::createFaultyNvidiaSmiScript);
+        this::createNvidiaSmiScript);
 
     GpuDiscoverer discoverer = creatediscovererWithGpuPathDefined(conf);
     assertEquals(fakeBinary.getAbsolutePath(),
         discoverer.getPathOfGpuBinary());
     assertNull(discoverer.getEnvironmentToRunCommand().get(PATH));
+
+    LOG.debug("Replacing script with faulty version!");
+    createFaultyNvidiaSmiScript(fakeBinary);
 
     final String terminateMsg = "Failed to execute GPU device " +
         "detection script (" + fakeBinary.getAbsolutePath() + ") for 11 times";
