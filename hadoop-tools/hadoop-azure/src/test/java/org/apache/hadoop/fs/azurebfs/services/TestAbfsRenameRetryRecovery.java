@@ -65,7 +65,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Testing Abfs Rename recovery using Mockito.
@@ -252,8 +252,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
-
-    assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
+    assumeThat(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext)).isTrue();
 
     AbfsClient mockClient = getMockAbfsClient();
 
@@ -310,8 +309,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
-    assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
-
+    assumeThat(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext)).isTrue();
     AbfsClient mockClient = getMockAbfsClient();
 
     String base = "/" + getMethodName();
@@ -333,7 +331,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
-    assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
+    assumeThat(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext)).isTrue();
 
     AbfsClient mockClient = getMockAbfsClient();
 
@@ -402,7 +400,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
-    assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
+    assumeThat(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext)).isTrue();
 
     AbfsClient spyClient = getMockAbfsClient();
 
@@ -432,7 +430,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
-    assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
+    assumeThat(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext)).isTrue();
 
     AbfsClient spyClient = getMockAbfsClient();
 
@@ -515,7 +513,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
     final AzureBlobFileSystemStore store = fs.getAbfsStore();
-    assumeTrue(store.getIsNamespaceEnabled(testTracingContext));
+    assumeThat(store.getIsNamespaceEnabled(testTracingContext)).isTrue();
 
     // patch in the mock abfs client to the filesystem, for the resilient
     // commit API to pick up.
@@ -547,7 +545,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
     final AzureBlobFileSystemStore store = fs.getAbfsStore();
-    assumeTrue(store.getIsNamespaceEnabled(testTracingContext));
+    assumeThat(store.getIsNamespaceEnabled(testTracingContext)).isTrue();
 
     // patch in the mock abfs client to the filesystem, for the resilient
     // commit API to pick up.

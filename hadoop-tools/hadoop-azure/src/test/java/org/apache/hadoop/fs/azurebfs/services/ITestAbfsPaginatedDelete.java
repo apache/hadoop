@@ -62,7 +62,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils.getHeaderValue;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Tests to verify server side pagination feature is supported from driver.
@@ -145,8 +145,8 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testRecursiveDeleteWithPagination() throws Exception {
-    assumeTrue(
-        getFileSystem().getAbfsStore().getClient() instanceof AbfsDfsClient);
+    assumeThat(getFileSystem().getAbfsStore().getClient())
+        .isInstanceOf(AbfsDfsClient.class);
     testRecursiveDeleteWithPaginationInternal(false, true,
         AbfsHttpConstants.ApiVersion.DEC_12_2019);
     testRecursiveDeleteWithPaginationInternal(false, true,
@@ -180,8 +180,8 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testRecursiveDeleteWithInvalidCT() throws Exception {
-    assumeTrue(
-        getFileSystem().getAbfsStore().getClient() instanceof AbfsDfsClient);
+    assumeThat(getFileSystem().getAbfsStore().getClient())
+        .isInstanceOf(AbfsDfsClient.class);
     testRecursiveDeleteWithInvalidCTInternal(true);
     testRecursiveDeleteWithInvalidCTInternal(false);
   }

@@ -62,8 +62,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CR
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test getIsNamespaceEnabled call.
@@ -82,8 +81,9 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testXNSAccount() throws IOException {
-    assumeTrue(isUsingXNSAccount,
-        "Skip this test because the account being used for test is a non XNS account");
+    assumeThat(isUsingXNSAccount)
+        .as("Skip this test because the account being used for test is a non XNS account")
+        .isTrue();
     assertTrue(
        getIsNamespaceEnabled(getFileSystem()), "Expecting getIsNamespaceEnabled() return true");
   }
@@ -91,8 +91,9 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
   @Test
   public void testNonXNSAccount() throws IOException {
     assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
-    assumeFalse(isUsingXNSAccount,
-        "Skip this test because the account being used for test is a XNS account");
+    assumeThat(isUsingXNSAccount)
+        .as("Skip this test because the account being used for test is a XNS account")
+        .isFalse();
     assertFalse(
        getIsNamespaceEnabled(getFileSystem()), "Expecting getIsNamespaceEnabled() return false");
   }
@@ -100,8 +101,9 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
   @Test
   public void testGetIsNamespaceEnabledWhenConfigIsTrue() throws Exception {
     assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
-    assumeTrue(getAbfsServiceType() == AbfsServiceType.DFS,
-        "Blob Endpoint Does not Allow FS init on HNS Account");
+    assumeThat(getAbfsServiceType())
+        .as("Blob Endpoint Does not Allow FS init on HNS Account")
+        .isEqualTo(AbfsServiceType.DFS);
     AzureBlobFileSystem fs = getNewFSWithHnsConf(TRUE_STR);
     Assertions.assertThat(getIsNamespaceEnabled(fs)).describedAs(
         "getIsNamespaceEnabled should return true when the "

@@ -49,7 +49,7 @@ import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_NETWORKING_LIBRARY;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.APACHE_HTTP_CLIENT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 public class ITestAbfsHttpClientRequestExecutor extends
     AbstractAbfsIntegrationTest {
@@ -67,8 +67,9 @@ public class ITestAbfsHttpClientRequestExecutor extends
     AzureBlobFileSystem fs = getFileSystem();
     Path path = new Path("/testExpect100ContinueHandling");
     if (isAppendBlobEnabled()) {
-      assumeFalse(getIngressServiceType() == AbfsServiceType.BLOB,
-          "Not valid for AppendBlob with blob endpoint");
+      assumeThat(getIngressServiceType())
+          .as("Not valid for AppendBlob with blob endpoint")
+          .isEqualTo(AbfsServiceType.BLOB);
     }
 
     Configuration conf = new Configuration(fs.getConf());

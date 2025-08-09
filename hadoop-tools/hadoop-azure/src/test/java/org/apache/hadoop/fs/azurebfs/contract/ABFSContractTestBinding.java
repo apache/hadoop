@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Bind ABFS contract tests to the Azure test setup/teardown.
@@ -44,8 +44,11 @@ public class ABFSContractTestBinding extends AbstractAbfsIntegrationTest {
     if (useExistingFileSystem) {
       AbfsConfiguration configuration = getConfiguration();
       String testUrl = configuration.get(TestConfigurationKeys.FS_AZURE_CONTRACT_TEST_URI);
-      assumeTrue(testUrl != null, "Contract tests are skipped because of missing config property :"
-          + TestConfigurationKeys.FS_AZURE_CONTRACT_TEST_URI);
+
+      assumeThat(testUrl)
+          .as("Contract tests are skipped because of missing config property :"
+          + TestConfigurationKeys.FS_AZURE_CONTRACT_TEST_URI)
+          .isNotNull();
 
       if (getAuthType() != AuthType.SharedKey) {
         testUrl = testUrl.replaceFirst(FileSystemUriSchemes.ABFS_SCHEME, FileSystemUriSchemes.ABFS_SECURE_SCHEME);

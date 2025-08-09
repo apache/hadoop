@@ -75,8 +75,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.FILE_SYSTEM_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Base for AzureBlobFileSystem Integration tests.
@@ -114,8 +113,9 @@ public abstract class AbstractAbfsIntegrationTest extends
       // check if accountName is set using different config key
       accountName = rawConfig.get(FS_AZURE_ABFS_ACCOUNT_NAME);
     }
-    assumeTrue(accountName != null && !accountName.isEmpty(),
-        "Not set: " + FS_AZURE_ABFS_ACCOUNT_NAME);
+    assumeThat(accountName)
+        .as("Not set: " + FS_AZURE_ABFS_ACCOUNT_NAME)
+        .isNotBlank();
 
     final String abfsUrl = this.getFileSystemName() + "@" + this.getAccountName();
     URI defaultUri = null;
@@ -577,14 +577,16 @@ public abstract class AbstractAbfsIntegrationTest extends
   protected void assumeValidTestConfigPresent(final Configuration conf, final String key) {
     String configuredValue = conf.get(accountProperty(key, accountName),
         conf.get(key, ""));
-    assumeTrue(!configuredValue.isEmpty(),
-        String.format("Missing Required Test Config: %s.", key));
+    assumeThat(configuredValue)
+        .as(String.format("Missing Required Test Config: %s.", key))
+        .isNotEmpty();
   }
 
   protected void assumeValidAuthConfigsPresent() {
     final AuthType currentAuthType = getAuthType();
-    assumeFalse(currentAuthType == AuthType.SAS,
-        "SAS Based Authentication Not Allowed For Integration Tests");
+    assumeThat(currentAuthType).
+        as("SAS Based Authentication Not Allowed For Integration Tests").
+        isEqualTo(AuthType.SAS);
     if (currentAuthType == AuthType.SharedKey) {
       assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_ACCOUNT_KEY);
     } else {
@@ -615,7 +617,7 @@ public abstract class AbstractAbfsIntegrationTest extends
    * @param path path to create. Can be relative or absolute.
    */
   protected void createAzCopyFolder(Path path) throws Exception {
-    assumeTrue(getAbfsServiceType() == AbfsServiceType.BLOB);
+    assumeThat(getAbfsServiceType()).isEqualTo(AbfsServiceType.BLOB);
     assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_FIXED_SAS_TOKEN);
     String sasToken = getRawConfiguration().get(FS_AZURE_TEST_FIXED_SAS_TOKEN);
     AzcopyToolHelper azcopyHelper = AzcopyToolHelper.getInstance(sasToken);
@@ -627,7 +629,7 @@ public abstract class AbstractAbfsIntegrationTest extends
    * @param path path to create. Can be relative or absolute.
    */
   protected void createAzCopyFile(Path path) throws Exception {
-    assumeTrue(getAbfsServiceType() == AbfsServiceType.BLOB);
+    assumeThat(getAbfsServiceType()).isEqualTo(AbfsServiceType.BLOB);
     assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_FIXED_SAS_TOKEN);
     String sasToken = getRawConfiguration().get(FS_AZURE_TEST_FIXED_SAS_TOKEN);
     AzcopyToolHelper azcopyHelper = AzcopyToolHelper.getInstance(sasToken);
@@ -645,8 +647,9 @@ public abstract class AbstractAbfsIntegrationTest extends
    * Otherwise, the test will be skipped.
    */
   protected void assumeBlobServiceType() {
-    assumeTrue(getAbfsServiceType() == AbfsServiceType.BLOB,
-        "Blob service type is required for this test");
+    assumeThat(getAbfsServiceType()).
+        as("Blob service type is required for this test").
+        isEqualTo(AbfsServiceType.BLOB);
   }
 
   /**
@@ -654,8 +657,9 @@ public abstract class AbstractAbfsIntegrationTest extends
    * Otherwise, the test will be skipped.
    */
   protected void assumeDfsServiceType() {
-    assumeTrue(getAbfsServiceType() == AbfsServiceType.DFS,
-        "DFS service type is required for this test");
+    assumeThat(getAbfsServiceType())
+        .as("DFS service type is required for this test")
+        .isEqualTo(AbfsServiceType.DFS);
   }
 
   /**
@@ -673,7 +677,7 @@ public abstract class AbstractAbfsIntegrationTest extends
    * @throws IOException if an error occurs while checking the account type.
    */
   protected void assumeHnsEnabled(String errorMessage) throws IOException {
-    assumeTrue(getIsNamespaceEnabled(getFileSystem()), errorMessage);
+    assumeThat(getIsNamespaceEnabled(getFileSystem())).as(errorMessage).isTrue();
   }
 
   /**
@@ -691,7 +695,7 @@ public abstract class AbstractAbfsIntegrationTest extends
    * @throws IOException if an error occurs while checking the account type.
    */
   protected void assumeHnsDisabled(String message) throws IOException {
-    assumeFalse(getIsNamespaceEnabled(getFileSystem()), message);
+    assumeThat(getIsNamespaceEnabled(getFileSystem())).as(message).isFalse();
   }
 
   /**
@@ -754,18 +758,20 @@ public abstract class AbstractAbfsIntegrationTest extends
   protected void assumeRecoveryThroughClientTransactionID(boolean isCreate)
       throws IOException {
     // Assumes that recovery through client transaction ID is enabled.
-    assumeTrue(getConfiguration().getIsClientTransactionIdEnabled(),
-        "Recovery through client transaction ID is not enabled");
+    assumeThat(getConfiguration().getIsClientTransactionIdEnabled())
+        .as("Recovery through client transaction ID is not enabled")
+        .isTrue();
     // Assumes that service type is DFS.
     assumeDfsServiceType();
     // Assumes that namespace is enabled for the given AzureBlobFileSystem.
     assumeHnsEnabled();
     if (isCreate) {
       // Assume that create client is DFS client.
-      assumeTrue(AbfsServiceType.DFS.equals(getIngressServiceType()),
-          "Ingress service type is not DFS");
+      assumeThat(AbfsServiceType.DFS.equals(getIngressServiceType()))
+          .as("Ingress service type is not DFS")
+          .isTrue();
       // Assume that append blob is not enabled in DFS client.
-      assumeFalse(isAppendBlobEnabled(), "Append blob is enabled in DFS client");
+      assumeThat(isAppendBlobEnabled()).as("Append blob is enabled in DFS client").isFalse();
     }
   }
 }

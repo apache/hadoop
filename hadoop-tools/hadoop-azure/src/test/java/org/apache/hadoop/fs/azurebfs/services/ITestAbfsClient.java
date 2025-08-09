@@ -94,7 +94,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_W
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test useragent of abfs client.
@@ -183,7 +183,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   @Test
   public void verifyBasicInfo() throws Exception {
-    assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
+    assumeThat(JDK_HTTP_URL_CONNECTION).isEqualTo(httpOperationType);
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
@@ -213,7 +213,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   public void verifyUserAgentPrefix()
       throws IOException, IllegalAccessException, URISyntaxException {
-    assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
+    assumeThat(JDK_HTTP_URL_CONNECTION).isEqualTo(httpOperationType);
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     configuration.set(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY, FS_AZURE_USER_AGENT_PREFIX);
@@ -248,7 +248,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   public void verifyUserAgentExpectHeader()
           throws IOException, IllegalAccessException, URISyntaxException {
-    assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
+    assumeThat(JDK_HTTP_URL_CONNECTION).isEqualTo(httpOperationType);
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     configuration.set(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY, FS_AZURE_USER_AGENT_PREFIX);
@@ -275,7 +275,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   @Test
   public void verifyUserAgentWithoutSSLProvider() throws Exception {
-    assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
+    assumeThat(JDK_HTTP_URL_CONNECTION).isEqualTo(httpOperationType);
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     configuration.set(ConfigurationKeys.FS_AZURE_SSL_CHANNEL_MODE_KEY,
@@ -299,7 +299,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   @Test
   public void verifyUserAgentClusterName() throws Exception {
-    assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
+    assumeThat(JDK_HTTP_URL_CONNECTION).isEqualTo(httpOperationType);
     final String clusterName = "testClusterName";
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
@@ -328,7 +328,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   @Test
   public void verifyUserAgentClusterType() throws Exception {
-    assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
+    assumeThat(JDK_HTTP_URL_CONNECTION).isEqualTo(httpOperationType);
     final String clusterType = "testClusterType";
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
@@ -488,9 +488,9 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         abfsConfig.getAccountName());
     AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
 
-    assumeTrue(
-        (currentAuthType == AuthType.SharedKey)
-        || (currentAuthType == AuthType.OAuth));
+    assumeThat(currentAuthType)
+        .as("Auth type must be SharedKey or OAuth for this test")
+        .isIn(AuthType.SharedKey, AuthType.OAuth);
 
     AbfsClient client;
     if (AbfsServiceType.DFS.equals(abfsConfig.getFsConfiguredServiceType())) {

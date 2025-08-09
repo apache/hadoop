@@ -58,7 +58,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.assertNoFailureStatistics;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.loadSuccessFile;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.validateSuccessFile;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Runs Terasort against ABFS using the manifest committer.
@@ -184,8 +184,9 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
    * @param stage stage name
    */
   private static void requireStage(final String stage) {
-    assumeTrue(COMPLETED_STAGES.get(stage) != null,
-        "Required stage was not completed: " + stage);
+    assumeThat(COMPLETED_STAGES.get(stage))
+        .as("Required stage was not completed: " + stage)
+        .isNotNull();
   }
 
   /**

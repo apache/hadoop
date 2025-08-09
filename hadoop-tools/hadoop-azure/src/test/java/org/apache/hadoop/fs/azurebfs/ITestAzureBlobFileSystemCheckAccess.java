@@ -52,8 +52,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_FS_CLIENT_SECRET;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test cases for AzureBlobFileSystem.access()
@@ -124,13 +123,13 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testCheckAccessForFileWithNullFsAction() throws Exception {
-      assertThrows(NullPointerException.class, () -> {
-          assumeTrue(isHNSEnabled, FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false");
-          assumeTrue(isCheckAccessEnabled, FS_AZURE_ENABLE_CHECK_ACCESS + " is false");
-          superUserFs.access(new Path("test.txt"), null);
-      });
-  //  NPE when trying to convert null FsAction enum
-}
+    assertThrows(NullPointerException.class, () -> {
+      assumeThat(isHNSEnabled).as(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false").isTrue();
+      assumeThat(isCheckAccessEnabled).as(FS_AZURE_ENABLE_CHECK_ACCESS + " is false").isTrue();
+      //  NPE when trying to convert null FsAction enum
+      superUserFs.access(new Path("test.txt"), null);
+    });
+  }
 
   @Test
   public void testCheckAccessForNonExistentFile() throws Exception {
@@ -145,7 +144,7 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testWhenCheckAccessConfigIsOff() throws Exception {
-    assumeTrue(isHNSEnabled, FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false");
+    assumeThat(isHNSEnabled).as(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false").isTrue();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ENABLE_CHECK_ACCESS, false);
     FileSystem fs = FileSystem.newInstance(conf);
@@ -176,9 +175,13 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testCheckAccessForAccountWithoutNS() throws Exception {
-    assumeFalse(getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
-        true), FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is true");
-    assumeTrue(isCheckAccessEnabled, FS_AZURE_ENABLE_CHECK_ACCESS + " is false");
+    assumeThat(getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
+        true))
+        .as(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is true")
+        .isFalse();
+    assumeThat(isCheckAccessEnabled)
+        .as(FS_AZURE_ENABLE_CHECK_ACCESS + " is false")
+        .isTrue();
     checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID);
     checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET);
     checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_USER_GUID);
@@ -313,8 +316,8 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   private void checkPrerequisites() throws Exception {
-    assumeTrue(isHNSEnabled, FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false");
-    assumeTrue(isCheckAccessEnabled, FS_AZURE_ENABLE_CHECK_ACCESS + " is false");
+    assumeThat(isHNSEnabled).as(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false").isTrue();
+    assumeThat(isCheckAccessEnabled).as(FS_AZURE_ENABLE_CHECK_ACCESS + " is false").isTrue();
     setTestUserFs();
     checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID);
     checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET);
@@ -324,8 +327,10 @@ public class ITestAzureBlobFileSystemCheckAccess
   private void checkIfConfigIsSet(String configKey){
     AbfsConfiguration conf = getConfiguration();
     String value = conf.get(configKey);
-    assumeTrue(value != null && value.trim().length() > 1,
-        configKey + " config is mandatory for the test to run");
+    assumeThat(value)
+        .as(configKey + " config is mandatory for the test to run")
+        .isNotNull()
+        .matches(v -> v.trim().length() > 1, "trimmed length > 1");
   }
 
   private void assertAccessible(Path testFilePath, FsAction fsAction)

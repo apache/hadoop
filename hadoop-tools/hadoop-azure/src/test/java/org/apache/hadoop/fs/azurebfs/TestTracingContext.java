@@ -59,7 +59,7 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.EXPONE
 import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.STATIC_RETRY_POLICY_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_ABBREVIATION;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 public class TestTracingContext extends AbstractAbfsIntegrationTest {
   private static final String[] CLIENT_CORRELATIONID_LIST = {
@@ -206,9 +206,9 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     fs.getAbfsStore().getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
     fs.hasPathCapability(new Path("/"), CommonPathCapabilities.FS_ACLS);
 
-    assumeTrue(getIsNamespaceEnabled(getFileSystem()));
-    assumeTrue(getConfiguration().isCheckAccessEnabled());
-    assumeTrue(getAuthType() == AuthType.OAuth);
+    assumeThat(getIsNamespaceEnabled(getFileSystem())).isTrue();
+    assumeThat(getConfiguration().isCheckAccessEnabled()).isTrue();
+    assumeThat(getAuthType()).isEqualTo(AuthType.OAuth);
 
     fs.setListenerOperation(FSOperationType.ACCESS);
     fs.getAbfsStore().getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.TRUE);

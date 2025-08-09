@@ -81,10 +81,9 @@ import static org.apache.hadoop.fs.store.DataBlocks.DATA_BLOCKS_BYTEBUFFER;
 import static org.apache.hadoop.fs.store.DataBlocks.DataBlock.DestState.Closed;
 import static org.apache.hadoop.fs.store.DataBlocks.DataBlock.DestState.Writing;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test append operations.
@@ -213,7 +212,7 @@ public class ITestAzureBlobFileSystemAppend extends
    */
   @Test
   public void testCreateOverDfsAppendOverBlob() throws IOException {
-    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     final AzureBlobFileSystem fs = getFileSystem();
     Path testPath = path(TEST_FILE_PATH);
     AzureBlobFileSystemStore.Permissions permissions
@@ -252,7 +251,7 @@ public class ITestAzureBlobFileSystemAppend extends
    */
   @Test
   public void testMultipleAppendsQualifyForSwitch() throws Exception {
-    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     final AzureBlobFileSystem fs = getFileSystem();
     Path testPath = path(TEST_FILE_PATH);
     AzureBlobFileSystemStore.Permissions permissions
@@ -317,7 +316,7 @@ public class ITestAzureBlobFileSystemAppend extends
    */
   @Test
   public void testParallelWritesOnDfsAndBlob() throws Exception {
-    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     final AzureBlobFileSystem fs = getFileSystem();
     Path testPath = path(TEST_FILE_PATH);
     Path testPath1 = path(TEST_FILE_PATH1);
@@ -374,7 +373,7 @@ public class ITestAzureBlobFileSystemAppend extends
    */
   @Test
   public void testCreateOverBlobAppendOverDfs() throws IOException {
-    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     assumeDfsServiceType();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK, true);
@@ -610,11 +609,11 @@ public class ITestAzureBlobFileSystemAppend extends
   @Test
   public void testRecreateAppendAndFlush() throws IOException {
       assertThrows(IOException.class, () -> {
-          assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
+          assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
           final AzureBlobFileSystem fs = getFileSystem();
           final Path filePath = path(TEST_FILE_PATH);
           fs.create(filePath);
-          assumeTrue(getIngressServiceType() == AbfsServiceType.BLOB);
+          assumeThat(getIngressServiceType()).isEqualTo(AbfsServiceType.BLOB);
           FSDataOutputStream outputStream = fs.append(filePath);
           outputStream.write(TEN);
           try (AzureBlobFileSystem fs1
@@ -748,14 +747,14 @@ public class ITestAzureBlobFileSystemAppend extends
    **/
   @Test
   public void testParallelWriteOutputStreamClose() throws Exception {
-    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     AzureBlobFileSystem fs = getFileSystem();
     final Path secondarytestfile = new Path("secondarytestfile");
     ExecutorService executorService = Executors.newFixedThreadPool(2);
     List<Future<?>> futures = new ArrayList<>();
 
     FSDataOutputStream out1 = fs.create(secondarytestfile);
-    assumeTrue(getIngressServiceType() == AbfsServiceType.BLOB);
+    assumeThat(getIngressServiceType()).isEqualTo(AbfsServiceType.BLOB);
     AbfsOutputStream outputStream1 = (AbfsOutputStream) out1.getWrappedStream();
     String fileETag = outputStream1.getIngressHandler().getETag();
     final byte[] b1 = new byte[8 * ONE_MB];
@@ -819,12 +818,12 @@ public class ITestAzureBlobFileSystemAppend extends
    **/
   @Test
   public void testEtagMismatch() throws Exception {
-    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     AzureBlobFileSystem fs = getFileSystem();
     final Path filePath = path(TEST_FILE_PATH);
     FSDataOutputStream out1 = fs.create(filePath);
     FSDataOutputStream out2 = fs.create(filePath);
-    assumeTrue(getIngressServiceType() == AbfsServiceType.BLOB);
+    assumeThat(getIngressServiceType()).isEqualTo(AbfsServiceType.BLOB);
     out2.write(TEN);
     out2.hsync();
     out1.write(TEN);
@@ -876,7 +875,7 @@ public class ITestAzureBlobFileSystemAppend extends
    */
   @Test
   public void testIntermittentAppendFailureToBeReported() throws Exception {
-    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     try (AzureBlobFileSystem fs = Mockito.spy(
         (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration()))) {
       assumeHnsDisabled();
@@ -976,7 +975,7 @@ public class ITestAzureBlobFileSystemAppend extends
    */
   @Test
   public void testWriteAsyncOpFailedAfterCloseCalled() throws Exception {
-    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     try (AzureBlobFileSystem fs = Mockito.spy(
         (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration()))) {
       AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
@@ -1066,7 +1065,7 @@ public class ITestAzureBlobFileSystemAppend extends
    */
   @Test
   public void testFlushSuccessWithConnectionResetOnResponseValidMd5() throws Exception {
-    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     // Create a spy of AzureBlobFileSystem
     try (AzureBlobFileSystem fs = Mockito.spy(
         (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration()))) {
@@ -1162,7 +1161,7 @@ public class ITestAzureBlobFileSystemAppend extends
    */
   @Test
   public void testFlushSuccessWithConnectionResetOnResponseInvalidMd5() throws Exception {
-    assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     // Create a spy of AzureBlobFileSystem
     try (AzureBlobFileSystem fs = Mockito.spy(
         (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration()))) {

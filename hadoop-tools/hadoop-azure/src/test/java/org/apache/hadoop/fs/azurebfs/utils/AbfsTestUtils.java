@@ -41,7 +41,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FILE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SECURE_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONTAINER_PREFIX;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Some Utils for ABFS tests.
@@ -63,7 +63,7 @@ public final class AbfsTestUtils extends AbstractAbfsIntegrationTest {
    */
 
   public void checkContainers() throws Throwable {
-    assumeTrue(this.getAuthType() == AuthType.SharedKey);
+    assumeThat(this.getAuthType()).isEqualTo(AuthType.SharedKey);
     int count = 0;
     CloudStorageAccount storageAccount = AzureBlobStorageTestAccount.createTestAccount();
     CloudBlobClient blobClient = storageAccount.createCloudBlobClient();
@@ -80,7 +80,7 @@ public final class AbfsTestUtils extends AbstractAbfsIntegrationTest {
 
 
   public void deleteContainers() throws Throwable {
-    assumeTrue(this.getAuthType() == AuthType.SharedKey);
+    assumeThat(this.getAuthType()).isEqualTo(AuthType.SharedKey);
     int count = 0;
     CloudStorageAccount storageAccount = AzureBlobStorageTestAccount.createTestAccount();
     CloudBlobClient blobClient = storageAccount.createCloudBlobClient();

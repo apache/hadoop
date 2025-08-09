@@ -57,7 +57,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
 
@@ -71,11 +71,13 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
     checkIfConfigIsSet(FS_AZURE_METRIC_URI);
   }
 
-  private void checkIfConfigIsSet(String configKey){
+  private void checkIfConfigIsSet(String configKey) {
     AbfsConfiguration conf = getConfiguration();
     String value = conf.get(configKey);
-    assumeTrue(value != null && value.trim().length() > 1,
-        configKey + " config is mandatory for the test to run");
+    assumeThat(value)
+        .as(configKey + " config is mandatory for the test to run")
+        .isNotNull()
+        .matches(v -> v.trim().length() > 1, "trimmed length > 1");
   }
 
   private static final String TEST_PATH = "/testfile";

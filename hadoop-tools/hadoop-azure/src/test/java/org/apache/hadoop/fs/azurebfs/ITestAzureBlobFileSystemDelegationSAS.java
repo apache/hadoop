@@ -68,7 +68,7 @@ import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
 import static org.apache.hadoop.fs.permission.AclEntryType.USER;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test Perform Authorization Check operation
@@ -84,16 +84,16 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   public ITestAzureBlobFileSystemDelegationSAS() throws Exception {
     // These tests rely on specific settings in azure-auth-keys.xml:
     String sasProvider = getRawConfiguration().get(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE);
-    assumeTrue(MockDelegationSASTokenProvider.class.getCanonicalName().equals(sasProvider));
-    assumeTrue(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_ID) != null);
-    assumeTrue(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_SECRET) != null);
-    assumeTrue(getRawConfiguration().get(
-        TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_TENANT_ID) != null);
-    assumeTrue(getRawConfiguration().get(
-        TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID) != null);
+    assumeThat(MockDelegationSASTokenProvider.class.getCanonicalName()).isEqualTo(sasProvider);
+    assumeThat(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_ID)).isNotNull();
+    assumeThat(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_SECRET)).isNotNull();
+    assumeThat(getRawConfiguration().get(
+        TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_TENANT_ID)).isNotNull();
+    assumeThat(getRawConfiguration().get(
+        TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID)).isNotNull();
     // The test uses shared key to create a random filesystem and then creates another
     // instance of this filesystem using SAS authorization.
-    assumeTrue(this.getAuthType() == AuthType.SharedKey);
+    assumeThat(this.getAuthType()).isEqualTo(AuthType.SharedKey);
   }
 
   @BeforeEach

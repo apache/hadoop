@@ -43,8 +43,7 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SEND_REQUESTS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_APPENDBLOB_ENABLED;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test combination for small writes with flush and close operations.
@@ -312,7 +311,7 @@ public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
     // default. Default settings will be turned on when server support is
     // available on all store prod regions.
     if (enableSmallWriteOptimization) {
-      assumeTrue(serviceDefaultOptmSettings);
+      assumeThat(serviceDefaultOptmSettings).isTrue();
     }
 
     final AzureBlobFileSystem currentfs = this.getFileSystem();
@@ -320,7 +319,7 @@ public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
     boolean isAppendBlobTestSettingEnabled = (config.get(FS_AZURE_TEST_APPENDBLOB_ENABLED) == "true");
 
     // This optimization doesnt take effect when append blob is on.
-    assumeFalse(isAppendBlobTestSettingEnabled);
+    assumeThat(isAppendBlobTestSettingEnabled).isFalse();
 
     config.set(ConfigurationKeys.AZURE_WRITE_BUFFER_SIZE, Integer.toString(TEST_BUFFER_SIZE));
     config.set(ConfigurationKeys.AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION, Boolean.toString(enableSmallWriteOptimization));

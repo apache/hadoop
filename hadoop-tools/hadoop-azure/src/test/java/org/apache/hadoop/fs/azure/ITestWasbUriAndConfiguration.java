@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azure;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azure.NativeAzureFileSystem.RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -132,7 +132,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
   @Test
   public void testConnectUsingSAS() throws Exception {
 
-    assumeFalse(runningInSASMode);
+    assumeThat(runningInSASMode).isFalse();
     // Create the test account with SAS credentials.
     testAccount = AzureBlobStorageTestAccount.create("",
         EnumSet.of(CreateOptions.UseSas, CreateOptions.CreateContainer));
@@ -148,7 +148,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
   @Test
   public void testConnectUsingSASReadonly() throws Exception {
 
-    assumeFalse(runningInSASMode);
+    assumeThat(runningInSASMode).isFalse();
     // Create the test account with SAS credentials.
     testAccount = AzureBlobStorageTestAccount.create("", EnumSet.of(
         CreateOptions.UseSas, CreateOptions.CreateContainer,
@@ -378,7 +378,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
   public void testCredsFromCredentialProvider(@TempDir java.nio.file.Path tempDir)
       throws Exception {
 
-    assumeFalse(runningInSASMode);
+    assumeThat(runningInSASMode).isFalse();
     String account = "testacct";
     String key = "testkey";
     // set up conf to have a cred provider

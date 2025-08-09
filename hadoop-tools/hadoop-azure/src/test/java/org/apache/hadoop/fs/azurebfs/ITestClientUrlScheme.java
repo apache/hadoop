@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ALWAYS_USE_HTTPS;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Parameterized test of ABFS CLIENT URL scheme verification.
@@ -65,8 +65,9 @@ public class ITestClientUrlScheme extends AbstractAbfsIntegrationTest{
     this.useSecureScheme = pUseSecureScheme;
     this.alwaysUseHttps = pAlwaysUseHttps;
     // authentication like OAUTH must use HTTPS
-    assumeTrue(getAuthType() == AuthType.SharedKey,
-        "ITestClientUrlScheme is skipped because auth type is not SharedKey");
+    assumeThat(getAuthType())
+        .as("ITestClientUrlScheme is skipped because auth type is not SharedKey")
+        .isEqualTo(AuthType.SharedKey);
   }
 
   @Test

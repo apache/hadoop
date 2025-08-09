@@ -46,7 +46,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_OVERRIDE_OWNER_SP_LIST;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_FS_CLIENT_SERVICE_PRINCIPAL_OBJECT_ID;
 import static org.apache.hadoop.io.IOUtils.closeStream;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Tests which create a yarn minicluster.
@@ -268,7 +268,7 @@ public abstract class AbstractAbfsClusterITest extends
 
   protected void assumeValidTestConfigPresent(final String key) {
     String configuredValue = getConfiguration().get(key);
-    assumeTrue(configuredValue != null && !configuredValue.isEmpty());
+    assumeThat(configuredValue != null && !configuredValue.isEmpty()).isTrue();
   }
 
 }

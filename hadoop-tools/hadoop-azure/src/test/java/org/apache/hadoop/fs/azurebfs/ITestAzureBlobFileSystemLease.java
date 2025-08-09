@@ -61,7 +61,7 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_ACQUIRING_LE
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_EXPIRED;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_ID_SPECIFIED;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_THREADS;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test lease operations.
@@ -213,7 +213,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   public void testTwoWritersCreateAppendNoInfiniteLease() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
     final AzureBlobFileSystem fs = getFileSystem();
-    assumeFalse(isAppendBlobEnabled(), "Parallel Writes Not Allowed on Append Blobs");
+    assumeThat(isAppendBlobEnabled()).as("Parallel Writes Not Allowed on Append Blobs").isFalse();
     fs.mkdirs(testFilePath.getParent());
 
     twoWriters(fs, testFilePath, false);
@@ -224,7 +224,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   public void testTwoWritersCreateAppendWithInfiniteLeaseEnabled() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
     final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
-    assumeFalse(isAppendBlobEnabled(), "Parallel Writes Not Allowed on Append Blobs");
+    assumeThat(isAppendBlobEnabled()).as("Parallel Writes Not Allowed on Append Blobs").isFalse();
     fs.mkdirs(testFilePath.getParent());
 
     twoWriters(fs, testFilePath, true);

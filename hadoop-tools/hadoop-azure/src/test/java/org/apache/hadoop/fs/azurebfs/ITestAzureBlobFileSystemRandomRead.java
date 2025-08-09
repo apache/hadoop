@@ -45,7 +45,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_RECEIVED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.GET_RESPONSES;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.ETAG;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test random read operation.
@@ -113,10 +113,10 @@ public class ITestAzureBlobFileSystemRandomRead extends
    */
   @Test
   public void testRandomRead() throws Exception {
-    assumeFalse(getIsNamespaceEnabled(getFileSystem()),
-        "This test does not support namespace enabled account");
-    assumeFalse(isAppendBlobEnabled(),
-        "Not valid for APPEND BLOB");
+    assumeThat(getIsNamespaceEnabled(getFileSystem()))
+        .as("This test does not support namespace enabled account")
+        .isFalse();
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Path testPath = path(TEST_FILE_PREFIX + "_testRandomRead");
     assumeHugeFileExists(testPath);
 
@@ -432,8 +432,9 @@ public class ITestAzureBlobFileSystemRandomRead extends
   @Test
   @Disabled("HADOOP-16915")
   public void testRandomReadPerformance() throws Exception {
-    assumeFalse(getIsNamespaceEnabled(getFileSystem()),
-        "This test does not support namespace enabled account");
+    assumeThat(getIsNamespaceEnabled(getFileSystem()))
+        .as("This test does not support namespace enabled account")
+        .isFalse();
     Path testPath = path(TEST_FILE_PREFIX + "_testRandomReadPerformance");
     assumeHugeFileExists(testPath);
 

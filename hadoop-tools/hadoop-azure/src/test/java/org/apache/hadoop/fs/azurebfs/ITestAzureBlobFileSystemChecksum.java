@@ -47,7 +47,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.O
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.APPEND_MODE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test For Verifying Checksum Related Operations
@@ -76,7 +76,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
   public void testAppendWithChecksumAtDifferentOffsets() throws Exception {
     AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true);
     if (!getIsNamespaceEnabled(fs)) {
-      assumeFalse(isAppendBlobEnabled(), "Not valid for APPEND BLOB");
+      assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     }
     AbfsClient client = fs.getAbfsStore().getClientHandler().getIngressClient();
     Path path = path("testPath" + getMethodName());
