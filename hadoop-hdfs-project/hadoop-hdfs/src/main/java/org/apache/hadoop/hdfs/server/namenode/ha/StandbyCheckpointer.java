@@ -375,6 +375,11 @@ public class StandbyCheckpointer {
     return canceledCount;
   }
 
+  @VisibleForTesting
+  public long getLastCheckpointTime() {
+    return lastCheckpointTime;
+  }
+
   private long countUncheckpointedTxns() {
     FSImage img = namesystem.getFSImage();
     return img.getCorrectLastAppliedOrWrittenTxId() -

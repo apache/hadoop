@@ -487,7 +487,7 @@ public class NNStorage extends Storage implements Closeable,
   /**
    * @return the time of the most recent checkpoint in millis since the epoch.
    */
-  long getMostRecentCheckpointTime() {
+  public long getMostRecentCheckpointTime() {
     return mostRecentCheckpointTime;
   }
 
