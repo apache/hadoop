@@ -24,8 +24,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Test;
-import org.junit.Before;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -35,7 +35,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.apache.hadoop.test.GenericTestUtils;
 
 /**
@@ -45,8 +45,8 @@ import org.apache.hadoop.test.GenericTestUtils;
  */
 public class TestSecondaryNameNodeUpgrade {
 
-  @Before
-  public void cleanupCluster() throws IOException {
+    @BeforeEach
+    public void cleanupCluster() throws IOException {
     File hdfsDir = new File(MiniDFSCluster.getBaseDirectory()).getCanonicalFile();
     System.out.println("cleanupCluster deleting " + hdfsDir);
     if (hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir)) {
@@ -114,7 +114,7 @@ public class TestSecondaryNameNodeUpgrade {
   public void testChangeNsIDFails() throws IOException {
     try {
       doIt(ImmutableMap.of("namespaceID", "2"));
-      Assert.fail("Should throw InconsistentFSStateException");
+      Assertions.fail("Should throw InconsistentFSStateException");
     } catch(IOException e) {
       GenericTestUtils.assertExceptionContains("Inconsistent checkpoint fields", e);
       System.out.println("Correctly failed with inconsistent namespaceID: " + e);

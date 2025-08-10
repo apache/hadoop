@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,8 +35,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.NameNodeResourceMonit
 import org.apache.hadoop.hdfs.server.namenode.NameNodeResourceChecker.CheckedVolume;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 public class TestNameNodeResourceChecker {
@@ -45,7 +45,7 @@ public class TestNameNodeResourceChecker {
   private File baseDir;
   private File nameDir;
 
-  @Before
+  @BeforeEach
   public void setUp () throws IOException {
     conf = new Configuration();
     nameDir = new File(BASE_DIR, "resource-check-name-dir");
@@ -63,9 +63,9 @@ public class TestNameNodeResourceChecker {
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_DU_RESERVED_KEY, 0);
     NameNodeResourceChecker nb = new NameNodeResourceChecker(conf);
     assertTrue(
+        nb.hasAvailableDiskSpace(),
         "isResourceAvailable must return true if " +
-            "disk usage is lower than threshold",
-        nb.hasAvailableDiskSpace());
+            "disk usage is lower than threshold");
   }
 
   /**
@@ -77,9 +77,9 @@ public class TestNameNodeResourceChecker {
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_DU_RESERVED_KEY, Long.MAX_VALUE);
     NameNodeResourceChecker nb = new NameNodeResourceChecker(conf);
     assertFalse(
+        nb.hasAvailableDiskSpace(),
         "isResourceAvailable must return false if " +
-            "disk usage is higher than threshold",
-        nb.hasAvailableDiskSpace());
+            "disk usage is higher than threshold");
   }
 
   /**
@@ -114,10 +114,8 @@ public class TestNameNodeResourceChecker {
           break;
         }
       }
-      assertTrue("NN resource monitor should be running",
-          isNameNodeMonitorRunning);
-      assertFalse("NN should not presently be in safe mode",
-          cluster.getNameNode().isInSafeMode());
+      assertTrue(isNameNodeMonitorRunning, "NN resource monitor should be running");
+      assertFalse(cluster.getNameNode().isInSafeMode(), "NN should not presently be in safe mode");
 
       mockResourceChecker.setResourcesAvailable(false);
 
@@ -128,16 +126,16 @@ public class TestNameNodeResourceChecker {
         Thread.sleep(1000);
       }
 
-      assertTrue("NN should be in safe mode after resources crossed threshold",
-          cluster.getNameNode().isInSafeMode());
+      assertTrue(cluster.getNameNode().isInSafeMode(),
+          "NN should be in safe mode after resources crossed threshold");
 
       mockResourceChecker.setResourcesAvailable(true);
       while (cluster.getNameNode().isInSafeMode() &&
           Time.now() < startMillis + (60 * 1000)) {
         Thread.sleep(1000);
       }
-      assertTrue("NN should leave safe mode after resources not crossed threshold",
-          !cluster.getNameNode().isInSafeMode());
+      assertTrue(!cluster.getNameNode().isInSafeMode(),
+          "NN should leave safe mode after resources not crossed threshold");
     } finally {
       if (cluster != null)
         cluster.shutdown();
@@ -161,8 +159,8 @@ public class TestNameNodeResourceChecker {
 
     NameNodeResourceChecker nb = new NameNodeResourceChecker(conf);
 
-    assertEquals("Should not check the same volume more than once.",
-        1, nb.getVolumesLowOnSpace().size());
+    assertEquals(1, nb.getVolumesLowOnSpace().size(),
+        "Should not check the same volume more than once.");
   }
 
   /**
@@ -180,8 +178,8 @@ public class TestNameNodeResourceChecker {
 
     NameNodeResourceChecker nb = new NameNodeResourceChecker(conf);
 
-    assertEquals("Should not check the same volume more than once.",
-        1, nb.getVolumesLowOnSpace().size());
+    assertEquals(1, nb.getVolumesLowOnSpace().size(),
+        "Should not check the same volume more than once.");
   }
 
   /**

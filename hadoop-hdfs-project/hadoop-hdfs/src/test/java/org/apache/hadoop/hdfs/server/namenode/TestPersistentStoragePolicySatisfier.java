@@ -35,7 +35,8 @@ import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.hdfs.server.sps.ExternalSPSContext;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.function.Supplier;
 
@@ -43,7 +44,7 @@ import java.io.IOException;
 import java.util.List;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test persistence of satisfying files/directories.
@@ -188,7 +189,8 @@ public class TestPersistentStoragePolicySatisfier {
    * 4. make sure all the storage policies are satisfied.
    * @throws Exception
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testWithCheckpoint() throws Exception {
     SecondaryNameNode secondary = null;
     try {
@@ -235,7 +237,8 @@ public class TestPersistentStoragePolicySatisfier {
    * 6. check whether all the blocks are satisfied.
    * @throws Exception
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testWithRestarts() throws Exception {
     try {
       clusterSetUp();
@@ -271,7 +274,8 @@ public class TestPersistentStoragePolicySatisfier {
    * 4. make sure step 3 works as expected.
    * @throws Exception
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testMultipleSatisfyStoragePolicy() throws Exception {
     try {
       // Lower block movement check for testing.
@@ -310,7 +314,8 @@ public class TestPersistentStoragePolicySatisfier {
    * 3. make sure sps xattr is removed.
    * @throws Exception
    */
-  @Test(timeout = 300000000)
+  @Test
+  @Timeout(value = 300000)
   public void testDropSPS() throws Exception {
     try {
       clusterSetUp();
@@ -334,7 +339,8 @@ public class TestPersistentStoragePolicySatisfier {
    *
    * @throws Exception
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testSPSShouldNotLeakXattrIfStorageAlreadySatisfied()
       throws Exception {
     try {
@@ -367,7 +373,8 @@ public class TestPersistentStoragePolicySatisfier {
    * 5. restart the namenode.
    * NameNode should be started successfully.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testNameNodeRestartWhenSPSCalledOnChildFileAndParentDir()
       throws Exception {
     try {
@@ -403,7 +410,8 @@ public class TestPersistentStoragePolicySatisfier {
    * 5. restart the namenode.
    * All the file blocks should satisfy the policy.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testSPSOnChildAndParentDirectory() throws Exception {
     try {
       clusterSetUp();
@@ -423,7 +431,8 @@ public class TestPersistentStoragePolicySatisfier {
    * Test SPS xAttr on directory. xAttr should be removed from the directory
    * once all the files blocks moved to specific storage.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testSPSxAttrWhenSpsCalledForDir() throws Exception {
     try {
       clusterSetUp();
@@ -449,8 +458,7 @@ public class TestPersistentStoragePolicySatisfier {
       FSNamesystem namesystem = cluster.getNamesystem();
       INode inode = namesystem.getFSDirectory().getINode("/parent");
       XAttrFeature f = inode.getXAttrFeature();
-      assertTrue("SPS xAttr should be exist",
-          f.getXAttr(XATTR_SATISFY_STORAGE_POLICY) != null);
+      assertTrue(f.getXAttr(XATTR_SATISFY_STORAGE_POLICY) != null, "SPS xAttr should be exist");
 
       // check for the child, SPS xAttr should not be there
       for (int i = 0; i < 5; i++) {
@@ -478,7 +486,8 @@ public class TestPersistentStoragePolicySatisfier {
    * Test SPS xAttr on file. xAttr should be removed from the file
    * once all the blocks moved to specific storage.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testSPSxAttrWhenSpsCalledForFile() throws Exception {
     try {
       clusterSetUp();
@@ -497,8 +506,7 @@ public class TestPersistentStoragePolicySatisfier {
       FSNamesystem namesystem = cluster.getNamesystem();
       INode inode = namesystem.getFSDirectory().getINode("/file");
       XAttrFeature f = inode.getXAttrFeature();
-      assertTrue("SPS xAttr should be exist",
-          f.getXAttr(XATTR_SATISFY_STORAGE_POLICY) != null);
+      assertTrue(f.getXAttr(XATTR_SATISFY_STORAGE_POLICY) != null, "SPS xAttr should be exist");
 
       cluster.restartDataNode(stopDataNode, false);
 

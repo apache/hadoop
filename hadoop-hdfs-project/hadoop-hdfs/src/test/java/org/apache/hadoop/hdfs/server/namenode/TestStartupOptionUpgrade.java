@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.util.Arrays;
@@ -29,9 +29,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -40,7 +42,6 @@ import org.junit.runners.Parameterized.Parameters;
  * This class tests various upgrade cases from earlier versions to current
  * version with and without clusterid.
  */
-@RunWith(value = Parameterized.class)
 public class TestStartupOptionUpgrade {
 
   private Configuration conf;
@@ -48,19 +49,17 @@ public class TestStartupOptionUpgrade {
   private int layoutVersion;
   NNStorage storage;
 
-  @Parameters
   public static Collection<Object[]> startOption() {
     Object[][] params = new Object[][] { { StartupOption.UPGRADE },
         { StartupOption.UPGRADEONLY } };
     return Arrays.asList(params);
   }
 
-  public TestStartupOptionUpgrade(StartupOption startOption) {
-    super();
-    this.startOpt = startOption;
+  public void initTestStartupOptionUpgrade(StartupOption pStartOption) throws Exception {
+    this.startOpt = pStartOption;
+    setUp();
   }
-  
-  @Before
+
   public void setUp() throws Exception {
     conf = new HdfsConfiguration();
     startOpt.setClusterId(null);
@@ -69,7 +68,7 @@ public class TestStartupOptionUpgrade {
       Collections.<URI>emptyList());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     conf = null;
     startOpt = null;
@@ -82,12 +81,14 @@ public class TestStartupOptionUpgrade {
    * 
    * @throws Exception
    */
-  @Test
-  public void testStartupOptUpgradeFrom204() throws Exception {
+  @MethodSource("startOption")
+  @ParameterizedTest
+  public void testStartupOptUpgradeFrom204(StartupOption pStartOption) throws Exception {
+    initTestStartupOptionUpgrade(pStartOption);
     layoutVersion = Feature.RESERVED_REL20_204.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
-    assertTrue("Clusterid should start with CID", storage.getClusterID()
-        .startsWith("CID"));
+    assertTrue(storage.getClusterID().startsWith("CID"),
+        "Clusterid should start with CID");
   }
 
   /**
@@ -97,13 +98,15 @@ public class TestStartupOptionUpgrade {
    * 
    * @throws Exception
    */
-  @Test
-  public void testStartupOptUpgradeFrom22WithCID() throws Exception {
+  @MethodSource("startOption")
+  @ParameterizedTest
+  public void testStartupOptUpgradeFrom22WithCID(StartupOption pStartOption) throws Exception {
+    initTestStartupOptionUpgrade(pStartOption);
     startOpt.setClusterId("cid");
     layoutVersion = Feature.RESERVED_REL22.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
-    assertEquals("Clusterid should match with the given clusterid",
-        "cid", storage.getClusterID());
+    assertEquals("cid", storage.getClusterID(),
+        "Clusterid should match with the given clusterid");
   }
 
   /**
@@ -113,15 +116,17 @@ public class TestStartupOptionUpgrade {
    * 
    * @throws Exception
    */
-  @Test
-  public void testStartupOptUpgradeFromFederation()
+  @MethodSource("startOption")
+  @ParameterizedTest
+  public void testStartupOptUpgradeFromFederation(StartupOption pStartOption)
       throws Exception {
+    initTestStartupOptionUpgrade(pStartOption);
     // Test assumes clusterid already exists, set the clusterid
     storage.setClusterID("currentcid");
     layoutVersion = Feature.FEDERATION.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
-    assertEquals("Clusterid should match with the existing one",
-        "currentcid", storage.getClusterID());
+    assertEquals("currentcid", storage.getClusterID(),
+        "Clusterid should match with the existing one");
   }
 
   /**
@@ -131,15 +136,17 @@ public class TestStartupOptionUpgrade {
    * 
    * @throws Exception
    */
-  @Test
-  public void testStartupOptUpgradeFromFederationWithWrongCID()
+  @MethodSource("startOption")
+  @ParameterizedTest
+  public void testStartupOptUpgradeFromFederationWithWrongCID(StartupOption pStartOption)
       throws Exception {
+    initTestStartupOptionUpgrade(pStartOption);
     startOpt.setClusterId("wrong-cid");
     storage.setClusterID("currentcid");
     layoutVersion = Feature.FEDERATION.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
-    assertEquals("Clusterid should match with the existing one",
-        "currentcid", storage.getClusterID());
+    assertEquals("currentcid", storage.getClusterID(),
+        "Clusterid should match with the existing one");
   }
 
   /**
@@ -149,14 +156,16 @@ public class TestStartupOptionUpgrade {
    * 
    * @throws Exception
    */
-  @Test
-  public void testStartupOptUpgradeFromFederationWithCID()
+  @MethodSource("startOption")
+  @ParameterizedTest
+  public void testStartupOptUpgradeFromFederationWithCID(StartupOption pStartOption)
       throws Exception {
+    initTestStartupOptionUpgrade(pStartOption);
     startOpt.setClusterId("currentcid");
     storage.setClusterID("currentcid");
     layoutVersion = Feature.FEDERATION.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
-    assertEquals("Clusterid should match with the existing one",
-        "currentcid", storage.getClusterID());
+    assertEquals("currentcid", storage.getClusterID(),
+        "Clusterid should match with the existing one");
   }
 }
