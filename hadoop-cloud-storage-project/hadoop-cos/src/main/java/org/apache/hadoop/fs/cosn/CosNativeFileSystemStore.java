@@ -103,11 +103,6 @@ class CosNativeFileSystemStore implements NativeFileSystemStore {
       throw new IOException(exceptionMsg);
     }
 
-    COSCredentials cosCred;
-    cosCred = new BasicCOSCredentials(
-        credentialProviderList.getCredentials().getCOSAccessKeyId(),
-        credentialProviderList.getCredentials().getCOSSecretKey());
-
     boolean useHttps = conf.getBoolean(CosNConfigKeys.COSN_USE_HTTPS_KEY,
         CosNConfigKeys.DEFAULT_USE_HTTPS);
 
@@ -133,7 +128,7 @@ class CosNativeFileSystemStore implements NativeFileSystemStore {
         conf.getInt(CosNConfigKeys.MAX_CONNECTION_NUM,
             CosNConfigKeys.DEFAULT_MAX_CONNECTION_NUM));
 
-    this.cosClient = new COSClient(cosCred, config);
+    this.cosClient = new COSClient(credentialProviderList.getCredentials(), config);
   }
 
   /**
