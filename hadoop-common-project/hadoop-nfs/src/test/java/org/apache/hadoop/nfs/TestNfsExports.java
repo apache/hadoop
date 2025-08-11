@@ -209,16 +209,14 @@ public class TestNfsExports {
   @Test
   public void testInvalidHost() {
     Assertions.assertThrows(IllegalArgumentException.class, () -> {
-      NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod,
-      "foo#bar");
+      NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod, "foo#bar");
     });
   }
 
   @Test
   public void testInvalidSeparator() {
     Assertions.assertThrows(IllegalArgumentException.class, () -> {
-      NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod,
-      "foo ro : bar rw");
+      NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod, "foo ro : bar rw");
     });
   }
 }
