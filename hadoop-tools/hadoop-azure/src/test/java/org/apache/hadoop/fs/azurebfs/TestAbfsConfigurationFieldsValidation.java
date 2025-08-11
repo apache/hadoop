@@ -35,11 +35,12 @@ import org.apache.hadoop.fs.azurebfs.utils.Base64;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SSL_CHANNEL_MODE_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * Test ConfigurationServiceFieldsValidation.
@@ -108,15 +109,15 @@ public class TestAbfsConfigurationFieldsValidation {
     for (Field field : fields) {
       field.setAccessible(true);
       if (field.isAnnotationPresent(IntegerConfigurationValidatorAnnotation.class)) {
-        Assertions.assertThat(abfsConfiguration.validateInt(field)).isEqualTo(TEST_INT);
+        assertThat(abfsConfiguration.validateInt(field)).isEqualTo(TEST_INT);
       } else if (field.isAnnotationPresent(LongConfigurationValidatorAnnotation.class)) {
-        Assertions.assertThat(abfsConfiguration.validateLong(field)).isEqualTo(DEFAULT_LONG);
+        assertThat(abfsConfiguration.validateLong(field)).isEqualTo(DEFAULT_LONG);
       } else if (field.isAnnotationPresent(StringConfigurationValidatorAnnotation.class)) {
-        Assertions.assertThat(abfsConfiguration.validateString(field)).isEqualTo("stringValue");
+        assertThat(abfsConfiguration.validateString(field)).isEqualTo("stringValue");
       } else if (field.isAnnotationPresent(Base64StringConfigurationValidatorAnnotation.class)) {
-        Assertions.assertThat(abfsConfiguration.validateBase64String(field)).isEqualTo(this.encodedString);
+        assertThat(abfsConfiguration.validateBase64String(field)).isEqualTo(this.encodedString);
       } else if (field.isAnnotationPresent(BooleanConfigurationValidatorAnnotation.class)) {
-        Assertions.assertThat(abfsConfiguration.validateBoolean(field)).isEqualTo(true);
+        assertThat(abfsConfiguration.validateBoolean(field)).isEqualTo(true);
       }
     }
   }
@@ -124,37 +125,37 @@ public class TestAbfsConfigurationFieldsValidation {
   @Test
   public void testConfigServiceImplAnnotatedFieldsInitialized() throws Exception {
     // test that all the ConfigurationServiceImpl annotated fields have been initialized in the constructor
-    Assertions.assertThat(abfsConfiguration.getWriteBufferSize())
+    assertThat(abfsConfiguration.getWriteBufferSize())
             .describedAs("Default value of write buffer size should be initialized")
             .isEqualTo(DEFAULT_WRITE_BUFFER_SIZE);
-    Assertions.assertThat(abfsConfiguration.getReadBufferSize())
+    assertThat(abfsConfiguration.getReadBufferSize())
             .describedAs("Default value of read buffer size should be initialized")
             .isEqualTo(DEFAULT_READ_BUFFER_SIZE);
-    Assertions.assertThat(abfsConfiguration.getMinBackoffIntervalMilliseconds())
+    assertThat(abfsConfiguration.getMinBackoffIntervalMilliseconds())
             .describedAs("Default value of min backoff interval should be initialized")
             .isEqualTo(DEFAULT_MIN_BACKOFF_INTERVAL);
-    Assertions.assertThat(abfsConfiguration.getMaxBackoffIntervalMilliseconds())
+    assertThat(abfsConfiguration.getMaxBackoffIntervalMilliseconds())
             .describedAs("Default value of max backoff interval should be initialized")
             .isEqualTo(DEFAULT_MAX_BACKOFF_INTERVAL);
-    Assertions.assertThat(abfsConfiguration.getBackoffIntervalMilliseconds())
+    assertThat(abfsConfiguration.getBackoffIntervalMilliseconds())
             .describedAs("Default value of backoff interval should be initialized")
             .isEqualTo(DEFAULT_BACKOFF_INTERVAL);
-    Assertions.assertThat(abfsConfiguration.getMaxIoRetries())
+    assertThat(abfsConfiguration.getMaxIoRetries())
             .describedAs("Default value of max number of retries should be initialized")
             .isEqualTo(DEFAULT_MAX_RETRY_ATTEMPTS);
-    Assertions.assertThat(abfsConfiguration.getAzureBlockSize())
+    assertThat(abfsConfiguration.getAzureBlockSize())
             .describedAs("Default value of azure block size should be initialized")
             .isEqualTo(MAX_AZURE_BLOCK_SIZE);
-    Assertions.assertThat(abfsConfiguration.getAzureBlockLocationHost())
+    assertThat(abfsConfiguration.getAzureBlockLocationHost())
             .describedAs("Default value of azure block location host should be initialized")
             .isEqualTo(AZURE_BLOCK_LOCATION_HOST_DEFAULT);
-    Assertions.assertThat(abfsConfiguration.getReadAheadRange())
+    assertThat(abfsConfiguration.getReadAheadRange())
             .describedAs("Default value of read ahead range should be initialized")
             .isEqualTo(DEFAULT_READ_AHEAD_RANGE);
-    Assertions.assertThat(abfsConfiguration.getHttpConnectionTimeout())
+    assertThat(abfsConfiguration.getHttpConnectionTimeout())
             .describedAs("Default value of http connection timeout should be initialized")
             .isEqualTo(DEFAULT_HTTP_CONNECTION_TIMEOUT);
-    Assertions.assertThat(abfsConfiguration.getHttpReadTimeout())
+    assertThat(abfsConfiguration.getHttpReadTimeout())
             .describedAs("Default value of http read timeout should be initialized")
             .isEqualTo(DEFAULT_HTTP_READ_TIMEOUT);
   }
@@ -162,7 +163,7 @@ public class TestAbfsConfigurationFieldsValidation {
   @Test
   public void testConfigBlockSizeInitialized() throws Exception {
     // test the block size annotated field has been initialized in the constructor
-    Assertions.assertThat(abfsConfiguration.getAzureBlockSize())
+    assertThat(abfsConfiguration.getAzureBlockSize())
             .describedAs("Default value of max azure block size should be initialized")
             .isEqualTo(MAX_AZURE_BLOCK_SIZE);
   }
@@ -170,42 +171,44 @@ public class TestAbfsConfigurationFieldsValidation {
   @Test
   public void testGetAccountKey() throws Exception {
     String accountKey = abfsConfiguration.getStorageAccountKey();
-    Assertions.assertThat(accountKey).describedAs("Account Key should be initialized in configs")
+    assertThat(accountKey).describedAs("Account Key should be initialized in configs")
             .isEqualTo(this.encodedAccountKey);
   }
 
-  @Test(expected = KeyProviderException.class)
+  @Test
   public void testGetAccountKeyWithNonExistingAccountName() throws Exception {
-    Configuration configuration = new Configuration();
-    configuration.addResource(TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME);
-    configuration.unset(ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME);
-    AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
-    abfsConfig.getStorageAccountKey();
+      Assertions.assertThrows(KeyProviderException.class, () -> {
+          Configuration configuration = new Configuration();
+          configuration.addResource(TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME);
+          configuration.unset(ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME);
+          AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
+          abfsConfig.getStorageAccountKey();
+      });
   }
 
   @Test
   public void testSSLSocketFactoryConfiguration()
       throws InvalidConfigurationValueException, IllegalAccessException, IOException {
-    Assertions.assertThat(abfsConfiguration.getPreferredSSLFactoryOption())
+    assertThat(abfsConfiguration.getPreferredSSLFactoryOption())
             .describedAs("By default SSL Channel Mode should be Default")
             .isEqualTo(DelegatingSSLSocketFactory.SSLChannelMode.Default);
-    Assertions.assertThat(abfsConfiguration.getPreferredSSLFactoryOption())
+    assertThat(abfsConfiguration.getPreferredSSLFactoryOption())
             .describedAs("By default SSL Channel Mode should be Default")
             .isNotEqualTo(DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE);
-    Assertions.assertThat(abfsConfiguration.getPreferredSSLFactoryOption())
+    assertThat(abfsConfiguration.getPreferredSSLFactoryOption())
             .describedAs("By default SSL Channel Mode should be Default")
             .isNotEqualTo(DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL);
     Configuration configuration = new Configuration();
     configuration.setEnum(FS_AZURE_SSL_CHANNEL_MODE_KEY, DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE);
     AbfsConfiguration localAbfsConfiguration = new AbfsConfiguration(configuration, accountName);
-    Assertions.assertThat(localAbfsConfiguration.getPreferredSSLFactoryOption())
+    assertThat(localAbfsConfiguration.getPreferredSSLFactoryOption())
             .describedAs("SSL Channel Mode should be Default_JSSE as set")
             .isEqualTo(DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE);
 
     configuration = new Configuration();
     configuration.setEnum(FS_AZURE_SSL_CHANNEL_MODE_KEY, DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL);
     localAbfsConfiguration = new AbfsConfiguration(configuration, accountName);
-    Assertions.assertThat(localAbfsConfiguration.getPreferredSSLFactoryOption())
+    assertThat(localAbfsConfiguration.getPreferredSSLFactoryOption())
             .describedAs("SSL Channel Mode should be OpenSSL as set")
             .isEqualTo(DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL);
   }

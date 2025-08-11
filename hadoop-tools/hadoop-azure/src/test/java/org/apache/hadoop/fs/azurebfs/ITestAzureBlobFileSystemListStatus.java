@@ -32,8 +32,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
 
@@ -87,6 +86,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * Test listStatus operation.
@@ -211,10 +212,10 @@ public class ITestAzureBlobFileSystemListStatus extends
         spiedStore.listStatus(new Path("/"), "", fileStatuses,
             true, null, getTestTracingContext(spiedFs, true));
       });
-    Assertions.assertThat(ex.getStatusCode())
+    assertThat(ex.getStatusCode())
         .describedAs("Expecting Network Error status code")
         .isEqualTo(-1);
-    Assertions.assertThat(ex.getErrorMessage())
+    assertThat(ex.getErrorMessage())
         .describedAs("Expecting COPY_ABORTED error code")
         .contains(ERR_BLOB_LIST_PARSING);
   }
@@ -229,7 +230,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     Path path = path("/testFile");
     try(FSDataOutputStream ignored = fs.create(path)) {
       FileStatus[] testFiles = fs.listStatus(path);
-      assertEquals("length of test files", 1, testFiles.length);
+      assertEquals(1, testFiles.length, "length of test files");
       FileStatus status = testFiles[0];
       assertIsFileReference(status);
     }
@@ -247,18 +248,19 @@ public class ITestAzureBlobFileSystemListStatus extends
     ContractTestUtils.touch(fs, testFile0Path);
 
     FileStatus[] testFiles = fs.listStatus(testFile0Path);
-    assertEquals("Wrong listing size of file " + testFile0Path,
-        1, testFiles.length);
+    assertEquals(1, testFiles.length, "Wrong listing size of file " + testFile0Path);
     FileStatus file0 = testFiles[0];
-    assertEquals("Wrong path for " + file0, new Path(getTestUrl(),
-        testFolder + "/testFolder2/testFolder3/testFile"), file0.getPath());
+    assertEquals(new Path(getTestUrl(), testFolder + "/testFolder2/testFolder3/testFile"),
+        file0.getPath(), "Wrong path for " + file0);
     assertIsFileReference(file0);
   }
 
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testListNonExistentDir() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    fs.listStatus(new Path("/testFile/"));
+      Assertions.assertThrows(FileNotFoundException.class, () -> {
+          final AzureBlobFileSystem fs = getFileSystem();
+          fs.listStatus(new Path("/testFile/"));
+      });
   }
 
   @Test
@@ -296,23 +298,20 @@ public class ITestAzureBlobFileSystemListStatus extends
         () -> fs.listFiles(childF, false).next());
 
     // do some final checks on the status (failing due to version checks)
-    assertEquals("Path mismatch of " + locatedChildStatus,
-        childF, locatedChildStatus.getPath());
-    assertEquals("locatedstatus.equals(status)",
-        locatedChildStatus, childStatus);
-    assertEquals("status.equals(locatedstatus)",
-        childStatus, locatedChildStatus);
+    assertEquals(childF, locatedChildStatus.getPath(), "Path mismatch of " + locatedChildStatus);
+    assertEquals(locatedChildStatus, childStatus, "locatedstatus.equals(status)");
+    assertEquals(childStatus, locatedChildStatus, "status.equals(locatedstatus)");
   }
 
   private void assertIsDirectoryReference(FileStatus status) {
-    assertTrue("Not a directory: " + status, status.isDirectory());
-    assertFalse("Not a directory: " + status, status.isFile());
+    assertTrue(status.isDirectory(), "Not a directory: " + status);
+    assertFalse(status.isFile(), "Not a directory: " + status);
     assertEquals(0, status.getLen());
   }
 
   private void assertIsFileReference(FileStatus status) {
-    assertFalse("Not a file: " + status, status.isDirectory());
-    assertTrue("Not a file: " + status, status.isFile());
+    assertFalse(status.isDirectory(), "Not a file: " + status);
+    assertTrue(status.isFile(), "Not a file: " + status);
   }
 
   @Test
@@ -331,8 +330,8 @@ public class ITestAzureBlobFileSystemListStatus extends
     catch(IllegalArgumentException e) {
       exceptionThrown = true;
     }
-    assertTrue("Attempt to create file that ended with a dot should"
-        + " throw IllegalArgumentException", exceptionThrown);
+    assertTrue(exceptionThrown, "Attempt to create file that ended with a dot should"
+        + " throw IllegalArgumentException");
   }
 
   @Test
@@ -353,8 +352,8 @@ public class ITestAzureBlobFileSystemListStatus extends
     catch(IllegalArgumentException e) {
       exceptionThrown = true;
     }
-    assertTrue("Attempt to create file that ended with a dot should"
-        + " throw IllegalArgumentException", exceptionThrown);
+    assertTrue(exceptionThrown, "Attempt to create file that ended with a dot should"
+        + " throw IllegalArgumentException");
   }
 
   @Test
@@ -372,8 +371,8 @@ public class ITestAzureBlobFileSystemListStatus extends
     catch(IllegalArgumentException e) {
       exceptionThrown = true;
     }
-    assertTrue("Attempt to create file that ended with a dot should"
-        + " throw IllegalArgumentException", exceptionThrown);
+    assertTrue(exceptionThrown, "Attempt to create file that ended with a dot should"
+        + " throw IllegalArgumentException");
   }
 
   @Test
@@ -478,7 +477,7 @@ public class ITestAzureBlobFileSystemListStatus extends
         any(), any(TracingContext.class), any());
     Mockito.verify(spiedClient, times(1))
         .postListProcessing(eq("/testPath"), any(), any(), any());
-    Assertions.assertThat(list).hasSize(expectedSize);
+    assertThat(list).hasSize(expectedSize);
 
     if (expectedSize == 0) {
       Mockito.verify(spiedClient, times(1))
@@ -488,18 +487,18 @@ public class ITestAzureBlobFileSystemListStatus extends
           .getPathStatus(eq("/testPath"), any(), eq(null), eq(false));
     }
 
-    Assertions.assertThat(continuationTokenUsed[0])
+    assertThat(continuationTokenUsed[0])
         .describedAs("First continuation token used is not as expected")
         .isNull();
 
     if (expectedInvocations > 1) {
-      Assertions.assertThat(continuationTokenUsed[1])
+      assertThat(continuationTokenUsed[1])
           .describedAs("Second continuation token used is not as expected")
           .isEqualTo(firstCT);
     }
 
     if (expectedInvocations > 2) {
-      Assertions.assertThat(continuationTokenUsed[2])
+      assertThat(continuationTokenUsed[2])
           .describedAs("Third continuation token used is not as expected")
           .isEqualTo(secondCT);
     }
@@ -523,7 +522,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     // Assert that implicit directory is returned
     FileStatus[] fileStatuses = fs.listStatus(root);
-    Assertions.assertThat(fileStatuses.length)
+    assertThat(fileStatuses.length)
         .describedAs("List size is not expected").isEqualTo(1);
     assertImplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(dir));
 
@@ -532,7 +531,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     // Assert that only one entry of explicit directory is returned
     fileStatuses = fs.listStatus(root);
-    Assertions.assertThat(fileStatuses.length)
+    assertThat(fileStatuses.length)
         .describedAs("List size is not expected").isEqualTo(1);
     assertExplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(dir));
 
@@ -542,7 +541,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     // Assert that two entries are returned in alphabetic order.
     fileStatuses = fs.listStatus(root);
-    Assertions.assertThat(fileStatuses.length)
+    assertThat(fileStatuses.length)
         .describedAs("List size is not expected").isEqualTo(2);
     assertExplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(dir));
     assertFilePathFileStatus(fileStatuses[1], fs.makeQualified(file1));
@@ -553,7 +552,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     // Assert that three entries are returned in alphabetic order.
     fileStatuses = fs.listStatus(root);
-    Assertions.assertThat(fileStatuses.length)
+    assertThat(fileStatuses.length)
         .describedAs("List size is not expected").isEqualTo(3);
     assertExplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(dir));
     assertFilePathFileStatus(fileStatuses[1], fs.makeQualified(file1));
@@ -571,12 +570,12 @@ public class ITestAzureBlobFileSystemListStatus extends
     createAzCopyFolder(implicitPath);
 
     FileStatus[] statuses = fs.listStatus(implicitPath);
-    Assertions.assertThat(statuses.length)
+    assertThat(statuses.length)
         .describedAs("List size is not expected").isGreaterThanOrEqualTo(1);
     assertImplicitDirectoryFileStatus(statuses[0], fs.makeQualified(statuses[0].getPath()));
 
     FileStatus[] statuses1 = fs.listStatus(new Path(statuses[0].getPath().toString()));
-    Assertions.assertThat(statuses1.length)
+    assertThat(statuses1.length)
         .describedAs("List size is not expected").isGreaterThanOrEqualTo(1);
     assertFilePathFileStatus(statuses1[0], fs.makeQualified(statuses1[0].getPath()));
   }
@@ -588,7 +587,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     fs.mkdirs(emptyDir);
 
     FileStatus[] statuses = fs.listStatus(emptyDir);
-    Assertions.assertThat(statuses.length)
+    assertThat(statuses.length)
         .describedAs("List size is not expected").isEqualTo(0);
   }
 
@@ -599,7 +598,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     fs.create(renamePendingJsonPath);
 
     FileStatus[] statuses = fs.listStatus(renamePendingJsonPath);
-    Assertions.assertThat(statuses.length)
+    assertThat(statuses.length)
         .describedAs("List size is not expected").isEqualTo(1);
     assertFilePathFileStatus(statuses[0], fs.makeQualified(statuses[0].getPath()));
   }
@@ -618,18 +617,18 @@ public class ITestAzureBlobFileSystemListStatus extends
         "/testContinuationToken", false, 1, null, getTestTracingContext(fs, true),
         fs.getAbfsStore().getUri());
 
-    Assertions.assertThat(listResponseData.getContinuationToken())
+    assertThat(listResponseData.getContinuationToken())
         .describedAs("Continuation Token Should not be null").isNotNull();
-    Assertions.assertThat(listResponseData.getFileStatusList())
+    assertThat(listResponseData.getFileStatusList())
         .describedAs("Listing Size Not as expected").hasSize(1);
 
     ListResponseData listResponseData1 =  fs.getAbfsStore().getClient().listPath(
         "/testContinuationToken", false, 1, listResponseData.getContinuationToken(), getTestTracingContext(fs, true),
         fs.getAbfsStore().getUri());
 
-    Assertions.assertThat(listResponseData1.getContinuationToken())
+    assertThat(listResponseData1.getContinuationToken())
         .describedAs("Continuation Token Should be null").isNull();
-    Assertions.assertThat(listResponseData1.getFileStatusList())
+    assertThat(listResponseData1.getFileStatusList())
         .describedAs("Listing Size Not as expected").hasSize(1);
   }
 
@@ -660,9 +659,9 @@ public class ITestAzureBlobFileSystemListStatus extends
         "/testInvalidContinuationToken", false, 1, "",
         getTestTracingContext(fs, true), fs.getAbfsStore().getUri());
 
-    Assertions.assertThat(listResponseData.getContinuationToken())
+    assertThat(listResponseData.getContinuationToken())
         .describedAs("Continuation Token Should Not be null").isNotNull();
-    Assertions.assertThat(listResponseData.getFileStatusList())
+    assertThat(listResponseData.getFileStatusList())
         .describedAs("Listing Size Not as expected").hasSize(1);
   }
 
@@ -726,7 +725,7 @@ public class ITestAzureBlobFileSystemListStatus extends
         .listPath(eq(ROOT_PATH), eq(false), eq(1), any(), any(), any());
 
     // Assert that after duplicate removal, only 7 unique entries are returned.
-    Assertions.assertThat(fileStatuses.length)
+    assertThat(fileStatuses.length)
         .describedAs("List size is not expected").isEqualTo(NUMBER_OF_UNIQUE_PATHS);
 
     // Assert that for duplicates, entry corresponding to marker blob is returned.
@@ -741,7 +740,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     // Assert that there are no duplicates in the returned file statuses.
     Set<Path> uniquePaths = new HashSet<>();
     for (FileStatus fileStatus : fileStatuses) {
-      Assertions.assertThat(uniquePaths.add(fileStatus.getPath()))
+      assertThat(uniquePaths.add(fileStatus.getPath()))
           .describedAs("Duplicate Entries found")
           .isTrue();
     }
@@ -749,13 +748,13 @@ public class ITestAzureBlobFileSystemListStatus extends
 
   private void assertFilePathFileStatus(final FileStatus fileStatus,
       final Path qualifiedPath) {
-    Assertions.assertThat(fileStatus.getPath())
+    assertThat(fileStatus.getPath())
         .describedAs("Path Not as expected").isEqualTo(qualifiedPath);
-    Assertions.assertThat(fileStatus.isFile())
+    assertThat(fileStatus.isFile())
         .describedAs("Expecting a File Path").isEqualTo(true);
-    Assertions.assertThat(fileStatus.isDirectory())
+    assertThat(fileStatus.isDirectory())
         .describedAs("Expecting a File Path").isEqualTo(false);
-    Assertions.assertThat(fileStatus.getModificationTime()).isNotEqualTo(0);
+    assertThat(fileStatus.getModificationTime()).isNotEqualTo(0);
   }
 
   private void assertImplicitDirectoryFileStatus(final FileStatus fileStatus,
@@ -763,7 +762,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     assertDirectoryFileStatus(fileStatus, qualifiedPath);
     DirectoryStateHelper.isImplicitDirectory(qualifiedPath, getFileSystem(),
         getTestTracingContext(getFileSystem(), true));
-    Assertions.assertThat(fileStatus.getModificationTime())
+    assertThat(fileStatus.getModificationTime())
         .describedAs("Last Modified Time Not as Expected").isEqualTo(0);
   }
 
@@ -772,19 +771,19 @@ public class ITestAzureBlobFileSystemListStatus extends
     assertDirectoryFileStatus(fileStatus, qualifiedPath);
     DirectoryStateHelper.isExplicitDirectory(qualifiedPath, getFileSystem(),
         getTestTracingContext(getFileSystem(), true));
-    Assertions.assertThat(fileStatus.getModificationTime())
+    assertThat(fileStatus.getModificationTime())
         .describedAs("Last Modified Time Not as Expected").isNotEqualTo(0);
   }
 
   private void assertDirectoryFileStatus(final FileStatus fileStatus,
       final Path qualifiedPath) {
-    Assertions.assertThat(fileStatus.getPath())
+    assertThat(fileStatus.getPath())
         .describedAs("Path Not as Expected").isEqualTo(qualifiedPath);
-    Assertions.assertThat(fileStatus.isDirectory())
+    assertThat(fileStatus.isDirectory())
         .describedAs("Expecting a Directory Path").isEqualTo(true);
-    Assertions.assertThat(fileStatus.isFile())
+    assertThat(fileStatus.isFile())
         .describedAs("Expecting a Directory Path").isEqualTo(false);
-    Assertions.assertThat(fileStatus.getLen())
+    assertThat(fileStatus.getLen())
         .describedAs("Content Length Not as Expected").isEqualTo(0);
   }
 
@@ -851,17 +850,17 @@ public class ITestAzureBlobFileSystemListStatus extends
           true, getTestTracingContext(fs, true),
           null).getResult();
 
-      Assertions.assertThat(abfsBlobClient.checkIsDir(op))
+      assertThat(abfsBlobClient.checkIsDir(op))
           .describedAs("Directory should be marked as " + expected)
           .isEqualTo(expected);
 
       // Verify the header and directory state
-      Assertions.assertThat(fileStatus.length)
+      assertThat(fileStatus.length)
           .describedAs("Expected directory state: " + expected)
           .isEqualTo(1);
 
       // Verify the header and directory state
-      Assertions.assertThat(fileStatus[0].isDirectory())
+      assertThat(fileStatus[0].isDirectory())
           .describedAs("Expected directory state: " + expected)
           .isEqualTo(expected);
 

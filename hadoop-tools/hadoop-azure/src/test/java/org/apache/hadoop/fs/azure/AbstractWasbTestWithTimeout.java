@@ -28,7 +28,7 @@ import org.apache.hadoop.test.TestName;
 
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Base class for any Wasb test with timeouts & named threads.
@@ -69,10 +69,10 @@ public class AbstractWasbTestWithTimeout extends Assertions {
   }
 
   public static void assumeNotNull(Object objects) {
-    assumeTrue(objects != null);
+    assumeThat(objects).isNotNull();
   }
 
   public static void assumeNotNull(Object objects, String message) {
-    assumeTrue(objects != null, message);
+    assumeThat(objects).as(message).isNotNull();
   }
 }

@@ -22,11 +22,10 @@ import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.Arrays;
 
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -37,21 +36,19 @@ import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ALWAYS_USE_HTTPS;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Parameterized test of ABFS CLIENT URL scheme verification.
  */
-
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("params")
 public class ITestClientUrlScheme extends AbstractAbfsIntegrationTest{
 
-  @Parameterized.Parameter
   public boolean useSecureScheme;
 
-  @Parameterized.Parameter(1)
   public boolean alwaysUseHttps;
 
-  @Parameterized.Parameters
   public static Iterable<Object[]> params() {
     return Arrays.asList(
             new Object[][]{
@@ -62,11 +59,15 @@ public class ITestClientUrlScheme extends AbstractAbfsIntegrationTest{
             });
   }
 
-  public ITestClientUrlScheme() throws Exception {
+  public ITestClientUrlScheme(boolean pUseSecureScheme,
+      boolean pAlwaysUseHttps) throws Exception {
     super();
+    this.useSecureScheme = pUseSecureScheme;
+    this.alwaysUseHttps = pAlwaysUseHttps;
     // authentication like OAUTH must use HTTPS
-    Assume.assumeTrue("ITestClientUrlScheme is skipped because auth type is not SharedKey",
-            getAuthType() == AuthType.SharedKey);
+    assumeThat(getAuthType())
+        .as("ITestClientUrlScheme is skipped because auth type is not SharedKey")
+        .isEqualTo(AuthType.SharedKey);
   }
 
   @Test
@@ -110,9 +111,9 @@ public class ITestClientUrlScheme extends AbstractAbfsIntegrationTest{
     String url = ((URL) baseUrlField.get(client)).toString();
 
     if (expectHttpConnection) {
-      Assert.assertTrue(url.startsWith(FileSystemUriSchemes.HTTP_SCHEME));
+      Assertions.assertTrue(url.startsWith(FileSystemUriSchemes.HTTP_SCHEME));
     } else {
-      Assert.assertTrue(url.startsWith(FileSystemUriSchemes.HTTPS_SCHEME));
+      Assertions.assertTrue(url.startsWith(FileSystemUriSchemes.HTTPS_SCHEME));
     }
   }
 }

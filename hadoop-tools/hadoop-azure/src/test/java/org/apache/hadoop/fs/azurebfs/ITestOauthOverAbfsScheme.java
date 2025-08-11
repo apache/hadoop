@@ -20,8 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.lang.reflect.Field;
 import java.net.URL;
 
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
@@ -29,14 +28,17 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
+import static org.assertj.core.api.Assumptions.assumeThat;
+
 /**
  * Test Oauth fail fast when uri scheme is incorrect.
  */
 public class ITestOauthOverAbfsScheme extends AbstractAbfsIntegrationTest {
 
   public ITestOauthOverAbfsScheme() throws Exception {
-    Assume.assumeTrue("ITestOauthOverAbfsScheme is skipped because auth type is not OAuth",
-            getAuthType() == AuthType.OAuth);
+    assumeThat(getAuthType())
+        .as("ITestOauthOverAbfsScheme is skipped because auth type is not OAuth")
+        .isNotEqualTo(AuthType.OAuth);
   }
 
   @Test
@@ -56,8 +58,8 @@ public class ITestOauthOverAbfsScheme extends AbstractAbfsIntegrationTest {
     baseUrlField.setAccessible(true);
     String url = ((URL) baseUrlField.get(client)).toString();
 
-    Assume.assumeTrue("OAuth authentication over scheme abfs must use HTTPS",
-            url.startsWith(FileSystemUriSchemes.HTTPS_SCHEME));
-
+    assumeThat(url)
+        .as("OAuth authentication over scheme abfs must use HTTPS")
+        .startsWith(FileSystemUriSchemes.HTTPS_SCHEME);
   }
 }

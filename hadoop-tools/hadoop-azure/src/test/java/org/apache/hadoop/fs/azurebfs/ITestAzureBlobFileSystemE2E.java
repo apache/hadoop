@@ -27,8 +27,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperati
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -46,6 +45,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * Test end to end between ABFS client and ABFS server.
@@ -83,34 +84,32 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     }
   }
 
-  @Test (expected = IOException.class)
+  @Test
   public void testOOBWritesAndReadFail() throws Exception {
-    Configuration conf = this.getRawConfiguration();
-    conf.setBoolean(AZURE_TOLERATE_CONCURRENT_APPEND, false);
-    final AzureBlobFileSystem fs = getFileSystem();
-    int readBufferSize = fs.getAbfsStore().getAbfsConfiguration().getReadBufferSize();
+      Assertions.assertThrows(IOException.class, () -> {
+          Configuration conf = this.getRawConfiguration();
+          conf.setBoolean(AZURE_TOLERATE_CONCURRENT_APPEND, false);
+          final AzureBlobFileSystem fs = getFileSystem();
+          int readBufferSize = fs.getAbfsStore().getAbfsConfiguration().getReadBufferSize();
+          byte[] bytesToRead = new byte[readBufferSize];
+          final byte[] b = new byte[2 * readBufferSize];
+          new Random().nextBytes(b);
+          final Path testFilePath = path(methodName.getMethodName());
+          try(FSDataOutputStream writeStream = fs.create(testFilePath)) {
+            writeStream.write(b);
+            writeStream.flush();
+          }
 
-    byte[] bytesToRead = new byte[readBufferSize];
-    final byte[] b = new byte[2 * readBufferSize];
-    new Random().nextBytes(b);
+          try (FSDataInputStream readStream = fs.open(testFilePath)) {
+            assertEquals(readBufferSize, readStream.read(bytesToRead, 0, readBufferSize));
+            try (FSDataOutputStream writeStream = fs.create(testFilePath)) {
+              writeStream.write(b);
+              writeStream.flush();
+            }
 
-    final Path testFilePath = path(methodName.getMethodName());
-    try(FSDataOutputStream writeStream = fs.create(testFilePath)) {
-      writeStream.write(b);
-      writeStream.flush();
-    }
-
-    try (FSDataInputStream readStream = fs.open(testFilePath)) {
-      assertEquals(readBufferSize,
-          readStream.read(bytesToRead, 0, readBufferSize));
-      try (FSDataOutputStream writeStream = fs.create(testFilePath)) {
-        writeStream.write(b);
-        writeStream.flush();
-      }
-
-      assertEquals(readBufferSize,
-          readStream.read(bytesToRead, 0, readBufferSize));
-    }
+            assertEquals(readBufferSize, readStream.read(bytesToRead, 0, readBufferSize));
+          }
+      });
   }
 
   @Test
@@ -264,12 +263,14 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
             TEST_STABLE_DEFAULT_READ_TIMEOUT_MS);
   }
 
-  @Test(expected = InvalidAbfsRestOperationException.class)
+  @Test
   public void testHttpReadTimeout() throws Exception {
-    // Small read timeout is bound to make the request fail.
-    testHttpTimeouts(TEST_STABLE_DEFAULT_CONNECTION_TIMEOUT_MS,
+      Assertions.assertThrows(InvalidAbfsRestOperationException.class, () -> {
+          testHttpTimeouts(TEST_STABLE_DEFAULT_CONNECTION_TIMEOUT_MS,
             TEST_UNSTABLE_READ_TIMEOUT_MS);
-  }
+      });
+  // Small read timeout is bound to make the request fail.
+}
 
   public void testHttpTimeouts(int connectionTimeoutMs, int readTimeoutMs)
       throws Exception {
@@ -285,11 +286,11 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     // Reduce retry count to reduce test run time
     conf.setInt(AZURE_MAX_IO_RETRIES, 1);
     final AzureBlobFileSystem fs = getFileSystem(conf);
-    Assertions.assertThat(
+    assertThat(
             fs.getAbfsStore().getAbfsConfiguration().getHttpConnectionTimeout())
         .describedAs("HTTP connection time should be picked from config")
         .isEqualTo(connectionTimeoutMs);
-    Assertions.assertThat(
+    assertThat(
             fs.getAbfsStore().getAbfsConfiguration().getHttpReadTimeout())
         .describedAs("HTTP Read time should be picked from config")
         .isEqualTo(readTimeoutMs);

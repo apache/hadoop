@@ -82,9 +82,9 @@ public class TestAbfsRestOperation extends
     }
 
     // For retry count greater than the max configured value, the request should fail.
-    assertEquals("Number of failed requests does not match expected value.",
-        "3", String.valueOf(testClient.getAbfsCounters().getAbfsBackoffMetrics().
-        getMetricValue(NUMBER_OF_REQUESTS_FAILED)));
+    assertEquals("3", String.valueOf(testClient.getAbfsCounters().getAbfsBackoffMetrics().
+        getMetricValue(NUMBER_OF_REQUESTS_FAILED)),
+        "Number of failed requests does not match expected value.");
 
     // Close the AzureBlobFileSystem.
     fs.close();

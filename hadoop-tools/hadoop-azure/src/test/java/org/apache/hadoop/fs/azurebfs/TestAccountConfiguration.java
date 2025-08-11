@@ -39,7 +39,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT;
@@ -51,8 +51,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Tests correct precedence of various configurations that might be returned.
@@ -126,24 +126,24 @@ public class TestAccountConfiguration {
     conf.set(globalKey, globalValue);
 
     abfsConf = new AbfsConfiguration(conf, accountName1);
-    assertEquals("Wrong value returned when account-specific value was requested",
-        abfsConf.get(accountKey1), accountValue1);
-    assertEquals("Account-specific value was not returned when one existed",
-        abfsConf.get(globalKey), accountValue1);
+    assertEquals(abfsConf.get(accountKey1), accountValue1,
+        "Wrong value returned when account-specific value was requested");
+    assertEquals(abfsConf.get(globalKey), accountValue1,
+        "Account-specific value was not returned when one existed");
 
     abfsConf = new AbfsConfiguration(conf, accountName2);
-    assertEquals("Wrong value returned when a different account-specific value was requested",
-        abfsConf.get(accountKey1), accountValue1);
-    assertEquals("Wrong value returned when account-specific value was requested",
-        abfsConf.get(accountKey2), accountValue2);
-    assertEquals("Account-agnostic value return even though account-specific value was set",
-        abfsConf.get(globalKey), accountValue2);
+    assertEquals(abfsConf.get(accountKey1), accountValue1,
+        "Wrong value returned when a different account-specific value was requested");
+    assertEquals(abfsConf.get(accountKey2), accountValue2,
+        "Wrong value returned when account-specific value was requested");
+    assertEquals(abfsConf.get(globalKey), accountValue2,
+        "Account-agnostic value return even though account-specific value was set");
 
     abfsConf = new AbfsConfiguration(conf, accountName3);
-    assertNull("Account-specific value returned when none was set",
-        abfsConf.get(accountKey3));
-    assertEquals("Account-agnostic value not returned when no account-specific value was set",
-        abfsConf.get(globalKey), globalValue);
+    assertNull(
+       abfsConf.get(accountKey3), "Account-specific value returned when none was set");
+    assertEquals(abfsConf.get(globalKey), globalValue,
+        "Account-agnostic value not returned when no account-specific value was set");
   }
 
   @Test
@@ -170,24 +170,24 @@ public class TestAccountConfiguration {
     conf.set(globalKey, globalValue);
 
     abfsConf = new AbfsConfiguration(conf, accountName1);
-    assertEquals("Wrong value returned when account-specific value was requested",
-        abfsConf.getPasswordString(accountKey1), accountValue1);
-    assertEquals("Account-specific value was not returned when one existed",
-        abfsConf.getPasswordString(globalKey), accountValue1);
+    assertEquals(abfsConf.getPasswordString(accountKey1), accountValue1,
+        "Wrong value returned when account-specific value was requested");
+    assertEquals(abfsConf.getPasswordString(globalKey), accountValue1,
+        "Account-specific value was not returned when one existed");
 
     abfsConf = new AbfsConfiguration(conf, accountName2);
-    assertEquals("Wrong value returned when a different account-specific value was requested",
-        abfsConf.getPasswordString(accountKey1), accountValue1);
-    assertEquals("Wrong value returned when account-specific value was requested",
-        abfsConf.getPasswordString(accountKey2), accountValue2);
-    assertEquals("Account-agnostic value return even though account-specific value was set",
-        abfsConf.getPasswordString(globalKey), accountValue2);
+    assertEquals(abfsConf.getPasswordString(accountKey1), accountValue1,
+        "Wrong value returned when a different account-specific value was requested");
+    assertEquals(abfsConf.getPasswordString(accountKey2), accountValue2,
+        "Wrong value returned when account-specific value was requested");
+    assertEquals(abfsConf.getPasswordString(globalKey), accountValue2,
+        "Account-agnostic value return even though account-specific value was set");
 
     abfsConf = new AbfsConfiguration(conf, accountName3);
-    assertNull("Account-specific value returned when none was set",
-        abfsConf.getPasswordString(accountKey3));
-    assertEquals("Account-agnostic value not returned when no account-specific value was set",
-        abfsConf.getPasswordString(globalKey), globalValue);
+    assertNull(abfsConf.getPasswordString(accountKey3),
+        "Account-specific value returned when none was set");
+    assertEquals(abfsConf.getPasswordString(globalKey), globalValue,
+        "Account-agnostic value not returned when no account-specific value was set");
   }
 
   @Test
@@ -202,23 +202,23 @@ public class TestAccountConfiguration {
     final AbfsConfiguration abfsConf = new AbfsConfiguration(conf, accountName);
 
     conf.setBoolean(globalKey, false);
-    assertEquals("Default value returned even though account-agnostic config was set",
-        abfsConf.getBoolean(globalKey, true), false);
+    assertEquals(abfsConf.getBoolean(globalKey, true), false,
+        "Default value returned even though account-agnostic config was set");
     conf.unset(globalKey);
-    assertEquals("Default value not returned even though config was unset",
-        abfsConf.getBoolean(globalKey, true), true);
+    assertEquals(abfsConf.getBoolean(globalKey, true), true,
+        "Default value not returned even though config was unset");
 
     conf.setBoolean(accountKey, false);
-    assertEquals("Default value returned even though account-specific config was set",
-        abfsConf.getBoolean(globalKey, true), false);
+    assertEquals(abfsConf.getBoolean(globalKey, true), false,
+        "Default value returned even though account-specific config was set");
     conf.unset(accountKey);
-    assertEquals("Default value not returned even though config was unset",
-        abfsConf.getBoolean(globalKey, true), true);
+    assertEquals(abfsConf.getBoolean(globalKey, true), true,
+        "Default value not returned even though config was unset");
 
     conf.setBoolean(accountKey, true);
     conf.setBoolean(globalKey, false);
-    assertEquals("Account-agnostic or default value returned even though account-specific config was set",
-        abfsConf.getBoolean(globalKey, false), true);
+    assertEquals(abfsConf.getBoolean(globalKey, false), true,
+        "Account-agnostic or default value returned even though account-specific config was set");
   }
 
   @Test
@@ -233,23 +233,23 @@ public class TestAccountConfiguration {
     final AbfsConfiguration abfsConf = new AbfsConfiguration(conf, accountName);
 
     conf.setLong(globalKey, 0);
-    assertEquals("Default value returned even though account-agnostic config was set",
-        abfsConf.getLong(globalKey, 1), 0);
+    assertEquals(abfsConf.getLong(globalKey, 1), 0,
+        "Default value returned even though account-agnostic config was set");
     conf.unset(globalKey);
-    assertEquals("Default value not returned even though config was unset",
-        abfsConf.getLong(globalKey, 1), 1);
+    assertEquals(abfsConf.getLong(globalKey, 1), 1,
+        "Default value not returned even though config was unset");
 
     conf.setLong(accountKey, 0);
-    assertEquals("Default value returned even though account-specific config was set",
-        abfsConf.getLong(globalKey, 1), 0);
+    assertEquals(abfsConf.getLong(globalKey, 1), 0,
+        "Default value returned even though account-specific config was set");
     conf.unset(accountKey);
-    assertEquals("Default value not returned even though config was unset",
-        abfsConf.getLong(globalKey, 1), 1);
+    assertEquals(abfsConf.getLong(globalKey, 1), 1,
+        "Default value not returned even though config was unset");
 
     conf.setLong(accountKey, 1);
     conf.setLong(globalKey, 0);
-    assertEquals("Account-agnostic or default value returned even though account-specific config was set",
-        abfsConf.getLong(globalKey, 0), 1);
+    assertEquals(abfsConf.getLong(globalKey, 0), 1,
+        "Account-agnostic or default value returned even though account-specific config was set");
   }
 
   /**
@@ -271,23 +271,23 @@ public class TestAccountConfiguration {
     final AbfsConfiguration abfsConf = new AbfsConfiguration(conf, accountName);
 
     conf.setEnum(globalKey, GetEnumType.FALSE);
-    assertEquals("Default value returned even though account-agnostic config was set",
-        abfsConf.getEnum(globalKey, GetEnumType.TRUE), GetEnumType.FALSE);
+    assertEquals(abfsConf.getEnum(globalKey, GetEnumType.TRUE), GetEnumType.FALSE,
+        "Default value returned even though account-agnostic config was set");
     conf.unset(globalKey);
-    assertEquals("Default value not returned even though config was unset",
-        abfsConf.getEnum(globalKey, GetEnumType.TRUE), GetEnumType.TRUE);
+    assertEquals(abfsConf.getEnum(globalKey, GetEnumType.TRUE), GetEnumType.TRUE,
+        "Default value not returned even though config was unset");
 
     conf.setEnum(accountKey, GetEnumType.FALSE);
-    assertEquals("Default value returned even though account-specific config was set",
-        abfsConf.getEnum(globalKey, GetEnumType.TRUE), GetEnumType.FALSE);
+    assertEquals(abfsConf.getEnum(globalKey, GetEnumType.TRUE), GetEnumType.FALSE,
+        "Default value returned even though account-specific config was set");
     conf.unset(accountKey);
-    assertEquals("Default value not returned even though config was unset",
-        abfsConf.getEnum(globalKey, GetEnumType.TRUE), GetEnumType.TRUE);
+    assertEquals(abfsConf.getEnum(globalKey, GetEnumType.TRUE), GetEnumType.TRUE,
+        "Default value not returned even though config was unset");
 
     conf.setEnum(accountKey, GetEnumType.TRUE);
     conf.setEnum(globalKey, GetEnumType.FALSE);
-    assertEquals("Account-agnostic or default value returned even though account-specific config was set",
-        abfsConf.getEnum(globalKey, GetEnumType.FALSE), GetEnumType.TRUE);
+    assertEquals(abfsConf.getEnum(globalKey, GetEnumType.FALSE), GetEnumType.TRUE,
+        "Account-agnostic or default value returned even though account-specific config was set");
   }
 
   /**
@@ -324,23 +324,23 @@ public class TestAccountConfiguration {
     final Class xface = GetClassInterface.class;
 
     conf.setClass(globalKey, class0, xface);
-    assertEquals("Default value returned even though account-agnostic config was set",
-        abfsConf.getAccountAgnosticClass(globalKey, class1, xface), class0);
+    assertEquals(abfsConf.getAccountAgnosticClass(globalKey, class1, xface), class0,
+        "Default value returned even though account-agnostic config was set");
     conf.unset(globalKey);
-    assertEquals("Default value not returned even though config was unset",
-        abfsConf.getAccountAgnosticClass(globalKey, class1, xface), class1);
+    assertEquals(abfsConf.getAccountAgnosticClass(globalKey, class1, xface), class1,
+        "Default value not returned even though config was unset");
 
     conf.setClass(accountKey, class0, xface);
-    assertEquals("Default value returned even though account-specific config was set",
-        abfsConf.getAccountSpecificClass(globalKey, class1, xface), class0);
+    assertEquals(abfsConf.getAccountSpecificClass(globalKey, class1, xface), class0,
+        "Default value returned even though account-specific config was set");
     conf.unset(accountKey);
-    assertEquals("Default value not returned even though config was unset",
-        abfsConf.getAccountSpecificClass(globalKey, class1, xface), class1);
+    assertEquals(abfsConf.getAccountSpecificClass(globalKey, class1, xface), class1,
+        "Default value not returned even though config was unset");
 
     conf.setClass(accountKey, class1, xface);
     conf.setClass(globalKey, class0, xface);
-    assertEquals("Account-agnostic or default value returned even though account-specific config was set",
-        abfsConf.getAccountSpecificClass(globalKey, class0, xface), class1);
+    assertEquals(abfsConf.getAccountSpecificClass(globalKey, class0, xface), class1,
+        "Account-agnostic or default value returned even though account-specific config was set");
   }
 
   @Test

@@ -21,18 +21,12 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.util.Date;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
 import org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider;
-
-import static org.junit.Assume.assumeThat;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.Matchers.isEmptyOrNullString;
-import static org.hamcrest.Matchers.isEmptyString;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT;
@@ -40,6 +34,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test MsiTokenProvider.
@@ -54,14 +49,14 @@ public final class ITestAbfsMsiTokenProvider
   @Test
   public void test() throws IOException {
     AbfsConfiguration conf = getConfiguration();
-    assumeThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT),
-        not(isEmptyOrNullString()));
-    assumeThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT),
-        not(isEmptyOrNullString()));
-    assumeThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID),
-        not(isEmptyOrNullString()));
-    assumeThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY),
-        not(isEmptyOrNullString()));
+    assertThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT))
+        .isNotNull().isNotEmpty();
+    assertThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT))
+        .isNotNull().isNotEmpty();
+    assertThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID))
+        .isNotNull().isNotEmpty();
+    assertThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY))
+        .isNotNull().isNotEmpty();
 
     String tenantGuid = conf
         .getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
@@ -77,8 +72,8 @@ public final class ITestAbfsMsiTokenProvider
 
     AzureADToken token = null;
     token = tokenProvider.getToken();
-    assertThat(token.getAccessToken(), not(isEmptyString()));
-    assertThat(token.getExpiry().after(new Date()), is(true));
+    assertThat(token.getAccessToken()).isNotEmpty();
+    assertThat(token.getExpiry().after(new Date())).isEqualTo(true);
   }
 
   private String getTrimmedPasswordString(AbfsConfiguration conf, String key,
