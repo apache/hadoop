@@ -35,8 +35,9 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
-import org.junit.jupiter.api.Assertions;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Regression test for HDFS-3597, SecondaryNameNode upgrade -- when a 2NN
@@ -45,8 +46,8 @@ import org.apache.hadoop.test.GenericTestUtils;
  */
 public class TestSecondaryNameNodeUpgrade {
 
-    @BeforeEach
-    public void cleanupCluster() throws IOException {
+  @BeforeEach
+  public void cleanupCluster() throws IOException {
     File hdfsDir = new File(MiniDFSCluster.getBaseDirectory()).getCanonicalFile();
     System.out.println("cleanupCluster deleting " + hdfsDir);
     if (hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir)) {
@@ -114,7 +115,7 @@ public class TestSecondaryNameNodeUpgrade {
   public void testChangeNsIDFails() throws IOException {
     try {
       doIt(ImmutableMap.of("namespaceID", "2"));
-      Assertions.fail("Should throw InconsistentFSStateException");
+      fail("Should throw InconsistentFSStateException");
     } catch(IOException e) {
       GenericTestUtils.assertExceptionContains("Inconsistent checkpoint fields", e);
       System.out.println("Correctly failed with inconsistent namespaceID: " + e);

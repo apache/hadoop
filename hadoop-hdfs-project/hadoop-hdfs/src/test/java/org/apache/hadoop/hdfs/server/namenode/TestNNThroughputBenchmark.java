@@ -32,15 +32,19 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.util.ExitUtil;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class TestNNThroughputBenchmark {
 
-    @BeforeAll
-    public static void setUp() {
+  @BeforeAll
+  public static void setUp() {
     ExitUtil.disableSystemExit();
   }
 
@@ -184,10 +188,10 @@ public class TestNNThroughputBenchmark {
       listing = fsNamesystem.getListing("/", HdfsFileStatus.EMPTY_NAME, false);
       HdfsFileStatus[] partialListingAfter = listing.getPartialListing();
 
-      Assertions.assertEquals(partialListing.length, partialListingAfter.length);
+      assertEquals(partialListing.length, partialListingAfter.length);
       for (int i = 0; i < partialListing.length; i++) {
         //Check the modification time after append operation
-        Assertions.assertNotEquals(partialListing[i].getModificationTime(),
+        assertNotEquals(partialListing[i].getModificationTime(),
             partialListingAfter[i].getModificationTime());
       }
 
@@ -241,13 +245,13 @@ public class TestNNThroughputBenchmark {
       NNThroughputBenchmark.runBenchmark(benchConf,
           new String[] {"-op", "create", "-keepResults", "-files", "3", "-baseDirName",
               "/nnThroughputBenchmark1", "-close"});
-      Assertions.assertTrue(fs.exists(new Path("/nnThroughputBenchmark1")));
-      Assertions.assertFalse(fs.exists(new Path("/nnThroughputBenchmark")));
+      assertTrue(fs.exists(new Path("/nnThroughputBenchmark1")));
+      assertFalse(fs.exists(new Path("/nnThroughputBenchmark")));
 
       NNThroughputBenchmark.runBenchmark(benchConf,
           new String[] {"-op", "all", "-baseDirName", "/nnThroughputBenchmark1"});
-      Assertions.assertTrue(fs.exists(new Path("/nnThroughputBenchmark1")));
-      Assertions.assertFalse(fs.exists(new Path("/nnThroughputBenchmark")));
+      assertTrue(fs.exists(new Path("/nnThroughputBenchmark1")));
+      assertFalse(fs.exists(new Path("/nnThroughputBenchmark")));
     } finally {
       if (cluster != null) {
         cluster.shutdown();

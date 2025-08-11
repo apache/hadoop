@@ -286,11 +286,11 @@ public class TestNestedEncryptionZones {
   }
 
   private void verifyEncryption() throws Exception {
-      assertEquals(true, fs.getFileStatus(topEZDir).isEncrypted(), "Top EZ dir is encrypted");
-      assertEquals(true, fs.getFileStatus(nestedEZDir).isEncrypted(), "Nested EZ dir is encrypted");
-      assertEquals(true, fs.getFileStatus(topEZFile).isEncrypted(), "Top zone file is encrypted");
-      assertEquals(true, fs.getFileStatus(nestedEZFile).isEncrypted(),
-          "Nested zone file is encrypted");
+    assertEquals(true, fs.getFileStatus(topEZDir).isEncrypted(), "Top EZ dir is encrypted");
+    assertEquals(true, fs.getFileStatus(nestedEZDir).isEncrypted(), "Nested EZ dir is encrypted");
+    assertEquals(true, fs.getFileStatus(topEZFile).isEncrypted(), "Top zone file is encrypted");
+    assertEquals(true, fs.getFileStatus(nestedEZFile).isEncrypted(),
+        "Nested zone file is encrypted");
 
     DFSTestUtil.verifyFilesEqual(fs, topEZBaseFile, topEZFile, len);
     DFSTestUtil.verifyFilesEqual(fs, nestedEZBaseFile, nestedEZFile, len);

@@ -18,12 +18,12 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -70,9 +70,9 @@ public class TestSecondaryWebUi {
 
     String[] checkpointDir = (String[]) mbs.getAttribute(mxbeanName,
             "CheckpointDirectories");
-    Assertions.assertArrayEquals(checkpointDir, snn.getCheckpointDirectories());
+    assertArrayEquals(checkpointDir, snn.getCheckpointDirectories());
     String[] checkpointEditlogDir = (String[]) mbs.getAttribute(mxbeanName,
             "CheckpointEditlogDirectories");
-    Assertions.assertArrayEquals(checkpointEditlogDir, snn.getCheckpointEditlogDirectories());
+    assertArrayEquals(checkpointEditlogDir, snn.getCheckpointEditlogDirectories());
   }
 }

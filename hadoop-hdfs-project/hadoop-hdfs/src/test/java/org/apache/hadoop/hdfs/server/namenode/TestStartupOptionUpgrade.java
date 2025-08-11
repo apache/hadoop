@@ -30,18 +30,16 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
 /**
  * This class tests various upgrade cases from earlier versions to current
  * version with and without clusterid.
  */
+@MethodSource("startOption")
+@ParameterizedClass
 public class TestStartupOptionUpgrade {
 
   private Configuration conf;
@@ -55,8 +53,8 @@ public class TestStartupOptionUpgrade {
     return Arrays.asList(params);
   }
 
-  public void initTestStartupOptionUpgrade(StartupOption pStartOption) throws Exception {
-    this.startOpt = pStartOption;
+  public TestStartupOptionUpgrade(StartupOption startOption) throws Exception {
+    this.startOpt = startOption;
     setUp();
   }
 
@@ -81,10 +79,8 @@ public class TestStartupOptionUpgrade {
    * 
    * @throws Exception
    */
-  @MethodSource("startOption")
-  @ParameterizedTest
-  public void testStartupOptUpgradeFrom204(StartupOption pStartOption) throws Exception {
-    initTestStartupOptionUpgrade(pStartOption);
+  @Test
+  public void testStartupOptUpgradeFrom204() throws Exception {
     layoutVersion = Feature.RESERVED_REL20_204.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
     assertTrue(storage.getClusterID().startsWith("CID"),
@@ -98,10 +94,8 @@ public class TestStartupOptionUpgrade {
    * 
    * @throws Exception
    */
-  @MethodSource("startOption")
-  @ParameterizedTest
-  public void testStartupOptUpgradeFrom22WithCID(StartupOption pStartOption) throws Exception {
-    initTestStartupOptionUpgrade(pStartOption);
+  @Test
+  public void testStartupOptUpgradeFrom22WithCID() throws Exception {
     startOpt.setClusterId("cid");
     layoutVersion = Feature.RESERVED_REL22.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
@@ -116,11 +110,9 @@ public class TestStartupOptionUpgrade {
    * 
    * @throws Exception
    */
-  @MethodSource("startOption")
-  @ParameterizedTest
-  public void testStartupOptUpgradeFromFederation(StartupOption pStartOption)
+  @Test
+  public void testStartupOptUpgradeFromFederation()
       throws Exception {
-    initTestStartupOptionUpgrade(pStartOption);
     // Test assumes clusterid already exists, set the clusterid
     storage.setClusterID("currentcid");
     layoutVersion = Feature.FEDERATION.getInfo().getLayoutVersion();
@@ -136,11 +128,9 @@ public class TestStartupOptionUpgrade {
    * 
    * @throws Exception
    */
-  @MethodSource("startOption")
-  @ParameterizedTest
-  public void testStartupOptUpgradeFromFederationWithWrongCID(StartupOption pStartOption)
+  @Test
+  public void testStartupOptUpgradeFromFederationWithWrongCID()
       throws Exception {
-    initTestStartupOptionUpgrade(pStartOption);
     startOpt.setClusterId("wrong-cid");
     storage.setClusterID("currentcid");
     layoutVersion = Feature.FEDERATION.getInfo().getLayoutVersion();
@@ -156,11 +146,9 @@ public class TestStartupOptionUpgrade {
    * 
    * @throws Exception
    */
-  @MethodSource("startOption")
-  @ParameterizedTest
-  public void testStartupOptUpgradeFromFederationWithCID(StartupOption pStartOption)
+  @Test
+  public void testStartupOptUpgradeFromFederationWithCID()
       throws Exception {
-    initTestStartupOptionUpgrade(pStartOption);
     startOpt.setClusterId("currentcid");
     storage.setClusterID("currentcid");
     layoutVersion = Feature.FEDERATION.getInfo().getLayoutVersion();

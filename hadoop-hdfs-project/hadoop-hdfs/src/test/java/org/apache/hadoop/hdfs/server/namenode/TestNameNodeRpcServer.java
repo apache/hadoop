@@ -240,7 +240,7 @@ public class TestNameNodeRpcServer {
           // found some other host, so things are good
           break;
         } else if (trial == ITERATIONS_TO_USE - 1) {
-            assertNotEquals(hosts[0], host, "Failed to get non-node1");
+          assertNotEquals(hosts[0], host, "Failed to get non-node1");
         }
       }
       // Run as fake joe to authorize the test

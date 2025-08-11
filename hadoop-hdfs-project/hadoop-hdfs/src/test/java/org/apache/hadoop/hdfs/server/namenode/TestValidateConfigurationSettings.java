@@ -33,7 +33,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.BindException;
 import java.util.Random;
-import org.junit.jupiter.api.Assertions;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * This class tests the validation of the configuration object when passed 
@@ -41,8 +42,8 @@ import org.junit.jupiter.api.Assertions;
  */
 public class TestValidateConfigurationSettings {
 
-    @AfterEach
-    public void cleanUp() {
+  @AfterEach
+  public void cleanUp() {
     FileUtil.fullyDeleteContents(new File(MiniDFSCluster.getBaseDirectory()));
   }
 
@@ -55,28 +56,28 @@ public class TestValidateConfigurationSettings {
   @Timeout(value = 300)
   public void testThatMatchingRPCandHttpPortsThrowException() 
       throws IOException {
-      Assertions.assertThrows(BindException.class, () -> {
-          NameNode nameNode = null;
-          try {
-              Configuration conf = new HdfsConfiguration();
-      File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
-      conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
-          nameDir.getAbsolutePath());
+    assertThrows(BindException.class, () -> {
+      NameNode nameNode = null;
+      try {
+        Configuration conf = new HdfsConfiguration();
+        File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
+        conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+            nameDir.getAbsolutePath());
 
-      Random rand = new Random();
-      final int port = 30000 + rand.nextInt(30000);
+        Random rand = new Random();
+        final int port = 30000 + rand.nextInt(30000);
 
-      // set both of these to the same port. It should fail.
-      FileSystem.setDefaultUri(conf, "hdfs://localhost:" + port);
-      conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:" + port);
-      DFSTestUtil.formatNameNode(conf);
-      nameNode = new NameNode(conf);
-    } finally {
-      if (nameNode != null) {
-        nameNode.stop();
+        // set both of these to the same port. It should fail.
+        FileSystem.setDefaultUri(conf, "hdfs://localhost:" + port);
+        conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:" + port);
+        DFSTestUtil.formatNameNode(conf);
+        nameNode = new NameNode(conf);
+      } finally {
+        if (nameNode != null) {
+          nameNode.stop();
+        }
       }
-    }
-      });
+    });
 
   }
 

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEditsFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 
 import java.io.File;
@@ -45,7 +46,6 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
 import org.apache.hadoop.util.Lists;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -310,7 +310,7 @@ public class TestNNStorageRetentionManager {
     for (FSImageFile captured : imagesPurgedCaptor.getAllValues()) {
       capturedPaths.add(fileToPath(captured.getFile()));
     }
-    Assertions.assertEquals(Joiner.on(",").join(filesToPaths(tc.expectedPurgedImages)),
+    assertEquals(Joiner.on(",").join(filesToPaths(tc.expectedPurgedImages)),
         Joiner.on(",").join(capturedPaths), "Image file check.");
 
     capturedPaths.clear();
@@ -318,7 +318,7 @@ public class TestNNStorageRetentionManager {
     for (EditLogFile captured : logsPurgedCaptor.getAllValues()) {
       capturedPaths.add(fileToPath(captured.getFile()));
     }
-    Assertions.assertEquals(Joiner.on(",").join(filesToPaths(tc.expectedPurgedLogs)),
+    assertEquals(Joiner.on(",").join(filesToPaths(tc.expectedPurgedLogs)),
         Joiner.on(",").join(capturedPaths), "Check old edits are removed.");
 
     capturedPaths.clear();
@@ -326,7 +326,7 @@ public class TestNNStorageRetentionManager {
     for (EditLogFile captured : staleLogsCaptor.getAllValues()) {
       capturedPaths.add(fileToPath(captured.getFile()));
     }
-    Assertions.assertEquals(Joiner.on(",").join(filesToPaths(tc.expectedStaleLogs)),
+    assertEquals(Joiner.on(",").join(filesToPaths(tc.expectedStaleLogs)),
         Joiner.on(",").join(capturedPaths), "Check unnecessary but kept edits are marked stale");
   }
 

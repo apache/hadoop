@@ -290,8 +290,8 @@ public class TestProcessCorruptBlocks {
       if (scanLogFile.exists()) {
         // wait for one minute for deletion to succeed;
         for (int i = 0; !scanLogFile.delete(); i++) {
-            assertTrue(i < 60, "Could not delete log file in one minute");
-            try {
+          assertTrue(i < 60, "Could not delete log file in one minute");
+          try {
             Thread.sleep(1000);
           } catch (InterruptedException ignored) {
           }

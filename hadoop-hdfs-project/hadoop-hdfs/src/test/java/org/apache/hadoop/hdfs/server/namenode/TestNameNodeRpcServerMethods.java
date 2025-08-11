@@ -32,11 +32,11 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestNameNodeRpcServerMethods {
   private static NamenodeProtocols nnRpc;
@@ -73,7 +73,7 @@ public class TestNameNodeRpcServerMethods {
     String dir = "/testNamenodeRetryCache/testDelete";
     try {
       nnRpc.deleteSnapshot(dir, null);
-      Assertions.fail("testdeleteSnapshot is not thrown expected exception ");
+      fail("testdeleteSnapshot is not thrown expected exception ");
     } catch (IOException e) {
       // expected
       GenericTestUtils.assertExceptionContains(
@@ -81,7 +81,7 @@ public class TestNameNodeRpcServerMethods {
     }
     try {
       nnRpc.deleteSnapshot(dir, "");
-      Assertions.fail("testdeleteSnapshot is not thrown expected exception");
+      fail("testdeleteSnapshot is not thrown expected exception");
     } catch (IOException e) {
       // expected
       GenericTestUtils.assertExceptionContains(

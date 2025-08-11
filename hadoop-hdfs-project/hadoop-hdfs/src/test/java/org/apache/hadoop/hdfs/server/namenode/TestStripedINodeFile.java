@@ -43,7 +43,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -164,8 +163,8 @@ public class TestStripedINodeFile {
         null, perm, 0L, 0L, null, null /*replication*/, ecPolicyID,
         1024L, HdfsConstants.WARM_STORAGE_POLICY_ID, STRIPED);
 
-    Assertions.assertTrue(inodeFile.isStriped());
-    Assertions.assertEquals(ecPolicyID.byteValue(), inodeFile.getErasureCodingPolicyID());
+    assertTrue(inodeFile.isStriped());
+    assertEquals(ecPolicyID.byteValue(), inodeFile.getErasureCodingPolicyID());
   }
 
   @Test
@@ -339,13 +338,13 @@ public class TestStripedINodeFile {
       INodeFile inodeStripedFile = (INodeFile) inodeStriped;
       BlockInfo[] stripedBlks = inodeStripedFile.getBlocks();
       for (BlockInfo blockInfo : stripedBlks) {
-          assertFalse(blockInfo.isDeleted(), "Mistakenly marked the block as deleted!");
+        assertFalse(blockInfo.isDeleted(), "Mistakenly marked the block as deleted!");
       }
 
       // delete directory with erasure coding policy
       dfs.delete(ecDir, true);
       for (BlockInfo blockInfo : stripedBlks) {
-          assertTrue(blockInfo.isDeleted(), "Didn't mark the block as deleted!");
+        assertTrue(blockInfo.isDeleted(), "Didn't mark the block as deleted!");
       }
 
       // Case-2: Verify the behavior of contiguous blocks
@@ -355,13 +354,13 @@ public class TestStripedINodeFile {
       INodeFile inodeFile = (INodeFile) inode;
       BlockInfo[] contiguousBlks = inodeFile.getBlocks();
       for (BlockInfo blockInfo : contiguousBlks) {
-          assertFalse(blockInfo.isDeleted(), "Mistakenly marked the block as deleted!");
+        assertFalse(blockInfo.isDeleted(), "Mistakenly marked the block as deleted!");
       }
 
       // delete parent directory
       dfs.delete(parentDir, true);
       for (BlockInfo blockInfo : contiguousBlks) {
-          assertTrue(blockInfo.isDeleted(), "Didn't mark the block as deleted!");
+        assertTrue(blockInfo.isDeleted(), "Didn't mark the block as deleted!");
       }
     } finally {
       if (cluster != null) {
@@ -439,7 +438,7 @@ public class TestStripedINodeFile {
           fileLen);
       for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
         for (StorageType type : lb.getStorageTypes()) {
-            Assertions.assertEquals(StorageType.DISK, type);
+          assertEquals(StorageType.DISK, type);
         }
       }
 

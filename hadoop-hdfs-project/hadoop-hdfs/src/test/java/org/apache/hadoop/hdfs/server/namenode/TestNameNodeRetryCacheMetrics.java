@@ -98,9 +98,9 @@ public class TestNameNodeRetryCacheMetrics {
   }
 
   private void checkMetrics(long hit, long cleared, long updated) {
-      assertEquals(hit, metrics.getCacheHit(), "CacheHit");
-      assertEquals(cleared, metrics.getCacheCleared(), "CacheCleared");
-      assertEquals(updated, metrics.getCacheUpdated(), "CacheUpdated");
+    assertEquals(hit, metrics.getCacheHit(), "CacheHit");
+    assertEquals(cleared, metrics.getCacheCleared(), "CacheCleared");
+    assertEquals(updated, metrics.getCacheUpdated(), "CacheUpdated");
   }
 
   private void trySaveNamespace() throws IOException {

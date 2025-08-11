@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,12 +38,14 @@ import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 /**
@@ -199,9 +200,9 @@ public class TestSecurityTokenEditLog {
         @Override
         public Void answer(InvocationOnMock invocation) throws Throwable {
           // fsn claims read lock if either read or write locked.
-                Assertions.assertTrue(fsnRef.get().hasReadLock(RwLockMode.FS));
-                Assertions.assertFalse(fsnRef.get().hasWriteLock(RwLockMode.FS));
-                return null;
+          assertTrue(fsnRef.get().hasReadLock(RwLockMode.FS));
+          assertFalse(fsnRef.get().hasWriteLock(RwLockMode.FS));
+          return null;
         }
       }
     ).when(log).logCancelDelegationToken(any(DelegationTokenIdentifier.class));

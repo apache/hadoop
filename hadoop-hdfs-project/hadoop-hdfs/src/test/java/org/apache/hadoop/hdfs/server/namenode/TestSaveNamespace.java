@@ -68,7 +68,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.Whitebox;
 import org.slf4j.event.Level;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
@@ -732,7 +731,7 @@ public class TestSaveNamespace {
 
       // make sure no new checkpoint was done
       long after = fsimage.getStorage().getMostRecentCheckpointTxId();
-      Assertions.assertEquals(before, after);
+      assertEquals(before, after);
 
       Thread.sleep(1000);
       // do another checkpoint. this time set the timewindow to 1s
@@ -741,7 +740,7 @@ public class TestSaveNamespace {
       fs.setSafeMode(SafeModeAction.LEAVE);
 
       after = fsimage.getStorage().getMostRecentCheckpointTxId();
-      Assertions.assertTrue(after > before);
+      assertTrue(after > before);
 
       fs.mkdirs(new Path("/foo/bar/baz")); // 3 new tx
 
@@ -749,11 +748,11 @@ public class TestSaveNamespace {
       cluster.getNameNodeRpc().saveNamespace(3600, 5); // 3 + end/start segment
       long after2 = fsimage.getStorage().getMostRecentCheckpointTxId();
       // no checkpoint should be made
-      Assertions.assertEquals(after, after2);
+      assertEquals(after, after2);
       cluster.getNameNodeRpc().saveNamespace(3600, 3);
       after2 = fsimage.getStorage().getMostRecentCheckpointTxId();
       // a new checkpoint should be done
-      Assertions.assertTrue(after2 > after);
+      assertTrue(after2 > after);
     } finally {
       cluster.shutdown();
     }

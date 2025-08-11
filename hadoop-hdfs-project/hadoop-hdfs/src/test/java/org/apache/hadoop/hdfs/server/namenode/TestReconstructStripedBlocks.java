@@ -49,7 +49,6 @@ import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.Block
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -352,7 +351,7 @@ public class TestReconstructStripedBlocks {
           Thread.sleep(1000);
         }
       }
-      Assertions.assertTrue(reconstructed);
+      assertTrue(reconstructed);
 
       blks = fs.getClient().getLocatedBlocks(filePath.toString(), 0);
       block = (LocatedStripedBlock) blks.getLastLocatedBlock();
@@ -361,7 +360,7 @@ public class TestReconstructStripedBlocks {
         bitSet.set(index);
       }
       for (int i = 0; i < groupSize; i++) {
-          Assertions.assertTrue(bitSet.get(i));
+        assertTrue(bitSet.get(i));
       }
     } finally {
       cluster.shutdown();
@@ -569,7 +568,7 @@ public class TestReconstructStripedBlocks {
         bitSet.set(index);
       }
       for (int i = 0; i < groupSize; i++) {
-          Assertions.assertTrue(bitSet.get(i));
+        assertTrue(bitSet.get(i));
       }
     } finally {
       cluster.shutdown();
