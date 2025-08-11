@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,9 +95,9 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
        * different setups.
        *
        */
-      assertTrue(String.format("The actual value of %d was not equal to the "
-              + "expected value of 2 or 3", statistics.getReadOps()),
-          statistics.getReadOps() == 2 || statistics.getReadOps() == 3);
+      assertTrue(
+         statistics.getReadOps() == 2 || statistics.getReadOps() == 3, String.format("The actual value of %d was not equal to the "
+              + "expected value of 2 or 3", statistics.getReadOps()));
 
     } finally {
       IOUtils.cleanupWithLogger(LOG, inForOneOperation,
@@ -105,9 +105,9 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
     }
 
     //Validating if content is being written in the smallOperationsFile
-    assertTrue("Mismatch in content validation",
-        validateContent(fs, smallOperationsFile,
-            testReadWriteOps.getBytes()));
+    assertTrue(
+       validateContent(fs, smallOperationsFile,
+            testReadWriteOps.getBytes()), "Mismatch in content validation");
 
     FSDataOutputStream outForLargeOperations = null;
     FSDataInputStream inForLargeOperations = null;
@@ -137,9 +137,9 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
 
       if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(largeOperationsFile).toString())) {
         // for appendblob data is already flushed, so there might be more data to read.
-        assertTrue(String.format("The actual value of %d was not equal to the "
-              + "expected value", statistics.getReadOps()),
-          statistics.getReadOps() >= largeValue  || statistics.getReadOps() <= (largeValue + 4));
+        assertTrue(
+         statistics.getReadOps() >= largeValue  || statistics.getReadOps() <= (largeValue + 4), String.format("The actual value of %d was not equal to the "
+              + "expected value", statistics.getReadOps()));
       } else {
         //Test for 1000000 read operations
         assertReadWriteOps("read", largeValue, statistics.getReadOps());
@@ -150,9 +150,9 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
           outForLargeOperations);
     }
     //Validating if content is being written in largeOperationsFile
-    assertTrue("Mismatch in content validation",
-        validateContent(fs, largeOperationsFile,
-            largeOperationsValidationString.toString().getBytes()));
+    assertTrue(
+       validateContent(fs, largeOperationsFile,
+            largeOperationsValidationString.toString().getBytes()), "Mismatch in content validation");
 
   }
 
@@ -166,7 +166,6 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
 
   private void assertReadWriteOps(String operation, long expectedValue,
       long actualValue) {
-    assertEquals("Mismatch in " + operation + " operations", expectedValue,
-        actualValue);
+    assertEquals(expectedValue, actualValue, "Mismatch in " + operation + " operations");
   }
 }

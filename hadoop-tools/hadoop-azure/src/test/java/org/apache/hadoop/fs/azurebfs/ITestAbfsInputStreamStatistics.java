@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -160,18 +160,14 @@ public class ITestAbfsInputStreamStatistics
        * would be equal to OPERATIONS.
        *
        */
-      assertEquals("Mismatch in seekOps value", 2 * OPERATIONS,
-          stats.getSeekOperations());
-      assertEquals("Mismatch in backwardSeekOps value", OPERATIONS,
-          stats.getBackwardSeekOperations());
-      assertEquals("Mismatch in forwardSeekOps value", OPERATIONS,
-          stats.getForwardSeekOperations());
-      assertEquals("Mismatch in bytesBackwardsOnSeek value",
-          OPERATIONS * ONE_MB, stats.getBytesBackwardsOnSeek());
-      assertEquals("Mismatch in bytesSkippedOnSeek value",
-          0, stats.getBytesSkippedOnSeek());
-      assertEquals("Mismatch in seekInBuffer value", OPERATIONS,
-          stats.getSeekInBuffer());
+      assertEquals(2 * OPERATIONS, stats.getSeekOperations(), "Mismatch in seekOps value");
+      assertEquals(OPERATIONS, stats.getBackwardSeekOperations(),
+          "Mismatch in backwardSeekOps value");
+      assertEquals(OPERATIONS, stats.getForwardSeekOperations(), "Mismatch in forwardSeekOps value");
+      assertEquals(OPERATIONS * ONE_MB, stats.getBytesBackwardsOnSeek(),
+          "Mismatch in bytesBackwardsOnSeek value");
+      assertEquals(0, stats.getBytesSkippedOnSeek(), "Mismatch in bytesSkippedOnSeek value");
+      assertEquals(OPERATIONS, stats.getSeekInBuffer(), "Mismatch in seekInBuffer value");
 
       in.close();
       // Verifying whether stats are readable after stream is closed.
@@ -230,12 +226,9 @@ public class ITestAbfsInputStreamStatistics
        * total remote read ops is 1.
        *
        */
-      assertEquals("Mismatch in bytesRead value", OPERATIONS,
-          stats.getBytesRead());
-      assertEquals("Mismatch in readOps value", OPERATIONS,
-          stats.getReadOperations());
-      assertEquals("Mismatch in remoteReadOps value", 1,
-          stats.getRemoteReadOperations());
+      assertEquals(OPERATIONS, stats.getBytesRead(), "Mismatch in bytesRead value");
+      assertEquals(OPERATIONS, stats.getReadOperations(), "Mismatch in readOps value");
+      assertEquals(1, stats.getRemoteReadOperations(), "Mismatch in remoteReadOps value");
 
       in.close();
       // Verifying if stats are still readable after stream is closed.
@@ -288,8 +281,7 @@ public class ITestAbfsInputStreamStatistics
           getTestTracingContext(fs, false));
 
       // Verifying that AbfsInputStream Operations works with null statistics.
-      assertNotEquals("AbfsInputStream read() with null statistics should "
-          + "work", -1, in.read());
+      assertNotEquals(-1, in.read(), "AbfsInputStream read() with null statistics should "+ "work");
       in.seek(ONE_KB);
 
       // Verifying toString() with no StreamStatistics.
@@ -420,6 +412,6 @@ public class ITestAbfsInputStreamStatistics
    * @param statistic   the name of operation or statistic being asserted.
    */
   private void checkInitValue(long actualValue, String statistic) {
-    assertEquals("Mismatch in " + statistic + " value", 0, actualValue);
+    assertEquals(0, actualValue, "Mismatch in " + statistic + " value");
   }
 }

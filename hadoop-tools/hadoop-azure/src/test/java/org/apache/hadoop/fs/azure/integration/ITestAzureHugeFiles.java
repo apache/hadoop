@@ -43,7 +43,7 @@ import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 
 /**
@@ -153,8 +153,10 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
     assertPathExists(getFileSystem(), "huge file not created", hugefile);
     try {
       FileStatus status = getFileSystem().getFileStatus(hugefile);
-      assumeTrue(status.isFile(), "Not a file: " + status);
-      assumeTrue(status.getLen() > 0, "File " + hugefile + " is empty");
+      assumeThat(status.isFile()).as("Not a file: " + status).isTrue();
+      assumeThat(status.getLen())
+          .as("File " + hugefile + " is empty")
+          .isPositive();
       return status;
     } catch (FileNotFoundException e) {
       skip("huge file not created: " + hugefile);

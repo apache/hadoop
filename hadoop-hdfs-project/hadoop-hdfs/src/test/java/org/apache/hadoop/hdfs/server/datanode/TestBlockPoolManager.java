@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -31,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -159,9 +160,9 @@ public class TestBlockPoolManager {
     bpm.refreshNamenodes(conf);
     assertEquals("create #1\n", log.toString());
     Map<String, BPOfferService> map = bpm.getBpByNameserviceId();
-    Assertions.assertFalse(map.containsKey("ns2"));
-    Assertions.assertFalse(map.containsKey("ns3"));
-    Assertions.assertTrue(map.containsKey("ns1"));
+    assertFalse(map.containsKey("ns2"));
+    assertFalse(map.containsKey("ns3"));
+    assertTrue(map.containsKey("ns1"));
     log.setLength(0);
   }
 
@@ -179,18 +180,18 @@ public class TestBlockPoolManager {
             "create #2\n" +
             "create #3\n", log.toString());
     Map<String, BPOfferService> map = bpm.getBpByNameserviceId();
-    Assertions.assertTrue(map.containsKey("ns1"));
-    Assertions.assertTrue(map.containsKey("ns2"));
-    Assertions.assertTrue(map.containsKey("ns3"));
-    Assertions.assertEquals(2, map.get("ns3").getBPServiceActors().size());
-    Assertions.assertEquals("ns3-" + MockDomainNameResolver.FQDN_1 + "-8020",
+    assertTrue(map.containsKey("ns1"));
+    assertTrue(map.containsKey("ns2"));
+    assertTrue(map.containsKey("ns3"));
+    assertEquals(2, map.get("ns3").getBPServiceActors().size());
+    assertEquals("ns3-" + MockDomainNameResolver.FQDN_1 + "-8020",
         map.get("ns3").getBPServiceActors().get(0).getNnId());
-    Assertions.assertEquals("ns3-" + MockDomainNameResolver.FQDN_2 + "-8020",
+    assertEquals("ns3-" + MockDomainNameResolver.FQDN_2 + "-8020",
         map.get("ns3").getBPServiceActors().get(1).getNnId());
-    Assertions.assertEquals(
+    assertEquals(
         new InetSocketAddress(MockDomainNameResolver.FQDN_1, 8020),
         map.get("ns3").getBPServiceActors().get(0).getNNSocketAddress());
-    Assertions.assertEquals(
+    assertEquals(
         new InetSocketAddress(MockDomainNameResolver.FQDN_2, 8020),
         map.get("ns3").getBPServiceActors().get(1).getNNSocketAddress());
     log.setLength(0);

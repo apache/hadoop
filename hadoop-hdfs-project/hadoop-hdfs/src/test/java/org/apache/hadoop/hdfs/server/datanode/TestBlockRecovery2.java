@@ -48,7 +48,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.TestName;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -77,6 +76,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -168,7 +169,7 @@ public class TestBlockRecovery2 {
       @Override
       DatanodeProtocolClientSideTranslatorPB connectToNN(
           InetSocketAddress nnAddr) throws IOException {
-        Assertions.assertEquals(NN_ADDR, nnAddr);
+        assertEquals(NN_ADDR, nnAddr);
         return namenode;
       }
     };
@@ -192,7 +193,7 @@ public class TestBlockRecovery2 {
     } catch (InterruptedException e) {
       LOG.warn("InterruptedException while waiting to see active NN", e);
     }
-    Assertions.assertNotNull(dn.getAllBpOs().get(0).getActiveNN(),
+    assertNotNull(dn.getAllBpOs().get(0).getActiveNN(),
         "Failed to get ActiveNN");
   }
 
@@ -210,7 +211,7 @@ public class TestBlockRecovery2 {
       } finally {
         File dir = new File(DATA_DIR);
         if (dir.exists()) {
-          Assertions.assertTrue(FileUtil.fullyDelete(dir), "Cannot delete data-node dirs");
+          assertTrue(FileUtil.fullyDelete(dir), "Cannot delete data-node dirs");
         }
       }
       tearDownDone = true;
@@ -264,12 +265,12 @@ public class TestBlockRecovery2 {
       try {
         out.close();
       } catch (IOException e) {
-        Assertions.assertTrue(e.getMessage().contains("are bad. Aborting..."),
+        assertTrue(e.getMessage().contains("are bad. Aborting..."),
             "Writing should fail");
       } finally {
         recoveryThread.join();
       }
-      Assertions.assertTrue(recoveryInitResult.get(),
+      assertTrue(recoveryInitResult.get(),
           "Recovery should be initiated successfully");
 
       dataNode.updateReplicaUnderRecovery(block.getBlock(), block.getBlock()
