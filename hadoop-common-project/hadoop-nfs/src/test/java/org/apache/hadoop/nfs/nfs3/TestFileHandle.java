@@ -18,7 +18,7 @@
 package org.apache.hadoop.nfs.nfs3;
 
 import org.apache.hadoop.oncrpc.XDR;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
