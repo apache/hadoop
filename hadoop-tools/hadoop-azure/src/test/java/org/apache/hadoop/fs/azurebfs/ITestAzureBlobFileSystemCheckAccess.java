@@ -123,9 +123,9 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testCheckAccessForFileWithNullFsAction() throws Exception {
+    assumeThat(isHNSEnabled).as(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false").isTrue();
+    assumeThat(isCheckAccessEnabled).as(FS_AZURE_ENABLE_CHECK_ACCESS + " is false").isTrue();
     assertThrows(NullPointerException.class, () -> {
-      assumeThat(isHNSEnabled).as(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false").isTrue();
-      assumeThat(isCheckAccessEnabled).as(FS_AZURE_ENABLE_CHECK_ACCESS + " is false").isTrue();
       //  NPE when trying to convert null FsAction enum
       superUserFs.access(new Path("test.txt"), null);
     });
@@ -133,13 +133,13 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testCheckAccessForNonExistentFile() throws Exception {
-      assertThrows(FileNotFoundException.class, () -> {
-          checkPrerequisites();
-          Path nonExistentFile = setupTestDirectoryAndUserAccess(
-        "/nonExistentFile1.txt", FsAction.ALL);
-          superUserFs.delete(nonExistentFile, true);
-          testUserFs.access(nonExistentFile, FsAction.READ);
-      });
+    checkPrerequisites();
+    assertThrows(FileNotFoundException.class, () -> {
+        Path nonExistentFile = setupTestDirectoryAndUserAccess(
+      "/nonExistentFile1.txt", FsAction.ALL);
+        superUserFs.delete(nonExistentFile, true);
+        testUserFs.access(nonExistentFile, FsAction.READ);
+    });
   }
 
   @Test
