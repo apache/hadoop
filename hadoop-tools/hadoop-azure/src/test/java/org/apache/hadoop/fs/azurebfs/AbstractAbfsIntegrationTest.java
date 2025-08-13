@@ -586,7 +586,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     final AuthType currentAuthType = getAuthType();
     assumeThat(currentAuthType).
         as("SAS Based Authentication Not Allowed For Integration Tests").
-        isEqualTo(AuthType.SAS);
+        isNotEqualTo(AuthType.SAS);
     if (currentAuthType == AuthType.SharedKey) {
       assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_ACCOUNT_KEY);
     } else {
