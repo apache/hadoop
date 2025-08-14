@@ -23,10 +23,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Random;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
+
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -43,7 +44,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.D
 /**
  * Testing Huge file for AbfsOutputStream.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="size [{0}] ; blockFactoryName [{1}]")
+@MethodSource("sizes")
 public class ITestAbfsHugeFiles extends AbstractAbfsScaleTest {
   private static final int ONE_MB = 1024 * 1024;
   private static final int EIGHT_MB = 8 * ONE_MB;
@@ -62,8 +64,6 @@ public class ITestAbfsHugeFiles extends AbstractAbfsScaleTest {
   // Block Factory to be used in this test.
   private String blockFactoryName;
 
-  @Parameterized.Parameters(name = "size [{0}] ; blockFactoryName "
-      + "[{1}]")
   public static Collection<Object[]> sizes() {
     return Arrays.asList(new Object[][] {
         { DEFAULT_WRITE_BUFFER_SIZE, DataBlocks.DATA_BLOCKS_BUFFER_DISK },
@@ -81,7 +81,7 @@ public class ITestAbfsHugeFiles extends AbstractAbfsScaleTest {
     this.blockFactoryName = blockFactoryName;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration configuration = getRawConfiguration();
     configuration.unset(DATA_BLOCKS_BUFFER);
@@ -103,8 +103,8 @@ public class ITestAbfsHugeFiles extends AbstractAbfsScaleTest {
     }
     // Verify correct length was uploaded. Don't want to verify contents
     // here, as this would increase the test time significantly.
-    assertEquals("Mismatch in content length of file uploaded", size,
-        fs.getFileStatus(filePath).getLen());
+    assertEquals(size, fs.getFileStatus(filePath).getLen(),
+        "Mismatch in content length of file uploaded");
   }
 
   /**
@@ -128,7 +128,7 @@ public class ITestAbfsHugeFiles extends AbstractAbfsScaleTest {
     }
     // Verify correct length was uploaded. Don't want to verify contents
     // here, as this would increase the test time significantly.
-    assertEquals("Mismatch in content length of file uploaded", size,
-        fs.getFileStatus(filePath).getLen());
+    assertEquals(size, fs.getFileStatus(filePath).getLen(),
+        "Mismatch in content length of file uploaded");
   }
 }

@@ -17,9 +17,9 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -36,8 +36,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import static org.apache.hadoop.security.SecurityUtilTestHelper.isExternalKdcRunning;
 import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * This test brings up a MiniDFSCluster with 1 NameNode and 0
@@ -56,7 +56,7 @@ import org.junit.Test;
 public class TestSecureNameNodeWithExternalKdc {
   final static private int NUM_OF_DATANODES = 0;
 
-  @Before
+  @BeforeEach
   public void testExternalKdcRunning() {
     // Tests are skipped if external KDC is not running.
     Assume.assumeTrue(isExternalKdcRunning());
@@ -71,10 +71,9 @@ public class TestSecureNameNodeWithExternalKdc {
       String nnSpnegoPrincipal =
         System.getProperty("dfs.namenode.kerberos.internal.spnego.principal");
       String nnKeyTab = System.getProperty("dfs.namenode.keytab.file");
-      assertNotNull("NameNode principal was not specified", nnPrincipal);
-      assertNotNull("NameNode SPNEGO principal was not specified",
-        nnSpnegoPrincipal);
-      assertNotNull("NameNode keytab was not specified", nnKeyTab);
+      assertNotNull(nnPrincipal, "NameNode principal was not specified");
+      assertNotNull(nnSpnegoPrincipal, "NameNode SPNEGO principal was not specified");
+      assertNotNull(nnKeyTab, "NameNode keytab was not specified");
 
       Configuration conf = new HdfsConfiguration();
       conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
@@ -96,8 +95,8 @@ public class TestSecureNameNodeWithExternalKdc {
       // The user specified should not be a superuser
       String userPrincipal = System.getProperty("user.principal");
       String userKeyTab = System.getProperty("user.keytab");
-      assertNotNull("User principal was not specified", userPrincipal);
-      assertNotNull("User keytab was not specified", userKeyTab);
+      assertNotNull(userPrincipal, "User principal was not specified");
+      assertNotNull(userKeyTab, "User keytab was not specified");
 
       UserGroupInformation ugi = UserGroupInformation
           .loginUserFromKeytabAndReturnUGI(userPrincipal, userKeyTab);
@@ -117,8 +116,7 @@ public class TestSecureNameNodeWithExternalKdc {
       Path p = new Path("/tmp/alpha");
       fs.mkdirs(p);
       assertNotNull(fs.listStatus(p));
-      assertEquals(AuthenticationMethod.KERBEROS,
-          ugi.getAuthenticationMethod());
+      assertEquals(AuthenticationMethod.KERBEROS, ugi.getAuthenticationMethod());
     } finally {
       if (cluster != null) {
         cluster.shutdown();

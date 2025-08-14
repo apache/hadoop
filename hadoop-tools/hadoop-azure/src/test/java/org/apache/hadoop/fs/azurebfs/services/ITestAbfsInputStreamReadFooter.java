@@ -32,9 +32,9 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsScaleTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 
 import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -96,13 +96,13 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
     this.abfsInputStreamTestUtils = new AbfsInputStreamTestUtils(this);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void init() {
     executorService = Executors.newFixedThreadPool(
         2 * Runtime.getRuntime().availableProcessors());
   }
 
-  @AfterClass
+  @AfterAll
   public static void close() {
     executorService.shutdown();
   }
@@ -184,11 +184,9 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
               .get(CONNECTIONS_MADE.getStatName());
 
           if (optimizeFooterRead) {
-            assertEquals(1,
-                requestsMadeAfterTest - requestsMadeBeforeTest);
+            assertEquals(1, requestsMadeAfterTest - requestsMadeBeforeTest);
           } else {
-            assertEquals(3,
-                requestsMadeAfterTest - requestsMadeBeforeTest);
+            assertEquals(3, requestsMadeAfterTest - requestsMadeBeforeTest);
           }
         }
       }

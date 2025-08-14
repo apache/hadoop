@@ -24,8 +24,7 @@ import java.util.List;
 
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.util.Lists;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -53,6 +52,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_FS_CLIENT_SECRET;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test cases for AzureBlobFileSystem.access()
@@ -114,34 +114,37 @@ public class ITestAzureBlobFileSystemCheckAccess
     conf.set(confKeyWithAccountName, confValue);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testCheckAccessWithNullPath() throws IOException {
-    superUserFs.access(null, FsAction.READ);
+      assertThrows(IllegalArgumentException.class, () -> {
+          superUserFs.access(null, FsAction.READ);
+      });
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testCheckAccessForFileWithNullFsAction() throws Exception {
-    Assume.assumeTrue(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false",
-        isHNSEnabled);
-    Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
-        isCheckAccessEnabled);
-    //  NPE when trying to convert null FsAction enum
-    superUserFs.access(new Path("test.txt"), null);
+    assertThrows(NullPointerException.class, () -> {
+      assumeThat(isHNSEnabled).as(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false").isTrue();
+      assumeThat(isCheckAccessEnabled).as(FS_AZURE_ENABLE_CHECK_ACCESS + " is false").isTrue();
+      //  NPE when trying to convert null FsAction enum
+      superUserFs.access(new Path("test.txt"), null);
+    });
   }
 
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testCheckAccessForNonExistentFile() throws Exception {
-    checkPrerequisites();
-    Path nonExistentFile = setupTestDirectoryAndUserAccess(
+      assertThrows(FileNotFoundException.class, () -> {
+          checkPrerequisites();
+          Path nonExistentFile = setupTestDirectoryAndUserAccess(
         "/nonExistentFile1.txt", FsAction.ALL);
-    superUserFs.delete(nonExistentFile, true);
-    testUserFs.access(nonExistentFile, FsAction.READ);
+          superUserFs.delete(nonExistentFile, true);
+          testUserFs.access(nonExistentFile, FsAction.READ);
+      });
   }
 
   @Test
   public void testWhenCheckAccessConfigIsOff() throws Exception {
-    Assume.assumeTrue(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false",
-        isHNSEnabled);
+    assumeThat(isHNSEnabled).as(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false").isTrue();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ENABLE_CHECK_ACCESS, false);
     FileSystem fs = FileSystem.newInstance(conf);
@@ -172,11 +175,13 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testCheckAccessForAccountWithoutNS() throws Exception {
-    Assume.assumeFalse(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is true",
-        getConfiguration()
-            .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, true));
-    Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
-        isCheckAccessEnabled);
+    assumeThat(getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
+        true))
+        .as(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is true")
+        .isFalse();
+    assumeThat(isCheckAccessEnabled)
+        .as(FS_AZURE_ENABLE_CHECK_ACCESS + " is false")
+        .isTrue();
     checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID);
     checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET);
     checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_USER_GUID);
@@ -311,10 +316,8 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   private void checkPrerequisites() throws Exception {
-    Assume.assumeTrue(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false",
-        isHNSEnabled);
-    Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
-        isCheckAccessEnabled);
+    assumeThat(isHNSEnabled).as(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false").isTrue();
+    assumeThat(isCheckAccessEnabled).as(FS_AZURE_ENABLE_CHECK_ACCESS + " is false").isTrue();
     setTestUserFs();
     checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID);
     checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET);
@@ -324,22 +327,22 @@ public class ITestAzureBlobFileSystemCheckAccess
   private void checkIfConfigIsSet(String configKey){
     AbfsConfiguration conf = getConfiguration();
     String value = conf.get(configKey);
-    Assume.assumeTrue(configKey + " config is mandatory for the test to run",
-        value != null && value.trim().length() > 1);
+    assumeThat(value)
+        .as(configKey + " config is mandatory for the test to run")
+        .isNotNull()
+        .matches(v -> v.trim().length() > 1, "trimmed length > 1");
   }
 
   private void assertAccessible(Path testFilePath, FsAction fsAction)
       throws IOException {
-    assertTrue(
-        "Should have been given access  " + fsAction + " on " + testFilePath,
-        isAccessible(testUserFs, testFilePath, fsAction));
+    assertTrue(isAccessible(testUserFs, testFilePath, fsAction),
+        "Should have been given access  " + fsAction + " on " + testFilePath);
   }
 
   private void assertInaccessible(Path testFilePath, FsAction fsAction)
       throws IOException {
-    assertFalse(
-        "Should have been denied access  " + fsAction + " on " + testFilePath,
-        isAccessible(testUserFs, testFilePath, fsAction));
+    assertFalse(isAccessible(testUserFs, testFilePath, fsAction),
+        "Should have been denied access  " + fsAction + " on " + testFilePath);
   }
 
   private void setExecuteAccessForParentDirs(Path dir) throws IOException {

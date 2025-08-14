@@ -23,10 +23,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 import org.junit.jupiter.api.AfterAll;
-import org.junit.Assume;
-import org.junit.Rule;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.rules.TemporaryFolder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -49,6 +46,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_OVERRIDE_OWNER_SP_LIST;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_FS_CLIENT_SERVICE_PRINCIPAL_OBJECT_ID;
 import static org.apache.hadoop.io.IOUtils.closeStream;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Tests which create a yarn minicluster.
@@ -206,15 +204,6 @@ public abstract class AbstractAbfsClusterITest extends
 
 
   /**
-   * We stage work into a temporary directory rather than directly under
-   * the user's home directory, as that is often rejected by CI test
-   * runners.
-   */
-  @Rule
-  public final TemporaryFolder stagingFilesDir = new TemporaryFolder();
-
-
-  /**
    * binding on demand rather than in a BeforeClass static method.
    * Subclasses can override this to change the binding options.
    * @return the cluster binding
@@ -279,7 +268,7 @@ public abstract class AbstractAbfsClusterITest extends
 
   protected void assumeValidTestConfigPresent(final String key) {
     String configuredValue = getConfiguration().get(key);
-    Assume.assumeTrue(configuredValue != null && !configuredValue.isEmpty());
+    assumeThat(configuredValue != null && !configuredValue.isEmpty()).isTrue();
   }
 
 }

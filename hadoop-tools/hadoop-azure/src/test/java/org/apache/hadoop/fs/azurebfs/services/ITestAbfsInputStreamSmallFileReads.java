@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.util.Map;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.FileSystem;
@@ -289,8 +289,7 @@ public class ITestAbfsInputStreamSmallFileReads extends
       assertEquals(bytesRead, length);
       abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent, seekPos, length, buffer, testFilePath);
       assertEquals(fileContent.length, abfsInputStream.getFCursor());
-      assertEquals(fileContent.length,
-          abfsInputStream.getFCursorAfterLastRead());
+      assertEquals(fileContent.length, abfsInputStream.getFCursorAfterLastRead());
       assertEquals(length, abfsInputStream.getBCursor());
       assertTrue(abfsInputStream.getLimit() >= length);
     } finally {

@@ -21,8 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.UUID;
 
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.assertj.core.api.Assertions;
 import org.mockito.Mockito;
 
@@ -63,6 +62,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CR
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test getIsNamespaceEnabled call.
@@ -81,26 +81,29 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testXNSAccount() throws IOException {
-    Assume.assumeTrue("Skip this test because the account being used for test is a non XNS account",
-            isUsingXNSAccount);
-    assertTrue("Expecting getIsNamespaceEnabled() return true",
-        getIsNamespaceEnabled(getFileSystem()));
+    assumeThat(isUsingXNSAccount)
+        .as("Skip this test because the account being used for test is a non XNS account")
+        .isTrue();
+    assertTrue(
+       getIsNamespaceEnabled(getFileSystem()), "Expecting getIsNamespaceEnabled() return true");
   }
 
   @Test
   public void testNonXNSAccount() throws IOException {
     assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
-    Assume.assumeFalse("Skip this test because the account being used for test is a XNS account",
-            isUsingXNSAccount);
-    assertFalse("Expecting getIsNamespaceEnabled() return false",
-        getIsNamespaceEnabled(getFileSystem()));
+    assumeThat(isUsingXNSAccount)
+        .as("Skip this test because the account being used for test is a XNS account")
+        .isFalse();
+    assertFalse(
+       getIsNamespaceEnabled(getFileSystem()), "Expecting getIsNamespaceEnabled() return false");
   }
 
   @Test
   public void testGetIsNamespaceEnabledWhenConfigIsTrue() throws Exception {
     assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
-    Assume.assumeTrue("Blob Endpoint Does not Allow FS init on HNS Account",
-        getAbfsServiceType() == AbfsServiceType.DFS);
+    assumeThat(getAbfsServiceType())
+        .as("Blob Endpoint Does not Allow FS init on HNS Account")
+        .isEqualTo(AbfsServiceType.DFS);
     AzureBlobFileSystem fs = getNewFSWithHnsConf(TRUE_STR);
     Assertions.assertThat(getIsNamespaceEnabled(fs)).describedAs(
         "getIsNamespaceEnabled should return true when the "

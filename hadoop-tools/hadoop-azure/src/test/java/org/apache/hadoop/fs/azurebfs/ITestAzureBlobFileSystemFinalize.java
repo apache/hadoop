@@ -20,8 +20,8 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.lang.ref.WeakReference;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,6 +57,6 @@ public class ITestAzureBlobFileSystemFinalize extends AbstractAbfsScaleTest{
       i++;
     }
 
-    Assert.assertTrue("testFinalizer didn't get cleaned up within maxTries", ref.get() == null);
+    Assertions.assertTrue(ref.get() == null, "testFinalizer didn't get cleaned up within maxTries");
   }
 }

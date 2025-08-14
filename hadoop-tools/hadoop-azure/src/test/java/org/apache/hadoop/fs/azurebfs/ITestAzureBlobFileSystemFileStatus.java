@@ -23,7 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -63,7 +63,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
 
     Path root = new Path("/");
     FileStatus[] rootls = fs.listStatus(root);
-    assertEquals("root listing", 0, rootls.length);
+    assertEquals(0, rootls.length, "root listing");
   }
 
   @Test
@@ -82,23 +82,21 @@ public class ITestAzureBlobFileSystemFileStatus extends
     String errorInStatus = "error in " + fileStatus + " from " + fs;
 
     if (!getIsNamespaceEnabled(fs)) {
-      assertEquals(errorInStatus + ": owner",
-              fs.getOwnerUser(), fileStatus.getOwner());
-      assertEquals(errorInStatus + ": group",
-              fs.getOwnerUserPrimaryGroup(), fileStatus.getGroup());
+      assertEquals(fs.getOwnerUser(), fileStatus.getOwner(), errorInStatus + ": owner");
+      assertEquals(fs.getOwnerUserPrimaryGroup(), fileStatus.getGroup(), errorInStatus + ": group");
       assertEquals(new FsPermission(FULL_PERMISSION), fileStatus.getPermission());
     } else {
       // When running with namespace enabled account,
       // the owner and group info retrieved from server will be digit ids.
       // hence skip the owner and group validation
       if (isDir) {
-        assertEquals(errorInStatus + ": permission",
-                new FsPermission(DEFAULT_DIR_PERMISSION_VALUE), fileStatus.getPermission());
-        assertTrue(errorInStatus + "not a directory", fileStatus.isDirectory());
+        assertEquals(new FsPermission(DEFAULT_DIR_PERMISSION_VALUE), fileStatus.getPermission(),
+            errorInStatus + ": permission");
+        assertTrue(fileStatus.isDirectory(), errorInStatus + "not a directory");
       } else {
-        assertEquals(errorInStatus + ": permission",
-                new FsPermission(DEFAULT_FILE_PERMISSION_VALUE), fileStatus.getPermission());
-        assertTrue(errorInStatus + "not a file", fileStatus.isFile());
+        assertEquals(new FsPermission(DEFAULT_FILE_PERMISSION_VALUE), fileStatus.getPermission(),
+            errorInStatus + ": permission");
+        assertTrue(fileStatus.isFile(), errorInStatus + "not a file");
       }
     }
     assertPathDns(fileStatus.getPath());
@@ -153,10 +151,10 @@ public class ITestAzureBlobFileSystemFileStatus extends
     long createEndTime = System.currentTimeMillis();
     FileStatus fStat = fs.getFileStatus(testFilePath);
     long lastModifiedTime = fStat.getModificationTime();
-    assertTrue("lastModifiedTime should be after minCreateStartTime",
-        minCreateStartTime < lastModifiedTime);
-    assertTrue("lastModifiedTime should be before createEndTime",
-        createEndTime > lastModifiedTime);
+    assertTrue(
+       minCreateStartTime < lastModifiedTime, "lastModifiedTime should be after minCreateStartTime");
+    assertTrue(
+       createEndTime > lastModifiedTime, "lastModifiedTime should be before createEndTime");
   }
 
   /**
