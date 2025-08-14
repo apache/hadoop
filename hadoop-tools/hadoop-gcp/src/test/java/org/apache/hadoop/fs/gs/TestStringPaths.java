@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.fs.gs;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -42,29 +43,39 @@ public class TestStringPaths {
     assertEquals("another-bucket", StringPaths.validateBucketName("another-bucket/"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testValidateBucketNameEmpty() {
-    StringPaths.validateBucketName("");
+    assertThrows(IllegalArgumentException.class, () -> {
+      StringPaths.validateBucketName("");
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testValidateBucketNameNull() {
-    StringPaths.validateBucketName(null);
+    assertThrows(IllegalArgumentException.class, () -> {
+      StringPaths.validateBucketName(null);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testValidateBucketNameInvalidChars() {
-    StringPaths.validateBucketName("my bucket"); // Space
+    assertThrows(IllegalArgumentException.class, () -> {
+      StringPaths.validateBucketName("my bucket"); // Space
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testValidateBucketNameInvalidChars2() {
-    StringPaths.validateBucketName("my@bucket"); // @ symbol
+    assertThrows(IllegalArgumentException.class, () -> {
+      StringPaths.validateBucketName("my@bucket"); // @ symbol
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testValidateBucketNameUpperCase() {
-    StringPaths.validateBucketName("MyBucket"); // Uppercase
+    assertThrows(IllegalArgumentException.class, () -> {
+      StringPaths.validateBucketName("MyBucket"); // Uppercase
+    });
   }
 
   @Test
@@ -84,14 +95,18 @@ public class TestStringPaths {
     assertEquals("object", StringPaths.validateObjectName("/object", false));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testValidateObjectNameEmptyNotAllowed() {
-    StringPaths.validateObjectName("", false);
+    assertThrows(IllegalArgumentException.class, () -> {
+      StringPaths.validateObjectName("", false);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testValidateObjectNameNullNotAllowed() {
-    StringPaths.validateObjectName(null, false);
+    assertThrows(IllegalArgumentException.class, () -> {
+      StringPaths.validateObjectName(null, false);
+    });
   }
 
   @Test
@@ -101,19 +116,25 @@ public class TestStringPaths {
     assertEquals("", StringPaths.validateObjectName("/", true)); // Single slash becomes empty
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testValidateObjectNameConsecutiveSlashes() {
-    StringPaths.validateObjectName("path//to/object", false);
+    assertThrows(IllegalArgumentException.class, () -> {
+      StringPaths.validateObjectName("path//to/object", false);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testValidateObjectNameConsecutiveSlashesAtStart() {
-    StringPaths.validateObjectName("//path/to/object", false);
+    assertThrows(IllegalArgumentException.class, () -> {
+      StringPaths.validateObjectName("//path/to/object", false);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testValidateObjectNameConsecutiveSlashesAtEnd() {
-    StringPaths.validateObjectName("path/to/object//", false);
+    assertThrows(IllegalArgumentException.class, () -> {
+      StringPaths.validateObjectName("path/to/object//", false);
+    });
   }
 
   @Test
@@ -124,9 +145,11 @@ public class TestStringPaths {
     assertEquals("gs://my-bucket/", StringPaths.fromComponents("my-bucket", ""));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testFromComponentsNullBucketNonNullObject() {
-    StringPaths.fromComponents(null, "path/to/object");
+    assertThrows(IllegalArgumentException.class, () -> {
+      StringPaths.fromComponents(null, "path/to/object");
+    });
   }
 
   @Test
