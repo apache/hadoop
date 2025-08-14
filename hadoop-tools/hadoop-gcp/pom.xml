@@ -425,23 +425,23 @@
     </plugins>
   </build>
 
-<dependencyManagement>
-        <dependencies>
-          <dependency>
-            <!--
-      We're using a specific Protobuf version to ensure compatibility with the
-      Google Cloud Storage (GCS) client. The GCS client often relies on
-      particular Long-Term Support (LTS) versions of Protobuf. When we upgrade
-      the GCS client, we'll likely need to update Protobuf too. To prevent
-      dependency conflicts, Protobuf will be shaded within the GCS connector's
-      fat JAR.
-      -->
-            <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java</artifactId>
-            <version>3.25.5</version>
-        </dependency>
-        </dependencies>
-    </dependencyManagement>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <!--
+        We're using a specific Protobuf version to ensure compatibility with the
+        Google Cloud Storage (GCS) client. The GCS client often relies on
+        particular Long-Term Support (LTS) versions of Protobuf. When we upgrade
+        the GCS client, we'll likely need to update Protobuf too. To prevent
+        dependency conflicts, Protobuf will be shaded within the GCS connector's
+        fat JAR.
+        -->
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java</artifactId>
+        <version>3.25.5</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>
@@ -476,25 +476,15 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.junit.platform</groupId>
       <artifactId>junit-platform-launcher</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.vintage</groupId>
-      <artifactId>junit-vintage-engine</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-storage</artifactId>
     </dependency>
-        <dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
       <scope>test</scope>
@@ -511,4 +501,3 @@
     </dependency>
   </dependencies>
 </project>
-
