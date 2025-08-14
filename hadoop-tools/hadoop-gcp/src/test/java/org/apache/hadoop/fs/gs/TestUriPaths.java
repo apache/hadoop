@@ -20,8 +20,9 @@ package org.apache.hadoop.fs.gs;
 
 import java.net.URI;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestUriPaths {
   @Test
@@ -130,23 +131,31 @@ public class TestUriPaths {
         UriPaths.fromStringPathComponents("my-bucket", "", true));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testFromStringPathComponentsNullBucketNameNotAllowed() {
-    UriPaths.fromStringPathComponents(null, "object", false);
+    assertThrows(IllegalArgumentException.class, () -> {
+      UriPaths.fromStringPathComponents(null, "object", false);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testFromStringPathComponentsEmptyObjectNameNotAllowed() {
-    UriPaths.fromStringPathComponents("my-bucket", "", false);
+    assertThrows(IllegalArgumentException.class, () -> {
+      UriPaths.fromStringPathComponents("my-bucket", "", false);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testFromStringPathComponentsConsecutiveSlashes() {
-    UriPaths.fromStringPathComponents("my-bucket", "path//to/object", false);
+    assertThrows(IllegalArgumentException.class, () -> {
+      UriPaths.fromStringPathComponents("my-bucket", "path//to/object", false);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testFromStringPathComponentsInvalidBucketName() {
-    UriPaths.fromStringPathComponents("MyBucket", "object", false); // Uppercase
+    assertThrows(IllegalArgumentException.class, () -> {
+      UriPaths.fromStringPathComponents("MyBucket", "object", false); // Uppercase
+    });
   }
 }
