@@ -692,6 +692,8 @@
                         <exclude>META-INF/versions/9/module-info.class</exclude>
                         <exclude>META-INF/versions/11/module-info.class</exclude>
                         <exclude>META-INF/versions/9/javax/xml/bind/ModuleUtil.class</exclude>
+                        <!-- Exclude Java 21 specific classes to maintain Java 8 compatibility -->
+                        <exclude>META-INF/versions/21/**</exclude>
                       </excludes>
                     </filter>
 
