@@ -189,173 +189,180 @@
         </plugins>
       </build>
     </profile>
+    <profile>
+      <id>shade</id>
+      <activation>
+        <property><name>!skipShade</name></property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-shade-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>shade</goal>
+                </goals>
+                <configuration>
+                  <transformers>
+                    <transformer
+                        implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+                    <transformer
+                        implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer"/>
+                    <transformer
+                        implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                  </transformers>
+                  <filters>
+                    <filter>
+                      <artifact>com.google.auth:*</artifact>
+                      <includes>
+                        <include>**</include>
+                      </includes>
+                    </filter>
+                    <filter>
+                      <artifact>io.grpc:*</artifact>
+                      <includes>
+                        <include>**</include>
+                      </includes>
+                    </filter>
+                    <filter>
+                      <artifact>io.opencensus:*</artifact>
+                      <includes>
+                        <include>**</include>
+                      </includes>
+                    </filter>
+                    <filter>
+                      <artifact>*:*</artifact>
+                      <excludes>
+                        <exclude>*.json</exclude>
+                        <exclude>google/**</exclude>
+                        <exclude>grpc/**</exclude>
+                      </excludes>
+                    </filter>
+                  </filters>
+                  <artifactSet>
+                    <includes>
+                      <include>com.google.api</include>
+                      <include>com.google.api-client</include>
+                      <include>com.google.api.grpc</include>
+                      <include>com.google.apis</include>
+                      <include>com.google.auth</include>
+                      <include>com.google.cloud</include>
+                      <include>com.google.cloud.bigdataoss</include>
+                      <include>com.google.cloud.grpc</include>
+                      <include>com.google.cloud.http</include>
+                      <include>com.google.flogger</include>
+                      <include>com.google.code.gson</include>
+                      <include>com.google.guava</include>
+                      <include>com.google.http-client</include>
+                      <include>com.google.oauth-client</include>
+                      <include>com.google.protobuf</include>
+                      <include>com.google.re2j</include>
+                      <include>com.google.storage.v2</include>
+                      <include>com.lmax</include>
+                      <include>io.grpc</include>
+                      <include>io.opencensus</include>
+                      <include>io.opentelemetry</include>
+                      <include>io.opentelemetry.api</include>
+                      <include>io.opentelemetry.contrib</include>
+                      <include>io.opentelemetry.semconv</include>
+                      <include>io.perfmark</include>
+                      <include>org.apache.httpcomponents</include>
+                      <include>org.threeten:threetenbp</include>
+                    </includes>
+                  </artifactSet>
+                  <minimizeJar>true</minimizeJar>
+                  <relocations>
+                    <relocation>
+                      <pattern>com</pattern>
+                      <shadedPattern>com.google.cloud.hadoop.repackaged.ossgcs.com</shadedPattern>
+                      <includes>
+                        <include>com.google.api.**</include>
+                        <include>com.google.api.gax.**</include>
+                        <include>com.google.auth.**</include>
+                        <include>com.google.cloud.*</include>
+                        <include>com.google.cloud.audit.**</include>
+                        <include>com.google.cloud.grpc.**</include>
+                        <include>com.google.cloud.hadoop.gcsio.**</include>
+                        <include>com.google.cloud.hadoop.util.**</include>
+                        <include>com.google.cloud.http.**</include>
+                        <include>com.google.cloud.monitoring.**</include>
+                        <include>com.google.cloud.opentelemetry.**</include>
+                        <include>com.google.cloud.spi.**</include>
+                        <include>com.google.cloud.storage.**</include>
+                        <include>com.google.common.**</include>
+                        <include>com.google.geo.**</include>
+                        <include>com.google.gson.**</include>
+                        <include>com.google.google.storage.**</include>
+                        <include>com.google.iam.**</include>
+                        <include>com.google.logging.**</include>
+                        <include>com.google.longrunning.**</include>
+                        <include>com.google.monitoring.**</include>
+                        <include>com.google.protobuf.**</include>
+                        <include>com.google.re2j.**</include>
+                        <include>com.google.rpc.**</include>
+                        <include>com.google.storage.**</include>
+                        <include>com.google.thirdparty.**</include>
+                        <include>com.google.type.**</include>
+                        <include>com.lmax.disruptor.**</include>
+                      </includes>
+                      <excludes>
+                        <exclude>com.google.cloud.hadoop.util.AccessTokenProvider</exclude>
+                        <exclude>com.google.cloud.hadoop.util.AccessTokenProvider$AccessToken</exclude>
+                        <exclude>com.google.cloud.hadoop.util.AccessTokenProvider$AccessTokenType</exclude>
+                        <exclude>com.google.cloud.hadoop.util.AccessBoundary</exclude>
+                        <exclude>com.google.cloud.hadoop.util.AccessBoundary$Action</exclude>
+                        <exclude>com.google.cloud.hadoop.util.AutoValue_AccessBoundary</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>org</pattern>
+                      <shadedPattern>com.google.cloud.hadoop.repackaged.ossgcs.org</shadedPattern>
+                      <includes>
+                        <include>org.apache.http.**</include>
+                        <include>org.threeten.**</include>
+                      </includes>
+                    </relocation>
+                    <relocation>
+                      <pattern>io.grpc.netty.shaded</pattern>
+                      <shadedPattern>
+                        com.google.cloud.hadoop.repackaged.ossgcs.io.grpc.netty.shaded
+                      </shadedPattern>
+                    </relocation>
+                    <relocation>
+                      <pattern>io</pattern>
+                      <shadedPattern>com.google.cloud.hadoop.repackaged.ossgcs.io</shadedPattern>
+                      <includes>
+                        <include>io.grpc.**</include>
+                        <include>io.opencensus.**</include>
+                        <include>io.perfmark.**</include>
+                      </includes>
+                    </relocation>
+                    <relocation>
+                      <pattern>META-INF/native/io_grpc_netty_shaded_</pattern>
+                      <shadedPattern>
+                        META-INF/native/com_google_cloud_hadoop_repackaged_gcs_io_grpc_netty_shaded_
+                      </shadedPattern>
+                    </relocation>
+                    <relocation>
+                      <pattern>META-INF/native/libio_grpc_netty_shaded_</pattern>
+                      <shadedPattern>
+                        META-INF/native/libcom_google_cloud_hadoop_repackaged_gcs_io_grpc_netty_shaded_
+                      </shadedPattern>
+                    </relocation>
+                  </relocations>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 
   <build>
     <plugins>
-      <plugin>
-        <artifactId>maven-shade-plugin</artifactId>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-            <configuration>
-              <transformers>
-                <transformer
-                    implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
-                <transformer
-                    implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer"/>
-                <transformer
-                    implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-              </transformers>
-              <filters>
-
-                <filter>
-                  <artifact>com.google.auth:*</artifact>
-                  <includes>
-                    <include>**</include>
-                  </includes>
-                </filter>
-                <filter>
-                  <artifact>io.grpc:*</artifact>
-                  <includes>
-                    <include>**</include>
-                  </includes>
-                </filter>
-                <filter>
-                  <artifact>io.opencensus:*</artifact>
-                  <includes>
-                    <include>**</include>
-                  </includes>
-                </filter>
-                <filter>
-                  <artifact>*:*</artifact>
-                  <excludes>
-                    <exclude>*.json</exclude>
-                    <exclude>google/**</exclude>
-                    <exclude>grpc/**</exclude>
-                  </excludes>
-                </filter>
-              </filters>
-              <artifactSet>
-                <includes>
-                  <include>com.google.api</include>
-                  <include>com.google.api-client</include>
-                  <include>com.google.api.grpc</include>
-                  <include>com.google.apis</include>
-                  <include>com.google.auth</include>
-                  <include>com.google.cloud</include>
-                  <include>com.google.cloud.bigdataoss</include>
-                  <include>com.google.cloud.grpc</include>
-                  <include>com.google.cloud.http</include>
-                  <include>com.google.flogger</include>
-                  <include>com.google.code.gson</include>
-                  <include>com.google.guava</include>
-                  <include>com.google.http-client</include>
-                  <include>com.google.oauth-client</include>
-                  <include>com.google.protobuf</include>
-                  <include>com.google.re2j</include>
-                  <include>com.google.storage.v2</include>
-                  <include>com.lmax</include>
-                  <include>io.grpc</include>
-                  <include>io.opencensus</include>
-                  <include>io.opentelemetry</include>
-                  <include>io.opentelemetry.api</include>
-                  <include>io.opentelemetry.contrib</include>
-                  <include>io.opentelemetry.semconv</include>
-                  <include>io.perfmark</include>
-                  <include>org.apache.httpcomponents</include>
-                  <include>org.threeten:threetenbp</include>
-                </includes>
-              </artifactSet>
-              <minimizeJar>true</minimizeJar>
-              <relocations>
-                <relocation>
-                  <pattern>com</pattern>
-                  <shadedPattern>com.google.cloud.hadoop.repackaged.ossgcs.com</shadedPattern>
-                  <includes>
-                    <include>com.google.api.**</include>
-                    <include>com.google.api.gax.**</include>
-                    <include>com.google.auth.**</include>
-                    <include>com.google.cloud.*</include>
-                    <include>com.google.cloud.audit.**</include>
-                    <include>com.google.cloud.grpc.**</include>
-                    <include>com.google.cloud.hadoop.gcsio.**</include>
-                    <include>com.google.cloud.hadoop.util.**</include>
-                    <include>com.google.cloud.http.**</include>
-                    <include>com.google.cloud.monitoring.**</include>
-                    <include>com.google.cloud.opentelemetry.**</include>
-                    <include>com.google.cloud.spi.**</include>
-                    <include>com.google.cloud.storage.**</include>
-                    <include>com.google.common.**</include>
-                    <include>com.google.geo.**</include>
-                    <include>com.google.gson.**</include>
-                    <include>com.google.google.storage.**</include>
-                    <include>com.google.iam.**</include>
-                    <include>com.google.logging.**</include>
-                    <include>com.google.longrunning.**</include>
-                    <include>com.google.monitoring.**</include>
-                    <include>com.google.protobuf.**</include>
-                    <include>com.google.re2j.**</include>
-                    <include>com.google.rpc.**</include>
-                    <include>com.google.storage.**</include>
-                    <include>com.google.thirdparty.**</include>
-                    <include>com.google.type.**</include>
-                    <include>com.lmax.disruptor.**</include>
-                  </includes>
-                  <excludes>
-                    <exclude>com.google.cloud.hadoop.util.AccessTokenProvider</exclude>
-                    <exclude>com.google.cloud.hadoop.util.AccessTokenProvider$AccessToken</exclude>
-                    <exclude>com.google.cloud.hadoop.util.AccessTokenProvider$AccessTokenType</exclude>
-                    <exclude>com.google.cloud.hadoop.util.AccessBoundary</exclude>
-                    <exclude>com.google.cloud.hadoop.util.AccessBoundary$Action</exclude>
-                    <exclude>com.google.cloud.hadoop.util.AutoValue_AccessBoundary</exclude>
-                  </excludes>
-                </relocation>
-                <relocation>
-                  <pattern>org</pattern>
-                  <shadedPattern>com.google.cloud.hadoop.repackaged.ossgcs.org</shadedPattern>
-                  <includes>
-                    <include>org.apache.http.**</include>
-                    <include>org.threeten.**</include>
-                  </includes>
-                </relocation>
-
-                <relocation>
-                  <pattern>io.grpc.netty.shaded</pattern>
-                  <shadedPattern>
-                    com.google.cloud.hadoop.repackaged.ossgcs.io.grpc.netty.shaded
-                  </shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>io</pattern>
-                  <shadedPattern>com.google.cloud.hadoop.repackaged.ossgcs.io</shadedPattern>
-                  <includes>
-                    <include>io.grpc.**</include>
-                    <include>io.opencensus.**</include>
-                    <include>io.perfmark.**</include>
-                  </includes>
-                </relocation>
-                <relocation>
-                  <pattern>META-INF/native/io_grpc_netty_shaded_</pattern>
-                  <shadedPattern>
-                    META-INF/native/com_google_cloud_hadoop_repackaged_gcs_io_grpc_netty_shaded_
-                  </shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>META-INF/native/libio_grpc_netty_shaded_</pattern>
-                  <shadedPattern>
-                    META-INF/native/libcom_google_cloud_hadoop_repackaged_gcs_io_grpc_netty_shaded_
-                  </shadedPattern>
-                </relocation>
-              </relocations>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
       <plugin>
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
@@ -366,12 +373,12 @@
           <effort>Max</effort>
         </configuration>
       </plugin>
-            <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-checkstyle-plugin</artifactId>
-          <configuration>
-            <suppressionsLocation>src/config/checkstyle-suppressions.xml</suppressionsLocation>
-          </configuration>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <configuration>
+          <suppressionsLocation>src/config/checkstyle-suppressions.xml</suppressionsLocation>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -399,7 +406,6 @@
                   <includeTestCode>false</includeTestCode>
                   <reason>Restrict mapreduce imports to committer code</reason>
                   <exclusions>
-
                   </exclusions>
                   <bannedImports>
                     <bannedImport>org.apache.hadoop.mapreduce.**</bannedImport>
@@ -410,10 +416,8 @@
                   <includeTestCode>false</includeTestCode>
                   <reason>Restrict encryption client imports to encryption client factory</reason>
                   <exclusions>
-
                   </exclusions>
                   <bannedImports>
-
                   </bannedImports>
                 </restrictImports>
               </rules>
