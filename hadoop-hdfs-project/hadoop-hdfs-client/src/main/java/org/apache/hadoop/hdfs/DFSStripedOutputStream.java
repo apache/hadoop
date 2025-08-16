@@ -73,8 +73,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.ECRedunency.DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.ECRedunency.DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED_DEFAILT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.ECRedundancy.DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.ECRedundancy.DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED_DEFAILT;
 
 /**
  * This class supports writing files in striped layout and erasure coded format.

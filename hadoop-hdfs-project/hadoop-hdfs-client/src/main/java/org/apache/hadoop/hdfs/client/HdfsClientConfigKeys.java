@@ -429,7 +429,7 @@ public interface HdfsClientConfigKeys {
     }
 
     @SuppressWarnings("checkstyle:InterfaceIsType")
-    interface ECRedunency {
+    interface ECRedundancy {
       String DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED =
           "dfs.client.ec.write.failed.blocks.tolerated";
       int DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED_DEFAILT = -1;
