@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
@@ -86,6 +87,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
@@ -291,7 +293,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
    */
   @ParameterizedTest(name = "{0}")
   @MethodSource("getParameters")
-  public void testAutoCorrectContainerAllocation(SchedulerType type) throws IOException {
+  public void testAutoCorrectContainerAllocation(SchedulerType type) throws Exception {
     initTestAbstractYarnScheduler(type);
     Configuration conf = new Configuration(getConf());
     conf.setBoolean(YarnConfiguration.RM_SCHEDULER_AUTOCORRECT_CONTAINER_ALLOCATION, true);
@@ -372,7 +374,8 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     Container container = mock(Container.class);
 
     // Mock the Container instance with the specified parameters
-    when(container.getResource()).thenReturn(Resource.newInstance(memory, 1));
+    Resource resource = Resource.newInstance(memory, 1);
+    when(container.getResource()).thenReturn(resource);
     when(container.getPriority()).thenReturn(priority);
     when(container.getId()).thenReturn(ContainerId.newContainerId(appAttemptId, containerId));
     when(container.getNodeId()).thenReturn(nodeId);
@@ -388,6 +391,10 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     when(rmContainer.getContainer()).thenReturn(container);
     when(rmContainer.getContainerId()).thenReturn(
         ContainerId.newContainerId(appAttemptId, containerId));
+    ResourceRequest resourceRequest =
+        BuilderUtils.newResourceRequest(priority, "*", resource, 1);
+    when(rmContainer.getContainerRequest()).thenReturn(
+        new ContainerRequest(ImmutableList.of(resourceRequest)));
 
     return rmContainer;
   }
@@ -470,7 +477,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
    */
   private void testContainerAskZeroAndNewlyAllocatedContainerOne(AbstractYarnScheduler scheduler,
       SchedulerApplicationAttempt application, SchedulerNode schedulerNode, NodeId nodeId,
-      Priority priority, ApplicationAttemptId appAttemptId) {
+      Priority priority, ApplicationAttemptId appAttemptId) throws Exception {
     // Create a resource request with 0 containers, 1024 MB memory, and GUARANTEED execution type
     ResourceRequest resourceRequest = createResourceRequest(1024, 1,
         0, priority, 0L,
@@ -485,14 +492,29 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     // Add the RMContainer to the newly allocated containers of the application
     application.addToNewlyAllocatedContainers(schedulerNode, rmContainer1);
 
+    // Simulate the container is released and expect it won't be recovered
+    // when calling AbstractYarnScheduler#recoverResourceRequestForContainer
+    when(rmContainer1.getState()).thenReturn(RMContainerState.RELEASED);
+
     // Call the autoCorrectContainerAllocation method
     scheduler.autoCorrectContainerAllocation(containerAsk, application);
+
+    // Make sure all event is handled
+    Dispatcher dispatcher = scheduler.rmContext.getDispatcher();
+    if (dispatcher instanceof DrainDispatcher) {
+      GenericTestUtils.waitFor(
+          () -> ((DrainDispatcher) dispatcher).isDrained(),
+          500, 3000);
+    }
 
     // Assert that the container ask remains 0
     assertEquals(0, resourceRequest.getNumContainers());
 
     // Assert that there are no newly allocated containers
     assertEquals(0, application.pullNewlyAllocatedContainers().size());
+
+    // Assert that the next pending ask is null
+    assertNull(application.appSchedulingInfo.getNextPendingAsk());
   }
 
   /**

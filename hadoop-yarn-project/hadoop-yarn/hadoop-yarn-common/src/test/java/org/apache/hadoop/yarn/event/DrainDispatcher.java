@@ -96,7 +96,7 @@ public class DrainDispatcher extends AsyncDispatcher {
   }
 
   @Override
-  protected boolean isDrained() {
+  public boolean isDrained() {
     synchronized (mutex) {
       return drained;
     }

@@ -769,10 +769,10 @@ public abstract class AbstractYarnScheduler
     }
 
     // when auto correct container allocation is enabled, there can be a case when extra containers
-    // go to expired state from allocated state. When such scenario happens do not re-attempt the
+    // go to released state from allocated state. When such scenario happens do not re-attempt the
     // container request since this is expected.
     if (autoCorrectContainerAllocation &&
-        RMContainerState.EXPIRED.equals(rmContainer.getState())) {
+        RMContainerState.RELEASED.equals(rmContainer.getState())) {
       return;
     }
 
