@@ -48,7 +48,7 @@ import org.apache.hadoop.fs.azure.integration.AbstractAzureScaleTest;
 import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test list performance.
@@ -99,7 +99,7 @@ public class ITestListPerformance extends AbstractAzureScaleTest {
 
   @Test
   public void test_0101_CreateDirectoryWithFiles() throws Exception {
-    assumeFalse(fs.exists(TEST_DIR_PATH), "Test path exists; skipping");
+    assumeThat(fs.exists(TEST_DIR_PATH)).as("Test path exists; skipping").isFalse();
 
     ExecutorService executorService = Executors.newFixedThreadPool(threads);
     CloudBlobContainer container = testAccount.getRealContainer();

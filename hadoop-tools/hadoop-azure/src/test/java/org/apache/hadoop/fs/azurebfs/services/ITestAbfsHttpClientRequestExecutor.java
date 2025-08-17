@@ -25,8 +25,7 @@ import java.io.OutputStream;
 import java.net.URL;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -50,6 +49,7 @@ import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_NETWORKING_LIBRARY;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.APACHE_HTTP_CLIENT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 public class ITestAbfsHttpClientRequestExecutor extends
     AbstractAbfsIntegrationTest {
@@ -67,8 +67,9 @@ public class ITestAbfsHttpClientRequestExecutor extends
     AzureBlobFileSystem fs = getFileSystem();
     Path path = new Path("/testExpect100ContinueHandling");
     if (isAppendBlobEnabled()) {
-      Assume.assumeFalse("Not valid for AppendBlob with blob endpoint",
-          getIngressServiceType() == AbfsServiceType.BLOB);
+      assumeThat(getIngressServiceType())
+          .as("Not valid for AppendBlob with blob endpoint")
+          .isEqualTo(AbfsServiceType.BLOB);
     }
 
     Configuration conf = new Configuration(fs.getConf());

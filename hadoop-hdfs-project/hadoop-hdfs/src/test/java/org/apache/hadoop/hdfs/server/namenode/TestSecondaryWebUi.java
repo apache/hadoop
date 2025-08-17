@@ -18,14 +18,14 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import javax.management.*;
 import java.io.IOException;
@@ -37,7 +37,7 @@ public class TestSecondaryWebUi {
   private static SecondaryNameNode snn;
   private static final Configuration conf = new Configuration();
   
-  @BeforeClass
+  @BeforeAll
   public static void setUpCluster() throws IOException {
     conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
         "0.0.0.0:0");
@@ -49,7 +49,7 @@ public class TestSecondaryWebUi {
     snn = new SecondaryNameNode(conf);
   }
   
-  @AfterClass
+  @AfterAll
   public static void shutDownCluster() {
     if (cluster != null) {
       cluster.shutdown();
@@ -70,10 +70,9 @@ public class TestSecondaryWebUi {
 
     String[] checkpointDir = (String[]) mbs.getAttribute(mxbeanName,
             "CheckpointDirectories");
-    Assert.assertArrayEquals(checkpointDir, snn.getCheckpointDirectories());
+    assertArrayEquals(checkpointDir, snn.getCheckpointDirectories());
     String[] checkpointEditlogDir = (String[]) mbs.getAttribute(mxbeanName,
             "CheckpointEditlogDirectories");
-    Assert.assertArrayEquals(checkpointEditlogDir,
-            snn.getCheckpointEditlogDirectories());
+    assertArrayEquals(checkpointEditlogDir, snn.getCheckpointEditlogDirectories());
   }
 }

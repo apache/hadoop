@@ -22,8 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +50,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatCode;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test Azure Oauth with Blob Data contributor role and Blob Data Reader role.
@@ -66,7 +66,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
       LoggerFactory.getLogger(ITestAbfsStreamStatistics.class);
 
   public ITestAzureBlobFileSystemOauth() throws Exception {
-    Assume.assumeTrue(this.getAuthType() == AuthType.OAuth);
+    assumeThat(this.getAuthType()).isEqualTo(AuthType.OAuth);
   }
   /*
   * BLOB DATA CONTRIBUTOR should have full access to the container and blobs in the container.
@@ -74,9 +74,9 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
   @Test
   public void testBlobDataContributor() throws Exception {
     String clientId = this.getConfiguration().get(TestConfigurationKeys.FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_ID);
-    Assume.assumeTrue("Contributor client id not provided", clientId != null);
+    assumeThat(clientId).as("Contributor client id not provided").isNotNull();
     String secret = this.getConfiguration().get(TestConfigurationKeys.FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_SECRET);
-    Assume.assumeTrue("Contributor client secret not provided", secret != null);
+    assumeThat(secret).as("Contributor client secret not provided").isNotNull();
 
     Path existedFilePath = path(EXISTED_FILE_PATH);
     Path existedFolderPath = path(EXISTED_FOLDER_PATH);
@@ -129,9 +129,9 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
   @Test
   public void testBlobDataReader() throws Exception {
     String clientId = this.getConfiguration().get(TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_ID);
-    Assume.assumeTrue("Reader client id not provided", clientId != null);
+    assumeThat(clientId).as("Reader client id not provided").isNotNull();
     String secret = this.getConfiguration().get(TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET);
-    Assume.assumeTrue("Reader client secret not provided", secret != null);
+    assumeThat(secret).as("Reader client secret not provided").isNotNull();
 
     Path existedFilePath = path(EXISTED_FILE_PATH);
     Path existedFolderPath = path(EXISTED_FOLDER_PATH);
@@ -177,9 +177,9 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
   @Test
   public void testGetPathStatusWithReader() throws Exception {
     String clientId = this.getConfiguration().get(FS_AZURE_BLOB_DATA_READER_CLIENT_ID);
-    Assume.assumeTrue("Reader client id not provided", clientId != null);
+    assumeThat(clientId).as("Reader client id not provided").isNotNull();
     String secret = this.getConfiguration().get(FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET);
-    Assume.assumeTrue("Reader client secret not provided", secret != null);
+    assumeThat(secret).as("Reader client secret not provided").isNotNull();
 
     Path existedFolderPath = path(EXISTED_FOLDER_PATH);
     createAzCopyFolder(existedFolderPath);

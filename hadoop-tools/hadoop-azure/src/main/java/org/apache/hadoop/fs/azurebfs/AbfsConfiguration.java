@@ -139,6 +139,11 @@ public class AbfsConfiguration{
   private int footerReadBufferSize;
 
   @BooleanConfigurationValidatorAnnotation(
+      ConfigurationKey = FS_AZURE_BUFFERED_PREAD_DISABLE,
+      DefaultValue = DEFAULT_BUFFERED_PREAD_DISABLE)
+  private boolean isBufferedPReadDisabled;
+
+  @BooleanConfigurationValidatorAnnotation(
       ConfigurationKey = FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED,
       DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED)
   private boolean isExpectHeaderEnabled;
@@ -951,6 +956,14 @@ public class AbfsConfiguration{
 
   public int getFooterReadBufferSize() {
     return this.footerReadBufferSize;
+  }
+
+  /**
+   * Returns whether the buffered pread is disabled.
+   * @return true if buffered pread is disabled, false otherwise.
+   */
+  public boolean isBufferedPReadDisabled() {
+    return this.isBufferedPReadDisabled;
   }
 
   public int getReadBufferSize() {

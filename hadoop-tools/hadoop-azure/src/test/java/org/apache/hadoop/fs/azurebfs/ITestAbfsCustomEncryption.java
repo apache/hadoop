@@ -30,9 +30,8 @@ import java.util.Random;
 
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Assumptions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -63,6 +62,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
@@ -85,7 +86,8 @@ import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.USER;
 import static org.apache.hadoop.fs.permission.FsAction.ALL;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="{0} mode, {2}")
+@MethodSource("params")
 public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
 
   public static final String SERVER_FILE_CONTENT = "123";
@@ -97,43 +99,33 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
   private List<AzureBlobFileSystem> fileSystemsOpenedInTest = new ArrayList<>();
 
   // Encryption type used by filesystem while creating file
-  @Parameterized.Parameter
   public EncryptionType fileEncryptionType;
 
   // Encryption type used by filesystem to call different operations
-  @Parameterized.Parameter(1)
   public EncryptionType requestEncryptionType;
 
-  @Parameterized.Parameter(2)
   public FSOperationType operation;
 
-  @Parameterized.Parameter(3)
   public boolean responseHeaderServerEnc;
 
-  @Parameterized.Parameter(4)
   public boolean responseHeaderReqServerEnc;
 
-  @Parameterized.Parameter(5)
   public boolean isExceptionCase;
 
   /**
    * Boolean value to indicate that the server response would have header related
    * to CPK and the test would need to assert its value.
    */
-  @Parameterized.Parameter(6)
   public boolean isCpkResponseHdrExpected;
 
   /**
    * Boolean value to indicate that the server response would have fields related
    * to CPK and the test would need to assert its value.
    */
-  @Parameterized.Parameter(7)
   public Boolean isCpkResponseKeyExpected = false;
 
-  @Parameterized.Parameter(8)
   public Boolean fileSystemListStatusResultToBeUsedForOpeningFile = false;
 
-  @Parameterized.Parameters(name = "{0} mode, {2}")
   public static Iterable<Object[]> params() {
     return Arrays.asList(new Object[][] {
         {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.READ, true, false, false, true, false, false},
@@ -178,10 +170,24 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     });
   }
 
-  public ITestAbfsCustomEncryption() throws Exception {
+  public ITestAbfsCustomEncryption(EncryptionType pFileEncryptionType,
+    EncryptionType pRequestEncryptionType, FSOperationType pOperation,
+    boolean pResponseHeaderServerEnc, boolean pResponseHeaderReqServerEnc,
+    boolean pIsExceptionCase, boolean pIsCpkResponseHdrExpected,
+    boolean pFileSystemListStatusResultToBeUsedForOpeningFile) throws Exception {
+
     new Random().nextBytes(cpk);
     cpkSHAEncoded = EncodingHelper.getBase64EncodedString(
         EncodingHelper.getSHA256Hash(cpk));
+    fileEncryptionType = pFileEncryptionType;
+    requestEncryptionType = pRequestEncryptionType;
+    operation = pOperation;
+    responseHeaderServerEnc = pResponseHeaderServerEnc;
+    responseHeaderReqServerEnc = pResponseHeaderReqServerEnc;
+    isExceptionCase = pIsExceptionCase;
+    isCpkResponseHdrExpected = pIsCpkResponseHdrExpected;
+    fileSystemListStatusResultToBeUsedForOpeningFile =
+        pFileSystemListStatusResultToBeUsedForOpeningFile;
   }
 
   @Test
@@ -514,6 +520,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     return fs;
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     super.teardown();

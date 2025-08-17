@@ -25,8 +25,8 @@ import static org.apache.hadoop.hdfs.server.datanode.BlockScanner.Conf.INTERNAL_
 import static org.apache.hadoop.hdfs.server.datanode.BlockScanner.Conf.INTERNAL_VOLUME_SCANNER_SCAN_RESULT_HANDLER;
 import static org.apache.hadoop.hdfs.server.datanode.BlockScanner.Conf.INTERNAL_DFS_BLOCK_SCANNER_CURSOR_SAVE_INTERVAL_MS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.Closeable;
@@ -62,7 +62,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.datanode.VolumeScanner.Statistics;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -704,36 +703,36 @@ public class TestBlockScanner {
     arr.add("3");
     arr.add("5");
     arr.add("7");
-    Assertions.assertEquals("3", FsVolumeImpl.nextSorted(arr, "2"));
-    Assertions.assertEquals("3", FsVolumeImpl.nextSorted(arr, "1"));
-    Assertions.assertEquals("1", FsVolumeImpl.nextSorted(arr, ""));
-    Assertions.assertEquals("1", FsVolumeImpl.nextSorted(arr, null));
-    Assertions.assertEquals(null, FsVolumeImpl.nextSorted(arr, "9"));
+    assertEquals("3", FsVolumeImpl.nextSorted(arr, "2"));
+    assertEquals("3", FsVolumeImpl.nextSorted(arr, "1"));
+    assertEquals("1", FsVolumeImpl.nextSorted(arr, ""));
+    assertEquals("1", FsVolumeImpl.nextSorted(arr, null));
+    assertEquals(null, FsVolumeImpl.nextSorted(arr, "9"));
   }
 
   @Test
   @Timeout(value = 120)
   public void testCalculateNeededBytesPerSec() throws Exception {
     // If we didn't check anything the last hour, we should scan now.
-    Assertions.assertTrue(
+    assertTrue(
         VolumeScanner.calculateShouldScan("test", 100, 0, 0, 60));
 
     // If, on average, we checked 101 bytes/s checked during the last hour,
     // stop checking now.
-    Assertions.assertFalse(VolumeScanner.
+    assertFalse(VolumeScanner.
         calculateShouldScan("test", 100, 101 * 3600, 1000, 5000));
 
     // Target is 1 byte / s, but we didn't scan anything in the last minute.
     // Should scan now.
-    Assertions.assertTrue(VolumeScanner.
+    assertTrue(VolumeScanner.
         calculateShouldScan("test", 1, 3540, 0, 60));
 
     // Target is 1000000 byte / s, but we didn't scan anything in the last
     // minute.  Should scan now.
-    Assertions.assertTrue(VolumeScanner.
+    assertTrue(VolumeScanner.
         calculateShouldScan("test", 100000L, 354000000L, 0, 60));
 
-    Assertions.assertFalse(VolumeScanner.
+    assertFalse(VolumeScanner.
         calculateShouldScan("test", 100000L, 365000000L, 0, 60));
   }
 
@@ -847,7 +846,7 @@ public class TestBlockScanner {
       // We should not have rescanned the "suspect block",
       // because it was recently rescanned by the suspect block system.
       // This is a test of the "suspect block" rate limiting.
-      Assertions.assertFalse(info.goodBlocks.contains(first), "We should not " +
+      assertFalse(info.goodBlocks.contains(first), "We should not " +
           "have rescanned block " + first + ", because it should have been " +
           "in recentSuspectBlocks.");
       info.blocksScanned = 0;

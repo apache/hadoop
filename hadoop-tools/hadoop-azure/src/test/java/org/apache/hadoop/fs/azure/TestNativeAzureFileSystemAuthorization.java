@@ -38,7 +38,6 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.apache.hadoop.util.StringUtils;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,7 +47,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_SECURE_MODE;
 import static org.apache.hadoop.fs.azure.CachingAuthorizer.KEY_AUTH_SERVICE_CACHING_ENABLE;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test class to hold all WASB authorization tests.
@@ -92,8 +91,9 @@ public class TestNativeAzureFileSystemAuthorization
     super.setUp();
     boolean useSecureMode = fs.getConf().getBoolean(KEY_USE_SECURE_MODE, false);
     boolean useAuthorization = fs.getConf().getBoolean(NativeAzureFileSystem.KEY_AZURE_AUTHORIZATION, false);
-    assumeTrue((useSecureMode && useAuthorization),
-        "Test valid when both SecureMode and Authorization are enabled .. skipping");
+    assumeThat((useSecureMode && useAuthorization))
+        .as("Test valid when both SecureMode and Authorization are enabled .. skipping")
+        .isTrue();
 
     authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(fs.getConf());
@@ -1544,8 +1544,9 @@ public class TestNativeAzureFileSystemAuthorization
       ContractTestUtils.assertPathExists(fs, "test path does not exist", testPath);
 
       String owner = fs.getFileStatus(testPath).getOwner();
-      assumeTrue(!StringUtils.equalsIgnoreCase(owner, newOwner),
-          "changing owner requires original and new owner to be different");
+      assumeThat(owner)
+          .as("changing owner requires original and new owner to be different")
+          .isNotEqualToIgnoringCase(newOwner);
 
       authorisedUser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
@@ -1587,8 +1588,9 @@ public class TestNativeAzureFileSystemAuthorization
       ContractTestUtils.assertPathExists(fs, "test path does not exist", testPath);
 
       String owner = fs.getFileStatus(testPath).getOwner();
-      assumeTrue(!StringUtils.equalsIgnoreCase(owner, newOwner),
-          "changing owner requires original and new owner to be different");
+      assumeThat(owner)
+          .as("changing owner requires original and new owner to be different")
+          .isNotEqualToIgnoringCase(newOwner);
 
       user.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
