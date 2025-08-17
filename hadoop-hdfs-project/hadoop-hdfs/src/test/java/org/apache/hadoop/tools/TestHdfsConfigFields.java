@@ -48,7 +48,7 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
         HdfsClientConfigKeys.ShortCircuit.class,
         HdfsClientConfigKeys.Retry.class, HdfsClientConfigKeys.Mmap.class,
         HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.class,
-        HdfsClientConfigKeys.Write.ECRedunency.class};
+        HdfsClientConfigKeys.Write.ECRedundancy.class};
 
     // Set error modes
     errorIfMissingConfigProps = true;
