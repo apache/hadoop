@@ -34,6 +34,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.SynchronousQueue;
@@ -356,9 +357,9 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
   public void close() {
     printTraceLog("Closing ReadBufferManagerV2");
-    workerPool.shutdownNow();
-    memoryMonitorThread.shutdownNow();
-    cpuMonitorThread.shutdownNow();
+    shutdown(workerPool);
+    shutdown(memoryMonitorThread);
+    shutdown(cpuMonitorThread);
     workerPool = null;
     if (bufferPool != null) {
       // help GC
@@ -367,6 +368,23 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     }
     setBufferManager(null); // reset the singleton instance
     printTraceLog("ReadBufferManagerV2 closed");
+  }
+
+  private void shutdown(ExecutorService service) {
+    if (service == null || service.isShutdown()) {
+      return; // already shut down or never initialized
+    }
+
+    try {
+      service.shutdown(); // disable new tasks from being submitted
+      // wait for existing tasks to terminate
+      if (!service.awaitTermination(executorServiceKeepAliveTimeInMilliSec, TimeUnit.MILLISECONDS)) {
+        service.shutdownNow(); // cancel currently executing tasks
+      }
+    } catch (InterruptedException e) {
+      service.shutdownNow(); // force shutdown if interrupted
+      Thread.currentThread().interrupt(); // restore interrupted status
+    }
   }
 
   private boolean isAlreadyQueued(final String eTag, final long requestedOffset) {
@@ -627,7 +645,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     }
 
     double memoryLoad = getMemoryLoad();
-    if (memoryLoad > memoryThreshold) {
+    if (isDynamicScalingEnabled && memoryLoad > memoryThreshold) {
       synchronized (this) {
         int freeIndex = getFreeList().pop();
         bufferPool[freeIndex] = null;
@@ -826,5 +844,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   @VisibleForTesting
   public int getCpuMonitoringIntervalInMilliSec() {
     return cpuMonitoringIntervalInMilliSec;
+  }
+
+  @VisibleForTesting
+  public ScheduledExecutorService getCpuMonitoringThread() {
+    return cpuMonitorThread;
   }
 }
