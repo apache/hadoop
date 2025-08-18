@@ -28,11 +28,11 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -62,19 +62,18 @@ public class TestTruncateQuotaUpdate {
     // be -block + (block - 0.5 block) = -0.5 block
     QuotaCounts count = new QuotaCounts.Builder().build();
     file.computeQuotaDeltaForTruncate(BLOCKSIZE + BLOCKSIZE / 2, null, count);
-    Assert.assertEquals(-BLOCKSIZE / 2 * REPLICATION, count.getStorageSpace());
+    assertEquals(-BLOCKSIZE / 2 * REPLICATION, count.getStorageSpace());
 
     // case 2: truncate to 1 block
     count = new QuotaCounts.Builder().build();
     file.computeQuotaDeltaForTruncate(BLOCKSIZE, null, count);
-    Assert.assertEquals(-(BLOCKSIZE + BLOCKSIZE / 2) * REPLICATION,
-                        count.getStorageSpace());
+    assertEquals(-(BLOCKSIZE + BLOCKSIZE / 2) * REPLICATION, count.getStorageSpace());
 
     // case 3: truncate to 0
     count = new QuotaCounts.Builder().build();
     file.computeQuotaDeltaForTruncate(0, null, count);
-    Assert.assertEquals(-(BLOCKSIZE * 2 + BLOCKSIZE / 2) * REPLICATION,
-                        count.getStorageSpace());
+    assertEquals(-(BLOCKSIZE * 2 + BLOCKSIZE / 2) * REPLICATION,
+        count.getStorageSpace());
   }
 
   @Test
@@ -87,17 +86,17 @@ public class TestTruncateQuotaUpdate {
     // diff should be +BLOCKSIZE
     QuotaCounts count = new QuotaCounts.Builder().build();
     file.computeQuotaDeltaForTruncate(BLOCKSIZE + BLOCKSIZE / 2, null, count);
-    Assert.assertEquals(BLOCKSIZE * REPLICATION, count.getStorageSpace());
+    assertEquals(BLOCKSIZE * REPLICATION, count.getStorageSpace());
 
     // case 2: truncate to 1 block
     count = new QuotaCounts.Builder().build();
     file.computeQuotaDeltaForTruncate(BLOCKSIZE, null, count);
-    Assert.assertEquals(0, count.getStorageSpace());
+    assertEquals(0, count.getStorageSpace());
 
     // case 3: truncate to 0
     count = new QuotaCounts.Builder().build();
     file.computeQuotaDeltaForTruncate(0, null, count);
-    Assert.assertEquals(0, count.getStorageSpace());
+    assertEquals(0, count.getStorageSpace());
   }
 
   @Test
@@ -116,20 +115,19 @@ public class TestTruncateQuotaUpdate {
     // as case 1
     QuotaCounts count = new QuotaCounts.Builder().build();
     file.computeQuotaDeltaForTruncate(BLOCKSIZE + BLOCKSIZE / 2, null, count);
-    Assert.assertEquals(-BLOCKSIZE / 2 * REPLICATION, count.getStorageSpace());
+    assertEquals(-BLOCKSIZE / 2 * REPLICATION, count.getStorageSpace());
 
     // case 8: truncate to 2 blocks
     // the original 2.5 blocks are in snapshot. the block truncated is not
     // in snapshot. diff should be -0.5 block
     count = new QuotaCounts.Builder().build();
     file.computeQuotaDeltaForTruncate(BLOCKSIZE + BLOCKSIZE / 2, null, count);
-    Assert.assertEquals(-BLOCKSIZE / 2 * REPLICATION, count.getStorageSpace());
+    assertEquals(-BLOCKSIZE / 2 * REPLICATION, count.getStorageSpace());
 
     // case 9: truncate to 0
     count = new QuotaCounts.Builder().build();
     file.computeQuotaDeltaForTruncate(0, null, count);
-    Assert.assertEquals(-(BLOCKSIZE + BLOCKSIZE / 2) * REPLICATION, count
-        .getStorageSpace());
+    assertEquals(-(BLOCKSIZE + BLOCKSIZE / 2) * REPLICATION, count.getStorageSpace());
   }
 
   private INodeFile createMockFile(long size, short replication) {
