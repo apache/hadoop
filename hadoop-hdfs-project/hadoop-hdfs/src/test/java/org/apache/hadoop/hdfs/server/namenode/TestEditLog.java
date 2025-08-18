@@ -826,11 +826,11 @@ public class TestEditLog {
         // We should see the file as in-progress
         File editsFile = new File(currentDir,
             NNStorage.getInProgressEditsFileName(1));
-        assertTrue(editsFile.exists(), "Edits file " + editsFile + " should exist");
-        
+      assertTrue(editsFile.exists(), "Edits file " + editsFile + " should exist");
+
         File imageFile = FSImageTestUtil.findNewestImageFile(
             currentDir.getAbsolutePath());
-        assertNotNull(imageFile, "No image found in " + nameDir);
+      assertNotNull(imageFile, "No image found in " + nameDir);
         assertEquals(NNStorage.getImageFileName(0), imageFile.getName());
         // Try to start a new cluster
         LOG.info("\n===========================================\n" +

@@ -33,8 +33,8 @@ public class TestNameNodeConfiguration {
   public void testNameNodeSpecificKeys() {
     Set<String> keySet = new HashSet<>();
     for (String key : NameNode.NAMENODE_SPECIFIC_KEYS) {
-        assertTrue(keySet.add(key),
-            "Duplicate key: " + key + " in NameNode.NAMENODE_SPECIFIC_KEYS.");
+      assertTrue(keySet.add(key),
+          "Duplicate key: " + key + " in NameNode.NAMENODE_SPECIFIC_KEYS.");
     }
   }
 }

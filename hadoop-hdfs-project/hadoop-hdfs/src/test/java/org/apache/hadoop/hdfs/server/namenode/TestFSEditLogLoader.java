@@ -151,8 +151,8 @@ public class TestFSEditLogLoader {
           .enableManagedDfsDirsRedundancy(false).format(false).build();
       fail("should not be able to start");
     } catch (IOException e) {
-        assertTrue(e.getMessage().matches(bld.toString()),
-            "error message contains opcodes message");
+      assertTrue(e.getMessage().matches(bld.toString()),
+          "error message contains opcodes message");
     }
   }
   

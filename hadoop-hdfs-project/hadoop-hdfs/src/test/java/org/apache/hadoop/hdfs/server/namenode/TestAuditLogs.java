@@ -132,7 +132,7 @@ public class TestAuditLogs {
     userGroupInfo = UserGroupInformation.createUserForTesting(username, groups);
  }
 
- @AfterEach
+  @AfterEach
   public void teardownCluster() throws Exception {
     util.cleanup(fs, "/srcdat");
     if (fs != null) {

@@ -26,7 +26,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class TestEditsDoubleBuffer {
@@ -128,11 +127,11 @@ public class TestEditsDoubleBuffer {
     }
     logs.stopCapturing();
     // Make sure ops are dumped into log in human readable format.
-    Assertions.assertTrue(logs.getOutput().contains(op.toString()),
+    assertTrue(logs.getOutput().contains(op.toString()),
         "expected " + op.toString() + " in the log");
-    Assertions.assertTrue(logs.getOutput().contains(op2.toString()),
+    assertTrue(logs.getOutput().contains(op2.toString()),
         "expected " + op2.toString() + " in the log");
-    Assertions.assertTrue(logs.getOutput().contains(op3.toString()),
+    assertTrue(logs.getOutput().contains(op3.toString()),
         "expected " + op3.toString() + " in the log");
   }
 }

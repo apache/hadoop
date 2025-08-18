@@ -124,7 +124,7 @@ public class TestBlockUnderConstruction {
     // If the file is open, the last block may be complete or not. 
     curBlock = blocks[idx]; // last block
     if (!isFileOpen) {
-        assertTrue(curBlock.isComplete(), "Block " + curBlock + ", isFileOpen = " + isFileOpen);
+      assertTrue(curBlock.isComplete(), "Block " + curBlock + ", isFileOpen = " + isFileOpen);
     }
     assertTrue(ns.getBlockManager().getStoredBlock(curBlock) == curBlock,
         "Block is not in BlocksMap: " + curBlock);

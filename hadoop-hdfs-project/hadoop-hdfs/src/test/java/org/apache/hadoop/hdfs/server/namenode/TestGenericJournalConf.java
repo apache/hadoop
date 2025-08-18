@@ -41,20 +41,20 @@ public class TestGenericJournalConf {
    */
   @Test
   public void testNotConfigured() throws Exception {
-      assertThrows(IllegalArgumentException.class, () -> {
-          MiniDFSCluster cluster = null;
-          Configuration conf = new Configuration();
-          conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
-              "dummy://test");
-          try {
-              cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
-      cluster.waitActive();
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
+    assertThrows(IllegalArgumentException.class, () -> {
+      MiniDFSCluster cluster = null;
+      Configuration conf = new Configuration();
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
+          "dummy://test");
+      try {
+        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+        cluster.waitActive();
+      } finally {
+        if (cluster != null) {
+          cluster.shutdown();
+        }
       }
-    }
-      });
+    });
 
   }
 
@@ -64,22 +64,22 @@ public class TestGenericJournalConf {
    */
   @Test
   public void testClassDoesntExist() throws Exception {
-      assertThrows(IllegalArgumentException.class, () -> {
-          MiniDFSCluster cluster = null;
-          Configuration conf = new Configuration();
-          conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_PLUGIN_PREFIX + ".dummy",
-              "org.apache.hadoop.nonexistent");
-          conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
-              "dummy://test");
-          try {
-              cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
-      cluster.waitActive();
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
+    assertThrows(IllegalArgumentException.class, () -> {
+      MiniDFSCluster cluster = null;
+      Configuration conf = new Configuration();
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_PLUGIN_PREFIX + ".dummy",
+          "org.apache.hadoop.nonexistent");
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
+          "dummy://test");
+      try {
+        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+        cluster.waitActive();
+      } finally {
+        if (cluster != null) {
+          cluster.shutdown();
+        }
       }
-    }
-      });
+    });
 
   }
 

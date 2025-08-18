@@ -178,8 +178,8 @@ public class TestDeadDatanode {
         clientNode, new HashSet<>(), 256 * 1024 * 1024L, null, (byte) 7,
         BlockType.CONTIGUOUS, null, null);
     for (DatanodeStorageInfo datanodeStorageInfo : results) {
-        assertFalse(datanodeStorageInfo.getDatanodeDescriptor().equals(clientNode),
-            "Dead node should not be chosen");
+      assertFalse(datanodeStorageInfo.getDatanodeDescriptor().equals(clientNode),
+          "Dead node should not be chosen");
     }
   }
 

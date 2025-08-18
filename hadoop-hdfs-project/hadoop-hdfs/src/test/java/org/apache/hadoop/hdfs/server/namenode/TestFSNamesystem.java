@@ -56,8 +56,8 @@ import java.util.List;
 
 public class TestFSNamesystem {
 
-    @AfterEach
-    public void cleanUp() {
+  @AfterEach
+  public void cleanUp() {
     FileUtil.fullyDeleteContents(new File(MiniDFSCluster.getBaseDirectory()));
   }
 
@@ -207,14 +207,14 @@ public class TestFSNamesystem {
 
   @Test
   public void testGetEffectiveLayoutVersion() {
-      assertEquals(-63, FSNamesystem.getEffectiveLayoutVersion(true, -60, -61, -63));
-      assertEquals(-61, FSNamesystem.getEffectiveLayoutVersion(true, -61, -61, -63));
-      assertEquals(-62, FSNamesystem.getEffectiveLayoutVersion(true, -62, -61, -63));
-      assertEquals(-63, FSNamesystem.getEffectiveLayoutVersion(true, -63, -61, -63));
-      assertEquals(-63, FSNamesystem.getEffectiveLayoutVersion(false, -60, -61, -63));
-      assertEquals(-63, FSNamesystem.getEffectiveLayoutVersion(false, -61, -61, -63));
-      assertEquals(-63, FSNamesystem.getEffectiveLayoutVersion(false, -62, -61, -63));
-      assertEquals(-63, FSNamesystem.getEffectiveLayoutVersion(false, -63, -61, -63));
+    assertEquals(-63, FSNamesystem.getEffectiveLayoutVersion(true, -60, -61, -63));
+    assertEquals(-61, FSNamesystem.getEffectiveLayoutVersion(true, -61, -61, -63));
+    assertEquals(-62, FSNamesystem.getEffectiveLayoutVersion(true, -62, -61, -63));
+    assertEquals(-63, FSNamesystem.getEffectiveLayoutVersion(true, -63, -61, -63));
+    assertEquals(-63, FSNamesystem.getEffectiveLayoutVersion(false, -60, -61, -63));
+    assertEquals(-63, FSNamesystem.getEffectiveLayoutVersion(false, -61, -61, -63));
+    assertEquals(-63, FSNamesystem.getEffectiveLayoutVersion(false, -62, -61, -63));
+    assertEquals(-63, FSNamesystem.getEffectiveLayoutVersion(false, -63, -61, -63));
   }
 
   @Test

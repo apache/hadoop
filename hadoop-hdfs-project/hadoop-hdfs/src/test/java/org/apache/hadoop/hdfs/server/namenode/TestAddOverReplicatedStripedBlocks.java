@@ -35,7 +35,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -47,6 +46,7 @@ import java.util.BitSet;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Timeout(300)
@@ -235,7 +235,7 @@ public class TestAddOverReplicatedStripedBlocks {
     for (byte index : bg.getBlockIndices()) {
       set.set(index);
     }
-    Assertions.assertFalse(set.get(0));
+    assertFalse(set.get(0));
     for (int i = 1; i < groupSize; i++) {
       assertTrue(set.get(i));
     }
@@ -292,7 +292,7 @@ public class TestAddOverReplicatedStripedBlocks {
     for (byte index : bg.getBlockIndices()) {
       set.set(index);
     }
-    Assertions.assertFalse(set.get(groupSize - 1));
+    assertFalse(set.get(groupSize - 1));
     for (int i = 0; i < groupSize - 1; i++) {
       assertTrue(set.get(i));
     }

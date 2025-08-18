@@ -50,7 +50,6 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
-import org.junit.jupiter.api.Assertions;
 
 public class TestFileJournalManager {
   static final Logger LOG =
@@ -231,21 +230,21 @@ public class TestFileJournalManager {
   
   @Test
   public void testFinalizeErrorReportedToNNStorage() throws IOException, InterruptedException {
-      assertThrows(IllegalStateException.class, () -> {
-          File f = new File(TestEditLog.TEST_DIR + "/filejournaltestError");
-          NNStorage storage = setupEdits(Collections.<URI>singletonList(f.toURI()),
-                                   10, new AbortSpec(10, 0));
-          StorageDirectory sd = storage.dirIterator(NameNodeDirType.EDITS).next();
-          FileJournalManager jm = new FileJournalManager(conf, sd, storage);
-          String sdRootPath = sd.getRoot().getAbsolutePath();
-          FileUtil.chmod(sdRootPath, "-w", true);
-          try {
-              jm.finalizeLogSegment(0, 1);
-    } finally {
-      FileUtil.chmod(sdRootPath, "+w", true);
-      assertTrue(storage.getRemovedStorageDirs().contains(sd));
-    }
-      });
+    assertThrows(IllegalStateException.class, () -> {
+      File f = new File(TestEditLog.TEST_DIR + "/filejournaltestError");
+      NNStorage storage = setupEdits(Collections.<URI>singletonList(f.toURI()),
+          10, new AbortSpec(10, 0));
+      StorageDirectory sd = storage.dirIterator(NameNodeDirType.EDITS).next();
+      FileJournalManager jm = new FileJournalManager(conf, sd, storage);
+      String sdRootPath = sd.getRoot().getAbsolutePath();
+      FileUtil.chmod(sdRootPath, "-w", true);
+      try {
+        jm.finalizeLogSegment(0, 1);
+      } finally {
+        FileUtil.chmod(sdRootPath, "+w", true);
+        assertTrue(storage.getRemovedStorageDirs().contains(sd));
+      }
+    });
 
   }
 
@@ -293,7 +292,8 @@ public class TestFileJournalManager {
     // 10 rolls, so 11 rolled files, 110 txids total.
     final int TOTAL_TXIDS = 10 * 11;
     for (int txid = 1; txid <= TOTAL_TXIDS; txid++) {
-        assertEquals((TOTAL_TXIDS - txid) + 1, getNumberOfTransactions(jm, txid, true, false));
+      assertEquals((TOTAL_TXIDS - txid) + 1,
+          getNumberOfTransactions(jm, txid, true, false));
     }
   }
 

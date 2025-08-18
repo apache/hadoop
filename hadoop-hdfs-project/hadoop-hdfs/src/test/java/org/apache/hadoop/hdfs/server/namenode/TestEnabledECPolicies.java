@@ -25,7 +25,6 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -39,6 +38,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -195,28 +196,26 @@ public class TestEnabledECPolicies {
     // Check that returned values are unique
     Set<String> found = new HashSet<>();
     for (ErasureCodingPolicy p : manager.getEnabledPolicies()) {
-        Assertions.assertFalse(found.contains(p.getName()),
-            "Duplicate policy name found: " + p.getName());
-        found.add(p.getName());
+      assertFalse(found.contains(p.getName()),
+          "Duplicate policy name found: " + p.getName());
+      found.add(p.getName());
     }
     // Check that the policies specified in conf are found
     for (ErasureCodingPolicy p: enabledPolicies) {
-        Assertions.assertTrue(found.contains(p.getName()),
-            "Did not find specified EC policy " + p.getName());
+      assertTrue(found.contains(p.getName()),
+          "Did not find specified EC policy " + p.getName());
     }
-    Assertions.assertEquals(enabledPolicies.length, found.size() - 1);
+    assertEquals(enabledPolicies.length, found.size() - 1);
     // Check that getEnabledPolicyByName only returns enabled policies
     for (ErasureCodingPolicy p: SystemErasureCodingPolicies.getPolicies()) {
       if (found.contains(p.getName())) {
         // Enabled policy should be present
-        Assertions.assertNotNull(
-
+        assertNotNull(
             manager.getEnabledPolicyByName(p.getName()),
             "getEnabledPolicyByName did not find enabled policy" + p.getName());
       } else {
         // Disabled policy should not be present
-        Assertions.assertNull(
-
+        assertNull(
             manager.getEnabledPolicyByName(p.getName()),
             "getEnabledPolicyByName found disabled policy " + p.getName());
       }
@@ -246,7 +245,7 @@ public class TestEnabledECPolicies {
   private void assertAllPoliciesAreDisabled(
       ErasureCodingPolicyInfo[] policies) {
     for (ErasureCodingPolicyInfo p : policies) {
-        assertTrue(p.isDisabled(), "Policy should be disabled");
+      assertTrue(p.isDisabled(), "Policy should be disabled");
     }
   }
 }

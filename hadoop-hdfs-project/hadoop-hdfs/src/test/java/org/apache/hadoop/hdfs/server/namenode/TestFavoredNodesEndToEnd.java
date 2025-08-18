@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -45,7 +46,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.event.Level;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -153,14 +153,14 @@ public class TestFavoredNodesEndToEnd {
     d.stopDecommission();
 
     BlockLocation[] locations = getBlockLocations(p);
-    Assertions.assertEquals(replication, locations[0].getNames().length);
+    assertEquals(replication, locations[0].getNames().length);
     //also make sure that the datanode[0] is not in the list of hosts
     for (int i = 0; i < replication; i++) {
       final String loc = locations[0].getNames()[i];
       int j = 0;
       for(; j < hosts.length && !loc.equals(hosts[j]); j++);
-      Assertions.assertTrue(j > 0, "j=" + j);
-      Assertions.assertTrue(j < hosts.length,
+      assertTrue(j > 0, "j=" + j);
+      assertTrue(j < hosts.length,
           "loc=" + loc + " not in host list " + Arrays.asList(hosts) + ", j=" + j);
     }
   }

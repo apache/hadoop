@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.net.StaticMapping;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -277,7 +276,7 @@ public class TestBlockPlacementPolicyRackFaultTolerant {
     for (LocatedBlock block : locatedBlocks.getLocatedBlocks()) {
       BlockPlacementStatus status = bm.getStriptedBlockPlacementPolicy()
               .verifyBlockPlacement(block.getLocations(), 5);
-      Assertions.assertTrue(status.isPlacementPolicySatisfied());
+      assertTrue(status.isPlacementPolicySatisfied());
     }
   }
 

@@ -77,17 +77,17 @@ public class TestNameEditsConfigs {
     FSImageTransactionalStorageInspector ins = inspect(dir);
 
     if (shouldHaveImages) {
-        assertTrue(ins.foundImages.size() > 0, "Expect images in " + dir);
+      assertTrue(ins.foundImages.size() > 0, "Expect images in " + dir);
     } else {
-        assertTrue(ins.foundImages.isEmpty(), "Expect no images in " + dir);
+      assertTrue(ins.foundImages.isEmpty(), "Expect no images in " + dir);
     }
 
     List<FileJournalManager.EditLogFile> editlogs 
       = FileJournalManager.matchEditLogs(new File(dir, "current").listFiles()); 
     if (shouldHaveEdits) {
-        assertTrue(editlogs.size() > 0, "Expect edits in " + dir);
+      assertTrue(editlogs.size() > 0, "Expect edits in " + dir);
     } else {
-        assertTrue(editlogs.isEmpty(), "Expect no edits in " + dir);
+      assertTrue(editlogs.isEmpty(), "Expect no edits in " + dir);
     }
   }
 

@@ -143,7 +143,7 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-        assertEquals(0, e.status, "Format should have succeeded");
+      assertEquals(0, e.status, "Format should have succeeded");
     }
 
     String cid = getClusterId(config);
@@ -168,7 +168,7 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-        assertEquals(0, e.status, "Format should have succeeded");
+      assertEquals(0, e.status, "Format should have succeeded");
     }
 
     String cid = getClusterId(config);
@@ -193,7 +193,7 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-        assertEquals(0, e.status, "Format should have succeeded");
+      assertEquals(0, e.status, "Format should have succeeded");
     }
 
     String cid = getClusterId(config);
@@ -219,7 +219,7 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-        assertEquals(0, e.status, "Format should have succeeded");
+      assertEquals(0, e.status, "Format should have succeeded");
     }
 
     String cId = getClusterId(config);
@@ -331,7 +331,7 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-        assertEquals(1, e.status, "Format should have been aborted with exit code 1");
+      assertEquals(1, e.status, "Format should have been aborted with exit code 1");
     }
 
     // check if the version file does not exists.
@@ -354,7 +354,7 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-        assertEquals(0, e.status, "Format should have succeeded");
+      assertEquals(0, e.status, "Format should have succeeded");
     }
 
     String cid = getClusterId(config);
@@ -379,7 +379,7 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-        assertEquals(0, e.status, "Format should have succeeded");
+      assertEquals(0, e.status, "Format should have succeeded");
     }
 
     String cid = getClusterId(config);
@@ -414,7 +414,7 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-        assertEquals(0, e.status, "Format should have succeeded");
+      assertEquals(0, e.status, "Format should have succeeded");
     }
 
     System.setIn(origIn);
@@ -450,7 +450,7 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-        assertEquals(1, e.status, "Format should not have succeeded");
+      assertEquals(1, e.status, "Format should not have succeeded");
     }
 
     System.setIn(origIn);

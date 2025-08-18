@@ -60,12 +60,10 @@ import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -976,8 +974,8 @@ public class TestNameNodeMXBean {
               return true;
             }
           } catch (Exception e) {
-                  Assertions.fail("Caught unexpected exception.");
-              }
+            fail("Caught unexpected exception.");
+          }
           return false;
         }
       }, 1000, 60000);

@@ -28,11 +28,13 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 
 public class TestCommitBlockWithInvalidGenStamp {
@@ -81,17 +83,17 @@ public class TestCommitBlockWithInvalidGenStamp {
       try{
         dfs.getClient().getNamenode().complete(file.toString(),
             dfs.getClient().getClientName(), previous, fileNode.getId());
-        Assertions.fail("should throw exception because invalid genStamp");
+        fail("should throw exception because invalid genStamp");
       } catch (IOException e) {
-        Assertions.assertTrue(e.toString().contains(
+        assertTrue(e.toString().contains(
             "Commit block with mismatching GS. NN has " +
-            newBlock + ", client submits " + newBlockClone));
+                newBlock + ", client submits " + newBlockClone));
       }
       previous = new ExtendedBlock(cluster.getNamesystem().getBlockPoolId(),
           newBlock);
       boolean complete =  dfs.getClient().getNamenode().complete(file.toString(),
       dfs.getClient().getClientName(), previous, fileNode.getId());
-      Assertions.assertTrue(complete, "should complete successfully");
+      assertTrue(complete, "should complete successfully");
     } finally {
       IOUtils.cleanupWithLogger(null, out);
     }
