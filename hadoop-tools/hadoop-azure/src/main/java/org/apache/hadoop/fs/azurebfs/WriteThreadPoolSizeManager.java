@@ -42,6 +42,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.B
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HIGH_CPU_LOW_MEMORY_REDUCTION_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HIGH_CPU_REDUCTION_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HIGH_MEDIUM_HEAP_FACTOR;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED_D;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.LOW_CPU_HEAP_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.LOW_CPU_HIGH_MEMORY_DECREASE_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.LOW_CPU_POOL_SIZE_INCREASE_FACTOR;
@@ -267,18 +268,18 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   public void adjustThreadPoolSizeBasedOnCPU(double cpuUtilization) throws InterruptedException {
     lock.lock();
     try {
-      ThreadPoolExecutor executor = (ThreadPoolExecutor) boundedThreadPool;
+      ThreadPoolExecutor executor = (ThreadPoolExecutor) this.boundedThreadPool;
       int currentPoolSize = executor.getMaximumPoolSize();
       long currentHeap = getAvailableHeapMemory();
       long initialHeap = initialAvailableHeapMemory;
       LOG.debug("Available heap memory: {} GB, Initial heap memory: {} GB", currentHeap, initialHeap);
       LOG.debug("Current CPU Utilization: {}", cpuUtilization);
 
-      if (cpuUtilization > (abfsConfiguration.getWriteHighCpuThreshold()/100.0)) {
+      if (cpuUtilization > (abfsConfiguration.getWriteHighCpuThreshold()/HUNDRED_D)) {
         newMaxPoolSize = calculateReducedPoolSizeHighCPU(currentPoolSize, currentHeap, initialHeap);
-      } else if (cpuUtilization > (abfsConfiguration.getWriteMediumCpuThreshold()/100.0)) {
+      } else if (cpuUtilization > (abfsConfiguration.getWriteMediumCpuThreshold()/HUNDRED_D)) {
         newMaxPoolSize = calculateReducedPoolSizeMediumCPU(currentPoolSize, currentHeap, initialHeap);
-      } else if (cpuUtilization < (abfsConfiguration.getWriteLowCpuThreshold()/100.0)) {
+      } else if (cpuUtilization < (abfsConfiguration.getWriteLowCpuThreshold()/HUNDRED_D)) {
         newMaxPoolSize = calculateIncreasedPoolSizeLowCPU(currentPoolSize, currentHeap, initialHeap);
       } else {
         newMaxPoolSize = currentPoolSize;
