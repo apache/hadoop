@@ -43,39 +43,17 @@ public final class FileSystemConfigurations {
    */
   public static final long BYTES_PER_GIGABYTE = 1024L * 1024 * 1024;
   /**
-   * Threshold for low memory in gigabytes.
-   */
-  public static final int LOW_MEMORY_THRESHOLD_GB = 2;
-  /**
-   * Threshold for medium memory in gigabytes.
-   */
-  public static final int MEDIUM_MEMORY_THRESHOLD_GB = 4;
-  /**
-   * Threshold for high memory in gigabytes.
-   */
-  public static final int HIGH_MEMORY_THRESHOLD_GB = 8;
-
-  /**
-   * Multiplier used for low memory scenarios.
-   */
-  public static final int LOW_MEMORY_MULTIPLIER = 10;
-
-  /**
-   * Multiplier used for medium memory scenarios.
-   */
-  public static final int MEDIUM_MEMORY_MULTIPLIER = 25;
-  /**
-   * Multiplier used for high memory scenarios.
-   */
-  public static final int HIGH_MEMORY_MULTIPLIER = 40;
-  /**
-   * Multiplier used for very high memory scenarios.
-   */
-  public static final int VERY_HIGH_MEMORY_MULTIPLIER = 50;
-  /**
    * Factor by which the pool size is increased when CPU utilization is low.
    */
-  public static final double POOL_SIZE_INCREASE_FACTOR = 1.5;
+  public static final double LOW_CPU_POOL_SIZE_INCREASE_FACTOR = 1.5;
+  public static final double LOW_CPU_HIGH_MEMORY_DECREASE_FACTOR = 0.9;
+  public static final int HIGH_CPU_REDUCTION_FACTOR = 3;
+  public static final int HIGH_CPU_LOW_MEMORY_REDUCTION_FACTOR = 2;
+  public static final int MEDIUM_CPU_REDUCTION_FACTOR = 5;
+  public static final int MEDIUM_CPU_LOW_MEMORY_REDUCTION_FACTOR = 3;
+  public static final int HIGH_MEDIUM_HEAP_FACTOR = 2;
+
+
 
   // Retry parameter defaults.
   public static final int DEFAULT_MIN_BACKOFF_INTERVAL = 500;  // 500ms
@@ -277,9 +255,45 @@ public final class FileSystemConfigurations {
 
   public static final int DEFAULT_FS_AZURE_BLOB_DELETE_THREAD = DEFAULT_FS_AZURE_LISTING_ACTION_THREADS;
 
+  public static final boolean DEFAULT_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT = true;
+
   public static final int DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME = 30;
 
+  public static final int MIN_WRITE_CPU_MONITORING_INTERVAL = 10;
+
+  public static final int MAX_WRITE_CPU_MONITORING_INTERVAL = 60;
+
   public static final int DEFAULT_WRITE_CPU_MONITORING_INTERVAL = 15;
+
+  public static final int MIN_WRITE_HIGH_CPU_THRESHOLD = 65;
+
+  public static final int MAX_WRITE_HIGH_CPU_THRESHOLD = 90;
+
+  public static final int DEFAULT_WRITE_HIGH_CPU_THRESHOLD = 80;
+
+  public static final int MIN_WRITE_MEDIUM_CPU_THRESHOLD = 45;
+
+  public static final int MAX_WRITE_MEDIUM_CPU_THRESHOLD = 65;
+
+  public static final int DEFAULT_WRITE_MEDIUM_CPU_THRESHOLD = 60;
+
+  public static final int MIN_WRITE_LOW_CPU_THRESHOLD = 10;
+
+  public static final int MAX_WRITE_LOW_CPU_THRESHOLD = 40;
+
+  public static final int DEFAULT_WRITE_LOW_CPU_THRESHOLD = 30;
+
+  public static final int MIN_WRITE_LOW_TIER_MEMORY_MULTIPLIER = 3;
+
+  public static final int DEFAULT_WRITE_LOW_TIER_MEMORY_MULTIPLIER = 4;
+
+  public static final int MIN_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER = 6;
+
+  public static final int DEFAULT_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER = 8;
+
+  public static final int MIN_WRITE_HIGH_TIER_MEMORY_MULTIPLIER = 12;
+
+  public static final int DEFAULT_WRITE_HIGH_TIER_MEMORY_MULTIPLIER = 16;
 
   public static final int DEFAULT_WRITE_THREADPOOL_CORE_POOL_SIZE = 1;
 

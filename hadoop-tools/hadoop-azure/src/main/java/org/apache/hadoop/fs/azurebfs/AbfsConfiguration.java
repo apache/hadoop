@@ -478,17 +478,56 @@ public class AbfsConfiguration{
       FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
   private int maxApacheHttpClientIoExceptionsRetries;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT,
+      DefaultValue = DEFAULT_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT)
+  private boolean dynamicWriteThreadPoolEnablement;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_THREADPOOL_KEEP_ALIVE_TIME,
       DefaultValue = DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME)
   private int writeThreadPoolKeepAliveTime;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_CPU_MONITORING_INTERVAL,
+      MinValue = MIN_WRITE_CPU_MONITORING_INTERVAL,
+      MaxValue = MAX_WRITE_CPU_MONITORING_INTERVAL,
       DefaultValue = DEFAULT_WRITE_CPU_MONITORING_INTERVAL)
   private int writeCpuMonitoringInterval;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_THREADPOOL_CORE_POOL_SIZE,
       DefaultValue = DEFAULT_WRITE_THREADPOOL_CORE_POOL_SIZE)
   private int writeCorePoolSize;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_HIGH_CPU_THRESHOLD,
+      MinValue = MIN_WRITE_HIGH_CPU_THRESHOLD,
+      MaxValue = MAX_WRITE_HIGH_CPU_THRESHOLD,
+      DefaultValue = DEFAULT_WRITE_HIGH_CPU_THRESHOLD)
+  private int writeHighCpuThreshold;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_MEDIUM_CPU_THRESHOLD,
+      MinValue = MIN_WRITE_MEDIUM_CPU_THRESHOLD,
+      MaxValue = MAX_WRITE_MEDIUM_CPU_THRESHOLD,
+      DefaultValue = DEFAULT_WRITE_MEDIUM_CPU_THRESHOLD)
+  private int writeMediumCpuThreshold;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LOW_CPU_THRESHOLD,
+      MinValue = MIN_WRITE_LOW_CPU_THRESHOLD,
+      MaxValue = MAX_WRITE_LOW_CPU_THRESHOLD,
+      DefaultValue = DEFAULT_WRITE_LOW_CPU_THRESHOLD)
+  private int writeLowCpuThreshold;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LOW_TIER_MEMORY_MULTIPLIER,
+      MinValue = MIN_WRITE_LOW_TIER_MEMORY_MULTIPLIER,
+      DefaultValue = DEFAULT_WRITE_LOW_TIER_MEMORY_MULTIPLIER)
+  private int lowTierMemoryMultiplier;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER,
+      MinValue = MIN_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER,
+      DefaultValue = DEFAULT_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER)
+  private int mediumTierMemoryMultiplier;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_HIGH_TIER_MEMORY_MULTIPLIER,
+      MinValue = MIN_WRITE_HIGH_TIER_MEMORY_MULTIPLIER,
+      DefaultValue = DEFAULT_WRITE_HIGH_TIER_MEMORY_MULTIPLIER)
+  private int highTierMemoryMultiplier;
 
   /**
    * Max idle TTL configuration for connection given in
@@ -1582,6 +1621,34 @@ public class AbfsConfiguration{
 
   public int getWriteCpuMonitoringInterval() {
     return writeCpuMonitoringInterval;
+  }
+
+  public boolean isDynamicWriteThreadPoolEnablement() {
+    return dynamicWriteThreadPoolEnablement;
+  }
+
+  public int getWriteLowCpuThreshold() {
+    return writeLowCpuThreshold;
+  }
+
+  public int getWriteMediumCpuThreshold() {
+    return writeMediumCpuThreshold;
+  }
+
+  public int getWriteHighCpuThreshold() {
+    return writeHighCpuThreshold;
+  }
+
+  public int getLowTierMemoryMultiplier() {
+    return lowTierMemoryMultiplier;
+  }
+
+  public int getMediumTierMemoryMultiplier() {
+    return mediumTierMemoryMultiplier;
+  }
+
+  public int getHighTierMemoryMultiplier() {
+    return highTierMemoryMultiplier;
   }
 
   public int getWriteCorePoolSize() {

@@ -173,9 +173,8 @@ public final class AbfsHttpConstants {
   public static final char CHAR_EQUALS = '=';
   public static final char CHAR_STAR = '*';
   public static final char CHAR_PLUS = '+';
-  public static final double HIGH_CPU_THRESHOLD = 0.80;
-  public static final double MEDIUM_CPU_THRESHOLD = 0.60;
-  public static final double LOW_CPU_THRESHOLD = 0.30;
+  public static final int LOW_HEAP_SPACE_FACTOR = 4;
+  public static final double MEDIUM_HEAP_SPACE_FACTOR = 8;
 
   public static final int SPLIT_NO_LIMIT = -1;
 

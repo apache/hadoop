@@ -438,6 +438,22 @@ public final class ConfigurationKeys {
 
   public static final String FS_AZURE_WRITE_CPU_MONITORING_INTERVAL = "fs.azure.write.cpu.monitoring.interval";
 
+  public static final String FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT = "fs.azure.write.dynamic.threadpool.enablement";
+
+  public static final String FS_AZURE_WRITE_HIGH_CPU_THRESHOLD = "fs.azure.write.high.cpu.threshold";
+
+  public static final String FS_AZURE_WRITE_MEDIUM_CPU_THRESHOLD = "fs.azure.write.medium.cpu.threshold";
+
+  public static final String FS_AZURE_WRITE_LOW_CPU_THRESHOLD = "fs.azure.write.low.cpu.threshold";
+
+  public static final String FS_AZURE_WRITE_LOW_TIER_MEMORY_MULTIPLIER = "fs.azure.write.low.tier.memory.multiplier";
+
+  public static final String FS_AZURE_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER = "fs.azure.write.medium.tier.memory.multiplier";
+
+  public static final String FS_AZURE_WRITE_HIGH_TIER_MEMORY_MULTIPLIER = "fs.azure.write.high.tier.memory.multiplier";
+
+
+
   /**Flag to enable/disable sending client transactional ID during create/rename operations: {@value}*/
   public static final String FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = "fs.azure.enable.client.transaction.id";
 

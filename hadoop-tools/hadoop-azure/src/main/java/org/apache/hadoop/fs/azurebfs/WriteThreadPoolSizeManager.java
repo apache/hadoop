@@ -36,11 +36,16 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HIGH_CPU_THRESHOLD;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.LOW_CPU_THRESHOLD;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.MEDIUM_CPU_THRESHOLD;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.LOW_HEAP_SPACE_FACTOR;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.MEDIUM_HEAP_SPACE_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BYTES_PER_GIGABYTE;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.POOL_SIZE_INCREASE_FACTOR;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HIGH_CPU_LOW_MEMORY_REDUCTION_FACTOR;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HIGH_CPU_REDUCTION_FACTOR;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HIGH_MEDIUM_HEAP_FACTOR;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.LOW_CPU_HIGH_MEMORY_DECREASE_FACTOR;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.LOW_CPU_POOL_SIZE_INCREASE_FACTOR;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MEDIUM_CPU_LOW_MEMORY_REDUCTION_FACTOR;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MEDIUM_CPU_REDUCTION_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.THIRTY_SECONDS;
 
 /**
@@ -151,12 +156,12 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    */
   private int getMemoryTierMaxThreads(long availableHeapGB, int availableProcessors) {
     int multiplier;
-    if (availableHeapGB <= 4) {
-      multiplier = 4;
-    } else if (availableHeapGB <= 8) {
-      multiplier = 8;
+    if (availableHeapGB <= LOW_HEAP_SPACE_FACTOR) {
+      multiplier = abfsConfiguration.getLowTierMemoryMultiplier();
+    } else if (availableHeapGB <= MEDIUM_HEAP_SPACE_FACTOR) {
+      multiplier = abfsConfiguration.getMediumTierMemoryMultiplier();
     } else {
-      multiplier = 16;
+      multiplier = abfsConfiguration.getHighTierMemoryMultiplier();
     }
     return availableProcessors * multiplier;
   }
@@ -268,11 +273,11 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       LOG.debug("Available heap memory: {} GB, Initial heap memory: {} GB", currentHeap, initialHeap);
       LOG.debug("Current CPU Utilization: {}", cpuUtilization);
 
-      if (cpuUtilization > HIGH_CPU_THRESHOLD) {
+      if (cpuUtilization > (abfsConfiguration.getWriteHighCpuThreshold()/100.0)) {
         newMaxPoolSize = calculateReducedPoolSizeHighCPU(currentPoolSize, currentHeap, initialHeap);
-      } else if (cpuUtilization > MEDIUM_CPU_THRESHOLD) {
+      } else if (cpuUtilization > (abfsConfiguration.getWriteMediumCpuThreshold()/100.0)) {
         newMaxPoolSize = calculateReducedPoolSizeMediumCPU(currentPoolSize, currentHeap, initialHeap);
-      } else if (cpuUtilization < LOW_CPU_THRESHOLD) {
+      } else if (cpuUtilization < (abfsConfiguration.getWriteLowCpuThreshold()/100.0)) {
         newMaxPoolSize = calculateIncreasedPoolSizeLowCPU(currentPoolSize, currentHeap, initialHeap);
       } else {
         newMaxPoolSize = currentPoolSize;
@@ -292,14 +297,14 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    * Calculates reduced pool size under high CPU utilization.
    */
   private int calculateReducedPoolSizeHighCPU(int currentPoolSize, long currentHeap, long initialHeap) {
-    if (currentHeap <= initialHeap / 2) {
+    if (currentHeap <= initialHeap / HIGH_MEDIUM_HEAP_FACTOR) {
       LOG.debug("High CPU & low heap. Aggressively reducing: current={}, new={}",
-          currentPoolSize, currentPoolSize / 2);
-      return Math.max(initialPoolSize, currentPoolSize / 2);
+          currentPoolSize, currentPoolSize / HIGH_CPU_LOW_MEMORY_REDUCTION_FACTOR);
+      return Math.max(initialPoolSize, currentPoolSize / HIGH_CPU_LOW_MEMORY_REDUCTION_FACTOR);
     }
-    int reduced = Math.max(initialPoolSize, currentPoolSize - currentPoolSize / 3);
+    int reduced = Math.max(initialPoolSize, currentPoolSize - currentPoolSize / HIGH_CPU_REDUCTION_FACTOR);
     LOG.debug("High CPU ({}). Reducing pool size moderately: current={}, new={}",
-        HIGH_CPU_THRESHOLD, currentPoolSize, reduced);
+        abfsConfiguration.getWriteHighCpuThreshold(), currentPoolSize, reduced);
     return reduced;
   }
 
@@ -307,13 +312,14 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    * Calculates reduced pool size under medium CPU utilization.
    */
   private int calculateReducedPoolSizeMediumCPU(int currentPoolSize, long currentHeap, long initialHeap) {
-    if (currentHeap <= initialHeap / 2) {
-      int reduced = Math.max(initialPoolSize, currentPoolSize - currentPoolSize / 3);
+    if (currentHeap <= initialHeap / HIGH_MEDIUM_HEAP_FACTOR) {
+      int reduced = Math.max(initialPoolSize, currentPoolSize - currentPoolSize / MEDIUM_CPU_LOW_MEMORY_REDUCTION_FACTOR);
       LOG.debug("Medium CPU & low heap. Reducing: current={}, new={}", currentPoolSize, reduced);
       return reduced;
     }
-    int reduced = Math.max(initialPoolSize, currentPoolSize - currentPoolSize / 5);
-    LOG.debug("Medium CPU ({}). Moderate reduction: current={}, new={}", MEDIUM_CPU_THRESHOLD, currentPoolSize, reduced);
+    int reduced = Math.max(initialPoolSize, currentPoolSize - currentPoolSize / MEDIUM_CPU_REDUCTION_FACTOR);
+    LOG.debug("Medium CPU ({}). Moderate reduction: current={}, new={}",
+        abfsConfiguration.getWriteMediumCpuThreshold(), currentPoolSize, reduced);
     return reduced;
   }
 
@@ -322,12 +328,12 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    */
   private int calculateIncreasedPoolSizeLowCPU(int currentPoolSize, long currentHeap, long initialHeap) {
     if (currentHeap >= initialHeap * 0.8) {
-      int increased = Math.min(maxThreadPoolSize, (int) (currentPoolSize * POOL_SIZE_INCREASE_FACTOR));
+      int increased = Math.min(maxThreadPoolSize, (int) (currentPoolSize * LOW_CPU_POOL_SIZE_INCREASE_FACTOR));
       LOG.debug("Low CPU & healthy heap. Increasing: current={}, new={}", currentPoolSize, increased);
       return increased;
     } else {
       // Decrease by 10%
-      int decreased = Math.max(1, (int) (currentPoolSize * 0.9));
+      int decreased = Math.max(1, (int) (currentPoolSize * LOW_CPU_HIGH_MEMORY_DECREASE_FACTOR));
       LOG.debug("Low CPU but insufficient heap ({} GB). Decreasing: current={}, new={}", currentHeap, currentPoolSize, decreased);
       return decreased;
     }
