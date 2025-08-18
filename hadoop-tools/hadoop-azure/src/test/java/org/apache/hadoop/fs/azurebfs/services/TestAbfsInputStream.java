@@ -823,7 +823,6 @@ public class TestAbfsInputStream extends
      */
     fileSize = 3 * ONE_MB; // To make sure multiple blocks are read.
     totalReadCalls += 3; // 3 blocks of 1MB each.
-    doReturn(false).when(spiedConfig).isReadAheadV2Enabled();
     doReturn(false).when(spiedConfig).isReadAheadEnabled();
     testReadTypeInTracingContextHeaderInternal(spiedFs, fileSize, NORMAL_READ, 3, totalReadCalls);
 
