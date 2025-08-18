@@ -98,4 +98,13 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
             FS_ACLS, acls, fs)
         .isEqualTo(acls);
   }
+
+  /**
+   * Test that the AzureBlobFileSystem close without init works
+   * @throws Exception if an error occurs
+   */
+  @Test
+  public void testABFSCloseWithoutInit() throws Exception {
+    new AzureBlobFileSystem().close();
+  }
 }

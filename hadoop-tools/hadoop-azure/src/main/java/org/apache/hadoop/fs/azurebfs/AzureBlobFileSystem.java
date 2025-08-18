@@ -148,7 +148,7 @@ public class AzureBlobFileSystem extends FileSystem
   private URI uri;
   private Path workingDir;
   private AzureBlobFileSystemStore abfsStore;
-  private boolean isClosed;
+  private boolean isClosed = true;
   private final String fileSystemId = UUID.randomUUID().toString();
 
   private boolean delegationTokenEnabled = false;
@@ -312,6 +312,7 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     rateLimiting = RateLimitingFactory.create(abfsConfiguration.getRateLimit());
+    isClosed = false;
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
   }
 
