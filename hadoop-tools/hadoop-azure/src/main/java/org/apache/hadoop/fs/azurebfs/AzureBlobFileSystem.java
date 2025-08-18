@@ -796,7 +796,7 @@ public class AzureBlobFileSystem extends FileSystem
 
   @Override
   public synchronized void close() throws IOException {
-    if (isClosed) {
+    if (isClosed()) {
       return;
     }
     if (abfsStore.getClient().isMetricCollectionEnabled()) {
@@ -1746,6 +1746,10 @@ public class AzureBlobFileSystem extends FileSystem
     return abfsStore.getClient();
   }
 
+  @VisibleForTesting
+  boolean isClosed() {
+    return isClosed;
+  }
   /**
    * Get any Delegation Token manager created by the filesystem.
    * @return the DT manager or null.

@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.net.URI;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +33,7 @@ import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_AVAILABLE;
 import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME;
 import static org.apache.hadoop.fs.CommonPathCapabilities.FS_ACLS;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test AzureBlobFileSystem initialization.
@@ -81,18 +81,18 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
 
     final Path p = new Path("}");
     // etags always present
-    Assertions.assertThat(fs.hasPathCapability(p, ETAGS_AVAILABLE))
+    assertThat(fs.hasPathCapability(p, ETAGS_AVAILABLE))
         .describedAs("path capability %s in %s", ETAGS_AVAILABLE, fs)
         .isTrue();
     // readahead always correct
-    Assertions.assertThat(fs.hasPathCapability(p, CAPABILITY_SAFE_READAHEAD))
+    assertThat(fs.hasPathCapability(p, CAPABILITY_SAFE_READAHEAD))
         .describedAs("path capability %s in %s", CAPABILITY_SAFE_READAHEAD, fs)
         .isTrue();
 
     // etags-over-rename and ACLs are either both true or both false.
     final boolean etagsAcrossRename = fs.hasPathCapability(p, ETAGS_PRESERVED_IN_RENAME);
     final boolean acls = fs.hasPathCapability(p, FS_ACLS);
-    Assertions.assertThat(etagsAcrossRename)
+    assertThat(etagsAcrossRename)
         .describedAs("capabilities %s=%s and %s=%s in %s",
             ETAGS_PRESERVED_IN_RENAME, etagsAcrossRename,
             FS_ACLS, acls, fs)
@@ -105,6 +105,12 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testABFSCloseWithoutInit() throws Exception {
-    new AzureBlobFileSystem().close();
+    AzureBlobFileSystem fs = new AzureBlobFileSystem();
+    assertThat(fs.isClosed()).isTrue();
+    fs.close();
+    fs.initialize(this.getFileSystem().getUri(), getRawConfiguration());
+    assertThat(fs.isClosed()).isFalse();
+    fs.close();
+    assertThat(fs.isClosed()).isTrue();
   }
 }
