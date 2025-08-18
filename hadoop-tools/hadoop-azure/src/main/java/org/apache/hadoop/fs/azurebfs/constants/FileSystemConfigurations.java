@@ -52,6 +52,7 @@ public final class FileSystemConfigurations {
   public static final int MEDIUM_CPU_REDUCTION_FACTOR = 5;
   public static final int MEDIUM_CPU_LOW_MEMORY_REDUCTION_FACTOR = 3;
   public static final int HIGH_MEDIUM_HEAP_FACTOR = 2;
+  public static final double LOW_CPU_HEAP_FACTOR = 0.8;
 
 
 
