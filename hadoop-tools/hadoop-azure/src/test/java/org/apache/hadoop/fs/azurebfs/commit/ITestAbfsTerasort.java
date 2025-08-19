@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import org.junit.Assume;
 import org.junit.FixMethodOrder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,6 +58,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.assertNoFailureStatistics;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.loadSuccessFile;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.validateSuccessFile;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Runs Terasort against ABFS using the manifest committer.
@@ -184,9 +184,9 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
    * @param stage stage name
    */
   private static void requireStage(final String stage) {
-    Assume.assumeTrue(
-        "Required stage was not completed: " + stage,
-        COMPLETED_STAGES.get(stage) != null);
+    assumeThat(COMPLETED_STAGES.get(stage))
+        .as("Required stage was not completed: " + stage)
+        .isNotNull();
   }
 
   /**
@@ -219,9 +219,7 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
       d.close();
     }
     dumpOutputTree(dest);
-    assertEquals(0, result, stage
-        + "(" + StringUtils.join(", ", args) + ")"
-        + " failed");
+    assertEquals(0, result, stage+ "(" + StringUtils.join(", ", args) + ")"+ " failed");
     final ManifestSuccessData successFile = validateSuccessFile(getFileSystem(), dest,
         minimumFileCount, "");
     final IOStatistics iostats = successFile.getIOStatistics();

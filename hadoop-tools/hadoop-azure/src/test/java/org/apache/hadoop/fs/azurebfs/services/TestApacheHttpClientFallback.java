@@ -23,7 +23,7 @@ import java.net.URL;
 import java.util.ArrayList;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;

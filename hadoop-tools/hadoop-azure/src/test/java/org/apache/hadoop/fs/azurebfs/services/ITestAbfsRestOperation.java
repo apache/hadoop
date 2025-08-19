@@ -26,9 +26,9 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -68,7 +68,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="expect={0}-code={1}-ErrorType={3}=NetLib={4}")
+@MethodSource("params")
 public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
 
   // Specifies whether getOutputStream() or write() throws IOException.
@@ -84,22 +85,17 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
   private static final String TEST_PATH = "/testfile";
 
   // Specifies whether the expect header is enabled or not.
-  @Parameterized.Parameter
   public boolean expectHeaderEnabled;
 
   // Gives the http response code.
-  @Parameterized.Parameter(1)
   public int responseCode;
 
   // Gives the http response message.
-  @Parameterized.Parameter(2)
   public String responseMessage;
 
   // Gives the errorType based on the enum.
-  @Parameterized.Parameter(3)
   public ErrorType errorType;
 
-  @Parameterized.Parameter(4)
   public HttpOperationType httpOperationType;
 
   // The intercept.
@@ -112,7 +108,6 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     HTTP_EXPECTATION_FAILED = 417,
     HTTP_ERROR = 0.
    */
-  @Parameterized.Parameters(name = "expect={0}-code={1}-ErrorType={3}=NetLib={4}")
   public static Iterable<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {true, HTTP_OK, "OK", ErrorType.WRITE, JDK_HTTP_URL_CONNECTION},
@@ -135,8 +130,14 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     });
   }
 
-  public ITestAbfsRestOperation() throws Exception {
-    super();
+  public ITestAbfsRestOperation(boolean pExpectHeaderEnabled, int pResponseCode,
+    String pResponseMessage, ErrorType pErrorType,
+    HttpOperationType phttpOperationType) throws Exception {
+    this.expectHeaderEnabled = pExpectHeaderEnabled;
+    this.responseCode = pResponseCode;
+    this.responseMessage = pResponseMessage;
+    this.errorType = pErrorType;
+    this.httpOperationType = phttpOperationType;
   }
 
   @Override

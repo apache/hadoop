@@ -40,7 +40,6 @@ import static org.mockito.Mockito.when;
 import org.apache.hadoop.fs.FSDataInputStream;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
 import org.mockito.Mockito;
 
 import java.net.URI;
@@ -49,7 +48,7 @@ import java.util.Random;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -207,8 +206,8 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     AbfsClient client = fs.getAbfsStore().getClient();
     AbfsConfiguration configuration1 = client.getAbfsConfiguration();
-    Assume.assumeTrue(configuration1.isAutoThrottlingEnabled());
-    Assume.assumeTrue(configuration1.accountThrottlingEnabled());
+    assumeTrue(configuration1.isAutoThrottlingEnabled());
+    assumeTrue(configuration1.accountThrottlingEnabled());
 
     AbfsClientThrottlingIntercept accountIntercept
         = (AbfsClientThrottlingIntercept) client.getIntercept();

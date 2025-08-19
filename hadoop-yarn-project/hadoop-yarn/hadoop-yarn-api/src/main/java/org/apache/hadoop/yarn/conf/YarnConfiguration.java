@@ -1918,6 +1918,26 @@ public class YarnConfiguration extends Configuration {
       NM_GPU_RESOURCE_PREFIX + "path-to-discovery-executables";
 
   /**
+   * Sets the maximum duration for executions of the discovery binary.
+   */
+  @Private
+  public static final String NM_GPU_DISCOVERY_TIMEOUT =
+      NM_GPU_RESOURCE_PREFIX + "discovery-timeout";
+
+  @Private
+  public static final String NM_GPU_DISCOVERY_TIMEOUT_DEFAULT = "10s";
+
+  /**
+   * Sets the maximum number of errors allowed from the discovery binary.
+   */
+  @Private
+  public static final String NM_GPU_DISCOVERY_MAX_ERRORS =
+      NM_GPU_RESOURCE_PREFIX + "discovery-max-errors";
+
+  @Private
+  public static final int NM_GPU_DISCOVERY_MAX_ERRORS_DEFAULT = 10;
+
+  /**
    * Settings to control which implementation of docker plugin for GPU will be
    * used.
    *
