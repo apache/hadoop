@@ -57,7 +57,7 @@ public class DynamicTemporaryCosnCredentialsProvider implements COSCredentialsPr
   private final String stsEndpoint;
   private final String region;
   private final String bucketName;
-  private final int durationSeconds;
+  private final long durationSeconds;
 
   private final AtomicReference<ExpiringCredentials> expiringCredentialsRef =
       new AtomicReference<>();
@@ -68,7 +68,7 @@ public class DynamicTemporaryCosnCredentialsProvider implements COSCredentialsPr
     this.stsEndpoint = conf.get(STS_ENDPOINT_KEY, DEFAULT_STS_ENDPOINT);
     this.region = conf.get(CosNConfigKeys.COSN_REGION_KEY);
     this.bucketName = conf.get("fs.defaultFS").replace("cosn://", "");
-    this.durationSeconds = conf.getInt(TOKEN_DURATION_SECONDS_KEY, DEFAULT_TOKEN_DURATION_SECONDS);
+    this.durationSeconds = conf.getLong(TOKEN_DURATION_SECONDS_KEY, DEFAULT_TOKEN_DURATION_SECONDS);
 
     if (this.longTermSecretId == null || this.longTermSecretKey == null) {
       throw new IOException(
@@ -104,25 +104,14 @@ public class DynamicTemporaryCosnCredentialsProvider implements COSCredentialsPr
       StsClient client = new StsClient(cred, this.region, clientProfile);
       GetFederationTokenRequest req = new GetFederationTokenRequest();
 
-      String policy = """
-          {
-              "version": "2.0",
-              "statement": [
-                  {
-                      "action": [
-                          "cos:*"
-                      ],
-                      "effect": "allow",
-                      "resource": [
-                          "qcs::cos:%s:uid/%s:%s/*"
-                      ]
-                  }
-              ]
-          }
-          """.formatted(this.region, getAppIdFromBucket(this.bucketName), this.bucketName);
+      String policyTemplate = "{\"version\":\"2.0\",\"statement\":[{\"action\":[\"cos:*\"],"
+          + "\"effect\":\"allow\",\"resource\":[\"qcs::cos:%s:uid/%s:%s/*\"]}]}";
+      String policy =
+          String.format(policyTemplate, this.region, getAppIdFromBucket(this.bucketName),
+              this.bucketName);
+      req.setPolicy(policy);
 
-      req.setPolicy(String.join("", policy));
-      req.setDurationSeconds((long) this.durationSeconds);
+      req.setDurationSeconds(this.durationSeconds);
       req.setName("HadoopCosNContractTest");
 
       GetFederationTokenResponse resp = client.GetFederationToken(req);
