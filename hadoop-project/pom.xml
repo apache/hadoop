@@ -146,7 +146,7 @@
     <netty4.version>4.1.118.Final</netty4.version>
     <snappy-java.version>1.1.10.4</snappy-java.version>
     <lz4-java.version>1.7.1</lz4-java.version>
-    <byte-buddy.version>1.15.11</byte-buddy.version>
+    <byte-buddy.version>1.17.6</byte-buddy.version>
 
     <!-- Maven protoc compiler -->
     <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
@@ -2219,6 +2219,22 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
           <version>${maven-shade-plugin.version}</version>
+          <dependencies>
+            <!--
+              TODO: Remove ASM version management once upstream change released
+              https://github.com/apache/maven-shade-plugin/pull/744
+              -->
+            <dependency>
+              <groupId>org.ow2.asm</groupId>
+              <artifactId>asm</artifactId>
+              <version>9.8</version>
+            </dependency>
+            <dependency>
+              <groupId>org.ow2.asm</groupId>
+              <artifactId>asm-commons</artifactId>
+              <version>9.8</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
