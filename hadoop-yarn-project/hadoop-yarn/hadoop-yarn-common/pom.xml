@@ -149,7 +149,7 @@
     <dependency>
       <groupId>org.glassfish.jersey.test-framework.providers</groupId>
       <artifactId>jersey-test-framework-provider-jetty</artifactId>
-      <scope>compile</scope>
+      <scope>test</scope>
       <exclusions>
         <exclusion>
           <artifactId>jakarta.servlet-api</artifactId>
