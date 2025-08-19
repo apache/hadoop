@@ -649,6 +649,52 @@ public class TestStandbyCheckpoints {
     HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(12));
   }
 
+  /**
+   * Test that lastCheckpointTime is correctly updated at each checkpoint.
+   */
+  @Test(timeout = 300000)
+  public void testLastCheckpointTime() throws Exception {
+    for (int i = 1; i < NUM_NNS; i++) {
+      cluster.shutdownNameNode(i);
+
+      // Make true checkpoint for DFS_NAMENODE_CHECKPOINT_PERIOD_KEY
+      cluster.getConfiguration(i).setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 3);
+      cluster.getConfiguration(i).setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 1000);
+    }
+    doEdits(0, 10);
+    cluster.transitionToStandby(0);
+
+    // Standby NNs do checkpoint without active NN available.
+    for (int i = 1; i < NUM_NNS; i++) {
+      cluster.restartNameNode(i, false);
+    }
+    cluster.waitClusterUp();
+    setNNs();
+
+    for (int i = 0; i < NUM_NNS; i++) {
+      // Once the standby catches up, it should do a checkpoint
+      // and save to local directories.
+      HATestUtil.waitForCheckpoint(cluster, i, ImmutableList.of(12));
+    }
+
+    long snnCheckpointTime1 = nns[1].getNamesystem().getStandbyLastCheckpointTime();
+    long annCheckpointTime1 = nns[0].getNamesystem().getLastCheckpointTime();
+    cluster.transitionToActive(0);
+    cluster.transitionToObserver(2);
+
+    doEdits(11, 20);
+    nns[0].getRpcServer().rollEditLog();
+    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(23));
+
+    long snnCheckpointTime2 = nns[1].getNamesystem().getStandbyLastCheckpointTime();
+    long annCheckpointTime2 = nns[0].getNamesystem().getLastCheckpointTime();
+
+    // Make sure that both standby and active NNs' lastCheckpointTime intervals are larger
+    // than 3 DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY.
+    assertTrue(snnCheckpointTime2 - snnCheckpointTime1 >= 3000
+        && annCheckpointTime2 - annCheckpointTime1 >= 3000);
+  }
+
   private void doEdits(int start, int stop) throws IOException {
     for (int i = start; i < stop; i++) {
       Path p = new Path("/test" + i);

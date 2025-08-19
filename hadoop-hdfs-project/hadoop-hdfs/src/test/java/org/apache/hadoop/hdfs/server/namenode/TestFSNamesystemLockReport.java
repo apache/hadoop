@@ -29,9 +29,9 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
 import java.security.PrivilegedExceptionAction;
@@ -40,7 +40,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_LOCK_SUPPRESS_WARNING_INT
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestFSNamesystemLockReport {
 
@@ -60,7 +60,7 @@ public class TestFSNamesystemLockReport {
   private UserGroupInformation userGroupInfo;
   private GenericTestUtils.LogCapturer logs;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new HdfsConfiguration();
     conf.set(DFS_PERMISSIONS_SUPERUSERGROUP_KEY, "hadoop");
@@ -82,7 +82,7 @@ public class TestFSNamesystemLockReport {
         org.slf4j.event.Level.INFO);
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws Exception {
     if (fs != null) {
       fs.close();

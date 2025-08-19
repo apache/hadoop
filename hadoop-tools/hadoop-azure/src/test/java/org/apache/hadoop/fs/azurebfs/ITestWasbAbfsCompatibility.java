@@ -161,7 +161,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
         .as("Namespace enabled account does not support this test")
         .isFalse();
     assumeBlobServiceType();
-    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB");
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path testFile = path("/testReadFile");

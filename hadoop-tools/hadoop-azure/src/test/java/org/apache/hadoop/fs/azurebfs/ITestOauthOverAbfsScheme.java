@@ -38,7 +38,7 @@ public class ITestOauthOverAbfsScheme extends AbstractAbfsIntegrationTest {
   public ITestOauthOverAbfsScheme() throws Exception {
     assumeThat(getAuthType())
         .as("ITestOauthOverAbfsScheme is skipped because auth type is not OAuth")
-        .isNotEqualTo(AuthType.OAuth);
+        .isEqualTo(AuthType.OAuth);
   }
 
   @Test
