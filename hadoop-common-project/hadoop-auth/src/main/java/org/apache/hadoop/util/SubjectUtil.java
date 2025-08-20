@@ -194,8 +194,7 @@ public class SubjectUtil {
   }
 
   /**
-   * Maps to Subject.current() if available, otherwise maps to
-   * Subject.getSubject()
+   * Maps to Subject.current() if available, otherwise maps to Subject.getSubject().
    *
    * @return the current subject
    */
@@ -226,5 +225,8 @@ public class SubjectUtil {
   @SuppressWarnings("unchecked")
   private static <E extends Throwable> RuntimeException sneakyThrow(Throwable e) throws E {
     throw (E) e;
+  }
+
+  private SubjectUtil() {
   }
 }
