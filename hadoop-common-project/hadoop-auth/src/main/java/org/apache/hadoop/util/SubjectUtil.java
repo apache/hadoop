@@ -155,7 +155,7 @@ public class SubjectUtil {
     try {
       return callAs(subject, privilegedActionToCallable(action));
     } catch (CompletionException ce) {
-      Exception cause = (Exception) (ce.getCause());
+      Throwable cause = ce.getCause();
       if (cause != null) {
         throw sneakyThrow(cause);
       } else {
