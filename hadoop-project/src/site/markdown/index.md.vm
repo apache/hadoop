@@ -38,18 +38,21 @@ S3A improvements
 [HADOOP-19363](https://issues.apache.org/jira/browse/HADOOP-19363) S3A: Support analytics-accelerator-s3 input streams
 for parquet read performance.
 
-HADOOP-19256](https://issues.apache.org/jira/browse/HADOOP-19256) S3A: Adds support for S3 Conditional Writes.
+[HADOOP-19256](https://issues.apache.org/jira/browse/HADOOP-19256) S3A: Adds support for S3 Conditional Writes.
 
 ABFS improvements
 -----------------
 
 **Improvement**
 
-[HADOOP-19226](https://issues.apache.org/jira/browse/HADOOP-19226) ABFS: [FnsOverBlob] Implementing Azure Rest APIs on
-Blob Endpoint for AbfsBlobClient.
+[HADOOP-19179](https://issues.apache.org/jira/browse/HADOOP-19179) ABFS: [FnsOverBlob] Support FNS Accounts over
+BlobEndpoint.
 
 [HADOOP-19474](https://issues.apache.org/jira/browse/HADOOP-19474)  ABFS: [FnsOverBlob] Listing Optimizations to avoid
 multiple iteration over list response.
+
+[HADOOP-19543](https://issues.apache.org/jira/browse/HADOOP-19543) ABFS: [FnsOverBlob] Remove Duplicates from Blob
+Endpoint Listing Across Iterations.
 
 Transitive CVE fixes
 --------------------
