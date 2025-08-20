@@ -149,7 +149,17 @@ public class SubjectUtil {
    * @return the result of the action
    */
   public static <T> T doAs(Subject subject, PrivilegedAction<T> action) {
-    return callAs(subject, privilegedActionToCallable(action));
+    try {
+      return callAs(subject, privilegedActionToCallable(action));
+    } catch (CompletionException ce) {
+      Exception cause = (Exception) (ce.getCause());
+      if (cause != null) {
+        throw sneakyThrow(cause);
+      } else {
+        // This should never happen, as CompletionException should always wrap an exception
+        throw ce;
+      }
+    }
   }
 
   /**
