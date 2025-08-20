@@ -824,8 +824,9 @@ public class CuratorService extends CompositeService
    * Registers a listener to path related events.
    *
    * @param listener the listener.
+   * @return a handle allowing for the management of the listener.
    */
-  public void registerPathListener(final PathListener listener) {
+  public ListenerHandle registerPathListener(final PathListener listener) {
 
     CuratorCacheListener cacheListener = CuratorCacheListener.builder()
         .forCreatesAndChanges((oldNode, node) -> {
@@ -853,6 +854,7 @@ public class CuratorService extends CompositeService
         .build();
 
     curatorCacheBridge.listenable().addListener(cacheListener);
+    return () -> curatorCacheBridge.listenable().removeListener(cacheListener);
   }
 
   // TODO: should caches be stopped and then restarted if need be?
