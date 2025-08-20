@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_AVAILABLE;
 import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME;
 import static org.apache.hadoop.fs.CommonPathCapabilities.FS_ACLS;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_INVALID_ABFS_STATE;
@@ -172,7 +173,7 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
         () -> fs.makeQualified(testPath));
 
     intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
-        () -> fs.setOwner(testPath, "", ""));
+        () -> fs.setOwner(testPath, EMPTY_STRING, EMPTY_STRING));
 
     intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
         () -> fs.setXAttr(testPath, "xattr", new byte[0],
