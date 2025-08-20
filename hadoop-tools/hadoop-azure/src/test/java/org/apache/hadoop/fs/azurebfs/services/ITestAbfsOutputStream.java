@@ -441,11 +441,10 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testResetCalledOnExceptionInRemoteFlush() throws Exception {
-    AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    assumeThat(getIsNamespaceEnabled(fs)).isFalse();
-    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    assumeHnsDisabled();
     assumeBlobServiceType();
     assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
+    AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
 
     // Create a file and spy on AbfsOutputStream
     Path path = new Path("/testFile");
@@ -502,43 +501,48 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testNoChecksumComputedWhenConfigFalse()  throws Exception {
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
+    assumeBlobServiceType();
+    assumeHnsDisabled();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, false);
     FileSystem fileSystem = FileSystem.newInstance(conf);
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) fileSystem;
-    assumeThat(getIsNamespaceEnabled(fs)).isFalse();
-    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
-    assumeBlobServiceType();
-    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) fileSystem) {
+      AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
 
-    // Create spies for the client handler and blob client
-    AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
-    AbfsBlobClient blobClient = Mockito.spy(clientHandler.getBlobClient());
+      // Create spies for the client handler and blob client
+      AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
+      AbfsBlobClient blobClient = Mockito.spy(clientHandler.getBlobClient());
 
-    // Set up the spies to return the mocked objects
-    Mockito.doReturn(clientHandler).when(store).getClientHandler();
-    Mockito.doReturn(blobClient).when(clientHandler).getBlobClient();
-    Mockito.doReturn(blobClient).when(clientHandler).getIngressClient();
-    AbfsOutputStream abfsOutputStream = Mockito.spy(
-        (AbfsOutputStream) fs.create(new Path("/test/file")).getWrappedStream());
-    AzureIngressHandler ingressHandler = Mockito.spy(
-        abfsOutputStream.getIngressHandler());
-    Mockito.doReturn(ingressHandler).when(abfsOutputStream).getIngressHandler();
-    Mockito.doReturn(blobClient).when(ingressHandler).getClient();
-    FSDataOutputStream os = Mockito.spy(
-        new FSDataOutputStream(abfsOutputStream, null));
-    AbfsOutputStream out = (AbfsOutputStream) os.getWrappedStream();
-    byte[] bytes = new byte[1024 * 1024 * 4];
-    new Random().nextBytes(bytes);
-    // Write some bytes and attempt to flush, which should retry
-    out.write(bytes);
-    out.hsync();
-    Assertions.assertThat(Mockito.mockingDetails(blobClient).getInvocations()
-        .stream()
-        .filter(i -> i.getMethod().getName().equals("addCheckSumHeaderForWrite"))
-        .count())
-        .as("Expected addCheckSumHeaderForWrite() to be called exactly 0 times")
-        .isZero();
+      // Set up the spies to return the mocked objects
+      Mockito.doReturn(clientHandler).when(store).getClientHandler();
+      Mockito.doReturn(blobClient).when(clientHandler).getBlobClient();
+      Mockito.doReturn(blobClient).when(clientHandler).getIngressClient();
+      AbfsOutputStream abfsOutputStream = Mockito.spy(
+          (AbfsOutputStream) fs.create(new Path("/test/file"))
+              .getWrappedStream());
+      AzureIngressHandler ingressHandler = Mockito.spy(
+          abfsOutputStream.getIngressHandler());
+      Mockito.doReturn(ingressHandler)
+          .when(abfsOutputStream)
+          .getIngressHandler();
+      Mockito.doReturn(blobClient).when(ingressHandler).getClient();
+      FSDataOutputStream os = Mockito.spy(
+          new FSDataOutputStream(abfsOutputStream, null));
+      AbfsOutputStream out = (AbfsOutputStream) os.getWrappedStream();
+      byte[] bytes = new byte[1024 * 1024 * 4];
+      new Random().nextBytes(bytes);
+      // Write some bytes and attempt to flush, which should retry
+      out.write(bytes);
+      out.hsync();
+      Assertions.assertThat(Mockito.mockingDetails(blobClient).getInvocations()
+              .stream()
+              .filter(
+                  i -> i.getMethod().getName().equals("addCheckSumHeaderForWrite"))
+              .count())
+          .as("Expected addCheckSumHeaderForWrite() to be called exactly 0 times")
+          .isZero();
+    }
   }
 
   /**
@@ -547,42 +551,47 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testChecksumComputedWhenConfigTrue()  throws Exception {
+    assumeHnsDisabled();
+    assumeBlobServiceType();
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB")
+        .isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) fileSystem;
-    assumeThat(getIsNamespaceEnabled(fs)).isFalse();
-    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
-    assumeBlobServiceType();
-    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) fileSystem) {
+      AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+      // Create spies for the client handler and blob client
+      AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
+      AbfsBlobClient blobClient = Mockito.spy(clientHandler.getBlobClient());
 
-    // Create spies for the client handler and blob client
-    AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
-    AbfsBlobClient blobClient = Mockito.spy(clientHandler.getBlobClient());
-
-    // Set up the spies to return the mocked objects
-    Mockito.doReturn(clientHandler).when(store).getClientHandler();
-    Mockito.doReturn(blobClient).when(clientHandler).getBlobClient();
-    Mockito.doReturn(blobClient).when(clientHandler).getIngressClient();
-    AbfsOutputStream abfsOutputStream = Mockito.spy(
-        (AbfsOutputStream) fs.create(new Path("/test/file")).getWrappedStream());
-    AzureIngressHandler ingressHandler = Mockito.spy(
-        abfsOutputStream.getIngressHandler());
-    Mockito.doReturn(ingressHandler).when(abfsOutputStream).getIngressHandler();
-    Mockito.doReturn(blobClient).when(ingressHandler).getClient();
-    FSDataOutputStream os = Mockito.spy(
-        new FSDataOutputStream(abfsOutputStream, null));
-    AbfsOutputStream out = (AbfsOutputStream) os.getWrappedStream();
-    byte[] bytes = new byte[1024 * 1024 * 4];
-    new Random().nextBytes(bytes);
-    // Write some bytes and attempt to flush, which should retry
-    out.write(bytes);
-    out.hsync();
-    Assertions.assertThat(Mockito.mockingDetails(blobClient).getInvocations()
-        .stream()
-        .filter(i -> i.getMethod().getName().equals("addCheckSumHeaderForWrite"))
-        .count())
-        .as("Expected addCheckSumHeaderForWrite() to be called exactly once")
-        .isEqualTo(1);
+      // Set up the spies to return the mocked objects
+      Mockito.doReturn(clientHandler).when(store).getClientHandler();
+      Mockito.doReturn(blobClient).when(clientHandler).getBlobClient();
+      Mockito.doReturn(blobClient).when(clientHandler).getIngressClient();
+      AbfsOutputStream abfsOutputStream = Mockito.spy(
+          (AbfsOutputStream) fs.create(new Path("/test/file"))
+              .getWrappedStream());
+      AzureIngressHandler ingressHandler = Mockito.spy(
+          abfsOutputStream.getIngressHandler());
+      Mockito.doReturn(ingressHandler)
+          .when(abfsOutputStream)
+          .getIngressHandler();
+      Mockito.doReturn(blobClient).when(ingressHandler).getClient();
+      FSDataOutputStream os = Mockito.spy(
+          new FSDataOutputStream(abfsOutputStream, null));
+      AbfsOutputStream out = (AbfsOutputStream) os.getWrappedStream();
+      byte[] bytes = new byte[1024 * 1024 * 4];
+      new Random().nextBytes(bytes);
+      // Write some bytes and attempt to flush, which should retry
+      out.write(bytes);
+      out.hsync();
+      Assertions.assertThat(Mockito.mockingDetails(blobClient).getInvocations()
+              .stream()
+              .filter(
+                  i -> i.getMethod().getName().equals("addCheckSumHeaderForWrite"))
+              .count())
+          .as("Expected addCheckSumHeaderForWrite() to be called exactly once")
+          .isEqualTo(1);
+    }
   }
 }
