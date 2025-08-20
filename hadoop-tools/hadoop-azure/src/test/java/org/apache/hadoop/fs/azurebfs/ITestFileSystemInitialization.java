@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
