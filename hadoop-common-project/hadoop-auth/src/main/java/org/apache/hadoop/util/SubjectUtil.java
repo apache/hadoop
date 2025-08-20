@@ -188,7 +188,7 @@ public class SubjectUtil {
   }
 
   /**
-   * Maps to Subject.currect() is available, otherwise maps to
+   * Maps to Subject.current() if available, otherwise maps to
    * Subject.getSubject()
    *
    * @return the current subject
