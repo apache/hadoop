@@ -125,6 +125,14 @@
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>jakarta.servlet</groupId>
+          <artifactId>jakarta.servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>javax.xml.bind</groupId>
           <artifactId>jaxb-api</artifactId>
         </exclusion>
@@ -223,10 +231,6 @@
         <exclusion>
           <groupId>commons-codec</groupId>
           <artifactId>commons-codec</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.servlet</groupId>
-          <artifactId>javax.servlet-api</artifactId>
         </exclusion>
 
         <!-- removing dependency jars from yarn-server-common, which are
@@ -415,22 +419,42 @@
       <optional>true</optional>
     </dependency>
     <!-- Add back in the transitive dependencies excluded from hadoop-common in client TODO remove once we have a filter for "is in these artifacts" -->
-    <!-- skip javax.servlet:servlet-api because it's in client -->
+    <!-- skip javax.servlet:javax.servlet-api because it's in client -->
+    <!-- skip jakarta.servlet:jakarta.servlet-api because it's in client -->
+    <!-- skip jakarta.ws.rs-api:jakarta.ws.rs because it's in client -->
     <!-- Skip commons-logging:commons-logging-api because it looks like nothing actually included it -->
     <!-- Skip jetty-util because it's in client -->
     <dependency>
       <groupId>org.glassfish.jersey.core</groupId>
       <artifactId>jersey-common</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+      </exclusions>
       <optional>true</optional>
     </dependency>
     <dependency>
-       <groupId>org.glassfish.jersey.core</groupId>
-       <artifactId>jersey-client</artifactId>
+      <groupId>org.glassfish.jersey.core</groupId>
+      <artifactId>jersey-client</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+      </exclusions>
       <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.core</groupId>
       <artifactId>jersey-server</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+      </exclusions>
       <optional>true</optional>
     </dependency>
     <!-- skip org.apache.avro:avro-ipc because it doesn't look like hadoop-common actually uses it -->
@@ -445,7 +469,9 @@
       <optional>true</optional>
     </dependency>
     <!-- add back in transitive dependencies of hadoop-mapreduce-client-app removed in client -->
-    <!-- Skipping javax.servlet:servlet-api because it's in client -->
+    <!-- Skipping javax.servlet:javax.servlet-api because it's in client -->
+    <!-- Skipping jakarta.servlet:jakarta.servlet-api because it's in client -->
+    <!-- Skipping jakarta.ws.rs-api:jakarta.ws.rs because it's in client -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-nodemanager</artifactId>
@@ -454,6 +480,14 @@
         <exclusion>
           <groupId>javax.servlet</groupId>
           <artifactId>javax.servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jakarta.servlet</groupId>
+          <artifactId>jakarta.servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
@@ -523,6 +557,14 @@
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>jakarta.servlet</groupId>
+          <artifactId>jakarta.servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-yarn-api</artifactId>
         </exclusion>
@@ -578,11 +620,27 @@
     <dependency>
       <groupId>org.glassfish.jersey.test-framework</groupId>
       <artifactId>jersey-test-framework-core</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jakarta.servlet</groupId>
+          <artifactId>jakarta.servlet-api</artifactId>
+        </exclusion>
+      </exclusions>
       <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.test-framework.providers</groupId>
       <artifactId>jersey-test-framework-provider-jetty</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+      </exclusions>
       <optional>true</optional>
     </dependency>
     <!-- skipping jersey-server because it's above -->
@@ -655,9 +713,6 @@
                       <!-- Leave snappy that includes native methods which cannot be relocated. -->
                       <exclude>org.xerial.snappy:*</exclude>
                       <exclude>org.glassfish.jersey:*</exclude>
-                      <exclude>org.hamcrest:*</exclude>
-                      <exclude>aopalliance:*</exclude>
-                      <exclude>javassist:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
