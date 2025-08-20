@@ -48,6 +48,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDeleted;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsDirectory;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test compatibility between ABFS client and WASB client.
@@ -69,7 +70,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       LoggerFactory.getLogger(ITestWasbAbfsCompatibility.class);
 
   public ITestWasbAbfsCompatibility() throws Exception {
-    Assume.assumeFalse("Emulator is not supported", isIPAddress());
+    assumeThat(isIPAddress()).as("Emulator is not supported").isFalse();
   }
 
   @Test
@@ -77,9 +78,10 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     // crate file using abfs
     AzureBlobFileSystem fs = getFileSystem();
     // test only valid for non-namespace enabled account
-    Assume.assumeFalse("Namespace enabled account does not support this test,",
-        getIsNamespaceEnabled(fs));
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(getIsNamespaceEnabled(fs))
+        .as("Namespace enabled account does not support this test")
+        .isFalse();
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 

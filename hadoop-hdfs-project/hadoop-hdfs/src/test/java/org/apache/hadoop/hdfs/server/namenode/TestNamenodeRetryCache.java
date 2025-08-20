@@ -19,10 +19,12 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -60,10 +62,10 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.LightWeightCache;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Tests for ensuring the namenode retry cache works correctly for
@@ -94,7 +96,7 @@ public class TestNamenodeRetryCache {
   private static final int BlockSize = 512;
   
   /** Start a cluster */
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BlockSize);
@@ -112,7 +114,7 @@ public class TestNamenodeRetryCache {
    * @throws UnresolvedLinkException 
    * @throws SafeModeException 
    * @throws AccessControlException */
-  @After
+  @AfterEach
   public void cleanup() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -173,7 +175,7 @@ public class TestNamenodeRetryCache {
     try {
       // Second non-retry call should fail with an exception
       nnRpc.concat(file1, new String[]{file2});
-      Assert.fail("testConcat - expected exception is not thrown");
+      fail("testConcat - expected exception is not thrown");
     } catch (IOException e) {
       // Expected
     }
@@ -189,13 +191,13 @@ public class TestNamenodeRetryCache {
     newCall();
     nnRpc.mkdirs(dir, perm, true);
     newCall();
-    Assert.assertTrue(nnRpc.delete(dir, false));
-    Assert.assertTrue(nnRpc.delete(dir, false));
-    Assert.assertTrue(nnRpc.delete(dir, false));
+    assertTrue(nnRpc.delete(dir, false));
+    assertTrue(nnRpc.delete(dir, false));
+    assertTrue(nnRpc.delete(dir, false));
     
     // non-retried call fails and gets false as return
     newCall();
-    Assert.assertFalse(nnRpc.delete(dir, false));
+    assertFalse(nnRpc.delete(dir, false));
   }
   
   /**
@@ -216,7 +218,7 @@ public class TestNamenodeRetryCache {
     try {
       // Second non-retry call should fail with an exception
       nnRpc.createSymlink(target, "/a/b", perm, true);
-      Assert.fail("testCreateSymlink - expected exception is not thrown");
+      fail("testCreateSymlink - expected exception is not thrown");
     } catch (IOException e) {
       // Expected
     }
@@ -233,19 +235,21 @@ public class TestNamenodeRetryCache {
     HdfsFileStatus status = nnRpc.create(src, perm, "holder",
         new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)), true,
         (short) 1, BlockSize, null, null, null);
-    Assert.assertEquals(status, nnRpc.create(src, perm, "holder",
-        new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)), true,
-        (short) 1, BlockSize, null, null, null));
-    Assert.assertEquals(status, nnRpc.create(src, perm, "holder",
-        new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)), true,
-        (short) 1, BlockSize, null, null, null));
+    assertEquals(status,
+        nnRpc.create(src, perm, "holder",
+            new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)), true, (short) 1,
+            BlockSize, null, null, null));
+    assertEquals(status,
+        nnRpc.create(src, perm, "holder",
+            new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)), true, (short) 1,
+            BlockSize, null, null, null));
     // A non-retried call fails
     newCall();
     try {
       nnRpc.create(src, perm, "holder",
           new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)),
           true, (short) 1, BlockSize, null, null, null);
-      Assert.fail("testCreate - expected exception is not thrown");
+      fail("testCreate - expected exception is not thrown");
     } catch (IOException e) {
       // expected
     }
@@ -265,17 +269,17 @@ public class TestNamenodeRetryCache {
     newCall();
     LastBlockWithStatus b = nnRpc.append(src, "holder",
         new EnumSetWritable<>(EnumSet.of(CreateFlag.APPEND)));
-    Assert.assertEquals(b, nnRpc.append(src, "holder",
-        new EnumSetWritable<>(EnumSet.of(CreateFlag.APPEND))));
-    Assert.assertEquals(b, nnRpc.append(src, "holder",
-        new EnumSetWritable<>(EnumSet.of(CreateFlag.APPEND))));
+    assertEquals(b,
+        nnRpc.append(src, "holder", new EnumSetWritable<>(EnumSet.of(CreateFlag.APPEND))));
+    assertEquals(b,
+        nnRpc.append(src, "holder", new EnumSetWritable<>(EnumSet.of(CreateFlag.APPEND))));
     
     // non-retried call fails
     newCall();
     try {
       nnRpc.append(src, "holder",
           new EnumSetWritable<>(EnumSet.of(CreateFlag.APPEND)));
-      Assert.fail("testAppend - expected exception is not thrown");
+      fail("testAppend - expected exception is not thrown");
     } catch (Exception e) {
       // Expected
     }
@@ -294,13 +298,13 @@ public class TestNamenodeRetryCache {
     
     // Retried renames succeed
     newCall();
-    Assert.assertTrue(nnRpc.rename(src, target));
-    Assert.assertTrue(nnRpc.rename(src, target));
-    Assert.assertTrue(nnRpc.rename(src, target));
+    assertTrue(nnRpc.rename(src, target));
+    assertTrue(nnRpc.rename(src, target));
+    assertTrue(nnRpc.rename(src, target));
     
     // A non-retried request fails
     newCall();
-    Assert.assertFalse(nnRpc.rename(src, target));
+    assertFalse(nnRpc.rename(src, target));
   }
   
   /**
@@ -323,7 +327,7 @@ public class TestNamenodeRetryCache {
     newCall();
     try {
       nnRpc.rename2(src, target, Rename.NONE);
-      Assert.fail("testRename 2 expected exception is not thrown");
+      fail("testRename 2 expected exception is not thrown");
     } catch (IOException e) {
       // expected
     }
@@ -333,7 +337,8 @@ public class TestNamenodeRetryCache {
    * Make sure a retry call does not hang because of the exception thrown in the
    * first call.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testUpdatePipelineWithFailOver() throws Exception {
     cluster.shutdown();
     nnRpc = null;
@@ -378,15 +383,15 @@ public class TestNamenodeRetryCache {
     // Test retry of create snapshot
     newCall();
     String name = nnRpc.createSnapshot(dir, "snap1");
-    Assert.assertEquals(name, nnRpc.createSnapshot(dir, "snap1"));
-    Assert.assertEquals(name, nnRpc.createSnapshot(dir, "snap1"));
-    Assert.assertEquals(name, nnRpc.createSnapshot(dir, "snap1"));
+    assertEquals(name, nnRpc.createSnapshot(dir, "snap1"));
+    assertEquals(name, nnRpc.createSnapshot(dir, "snap1"));
+    assertEquals(name, nnRpc.createSnapshot(dir, "snap1"));
     
     // Non retried calls should fail
     newCall();
     try {
       nnRpc.createSnapshot(dir, "snap1");
-      Assert.fail("testSnapshotMethods expected exception is not thrown");
+      fail("testSnapshotMethods expected exception is not thrown");
     } catch (IOException e) {
       // exptected
     }
@@ -401,7 +406,7 @@ public class TestNamenodeRetryCache {
     newCall();
     try {
       nnRpc.renameSnapshot(dir, "snap1", "snap2");
-      Assert.fail("testSnapshotMethods expected exception is not thrown");
+      fail("testSnapshotMethods expected exception is not thrown");
     } catch (IOException e) {
       // expected
     }
@@ -416,7 +421,7 @@ public class TestNamenodeRetryCache {
     newCall();
     try {
       nnRpc.deleteSnapshot(dir, "snap2");
-      Assert.fail("testSnapshotMethods expected exception is not thrown");
+      fail("testSnapshotMethods expected exception is not thrown");
     } catch (IOException e) {
       // expected
     }
@@ -426,11 +431,11 @@ public class TestNamenodeRetryCache {
   public void testRetryCacheConfig() {
     // By default retry configuration should be enabled
     Configuration conf = new HdfsConfiguration();
-    Assert.assertNotNull(FSNamesystem.initRetryCache(conf));
+    assertNotNull(FSNamesystem.initRetryCache(conf));
     
     // If retry cache is disabled, it should not be created
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ENABLE_RETRY_CACHE_KEY, false);
-    Assert.assertNull(FSNamesystem.initRetryCache(conf));
+    assertNull(FSNamesystem.initRetryCache(conf));
   }
   
   /**
@@ -444,7 +449,7 @@ public class TestNamenodeRetryCache {
 
     LightWeightCache<CacheEntry, CacheEntry> cacheSet = 
         (LightWeightCache<CacheEntry, CacheEntry>) namesystem.getRetryCache().getCacheSet();
-    assertEquals("Retry cache size is wrong", 39, cacheSet.size());
+    assertEquals(39, cacheSet.size(), "Retry cache size is wrong");
     
     Map<CacheEntry, CacheEntry> oldEntries = 
         new HashMap<CacheEntry, CacheEntry>();
@@ -463,7 +468,7 @@ public class TestNamenodeRetryCache {
     assertTrue(namesystem.hasRetryCache());
     cacheSet = (LightWeightCache<CacheEntry, CacheEntry>) namesystem
         .getRetryCache().getCacheSet();
-    assertEquals("Retry cache size is wrong", 39, cacheSet.size());
+    assertEquals(39, cacheSet.size(), "Retry cache size is wrong");
     iter = cacheSet.iterator();
     while (iter.hasNext()) {
       CacheEntry entry = iter.next();

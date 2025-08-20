@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azure;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
@@ -63,7 +63,7 @@ public class ITestNativeAzureFileSystemContractPageBlobLive extends
   @BeforeEach
   public void setUp() throws Exception {
     testAccount = createTestAccount();
-    assumeTrue(testAccount != null);
+    assumeThat(testAccount).isNotNull();
     fs = testAccount.getFileSystem();
     basePath = AzureTestUtils.pathForTests(fs, "filesystemcontractpageblob");
   }

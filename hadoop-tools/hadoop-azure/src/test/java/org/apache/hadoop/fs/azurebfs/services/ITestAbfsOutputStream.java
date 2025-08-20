@@ -28,12 +28,14 @@ import java.net.URL;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -61,21 +63,21 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test create operation.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="{0}")
+@MethodSource("params")
 public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
 
   private static final int TEST_EXECUTION_TIMEOUT = 2 * 60 * 1000;
   private static final String TEST_FILE_PATH = "testfile";
   private static final int TEN = 10;
 
-  @Parameterized.Parameter
   public HttpOperationType httpOperationType;
 
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {HttpOperationType.JDK_HTTP_URL_CONNECTION},
@@ -83,9 +85,9 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     });
   }
 
-
-  public ITestAbfsOutputStream() throws Exception {
+  public ITestAbfsOutputStream(final HttpOperationType pHttpOperationType) throws Exception {
     super();
+    this.httpOperationType = pHttpOperationType;
   }
 
   @Override
@@ -147,7 +149,8 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
    * Verify the passing of AzureBlobFileSystem reference to AbfsOutputStream
    * to make sure that the FS instance is not eligible for GC while writing.
    */
-  @Test(timeout = TEST_EXECUTION_TIMEOUT)
+  @Test
+  @Timeout(value = TEST_EXECUTION_TIMEOUT, unit = TimeUnit.MILLISECONDS)
   public void testAzureBlobFileSystemBackReferenceInOutputStream()
       throws Exception {
     byte[] testBytes = new byte[5 * 1024];
@@ -200,7 +203,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
   @Test
   public void testExpect100ContinueFailureInAppend() throws Exception {
     if (!getIsNamespaceEnabled(getFileSystem())) {
-      Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+      assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     }
     Configuration configuration = new Configuration(getRawConfiguration());
     configuration.set(FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED, "true");
@@ -314,7 +317,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
   @Test
   public void testValidateGetBlockList() throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    Assume.assumeTrue(!getIsNamespaceEnabled(fs));
+    assumeThat(getIsNamespaceEnabled(fs)).isFalse();
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     assumeBlobServiceType();
 
@@ -353,7 +356,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
   @Test
   public void testNoNetworkCallsForFlush() throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    Assume.assumeTrue(!getIsNamespaceEnabled(fs));
+    assumeThat(getIsNamespaceEnabled(fs)).isFalse();
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     assumeBlobServiceType();
 
@@ -396,10 +399,10 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
   @Test
   public void testNoNetworkCallsForSecondFlush() throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    Assume.assumeTrue(!getIsNamespaceEnabled(fs));
+    assumeThat(getIsNamespaceEnabled(fs)).isFalse();
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
 
     // Step 2: Mock the clientHandler to return the blobClient when getBlobClient is called
     AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
@@ -429,7 +432,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
             Mockito.any(TracingContext.class));
     Mockito.verify(blobClient, Mockito.times(1)).
         flush(Mockito.any(byte[].class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.any(), Mockito.any(), Mockito.anyString(), Mockito.any(),
-            Mockito.any(TracingContext.class), Mockito.nullable(String.class));
+            Mockito.any(TracingContext.class), Mockito.anyString());
   }
 
   /**
@@ -439,9 +442,10 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
   @Test
   public void testResetCalledOnExceptionInRemoteFlush() throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    Assume.assumeTrue(!getIsNamespaceEnabled(fs));
+    assumeThat(getIsNamespaceEnabled(fs)).isFalse();
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
 
     // Create a file and spy on AbfsOutputStream
     Path path = new Path("/testFile");
@@ -502,10 +506,10 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, false);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem fs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeTrue(!getIsNamespaceEnabled(fs));
+    assumeThat(getIsNamespaceEnabled(fs)).isFalse();
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
 
     // Create spies for the client handler and blob client
     AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
@@ -547,10 +551,10 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
     AzureBlobFileSystem fs = (AzureBlobFileSystem) fileSystem;
-    Assume.assumeTrue(!getIsNamespaceEnabled(fs));
+    assumeThat(getIsNamespaceEnabled(fs)).isFalse();
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
 
     // Create spies for the client handler and blob client
     AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());

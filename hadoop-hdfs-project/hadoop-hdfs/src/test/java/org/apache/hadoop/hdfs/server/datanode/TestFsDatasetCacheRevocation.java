@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -45,9 +45,10 @@ import org.apache.hadoop.io.nativeio.NativeIO.POSIX.NoMlockCacheManipulator;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +65,7 @@ public class TestFsDatasetCacheRevocation {
 
   private static final int BLOCK_SIZE = 4096;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     prevCacheManipulator = NativeIO.POSIX.getCacheManipulator();
     NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator());
@@ -72,7 +73,7 @@ public class TestFsDatasetCacheRevocation {
     sockDir = new TemporarySocketDirectory();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     // Restore the original CacheManipulator
     NativeIO.POSIX.setCacheManipulator(prevCacheManipulator);
@@ -99,7 +100,8 @@ public class TestFsDatasetCacheRevocation {
    * replica for a reasonable amount of time, even if an uncache request
    * occurs.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testPinning() throws Exception {
     assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
     assumeNotWindows();
@@ -149,7 +151,8 @@ public class TestFsDatasetCacheRevocation {
    * Test that when we have an uncache request, and the client refuses to
    * release the replica for a long time, we will un-mlock it.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testRevocation() throws Exception {
     assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
     assumeNotWindows();

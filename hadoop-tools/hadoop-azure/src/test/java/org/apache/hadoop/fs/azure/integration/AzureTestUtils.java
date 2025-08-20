@@ -27,7 +27,6 @@ import java.net.URI;
 import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.Assume;
 import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,8 +41,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX;
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_TEST_ACCOUNT_NAME_WITH_DOMAIN;
 import static org.apache.hadoop.fs.azure.integration.AzureTestConstants.*;
@@ -51,6 +48,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Utilities for the Azure tests. Based on {@code S3ATestUtils}, so
@@ -394,7 +392,7 @@ public final class AzureTestUtils extends Assertions {
     if (!condition) {
       LOG.warn(message);
     }
-    Assume.assumeTrue(message, condition);
+    assumeThat(condition).as(message).isTrue();
   }
 
   /**
@@ -495,8 +493,10 @@ public final class AzureTestUtils extends Assertions {
     if (accountName == null) {
       accountName = conf.get(WASB_TEST_ACCOUNT_NAME_WITH_DOMAIN);
     }
-    assumeTrue(accountName != null && !accountName.endsWith(WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX),
-        "Account for WASB is missing or it is not in correct format");
+    assumeThat(accountName)
+        .as("Account for WASB is missing or it is not in correct format")
+        .isNotNull()
+        .doesNotEndWith(WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX);
     return accountName;
   }
 
@@ -550,7 +550,8 @@ public final class AzureTestUtils extends Assertions {
    * Assume hierarchical namespace is disabled for test account.
    */
   public static void assumeNamespaceDisabled(Configuration conf) {
-    Assume.assumeFalse("Hierarchical namespace is enabled for test account.",
-        conf.getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false));
+    assumeThat(conf.getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false))
+        .as("Hierarchical namespace is enabled for test account.")
+        .isFalse();
   }
 }
