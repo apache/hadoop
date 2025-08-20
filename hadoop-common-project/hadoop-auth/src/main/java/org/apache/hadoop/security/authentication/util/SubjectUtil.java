@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.util;
+package org.apache.hadoop.security.authentication.util;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -32,44 +32,65 @@ import javax.security.auth.Subject;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 
+/**
+ * An utility class that adapt the Security Manager and APIs related to it for
+ * JDK 8 and above.
+ * <p>
+ * In JDK 17, the Security Manager and APIs related to it have been deprecated
+ * and are subject to removal in a future release. There is no replacement for
+ * the Security Manager. See <a href="https://openjdk.org/jeps/411">JEP 411</a>
+ * for discussion and alternatives.
+ * <p>
+ * In JDK 24, the Security Manager has been permanently disabled. See
+ * <a href="https://openjdk.org/jeps/486">JEP 486</a> for more information.
+ */
 @Private
-public class SubjectUtil {
-  private static MethodHandle CALL_AS;
-  private static MethodHandle CURRENT;
+public final class SubjectUtil {
+  private static final MethodHandle CALL_AS = lookupCallAs();
+  static final boolean HAS_CALL_AS = CALL_AS != null;
+  private static final MethodHandle DO_AS = HAS_CALL_AS ? null : lookupDoAs();
+  private static final MethodHandle DO_AS_THROW_EXCEPTION =
+      HAS_CALL_AS ? null : lookupDoAsThrowException();
+  private static final MethodHandle CURRENT = lookupCurrent();
 
-  static {
+  private static MethodHandle lookupCallAs() {
     MethodHandles.Lookup lookup = MethodHandles.lookup();
     try {
       try {
-        // Subject.doAs() is deprecated for removal and replaced by Subject.callAs().
-        // Lookup first the new API, since for Java versions where both exist, the
-        // new API delegates to the old API (e.g. Java 18, 19 and 20).
-        // Otherwise (e.g. Java 17), lookup the old API.
-        CALL_AS = lookup.findStatic(Subject.class, "callAs",
+        // Subject.callAs() is available since Java 18.
+        return lookup.findStatic(Subject.class, "callAs",
             MethodType.methodType(Object.class, Subject.class, Callable.class));
       } catch (NoSuchMethodException x) {
-        try {
-          // Lookup the old API.
-          MethodType oldSignature = MethodType.methodType(
-              Object.class, Subject.class, PrivilegedExceptionAction.class);
-          MethodHandle doAs = lookup.findStatic(Subject.class, "doAs", oldSignature);
-          // Convert the Callable used in the new API to the PrivilegedAction used
-          // in the old API.
-          MethodType convertSignature = MethodType.methodType(
-              PrivilegedExceptionAction.class, Callable.class);
-          MethodHandle converter = lookup.findStatic(
-              SubjectUtil.class, "callableToPrivilegedExceptionAction", convertSignature);
-          CALL_AS = MethodHandles.filterArguments(doAs, 1, converter);
-        } catch (NoSuchMethodException e) {
-          throw new AssertionError(e);
-        }
+        return null;
       }
     } catch (IllegalAccessException e) {
-      throw new AssertionError(e);
+      throw new ExceptionInInitializerError(e);
     }
   }
 
-  static {
+  private static MethodHandle lookupDoAs() {
+    MethodHandles.Lookup lookup = MethodHandles.lookup();
+    try {
+      MethodType signature = MethodType.methodType(
+          Object.class, Subject.class, PrivilegedAction.class);
+      return lookup.findStatic(Subject.class, "doAs", signature);
+    } catch (IllegalAccessException | NoSuchMethodException e) {
+      throw new ExceptionInInitializerError(e);
+    }
+  }
+
+  private static MethodHandle lookupDoAsThrowException() {
+    MethodHandles.Lookup lookup = MethodHandles.lookup();
+    try {
+      MethodType signature = MethodType.methodType(
+          Object.class, Subject.class, PrivilegedExceptionAction.class);
+      return lookup.findStatic(Subject.class, "doAs", signature);
+    } catch (IllegalAccessException | NoSuchMethodException e) {
+      throw new ExceptionInInitializerError(e);
+    }
+  }
+
+  private static MethodHandle lookupCurrent() {
     MethodHandles.Lookup lookup = MethodHandles.lookup();
     try {
       // Subject.getSubject(AccessControlContext) is deprecated for removal and
@@ -77,14 +98,14 @@ public class SubjectUtil {
       // Lookup first the new API, since for Java versions where both exists, the
       // new API delegates to the old API (e.g. Java 18, 19 and 20).
       // Otherwise (e.g. Java 17), lookup the old API.
-      CURRENT = lookup.findStatic(
+      return lookup.findStatic(
           Subject.class, "current", MethodType.methodType(Subject.class));
     } catch (NoSuchMethodException e) {
       MethodHandle getContext = lookupGetContext();
       MethodHandle getSubject = lookupGetSubject();
-      CURRENT = MethodHandles.filterReturnValue(getContext, getSubject);
+      return MethodHandles.filterReturnValue(getContext, getSubject);
     } catch (IllegalAccessException e) {
-      throw new AssertionError(e);
+      throw new ExceptionInInitializerError(e);
     }
   }
 
@@ -96,7 +117,7 @@ public class SubjectUtil {
       return lookup.findStatic(Subject.class,
           "getSubject", MethodType.methodType(Subject.class, contextKlass));
     } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
-      throw new AssertionError(e);
+      throw new ExceptionInInitializerError(e);
     }
   }
 
@@ -113,7 +134,7 @@ public class SubjectUtil {
       return lookup.findStatic(
           controllerKlass, "getContext", MethodType.methodType(contextKlass));
     } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
-      throw new AssertionError(e);
+      throw new ExceptionInInitializerError(e);
     }
   }
 
@@ -132,18 +153,26 @@ public class SubjectUtil {
    */
   @SuppressWarnings("unchecked")
   public static <T> T callAs(Subject subject, Callable<T> action) throws CompletionException {
-    try {
-      return (T) CALL_AS.invoke(subject, action);
-    } catch (PrivilegedActionException e) {
-      throw new CompletionException(e.getCause());
-    } catch (Throwable t) {
-      throw sneakyThrow(t);
+    if (HAS_CALL_AS) {
+      try {
+        return (T) CALL_AS.invoke(subject, action);
+      } catch (Throwable t) {
+        throw sneakyThrow(t);
+      }
+    } else {
+      try {
+        return (T) DO_AS.invoke(subject, callableToPrivilegedAction(action));
+      } catch (Exception e) {
+        throw new CompletionException(e);
+      } catch (Throwable t) {
+        throw sneakyThrow(t);
+      }
     }
   }
 
   /**
-   * Maps action to a Callable, and delegates to callAs(). On older JVMs, the
-   * action may be double wrapped (into Callable, and then back into
+   * Maps action to a Callable, and delegates to callAs(). On older JVMs,
+   * the action may be double wrapped (into Callable, and then back into
    * PrivilegedAction).
    *
    * @param subject the subject this action runs as
@@ -151,16 +180,26 @@ public class SubjectUtil {
    * @return the result of the action
    * @param <T> the type of the result
    */
+  @SuppressWarnings("unchecked")
   public static <T> T doAs(Subject subject, PrivilegedAction<T> action) {
-    try {
-      return callAs(subject, privilegedActionToCallable(action));
-    } catch (CompletionException ce) {
-      Throwable cause = ce.getCause();
-      if (cause != null) {
-        throw sneakyThrow(cause);
-      } else {
-        // This should never happen, as CompletionException should always wrap an exception
-        throw ce;
+    if (HAS_CALL_AS) {
+      try {
+        return callAs(subject, privilegedActionToCallable(action));
+      } catch (CompletionException ce) {
+        Throwable cause = ce.getCause();
+        if (cause != null) {
+          throw sneakyThrow(cause);
+        } else {
+          // This should never happen, CompletionException thrown by Subject.callAs
+          // should always wrap an exception
+          throw ce;
+        }
+      }
+    } else {
+      try {
+        return (T) DO_AS.invoke(subject, action);
+      } catch (Throwable t) {
+        throw sneakyThrow(t);
       }
     }
   }
@@ -177,18 +216,31 @@ public class SubjectUtil {
    *      The cause of the {@code PrivilegedActionException} is set to the exception
    *      thrown by {@code action.run()}.
    */
+  @SuppressWarnings("unchecked")
   public static <T> T doAs(
       Subject subject, PrivilegedExceptionAction<T> action) throws PrivilegedActionException {
-    try {
-      return callAs(subject, privilegedExceptionActionToCallable(action));
-    } catch (CompletionException ce) {
+    if (HAS_CALL_AS) {
       try {
-        Exception cause = (Exception) ce.getCause();
-        throw new PrivilegedActionException(cause);
-      } catch (ClassCastException castException) {
-        // This should never happen, as PrivilegedExceptionAction should not wrap
-        // non-checked exceptions
-        throw new PrivilegedActionException(new UndeclaredThrowableException(ce.getCause()));
+        return callAs(subject, privilegedExceptionActionToCallable(action));
+      } catch (CompletionException ce) {
+        try {
+          Exception cause = (Exception) ce.getCause();
+          if (cause instanceof RuntimeException) {
+            throw (RuntimeException) cause;
+          } else {
+            throw new PrivilegedActionException(cause);
+          }
+        } catch (ClassCastException castException) {
+          // This should never happen, as PrivilegedExceptionAction should not wrap
+          // non-checked exceptions
+          throw new PrivilegedActionException(new UndeclaredThrowableException(ce.getCause()));
+        }
+      }
+    } else {
+      try {
+        return (T) DO_AS_THROW_EXCEPTION.invoke(subject, action);
+      } catch (Throwable t) {
+        throw sneakyThrow(t);
       }
     }
   }
@@ -206,7 +258,17 @@ public class SubjectUtil {
     }
   }
 
-  @SuppressWarnings("unused")
+  private static <T> PrivilegedAction<T> callableToPrivilegedAction(
+      Callable<T> callable) {
+    return () -> {
+      try {
+        return callable.call();
+      } catch (Exception e) {
+        throw sneakyThrow(e);
+      }
+    };
+  }
+
   private static <T> PrivilegedExceptionAction<T> callableToPrivilegedExceptionAction(
       Callable<T> callable) {
     return callable::call;
@@ -222,8 +284,21 @@ public class SubjectUtil {
     return action::run;
   }
 
+  /**
+   * The sneaky throw concept allows the caller to throw any checked exception without
+   * defining it explicitly in the method signature.
+   * <p>
+   * See <a href="https://www.baeldung.com/java-sneaky-throws">"Sneaky Throws" in Java</a>
+   * for more details.
+   *
+   * @param e the exception that will be thrown.
+   * @return unreachable, the method always throws an exception before returning
+   * @param <E> the thrown exception type, trick the compiler into inferring it as
+   *      a {@code RuntimeException} type.
+   * @throws E the original exception passes by caller
+   */
   @SuppressWarnings("unchecked")
-  private static <E extends Throwable> RuntimeException sneakyThrow(Throwable e) throws E {
+  static <E extends Throwable> RuntimeException sneakyThrow(Throwable e) throws E {
     throw (E) e;
   }
 

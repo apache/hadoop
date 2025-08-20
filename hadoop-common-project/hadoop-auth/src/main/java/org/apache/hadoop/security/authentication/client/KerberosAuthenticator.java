@@ -19,7 +19,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.security.authentication.server.HttpConstants;
 import org.apache.hadoop.security.authentication.util.AuthToken;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
-import org.apache.hadoop.util.SubjectUtil;
+import org.apache.hadoop.security.authentication.util.SubjectUtil;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
