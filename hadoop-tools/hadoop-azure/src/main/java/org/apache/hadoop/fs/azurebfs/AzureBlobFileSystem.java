@@ -149,6 +149,10 @@ public class AzureBlobFileSystem extends FileSystem
   private URI uri;
   private Path workingDir;
   private AzureBlobFileSystemStore abfsStore;
+
+  /**
+   * Flag to indicate whether the file system is closed or not initiated.
+   */
   private boolean isClosed = true;
   private final String fileSystemId = UUID.randomUUID().toString();
 
