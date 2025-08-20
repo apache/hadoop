@@ -34,6 +34,12 @@ import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_ALGORITHM;
  */
 public final class ChecksumSupport {
 
+  /**
+   * Special checksum algorithm to declare that no checksum
+   * is required: {@value}.
+   */
+  public static final String NONE = "none";
+
   private ChecksumSupport() {
   }
 
@@ -58,7 +64,7 @@ public final class ChecksumSupport {
         CHECKSUM_ALGORITHM,
         ChecksumAlgorithm.class,
         configValue -> {
-          if (StringUtils.isBlank(configValue)) {
+          if (StringUtils.isBlank(configValue) || NONE.equalsIgnoreCase(configValue)) {
             return null;
           }
           if (ChecksumAlgorithm.CRC32_C.toString().equalsIgnoreCase(configValue)) {

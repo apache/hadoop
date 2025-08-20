@@ -484,6 +484,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Access the test bucket using central endpoint and"
         + " null region, perform file system CRUD operations");
     final Configuration conf = getConfiguration();
+    assumeStoreAwsHosted(getFileSystem());
 
     final Configuration newConf = new Configuration(conf);
 

@@ -409,6 +409,48 @@ affect the performance.
 </property>
 ```
 
+### <a name="content-sha-256"></a> Status Code 400 "XAmzContentSHA256Mismatch: The Content-SHA256 you specified did not match what we receive"
+
+Seen when working with a third-party store
+
+```
+org.apache.hadoop.fs.s3a.AWSBadRequestException: PUT 0-byte object  on test:
+software.amazon.awssdk.services.s3.model.S3Exception:
+The Content-SHA256 you specified did not match what we received
+(Service: S3, Status Code: 400, Request ID: 0c07c87d:196d43d824a:d7bca:eeb, Extended Request ID: 2af53adb49ffb141a32b534ad7ffbdf33a247f6b95b422011e0b109649d1fab7) (SDK Attempt Count: 1):
+XAmzContentSHA256Mismatch: The Content-SHA256 you specified did not match what we received
+```
+
+This happens when a file create checksum has been enabled but the store does not support it/support it consistently with AWS S3.
+
+```xml
+  <property>
+    <name>fs.s3a.create.checksum.algorithm</name>
+    <value>none</value>
+  </property>
+```
+
+### <a name="content-sha-256"></a> Status Code 400 "x-amz-sdk-checksum-algorithm specified, but no corresponding x-amz-checksum-* or x-amz-trailer headers were found"
+
+```
+org.apache.hadoop.fs.s3a.AWSBadRequestException: PUT 0-byte object  on test
+software.amazon.awssdk.services.s3.model.InvalidRequestException
+x-amz-sdk-checksum-algorithm specified, but no corresponding x-amz-checksum-* or x-amz-trailer headers were found.
+  (Service: S3, Status Code: 400, Request ID: 012929bd17000198c8bc82d20509eecd6df79b1a, Extended Request ID: P9bq0Iv) (SDK Attempt Count: 1):
+```
+
+The checksum algorithm to be used is not one supported by the store.
+In particular, the value `unknown_to_sdk_version` appears to cause it.
+
+```xml
+  <property>
+    <name>fs.s3a.create.checksum.algorithm</name>
+    <value>unknown_to_sdk_version</value>
+  </property>
+```
+
+
+
 ## <a name="access_denied"></a> Access Denied
 
 HTTP error codes 401 and 403 are mapped to `AccessDeniedException` in the S3A connector.

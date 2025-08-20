@@ -931,7 +931,7 @@ Here are some the S3A properties for use in production.
   <description>
     Indicates the algorithm used to create the checksum for the object
     to be uploaded to S3. Unset by default. It supports the following values:
-    'CRC32', 'CRC32C', 'SHA1', and 'SHA256'
+    'CRC32', 'CRC32C', 'SHA1', 'SHA256', "none"
   </description>
 </property>
 

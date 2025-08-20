@@ -53,9 +53,11 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.auth.ITestCustomSigner.CustomSignerInitializer.StoreValue;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
+import org.apache.hadoop.fs.s3a.impl.ChecksumSupport;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_VALIDATION;
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
@@ -218,6 +220,8 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     Configuration conf = createConfiguration();
 
     removeBaseAndBucketOverrides(conf,
+        CHECKSUM_ALGORITHM,
+        CHECKSUM_VALIDATION,
         CUSTOM_SIGNERS,
         SIGNING_ALGORITHM_S3,
         ENABLE_MULTI_DELETE);
@@ -233,7 +237,8 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     // Having the checksum algorithm in this test causes
     // x-amz-sdk-checksum-algorithm specified, but no corresponding
     // x-amz-checksum-* or x-amz-trailer headers were found
-    conf.unset(CHECKSUM_ALGORITHM);
+    conf.set(CHECKSUM_ALGORITHM, ChecksumSupport.NONE);
+    conf.setBoolean(CHECKSUM_VALIDATION, false);
 
     // make absolutely sure there is no caching.
     disableFilesystemCaching(conf);

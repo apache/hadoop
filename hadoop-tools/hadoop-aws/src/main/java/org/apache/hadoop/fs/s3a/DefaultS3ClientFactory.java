@@ -30,6 +30,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.awscore.util.AwsHostNameUtils;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
+import software.amazon.awssdk.core.checksums.ResponseChecksumValidation;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
@@ -41,6 +43,7 @@ import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
 import software.amazon.awssdk.metrics.LoggingMetricPublisher;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin;
+import software.amazon.awssdk.services.s3.LegacyMd5Plugin;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
@@ -202,11 +205,24 @@ public class DefaultS3ClientFactory extends Configured
 
     configureEndpointAndRegion(builder, parameters, conf);
 
+    // add a plugin to add a Content-MD5 header.
+    // this is required when performing some operations with third party stores
+    // (for example: bulk delete), and is harmless when working with AWS S3.
+    builder.addPlugin(LegacyMd5Plugin.create());
+
+    // do not do request checksums as this causes third-party store problems.
+    builder.requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED);
+
+    // response checksum validation. Slow, even with CRC32 checksums.
+    if (parameters.isChecksumValidationEnabled()) {
+      builder.responseChecksumValidation(ResponseChecksumValidation.WHEN_SUPPORTED);
+    }
+
+
     maybeApplyS3AccessGrantsConfigurations(builder, conf);
 
     S3Configuration serviceConfiguration = S3Configuration.builder()
         .pathStyleAccessEnabled(parameters.isPathStyleAccess())
-        .checksumValidationEnabled(parameters.isChecksumValidationEnabled())
         .build();
 
     final ClientOverrideConfiguration.Builder override =
