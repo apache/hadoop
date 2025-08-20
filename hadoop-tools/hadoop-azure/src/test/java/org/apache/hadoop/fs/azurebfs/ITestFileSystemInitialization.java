@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.EnumSet;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -27,14 +29,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 
 import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_AVAILABLE;
 import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME;
 import static org.apache.hadoop.fs.CommonPathCapabilities.FS_ACLS;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
-import static org.junit.Assume.assumeTrue;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_INVALID_ABFS_STATE;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test AzureBlobFileSystem initialization.
@@ -105,5 +113,107 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
             ETAGS_PRESERVED_IN_RENAME, etagsAcrossRename,
             FS_ACLS, acls, fs)
         .isEqualTo(acls);
+  }
+
+  /**
+   * Test that the AzureBlobFileSystem close without init works
+   * @throws Exception if an error occurs
+   */
+  @Test
+  public void testABFSCloseWithoutInit() throws Exception {
+    AzureBlobFileSystem fs = new AzureBlobFileSystem();
+    Assertions.assertThat(fs.isClosed()).isTrue();
+    fs.close();
+    fs.initialize(this.getFileSystem().getUri(), getRawConfiguration());
+    Assertions.assertThat(fs.isClosed()).isFalse();
+    fs.close();
+    Assertions.assertThat(fs.isClosed()).isTrue();
+  }
+
+  /**
+   * Test that the AzureBlobFileSystem throws an exception
+   * when trying to perform an operation without initialization.
+   * @throws Exception if an error occurs
+   */
+  @Test
+  public void testABFSUninitializedFileSystem() throws Exception {
+    AzureBlobFileSystem fs = new AzureBlobFileSystem();
+    Assertions.assertThat(fs.isClosed()).isTrue();
+    Path testPath = new Path("testPath");
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        fs::toString);
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.open(testPath, ONE_MB));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.create(testPath, FsPermission.getDefault(), false, ONE_MB,
+            fs.getDefaultReplication(testPath), ONE_MB, null));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.createNonRecursive(testPath, FsPermission.getDefault(), false, ONE_MB,
+            fs.getDefaultReplication(testPath), ONE_MB, null));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.append(testPath, ONE_MB, null));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.rename(testPath, testPath));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.delete(testPath, true));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.listStatus(testPath));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.mkdirs(testPath, FsPermission.getDefault()));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.getFileStatus(testPath));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.breakLease(testPath));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.makeQualified(testPath));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.setOwner(testPath, EMPTY_STRING, EMPTY_STRING));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.setXAttr(testPath, "xattr", new byte[0],
+            EnumSet.of(XAttrSetFlag.CREATE)));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.getXAttr(testPath, "xattr"));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.setPermission(testPath, FsPermission.getDefault()));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.modifyAclEntries(testPath, new ArrayList<>()));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.removeAclEntries(testPath, new ArrayList<>()));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.removeDefaultAcl(testPath));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.removeAcl(testPath));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.setAcl(testPath, new ArrayList<>()));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.getAclStatus(testPath));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.access(testPath, FsAction.ALL));
+
+    intercept(IllegalStateException.class, ERR_INVALID_ABFS_STATE,
+        () -> fs.exists(testPath));
   }
 }
