@@ -126,7 +126,9 @@ public class SubjectUtil {
    * @param action  the action to run
    * @return the result of the action
    * @param <T> the type of the result
-   * @throws CompletionException
+   * @throws CompletionException if {@code action.call()} throws an exception.
+   *      The cause of the {@code CompletionException} is set to the exception
+   *      thrown by {@code action.call()}.
    */
   @SuppressWarnings("unchecked")
   public static <T> T callAs(Subject subject, Callable<T> action) throws CompletionException {
@@ -147,6 +149,7 @@ public class SubjectUtil {
    * @param subject the subject this action runs as
    * @param action action  the action to run
    * @return the result of the action
+   * @param <T> the type of the result
    */
   public static <T> T doAs(Subject subject, PrivilegedAction<T> action) {
     try {
@@ -164,12 +167,15 @@ public class SubjectUtil {
 
   /**
    * Maps action to a Callable, and delegates to callAs(). On older JVMs, the
-   * action may be double wrapped (into Callable, and then back into
-   * PrivilegedAction).
+   * action may be double wrapped (into Callable, and then back into PrivilegedAction).
    *
    * @param subject the subject this action runs as
    * @param action action  the action to run
    * @return the result of the action
+   * @param <T> the type of the result
+   * @throws PrivilegedActionException if {@code action.run()} throws an exception.
+   *      The cause of the {@code PrivilegedActionException} is set to the exception
+   *      thrown by {@code action.run()}.
    */
   public static <T> T doAs(
       Subject subject, PrivilegedExceptionAction<T> action) throws PrivilegedActionException {
@@ -177,7 +183,7 @@ public class SubjectUtil {
       return callAs(subject, privilegedExceptionActionToCallable(action));
     } catch (CompletionException ce) {
       try {
-        Exception cause = (Exception) (ce.getCause());
+        Exception cause = (Exception) ce.getCause();
         throw new PrivilegedActionException(cause);
       } catch (ClassCastException castException) {
         // This should never happen, as PrivilegedExceptionAction should not wrap
