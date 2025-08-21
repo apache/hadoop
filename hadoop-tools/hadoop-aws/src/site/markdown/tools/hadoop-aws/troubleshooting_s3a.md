@@ -1283,6 +1283,24 @@ When working with S3 Express store buckets (unlike standard S3 buckets), follow 
 
 2. This setting ensures that all pending MPUs are aborted before the directory object is deleted, which is a requirement specific to S3 Express store buckets.
 
+## Status Code: 200 + "PreconditionFailed: At least one of the pre-conditions you specified did not hold"
+
+```
+software.amazon.awssdk.services.s3.model.S3Exception: At least one of the pre-conditions you specified did not hold 
+(Service: S3, Status Code: 200, Request ID: 01a396cff3000198cc0439e40509a95e33467bdc, Extended Request ID: TZrsG8pBzlmXoV) (SDK Attempt Count: 1):
+PreconditionFailed: At least one of the pre-conditions you specified did not hold
+```
+
+An attempt to write to S3Express bucket using conditional overwrite failed because another process was writing at the same time.
+
+Conditional overwrite during file creation is used when conditional creation has been enabled (`fs.s3a.create.conditional.enabled`).
+This is true by default.
+
+* A file is created using the `createFile()` API with the option `fs.option.create.conditional.overwrite` set to true.
+* File create performance has been enabled with (`fs.s3a.performance.flags` including `create` or being `*`)
+
+
+
 
 ### Application hangs after reading a number of files
 
