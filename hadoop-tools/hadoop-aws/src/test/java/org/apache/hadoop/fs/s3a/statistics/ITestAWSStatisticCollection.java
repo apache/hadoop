@@ -22,10 +22,16 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
+import static org.apache.hadoop.fs.s3a.Constants.S3EXPRESS_CREATE_SESSION;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_REQUEST;
+import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
 
 /**
  * Verify that AWS SDK statistics are wired up.
@@ -35,7 +41,10 @@ public class ITestAWSStatisticCollection extends AbstractS3ACostTest {
   @Override
   public Configuration createConfiguration() {
     final Configuration conf = super.createConfiguration();
-    conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, true);
+    S3ATestUtils.removeBaseAndBucketOverrides(conf,
+        S3EXPRESS_CREATE_SESSION);
+    setPerformanceFlags(conf, "create");
+    conf.setBoolean(S3EXPRESS_CREATE_SESSION, false);
     return conf;
   }
 
@@ -44,8 +53,11 @@ public class ITestAWSStatisticCollection extends AbstractS3ACostTest {
     describe("performing getFileStatus on a file");
     Path simpleFile = file(methodPath());
     // and repeat on the file looking at AWS wired up stats
-    verifyMetrics(() -> getFileSystem().getFileStatus(simpleFile),
-        with(STORE_IO_REQUEST, 1));
+    final S3AFileSystem fs = getFileSystem();
+    verifyMetrics(() -> fs.getFileStatus(simpleFile),
+        with(STORE_IO_REQUEST,
+            fs.hasPathCapability(new Path("/"), STORE_CAPABILITY_S3_EXPRESS_STORAGE)
+            ? 2 : 1));
   }
 
 }
