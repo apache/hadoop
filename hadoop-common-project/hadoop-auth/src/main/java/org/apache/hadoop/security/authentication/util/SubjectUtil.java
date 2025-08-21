@@ -176,7 +176,7 @@ public final class SubjectUtil {
    * action throw a checked exception.
    *
    * @param subject the subject this action runs as
-   * @param action action  the action to run
+   * @param action the action to run
    * @return the result of the action
    * @param <T> the type of the result
    */
@@ -209,7 +209,7 @@ public final class SubjectUtil {
    * Call Subject.doAs directly on older JVM.
    *
    * @param subject the subject this action runs as
-   * @param action action  the action to run
+   * @param action the action to run
    * @return the result of the action
    * @param <T> the type of the result
    * @throws PrivilegedActionException if {@code action.run()} throws an checked exception.
