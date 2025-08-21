@@ -128,7 +128,7 @@ public final class FileSystemConfigurations {
   public static final long DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS = 120;
 
   public static final boolean DEFAULT_ENABLE_READAHEAD = true;
-  public static final boolean DEFAULT_ENABLE_READAHEAD_V2 = false;
+  public static final boolean DEFAULT_ENABLE_READAHEAD_V2 = true;
   public static final boolean DEFAULT_ENABLE_READAHEAD_V2_DYNAMIC_SCALING = true;
   public static final int DEFAULT_READAHEAD_V2_MIN_THREAD_POOL_SIZE = -1;
   public static final int DEFAULT_READAHEAD_V2_MAX_THREAD_POOL_SIZE = -1;

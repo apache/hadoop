@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
@@ -47,14 +48,9 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
   public void testReadBufferManagerV2Init() throws Exception {
     assertThat(ReadBufferManagerV2.getInstance())
         .as("ReadBufferManager should be uninitialized").isNull();
-    intercept(IllegalStateException.class, "ReadBufferManagerV2 is not configured.", () -> {
-      ReadBufferManagerV2.getBufferManager();
-    });
-    ReadBufferManagerV2.setReadBufferManagerConfigs(
-        getConfiguration().getReadAheadBlockSize(), getConfiguration());
     // verify that multiple invocations of getBufferManager returns same instance.
-    ReadBufferManagerV2 bufferManager = ReadBufferManagerV2.getBufferManager();
-    ReadBufferManagerV2 bufferManager2 = ReadBufferManagerV2.getBufferManager();
+    ReadBufferManagerV2 bufferManager = ReadBufferManagerV2.getBufferManager(getConfiguration());
+    ReadBufferManagerV2 bufferManager2 = ReadBufferManagerV2.getBufferManager(getConfiguration());
     ReadBufferManagerV2 bufferManager3 = ReadBufferManagerV2.getInstance();
     assertThat(bufferManager).isNotNull();
     assertThat(bufferManager2).isNotNull();
@@ -78,8 +74,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING, true);
     try(AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getUri(), conf)) {
       AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
-      ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfiguration.getReadAheadBlockSize(), abfsConfiguration);
-      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
+      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(abfsConfiguration);
       assertThat(bufferManagerV2.getCpuMonitoringThread())
           .as("CPU Monitor thread should be initialized").isNotNull();
       bufferManagerV2.close();
@@ -88,8 +83,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING, false);
     try(AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getUri(), conf)) {
       AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
-      ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfiguration.getReadAheadBlockSize(), abfsConfiguration);
-      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
+      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(abfsConfiguration);
       assertThat(bufferManagerV2.getCpuMonitoringThread())
           .as("CPU Monitor thread should not be initialized").isNull();
       bufferManagerV2.close();
@@ -104,5 +98,18 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
   @Test
   public void testPrefetchAlreadyQueued() throws Exception {
 
+  }
+
+  @Test
+  public void demo() throws Exception {
+    Path testPath = new Path("/testReadBufferManagerV2.txt");
+    Configuration conf = new Configuration(getRawConfiguration());
+    AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getUri(), conf);
+    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getUri(), conf);
+    fs1.create(testPath);
+    AbfsInputStream stream1 = (AbfsInputStream) fs1.open(testPath).getWrappedStream();
+    AbfsInputStream stream2 = (AbfsInputStream) fs2.open(testPath).getWrappedStream();
+    int br = stream1.read();
+    br = stream2.read();
   }
 }

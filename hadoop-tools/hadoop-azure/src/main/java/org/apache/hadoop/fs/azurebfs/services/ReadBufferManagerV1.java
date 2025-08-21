@@ -52,7 +52,7 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
    * Sets the read buffer manager configurations.
    * @param readAheadBlockSize the size of the read-ahead block in bytes
    */
-  static void setReadBufferManagerConfigs(int readAheadBlockSize) {
+  public static void setReadBufferManagerConfigs(int readAheadBlockSize) {
     if (bufferManager == null) {
       LOGGER.debug(
           "ReadBufferManagerV1 not initialized yet. Overriding readAheadBlockSize as {}",
