@@ -21,7 +21,6 @@ package org.apache.hadoop.security.authentication.util;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -223,17 +222,14 @@ public final class SubjectUtil {
       try {
         return callAs(subject, privilegedExceptionActionToCallable(action));
       } catch (CompletionException ce) {
-        try {
-          Exception cause = (Exception) ce.getCause();
-          if (cause instanceof RuntimeException) {
-            throw (RuntimeException) cause;
-          } else {
-            throw new PrivilegedActionException(cause);
-          }
-        } catch (ClassCastException castException) {
-          // This should never happen, as PrivilegedExceptionAction should not wrap
-          // non-checked exceptions
-          throw new PrivilegedActionException(new UndeclaredThrowableException(ce.getCause()));
+        Throwable cause = ce.getCause();
+        if (cause instanceof RuntimeException) {
+          throw (RuntimeException) cause;
+        } else if (cause instanceof Exception) {
+          throw new PrivilegedActionException((Exception) cause);
+        } else {
+          // This should never happen, CompletionException should only wraps an exception
+          throw sneakyThrow(cause);
         }
       }
     } else {
