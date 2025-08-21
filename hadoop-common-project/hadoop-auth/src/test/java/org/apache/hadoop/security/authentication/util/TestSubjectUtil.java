@@ -130,6 +130,11 @@ public class TestSubjectUtil {
     assertInstanceOf(LinkageError.class, e);
     assertEquals("Dummy LinkageError", e.getMessage());
     assertNull(e.getCause());
+
+    // throw NPE when action is NULL
+    assertThrows(NullPointerException.class, () ->
+        SubjectUtil.doAs(SubjectUtil.current(), (PrivilegedAction<Object>) null)
+    );
   }
 
   @Test
@@ -206,6 +211,11 @@ public class TestSubjectUtil {
     assertInstanceOf(LinkageError.class, e);
     assertEquals("Dummy LinkageError", e.getMessage());
     assertNull(e.getCause());
+
+    // throw NPE when action is NULL
+    assertThrows(NullPointerException.class, () ->
+        SubjectUtil.doAs(SubjectUtil.current(), (PrivilegedExceptionAction<Object>) null)
+    );
   }
 
   @Test
@@ -307,6 +317,11 @@ public class TestSubjectUtil {
     assertInstanceOf(LinkageError.class, e);
     assertEquals("Dummy LinkageError", e.getMessage());
     assertNull(e.getCause());
+
+    // throw NPE when action is NULL
+    assertThrows(NullPointerException.class, () ->
+        SubjectUtil.callAs(SubjectUtil.current(), null)
+    );
   }
 
   @Test

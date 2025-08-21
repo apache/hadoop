@@ -24,6 +24,7 @@ import java.lang.invoke.MethodType;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionException;
 
@@ -144,12 +145,14 @@ public final class SubjectUtil {
    * @param action  the action to run
    * @return the result of the action
    * @param <T> the type of the result
+   * @throws NullPointerException if action is null
    * @throws CompletionException if {@code action.call()} throws an exception.
    *      The cause of the {@code CompletionException} is set to the exception
    *      thrown by {@code action.call()}.
    */
   @SuppressWarnings("unchecked")
   public static <T> T callAs(Subject subject, Callable<T> action) throws CompletionException {
+    Objects.requireNonNull(action);
     if (HAS_CALL_AS) {
       try {
         return (T) CALL_AS.invoke(subject, action);
@@ -178,9 +181,11 @@ public final class SubjectUtil {
    * @param action the action to run
    * @return the result of the action
    * @param <T> the type of the result
+   * @throws NullPointerException if action is null
    */
   @SuppressWarnings("unchecked")
   public static <T> T doAs(Subject subject, PrivilegedAction<T> action) {
+    Objects.requireNonNull(action);
     if (HAS_CALL_AS) {
       try {
         return callAs(subject, privilegedActionToCallable(action));
@@ -211,6 +216,7 @@ public final class SubjectUtil {
    * @param action the action to run
    * @return the result of the action
    * @param <T> the type of the result
+   * @throws NullPointerException if action is null
    * @throws PrivilegedActionException if {@code action.run()} throws an checked exception.
    *      The cause of the {@code PrivilegedActionException} is set to the exception thrown
    *      by {@code action.run()}.
@@ -218,6 +224,7 @@ public final class SubjectUtil {
   @SuppressWarnings("unchecked")
   public static <T> T doAs(
       Subject subject, PrivilegedExceptionAction<T> action) throws PrivilegedActionException {
+    Objects.requireNonNull(action);
     if (HAS_CALL_AS) {
       try {
         return callAs(subject, privilegedExceptionActionToCallable(action));
