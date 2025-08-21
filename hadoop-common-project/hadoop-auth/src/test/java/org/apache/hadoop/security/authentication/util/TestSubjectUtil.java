@@ -42,24 +42,72 @@ public class TestSubjectUtil {
 
   @Test
   void testDoAsPrivilegedActionExceptionPropagation() {
-    // always throw the original exception thrown by action
-    Throwable e = assertThrows(IllegalArgumentException.class, () ->
-      SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedAction<>() {
-        @Override
-        public Object run() {
-          RuntimeException innerE = new RuntimeException("Inner Dummy RuntimeException");
-          throw new IllegalArgumentException("Dummy IllegalArgumentException", innerE);
-        }
-      })
+    // in Java 12 onwards, always throw the original exception thrown by action;
+    // in lower Java versions, throw a PrivilegedActionException that wraps the
+    // original exception when action throws a checked exception
+    Throwable e = assertThrows(Exception.class, () ->
+        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedAction<Object>() {
+          @Override
+          public Object run() {
+            RuntimeException innerE = new RuntimeException("Inner Dummy RuntimeException");
+            throw SubjectUtil.sneakyThrow(new IOException("Dummy IOException", innerE));
+          }
+        })
     );
-    assertInstanceOf(IllegalArgumentException.class, e);
-    assertEquals("Dummy IllegalArgumentException", e.getMessage());
-    assertInstanceOf(RuntimeException.class, e.getCause());
-    assertEquals("Inner Dummy RuntimeException", e.getCause().getMessage());
-    assertNull(e.getCause().getCause());
+    if (JAVA_SPEC_VER > 11) {
+      assertInstanceOf(IOException.class, e);
+      assertEquals("Dummy IOException", e.getMessage());
+      assertInstanceOf(RuntimeException.class, e.getCause());
+      assertEquals("Inner Dummy RuntimeException", e.getCause().getMessage());
+      assertNull(e.getCause().getCause());
+    } else {
+      assertInstanceOf(PrivilegedActionException.class, e);
+      assertNull(e.getMessage());
+      assertInstanceOf(IOException.class, e.getCause());
+      assertEquals("Dummy IOException", e.getCause().getMessage());
+      assertInstanceOf(RuntimeException.class, e.getCause().getCause());
+      assertEquals("Inner Dummy RuntimeException", e.getCause().getCause().getMessage());
+      assertNull(e.getCause().getCause().getCause());
+    }
 
+    // same as above case because PrivilegedActionException is a checked exception
+    e = assertThrows(PrivilegedActionException.class, () ->
+        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedAction<Object>() {
+          @Override
+          public Object run() {
+            throw SubjectUtil.sneakyThrow(new PrivilegedActionException(null));
+          }
+        })
+    );
+    if (JAVA_SPEC_VER > 11) {
+      assertInstanceOf(PrivilegedActionException.class, e);
+      assertNull(e.getMessage());
+      assertNull(e.getCause());
+    } else {
+      assertInstanceOf(PrivilegedActionException.class, e);
+      assertNull(e.getMessage());
+      assertInstanceOf(PrivilegedActionException.class, e.getCause());
+      assertNull(e.getCause().getMessage());
+      assertNull(e.getCause().getCause());
+    }
+
+    // throw a PrivilegedActionException that wraps the original exception when action throws
+    // a runtime exception
+    e = assertThrows(RuntimeException.class, () ->
+        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedAction<Object>() {
+          @Override
+          public Object run() {
+            throw new RuntimeException("Dummy RuntimeException");
+          }
+        })
+    );
+    assertInstanceOf(RuntimeException.class, e);
+    assertEquals("Dummy RuntimeException", e.getMessage());
+    assertNull(e.getCause());
+
+    // same as above case because CompletionException is a runtime exception
     e = assertThrows(CompletionException.class, () ->
-        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedAction<>() {
+        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedAction<Object>() {
           @Override
           public Object run() {
             throw new CompletionException("Dummy CompletionException", null);
@@ -70,8 +118,9 @@ public class TestSubjectUtil {
     assertEquals("Dummy CompletionException", e.getMessage());
     assertNull(e.getCause());
 
+    // throw the original error when action throws an error
     e = assertThrows(LinkageError.class, () ->
-        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedAction<>() {
+        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedAction<Object>() {
           @Override
           public Object run() {
             throw new LinkageError("Dummy LinkageError");
@@ -85,10 +134,10 @@ public class TestSubjectUtil {
 
   @Test
   void testDoAsPrivilegedExceptionActionExceptionPropagation() {
-    // throw PrivilegedActionException that wrap the original exception when action throw
+    // throw PrivilegedActionException that wraps the original exception when action throws
     // a checked exception
     Throwable e = assertThrows(PrivilegedActionException.class, () ->
-        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedExceptionAction<>() {
+        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedExceptionAction<Object>() {
           @Override
           public Object run() throws Exception {
             RuntimeException innerE = new RuntimeException("Inner Dummy RuntimeException");
@@ -104,36 +153,9 @@ public class TestSubjectUtil {
     assertEquals("Inner Dummy RuntimeException", e.getCause().getCause().getMessage());
     assertNull(e.getCause().getCause().getCause());
 
-    // the original exception when action throw a runtime exception
-    e = assertThrows(RuntimeException.class, () ->
-        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedExceptionAction<>() {
-          @Override
-          public Object run() throws Exception {
-            throw new RuntimeException("Dummy RuntimeException");
-          }
-        })
-    );
-    assertInstanceOf(RuntimeException.class, e);
-    assertEquals("Dummy RuntimeException", e.getMessage());
-    assertNull(e.getCause());
-
-    // CompletionException is subclass of RuntimeException, same as above case
-    e = assertThrows(CompletionException.class, () ->
-        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedExceptionAction<>() {
-          @Override
-          public Object run() throws Exception {
-            throw new CompletionException(null);
-          }
-        })
-    );
-    assertInstanceOf(CompletionException.class, e);
-    assertNull(e.getMessage());
-    assertNull(e.getCause());
-
-    // wrap a PrivilegedActionException when action throws a PrivilegedActionException, because
-    // PrivilegedActionException is a checked exception
+    // same as above because PrivilegedActionException is a checked exception
     e = assertThrows(PrivilegedActionException.class, () ->
-        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedExceptionAction<>() {
+        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedExceptionAction<Object>() {
           @Override
           public Object run() throws Exception {
             throw new PrivilegedActionException(null);
@@ -146,9 +168,35 @@ public class TestSubjectUtil {
     assertNull(e.getCause().getMessage());
     assertNull(e.getCause().getCause());
 
-    // throw original error when action throw an error that is not the subclass of Exception
+    // throw the original exception when action throw a runtime exception
+    e = assertThrows(RuntimeException.class, () ->
+        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            throw new RuntimeException("Dummy RuntimeException");
+          }
+        })
+    );
+    assertInstanceOf(RuntimeException.class, e);
+    assertEquals("Dummy RuntimeException", e.getMessage());
+    assertNull(e.getCause());
+
+    // same as above case because CompletionException is a runtime exception
+    e = assertThrows(CompletionException.class, () ->
+        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            throw new CompletionException(null);
+          }
+        })
+    );
+    assertInstanceOf(CompletionException.class, e);
+    assertNull(e.getMessage());
+    assertNull(e.getCause());
+
+    // throw the original error when action throw an error
     e = assertThrows(LinkageError.class, () ->
-        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedExceptionAction<>() {
+        SubjectUtil.doAs(SubjectUtil.current(), new PrivilegedExceptionAction<Object>() {
           @Override
           public Object run() throws Exception {
             throw new LinkageError("Dummy LinkageError");
@@ -162,10 +210,10 @@ public class TestSubjectUtil {
 
   @Test
   void testCallAsExceptionPropagation() {
-    // throw PrivilegedActionException that wrap the original exception when action throws
-    // an error that is the subclass of Exception. try checked exception
+    // always throw a CompletionException that wraps the original exception, when action throw
+    // a checked or runtime exception
     Throwable e = assertThrows(CompletionException.class, () ->
-        SubjectUtil.callAs(SubjectUtil.current(), new Callable<>() {
+        SubjectUtil.callAs(SubjectUtil.current(), new Callable<Object>() {
           @Override
           public Object call() throws Exception {
             RuntimeException innerE = new RuntimeException("Inner Dummy RuntimeException");
@@ -174,16 +222,54 @@ public class TestSubjectUtil {
         })
     );
     assertInstanceOf(CompletionException.class, e);
-    assertEquals("java.io.IOException: Dummy IOException", e.getMessage());
-    assertInstanceOf(IOException.class, e.getCause());
-    assertEquals("Dummy IOException", e.getCause().getMessage());
-    assertInstanceOf(RuntimeException.class, e.getCause().getCause());
-    assertEquals("Inner Dummy RuntimeException", e.getCause().getCause().getMessage());
-    assertNull(e.getCause().getCause().getCause());
+    if (JAVA_SPEC_VER > 11) {
+      assertEquals("java.io.IOException: Dummy IOException", e.getMessage());
+      assertInstanceOf(IOException.class, e.getCause());
+      assertEquals("Dummy IOException", e.getCause().getMessage());
+      assertInstanceOf(RuntimeException.class, e.getCause().getCause());
+      assertEquals("Inner Dummy RuntimeException", e.getCause().getCause().getMessage());
+      assertNull(e.getCause().getCause().getCause());
+    } else {
+      assertEquals(
+          "java.security.PrivilegedActionException: java.io.IOException: Dummy IOException",
+          e.getMessage());
+      assertInstanceOf(PrivilegedActionException.class, e.getCause());
+      assertNull(e.getCause().getMessage());
+      assertInstanceOf(IOException.class, e.getCause().getCause());
+      assertEquals("Dummy IOException", e.getCause().getCause().getMessage());
+      assertInstanceOf(RuntimeException.class, e.getCause().getCause().getCause());
+      assertEquals("Inner Dummy RuntimeException",
+          e.getCause().getCause().getCause().getMessage());
+      assertNull(e.getCause().getCause().getCause().getCause());
+    }
 
-    // same as above, try runtime exception
     e = assertThrows(CompletionException.class, () ->
-        SubjectUtil.callAs(SubjectUtil.current(), new Callable<>() {
+        SubjectUtil.callAs(SubjectUtil.current(), new Callable<Object>() {
+          @Override
+          public Object call() throws Exception {
+            throw new PrivilegedActionException(null);
+          }
+        })
+    );
+    assertInstanceOf(CompletionException.class, e);
+    if (JAVA_SPEC_VER > 11) {
+      assertEquals("java.security.PrivilegedActionException", e.getMessage());
+      assertInstanceOf(PrivilegedActionException.class, e.getCause());
+      assertNull(e.getCause().getMessage());
+      assertNull(e.getCause().getCause());
+    } else {
+      assertEquals(
+          "java.security.PrivilegedActionException: java.security.PrivilegedActionException",
+          e.getMessage());
+      assertInstanceOf(PrivilegedActionException.class, e.getCause());
+      assertNull(e.getCause().getMessage());
+      assertInstanceOf(PrivilegedActionException.class, e.getCause().getCause());
+      assertNull(e.getCause().getCause().getMessage());
+      assertNull(e.getCause().getCause().getCause());
+    }
+
+    e = assertThrows(CompletionException.class, () ->
+        SubjectUtil.callAs(SubjectUtil.current(), new Callable<Object>() {
           @Override
           public Object call() throws Exception {
             throw new RuntimeException("Dummy RuntimeException");
@@ -196,24 +282,22 @@ public class TestSubjectUtil {
     assertEquals("Dummy RuntimeException", e.getCause().getMessage());
     assertNull(e.getCause().getCause());
 
-    // wrap a CompletionException even the action throws a PrivilegedActionException
     e = assertThrows(CompletionException.class, () ->
-        SubjectUtil.callAs(SubjectUtil.current(), new Callable<>() {
+        SubjectUtil.callAs(SubjectUtil.current(), new Callable<Object>() {
           @Override
           public Object call() throws Exception {
-            throw new PrivilegedActionException(null);
+            throw new CompletionException(null);
           }
         })
     );
     assertInstanceOf(CompletionException.class, e);
-    assertEquals("java.security.PrivilegedActionException", e.getMessage());
-    assertInstanceOf(PrivilegedActionException.class, e.getCause());
+    assertEquals("java.util.concurrent.CompletionException", e.getMessage());
+    assertInstanceOf(CompletionException.class, e.getCause());
     assertNull(e.getCause().getMessage());
-    assertNull(e.getCause().getCause());
 
-    // throw original error when action throw an error that is not the subclass of Exception
+    // throw original error when action throw an error
     e = assertThrows(LinkageError.class, () ->
-        SubjectUtil.callAs(SubjectUtil.current(), new Callable<>() {
+        SubjectUtil.callAs(SubjectUtil.current(), new Callable<Object>() {
           @Override
           public Object call() throws Exception {
             throw new LinkageError("Dummy LinkageError");

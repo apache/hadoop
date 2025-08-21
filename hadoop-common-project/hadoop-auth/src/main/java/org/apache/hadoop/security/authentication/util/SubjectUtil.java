@@ -139,9 +139,7 @@ public final class SubjectUtil {
   }
 
   /**
-   * Maps to Subject.callAs() if available, otherwise maps to Subject.doAs().
-   * It also wraps the Callable so that the Subject is propagated to the new thread
-   * in all Java versions.
+   * Map to Subject.callAs() if available, otherwise maps to Subject.doAs().
    *
    * @param subject the subject this action runs as
    * @param action  the action to run
@@ -161,19 +159,21 @@ public final class SubjectUtil {
       }
     } else {
       try {
-        return (T) DO_AS.invoke(subject, callableToPrivilegedAction(action));
+        return doAs(subject, callableToPrivilegedAction(action));
       } catch (Exception e) {
         throw new CompletionException(e);
-      } catch (Throwable t) {
-        throw sneakyThrow(t);
       }
     }
   }
 
   /**
-   * Maps action to a Callable, and delegates to callAs(). On older JVMs,
-   * the action may be double wrapped (into Callable, and then back into
-   * PrivilegedAction).
+   * Map action to a Callable on Java 18 onwards, and delegates to callAs().
+   * Call Subject.doAs directly on older JVM.
+   * <p>
+   * Note: Exception propagation behavior is different since Java 12, it always
+   * throw the original exception thrown by action; for lower Java versions,
+   * throw a PrivilegedActionException that wraps the original exception when
+   * action throw a checked exception.
    *
    * @param subject the subject this action runs as
    * @param action action  the action to run
@@ -205,16 +205,16 @@ public final class SubjectUtil {
   }
 
   /**
-   * Maps action to a Callable, and delegates to callAs(). On older JVMs, the
-   * action may be double wrapped (into Callable, and then back into PrivilegedAction).
+   * Maps action to a Callable on Java 18 onwards, and delegates to callAs().
+   * Call Subject.doAs directly on older JVM.
    *
    * @param subject the subject this action runs as
    * @param action action  the action to run
    * @return the result of the action
    * @param <T> the type of the result
-   * @throws PrivilegedActionException if {@code action.run()} throws an exception.
-   *      The cause of the {@code PrivilegedActionException} is set to the exception
-   *      thrown by {@code action.run()}.
+   * @throws PrivilegedActionException if {@code action.run()} throws an checked exception.
+   *      The cause of the {@code PrivilegedActionException} is set to the exception thrown
+   *      by {@code action.run()}.
    */
   @SuppressWarnings("unchecked")
   public static <T> T doAs(
@@ -267,11 +267,6 @@ public final class SubjectUtil {
         throw sneakyThrow(e);
       }
     };
-  }
-
-  private static <T> PrivilegedExceptionAction<T> callableToPrivilegedExceptionAction(
-      Callable<T> callable) {
-    return callable::call;
   }
 
   private static <T> Callable<T> privilegedExceptionActionToCallable(
