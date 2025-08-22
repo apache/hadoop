@@ -539,6 +539,7 @@ class DataStreamer extends Daemon {
   protected final LoadingCache<DatanodeInfo, DatanodeInfo> excludedNodes;
   private final String[] favoredNodes;
   private final EnumSet<AddBlockFlag> addBlockFlags;
+  private volatile boolean endBlockFlag = false;
 
   private DataStreamer(HdfsFileStatus stat, ExtendedBlock block,
                        DFSClient dfsClient, String src,
@@ -2284,5 +2285,13 @@ class DataStreamer extends Daemon {
     final ExtendedBlock extendedBlock = block.getCurrentBlock();
     return extendedBlock == null ?
         "block==null" : "" + extendedBlock.getLocalBlock();
+  }
+
+  public boolean isEndBlockFlag() {
+    return endBlockFlag;
+  }
+
+  public void setEndBlockFlag(boolean endBlockFlag) {
+    this.endBlockFlag = endBlockFlag;
   }
 }

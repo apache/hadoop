@@ -73,6 +73,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_EC_WRITE_ALLOW_END_BLOCKGROUP_INADVANCE;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_EC_WRITE_ALLOW_END_BLOCKGROUP_INADVANCE_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.ECRedundancy.DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.ECRedundancy.DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED_DEFAILT;
 
@@ -287,6 +289,8 @@ public class DFSStripedOutputStream extends DFSOutputStream
   private int blockGroupIndex;
   private long datanodeRestartTimeout;
   private final int failedBlocksTolerated;
+  private final boolean allowEndBlockGroupInAdvance;
+  private boolean endBlockGroupInAdvance;
 
   /** Construct a new output stream for creating a file. */
   DFSStripedOutputStream(DFSClient dfsClient, String src, HdfsFileStatus stat,
@@ -335,6 +339,9 @@ public class DFSStripedOutputStream extends DFSOutputStream
     }
     failedBlocksTolerated = Math.min(failedBlocksToleratedTmp,
         ecPolicy.getNumParityUnits());
+    allowEndBlockGroupInAdvance = dfsClient.getConfiguration().getBoolean(
+        DFS_CLIENT_EC_WRITE_ALLOW_END_BLOCKGROUP_INADVANCE,
+        DFS_CLIENT_EC_WRITE_ALLOW_END_BLOCKGROUP_INADVANCE_DEFAULT);
   }
 
   /** Construct a new output stream for appending to a file. */
@@ -420,6 +427,16 @@ public class DFSStripedOutputStream extends DFSOutputStream
       throw new IOException("Failed: the number of failed blocks = "
           + failCount + " > the number of failed blocks tolerated = "
           + failedBlocksTolerated);
+    }
+    return newFailed;
+  }
+
+  private Set<StripedDataStreamer> checkStreamersWithoutThrowException() {
+    Set<StripedDataStreamer> newFailed = new HashSet<>();
+    for(StripedDataStreamer s : streamers) {
+      if (!s.isHealthy() && !failedStreamers.contains(s)) {
+        newFailed.add(s);
+      }
     }
     return newFailed;
   }
@@ -559,6 +576,34 @@ public class DFSStripedOutputStream extends DFSOutputStream
         currentBlockGroup.getNumBytes() == blockSize * numDataBlocks;
   }
 
+  private boolean shouldEndBlockGroupInAdvance() {
+    if (!allowEndBlockGroupInAdvance) {
+      return false;
+    }
+    Set<StripedDataStreamer> newFailed = checkStreamersWithoutThrowException();
+    boolean overFailedStreamer =
+        failedStreamers.size() + newFailed.size() >= failedBlocksTolerated;
+    boolean stripeFull = currentBlockGroup.getNumBytes() > 0 &&
+        currentBlockGroup.getNumBytes() % ((long) numDataBlocks * cellSize) == 0;
+    if (overFailedStreamer && stripeFull) {
+      LOG.info("Block group {} ends in advance.", currentBlockGroup);
+      this.endBlockGroupInAdvance = true;
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  void endBlock() throws IOException {
+    if (getStreamer().getBytesCurBlock() == blockSize || getStreamer().isEndBlockFlag()) {
+      setCurrentPacketToEmpty();
+      enqueueCurrentPacket();
+      getStreamer().setBytesCurBlock(0);
+      getStreamer().setEndBlockFlag(false);
+      lastFlushOffset = 0;
+    }
+  }
+
   @Override
   protected synchronized void writeChunk(byte[] bytes, int offset, int len,
       byte[] checksum, int ckoff, int cklen) throws IOException {
@@ -566,8 +611,9 @@ public class DFSStripedOutputStream extends DFSOutputStream
     final int pos = cellBuffers.addTo(index, bytes, offset, len);
     final boolean cellFull = pos == cellSize;
 
-    if (currentBlockGroup == null || shouldEndBlockGroup()) {
-      // the incoming data should belong to a new block. Allocate a new block.
+    if (currentBlockGroup == null || shouldEndBlockGroup() || endBlockGroupInAdvance) {
+      this.endBlockGroupInAdvance = false;
+      // The incoming data should belong to a new block. Allocate a new block.
       allocateNewBlock();
     }
 
@@ -596,13 +642,14 @@ public class DFSStripedOutputStream extends DFSOutputStream
         next = 0;
 
         // if this is the end of the block group, end each internal block
-        if (shouldEndBlockGroup()) {
+        if (shouldEndBlockGroup() || shouldEndBlockGroupInAdvance()) {
           flushAllInternals();
           checkStreamerFailures(false);
           for (int i = 0; i < numAllBlocks; i++) {
             final StripedDataStreamer s = setCurrentStreamer(i);
             if (s.isHealthy()) {
               try {
+                getStreamer().setEndBlockFlag(true);
                 endBlock();
               } catch (IOException ignored) {}
             }

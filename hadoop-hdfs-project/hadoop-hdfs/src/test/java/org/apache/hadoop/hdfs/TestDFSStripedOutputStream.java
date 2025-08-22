@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_EC_WRITE_ALLOW_END_BLOCKGROUP_INADVANCE;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -189,6 +190,16 @@ public class TestDFSStripedOutputStream {
         blockSize * dataBlocks * 3 + cellSize * dataBlocks
         + cellSize + 123);
   }
+
+  @Test
+  public void testEndBlockGroupInadvance() throws Exception {
+    Configuration config = new Configuration();
+    config.setBoolean(DFS_CLIENT_EC_WRITE_ALLOW_END_BLOCKGROUP_INADVANCE, true);
+    DFSClient client =
+        new DFSClient(cluster.getNameNode(0).getNameNodeAddress(), config);
+    DFSClient spyClient = Mockito.spy(client);
+  }
+
 
   /**
    * {@link DFSStripedOutputStream} doesn't support hflush() or hsync() yet.

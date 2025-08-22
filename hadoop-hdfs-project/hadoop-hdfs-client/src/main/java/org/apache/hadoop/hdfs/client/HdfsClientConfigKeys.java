@@ -296,6 +296,10 @@ public interface HdfsClientConfigKeys {
   int DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT =
       DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT * 10;
 
+  String DFS_CLIENT_EC_WRITE_ALLOW_END_BLOCKGROUP_INADVANCE =
+      "dfs.client.ec.write.allow.end.blockgroup.inadvance";
+  boolean DFS_CLIENT_EC_WRITE_ALLOW_END_BLOCKGROUP_INADVANCE_DEFAULT = false;
+
   /**
    * These are deprecated config keys to client code.
    */
