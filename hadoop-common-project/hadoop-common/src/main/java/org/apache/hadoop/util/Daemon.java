@@ -18,16 +18,14 @@
 
 package org.apache.hadoop.util;
 
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
+import java.security.PrivilegedAction;
 import java.util.concurrent.ThreadFactory;
 
 import javax.security.auth.Subject;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.security.authentication.util.SubjectUtil;
 
 /** A thread that has called {@link Thread#setDaemon(boolean) } with true.
  * 
@@ -43,12 +41,12 @@ public class Daemon extends Thread {
 
   Subject startSubject;
   
-  @Override
-  public final void start() {
-    AccessControlContext context = AccessController.getContext();
-    startSubject = Subject.getSubject(context);
-    super.start();
-  }
+//To be replaced with this in the next JDK24 patch:
+ @Override
+ public final void start() {
+   startSubject = SubjectUtil.current();
+   super.start();
+ }
   
   /**
    * Override this instead of run()
@@ -59,11 +57,10 @@ public class Daemon extends Thread {
   
   @Override
   public final void run() {
-    try {
-      Subject.doAs(startSubject, new PrivilegedExceptionAction<Void>() {
+      SubjectUtil.doAs(startSubject, new PrivilegedAction<Void>() {
 
         @Override
-        public Void run() throws Exception {
+        public Void run() {
           if (runnable != null) {
             runnable.run();
           } else {
@@ -73,16 +70,6 @@ public class Daemon extends Thread {
         }
 
       });
-    } catch (PrivilegedActionException ce) {
-      Throwable t = ce.getCause();
-      if (t instanceof RuntimeException) {
-        throw (RuntimeException) t;
-      } else if (t instanceof Error) {
-        throw (Error) t;
-      } else {
-        throw new RuntimeException("Unexpected exception", t);
-      }
-    }
   }
   
   {

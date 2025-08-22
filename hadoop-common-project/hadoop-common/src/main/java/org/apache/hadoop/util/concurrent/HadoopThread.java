@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.util.concurrent;
 
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
-
+import java.security.PrivilegedAction;
 import javax.security.auth.Subject;
+
+import org.apache.hadoop.security.authentication.util.SubjectUtil;
 
 /**
  * Helper class to restore Subject propagation behavior after the JEP411/JEP486
@@ -71,21 +69,21 @@ public class HadoopThread extends Thread {
     this.hadoopTarget = target;
   }
 
-  @Override
-  public final void start() {
-    // This is temporary, to be replaced with JVM version dependent
-    // Subject.current() shim
-    AccessControlContext context = AccessController.getContext();
-    startSubject = Subject.getSubject(context);
-    super.start();
-  }
-
-// To be replaced with this in the next JDK24 patch:
 //  @Override
 //  public final void start() {
-//    startSubject = SubjectUtil.current();
+//    // This is temporary, to be replaced with JVM version dependent
+//    // Subject.current() shim
+//    AccessControlContext context = AccessController.getContext();
+//    startSubject = Subject.getSubject(context);
 //    super.start();
 //  }
+
+// To be replaced with this in the next JDK24 patch:
+  @Override
+  public final void start() {
+    startSubject = SubjectUtil.current();
+    super.start();
+  }
 
   /**
    * Override this instead of run()
@@ -98,48 +96,14 @@ public class HadoopThread extends Thread {
     throw new IllegalArgumentException("No Runnable was specified and work() is not overriden");
   }
 
-  @Override
-  public final void run() {
-    try {
-      // This is temporary, to be replaced with JVM version dependent shim code
-      Subject.doAs(startSubject, new PrivilegedExceptionAction<Void>() {
-
-        @Override
-        public Void run() throws Exception {
-          if (hadoopTarget != null) {
-            hadoopTarget.run();
-          } else {
-            work();
-          }
-          return null;
-        }
-
-      });
-    } catch (PrivilegedActionException ce) {
-      Exception t = ce.getException();
-      if (t instanceof RuntimeException) {
-        throw (RuntimeException) t;
-      } else {
-        throw new RuntimeException("Unexpected exception", t);
-      }
-    }
-  }
-
-  // To replaced with this in the next patch:
-//  /**
-//   * Override this instead of run()
-//   */
-//  public void work() {
-//    throw new IllegalArgumentException("No Runnable was specified and work() is not overriden");
-//  }
-//  
 //  @Override
 //  public final void run() {
 //    try {
-//      SubjectUtil.callAs(startSubject, new Callable<Void>() {
+//      // This is temporary, to be replaced with JVM version dependent shim code
+//      Subject.doAs(startSubject, new PrivilegedExceptionAction<Void>() {
 //
 //        @Override
-//        public Void call() throws Exception {
+//        public Void run() throws Exception {
 //          if (hadoopTarget != null) {
 //            hadoopTarget.run();
 //          } else {
@@ -149,15 +113,32 @@ public class HadoopThread extends Thread {
 //        }
 //
 //      });
-//    } catch (CompletionException ce) {
-//      Throwable t = ce.getCause();
+//    } catch (PrivilegedActionException ce) {
+//      Exception t = ce.getException();
 //      if (t instanceof RuntimeException) {
 //        throw (RuntimeException) t;
-//      } else if (t instanceof Error) {
-//        throw (Error) t;
 //      } else {
 //        throw new RuntimeException("Unexpected exception", t);
 //      }
 //    }
 //  }
+
+  // To replaced with this in the next patch:
+  
+  @Override
+  public final void run() {
+      SubjectUtil.doAs(startSubject, new PrivilegedAction<Void>() {
+
+        @Override
+        public Void run() {
+          if (hadoopTarget != null) {
+            hadoopTarget.run();
+          } else {
+            work();
+          }
+          return null;
+        }
+
+      });
+  }
 }
