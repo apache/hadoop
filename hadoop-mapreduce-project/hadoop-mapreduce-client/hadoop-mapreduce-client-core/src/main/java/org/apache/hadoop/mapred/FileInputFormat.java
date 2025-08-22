@@ -361,50 +361,45 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
     for (FileStatus file: files) {
       Path path = file.getPath();
       long length = file.getLen();
-      if (length != 0) {
-        FileSystem fs = path.getFileSystem(job);
-        BlockLocation[] blkLocations;
-        if (file instanceof LocatedFileStatus) {
-          blkLocations = ((LocatedFileStatus) file).getBlockLocations();
-        } else {
-          blkLocations = fs.getFileBlockLocations(file, 0, length);
-        }
-        if (blkLocations.length == 0){
-          continue;
-        }
-        if (isSplitable(fs, path)) {
-          long blockSize = file.getBlockSize();
-          long splitSize = computeSplitSize(goalSize, minSize, blockSize);
+      FileSystem fs = path.getFileSystem(job);
+      BlockLocation[] blkLocations;
+      if (file instanceof LocatedFileStatus) {
+        blkLocations = ((LocatedFileStatus) file).getBlockLocations();
+      } else {
+        blkLocations = fs.getFileBlockLocations(file, 0, length);
+      }
+      if (blkLocations.length == 0){
+        continue;
+      }
+      if (isSplitable(fs, path)) {
+        long blockSize = file.getBlockSize();
+        long splitSize = computeSplitSize(goalSize, minSize, blockSize);
 
-          long bytesRemaining = length;
-          while (((double) bytesRemaining)/splitSize > SPLIT_SLOP) {
-            String[][] splitHosts = getSplitHostsAndCachedHosts(blkLocations,
-                length-bytesRemaining, splitSize, clusterMap);
-            splits.add(makeSplit(path, length-bytesRemaining, splitSize,
-                splitHosts[0], splitHosts[1]));
-            bytesRemaining -= splitSize;
-          }
-
-          if (bytesRemaining != 0) {
-            String[][] splitHosts = getSplitHostsAndCachedHosts(blkLocations, length
-                - bytesRemaining, bytesRemaining, clusterMap);
-            splits.add(makeSplit(path, length - bytesRemaining, bytesRemaining,
-                splitHosts[0], splitHosts[1]));
-          }
-        } else {
-          if (LOG.isDebugEnabled()) {
-            // Log only if the file is big enough to be splitted
-            if (length > Math.min(file.getBlockSize(), minSize)) {
-              LOG.debug("File is not splittable so no parallelization "
-                  + "is possible: " + file.getPath());
-            }
-          }
-          String[][] splitHosts = getSplitHostsAndCachedHosts(blkLocations,0,length,clusterMap);
-          splits.add(makeSplit(path, 0, length, splitHosts[0], splitHosts[1]));
+        long bytesRemaining = length;
+        while (((double) bytesRemaining)/splitSize > SPLIT_SLOP) {
+          String[][] splitHosts = getSplitHostsAndCachedHosts(blkLocations,
+              length-bytesRemaining, splitSize, clusterMap);
+          splits.add(makeSplit(path, length-bytesRemaining, splitSize,
+              splitHosts[0], splitHosts[1]));
+          bytesRemaining -= splitSize;
         }
-      } else { 
-        //Create empty hosts array for zero length files
-        splits.add(makeSplit(path, 0, length, new String[0]));
+
+        if (bytesRemaining != 0) {
+          String[][] splitHosts = getSplitHostsAndCachedHosts(blkLocations, length
+              - bytesRemaining, bytesRemaining, clusterMap);
+          splits.add(makeSplit(path, length - bytesRemaining, bytesRemaining,
+              splitHosts[0], splitHosts[1]));
+        }
+      } else {
+        if (LOG.isDebugEnabled()) {
+          // Log only if the file is big enough to be splitted
+          if (length > Math.min(file.getBlockSize(), minSize)) {
+            LOG.debug("File is not splittable so no parallelization "
+                + "is possible: " + file.getPath());
+          }
+        }
+        String[][] splitHosts = getSplitHostsAndCachedHosts(blkLocations,0,length,clusterMap);
+        splits.add(makeSplit(path, 0, length, splitHosts[0], splitHosts[1]));
       }
     }
     sw.stop();
