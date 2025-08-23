@@ -30,39 +30,28 @@ import org.apache.hadoop.fs.tosfs.conf.ConfKeys;
 import org.apache.hadoop.fs.tosfs.conf.TosKeys;
 import org.apache.hadoop.fs.tosfs.object.Constants;
 import org.apache.hadoop.fs.tosfs.util.UUIDUtils;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 
-@RunWith(Parameterized.class)
-public class TestGetFileStatus extends AbstractContractGetFileStatusTest {
+public abstract class TestGetFileStatus extends AbstractContractGetFileStatusTest {
 
   private final boolean getFileStatusEnabled;
-
-  @Parameterized.Parameters(name = "getFileStatusEnabled={0}")
-  public static List<Boolean> createParameters() {
-    return Arrays.asList(false, true);
-  }
 
   public TestGetFileStatus(boolean getFileStatusEnabled) {
     this.getFileStatusEnabled = getFileStatusEnabled;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void before() {
-    Assume.assumeTrue(TestEnv.checkTestEnabled());
+    Assumptions.assumeTrue(TestEnv.checkTestEnabled());
   }
 
   @Override
@@ -90,8 +79,9 @@ public class TestGetFileStatus extends AbstractContractGetFileStatusTest {
     FileSystem fs = getFileSystem();
     Path path = getContract().getTestPath();
 
-    assertThrows("Path doesn't exist", FileNotFoundException.class,
-        () -> fs.listStatusIterator(new Path(path, "testListStatusForNonExistPath")));
+    assertThrows(FileNotFoundException.class,
+        () -> fs.listStatusIterator(new Path(path, "testListStatusForNonExistPath")),
+        "Path doesn't exist");
   }
 
   @Test
@@ -99,7 +89,7 @@ public class TestGetFileStatus extends AbstractContractGetFileStatusTest {
     FileSystem fs = getFileSystem();
     // working dir does not exist.
     Path file = new Path(getContract().getTestPath(), this.methodName.getMethodName());
-    assertThrows("Path doesn't exist", FileNotFoundException.class, () -> fs.getFileStatus(file));
+    assertThrows(FileNotFoundException.class, () -> fs.getFileStatus(file), "Path doesn't exist");
   }
 
   @Test
@@ -111,9 +101,9 @@ public class TestGetFileStatus extends AbstractContractGetFileStatusTest {
     byte[] data = dataset(size, 'a', 'z');
     createFile(fs, file, true, data);
     FileStatus status = fs.getFileStatus(file);
-    Assert.assertTrue(status.isFile());
-    Assert.assertTrue(status.getModificationTime() > 0);
-    Assert.assertEquals(size, status.getLen());
+    assertTrue(status.isFile());
+    assertTrue(status.getModificationTime() > 0);
+    assertEquals(size, status.getLen());
   }
 
   @Test
@@ -123,10 +113,10 @@ public class TestGetFileStatus extends AbstractContractGetFileStatusTest {
     mkdirs(workingPath);
 
     FileStatus dirStatus = fs.getFileStatus(workingPath);
-    Assert.assertTrue(dirStatus.isDirectory());
-    Assert.assertTrue(dirStatus.getModificationTime() > 0);
+    assertTrue(dirStatus.isDirectory());
+    assertTrue(dirStatus.getModificationTime() > 0);
     if (dirStatus instanceof RawFileStatus) {
-      Assert.assertArrayEquals(Constants.MAGIC_CHECKSUM, ((RawFileStatus) dirStatus).checksum());
+      assertArrayEquals(Constants.MAGIC_CHECKSUM, ((RawFileStatus) dirStatus).checksum());
     }
   }
 
@@ -137,14 +127,14 @@ public class TestGetFileStatus extends AbstractContractGetFileStatusTest {
     // create sub directory directly.
     Path subDir = new Path(workintPath, UUIDUtils.random());
     mkdirs(subDir);
-    Assert.assertTrue(fs.getFileStatus(subDir).isDirectory());
+    assertTrue(fs.getFileStatus(subDir).isDirectory());
 
     // can get FileStatus of working dir.
-    Assert.assertTrue(fs.getFileStatus(workintPath).isDirectory());
+    assertTrue(fs.getFileStatus(workintPath).isDirectory());
     // delete sub directory.
     fs.delete(subDir, true);
     // still cat get FileStatus of working dir.
-    Assert.assertTrue(fs.getFileStatus(workintPath).isDirectory());
+    assertTrue(fs.getFileStatus(workintPath).isDirectory());
   }
 
   @Test
@@ -152,18 +142,18 @@ public class TestGetFileStatus extends AbstractContractGetFileStatusTest {
     FileSystem fs = getFileSystem();
     // working dir does not exist.
     Path workintPath = new Path(getContract().getTestPath(), this.methodName.getMethodName());
-    assertThrows("Path doesn't exist", FileNotFoundException.class,
-        () -> fs.getFileStatus(workintPath));
+    assertThrows(FileNotFoundException.class, () -> fs.getFileStatus(workintPath),
+        "Path doesn't exist");
 
     // create sub file in working dir directly.
     Path file = workintPath.suffix('/' + UUIDUtils.random());
     touch(fs, file);
 
     // can get FileStatus of working dir.
-    Assert.assertTrue(fs.getFileStatus(workintPath).isDirectory());
+    assertTrue(fs.getFileStatus(workintPath).isDirectory());
 
     // delete sub file, will create parent directory.
     fs.delete(file, false);
-    Assert.assertTrue(fs.getFileStatus(workintPath).isDirectory());
+    assertTrue(fs.getFileStatus(workintPath).isDirectory());
   }
 }

@@ -24,9 +24,9 @@ import org.apache.hadoop.fs.contract.AbstractContractDeleteTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.tosfs.TestEnv;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -35,9 +35,9 @@ import static org.apache.hadoop.fs.tosfs.object.ObjectTestUtils.assertObjectNotE
 
 public class TestDelete extends AbstractContractDeleteTest {
 
-  @BeforeClass
+  @BeforeAll
   public static void before() {
-    Assume.assumeTrue(TestEnv.checkTestEnabled());
+    Assumptions.assumeTrue(TestEnv.checkTestEnabled());
   }
 
   @Override

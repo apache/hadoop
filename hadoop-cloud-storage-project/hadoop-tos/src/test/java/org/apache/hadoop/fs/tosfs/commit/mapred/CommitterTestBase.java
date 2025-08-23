@@ -33,7 +33,6 @@ import org.apache.hadoop.mapred.TaskAttemptContext;
 import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import org.junit.Assume;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
@@ -115,7 +114,7 @@ public abstract class CommitterTestBase {
   @Test
   public void testSetupJob() throws IOException {
     JobSuite suite = JobSuite.create(conf, taskAttempt0, outputPath);
-    Assume.assumeFalse(suite.skipTests());
+    Assumptions.assumeFalse(suite.skipTests());
 
     // Setup job.
     suite.setupJob();
@@ -126,7 +125,7 @@ public abstract class CommitterTestBase {
   @Test
   public void testSetupJobWithOrphanPaths() throws IOException, InterruptedException {
     JobSuite suite = JobSuite.create(conf, taskAttempt0, outputPath);
-    Assume.assumeFalse(suite.skipTests());
+    Assumptions.assumeFalse(suite.skipTests());
 
     // Orphan success marker.
     Path successPath = CommitUtils.successMarker(outputPath);
@@ -155,7 +154,7 @@ public abstract class CommitterTestBase {
   @Test
   public void testSetupTask() throws IOException {
     JobSuite suite = JobSuite.create(conf, taskAttempt0, outputPath);
-    Assume.assumeFalse(suite.skipTests());
+    Assumptions.assumeFalse(suite.skipTests());
 
     // Remaining attempt task path.
     Path taskAttemptBasePath =
@@ -185,7 +184,7 @@ public abstract class CommitterTestBase {
   @Test
   public void testCommitTask() throws Exception {
     JobSuite suite = JobSuite.create(conf, taskAttempt0, outputPath);
-    Assume.assumeFalse(suite.skipTests());
+    Assumptions.assumeFalse(suite.skipTests());
     // Setup job
     suite.setupJob();
     suite.dumpObjectStorage();
@@ -234,7 +233,7 @@ public abstract class CommitterTestBase {
   @Test
   public void testAbortTask() throws Exception {
     JobSuite suite = JobSuite.create(conf, taskAttempt0, outputPath);
-    Assume.assumeFalse(suite.skipTests());
+    Assumptions.assumeFalse(suite.skipTests());
     suite.setupJob();
     suite.setupTask();
 
@@ -270,7 +269,7 @@ public abstract class CommitterTestBase {
   @Test
   public void testCommitJob() throws Exception {
     JobSuite suite = JobSuite.create(conf, taskAttempt0, outputPath);
-    Assume.assumeFalse(suite.skipTests());
+    Assumptions.assumeFalse(suite.skipTests());
     suite.setupJob();
     suite.setupTask();
     suite.writeOutput();
@@ -291,7 +290,7 @@ public abstract class CommitterTestBase {
   @Test
   public void testCommitJobFailed() throws Exception {
     JobSuite suite = JobSuite.create(conf, taskAttempt0, outputPath);
-    Assume.assumeFalse(suite.skipTests());
+    Assumptions.assumeFalse(suite.skipTests());
     suite.setupJob();
     suite.setupTask();
     suite.writeOutput();
@@ -305,7 +304,7 @@ public abstract class CommitterTestBase {
   @Test
   public void testTaskCommitAfterJobCommit() throws Exception {
     JobSuite suite = JobSuite.create(conf, taskAttempt0, outputPath);
-    Assume.assumeFalse(suite.skipTests());
+    Assumptions.assumeFalse(suite.skipTests());
     suite.setupJob();
     suite.setupTask();
     suite.writeOutput();
@@ -330,7 +329,7 @@ public abstract class CommitterTestBase {
     String consistentJobId = randomFormedJobId();
     config.set(CommitUtils.SPARK_WRITE_UUID, consistentJobId);
     JobSuite suite = JobSuite.create(config, taskAttempt0, outputPath);
-    Assume.assumeFalse(suite.skipTests());
+    Assumptions.assumeFalse(suite.skipTests());
 
     // By now, we have two "jobId"s, one is spark uuid, and the other is the jobId in taskAttempt.
     // The job committer will adopt the former.

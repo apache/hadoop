@@ -24,9 +24,9 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.fs.tosfs.TestEnv;
 import org.apache.hadoop.fs.tosfs.common.Bytes;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -39,9 +39,9 @@ public class TestXAttr extends AbstractFSContractTestBase {
   private static final String XATTR_NAME = "xAttrName";
   private static final byte[] XATTR_VALUE = "xAttrValue".getBytes();
 
-  @BeforeClass
+  @BeforeAll
   public static void before() {
-    Assume.assumeTrue(TestEnv.checkTestEnabled());
+    Assumptions.assumeTrue(TestEnv.checkTestEnabled());
   }
 
   @Override
@@ -56,12 +56,11 @@ public class TestXAttr extends AbstractFSContractTestBase {
     fs.create(path).close();
 
     fs.setXAttr(path, XATTR_NAME, XATTR_VALUE);
-    assertThrows("Not found.", IOException.class,
-        () -> fs.getXAttr(path, "non-exist"));
-    assertThrows("Not found.", IOException.class,
-        () -> fs.getXAttrs(path, Arrays.asList("non-exist")));
-    assertThrows("Not found.", IOException.class,
-        () -> fs.getXAttrs(path, Arrays.asList("non-exist", XATTR_NAME)));
+    assertThrows(IOException.class, () -> fs.getXAttr(path, "non-exist"), "Not found.");
+    assertThrows(IOException.class, () -> fs.getXAttrs(path, Arrays.asList("non-exist")),
+        "Not found.");
+    assertThrows(IOException.class,
+        () -> fs.getXAttrs(path, Arrays.asList("non-exist", XATTR_NAME)), "Not found.");
   }
 
   @Test
@@ -70,12 +69,10 @@ public class TestXAttr extends AbstractFSContractTestBase {
     Path path = path("testXAttrWhenPathNotExist/file");
     fs.delete(path);
 
-    assertThrows("No such file", FileNotFoundException.class,
-        () -> fs.setXAttr(path, XATTR_NAME, XATTR_VALUE));
-    assertThrows("No such file", FileNotFoundException.class,
-        () -> fs.getXAttrs(path));
-    assertThrows("No such file", FileNotFoundException.class,
-        () -> fs.removeXAttr(path, "name"));
+    assertThrows(FileNotFoundException.class, () -> fs.setXAttr(path, XATTR_NAME, XATTR_VALUE),
+        "No such file");
+    assertThrows(FileNotFoundException.class, () -> fs.getXAttrs(path), "No such file");
+    assertThrows(FileNotFoundException.class, () -> fs.removeXAttr(path, "name"), "No such file");
   }
 
   @Test
@@ -96,8 +93,7 @@ public class TestXAttr extends AbstractFSContractTestBase {
 
     Path nonExistedPath = path.getParent().getParent();
     fs.setXAttr(nonExistedPath, XATTR_NAME, XATTR_VALUE);
-    assertThrows("Not found.", IOException.class,
-        () -> fs.getXAttr(nonExistedPath, XATTR_NAME));
+    assertThrows(IOException.class, () -> fs.getXAttr(nonExistedPath, XATTR_NAME), "Not found.");
   }
 
   @Test
@@ -107,8 +103,7 @@ public class TestXAttr extends AbstractFSContractTestBase {
     fs.mkdirs(path);
 
     fs.setXAttr(path, XATTR_NAME, XATTR_VALUE);
-    assertThrows("Not found.", IOException.class,
-        () -> fs.getXAttr(path, XATTR_NAME));
+    assertThrows(IOException.class, () -> fs.getXAttr(path, XATTR_NAME), "Not found.");
   }
 
   @Test
@@ -149,8 +144,7 @@ public class TestXAttr extends AbstractFSContractTestBase {
     for (int i = 0; i < size; i++) {
       fs.removeXAttr(path, XATTR_NAME + i);
       String name = XATTR_NAME + i;
-      assertThrows("Not found.", IOException.class,
-          () -> fs.getXAttr(path, name));
+      assertThrows(IOException.class, () -> fs.getXAttr(path, name), "Not found.");
       assertEquals(size - 1 - i, fs.listXAttrs(path).size());
     }
   }
@@ -163,14 +157,16 @@ public class TestXAttr extends AbstractFSContractTestBase {
 
     String key = XATTR_NAME;
     byte[] value = XATTR_VALUE;
-    assertThrows("The CREATE flag must be specified", IOException.class,
-        () -> fs.setXAttr(path, key, value, EnumSet.of(XAttrSetFlag.REPLACE)));
+    assertThrows(IOException.class,
+        () -> fs.setXAttr(path, key, value, EnumSet.of(XAttrSetFlag.REPLACE)),
+        "The CREATE flag must be specified");
     fs.setXAttr(path, key, value, EnumSet.of(XAttrSetFlag.CREATE));
     assertArrayEquals(value, fs.getXAttr(path, key));
 
     byte[] newValue = Bytes.toBytes("new value");
-    assertThrows("The REPLACE flag must be specified", IOException.class,
-        () -> fs.setXAttr(path, key, newValue, EnumSet.of(XAttrSetFlag.CREATE)));
+    assertThrows(IOException.class,
+        () -> fs.setXAttr(path, key, newValue, EnumSet.of(XAttrSetFlag.CREATE)),
+        "The REPLACE flag must be specified");
     fs.setXAttr(path, key, newValue, EnumSet.of(XAttrSetFlag.REPLACE));
     assertArrayEquals(newValue, fs.getXAttr(path, key));
   }

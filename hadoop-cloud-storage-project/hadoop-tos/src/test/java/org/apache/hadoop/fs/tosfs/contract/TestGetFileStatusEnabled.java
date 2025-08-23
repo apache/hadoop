@@ -18,22 +18,8 @@
 
 package org.apache.hadoop.fs.tosfs.contract;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.AbstractContractMkdirTest;
-import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.tosfs.TestEnv;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeAll;
-
-public class TestMkdir extends AbstractContractMkdirTest {
-
-  @BeforeAll
-  public static void before() {
-    Assumptions.assumeTrue(TestEnv.checkTestEnabled());
-  }
-
-  @Override
-  protected AbstractFSContract createContract(Configuration conf) {
-    return new TosContract(conf);
+public class TestGetFileStatusEnabled extends TestGetFileStatus {
+  public TestGetFileStatusEnabled() {
+    super(true);
   }
 }

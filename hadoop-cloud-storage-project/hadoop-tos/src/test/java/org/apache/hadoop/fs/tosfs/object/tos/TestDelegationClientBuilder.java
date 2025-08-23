@@ -81,11 +81,9 @@ public class TestDelegationClientBuilder {
 
   private static final String TEST_KEY = UUIDUtils.random();
   private static final String TEST_DATA = "1234567890";
-  private static final String ENV_ACCESS_KEY =
-      ParseUtils.envAsString(TOS.ENV_TOS_ACCESS_KEY_ID, false);
-  private static final String ENV_SECRET_KEY =
-      ParseUtils.envAsString(TOS.ENV_TOS_SECRET_ACCESS_KEY, false);
-  private static final String ENV_ENDPOINT = ParseUtils.envAsString(TOS.ENV_TOS_ENDPOINT, false);
+  private static String envAccessKey;
+  private static String envSecretKey;
+  private static String envEndpoint;
 
   // Maximum retry times of the tos http client.
   public static final String MAX_RETRY_COUNT_KEY = "fs.tos.http.maxRetryCount";
@@ -93,13 +91,19 @@ public class TestDelegationClientBuilder {
   @BeforeAll
   public static void before() {
     assumeTrue(TestEnv.checkTestEnabled());
+
+    envAccessKey =
+        ParseUtils.envAsString(TOS.ENV_TOS_ACCESS_KEY_ID, false);
+    envSecretKey =
+        ParseUtils.envAsString(TOS.ENV_TOS_SECRET_ACCESS_KEY, false);
+    envEndpoint = ParseUtils.envAsString(TOS.ENV_TOS_ENDPOINT, false);
   }
 
   @BeforeEach
   public void setUp() {
     TOSV2 tosSdkClientV2 =
         new TOSV2ClientBuilder().build(TestUtility.region(), TestUtility.endpoint(),
-            new StaticCredentials(ENV_ACCESS_KEY, ENV_SECRET_KEY));
+            new StaticCredentials(envAccessKey, envSecretKey));
     try (ByteArrayInputStream stream = new ByteArrayInputStream(TEST_DATA.getBytes())) {
       PutObjectInput putObjectInput =
           new PutObjectInput().setBucket(TestUtility.bucket()).setKey(TEST_KEY).setContent(stream);
@@ -253,10 +257,10 @@ public class TestDelegationClientBuilder {
   @Test
   public void testDynamicRefreshAkSk() throws IOException {
     Configuration conf = new Configuration();
-    conf.set(ConfKeys.FS_OBJECT_STORAGE_ENDPOINT.key(TOS_SCHEME), ENV_ENDPOINT);
+    conf.set(ConfKeys.FS_OBJECT_STORAGE_ENDPOINT.key(TOS_SCHEME), envEndpoint);
     conf.set(TosKeys.FS_TOS_CREDENTIALS_PROVIDER, SimpleCredentialsProvider.NAME);
-    conf.set(TosKeys.FS_TOS_BUCKET_ACCESS_KEY_ID.key(TestUtility.bucket()), ENV_ACCESS_KEY);
-    conf.set(TosKeys.FS_TOS_BUCKET_SECRET_ACCESS_KEY.key(TestUtility.bucket()), ENV_SECRET_KEY);
+    conf.set(TosKeys.FS_TOS_BUCKET_ACCESS_KEY_ID.key(TestUtility.bucket()), envAccessKey);
+    conf.set(TosKeys.FS_TOS_BUCKET_SECRET_ACCESS_KEY.key(TestUtility.bucket()), envSecretKey);
     conf.setInt(TosKeys.FS_TOS_HTTP_MAX_CONNECTIONS, 24);
     conf.setInt(MAX_RETRY_COUNT_KEY, 24);
 
@@ -272,7 +276,7 @@ public class TestDelegationClientBuilder {
 
     assertThrows(TosServerException.class, () -> tosSdkClientV2.listObjects(inputV2));
 
-    tosSdkClientV2.changeCredentials(new StaticCredentials(ENV_ACCESS_KEY, ENV_SECRET_KEY));
+    tosSdkClientV2.changeCredentials(new StaticCredentials(envAccessKey, envSecretKey));
 
     ListObjectsV2Output tosSdkOutput = tosSdkClientV2.listObjects(inputV2);
     ListObjectsV2Output delegateOutput = delegationClientV2.listObjects(inputV2);
@@ -283,7 +287,7 @@ public class TestDelegationClientBuilder {
 
     assertEquals(nativeContentSize, delegateContentSize,
         "delegation client must same as native client");
-    assertEquals(ENV_ACCESS_KEY, delegationClientV2.usedCredential().getAccessKeyId());
+    assertEquals(envAccessKey, delegationClientV2.usedCredential().getAccessKeyId());
 
     delegationClientV2.close();
   }
@@ -291,7 +295,7 @@ public class TestDelegationClientBuilder {
   @Test
   public void testCreateClientWithEnvironmentCredentials() throws IOException {
     Configuration conf = new Configuration();
-    conf.set(ConfKeys.FS_OBJECT_STORAGE_ENDPOINT.key(TOS_SCHEME), ENV_ENDPOINT);
+    conf.set(ConfKeys.FS_OBJECT_STORAGE_ENDPOINT.key(TOS_SCHEME), envEndpoint);
     conf.set(TosKeys.FS_TOS_CREDENTIALS_PROVIDER, EnvironmentCredentialsProvider.NAME);
 
     DelegationClient tosV2 =
@@ -299,10 +303,10 @@ public class TestDelegationClientBuilder {
     Credential cred = tosV2.usedCredential();
 
     String assertMsg =
-        String.format("expect %s, but got %s", ENV_ACCESS_KEY, cred.getAccessKeyId());
-    assertEquals(cred.getAccessKeyId(), ENV_ACCESS_KEY, assertMsg);
-    assertMsg = String.format("expect %s, but got %s", ENV_SECRET_KEY, cred.getAccessKeySecret());
-    assertEquals(cred.getAccessKeySecret(), ENV_SECRET_KEY, assertMsg);
+        String.format("expect %s, but got %s", envAccessKey, cred.getAccessKeyId());
+    assertEquals(cred.getAccessKeyId(), envAccessKey, assertMsg);
+    assertMsg = String.format("expect %s, but got %s", envSecretKey, cred.getAccessKeySecret());
+    assertEquals(cred.getAccessKeySecret(), envSecretKey, assertMsg);
 
     tosV2.close();
   }
@@ -310,10 +314,10 @@ public class TestDelegationClientBuilder {
   @Test
   public void testCreateClientWithSimpleCredentials() throws IOException {
     Configuration conf = new Configuration();
-    conf.set(ConfKeys.FS_OBJECT_STORAGE_ENDPOINT.key(TOS_SCHEME), ENV_ENDPOINT);
+    conf.set(ConfKeys.FS_OBJECT_STORAGE_ENDPOINT.key(TOS_SCHEME), envEndpoint);
     conf.set(TosKeys.FS_TOS_CREDENTIALS_PROVIDER, SimpleCredentialsProvider.NAME);
-    conf.set(TosKeys.FS_TOS_BUCKET_ACCESS_KEY_ID.key(TestUtility.bucket()), ENV_ACCESS_KEY);
-    conf.set(TosKeys.FS_TOS_BUCKET_SECRET_ACCESS_KEY.key(TestUtility.bucket()), ENV_SECRET_KEY);
+    conf.set(TosKeys.FS_TOS_BUCKET_ACCESS_KEY_ID.key(TestUtility.bucket()), envAccessKey);
+    conf.set(TosKeys.FS_TOS_BUCKET_SECRET_ACCESS_KEY.key(TestUtility.bucket()), envSecretKey);
     conf.setInt(TosKeys.FS_TOS_HTTP_MAX_CONNECTIONS, 24);
     conf.setInt(MAX_RETRY_COUNT_KEY, 24);
 
@@ -322,7 +326,7 @@ public class TestDelegationClientBuilder {
             .maxKeys(10).build();
 
     TOSV2 v2 = new TOSV2ClientBuilder().build(TestUtility.region(), TestUtility.endpoint(),
-        new StaticCredentials(ENV_ACCESS_KEY, ENV_SECRET_KEY));
+        new StaticCredentials(envAccessKey, envSecretKey));
     ListObjectsV2Output outputV2 = v2.listObjects(input);
 
     DelegationClient tosV2 =
@@ -341,10 +345,10 @@ public class TestDelegationClientBuilder {
 
     Function<String, Configuration> commonConf = bucket -> {
       Configuration conf = new Configuration();
-      conf.set(ConfKeys.FS_OBJECT_STORAGE_ENDPOINT.key(TOS_SCHEME), ENV_ENDPOINT);
+      conf.set(ConfKeys.FS_OBJECT_STORAGE_ENDPOINT.key(TOS_SCHEME), envEndpoint);
       conf.set(TosKeys.FS_TOS_CREDENTIALS_PROVIDER, SimpleCredentialsProvider.NAME);
-      conf.set(TosKeys.FS_TOS_BUCKET_ACCESS_KEY_ID.key(bucket), ENV_ACCESS_KEY);
-      conf.set(TosKeys.FS_TOS_BUCKET_SECRET_ACCESS_KEY.key(bucket), ENV_SECRET_KEY);
+      conf.set(TosKeys.FS_TOS_BUCKET_ACCESS_KEY_ID.key(bucket), envAccessKey);
+      conf.set(TosKeys.FS_TOS_BUCKET_SECRET_ACCESS_KEY.key(bucket), envSecretKey);
       return conf;
     };
 
@@ -414,7 +418,7 @@ public class TestDelegationClientBuilder {
   public void deleteAllTestData() throws IOException {
     TOSV2 tosSdkClientV2 =
         new TOSV2ClientBuilder().build(TestUtility.region(), TestUtility.endpoint(),
-            new StaticCredentials(ENV_ACCESS_KEY, ENV_SECRET_KEY));
+            new StaticCredentials(envAccessKey, envSecretKey));
     tosSdkClientV2.deleteObject(
         DeleteObjectInput.builder().bucket(TestUtility.bucket()).key(TEST_KEY).build());
 

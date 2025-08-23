@@ -30,9 +30,9 @@ import org.apache.hadoop.fs.tosfs.TestEnv;
 import org.apache.hadoop.fs.tosfs.conf.ConfKeys;
 import org.apache.hadoop.fs.tosfs.object.ObjectUtils;
 import org.apache.hadoop.fs.tosfs.util.TestUtility;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -41,9 +41,9 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 
 public class TestChecksum extends AbstractFSContractTestBase {
-  @BeforeClass
+  @BeforeAll
   public static void before() {
-    Assume.assumeTrue(TestEnv.checkTestEnabled());
+    Assumptions.assumeTrue(TestEnv.checkTestEnabled());
   }
 
   @Override
@@ -74,18 +74,17 @@ public class TestChecksum extends AbstractFSContractTestBase {
     Path path3 = testCreateNewFile("file3", dataset(512, 'a', 'z'), true);
 
     FileChecksum expected = getFileSystem().getFileChecksum(path1);
-    assertEquals("Checksum value should be same among objects with same content",
-        expected, getFileSystem().getFileChecksum(path2));
-    assertEquals("Checksum value should be same among multiple call for same object",
-        expected, getFileSystem().getFileChecksum(path1));
-    assertNotEquals(
-        "Checksum value should be different for different objects with different content", expected,
-        getFileSystem().getFileChecksum(path3));
+    assertEquals(expected, getFileSystem().getFileChecksum(path2),
+        "Checksum value should be same among objects with same content");
+    assertEquals(expected, getFileSystem().getFileChecksum(path1),
+        "Checksum value should be same among multiple call for same object");
+    assertNotEquals(expected, getFileSystem().getFileChecksum(path3),
+        "Checksum value should be different for different objects with different content");
 
     Path renamed = path("renamed");
     getFileSystem().rename(path1, renamed);
-    assertEquals("Checksum value should not change after rename",
-        expected, getFileSystem().getFileChecksum(renamed));
+    assertEquals(expected, getFileSystem().getFileChecksum(renamed),
+        "Checksum value should not change after rename");
   }
 
   @Test
@@ -127,10 +126,10 @@ public class TestChecksum extends AbstractFSContractTestBase {
     assertPathDoesNotExist("directory already exists", dir2);
     fs.mkdirs(dir1);
 
-    assertThrows("Path is not a file", FileNotFoundException.class,
-        () -> getFileSystem().getFileChecksum(dir1));
-    assertThrows("No such file or directory", FileNotFoundException.class,
-        () -> getFileSystem().getFileChecksum(dir2));
+    assertThrows(FileNotFoundException.class, () -> getFileSystem().getFileChecksum(dir1),
+        "Path is not a file");
+    assertThrows(FileNotFoundException.class, () -> getFileSystem().getFileChecksum(dir2),
+        "No such file or directory");
 
     assertDeleted(dir1, false);
   }

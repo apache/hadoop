@@ -28,9 +28,9 @@ import org.apache.hadoop.fs.tosfs.RawFileSystem;
 import org.apache.hadoop.fs.tosfs.TestEnv;
 import org.apache.hadoop.fs.tosfs.object.exceptions.ChecksumMismatchException;
 import org.apache.hadoop.fs.tosfs.util.Range;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -39,9 +39,9 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 
 public class TestOpen extends AbstractContractOpenTest {
 
-  @BeforeClass
+  @BeforeAll
   public static void before() {
-    Assume.assumeTrue(TestEnv.checkTestEnabled());
+    Assumptions.assumeTrue(TestEnv.checkTestEnabled());
   }
 
   @Override
@@ -69,7 +69,7 @@ public class TestOpen extends AbstractContractOpenTest {
 
       FSDataInputStream newStream =
           ((RawFileSystem) fs).open(file, expectChecksum, Range.of(0, Long.MAX_VALUE));
-      assertThrows("the file is expired", ChecksumMismatchException.class, () -> newStream.read());
+      assertThrows(ChecksumMismatchException.class, () -> newStream.read(), "the file is expired");
     }
   }
 }

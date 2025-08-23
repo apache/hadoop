@@ -25,10 +25,10 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.tosfs.TestEnv;
 import org.apache.hadoop.fs.tosfs.conf.ConfKeys;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,9 +38,9 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 
 public class TestRename extends AbstractContractRenameTest {
 
-  @BeforeClass
+  @BeforeAll
   public static void before() {
-    Assume.assumeTrue(TestEnv.checkTestEnabled());
+    Assumptions.assumeTrue(TestEnv.checkTestEnabled());
   }
 
   @Override
@@ -269,12 +269,12 @@ public class TestRename extends AbstractContractRenameTest {
     ContractTestUtils.cleanup("TEARDOWN", fs, getContract().getTestPath());
   }
 
-  @Ignore
+  @Disabled
   @Test
   public void testRenameFileUnderFileSubdir() {
   }
 
-  @Ignore
+  @Disabled
   @Test
   public void testRenameFileUnderFile() {
   }

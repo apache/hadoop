@@ -50,10 +50,10 @@ import java.util.stream.Stream;
 import java.util.zip.Checksum;
 
 import static org.apache.hadoop.fs.tosfs.object.tos.TOS.TOS_SCHEME;
-import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -266,8 +266,8 @@ public class TestTOSObjectStorage {
     data = TestUtility.rand(256);
     objectStore.put(key, data);
 
-    assertThrows("Expect not appendable.", NotAppendableException.class,
-        () -> objectStore.append(key, new byte[0]));
+    assertThrows(NotAppendableException.class, () -> objectStore.append(key, new byte[0]),
+        "Expect not appendable.");
 
     objectStore.delete(key);
   }

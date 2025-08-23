@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.tosfs.util.TempFiles;
 import org.apache.hadoop.fs.tosfs.util.TestUtility;
 import org.apache.hadoop.fs.tosfs.util.UUIDUtils;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -44,6 +45,7 @@ import java.util.stream.Stream;
 import static org.apache.hadoop.fs.tosfs.object.tos.TOS.TOS_SCHEME;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestTosChecksum {
   private static final String FILE_STORE_ROOT = TempFiles.newTempDir("TestTosChecksum");
@@ -51,6 +53,11 @@ public class TestTosChecksum {
   private static final String PREFIX = UUIDUtils.random();
 
   private ObjectStorage objectStorage;
+
+  @BeforeAll
+  public static void beforeClass() {
+    assumeTrue(TestEnv.checkTestEnabled());
+  }
 
   public void setObjectStorage(ObjectStorage objectStorage) {
     this.objectStorage = objectStorage;

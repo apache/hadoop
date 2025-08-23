@@ -30,8 +30,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import static junit.framework.TestCase.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestTOSInputStream {
 
@@ -42,26 +42,26 @@ public class TestTOSInputStream {
   public void testForceClose() throws IOException {
     TOSInputStream stream = createStream(DATA, 0, DATA_SIZE - 1, 1024);
     stream.close();
-    assertTrue("Expected force close", cast(stream).isForceClose());
+    assertTrue(cast(stream).isForceClose(), "Expected force close");
 
     stream = createStream(DATA, 0, DATA_SIZE - 1, 1024);
     ByteStreams.skipFully(stream, DATA_SIZE - 1024 - 1);
     stream.close();
-    assertTrue("Expected force close", cast(stream).isForceClose());
+    assertTrue(cast(stream).isForceClose(), "Expected force close");
 
     stream = createStream(DATA, 0, -1, 1024);
     stream.close();
-    assertTrue("Expected force close", cast(stream).isForceClose());
+    assertTrue(cast(stream).isForceClose(), "Expected force close");
 
     stream = createStream(DATA, 0, -1, 1024);
     ByteStreams.skipFully(stream, DATA_SIZE - 1024 - 1);
     stream.close();
-    assertTrue("Expected force close", cast(stream).isForceClose());
+    assertTrue(cast(stream).isForceClose(), "Expected force close");
 
     stream = createStream(DATA, 0, -1, 1024);
     ByteStreams.skipFully(stream, DATA_SIZE - 1024);
     stream.close();
-    assertTrue("Expected force close", cast(stream).isForceClose());
+    assertTrue(cast(stream).isForceClose(), "Expected force close");
   }
 
   @Test
@@ -97,7 +97,7 @@ public class TestTOSInputStream {
 
   private TestInputStream cast(TOSInputStream stream) throws IOException {
     InputStream content = stream.getObjectOutput().verifiedContent(Constants.MAGIC_CHECKSUM);
-    assertTrue("Not a TestInputStream", content instanceof TestInputStream);
+    assertTrue(content instanceof TestInputStream, "Not a TestInputStream");
     return (TestInputStream) content;
   }
 
@@ -132,7 +132,7 @@ public class TestTOSInputStream {
     }
 
     boolean isForceClose() {
-      assertTrue("Neither call close() nor forceClose()", cloeState == -1 || cloeState == 1);
+      assertTrue(cloeState == -1 || cloeState == 1, "Neither call close() nor forceClose()");
       return cloeState == 1;
     }
   }
