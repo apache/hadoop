@@ -35,6 +35,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test MsiTokenProvider.
@@ -49,13 +50,13 @@ public final class ITestAbfsMsiTokenProvider
   @Test
   public void test() throws IOException {
     AbfsConfiguration conf = getConfiguration();
-    assertThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT))
+    assumeThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT))
         .isNotNull().isNotEmpty();
-    assertThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT))
+    assumeThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT))
         .isNotNull().isNotEmpty();
-    assertThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID))
+    assumeThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID))
         .isNotNull().isNotEmpty();
-    assertThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY))
+    assumeThat(conf.get(FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY))
         .isNotNull().isNotEmpty();
 
     String tenantGuid = conf

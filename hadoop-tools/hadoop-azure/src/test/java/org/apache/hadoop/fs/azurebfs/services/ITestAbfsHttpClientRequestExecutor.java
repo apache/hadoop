@@ -69,7 +69,7 @@ public class ITestAbfsHttpClientRequestExecutor extends
     if (isAppendBlobEnabled()) {
       assumeThat(getIngressServiceType())
           .as("Not valid for AppendBlob with blob endpoint")
-          .isEqualTo(AbfsServiceType.BLOB);
+          .isNotEqualTo(AbfsServiceType.BLOB);
     }
 
     Configuration conf = new Configuration(fs.getConf());

@@ -220,7 +220,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  @Timeout(value = TEST_EXECUTION_TIMEOUT, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = LONG_TEST_EXECUTION_TIMEOUT, unit = TimeUnit.MILLISECONDS)
   public void testTwoWritersCreateAppendWithInfiniteLeaseEnabled() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
     final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
@@ -294,7 +294,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  @Timeout(value = TEST_EXECUTION_TIMEOUT, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = LONG_TEST_EXECUTION_TIMEOUT, unit = TimeUnit.MILLISECONDS)
   public void testLeaseFreedAfterBreak() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
     final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);

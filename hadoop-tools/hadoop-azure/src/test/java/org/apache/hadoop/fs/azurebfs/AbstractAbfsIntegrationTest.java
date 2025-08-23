@@ -586,7 +586,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     final AuthType currentAuthType = getAuthType();
     assumeThat(currentAuthType).
         as("SAS Based Authentication Not Allowed For Integration Tests").
-        isEqualTo(AuthType.SAS);
+        isNotEqualTo(AuthType.SAS);
     if (currentAuthType == AuthType.SharedKey) {
       assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_ACCOUNT_KEY);
     } else {
@@ -617,7 +617,7 @@ public abstract class AbstractAbfsIntegrationTest extends
    * @param path path to create. Can be relative or absolute.
    */
   protected void createAzCopyFolder(Path path) throws Exception {
-    assumeThat(getAbfsServiceType()).isEqualTo(AbfsServiceType.BLOB);
+    assumeBlobServiceType();
     assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_FIXED_SAS_TOKEN);
     String sasToken = getRawConfiguration().get(FS_AZURE_TEST_FIXED_SAS_TOKEN);
     AzcopyToolHelper azcopyHelper = AzcopyToolHelper.getInstance(sasToken);
@@ -629,7 +629,7 @@ public abstract class AbstractAbfsIntegrationTest extends
    * @param path path to create. Can be relative or absolute.
    */
   protected void createAzCopyFile(Path path) throws Exception {
-    assumeThat(getAbfsServiceType()).isEqualTo(AbfsServiceType.BLOB);
+    assumeBlobServiceType();
     assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_FIXED_SAS_TOKEN);
     String sasToken = getRawConfiguration().get(FS_AZURE_TEST_FIXED_SAS_TOKEN);
     AzcopyToolHelper azcopyHelper = AzcopyToolHelper.getInstance(sasToken);

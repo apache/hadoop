@@ -15,9 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.datanode.web;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLConnection;
@@ -33,45 +35,45 @@ import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedClass;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-@MethodSource("policy")
-@ParameterizedClass
-public class TestNameNodeHttpServer {
+@RunWith(value = Parameterized.class)
+public class TestDatanodeHttpServer {
   private static final String BASEDIR = GenericTestUtils
-      .getTempPath(TestNameNodeHttpServer.class.getSimpleName());
+      .getTempPath(TestDatanodeHttpServer.class.getSimpleName());
   private static String keystoresDir;
   private static String sslConfDir;
   private static Configuration conf;
   private static URLConnectionFactory connectionFactory;
 
+  @Parameters
   public static Collection<Object[]> policy() {
-    Object[][] params = new Object[][] { { HttpConfig.Policy.HTTP_ONLY },
-        { HttpConfig.Policy.HTTPS_ONLY }, { HttpConfig.Policy.HTTP_AND_HTTPS } };
+    Object[][] params = new Object[][] {{HttpConfig.Policy.HTTP_ONLY},
+        {HttpConfig.Policy.HTTPS_ONLY}, {HttpConfig.Policy.HTTP_AND_HTTPS}};
     return Arrays.asList(params);
   }
 
   private final HttpConfig.Policy policy;
 
-  public TestNameNodeHttpServer(Policy policy) {
+  public TestDatanodeHttpServer(Policy policy) {
     super();
     this.policy = policy;
   }
 
-  @BeforeAll
+  @BeforeClass
   public static void setUp() throws Exception {
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
     base.mkdirs();
     conf = new Configuration();
     keystoresDir = new File(BASEDIR).getAbsolutePath();
-    sslConfDir = KeyStoreTestUtil.getClasspathDir(TestNameNodeHttpServer.class);
+    sslConfDir = KeyStoreTestUtil.getClasspathDir(TestDatanodeHttpServer.class);
     KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false);
     connectionFactory = URLConnectionFactory
         .newDefaultURLConnectionFactory(conf);
@@ -81,7 +83,7 @@ public class TestNameNodeHttpServer {
         KeyStoreTestUtil.getServerSSLConfigFileName());
   }
 
-  @AfterAll
+  @AfterClass
   public static void tearDown() throws Exception {
     FileUtil.fullyDelete(new File(BASEDIR));
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
@@ -90,42 +92,57 @@ public class TestNameNodeHttpServer {
   @Test
   public void testHttpPolicy() throws Exception {
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, policy.name());
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
+    conf.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY, "localhost:0");
+    conf.set(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, "localhost:0");
 
-    InetSocketAddress addr = InetSocketAddress.createUnresolved("localhost", 0);
-    NameNodeHttpServer server = null;
+    DatanodeHttpServer server = null;
     try {
-      server = new NameNodeHttpServer(conf, null, addr);
+      server = new DatanodeHttpServer(conf, null, null);
       server.start();
 
-      assertTrue(implies(policy.isHttpEnabled(),
+      Assert.assertTrue(implies(policy.isHttpEnabled(),
           canAccess("http", server.getHttpAddress())));
-      assertTrue(implies(!policy.isHttpEnabled(),
+      Assert.assertTrue(implies(!policy.isHttpEnabled(),
           server.getHttpAddress() == null));
 
-      assertTrue(implies(policy.isHttpsEnabled(),
+      Assert.assertTrue(implies(policy.isHttpsEnabled(),
           canAccess("https", server.getHttpsAddress())));
-      assertTrue(implies(!policy.isHttpsEnabled(), server.getHttpsAddress() == null));
+      Assert.assertTrue(implies(!policy.isHttpsEnabled(),
+          server.getHttpsAddress() == null));
 
     } finally {
       if (server != null) {
-        server.stop();
+        server.close();
       }
     }
   }
 
   private static boolean canAccess(String scheme, InetSocketAddress addr) {
-    if (addr == null)
+    if (addr == null) {
       return false;
+    }
     try {
       URL url = new URL(scheme + "://" + NetUtils.getHostPortString(addr));
       URLConnection conn = connectionFactory.openConnection(url);
       conn.connect();
-      conn.getContent();
+      Assert.assertTrue(conn instanceof java.net.HttpURLConnection);
+      java.net.HttpURLConnection httpConn = (java.net.HttpURLConnection) conn;
+      if (httpConn.getResponseCode() != 200) {
+        return false;
+      }
+
+      StringBuilder builder = new StringBuilder();
+      InputStreamReader responseReader = new InputStreamReader((conn.getInputStream()));
+      try (BufferedReader reader = new BufferedReader(responseReader)) {
+        String output;
+        while ((output = reader.readLine()) != null) {
+          builder.append(output);
+        }
+      }
+      return builder.toString().contains("Hadoop Administration");
     } catch (Exception e) {
       return false;
     }
-    return true;
   }
 
   private static boolean implies(boolean a, boolean b) {

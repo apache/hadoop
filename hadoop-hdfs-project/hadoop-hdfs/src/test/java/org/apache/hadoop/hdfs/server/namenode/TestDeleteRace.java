@@ -59,31 +59,28 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 /**
  * Test race between delete and other operations.  For now only addBlock()
  * is tested since all others are acquiring FSNamesystem lock for the 
  * whole duration.
  */
+@Timeout(60 * 3)
 public class TestDeleteRace {
   private static final int BLOCK_SIZE = 4096;
   private static final Logger LOG = LoggerFactory.getLogger(TestDeleteRace.class);
   private static final Configuration conf = new HdfsConfiguration();
   private MiniDFSCluster cluster;
-
-  @Rule
-  public Timeout timeout = new Timeout(60000 * 3);
 
   @Test  
   public void testDeleteAddBlockRace() throws Exception {
@@ -118,7 +115,7 @@ public class TestDeleteRace {
         // write data and syn to make sure a block is allocated.
         out.write(new byte[32], 0, 32);
         out.hsync();
-        Assert.fail("Should have failed.");
+        fail("Should have failed.");
       } catch (FileNotFoundException e) {
         GenericTestUtils.assertExceptionContains(filePath.getName(), e);
       }
@@ -361,13 +358,15 @@ public class TestDeleteRace {
     }
   }
 
-  @Test(timeout=600000)
+  @Test
+  @Timeout(value = 600)
   public void testDeleteAndCommitBlockSynchonizationRaceNoSnapshot()
       throws Exception {
     testDeleteAndCommitBlockSynchronizationRace(false);
   }
 
-  @Test(timeout=600000)
+  @Test
+  @Timeout(value = 600)
   public void testDeleteAndCommitBlockSynchronizationRaceHasSnapshot()
       throws Exception {
     testDeleteAndCommitBlockSynchronizationRace(true);
@@ -429,7 +428,8 @@ public class TestDeleteRace {
     }
   }
 
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testOpenRenameRace() throws Exception {
     Configuration config = new Configuration();
     config.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, 1);
