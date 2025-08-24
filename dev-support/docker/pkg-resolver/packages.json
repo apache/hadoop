@@ -29,7 +29,7 @@
     "debian:10": "build-essential",
     "ubuntu:focal": "build-essential",
     "ubuntu:noble": "build-essential",
-    "ubuntu:focal::arch64": "build-essential",
+    "ubuntu:focal::arch64": "build-essential"
   },
   "bzip2": {
     "debian:10": [
