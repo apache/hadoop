@@ -1295,10 +1295,10 @@ public class ResourceLocalizationService extends CompositeService
           // Notify resource of failed localization
           ContainerId cId = context.getContainerId();
           try {
-              dispatcher.getEventHandler().handle(new ContainerResourceFailedEvent(
-                      cId, null, exception.getMessage()));
+            dispatcher.getEventHandler().handle(new ContainerResourceFailedEvent(
+                cId, null, exception.getMessage()));
           } catch (Exception | FSError e) {
-              LOG.info("Failed to send container resource failed event for " + cId, e);
+            LOG.info("Failed to send container resource failed event for " + cId, e);
           }
         }
         List<Path> paths = new ArrayList<Path>();
