@@ -33,7 +33,7 @@ import javax.security.auth.Subject;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 
 /**
- * An utility class that adapt the Security Manager and APIs related to it for
+ * An utility class that adapts the Security Manager and APIs related to it for
  * JDK 8 and above.
  * <p>
  * In JDK 17, the Security Manager and APIs related to it have been deprecated
@@ -43,6 +43,9 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
  * <p>
  * In JDK 24, the Security Manager has been permanently disabled. See
  * <a href="https://openjdk.org/jeps/486">JEP 486</a> for more information.
+ * <p>
+ * This is derived from Apache Calcite Avatica, which is derived from the Jetty
+ * implementation.
  */
 @Private
 public final class SubjectUtil {
