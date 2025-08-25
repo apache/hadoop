@@ -427,6 +427,11 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>33.1.0-jre</version>
+      </dependency>
+      <dependency>
         <!--
         We're using a specific Protobuf version to ensure compatibility with the
         Google Cloud Storage (GCS) client. The GCS client often relies on
@@ -455,6 +460,11 @@
         <exclusion>
           <groupId>javax.enterprise</groupId>
           <artifactId>cdi-api</artifactId>
+        </exclusion>
+        <!-- Exclude guava 27.0-jre -->
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
         </exclusion>
         <!-- Exclude protobuf-java 2.5.0 -->
         <exclusion>
