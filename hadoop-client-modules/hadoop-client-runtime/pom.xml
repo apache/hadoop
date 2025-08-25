@@ -176,14 +176,11 @@
                       <exclude>org.glassfish.jersey.core:*</exclude>
                       <exclude>org.glassfish.hk2.external:*</exclude>
                       <exclude>org.glassfish.jaxb:*</exclude>
-                      <exclude>jakarta.ws.rs:*</exclude>
                       <exclude>jakarta.annotation:*</exclude>
                       <exclude>jakarta.validation:*</exclude>
-                      <exclude>jakarta.servlet:*</exclude>
-                      <exclude>javax.annotation:*</exclude>
                       <exclude>org.hamcrest:*</exclude>
+                      <exclude>org.javassist:*</exclude>
                       <exclude>aopalliance:*</exclude>
-                      <exclude>javassist:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
