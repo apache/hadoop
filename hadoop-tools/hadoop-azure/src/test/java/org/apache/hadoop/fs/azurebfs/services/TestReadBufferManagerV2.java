@@ -82,7 +82,6 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
       ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
       assertThat(bufferManagerV2.getCpuMonitoringThread())
           .as("CPU Monitor thread should be initialized").isNotNull();
-      bufferManagerV2.close();
     }
 
     conf.setBoolean(FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING, false);
@@ -92,7 +91,6 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
       ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
       assertThat(bufferManagerV2.getCpuMonitoringThread())
           .as("CPU Monitor thread should not be initialized").isNull();
-      bufferManagerV2.close();
     }
   }
 

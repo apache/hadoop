@@ -152,7 +152,11 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       getFreeList().add(i);
       numberOfActiveBuffers++;
     }
-    memoryMonitorThread = Executors.newSingleThreadScheduledExecutor();
+    memoryMonitorThread = Executors.newSingleThreadScheduledExecutor(runnable -> {
+      Thread t = new Thread(runnable, "ReadAheadV2-Memory-Monitor");
+      t.setDaemon(true);
+      return t;
+    });
     memoryMonitorThread.scheduleAtFixedRate(this::scheduledEviction,
         memoryMonitoringIntervalInMilliSec, memoryMonitoringIntervalInMilliSec, TimeUnit.MILLISECONDS);
 
@@ -163,7 +167,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         executorServiceKeepAliveTimeInMilliSec,
         TimeUnit.MILLISECONDS,
         new SynchronousQueue<>(),
-        namedThreadFactory);
+        workerThreadFactory);
     workerPool.allowCoreThreadTimeOut(true);
     for (int i = 0; i < minThreadPoolSize; i++) {
       ReadBufferWorker worker = new ReadBufferWorker(i, getBufferManager());
@@ -173,7 +177,11 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     ReadBufferWorker.UNLEASH_WORKERS.countDown();
 
     if (isDynamicScalingEnabled) {
-      cpuMonitorThread = Executors.newSingleThreadScheduledExecutor();
+      cpuMonitorThread = Executors.newSingleThreadScheduledExecutor(runnable -> {
+        Thread t = new Thread(runnable, "ReadAheadV2-CPU-Monitor");
+        t.setDaemon(true);
+        return t;
+      });
       cpuMonitorThread.scheduleAtFixedRate(this::adjustThreadPool,
           cpuMonitoringIntervalInMilliSec, cpuMonitoringIntervalInMilliSec,
           TimeUnit.MILLISECONDS);
@@ -353,38 +361,6 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     printDebugLog("Purging stale buffers for AbfsInputStream {} ", stream);
     getReadAheadQueue().removeIf(readBuffer -> readBuffer.getStream() == stream);
     purgeList(stream, getCompletedReadList());
-  }
-
-  public void close() {
-    printTraceLog("Closing ReadBufferManagerV2");
-    shutdown(workerPool);
-    shutdown(memoryMonitorThread);
-    shutdown(cpuMonitorThread);
-    workerPool = null;
-    if (bufferPool != null) {
-      // help GC
-      Arrays.fill(bufferPool, null);
-      bufferPool = null;
-    }
-    setBufferManager(null); // reset the singleton instance
-    printTraceLog("ReadBufferManagerV2 closed");
-  }
-
-  private void shutdown(ExecutorService service) {
-    if (service == null || service.isShutdown()) {
-      return; // already shut down or never initialized
-    }
-
-    try {
-      service.shutdown(); // disable new tasks from being submitted
-      // wait for existing tasks to terminate
-      if (!service.awaitTermination(executorServiceKeepAliveTimeInMilliSec, TimeUnit.MILLISECONDS)) {
-        service.shutdownNow(); // cancel currently executing tasks
-      }
-    } catch (InterruptedException e) {
-      service.shutdownNow(); // force shutdown if interrupted
-      Thread.currentThread().interrupt(); // restore interrupted status
-    }
   }
 
   private boolean isAlreadyQueued(final String eTag, final long requestedOffset) {
@@ -786,11 +762,13 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     bufferManager = manager;
   }
 
-  private final ThreadFactory namedThreadFactory = new ThreadFactory() {
+  private final ThreadFactory workerThreadFactory = new ThreadFactory() {
     private int count = 0;
     @Override
     public Thread newThread(Runnable r) {
-      return new Thread(r, "ReadAheadV2-Thread-" + count++);
+      Thread t = new Thread(r, "ReadAheadV2-WorkerThread-" + count++);
+      t.setDaemon(true);
+      return t;
     }
   };
 
