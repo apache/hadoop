@@ -1298,7 +1298,7 @@ public class ResourceLocalizationService extends CompositeService
             dispatcher.getEventHandler().handle(new ContainerResourceFailedEvent(
                 cId, null, exception.getMessage()));
           } catch (Exception | FSError e) {
-            LOG.info("Failed to send container resource failed event for " + cId, e);
+            LOG.info("Failed to send container resource failed event for " + cId.toString(), e);
           }
         }
         List<Path> paths = new ArrayList<Path>();
