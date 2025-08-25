@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_EC_WRITE_ALLOW_END_BLOCKGROUP_INADVANCE;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.ECRedundancy.DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -36,7 +35,6 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.mockito.Mockito;
