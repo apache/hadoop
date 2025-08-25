@@ -580,6 +580,12 @@ public class DFSStripedOutputStream extends DFSOutputStream
     if (!allowEndBlockGroupInAdvance) {
       return false;
     }
+    if (DFSClientFaultInjector.get().mockEndBlockGroupInAdvance()) {
+      LOG.info("Block group {} ends in advance.", currentBlockGroup);
+      this.endBlockGroupInAdvance = true;
+      return true;
+    }
+
     Set<StripedDataStreamer> newFailed = checkStreamersWithoutThrowException();
     boolean overFailedStreamer =
         failedStreamers.size() + newFailed.size() >= failedBlocksTolerated;
@@ -632,6 +638,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
     // 1. Forward the current index pointer
     // 2. Generate parity packets if a full stripe of data cells are present
     if (cellFull) {
+      LOG.info("BZL#Test. cellFull cellFull cellFull");
       int next = index + 1;
       //When all data cells in a stripe are ready, we need to encode
       //them and generate some parity cells. These cells will be
@@ -643,6 +650,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
 
         // if this is the end of the block group, end each internal block
         if (shouldEndBlockGroup() || shouldEndBlockGroupInAdvance()) {
+          LOG.info("BZL#Test. here here here");
           flushAllInternals();
           checkStreamerFailures(false);
           for (int i = 0; i < numAllBlocks; i++) {

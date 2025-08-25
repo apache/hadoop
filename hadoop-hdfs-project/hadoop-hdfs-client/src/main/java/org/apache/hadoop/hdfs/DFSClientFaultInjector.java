@@ -73,5 +73,7 @@ public class DFSClientFaultInjector {
 
   public void failCreateBlockReader() throws InvalidBlockTokenException {}
 
-  public void failWhenReadWithStrategy(boolean isRetryRead) throws IOException {};
+  public void failWhenReadWithStrategy(boolean isRetryRead) throws IOException {}
+  
+  public boolean mockEndBlockGroupInAdvance() {return false;}
 }
