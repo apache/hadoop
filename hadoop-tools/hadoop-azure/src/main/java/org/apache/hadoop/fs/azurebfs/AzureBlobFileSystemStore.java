@@ -110,6 +110,8 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.ListingSupport;
+import org.apache.hadoop.fs.azurebfs.services.ReadBufferManager;
+import org.apache.hadoop.fs.azurebfs.services.ReadBufferManagerV1;
 import org.apache.hadoop.fs.azurebfs.services.ReadBufferManagerV2;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.services.StaticRetryPolicy;
@@ -952,24 +954,45 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     int footerReadBufferSize = options.map(c -> c.getInt(
         AZURE_FOOTER_READ_BUFFER_SIZE, getAbfsConfiguration().getFooterReadBufferSize()))
         .orElse(getAbfsConfiguration().getFooterReadBufferSize());
+
+    ReadBufferManager bufferManager;
+    if (getAbfsConfiguration().isReadAheadV2Enabled()) {
+      bufferManager = ReadBufferManagerV2.getBufferManager(getAbfsConfiguration());
+    } else {
+      ReadBufferManagerV1.setReadBufferManagerConfigs(getReadAheadBlockSize());
+      bufferManager = ReadBufferManagerV1.getBufferManager();
+    }
     return new AbfsInputStreamContext(getAbfsConfiguration().getSasTokenRenewPeriodForStreamsInSeconds())
-            .withReadBufferSize(getAbfsConfiguration().getReadBufferSize())
-            .withReadAheadQueueDepth(getAbfsConfiguration().getReadAheadQueueDepth())
-            .withTolerateOobAppends(getAbfsConfiguration().getTolerateOobAppends())
-            .isReadAheadEnabled(getAbfsConfiguration().isReadAheadEnabled())
-            .isReadAheadV2Enabled(getAbfsConfiguration().isReadAheadV2Enabled())
-            .withReadSmallFilesCompletely(getAbfsConfiguration().readSmallFilesCompletely())
-            .withOptimizeFooterRead(getAbfsConfiguration().optimizeFooterRead())
-            .withFooterReadBufferSize(footerReadBufferSize)
-            .withReadAheadRange(getAbfsConfiguration().getReadAheadRange())
-            .withStreamStatistics(new AbfsInputStreamStatisticsImpl())
-            .withShouldReadBufferSizeAlways(
-                getAbfsConfiguration().shouldReadBufferSizeAlways())
-            .withReadAheadBlockSize(getAbfsConfiguration().getReadAheadBlockSize())
-            .withBufferedPreadDisabled(bufferedPreadDisabled)
-            .withEncryptionAdapter(contextEncryptionAdapter)
-            .withAbfsBackRef(fsBackRef)
-            .build();
+        .withReadBufferSize(getAbfsConfiguration().getReadBufferSize())
+        .withReadAheadQueueDepth(getAbfsConfiguration().getReadAheadQueueDepth())
+        .withTolerateOobAppends(getAbfsConfiguration().getTolerateOobAppends())
+        .isReadAheadEnabled(getAbfsConfiguration().isReadAheadEnabled())
+        .withReadSmallFilesCompletely(getAbfsConfiguration().readSmallFilesCompletely())
+        .withOptimizeFooterRead(getAbfsConfiguration().optimizeFooterRead())
+        .withFooterReadBufferSize(footerReadBufferSize)
+        .withReadAheadRange(getAbfsConfiguration().getReadAheadRange())
+        .withStreamStatistics(new AbfsInputStreamStatisticsImpl())
+        .withShouldReadBufferSizeAlways(getAbfsConfiguration().shouldReadBufferSizeAlways())
+        .withReadAheadBlockSize(getReadAheadBlockSize())
+        .withBufferedPreadDisabled(bufferedPreadDisabled)
+        .withEncryptionAdapter(contextEncryptionAdapter)
+        .withReadBufferManager(bufferManager)
+        .withAbfsBackRef(fsBackRef)
+        .build();
+  }
+
+  private int getReadAheadBlockSize() {
+    int readBufferSize = getAbfsConfiguration().getReadBufferSize();
+    int readAheadBlockSize = getAbfsConfiguration().getReadAheadBlockSize();
+    if (readBufferSize > readAheadBlockSize) {
+      LOG.debug(
+          "fs.azure.read.request.size[={}] is configured for higher size than "
+              + "fs.azure.read.readahead.blocksize[={}]. Auto-align "
+              + "readAhead block size to be same as readRequestSize.",
+          readBufferSize, readAheadBlockSize);
+      readAheadBlockSize = readBufferSize;
+    }
+    return readAheadBlockSize;
   }
 
   public OutputStream openFileForWrite(final Path path,

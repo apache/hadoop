@@ -69,7 +69,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   public static final int FOOTER_SIZE = 16 * ONE_KB;
   public static final int MAX_OPTIMIZED_READ_ATTEMPTS = 2;
 
-  private int readAheadBlockSize;
+  private final int readAheadBlockSize;
   private final AbfsClient client;
   private final Statistics statistics;
   private final String path;
@@ -80,7 +80,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final String eTag;                  // eTag of the path when InputStream are created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
   private final boolean readAheadEnabled; // whether enable readAhead;
-  private final boolean readAheadV2Enabled; // whether enable readAhead V2;
   private final String inputStreamId;
   private final boolean alwaysReadBufferSize;
   /*
@@ -132,7 +131,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   /** ABFS instance to be held by the input stream to avoid GC close. */
   private final BackReference fsBackRef;
-  private ReadBufferManager readBufferManager;
+  private final ReadBufferManager readBufferManager;
 
   public AbfsInputStream(
           final AbfsClient client,
@@ -153,7 +152,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.eTag = eTag;
     this.readAheadRange = abfsInputStreamContext.getReadAheadRange();
     this.readAheadEnabled = abfsInputStreamContext.isReadAheadEnabled();
-    this.readAheadV2Enabled = abfsInputStreamContext.isReadAheadV2Enabled();
     this.alwaysReadBufferSize
         = abfsInputStreamContext.shouldReadBufferSizeAlways();
     this.bufferedPreadDisabled = abfsInputStreamContext
@@ -177,20 +175,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
     this.fsBackRef = abfsInputStreamContext.getFsBackRef();
     contextEncryptionAdapter = abfsInputStreamContext.getEncryptionAdapter();
+    this.readBufferManager = abfsInputStreamContext.getReadBufferManager();
 
-    /*
-     * Initialize the ReadBufferManager based on whether readAheadV2 is enabled or not.
-     * Precedence is given to ReadBufferManagerV2.
-     * If none of the V1 and V2 are enabled, then no read ahead will be done.
-     */
-    if (readAheadV2Enabled) {
-      ReadBufferManagerV2.setReadBufferManagerConfigs(
-          readAheadBlockSize, client.getAbfsConfiguration());
-      readBufferManager = ReadBufferManagerV2.getBufferManager();
-    } else {
-      ReadBufferManagerV1.setReadBufferManagerConfigs(readAheadBlockSize);
-      readBufferManager = ReadBufferManagerV1.getBufferManager();
-    }
     if (streamStatistics != null) {
       ioStatistics = streamStatistics.getIOStatistics();
     }
@@ -807,7 +793,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
    */
   @VisibleForTesting
   public boolean isReadAheadEnabled() {
-    return (readAheadEnabled || readAheadV2Enabled) && readBufferManager != null;
+    return readAheadEnabled;
   }
 
   @VisibleForTesting
@@ -933,6 +919,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @VisibleForTesting
   BackReference getFsBackRef() {
     return fsBackRef;
+  }
+
+  @VisibleForTesting
+  ReadBufferManager getReadBufferManager() {
+    return readBufferManager;
   }
 
   @Override

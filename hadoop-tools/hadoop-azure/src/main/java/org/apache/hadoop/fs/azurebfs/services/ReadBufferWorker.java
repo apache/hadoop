@@ -34,6 +34,9 @@ class ReadBufferWorker implements Runnable {
   private AtomicBoolean isRunning = new AtomicBoolean(true);
 
   ReadBufferWorker(final int id, final ReadBufferManager bufferManager) {
+    if (bufferManager == null) {
+      throw new IllegalArgumentException("ReadBufferManager cannot be null");
+    }
     this.id = id;
     this.bufferManager = bufferManager;
   }
