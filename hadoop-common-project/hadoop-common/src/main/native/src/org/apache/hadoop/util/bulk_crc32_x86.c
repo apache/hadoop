@@ -27,7 +27,6 @@
 
 #include  "bulk_crc32.h"
 #include "gcc_optimizations.h"
-#include "gcc_optimizations.h"
 
 ///////////////////////////////////////////////////////////////////////////
 // Begin code for SSE4.2 specific hardware support of CRC32C
