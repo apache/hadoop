@@ -38,14 +38,14 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class TestAuthorizationHeaderPropagation {
 
   public static class HeaderCapturingAuditLogger implements AuditLogger {
-    public static final List<byte[]> CAPTURED_HEADERS = new ArrayList<>();
+    public static final List<byte[]> capturedHeaders = new ArrayList<>();
     @Override
     public void initialize(Configuration conf) {}
     @Override
     public void logAuditEvent(boolean succeeded, String userName, InetAddress addr,
                               String cmd, String src, String dst, FileStatus stat) {
       byte[] header = AuthorizationContext.getCurrentAuthorizationHeader();
-      CAPTURED_HEADERS.add(header == null ? null : Arrays.copyOf(header, header.length));
+      capturedHeaders.add(header == null ? null : Arrays.copyOf(header, header.length));
     }
   }
 
@@ -56,7 +56,7 @@ public class TestAuthorizationHeaderPropagation {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       cluster.waitClusterUp();
-      HeaderCapturingAuditLogger.CAPTURED_HEADERS.clear();
+      HeaderCapturingAuditLogger.capturedHeaders.clear();
       FileSystem fs = cluster.getFileSystem();
       // First RPC with header1
       byte[] header1 = "header-one".getBytes();
@@ -71,9 +71,9 @@ public class TestAuthorizationHeaderPropagation {
       // Third RPC with no header
       fs.mkdirs(new Path("/authz3"));
       // Now assert
-      assertArrayEquals(header1, HeaderCapturingAuditLogger.CAPTURED_HEADERS.get(0));
-      assertArrayEquals(header2, HeaderCapturingAuditLogger.CAPTURED_HEADERS.get(1));
-      assertNull(HeaderCapturingAuditLogger.CAPTURED_HEADERS.get(2));
+      assertArrayEquals(header1, HeaderCapturingAuditLogger.capturedHeaders.get(0));
+      assertArrayEquals(header2, HeaderCapturingAuditLogger.capturedHeaders.get(1));
+      assertNull(HeaderCapturingAuditLogger.capturedHeaders.get(2));
     } finally {
       cluster.shutdown();
     }

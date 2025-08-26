@@ -46,9 +46,7 @@ public class TestAuthorizationContext {
       Assertions.assertNull(AuthorizationContext.getCurrentAuthorizationHeader());
       byte[] threadHeader = "other-thread".getBytes();
       AuthorizationContext.setCurrentAuthorizationHeader(threadHeader);
-      Assertions.assertArrayEquals(
-          threadHeader,
-          AuthorizationContext.getCurrentAuthorizationHeader());
+      Assertions.assertArrayEquals(threadHeader, AuthorizationContext.getCurrentAuthorizationHeader());
       AuthorizationContext.clear();
       Assertions.assertNull(AuthorizationContext.getCurrentAuthorizationHeader());
     });
