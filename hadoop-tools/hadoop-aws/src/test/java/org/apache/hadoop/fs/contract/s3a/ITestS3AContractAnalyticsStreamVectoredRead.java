@@ -18,12 +18,24 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.util.List;
+
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.enableAnalyticsAccelerator;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipForAnyEncryptionExceptSSES3;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 
 /**
  * S3A contract tests for vectored reads with the Analytics stream.
@@ -57,12 +69,48 @@ public class ITestS3AContractAnalyticsStreamVectoredRead extends AbstractContrac
     // This issue is tracked in:
     // https://github.com/awslabs/analytics-accelerator-s3/issues/218
     skipForAnyEncryptionExceptSSES3(conf);
-    conf.set("fs.contract.vector-io-early-eof-check", "false");
     return conf;
   }
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf);
+  }
+
+  /**
+   * When the offset is negative, AAL returns IllegalArgumentException, whereas the base implementation will return
+   * an EoF.
+   */
+  @Override
+  public void testNegativeOffsetRange()  throws Exception {
+    verifyExceptionalVectoredRead(ContractTestUtils.range(-1, 50), IllegalArgumentException.class);
+  }
+
+  /**
+   * Currently there is no null check on the release operation, this will be fixed in the next AAL version.
+   */
+  @Override
+  public void testNullReleaseOperation()  {
+    skip("AAL current does not do a null check on the release operation");
+  }
+
+  @Test
+  public void testReadVectoredWithAALStatsCollection() throws Exception {
+
+    List<FileRange> fileRanges = createSampleNonOverlappingRanges();
+    try (FSDataInputStream in = openVectorFile()) {
+      in.readVectored(fileRanges, getAllocate());
+
+      validateVectoredReadResult(fileRanges, DATASET, 0);
+      IOStatistics st = in.getIOStatistics();
+
+      // Statistics such as GET requests will be added after IoStats support.
+      verifyStatisticCounterValue(st,
+              StreamStatisticNames.STREAM_READ_ANALYTICS_OPENED, 1);
+
+      verifyStatisticCounterValue(st,
+              StreamStatisticNames.STREAM_READ_VECTORED_OPERATIONS,
+              1);
+    }
   }
 }
