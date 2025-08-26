@@ -55,6 +55,7 @@ import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.ClientAssertionProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.CustomTokenProviderAdapter;
 import org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider;
@@ -1277,12 +1278,38 @@ public class AbfsConfiguration{
               getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
           String clientId =
               getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
-          String tokenFile =
-              getTrimmedPasswordString(FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE,
-              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE);
-          tokenProvider = new WorkloadIdentityTokenProvider(
-              authority, tenantGuid, clientId, tokenFile);
-          LOG.trace("WorkloadIdentityTokenProvider initialized");
+          
+          // Check if a custom ClientAssertionProvider is configured
+          String clientAssertionProviderClassName = 
+              getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_CLASS);
+          
+          if (clientAssertionProviderClassName != null && !clientAssertionProviderClassName.trim().isEmpty()) {
+            // Use custom ClientAssertionProvider
+            try {
+              Class<?> providerClass = Class.forName(clientAssertionProviderClassName.trim());
+              ClientAssertionProvider clientAssertionProvider = 
+                  (ClientAssertionProvider) providerClass.getDeclaredConstructor().newInstance();
+              
+              // Initialize the provider with configuration
+              clientAssertionProvider.initialize(rawConfig, accountName);
+              
+              tokenProvider = new WorkloadIdentityTokenProvider(
+                  authority, tenantGuid, clientId, clientAssertionProvider);
+              LOG.trace("WorkloadIdentityTokenProvider initialized with custom ClientAssertionProvider: {}", 
+                  clientAssertionProviderClassName);
+            } catch (Exception e) {
+              throw new TokenAccessProviderException(
+                  "Failed to initialize custom ClientAssertionProvider: " + clientAssertionProviderClassName, e);
+            }
+          } else {
+            // Use file-based approach (backward compatibility)
+            String tokenFile =
+                getTrimmedPasswordString(FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE,
+                AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE);
+            tokenProvider = new WorkloadIdentityTokenProvider(
+                authority, tenantGuid, clientId, tokenFile);
+            LOG.trace("WorkloadIdentityTokenProvider initialized with file-based token");
+          }
         } else {
           throw new IllegalArgumentException("Failed to initialize " + tokenProviderClass);
         }
