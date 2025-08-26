@@ -28,10 +28,10 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
 /**
@@ -47,13 +47,13 @@ public class TestWebHdfsCreatePermissions {
 
   private MiniDFSCluster cluster;
 
-  @Before
+  @BeforeEach
   public void initializeMiniDFSCluster() throws Exception {
     final Configuration conf = WebHdfsTestUtil.createConf();
     this.cluster = new MiniDFSCluster.Builder(conf).build();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -79,12 +79,12 @@ public class TestWebHdfsCreatePermissions {
       URL url = new URL(uri.toString());
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       conn.setRequestMethod("PUT");
-      Assert.assertEquals(expectedResponse, conn.getResponseCode());
+      Assertions.assertEquals(expectedResponse, conn.getResponseCode());
 
       NamenodeProtocols namenode = cluster.getNameNode().getRpcServer();
       FsPermission resultingPermission = namenode.getFileInfo(path).
             getPermission();
-      Assert.assertEquals(expectedPermission, resultingPermission.toString());
+      Assertions.assertEquals(expectedPermission, resultingPermission.toString());
     } finally {
       cluster.shutdown();
     }

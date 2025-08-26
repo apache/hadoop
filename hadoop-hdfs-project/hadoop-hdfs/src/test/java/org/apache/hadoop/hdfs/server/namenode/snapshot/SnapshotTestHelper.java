@@ -50,7 +50,7 @@ import org.apache.log4j.Layout;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.WriterAppender;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,8 +59,8 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Helper for writing snapshot related tests
@@ -210,7 +210,7 @@ public class SnapshotTestHelper {
       final String label = "mkdirs " + dir;
       LOG.info(label);
       hdfs.mkdirs(dir);
-      Assert.assertTrue(label, hdfs.exists(dir));
+      Assertions.assertTrue(hdfs.exists(dir), label);
       return dir;
     }
 
@@ -222,7 +222,7 @@ public class SnapshotTestHelper {
       final String label = "createFile " + file;
       LOG.info(label);
       DFSTestUtil.createFile(hdfs, file, 0, (short)1, 0L);
-      Assert.assertTrue(label, hdfs.exists(file));
+      Assertions.assertTrue(hdfs.exists(file), label);
       return file;
     }
 
@@ -233,7 +233,7 @@ public class SnapshotTestHelper {
       final String label = "rename " + src + " -> " + dst;
       final boolean renamed = hdfs.rename(src, dst);
       LOG.info("{}: success? {}", label, renamed);
-      Assert.assertTrue(label, renamed);
+      Assertions.assertTrue(renamed, label);
       return snapshot;
     }
 
@@ -355,9 +355,9 @@ public class SnapshotTestHelper {
     // Compare the snapshot with the current dir
     FileStatus[] currentFiles = hdfs.listStatus(snapshottedDir);
     FileStatus[] snapshotFiles = hdfs.listStatus(snapshotRoot);
-    assertEquals("snapshottedDir=" + snapshottedDir
-        + ", snapshotRoot=" + snapshotRoot,
-        currentFiles.length, snapshotFiles.length);
+    assertEquals(currentFiles.length, snapshotFiles.length,
+        "snapshottedDir=" + snapshottedDir
+            + ", snapshotRoot=" + snapshotRoot);
   }
   
   /**
@@ -449,8 +449,8 @@ public class SnapshotTestHelper {
         }
         assertEquals(line1.trim(), line2.trim());
       }
-      Assert.assertNull(reader1.readLine());
-      Assert.assertNull(reader2.readLine());
+      Assertions.assertNull(reader1.readLine());
+      Assertions.assertNull(reader2.readLine());
     } finally {
       reader1.close();
       reader2.close();

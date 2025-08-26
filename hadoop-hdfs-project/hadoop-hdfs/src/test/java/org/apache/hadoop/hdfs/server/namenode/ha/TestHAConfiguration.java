@@ -19,10 +19,10 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -40,7 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 /**
@@ -107,8 +107,8 @@ public class TestHAConfiguration {
     NameNode.initializeGenericKeys(conf, "ns1", "nn1");
 
     checkpointer = new StandbyCheckpointer(conf, fsn);
-    assertEquals("Got an unexpected number of possible active NNs", 2, checkpointer
-        .getActiveNNAddresses().size());
+    assertEquals(2, checkpointer.getActiveNNAddresses().size(),
+        "Got an unexpected number of possible active NNs");
     assertEquals(new URL("http", "1.2.3.2", DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT, ""),
         checkpointer.getActiveNNAddresses().get(0));
     assertAddressMatches("1.2.3.2", checkpointer.getActiveNNAddresses().get(0));

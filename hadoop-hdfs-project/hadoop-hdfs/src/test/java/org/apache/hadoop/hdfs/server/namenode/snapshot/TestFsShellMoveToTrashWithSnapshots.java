@@ -20,10 +20,11 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,14 +56,14 @@ public class TestFsShellMoveToTrashWithSnapshots {
 
   private static SnapshotTestHelper.MyCluster cluster;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     final Configuration conf = new Configuration();
     conf.setInt(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, 100);
     cluster = new SnapshotTestHelper.MyCluster(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -245,7 +246,7 @@ public class TestFsShellMoveToTrashWithSnapshots {
     for (MyFile f : files) {
       final String original = f.trash.toUri().getPath();
       if (!original.startsWith(trashPathPrefix)) {
-        Assert.assertTrue(original.startsWith(commonPrefix));
+        Assertions.assertTrue(original.startsWith(commonPrefix));
 
         final int i = original.indexOf('/', commonPrefix.length());
         final String suffix = original.substring(i + 1);
@@ -254,12 +255,14 @@ public class TestFsShellMoveToTrashWithSnapshots {
     }
   }
 
-  @Test(timeout = 300_000)
+  @Test
+  @Timeout(value = 300)
   public void test100tasks20files() throws Exception {
     runMultipleTasks(100, 20);
   }
 
-  @Test(timeout = 300_000)
+  @Test
+  @Timeout(value = 300)
   public void test10tasks200files() throws Exception {
     runMultipleTasks(10, 200);
   }
@@ -289,7 +292,8 @@ public class TestFsShellMoveToTrashWithSnapshots {
     assertExists(buckets, f -> removeSubstring(f.getPath()));
   }
 
-  @Test(timeout = 100_000)
+  @Test
+  @Timeout(value = 100)
   public void test4files() throws Exception {
     final Path dbDir = cluster.mkdirs(WAREHOUSE_DIR + "db");
     final Path tmpDir = cluster.mkdirs(WAREHOUSE_DIR + "tmp");
@@ -298,7 +302,8 @@ public class TestFsShellMoveToTrashWithSnapshots {
     assertExists(buckets, f -> removeSubstring(f.getPath()));
   }
 
-  @Test(timeout = 300_000)
+  @Test
+  @Timeout(value = 300)
   public void test200files() throws Exception {
     final Path dbDir = cluster.mkdirs(WAREHOUSE_DIR + "db");
     final Path tmpDir = cluster.mkdirs(WAREHOUSE_DIR + "tmp");
@@ -307,7 +312,8 @@ public class TestFsShellMoveToTrashWithSnapshots {
     assertExists(buckets, f -> removeSubstring(f.getPath()));
   }
 
-  @Test(timeout = 300_000)
+  @Test
+  @Timeout(value = 300)
   public void test50files10times() throws Exception {
     final Path tmpDir = cluster.mkdirs(WAREHOUSE_DIR + "tmp");
     final List<MyFile> buckets = new ArrayList<>();
