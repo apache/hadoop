@@ -17,7 +17,7 @@
 # Dockerfile for installing the necessary dependencies for building Hadoop.
 # See BUILDING.txt.
 
-FROM debian:10
+FROM debian:11
 
 WORKDIR /root
 
@@ -29,26 +29,24 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN echo APT::Install-Recommends "0"\; > /etc/apt/apt.conf.d/10disableextras
 RUN echo APT::Install-Suggests "0"\; >>  /etc/apt/apt.conf.d/10disableextras
 
-ENV DEBIAN_FRONTEND noninteractive
-ENV DEBCONF_TERSE true
+ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBCONF_TERSE=true
 
 ######
 # Platform package dependency resolver
 ######
 COPY pkg-resolver pkg-resolver
 RUN chmod a+x pkg-resolver/install-pkg-resolver.sh
-RUN pkg-resolver/install-pkg-resolver.sh debian:10
+RUN pkg-resolver/install-pkg-resolver.sh debian:11
 
 ######
 # Install packages from apt
 ######
 # hadolint ignore=DL3008,SC2046
 RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends $(pkg-resolver/resolve.py debian:10) \
-    && echo 'deb http://deb.debian.org/debian bullseye main' >> /etc/apt/sources.list \
-    && apt-get -q update \
-    && apt-get -q install -y --no-install-recommends -t bullseye $(pkg-resolver/resolve.py --release=bullseye debian:10) \
+    && apt-get -q install -y --no-install-recommends $(pkg-resolver/resolve.py debian:11) \
     && apt-get clean \
+    && update-java-alternatives -s java-1.11.0-openjdk-amd64 \
     && rm -rf /var/lib/apt/lists/*
 
 # TODO : Set locale
@@ -56,38 +54,38 @@ RUN apt-get -q update \
 ######
 # Set env vars required to build Hadoop
 ######
-ENV MAVEN_HOME /usr
+ENV MAVEN_HOME=/usr
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
-ENV JAVA_HOME /usr/lib/jvm/java-11-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 
 #######
 # Set env vars for SpotBugs 4.2.2
 #######
-ENV SPOTBUGS_HOME /opt/spotbugs
+ENV SPOTBUGS_HOME=/opt/spotbugs
 
 #######
 # Set env vars for Google Protobuf 3.21.12
 #######
-ENV PROTOBUF_HOME /opt/protobuf
-ENV PATH "${PATH}:/opt/protobuf/bin"
+ENV PROTOBUF_HOME=/opt/protobuf
+ENV PATH="${PATH}:/opt/protobuf/bin"
 
 ###
 # Avoid out of memory errors in builds
 ###
-ENV MAVEN_OPTS -Xms256m -Xmx3072m
+ENV MAVEN_OPTS="-Xms256m -Xmx3072m"
 
 # Skip gpg verification when downloading Yetus via yetus-wrapper
-ENV HADOOP_SKIP_YETUS_VERIFICATION true
+ENV HADOOP_SKIP_YETUS_VERIFICATION=true
 
 ####
 # Install packages
 ####
-RUN pkg-resolver/install-cmake.sh debian:10
-RUN pkg-resolver/install-spotbugs.sh debian:10
-RUN pkg-resolver/install-boost.sh debian:10
-RUN pkg-resolver/install-protobuf.sh debian:10
-RUN pkg-resolver/install-hadolint.sh debian:10
-RUN pkg-resolver/install-intel-isa-l.sh debian:10
+RUN pkg-resolver/install-cmake.sh debian:11
+RUN pkg-resolver/install-spotbugs.sh debian:11
+RUN pkg-resolver/install-boost.sh debian:11
+RUN pkg-resolver/install-protobuf.sh debian:11
+RUN pkg-resolver/install-hadolint.sh debian:11
+RUN pkg-resolver/install-intel-isa-l.sh debian:11
 
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.
