@@ -1063,6 +1063,7 @@ public abstract class Server {
           span, context, new byte[0]);
     }
 
+    @SuppressWarnings("checkstyle:parameterNumber")
     RpcCall(Connection connection, int id, int retryCount,
         Writable param, RPC.RpcKind kind, byte[] clientId,
         Span span, CallerContext context, byte[] authHeader) {
