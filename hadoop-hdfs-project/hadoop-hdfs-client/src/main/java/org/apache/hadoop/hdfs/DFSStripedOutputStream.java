@@ -75,6 +75,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_EC_WRITE_ALLOW_END_BLOCKGROUP_INADVANCE;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_EC_WRITE_ALLOW_END_BLOCKGROUP_INADVANCE_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_EC_WRITE_MAX_END_BLOCKGROUP_INADVANCE_COUNT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_EC_WRITE_MAX_END_BLOCKGROUP_INADVANCE_COUNT_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.ECRedundancy.DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.ECRedundancy.DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED_DEFAILT;
 
@@ -289,6 +291,8 @@ public class DFSStripedOutputStream extends DFSOutputStream
   private int blockGroupIndex;
   private long datanodeRestartTimeout;
   private final int failedBlocksTolerated;
+  private final int maxEndBlockGroupInAdvanceCount;
+  private int curEndBlockGroupInAdvanceCount;
   private final boolean allowEndBlockGroupInAdvance;
   private boolean endBlockGroupInAdvance;
 
@@ -342,6 +346,9 @@ public class DFSStripedOutputStream extends DFSOutputStream
     allowEndBlockGroupInAdvance = dfsClient.getConfiguration().getBoolean(
         DFS_CLIENT_EC_WRITE_ALLOW_END_BLOCKGROUP_INADVANCE,
         DFS_CLIENT_EC_WRITE_ALLOW_END_BLOCKGROUP_INADVANCE_DEFAULT);
+    maxEndBlockGroupInAdvanceCount = dfsClient.getConfiguration().getInt(
+        DFS_CLIENT_EC_WRITE_MAX_END_BLOCKGROUP_INADVANCE_COUNT,
+        DFS_CLIENT_EC_WRITE_MAX_END_BLOCKGROUP_INADVANCE_COUNT_DEFAULT);
   }
 
   /** Construct a new output stream for appending to a file. */
@@ -577,12 +584,14 @@ public class DFSStripedOutputStream extends DFSOutputStream
   }
 
   private boolean shouldEndBlockGroupInAdvance() {
-    if (!allowEndBlockGroupInAdvance) {
+    if (!allowEndBlockGroupInAdvance ||
+        curEndBlockGroupInAdvanceCount > maxEndBlockGroupInAdvanceCount) {
       return false;
     }
     if (DFSClientFaultInjector.get().mockEndBlockGroupInAdvance()) {
       LOG.info("Block group {} ends in advance.", currentBlockGroup);
       this.endBlockGroupInAdvance = true;
+      curEndBlockGroupInAdvanceCount++;
       return true;
     }
 
@@ -594,6 +603,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
     if (overFailedStreamer && stripeFull) {
       LOG.info("Block group {} ends in advance.", currentBlockGroup);
       this.endBlockGroupInAdvance = true;
+      curEndBlockGroupInAdvanceCount++;
       return true;
     }
     return false;

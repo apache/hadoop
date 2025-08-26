@@ -300,6 +300,10 @@ public interface HdfsClientConfigKeys {
       "dfs.client.ec.write.allow.end.blockgroup.inadvance";
   boolean DFS_CLIENT_EC_WRITE_ALLOW_END_BLOCKGROUP_INADVANCE_DEFAULT = false;
 
+  String DFS_CLIENT_EC_WRITE_MAX_END_BLOCKGROUP_INADVANCE_COUNT =
+      "dfs.client.ec.write.max.end.blockgroup.inadvance.count";
+  int DFS_CLIENT_EC_WRITE_MAX_END_BLOCKGROUP_INADVANCE_COUNT_DEFAULT = 10;
+
   /**
    * These are deprecated config keys to client code.
    */

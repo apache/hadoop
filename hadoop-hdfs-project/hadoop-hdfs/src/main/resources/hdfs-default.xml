@@ -6708,4 +6708,12 @@
       Whether allow client ends non-full block group in advance or not.
     </description>
   </property>
+  <property>
+    <name>dfs.client.ec.write.max.end.blockgroup.inadvance.count</name>
+    <value>10</value>
+    <description>
+      Max count of ending block group in advance allowed.
+      This prevents the creation of large amounts of metadata in NameNode.
+    </description>
+  </property>
 </configuration>
