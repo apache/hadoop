@@ -352,8 +352,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
         SERVICE_AMAZON_S3_STATUS_CODE_403,
         () -> fsKeyB.getFileChecksum(path));
   }
-
-
+  
   private S3AFileSystem createNewFileSystemWithSSECKey(String sseCKey) throws
       IOException {
     Configuration conf = this.createConfiguration();
