@@ -133,7 +133,7 @@ The JCE provider name used in CryptoCodec.
 
 Default: `8192`
 
-The buffer size used by CryptoInputStream and CryptoOutputStream.
+The buffer size used by CryptoInputStream and CryptoOutputStream. Minimum is 512 bytes; the effective value is floored to the nearest multiple of the cipher algorithm block size.
 
 ### Namenode configuration
 
