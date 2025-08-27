@@ -20,11 +20,15 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
+import java.util.Arrays;
+import java.util.Collection;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -56,6 +60,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * Equally "vexing" has been the optimizations of getFileStatus(), wherein
  * LIST comes before HEAD path + /
  */
+@ParameterizedClass(name="analytics-accelerator-enabled-{0}")
+@MethodSource("params")
 public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
 
   private static final String SERVICE_AMAZON_S3_STATUS_CODE_403
@@ -75,6 +81,19 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
    */
   private S3AFileSystem fsKeyB;
 
+  private final boolean analyticsAcceleratorEnabled;
+
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+            {true},
+            {false}
+    });
+  }
+
+  public ITestS3AEncryptionSSEC (final boolean analyticsAcceleratorEnabled) {
+    this.analyticsAcceleratorEnabled = analyticsAcceleratorEnabled;
+  }
+
 
   @SuppressWarnings("deprecation")
   @Override
@@ -92,6 +111,11 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
         getSSEAlgorithm().getMethod());
     conf.set(S3_ENCRYPTION_KEY, KEY_1);
     conf.setBoolean(ETAG_CHECKSUM_ENABLED, true);
+
+    if (analyticsAcceleratorEnabled) {
+      enableAnalyticsAccelerator(conf);
+    }
+
     return conf;
   }
 
@@ -329,64 +353,6 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
         () -> fsKeyB.getFileChecksum(path));
   }
 
-
-  /**
-   * Tests the creation and reading of a file using a different encryption key
-   * when Analytics Accelerator is enabled.
-   *
-   * @throws Exception if any error occurs during the test execution
-   */
-  @Test
-  public void testCreateFileAndReadWithDifferentEncryptionKeyWithAnalyticsAcceleratorEnabled() throws Exception {
-    enableAnalyticsAccelerator(getConfiguration());
-    testCreateFileAndReadWithDifferentEncryptionKey();
-  }
-
-  /**
-   * Tests the creation and movement of a file using a different SSE-C key
-   * when Analytics Accelerator is enabled.
-   *
-   * @throws Exception if any error occurs during the test execution
-   */
-  @Test
-  public void testCreateFileThenMoveWithDifferentSSECKeyWithAnalyticsAcceleratorEnabled() throws Exception {
-    enableAnalyticsAccelerator(getConfiguration());
-    testCreateFileThenMoveWithDifferentSSECKey();
-  }
-
-  /**
-   * Tests create and file rename operation when Analytics Accelerator is enabled.
-   *
-   * @throws Exception if any error occurs during the test execution
-   */
-  @Test
-  public void testCreateFileAndRenameFileWithAnalyticsAcceleratorEnabled() throws Exception {
-    enableAnalyticsAccelerator(getConfiguration());
-    testRenameFile();
-  }
-
-  /**
-   * Tests the creation and listing of encrypted files when Analytics Accelerator is enabled.
-   *
-   * @throws Exception if any error occurs during the test execution
-   */
-  @Test
-  public void testCreateFileAndListStatusEncryptedFileWithAnalyticsAcceleratorEnabled() throws Exception {
-    enableAnalyticsAccelerator(getConfiguration());
-    testListStatusEncryptedFile();
-  }
-
-  /**
-   * Tests the creation and deletion of an encrypted object using a different key
-   * when Analytics Accelerator is enabled.t.
-   *
-   * @throws Exception if any error occurs during the test execution
-   */
-  @Test
-  public void testCreateFileAndDeleteEncryptedObjectWithDifferentKeyWithAnalyticsAcceleratorEnabled() throws Exception {
-    enableAnalyticsAccelerator(getConfiguration());
-    testDeleteEncryptedObjectWithDifferentKey();
-  }
 
   private S3AFileSystem createNewFileSystemWithSSECKey(String sseCKey) throws
       IOException {

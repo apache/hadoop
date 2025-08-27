@@ -21,14 +21,12 @@ package org.apache.hadoop.fs.s3a.impl.streams;
 
 import java.io.EOFException;
 import java.io.IOException;
-
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
-
 import java.util.Optional;
 
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
@@ -259,7 +257,7 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
           .etag(parameters.getObjectAttributes().getETag()).build());
     }
 
-    if(parameters.getEncryptionSecrets().getEncryptionMethod() == S3AEncryptionMethods.SSE_C) {
+    if (parameters.getEncryptionSecrets().getEncryptionMethod() == S3AEncryptionMethods.SSE_C) {
       EncryptionSecretOperations.getSSECustomerKey(parameters.getEncryptionSecrets())
               .ifPresent(base64customerKey -> openStreamInformationBuilder.encryptionSecrets(
               EncryptionSecrets.builder().sseCustomerKey(Optional.of(base64customerKey)).build()));

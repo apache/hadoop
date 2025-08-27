@@ -71,7 +71,7 @@ public final class ObjectReadParameters {
   private LocalDirAllocator directoryAllocator;
 
   /**
-   * Encryption secrets for this stream
+   * Encryption secrets for this stream.
    */
   private EncryptionSecrets encryptionSecrets;
 
