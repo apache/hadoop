@@ -155,7 +155,7 @@ public class TestMultiObserverNode {
   }
 
   private void assertSentTo(int... nnIndices) throws IOException {
-      assertTrue(HATestUtil.isSentToAnyOfNameNodes(dfs, dfsCluster, nnIndices),
-          "Request was not sent to any of the expected namenodes.");
+    assertTrue(HATestUtil.isSentToAnyOfNameNodes(dfs, dfsCluster, nnIndices),
+        "Request was not sent to any of the expected namenodes.");
   }
 }

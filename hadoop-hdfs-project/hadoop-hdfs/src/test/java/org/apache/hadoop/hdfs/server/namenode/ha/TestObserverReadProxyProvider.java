@@ -264,7 +264,7 @@ public class TestObserverReadProxyProvider {
       doWrite();
       fail("Write should fail; failover required");
     } catch (RemoteException re) {
-        assertEquals(re.getClassName(), StandbyException.class.getCanonicalName());
+      assertEquals(re.getClassName(), StandbyException.class.getCanonicalName());
     }
     proxyProvider.performFailover(proxyProvider.getProxy().proxy);
     doWrite();
@@ -530,7 +530,7 @@ public class TestObserverReadProxyProvider {
   }
 
   private void assertHandledBy(int namenodeIdx) {
-      assertEquals(namenodeAddrs[namenodeIdx], proxyProvider.getLastProxy().proxyInfo);
+    assertEquals(namenodeAddrs[namenodeIdx], proxyProvider.getLastProxy().proxyInfo);
   }
 
   private static void doWrite(ClientProtocol client) throws Exception {

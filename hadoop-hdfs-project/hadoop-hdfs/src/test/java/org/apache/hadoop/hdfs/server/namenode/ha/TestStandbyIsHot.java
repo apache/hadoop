@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 
@@ -39,7 +40,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.event.Level;
@@ -214,8 +214,8 @@ public class TestStandbyIsHot {
           LocatedBlocks locs = NameNodeAdapter.getBlockLocations(nn, path, 0, 1000);
           DatanodeInfo[] dnis = locs.getLastLocatedBlock().getLocations();
           for (DatanodeInfo dni : dnis) {
-                    Assertions.assertNotNull(dni);
-                }
+            assertNotNull(dni);
+          }
           int numReplicas = dnis.length;
           
           LOG.info("Got " + numReplicas + " locs: " + locs);

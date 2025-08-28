@@ -1393,8 +1393,8 @@ public class TestRetryCacheWithHA {
     assertTrue(updatesNN[1] > 0, "CacheUpdated on NN1: " + updatesNN[1]);
     long expectedUpdateCount = op.getExpectedCacheUpdateCount();
     if (expectedUpdateCount > 0) {
-        assertEquals(expectedUpdateCount, updatesNN[0], "CacheUpdated on NN0: " + updatesNN[0]);
-        assertEquals(expectedUpdateCount, updatesNN[1], "CacheUpdated on NN0: " + updatesNN[1]);
+      assertEquals(expectedUpdateCount, updatesNN[0], "CacheUpdated on NN0: " + updatesNN[0]);
+      assertEquals(expectedUpdateCount, updatesNN[1], "CacheUpdated on NN0: " + updatesNN[1]);
     }
   }
 

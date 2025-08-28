@@ -499,28 +499,28 @@ public class TestHASafeMode {
     int numNodes, int nodeThresh) {
     String status = nn.getNamesystem().getSafemode();
     if (total == 0 && nodeThresh == 0) {
-        assertTrue(status.isEmpty()
+      assertTrue(status.isEmpty()
               || status.startsWith("Safe mode is ON. The reported blocks 0 " +
               "has reached the threshold 0.9990 of total blocks 0. The " +
               "minimum number of live datanodes is not required. In safe " +
               "mode extension. Safe mode will be turned off automatically " +
-                "in 0 seconds."),
-            "Bad safemode status: '" + status + "'");
+              "in 0 seconds."),
+          "Bad safemode status: '" + status + "'");
     } else if (safe == total) {
       if (nodeThresh == 0) {
-          assertTrue(status.startsWith("Safe mode is ON. The reported blocks " + safe
-                + " has reached the " + "threshold 0.9990 of total blocks "
-                + total + ". The minimum number of live datanodes is not "
-                + "required. In safe mode extension. Safe mode will be turned "
-              + "off automatically"), "Bad safemode status: '" + status + "'");
+        assertTrue(status.startsWith("Safe mode is ON. The reported blocks " + safe
+            + " has reached the " + "threshold 0.9990 of total blocks "
+            + total + ". The minimum number of live datanodes is not "
+            + "required. In safe mode extension. Safe mode will be turned "
+            + "off automatically"), "Bad safemode status: '" + status + "'");
       } else {
-          assertTrue(status.startsWith(
+        assertTrue(status.startsWith(
                 "Safe mode is ON. The reported blocks " + safe + " has reached "
                     + "the threshold 0.9990 of total blocks " + total + ". The "
                     + "number of live datanodes " + numNodes + " has reached "
                     + "the minimum number " + nodeThresh + ". In safe mode "
-                  + "extension. Safe mode will be turned off automatically"),
-              "Bad safemode status: '" + status + "'");
+                    + "extension. Safe mode will be turned off automatically"),
+            "Bad safemode status: '" + status + "'");
       }
     } else {
       int additional = (int) (total * 0.9990) - safe;
@@ -799,11 +799,11 @@ public class TestHASafeMode {
       fail("StandBy should throw exception for isInSafeMode");
     } catch (IOException e) {
       if (e instanceof RemoteException) {
-          assertEquals(RpcErrorCodeProto.ERROR_APPLICATION, ((RemoteException) e).getErrorCode(),
-              "RPC Error code should indicate app failure.");
-          IOException sbExcpetion = ((RemoteException) e).unwrapRemoteException();
-          assertTrue(sbExcpetion instanceof StandbyException,
-              "StandBy nn should not support isInSafeMode");
+        assertEquals(RpcErrorCodeProto.ERROR_APPLICATION, ((RemoteException) e).getErrorCode(),
+            "RPC Error code should indicate app failure.");
+        IOException sbExcpetion = ((RemoteException) e).unwrapRemoteException();
+        assertTrue(sbExcpetion instanceof StandbyException,
+            "StandBy nn should not support isInSafeMode");
       } else {
         throw e;
       }

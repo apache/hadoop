@@ -89,7 +89,7 @@ public class TestFailureOfSharedDir {
       FSNamesystem.getNamespaceEditsDirs(conf);
       fail("Allowed multiple shared edits directories");
     } catch (IOException ioe) {
-        assertEquals("Multiple shared edits directories are not yet supported", ioe.getMessage());
+      assertEquals("Multiple shared edits directories are not yet supported", ioe.getMessage());
     }
   }
   

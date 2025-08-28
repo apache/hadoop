@@ -22,6 +22,7 @@ import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -63,7 +64,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.junit.jupiter.api.Assertions;
 
 /**
  * Test consistency of reads while accessing an ObserverNode.
@@ -252,10 +252,10 @@ public class TestConsistentReadsObserver {
 
   @Test
   public void testAutoMsyncLongPeriod() throws Exception {
-      Assertions.assertThrows(TimeoutException.class, () -> {
-          testMsync(true, Long.MAX_VALUE);
-      });
-      // This should fail since the auto-msync is never activated
+    assertThrows(TimeoutException.class, () -> {
+      testMsync(true, Long.MAX_VALUE);
+    });
+    // This should fail since the auto-msync is never activated
   }
 
   // A new client should first contact the active, before using an observer,
@@ -479,8 +479,8 @@ public class TestConsistentReadsObserver {
   }
 
   private void assertSentTo(int nnIdx) throws IOException {
-      assertTrue(HATestUtil.isSentToAnyOfNameNodes(dfs, dfsCluster, nnIdx),
-          "Request was not sent to the expected namenode " + nnIdx);
+    assertTrue(HATestUtil.isSentToAnyOfNameNodes(dfs, dfsCluster, nnIdx),
+        "Request was not sent to the expected namenode " + nnIdx);
   }
 
   private DistributedFileSystem setObserverRead(boolean flag) throws Exception {

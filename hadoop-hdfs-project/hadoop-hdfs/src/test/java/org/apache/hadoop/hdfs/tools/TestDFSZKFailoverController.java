@@ -246,8 +246,8 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
         "Bind address not expected to be wildcard by default.");
   }
 
-@Test
-@Timeout(value = 30)
+  @Test
+  @Timeout(value = 30)
   public void testWithBindAddressSet() throws Exception {
     startCluster();
     conf.set(DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY, WILDCARD_ADDRESS);
@@ -283,10 +283,10 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     startCluster();
     DFSHAAdmin tool = new DFSHAAdmin();
     tool.setConf(conf);
-    assertEquals(0, tool.run(new String[] { "-failover", "nn1", "nn2" }));
+    assertEquals(0, tool.run(new String[]{"-failover", "nn1", "nn2"}));
     waitForHAState(0, HAServiceState.STANDBY);
     waitForHAState(1, HAServiceState.ACTIVE);
-    assertEquals(0, tool.run(new String[] { "-failover", "nn2", "nn1" }));
+    assertEquals(0, tool.run(new String[]{"-failover", "nn2", "nn1"}));
     waitForHAState(0, HAServiceState.ACTIVE);
     waitForHAState(1, HAServiceState.STANDBY);
     // Answer "yes" to the prompt for --forcemanual

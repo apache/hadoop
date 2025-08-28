@@ -126,7 +126,7 @@ public class TestObserverNode {
         "NN[2] should be observer");
   }
 
-@AfterAll
+  @AfterAll
   public static void shutDownCluster() throws IOException {
     if (qjmhaCluster != null) {
       qjmhaCluster.shutdown();
@@ -667,11 +667,11 @@ public class TestObserverNode {
         dfsCluster.getNameNode(2).getFSImage().getLastAppliedOrWrittenTxId(),
         "Active and Observer stateIds don't match");
     for (int i = 0; i < numThreads; i++) {
-        assertTrue(clientStates[i].lastSeenStateId >= activStateId && clientStates[i].fnfe == null,
-            "Client #" + i
-                + " lastSeenStateId=" + clientStates[i].lastSeenStateId
-          + " activStateId=" + activStateId
-                + "\n" + clientStates[i].fnfe);
+      assertTrue(clientStates[i].lastSeenStateId >= activStateId && clientStates[i].fnfe == null,
+          "Client #" + i
+              + " lastSeenStateId=" + clientStates[i].lastSeenStateId
+              + " activStateId=" + activStateId
+              + "\n" + clientStates[i].fnfe);
     }
 
     // Restore edit log
@@ -750,13 +750,13 @@ public class TestObserverNode {
 
   private static void assertSentTo(DistributedFileSystem fs, int nnIdx)
       throws IOException {
-      assertTrue(HATestUtil.isSentToAnyOfNameNodes(fs, dfsCluster, nnIdx),
-          "Request was not sent to the expected namenode " + nnIdx);
+    assertTrue(HATestUtil.isSentToAnyOfNameNodes(fs, dfsCluster, nnIdx),
+        "Request was not sent to the expected namenode " + nnIdx);
   }
 
   private void assertSentTo(int nnIdx) throws IOException {
-      assertTrue(HATestUtil.isSentToAnyOfNameNodes(dfs, dfsCluster, nnIdx),
-          "Request was not sent to the expected namenode " + nnIdx);
+    assertTrue(HATestUtil.isSentToAnyOfNameNodes(dfs, dfsCluster, nnIdx),
+        "Request was not sent to the expected namenode " + nnIdx);
   }
 
   private static void setObserverRead(boolean flag) throws Exception {

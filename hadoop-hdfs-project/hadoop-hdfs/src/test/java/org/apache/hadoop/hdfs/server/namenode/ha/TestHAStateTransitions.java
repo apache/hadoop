@@ -43,7 +43,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.slf4j.event.Level;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
@@ -177,36 +176,36 @@ public class TestHAStateTransitions {
    * @param nsIndex namespace index starting from zero
    * @throws Exception
    */
-  private void testManualFailoverFailback(MiniDFSCluster cluster, 
+  private void testManualFailoverFailback(MiniDFSCluster cluster,
 		  Configuration conf, int nsIndex) throws Exception {
-      int nn0 = 2 * nsIndex, nn1 = 2 * nsIndex + 1;
+    int nn0 = 2 * nsIndex, nn1 = 2 * nsIndex + 1;
 
-      cluster.transitionToActive(nn0);
-      
-      LOG.info("Starting with NN 0 active in namespace " + nsIndex);
-      FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
-      fs.mkdirs(TEST_DIR);
+    cluster.transitionToActive(nn0);
 
-      LOG.info("Failing over to NN 1 in namespace " + nsIndex);
-      cluster.transitionToStandby(nn0);
-      cluster.transitionToActive(nn1);
-      assertTrue(fs.exists(TEST_DIR));
-      DFSTestUtil.writeFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
+    LOG.info("Starting with NN 0 active in namespace " + nsIndex);
+    FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
+    fs.mkdirs(TEST_DIR);
 
-      LOG.info("Failing over to NN 0 in namespace " + nsIndex);
-      cluster.transitionToStandby(nn1);
-      cluster.transitionToActive(nn0);
-      assertTrue(fs.exists(TEST_DIR));
-      assertEquals(TEST_FILE_DATA, DFSTestUtil.readFile(fs, TEST_FILE_PATH));
+    LOG.info("Failing over to NN 1 in namespace " + nsIndex);
+    cluster.transitionToStandby(nn0);
+    cluster.transitionToActive(nn1);
+    assertTrue(fs.exists(TEST_DIR));
+    DFSTestUtil.writeFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
 
-      LOG.info("Removing test file");
-      fs.delete(TEST_DIR, true);
-      assertFalse(fs.exists(TEST_DIR));
+    LOG.info("Failing over to NN 0 in namespace " + nsIndex);
+    cluster.transitionToStandby(nn1);
+    cluster.transitionToActive(nn0);
+    assertTrue(fs.exists(TEST_DIR));
+    assertEquals(TEST_FILE_DATA, DFSTestUtil.readFile(fs, TEST_FILE_PATH));
 
-      LOG.info("Failing over to NN 1 in namespace " + nsIndex);
-      cluster.transitionToStandby(nn0);
-      cluster.transitionToActive(nn1);
-      assertFalse(fs.exists(TEST_DIR));
+    LOG.info("Removing test file");
+    fs.delete(TEST_DIR, true);
+    assertFalse(fs.exists(TEST_DIR));
+
+    LOG.info("Failing over to NN 1 in namespace " + nsIndex);
+    cluster.transitionToStandby(nn0);
+    cluster.transitionToActive(nn1);
+    assertFalse(fs.exists(TEST_DIR));
   }
   
   /**
@@ -366,7 +365,7 @@ public class TestHAStateTransitions {
       nn2.getRpcServer().renewDelegationToken(token);
       nn2.getRpcServer().cancelDelegationToken(token);
       token = nn2.getRpcServer().getDelegationToken(new Text(renewer));
-      Assertions.assertTrue(token != null);
+      assertTrue(token != null);
     } finally {
       cluster.shutdown();
     }

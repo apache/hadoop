@@ -531,9 +531,9 @@ public class TestStandbyCheckpoints {
     assertTrue(answerer.getFireCount() == 1 && answerer.getResultCount() == 1,
         "SBN should have finished checkpointing.");
   }
-  
-@Test
-@Timeout(value = 300)
+
+  @Test
+  @Timeout(value = 300)
   public void testReadsAllowedDuringCheckpoint() throws Exception {
     
     // Set it up so that we know when the SBN checkpoint starts and ends.

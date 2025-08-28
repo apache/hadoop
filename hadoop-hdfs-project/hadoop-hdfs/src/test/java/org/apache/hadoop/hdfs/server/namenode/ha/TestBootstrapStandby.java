@@ -211,7 +211,7 @@ public class TestBootstrapStandby {
     // BootstrapStandby should fail if the node has a future version
     // and the cluster isn't in rolling upgrade
     bs.setConf(cluster.getConfiguration(2));
-    assertEquals(ERR_CODE_INVALID_VERSION, bs.run(new String[] { "-force" }),
+    assertEquals(ERR_CODE_INVALID_VERSION, bs.run(new String[]{"-force"}),
         "BootstrapStandby should return ERR_CODE_INVALID_VERSION");
 
     // Start rolling upgrade
@@ -296,10 +296,9 @@ public class TestBootstrapStandby {
             try {
               bs.run(new String[]{"-force"});
             } catch (RuntimeException e) {
-              // 和原来一样，把包装的 cause 抛出来以匹配期望异常类型
               Throwable cause = e.getCause();
               if (cause != null) throw cause;
-              throw e; // 没有 cause 就把原异常抛出
+              throw e;
             }
           },
           "BootstrapStandby should fail the image transfer request"

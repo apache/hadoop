@@ -132,9 +132,9 @@ public class TestDFSUpgradeWithHA {
       boolean shouldExist) {
     File previousDir = new File(rootDir, "previous");
     if (shouldExist) {
-        assertTrue(previousDir.exists(), previousDir + " does not exist");
+      assertTrue(previousDir.exists(), previousDir + " does not exist");
     } else {
-        assertFalse(previousDir.exists(), previousDir + " does exist");
+      assertFalse(previousDir.exists(), previousDir + " does exist");
     }
   }
   

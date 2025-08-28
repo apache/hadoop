@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 
@@ -40,7 +41,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.Assertions;
 
 public class TestQuotasWithHA {
   private static final Path TEST_DIR = new Path("/test");
@@ -143,13 +143,12 @@ public class TestQuotasWithHA {
    */
   @Test
   public void testGetContentSummaryOnStandby() throws Exception {
-      Assertions.assertThrows(StandbyException.class, () -> {
-          Configuration nn1conf = cluster.getConfiguration(1);
-          HAUtil.setAllowStandbyReads(nn1conf, false);
-          cluster.restartNameNode(1);
-          cluster.getNameNodeRpc(1).getContentSummary("/");
-      });
-
+    assertThrows(StandbyException.class, () -> {
+      Configuration nn1conf = cluster.getConfiguration(1);
+      HAUtil.setAllowStandbyReads(nn1conf, false);
+      cluster.restartNameNode(1);
+      cluster.getNameNodeRpc(1).getContentSummary("/");
+    });
   }
 
   /**
@@ -157,12 +156,11 @@ public class TestQuotasWithHA {
    */
   @Test
   public void testGetQuotaUsageOnStandby() throws Exception {
-      Assertions.assertThrows(StandbyException.class, () -> {
-          Configuration nn1conf = cluster.getConfiguration(1);
-          HAUtil.setAllowStandbyReads(nn1conf, false);
-          cluster.restartNameNode(1);
-          cluster.getNameNodeRpc(1).getQuotaUsage("/");
-      });
-
+    assertThrows(StandbyException.class, () -> {
+      Configuration nn1conf = cluster.getConfiguration(1);
+      HAUtil.setAllowStandbyReads(nn1conf, false);
+      cluster.restartNameNode(1);
+      cluster.getNameNodeRpc(1).getQuotaUsage("/");
+    });
   }
 }
