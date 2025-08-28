@@ -33,6 +33,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -96,6 +97,7 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_CREATE_RECOV
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicity.SUFFIX;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -2233,6 +2235,98 @@ public class ITestAzureBlobFileSystemCreate extends
       Assertions.assertThat(errorMessage)
           .describedAs("getPathStatus should fail while recovering")
           .contains(ERR_CREATE_RECOVERY);
+    }
+  }
+
+  /**
+   * Test to simulate a successful create operation followed by a connection reset
+   * on the response, triggering a retry.
+   *
+   * This test verifies that the create operation is retried in the event of a
+   * connection reset during the response phase. The test creates a mock
+   * AzureBlobFileSystem and its associated components to simulate the create
+   * operation and the connection reset. It then verifies that the create
+   * operation is retried once before succeeding.
+   *
+   * @throws Exception if an error occurs during the test execution.
+   */
+  @Test
+  public void testCreateIdempotencyForNonHnsBlob() throws Exception {
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
+    // Create a spy of AzureBlobFileSystem
+    try (AzureBlobFileSystem fs = Mockito.spy(
+        (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration()))) {
+      assumeHnsDisabled();
+      // Create a spy of AzureBlobFileSystemStore
+      AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+      assumeBlobServiceType();
+
+      // Create spies for the client handler and blob client
+      AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
+      AbfsBlobClient blobClient = Mockito.spy(clientHandler.getBlobClient());
+      fs.getAbfsStore().setClient(blobClient);
+      fs.getAbfsStore().setClientHandler(clientHandler);
+      // Set up the spies to return the mocked objects
+      Mockito.doReturn(clientHandler).when(store).getClientHandler();
+      Mockito.doReturn(blobClient).when(clientHandler).getBlobClient();
+      Mockito.doReturn(blobClient).when(clientHandler).getIngressClient();
+
+      AtomicInteger createCount = new AtomicInteger(0);
+
+      Mockito.doAnswer(answer -> {
+        // Set up the mock for the create operation
+        AbfsClientTestUtil.setMockAbfsRestOperationForCreateOperation(blobClient,
+            (httpOperation) -> {
+              Mockito.doAnswer(invocation -> {
+                // Call the real processResponse method
+                invocation.callRealMethod();
+
+                int currentCount = createCount.incrementAndGet();
+                if (currentCount == 2) {
+                  Mockito.when(httpOperation.getStatusCode())
+                      .thenReturn(
+                          HTTP_INTERNAL_ERROR); // Status code 500 for Internal Server Error
+                  Mockito.when(httpOperation.getStorageErrorMessage())
+                      .thenReturn("CONNECTION_RESET"); // Error message
+                  throw new IOException("Connection Reset");
+                }
+                return null;
+              }).when(httpOperation).processResponse(
+                  Mockito.nullable(byte[].class),
+                  Mockito.anyInt(),
+                  Mockito.anyInt()
+              );
+
+              return httpOperation;
+            });
+        return answer.callRealMethod();
+      }).when(blobClient).createPath(
+          Mockito.anyString(),
+          Mockito.anyBoolean(),
+          Mockito.anyBoolean(),
+          Mockito.any(AzureBlobFileSystemStore.Permissions.class),
+          Mockito.anyBoolean(), Mockito.nullable(String.class), Mockito.any(ContextEncryptionAdapter.class),
+          any(TracingContext.class)
+      );
+
+      Path path = new Path("/test/file");
+      fs.create(path, false);
+      Mockito.verify(blobClient, Mockito.times(1)).createPath(
+          Mockito.anyString(),
+          Mockito.anyBoolean(),
+          Mockito.anyBoolean(),
+          Mockito.any(AzureBlobFileSystemStore.Permissions.class),
+          Mockito.anyBoolean(), Mockito.nullable(String.class), Mockito.any(ContextEncryptionAdapter.class),
+          any(TracingContext.class));
+
+      Mockito.verify(blobClient, Mockito.times(2)).createPathRestOp(
+          Mockito.anyString(),
+          Mockito.anyBoolean(),
+          Mockito.anyBoolean(),
+          Mockito.anyBoolean(),
+          Mockito.nullable(String.class), Mockito.any(ContextEncryptionAdapter.class),
+          any(TracingContext.class));
+      assertIsFile(fs, path);
     }
   }
 
