@@ -40,6 +40,8 @@ typedef struct crc32_error {
   const uint8_t *bad_data; // pointer to start of data chunk with error
 } crc32_error_t;
 
+extern uint32_t crc32c_sb8(uint32_t crc, const uint8_t *buf, size_t length);
+extern uint32_t crc32_zlib_sb8(uint32_t crc, const uint8_t *buf, size_t length);
 
 /**
  * Either calculates checksums for or verifies a buffer of data.

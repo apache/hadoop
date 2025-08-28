@@ -156,7 +156,7 @@ static uint32_t crc_val(uint32_t crc) {
  * Computes the CRC32c checksum for the specified buffer using the slicing by 8 
  * algorithm over 64 bit quantities.
  */
-static uint32_t crc32c_sb8(uint32_t crc, const uint8_t *buf, size_t length) {
+uint32_t crc32c_sb8(uint32_t crc, const uint8_t *buf, size_t length) {
   uint32_t running_length = ((length)/8)*8;
   uint32_t end_bytes = length - running_length; 
   int li;
@@ -201,7 +201,7 @@ static void pipelined_crc32c_sb8(uint32_t *crc1, uint32_t *crc2, uint32_t *crc3,
  * Update a CRC using the "zlib" polynomial -- what Hadoop calls CHECKSUM_CRC32
  * using slicing-by-8
  */
-static uint32_t crc32_zlib_sb8(
+uint32_t crc32_zlib_sb8(
     uint32_t crc, const uint8_t *buf, size_t length) {
   uint32_t running_length = ((length)/8)*8;
   uint32_t end_bytes = length - running_length; 
