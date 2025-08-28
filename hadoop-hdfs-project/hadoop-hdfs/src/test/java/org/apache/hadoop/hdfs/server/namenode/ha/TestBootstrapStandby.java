@@ -297,7 +297,9 @@ public class TestBootstrapStandby {
               bs.run(new String[]{"-force"});
             } catch (RuntimeException e) {
               Throwable cause = e.getCause();
-              if (cause != null) throw cause;
+              if (cause != null) {
+                throw cause;
+              }
               throw e;
             }
           },
