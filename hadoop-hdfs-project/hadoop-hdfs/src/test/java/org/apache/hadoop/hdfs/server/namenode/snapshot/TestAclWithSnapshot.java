@@ -154,15 +154,13 @@ public class TestAclWithSnapshot {
     AclStatus s = hdfs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[]{aclEntry(ACCESS, USER, "diana", READ_EXECUTE),
-            aclEntry(ACCESS, GROUP, NONE)},
-        returned);
+        aclEntry(ACCESS, GROUP, NONE)}, returned);
     assertPermission((short)010550, path);
 
     s = hdfs.getAclStatus(snapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[]{aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
-            aclEntry(ACCESS, GROUP, NONE)},
-        returned);
+        aclEntry(ACCESS, GROUP, NONE)}, returned);
     assertPermission((short)010750, snapshotPath);
 
     assertDirPermissionDenied(fsAsBruce, BRUCE, path);

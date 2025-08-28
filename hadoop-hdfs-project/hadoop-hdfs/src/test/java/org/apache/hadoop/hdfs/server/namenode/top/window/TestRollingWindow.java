@@ -42,9 +42,8 @@ public class TestRollingWindow {
 
     time += BUCKET_LEN;
     window.incAt(time, 6);
-    assertEquals
-        (11, window.getSum(time),
-            "The sum of rolling window does not reflect the recent update");
+    assertEquals(11, window.getSum(time),
+        "The sum of rolling window does not reflect the recent update");
 
     time += WINDOW_LEN - BUCKET_LEN;
     assertEquals(
