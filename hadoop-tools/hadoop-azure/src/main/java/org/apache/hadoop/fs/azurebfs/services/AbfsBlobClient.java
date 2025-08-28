@@ -513,19 +513,25 @@ public class AbfsBlobClient extends AbfsClient {
     if (isFileCreation) {
       AbfsRestOperation statusOp = null;
       try {
-       statusOp = getPathStatus(path,
-            false, tracingContext, null);
+        // Check if the file already exists by calling GetPathStatus
+        statusOp = getPathStatus(path, false, tracingContext, null);
       } catch (AbfsRestOperationException ex) {
+        // If the path does not exist, continue with file creation
+        // For other errors, rethrow the exception
         if (ex.getStatusCode() != HTTP_NOT_FOUND) {
           throw ex;
         }
       }
+
+      // If the file exists and overwrite is not allowed, throw conflict
       if (statusOp != null && statusOp.hasResult() && !overwrite) {
-        throw new AbfsRestOperationException(HTTP_CONFLICT,
+        throw new AbfsRestOperationException(
+            HTTP_CONFLICT,
             AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
             PATH_EXISTS,
             null);
       } else {
+        // Proceed with file creation (force overwrite = true)
         op = createFile(path, true, permissions, isAppendBlob, eTag,
             contextEncryptionAdapter, tracingContext);
       }
