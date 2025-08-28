@@ -50,7 +50,6 @@ import org.apache.log4j.Layout;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.WriterAppender;
-import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +59,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -210,7 +210,7 @@ public class SnapshotTestHelper {
       final String label = "mkdirs " + dir;
       LOG.info(label);
       hdfs.mkdirs(dir);
-      Assertions.assertTrue(hdfs.exists(dir), label);
+      assertTrue(hdfs.exists(dir), label);
       return dir;
     }
 
@@ -222,7 +222,7 @@ public class SnapshotTestHelper {
       final String label = "createFile " + file;
       LOG.info(label);
       DFSTestUtil.createFile(hdfs, file, 0, (short)1, 0L);
-      Assertions.assertTrue(hdfs.exists(file), label);
+      assertTrue(hdfs.exists(file), label);
       return file;
     }
 
@@ -233,7 +233,7 @@ public class SnapshotTestHelper {
       final String label = "rename " + src + " -> " + dst;
       final boolean renamed = hdfs.rename(src, dst);
       LOG.info("{}: success? {}", label, renamed);
-      Assertions.assertTrue(renamed, label);
+      assertTrue(renamed, label);
       return snapshot;
     }
 
@@ -449,8 +449,8 @@ public class SnapshotTestHelper {
         }
         assertEquals(line1.trim(), line2.trim());
       }
-      Assertions.assertNull(reader1.readLine());
-      Assertions.assertNull(reader2.readLine());
+      assertNull(reader1.readLine());
+      assertNull(reader2.readLine());
     } finally {
       reader1.close();
       reader2.close();

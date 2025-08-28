@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.io.File;
 import java.io.IOException;
 
@@ -34,6 +32,8 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestCheckpointsWithSnapshots {
   

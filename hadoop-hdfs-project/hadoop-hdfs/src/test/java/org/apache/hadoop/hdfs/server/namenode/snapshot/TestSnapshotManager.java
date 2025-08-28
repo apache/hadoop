@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -37,7 +40,6 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -101,9 +103,9 @@ public class TestSnapshotManager {
     try {
       sm.createSnapshot(leaseManager, iip, "dummy", "shouldFailSnapshot",
           Time.now());
-      Assertions.fail("Expected SnapshotException not thrown");
+      fail("Expected SnapshotException not thrown");
     } catch (SnapshotException se) {
-      Assertions.assertTrue(
+      assertTrue(
           StringUtils.toLowerCase(se.getMessage()).contains(errMsg));
     }
 
@@ -121,10 +123,10 @@ public class TestSnapshotManager {
       // in case the snapshot ID limit is hit, further creation of snapshots
       // even post deletions of snapshots won't succeed
       if (maxSnapID < maxSnapshotLimit) {
-          Assertions.fail("CreateSnapshot should succeed");
+        fail("CreateSnapshot should succeed");
       }
     } catch (SnapshotException se) {
-      Assertions.assertTrue(
+      assertTrue(
           StringUtils.toLowerCase(se.getMessage()).contains(errMsg));
     }
   }
@@ -137,7 +139,7 @@ public class TestSnapshotManager {
     FSDirectory fsdir = mock(FSDirectory.class);
     SnapshotManager snapshotManager = new SnapshotManager(new Configuration(),
         fsdir);
-    Assertions.assertTrue(snapshotManager.
+    assertTrue(snapshotManager.
         getMaxSnapshotID() < Snapshot.CURRENT_STATE_ID);
   }
 
@@ -174,10 +176,10 @@ public class TestSnapshotManager {
           getSnapshotManager();
 
       // make sure edits of all previous 5 create snapshots are replayed
-      Assertions.assertEquals(numSnapshots, snapshotManager.getNumSnapshots());
+      assertEquals(numSnapshots, snapshotManager.getNumSnapshots());
 
       // make sure namenode has the new snapshot limit configured as 2
-      Assertions.assertEquals(2, snapshotManager.getMaxSnapshotLimit());
+      assertEquals(2, snapshotManager.getMaxSnapshotLimit());
 
       // Any new snapshot creation should still fail
       LambdaTestUtils.intercept(SnapshotException.class,
@@ -189,10 +191,10 @@ public class TestSnapshotManager {
       snapshotManager = cluster.getNamesystem().
           getSnapshotManager();
       // make sure edits of all previous 5 create snapshots are replayed
-      Assertions.assertEquals(numSnapshots, snapshotManager.getNumSnapshots());
+      assertEquals(numSnapshots, snapshotManager.getNumSnapshots());
 
       // make sure namenode has the new snapshot limit configured as 2
-      Assertions.assertEquals(2, snapshotManager.getMaxSnapshotLimit());
+      assertEquals(2, snapshotManager.getMaxSnapshotLimit());
     } finally {
       if (cluster != null) {
         cluster.shutdown();

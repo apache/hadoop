@@ -472,8 +472,8 @@ public class TestSnapshot {
         newSnapshotStatus.getModificationTime());
   }
 
-@Test
-@Timeout(value = 60)
+  @Test
+  @Timeout(value = 60)
   public void testRenameSnapshotMtime() throws Exception {
     Path dir = new Path("/dir");
     Path sub = new Path(dir, "sub");

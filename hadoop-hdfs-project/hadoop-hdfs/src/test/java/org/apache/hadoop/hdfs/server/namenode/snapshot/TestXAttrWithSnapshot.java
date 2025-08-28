@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -148,11 +147,11 @@ public class TestXAttrWithSnapshot {
     SnapshotDiffReport report =
         hdfs.getSnapshotDiffReport(path, snapshotName, "");
     System.out.println(report);
-    Assertions.assertEquals(0, report.getDiffList().size());
+    assertEquals(0, report.getDiffList().size());
     report =
         hdfs.getSnapshotDiffReport(path, snapshotName, "");
     System.out.println(report);
-    Assertions.assertEquals(0, report.getDiffList().size());
+    assertEquals(0, report.getDiffList().size());
     hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
     hdfs.setSafeMode(SafeModeAction.LEAVE);
@@ -160,7 +159,7 @@ public class TestXAttrWithSnapshot {
     report =
         hdfs.getSnapshotDiffReport(path, snapshotName, "");
     System.out.println(report);
-    Assertions.assertEquals(0, report.getDiffList().size());
+    assertEquals(0, report.getDiffList().size());
   }
 
   /**
@@ -210,14 +209,14 @@ public class TestXAttrWithSnapshot {
 
     // Both original and snapshot have same XAttrs.
     Map<String, byte[]> xattrs = hdfs.getXAttrs(path);
-    Assertions.assertEquals(xattrs.size(), 2);
-    Assertions.assertArrayEquals(value1, xattrs.get(name1));
-    Assertions.assertArrayEquals(value2, xattrs.get(name2));
+    assertEquals(xattrs.size(), 2);
+    assertArrayEquals(value1, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
 
     xattrs = hdfs.getXAttrs(snapshotPath);
-    Assertions.assertEquals(xattrs.size(), 2);
-    Assertions.assertArrayEquals(value1, xattrs.get(name1));
-    Assertions.assertArrayEquals(value2, xattrs.get(name2));
+    assertEquals(xattrs.size(), 2);
+    assertArrayEquals(value1, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
 
     // Original XAttrs have changed, but snapshot still has old XAttrs.
     hdfs.setXAttr(path, name1, newValue1);
@@ -232,14 +231,14 @@ public class TestXAttrWithSnapshot {
   private static void doSnapshotRootChangeAssertions(Path path,
       Path snapshotPath) throws Exception {
     Map<String, byte[]> xattrs = hdfs.getXAttrs(path);
-    Assertions.assertEquals(xattrs.size(), 2);
-    Assertions.assertArrayEquals(newValue1, xattrs.get(name1));
-    Assertions.assertArrayEquals(value2, xattrs.get(name2));
+    assertEquals(xattrs.size(), 2);
+    assertArrayEquals(newValue1, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
 
     xattrs = hdfs.getXAttrs(snapshotPath);
-    Assertions.assertEquals(xattrs.size(), 2);
-    Assertions.assertArrayEquals(value1, xattrs.get(name1));
-    Assertions.assertArrayEquals(value2, xattrs.get(name2));
+    assertEquals(xattrs.size(), 2);
+    assertArrayEquals(value1, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
   }
 
   /**
@@ -257,14 +256,14 @@ public class TestXAttrWithSnapshot {
 
     // Both original and snapshot have same XAttrs.
     Map<String, byte[]> xattrs = hdfs.getXAttrs(path);
-    Assertions.assertEquals(xattrs.size(), 2);
-    Assertions.assertArrayEquals(value1, xattrs.get(name1));
-    Assertions.assertArrayEquals(value2, xattrs.get(name2));
+    assertEquals(xattrs.size(), 2);
+    assertArrayEquals(value1, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
 
     xattrs = hdfs.getXAttrs(snapshotPath);
-    Assertions.assertEquals(xattrs.size(), 2);
-    Assertions.assertArrayEquals(value1, xattrs.get(name1));
-    Assertions.assertArrayEquals(value2, xattrs.get(name2));
+    assertEquals(xattrs.size(), 2);
+    assertArrayEquals(value1, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
 
     // Original XAttrs have been removed, but snapshot still has old XAttrs.
     hdfs.removeXAttr(path, name1);
@@ -280,12 +279,12 @@ public class TestXAttrWithSnapshot {
   private static void doSnapshotRootRemovalAssertions(Path path,
       Path snapshotPath) throws Exception {
     Map<String, byte[]> xattrs = hdfs.getXAttrs(path);
-    Assertions.assertEquals(0, xattrs.size());
+    assertEquals(0, xattrs.size());
 
     xattrs = hdfs.getXAttrs(snapshotPath);
-    Assertions.assertEquals(2, xattrs.size());
-    Assertions.assertArrayEquals(value1, xattrs.get(name1));
-    Assertions.assertArrayEquals(value2, xattrs.get(name2));
+    assertEquals(2, xattrs.size());
+    assertArrayEquals(value1, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
   }
 
   /**
@@ -300,45 +299,45 @@ public class TestXAttrWithSnapshot {
     hdfs.setXAttr(path, name1, value1);
     SnapshotTestHelper.createSnapshot(hdfs, path, snapshotName);
     Map<String, byte[]> xattrs = hdfs.getXAttrs(snapshotPath);
-    Assertions.assertEquals(1, xattrs.size());
-    Assertions.assertArrayEquals(value1, xattrs.get(name1));
+    assertEquals(1, xattrs.size());
+    assertArrayEquals(value1, xattrs.get(name1));
 
     // Second snapshot
     hdfs.setXAttr(path, name1, newValue1);
     hdfs.setXAttr(path, name2, value2);
     SnapshotTestHelper.createSnapshot(hdfs, path, snapshotName2);
     xattrs = hdfs.getXAttrs(snapshotPath2);
-    Assertions.assertEquals(2, xattrs.size());
-    Assertions.assertArrayEquals(newValue1, xattrs.get(name1));
-    Assertions.assertArrayEquals(value2, xattrs.get(name2));
+    assertEquals(2, xattrs.size());
+    assertArrayEquals(newValue1, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
 
     // Third snapshot
     hdfs.setXAttr(path, name1, value1);
     hdfs.removeXAttr(path, name2);
     SnapshotTestHelper.createSnapshot(hdfs, path, snapshotName3);
     xattrs = hdfs.getXAttrs(snapshotPath3);
-    Assertions.assertEquals(1, xattrs.size());
-    Assertions.assertArrayEquals(value1, xattrs.get(name1));
+    assertEquals(1, xattrs.size());
+    assertArrayEquals(value1, xattrs.get(name1));
 
     // Check that the first and second snapshots'
     // XAttrs have stayed constant
     xattrs = hdfs.getXAttrs(snapshotPath);
-    Assertions.assertEquals(1, xattrs.size());
-    Assertions.assertArrayEquals(value1, xattrs.get(name1));
+    assertEquals(1, xattrs.size());
+    assertArrayEquals(value1, xattrs.get(name1));
     xattrs = hdfs.getXAttrs(snapshotPath2);
-    Assertions.assertEquals(2, xattrs.size());
-    Assertions.assertArrayEquals(newValue1, xattrs.get(name1));
-    Assertions.assertArrayEquals(value2, xattrs.get(name2));
+    assertEquals(2, xattrs.size());
+    assertArrayEquals(newValue1, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
 
     // Remove the second snapshot and verify the first and
     // third snapshots' XAttrs have stayed constant
     hdfs.deleteSnapshot(path, snapshotName2);
     xattrs = hdfs.getXAttrs(snapshotPath);
-    Assertions.assertEquals(1, xattrs.size());
-    Assertions.assertArrayEquals(value1, xattrs.get(name1));
+    assertEquals(1, xattrs.size());
+    assertArrayEquals(value1, xattrs.get(name1));
     xattrs = hdfs.getXAttrs(snapshotPath3);
-    Assertions.assertEquals(1, xattrs.size());
-    Assertions.assertArrayEquals(value1, xattrs.get(name1));
+    assertEquals(1, xattrs.size());
+    assertArrayEquals(value1, xattrs.get(name1));
 
     hdfs.deleteSnapshot(path, snapshotName);
     hdfs.deleteSnapshot(path, snapshotName3);

@@ -18,7 +18,13 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.AssertionsKt.assertNotNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
@@ -61,7 +67,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -235,6 +240,7 @@ public class TestSnapshotDeletion {
    * 4. Delete current INodeDirectoryWithSnapshot.
    * </pre>
    */
+  @SuppressWarnings("checkstyle:methodlength")
   @Test
   @Timeout(value = 300)
   public void testDeleteCurrentFileDirectory() throws Exception {
@@ -1245,13 +1251,13 @@ public class TestSnapshotDeletion {
 
     // make sure bar has been removed from its parent
     INode p = fsdir.getInode(parentId);
-    Assertions.assertNotNull(p);
+    assertNotNull(p);
     INodeDirectory pd = p.asDirectory();
-    Assertions.assertNotNull(pd);
-    Assertions.assertNull(pd.getChild("bar".getBytes(), Snapshot.CURRENT_STATE_ID));
+    assertNotNull(pd);
+    assertNull(pd.getChild("bar".getBytes(), Snapshot.CURRENT_STATE_ID));
 
     // make sure bar has been cleaned from inodeMap
-    Assertions.assertNull(fsdir.getInode(fileId));
+    assertNull(fsdir.getInode(fileId));
   }
 
   @Test
@@ -1356,10 +1362,10 @@ public class TestSnapshotDeletion {
 
       SnapshotDiffReport sdr = hdfs.getSnapshotDiffReport(st, "s" + i, "ss");
       LOG.info("Snapshot Diff s{} to ss : {}", i, sdr);
-      Assertions.assertEquals(sdr.getDiffList().size(), 1);
-      Assertions.assertTrue(sdr.getDiffList().get(0).getType() ==
+      assertEquals(sdr.getDiffList().size(), 1);
+      assertTrue(sdr.getDiffList().get(0).getType() ==
           SnapshotDiffReport.DiffType.MODIFY);
-      Assertions.assertTrue(new Path(st,
+      assertTrue(new Path(st,
           DFSUtilClient.bytes2String(sdr.getDiffList().get(0).getSourcePath())).equals(dest));
     }
 

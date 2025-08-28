@@ -29,10 +29,11 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test WebHDFS files/directories creation to make sure it follows same rules
@@ -79,12 +80,12 @@ public class TestWebHdfsCreatePermissions {
       URL url = new URL(uri.toString());
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       conn.setRequestMethod("PUT");
-      Assertions.assertEquals(expectedResponse, conn.getResponseCode());
+      assertEquals(expectedResponse, conn.getResponseCode());
 
       NamenodeProtocols namenode = cluster.getNameNode().getRpcServer();
       FsPermission resultingPermission = namenode.getFileInfo(path).
             getPermission();
-      Assertions.assertEquals(expectedPermission, resultingPermission.toString());
+      assertEquals(expectedPermission, resultingPermission.toString());
     } finally {
       cluster.shutdown();
     }

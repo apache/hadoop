@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.top.TopConf;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,6 +33,7 @@ import static org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowMan
 import static org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.TopWindow;
 import static org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.User;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestRollingWindowManager {
 
@@ -207,15 +207,15 @@ public class TestRollingWindowManager {
     rollingWindowManager.recordMetric(0, "op3", "user8", 1);
 
     TopWindow window = rollingWindowManager.snapshot(0);
-    Assertions.assertEquals(numOps + 1, window.getOps().size());
+    assertEquals(numOps + 1, window.getOps().size());
 
     Op allOp = window.getOps().get(0);
-    Assertions.assertEquals(TopConf.ALL_CMDS, allOp.getOpType());
+    assertEquals(TopConf.ALL_CMDS, allOp.getOpType());
     List<User> topUsers = allOp.getTopUsers();
-    Assertions.assertEquals(numTopUsers * numOps, topUsers.size());
+    assertEquals(numTopUsers * numOps, topUsers.size());
     // ensure all the top users for each op are present in the total op.
     for (int i = 1; i < numOps; i++) {
-      Assertions.assertTrue(topUsers.containsAll(window.getOps().get(i).getTopUsers()));
+      assertTrue(topUsers.containsAll(window.getOps().get(i).getTopUsers()));
     }
   }
 

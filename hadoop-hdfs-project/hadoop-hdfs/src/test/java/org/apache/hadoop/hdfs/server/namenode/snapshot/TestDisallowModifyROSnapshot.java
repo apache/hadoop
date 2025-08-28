@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import java.util.ArrayList;
@@ -33,7 +34,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.Assertions;
 
 /**
  * This class tests snapshot functionality. One or multiple snapshots are
@@ -85,7 +85,7 @@ public class TestDisallowModifyROSnapshot {
   @Test
   @Timeout(value = 60)
   public void testSetReplication() throws Exception {
-    Assertions.assertThrows(SnapshotAccessControlException.class, () -> {
+    assertThrows(SnapshotAccessControlException.class, () -> {
       fs.setReplication(objInSnapshot, (short) 1);
     });
   }
@@ -93,7 +93,7 @@ public class TestDisallowModifyROSnapshot {
   @Test
   @Timeout(value = 60)
   public void testSetPermission() throws Exception {
-    Assertions.assertThrows(SnapshotAccessControlException.class, () -> {
+    assertThrows(SnapshotAccessControlException.class, () -> {
       fs.setPermission(objInSnapshot, new FsPermission("777"));
     });
   }
@@ -101,7 +101,7 @@ public class TestDisallowModifyROSnapshot {
   @Test
   @Timeout(value = 60)
   public void testSetOwner() throws Exception {
-    Assertions.assertThrows(SnapshotAccessControlException.class, () -> {
+    assertThrows(SnapshotAccessControlException.class, () -> {
       fs.setOwner(objInSnapshot, "username", "groupname");
     });
   }
@@ -128,7 +128,7 @@ public class TestDisallowModifyROSnapshot {
   @Test
   @Timeout(value = 60)
   public void testDelete() throws Exception {
-    Assertions.assertThrows(SnapshotAccessControlException.class, () -> {
+    assertThrows(SnapshotAccessControlException.class, () -> {
       fs.delete(objInSnapshot, true);
     });
   }
@@ -136,7 +136,7 @@ public class TestDisallowModifyROSnapshot {
   @Test
   @Timeout(value = 60)
   public void testQuota() throws Exception {
-    Assertions.assertThrows(SnapshotAccessControlException.class, () -> {
+    assertThrows(SnapshotAccessControlException.class, () -> {
       fs.setQuota(objInSnapshot, 100, 100);
     });
   }
@@ -144,7 +144,7 @@ public class TestDisallowModifyROSnapshot {
   @Test
   @Timeout(value = 60)
   public void testSetTime() throws Exception {
-    Assertions.assertThrows(SnapshotAccessControlException.class, () -> {
+    assertThrows(SnapshotAccessControlException.class, () -> {
       fs.setTimes(objInSnapshot, 100, 100);
     });
   }
@@ -152,7 +152,7 @@ public class TestDisallowModifyROSnapshot {
   @Test
   @Timeout(value = 60)
   public void testCreate() throws Exception {
-    Assertions.assertThrows(SnapshotAccessControlException.class, () -> {
+    assertThrows(SnapshotAccessControlException.class, () -> {
       @SuppressWarnings("deprecation")
       DFSClient dfsclient = new DFSClient(conf);
       dfsclient.create(objInSnapshot.toString(), true);
@@ -162,7 +162,7 @@ public class TestDisallowModifyROSnapshot {
   @Test
   @Timeout(value = 60)
   public void testAppend() throws Exception {
-    Assertions.assertThrows(SnapshotAccessControlException.class, () -> {
+    assertThrows(SnapshotAccessControlException.class, () -> {
       fs.append(objInSnapshot, 65535, null);
     });
   }
@@ -170,7 +170,7 @@ public class TestDisallowModifyROSnapshot {
   @Test
   @Timeout(value = 60)
   public void testMkdir() throws Exception {
-    Assertions.assertThrows(SnapshotAccessControlException.class, () -> {
+    assertThrows(SnapshotAccessControlException.class, () -> {
       fs.mkdirs(objInSnapshot, new FsPermission("777"));
     });
   }
@@ -178,7 +178,7 @@ public class TestDisallowModifyROSnapshot {
   @Test
   @Timeout(value = 60)
   public void testCreateSymlink() throws Exception {
-    Assertions.assertThrows(SnapshotAccessControlException.class, () -> {
+    assertThrows(SnapshotAccessControlException.class, () -> {
       @SuppressWarnings("deprecation")
       DFSClient dfsclient = new DFSClient(conf);
       dfsclient.createSymlink(sub2.toString(), "/TestSnapshot/sub1/.snapshot",

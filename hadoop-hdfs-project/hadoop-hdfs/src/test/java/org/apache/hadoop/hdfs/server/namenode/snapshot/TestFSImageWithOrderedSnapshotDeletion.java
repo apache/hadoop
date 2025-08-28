@@ -26,7 +26,6 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.visitor.NamespacePrintVisitor;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -37,6 +36,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -191,7 +191,7 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     output.println(b);
 
     final String s = NamespacePrintVisitor.print2Sting(fsn);
-    Assertions.assertEquals(b, s);
+    assertEquals(b, s);
     return b;
   }
 

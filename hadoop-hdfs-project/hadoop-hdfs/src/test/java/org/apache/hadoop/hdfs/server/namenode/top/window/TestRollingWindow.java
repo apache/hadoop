@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.top.window;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestRollingWindow {
 
@@ -30,28 +31,28 @@ public class TestRollingWindow {
   public void testBasics() {
     RollingWindow window = new RollingWindow(WINDOW_LEN, BUCKET_CNT);
     long time = 1;
-    Assertions.assertEquals(0, window.getSum(time), "The initial sum of rolling window must be 0");
+    assertEquals(0, window.getSum(time), "The initial sum of rolling window must be 0");
     time = WINDOW_LEN + BUCKET_LEN * 3 / 2;
-    Assertions.assertEquals(0, window.getSum(time), "The initial sum of rolling window must be 0");
+    assertEquals(0, window.getSum(time), "The initial sum of rolling window must be 0");
 
     window.incAt(time, 5);
-    Assertions.assertEquals(
+    assertEquals(
         5, window.getSum(time),
         "The sum of rolling window does not reflect the recent update");
 
     time += BUCKET_LEN;
     window.incAt(time, 6);
-    Assertions.assertEquals
+    assertEquals
         (11, window.getSum(time),
-        "The sum of rolling window does not reflect the recent update");
+            "The sum of rolling window does not reflect the recent update");
 
     time += WINDOW_LEN - BUCKET_LEN;
-    Assertions.assertEquals(
+    assertEquals(
         6, window.getSum(time),
         "The sum of rolling window does not reflect rolling effect");
 
     time += BUCKET_LEN;
-    Assertions.assertEquals(
+    assertEquals(
         0, window.getSum(time),
         "The sum of rolling window does not reflect rolling effect");
   }
@@ -63,18 +64,18 @@ public class TestRollingWindow {
     window.incAt(time, 5);
 
     time++;
-    Assertions.assertEquals(
+    assertEquals(
         5, window.getSum(time),
         "The sum of rolling window does not reflect the recent update");
 
     long reorderedTime = time - 2 * BUCKET_LEN;
     window.incAt(reorderedTime, 6);
-    Assertions.assertEquals(
+    assertEquals(
         11, window.getSum(time),
         "The sum of rolling window does not reflect the reordered update");
 
     time = reorderedTime + WINDOW_LEN;
-    Assertions.assertEquals(
+    assertEquals(
         5, window.getSum(time),
         "The sum of rolling window does not reflect rolling effect");
   }

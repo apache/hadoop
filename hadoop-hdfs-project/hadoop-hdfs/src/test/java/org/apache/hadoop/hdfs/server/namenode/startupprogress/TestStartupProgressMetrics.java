@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.startupprogress;
 
 import static org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgressTestHelper.*;
 import static org.apache.hadoop.test.MetricsAsserts.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.junit.jupiter.api.BeforeEach;

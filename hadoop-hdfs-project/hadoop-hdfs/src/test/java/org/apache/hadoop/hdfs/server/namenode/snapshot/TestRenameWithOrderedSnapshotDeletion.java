@@ -23,7 +23,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -32,6 +31,9 @@ import java.io.IOException;
 
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
 import static org.apache.hadoop.hdfs.server.namenode.FSNamesystem.DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 /**
  * Test Rename with ordered snapshot deletion.
  */
@@ -102,10 +104,9 @@ public class TestRenameWithOrderedSnapshotDeletion {
   private void validateRename(Path src, Path dest) {
     try {
       hdfs.rename(src, dest);
-      Assertions.fail("Expected exception not thrown.");
+      fail("Expected exception not thrown.");
     } catch (IOException ioe) {
-      Assertions
-          .assertTrue(ioe.getMessage().contains("are not under the" +          " same snapshot root."));
+      assertTrue(ioe.getMessage().contains("are not under the" + " same snapshot root."));
     }
   }
 }

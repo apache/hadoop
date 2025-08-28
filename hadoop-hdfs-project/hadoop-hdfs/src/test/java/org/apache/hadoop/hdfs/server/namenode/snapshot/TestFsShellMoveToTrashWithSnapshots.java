@@ -21,7 +21,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -38,6 +37,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Testing snapshots with FsShell move-to-trash feature.
@@ -246,7 +247,7 @@ public class TestFsShellMoveToTrashWithSnapshots {
     for (MyFile f : files) {
       final String original = f.trash.toUri().getPath();
       if (!original.startsWith(trashPathPrefix)) {
-        Assertions.assertTrue(original.startsWith(commonPrefix));
+        assertTrue(original.startsWith(commonPrefix));
 
         final int i = original.indexOf('/', commonPrefix.length());
         final String suffix = original.substring(i + 1);

@@ -27,12 +27,14 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Verify content summary is computed correctly when
@@ -98,68 +100,68 @@ public class TestGetContentSummaryWithSnapshot {
 
     ContentSummary summary = cluster.getNameNodeRpc().getContentSummary(
         bar.toString());
-    Assertions.assertEquals(1, summary.getDirectoryCount());
-    Assertions.assertEquals(2, summary.getFileCount());
-    Assertions.assertEquals(20, summary.getLength());
+    assertEquals(1, summary.getDirectoryCount());
+    assertEquals(2, summary.getFileCount());
+    assertEquals(20, summary.getLength());
 
     final Path barS1 = SnapshotTestHelper.getSnapshotPath(foo, "s1", "bar");
     summary = cluster.getNameNodeRpc().getContentSummary(barS1.toString());
-    Assertions.assertEquals(1, summary.getDirectoryCount());
-    Assertions.assertEquals(0, summary.getFileCount());
-    Assertions.assertEquals(0, summary.getLength());
+    assertEquals(1, summary.getDirectoryCount());
+    assertEquals(0, summary.getFileCount());
+    assertEquals(0, summary.getLength());
 
     // also check /foo and /foo/.snapshot/s1
     summary = cluster.getNameNodeRpc().getContentSummary(foo.toString());
-    Assertions.assertEquals(2, summary.getDirectoryCount());
-    Assertions.assertEquals(2, summary.getFileCount());
-    Assertions.assertEquals(20, summary.getLength());
+    assertEquals(2, summary.getDirectoryCount());
+    assertEquals(2, summary.getFileCount());
+    assertEquals(20, summary.getLength());
 
     final Path fooS1 = SnapshotTestHelper.getSnapshotRoot(foo, "s1");
     summary = cluster.getNameNodeRpc().getContentSummary(fooS1.toString());
-    Assertions.assertEquals(2, summary.getDirectoryCount());
-    Assertions.assertEquals(0, summary.getFileCount());
-    Assertions.assertEquals(0, summary.getLength());
+    assertEquals(2, summary.getDirectoryCount());
+    assertEquals(0, summary.getFileCount());
+    assertEquals(0, summary.getLength());
 
     // create a new snapshot s2 and update the file
     dfs.createSnapshot(foo, "s2");
     DFSTestUtil.appendFile(dfs, baz, 10);
     summary = cluster.getNameNodeRpc().getContentSummary(
         bar.toString());
-    Assertions.assertEquals(1, summary.getDirectoryCount());
-    Assertions.assertEquals(2, summary.getFileCount());
-    Assertions.assertEquals(30, summary.getLength());
+    assertEquals(1, summary.getDirectoryCount());
+    assertEquals(2, summary.getFileCount());
+    assertEquals(30, summary.getLength());
 
     final Path fooS2 = SnapshotTestHelper.getSnapshotRoot(foo, "s2");
     summary = cluster.getNameNodeRpc().getContentSummary(fooS2.toString());
-    Assertions.assertEquals(2, summary.getDirectoryCount());
-    Assertions.assertEquals(2, summary.getFileCount());
-    Assertions.assertEquals(20, summary.getLength());
+    assertEquals(2, summary.getDirectoryCount());
+    assertEquals(2, summary.getFileCount());
+    assertEquals(20, summary.getLength());
 
     cluster.getNameNodeRpc().delete(baz.toString(), false);
 
     summary = cluster.getNameNodeRpc().getContentSummary(
         foo.toString());
-    Assertions.assertEquals(0, summary.getSnapshotDirectoryCount());
-    Assertions.assertEquals(1, summary.getSnapshotFileCount());
-    Assertions.assertEquals(20, summary.getSnapshotLength());
-    Assertions.assertEquals(2, summary.getDirectoryCount());
-    Assertions.assertEquals(2, summary.getFileCount());
-    Assertions.assertEquals(30, summary.getLength());
+    assertEquals(0, summary.getSnapshotDirectoryCount());
+    assertEquals(1, summary.getSnapshotFileCount());
+    assertEquals(20, summary.getSnapshotLength());
+    assertEquals(2, summary.getDirectoryCount());
+    assertEquals(2, summary.getFileCount());
+    assertEquals(30, summary.getLength());
 
     final Path bazS1 = SnapshotTestHelper.getSnapshotPath(foo, "s1", "bar/baz");
     try {
       cluster.getNameNodeRpc().getContentSummary(bazS1.toString());
-      Assertions.fail("should get FileNotFoundException");
+      fail("should get FileNotFoundException");
     } catch (FileNotFoundException ignored) {}
     cluster.getNameNodeRpc().rename(qux.toString(), "/temp/qux");
     summary = cluster.getNameNodeRpc().getContentSummary(
         foo.toString());
-    Assertions.assertEquals(0, summary.getSnapshotDirectoryCount());
-    Assertions.assertEquals(2, summary.getSnapshotFileCount());
-    Assertions.assertEquals(30, summary.getSnapshotLength());
-    Assertions.assertEquals(2, summary.getDirectoryCount());
-    Assertions.assertEquals(2, summary.getFileCount());
-    Assertions.assertEquals(30, summary.getLength());
+    assertEquals(0, summary.getSnapshotDirectoryCount());
+    assertEquals(2, summary.getSnapshotFileCount());
+    assertEquals(30, summary.getSnapshotLength());
+    assertEquals(2, summary.getDirectoryCount());
+    assertEquals(2, summary.getFileCount());
+    assertEquals(30, summary.getLength());
 
   }
 }

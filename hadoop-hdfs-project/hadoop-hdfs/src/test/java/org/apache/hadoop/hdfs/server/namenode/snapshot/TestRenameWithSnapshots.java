@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -57,8 +56,10 @@ import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -151,20 +152,20 @@ public class TestRenameWithSnapshots {
     
     final INode fooRef = fsdir.getINode(
         SnapshotTestHelper.getSnapshotPath(abc, "s0", "foo").toString());
-    Assertions.assertTrue(fooRef.isReference());
-    Assertions.assertTrue(fooRef.asReference() instanceof INodeReference.WithName);
+    assertTrue(fooRef.isReference());
+    assertTrue(fooRef.asReference() instanceof INodeReference.WithName);
 
     final INodeReference.WithCount withCount
         = (INodeReference.WithCount)fooRef.asReference().getReferredINode();
-    Assertions.assertEquals(2, withCount.getReferenceCount());
+    assertEquals(2, withCount.getReferenceCount());
 
     final INode barRef = fsdir.getINode(bar.toString());
-    Assertions.assertTrue(barRef.isReference());
+    assertTrue(barRef.isReference());
 
-    Assertions.assertSame(withCount, barRef.asReference().getReferredINode());
+    assertSame(withCount, barRef.asReference().getReferredINode());
     
     hdfs.delete(bar, false);
-    Assertions.assertEquals(1, withCount.getReferenceCount());
+    assertEquals(1, withCount.getReferenceCount());
     restartClusterAndCheckImage(true);
   }
   
@@ -354,10 +355,10 @@ public class TestRenameWithSnapshots {
             .asReference();
     INodeReference.WithCount withCount = (WithCount) ref
             .getReferredINode();
-    Assertions.assertEquals(withCount.getReferenceCount(), 1);
+    assertEquals(withCount.getReferenceCount(), 1);
     // Ensure name list is empty for the reference sub3file3Inode
-    Assertions.assertNull(withCount.getLastWithName());
-    Assertions.assertTrue(sub3file3Inode.isInCurrentState());
+    assertNull(withCount.getLastWithName());
+    assertTrue(sub3file3Inode.isInCurrentState());
   }
 
   /**
@@ -2231,7 +2232,7 @@ public class TestRenameWithSnapshots {
     hdfs.deleteSnapshot(test, "s0");
     // check the internal
     assertFalse(hdfs.exists(foo_s0),
-    "after deleting s0, " + foo_s0 + " should not exist");
+        "after deleting s0, " + foo_s0 + " should not exist");
     INodeDirectory dir2Node = fsdir.getINode4Write(dir2.toString())
         .asDirectory();
     assertTrue(!dir2Node.isWithSnapshot(),
@@ -2329,7 +2330,7 @@ public class TestRenameWithSnapshots {
         (INodeReference.WithName) fsdir.getINode(foo_s2.toString());
     assertSame(dList.get(0), fooNode_s2);
     assertSame(fooNode.asReference().getReferredINode(),
-fooNode_s2.getReferredINode());
+        fooNode_s2.getReferredINode());
     
     restartClusterAndCheckImage(true);
   }

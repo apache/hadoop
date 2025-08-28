@@ -30,7 +30,6 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeat
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DiffListBySkipList.SkipListNode;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -39,6 +38,8 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.ToIntBiFunction;
 import java.util.function.ToIntFunction;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * This class tests the DirectoryDiffList API's.
@@ -81,9 +82,9 @@ public class TestDiffListBySkipList {
   }
 
   static void assertList(List<INode> expected, List<INode> computed) {
-    Assertions.assertEquals(expected.size(), computed.size());
+    assertEquals(expected.size(), computed.size());
     for (int index = 0; index < expected.size(); index++) {
-      Assertions.assertEquals(expected.get(index), computed.get(index));
+      assertEquals(expected.get(index), computed.get(index));
     }
   }
 
@@ -107,7 +108,7 @@ public class TestDiffListBySkipList {
       DiffList<DirectoryDiff> array, DiffListBySkipList skip,
       INodeDirectory dir, List<INode> childrenList) {
     final int n = array.size();
-    Assertions.assertEquals(n, skip.size());
+    assertEquals(n, skip.size());
     for (int i = 0; i < n - 1; i++) {
       for (int j = i + 1; j < n - 1; j++) {
         final List<INode> expected = getCombined(array, i, j, dir)
@@ -254,8 +255,8 @@ public class TestDiffListBySkipList {
     final DiffListBySkipList skipList = newDiffListBySkipList();
     final DiffList<DirectoryDiff> arrayList = new DiffListByArrayList<>(0);
     final INodeDirectory dir = addDiff(n, skipList, arrayList, root);
-    Assertions.assertEquals(n, arrayList.size());
-    Assertions.assertEquals(n, skipList.size());
+    assertEquals(n, arrayList.size());
+    assertEquals(n, skipList.size());
 
     for (int i = 0; i < n; i++) {
       DiffListBySkipList.LOG.debug("i={}: {}", i, skipList);
@@ -326,7 +327,7 @@ public class TestDiffListBySkipList {
 
   static void assertDirectoryDiff(DirectoryDiff expected,
       DirectoryDiff computed) {
-    Assertions.assertEquals(expected.getSnapshotId(), computed.getSnapshotId());
+    assertEquals(expected.getSnapshotId(), computed.getSnapshotId());
   }
 
   static void assertSkipList(DiffListBySkipList skipList) {

@@ -60,7 +60,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Time;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -828,7 +827,7 @@ public class TestSnapshotDiffReport {
     final SnapshotDiffReport report =
         hdfs.getSnapshotDiffReport(testdir, "s0", "");
     // The diff should be null. Snapshot dir inode should keep the quota.
-    Assertions.assertEquals(0, report.getDiffList().size());
+    assertEquals(0, report.getDiffList().size());
     // Cleanup
     hdfs.deleteSnapshot(testdir, "s0");
     hdfs.disallowSnapshot(testdir);
@@ -1080,7 +1079,7 @@ public class TestSnapshotDiffReport {
     final long flumeFileLengthAfterS1 = hdfs.getFileStatus(flumeFile).getLen();
 
     // Verify if Snap S1 file length is same as the the live one
-    Assertions.assertEquals(flumeFileLengthAfterS1, hdfs.getFileStatus(flumeS1Path).getLen());
+    assertEquals(flumeFileLengthAfterS1, hdfs.getFileStatus(flumeS1Path).getLen());
 
     verifyDiffReport(level0A, flumeSnap1Name, "",
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")));
@@ -1101,10 +1100,10 @@ public class TestSnapshotDiffReport {
 
     // Verify live files length is same as all data written till now
     final long flumeFileLengthAfterS2 = hdfs.getFileStatus(flumeFile).getLen();
-    Assertions.assertEquals(flumeFileWrittenDataLength, flumeFileLengthAfterS2);
+    assertEquals(flumeFileWrittenDataLength, flumeFileLengthAfterS2);
 
     // Verify if Snap S2 file length is same as the live one
-    Assertions.assertEquals(flumeFileLengthAfterS2, hdfs.getFileStatus(flumeS2Path).getLen());
+    assertEquals(flumeFileLengthAfterS2, hdfs.getFileStatus(flumeS2Path).getLen());
 
     verifyDiffReport(level0A, flumeSnap1Name, "",
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
@@ -1123,19 +1122,19 @@ public class TestSnapshotDiffReport {
 
     // Verify old flume snapshots have point-in-time / frozen file lengths
     // even after the live file have moved forward.
-    Assertions.assertEquals(flumeFileLengthAfterS1, hdfs.getFileStatus(flumeS1Path).getLen());
-    Assertions.assertEquals(flumeFileLengthAfterS2, hdfs.getFileStatus(flumeS2Path).getLen());
+    assertEquals(flumeFileLengthAfterS1, hdfs.getFileStatus(flumeS1Path).getLen());
+    assertEquals(flumeFileLengthAfterS2, hdfs.getFileStatus(flumeS2Path).getLen());
 
     flumeOutputStream.close();
 
     // Verify if Snap S2 file length is same as the live one
-    Assertions.assertEquals(flumeFileWrittenDataLength, hdfs.getFileStatus(flumeFile).getLen());
+    assertEquals(flumeFileWrittenDataLength, hdfs.getFileStatus(flumeFile).getLen());
 
     // Verify old flume snapshots have point-in-time / frozen file lengths
     // even after the live file have moved forward.
-    Assertions.assertEquals(flumeFileLengthAfterS1,
+    assertEquals(flumeFileLengthAfterS1,
         hdfs.getFileStatus(flumeS1Path).getLen());
-    Assertions.assertEquals(flumeFileLengthAfterS2,
+    assertEquals(flumeFileLengthAfterS2,
         hdfs.getFileStatus(flumeS2Path).getLen());
 
     verifyDiffReport(level0A, flumeSnap1Name, "",
@@ -1554,10 +1553,10 @@ public class TestSnapshotDiffReport {
     try {
       iterator.next();
     } catch (Exception e) {
-      Assertions.assertTrue(
+      assertTrue(
           e.getMessage().contains("No more entry in SnapshotDiffReport for /"));
     }
-    Assertions.assertNotEquals(0, reportList.size());
+    assertNotEquals(0, reportList.size());
     // generate the snapshotDiffReport and Verify
     snapshotDiffReport = new SnapshotDiffReportGenerator("/", "s0", "s1",
         report.getIsFromEarlier(), modifiedList, createdList, deletedList);
@@ -1598,7 +1597,7 @@ public class TestSnapshotDiffReport {
     try {
       hdfs.snapshotDiffReportListingRemoteIterator(root, "s0", "");
     } catch (Exception e) {
-      Assertions.assertTrue(e.getMessage().contains("Remote Iterator is"
+      assertTrue(e.getMessage().contains("Remote Iterator is"
           + "supported for snapshotDiffReport between two snapshots"));
     }
   }
@@ -1613,15 +1612,15 @@ public class TestSnapshotDiffReport {
 
     final SnapshottableDirectoryStatus[] snapshottables
         = hdfs.getSnapshottableDirListing();
-    Assertions.assertEquals(1, snapshottables.length);
-    Assertions.assertEquals(3, snapshottables[0].getSnapshotNumber());
+    assertEquals(1, snapshottables.length);
+    assertEquals(3, snapshottables[0].getSnapshotNumber());
 
     final SnapshotStatus[] statuses = hdfs.getSnapshotListing(root);
-    Assertions.assertEquals(3, statuses.length);
+    assertEquals(3, statuses.length);
     for (int i = 0; i < statuses.length; i++) {
       final SnapshotStatus s = statuses[i];
       LOG.info("Snapshot #{}: {}", s.getSnapshotID(), s.getFullPath());
-      Assertions.assertEquals(i, s.getSnapshotID());
+      assertEquals(i, s.getSnapshotID());
     }
 
     for (int i = 0; i <= 2; i++) {
@@ -1635,11 +1634,11 @@ public class TestSnapshotDiffReport {
       String from, String to) throws Exception {
     final String barDiff = diff(bar, from, to);
     final String fooDiff = diff(foo, from, to);
-    Assertions.assertEquals(barDiff, fooDiff.replace("/bar", ""));
+    assertEquals(barDiff, fooDiff.replace("/bar", ""));
 
     final String rootDiff = diff(root, from, to);
-    Assertions.assertEquals(fooDiff, rootDiff.replace("/foo", ""));
-    Assertions.assertEquals(barDiff, rootDiff.replace("/foo/bar", ""));
+    assertEquals(fooDiff, rootDiff.replace("/foo", ""));
+    assertEquals(barDiff, rootDiff.replace("/foo/bar", ""));
   }
 
   private String diff(Path path, String from, String to) throws Exception {
