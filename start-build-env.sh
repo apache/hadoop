@@ -93,7 +93,7 @@ RUN userdel -r \$(getent passwd ${USER_ID} | cut -d: -f1) 2>/dev/null || :
 RUN groupadd --non-unique -g ${GROUP_ID} ${USER_NAME}
 RUN useradd -g ${GROUP_ID} -u ${USER_ID} -k /root -m ${USER_NAME} -d "${DOCKER_HOME_DIR}"
 RUN echo "${USER_NAME} ALL=NOPASSWD: ALL" > "/etc/sudoers.d/hadoop-build-${USER_ID}"
-ENV HOME "${DOCKER_HOME_DIR}"
+ENV HOME="${DOCKER_HOME_DIR}"
 
 UserSpecificDocker
 
