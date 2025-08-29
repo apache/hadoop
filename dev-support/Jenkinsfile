@@ -162,7 +162,7 @@ pipeline {
             environment {
                 SOURCEDIR = "${WORKSPACE}/debian-11/src"
                 PATCHDIR = "${WORKSPACE}/debian-11/out"
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_11"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_10"
                 IS_OPTIONAL = 1
             }
 
