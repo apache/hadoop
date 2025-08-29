@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
@@ -35,7 +36,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -107,9 +107,9 @@ public class TestXAttrsWithHA {
     cluster.transitionToActive(1);
     
     Map<String, byte[]> xattrs = fs.getXAttrs(path);
-    Assertions.assertEquals(xattrs.size(), 2);
-    Assertions.assertArrayEquals(value1, xattrs.get(name1));
-    Assertions.assertArrayEquals(value2, xattrs.get(name2));
+    assertEquals(xattrs.size(), 2);
+    assertArrayEquals(value1, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
     
     fs.delete(path, true);
   }
