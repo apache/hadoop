@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractOpenTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
@@ -37,6 +38,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * S3A contract tests opening files.
  */
+@IntegrationTest
 public class ITestS3AContractOpen extends AbstractContractOpenTest {
 
   @Override

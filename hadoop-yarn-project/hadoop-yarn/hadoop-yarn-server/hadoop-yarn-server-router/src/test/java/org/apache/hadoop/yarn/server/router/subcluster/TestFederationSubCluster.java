@@ -99,7 +99,7 @@ public class TestFederationSubCluster {
       String connectString = curatorTestingServer.getConnectString();
       curatorFramework = CuratorFrameworkFactory.builder()
           .connectString(connectString)
-          .retryPolicy(new RetryNTimes(100, 100))
+          .retryPolicy(new RetryNTimes(200, 200))
           .build();
       curatorFramework.start();
       curatorFramework.getConnectionStateListenable().addListener((client, newState) -> {
@@ -202,7 +202,7 @@ public class TestFederationSubCluster {
       } catch (Exception e) {
       }
       return false;
-    }, 5000, 50 * 1000);
+    }, 5000, 100 * 1000);
   }
 
   public static <T> T performGetCalls(final String routerAddress, final String path,

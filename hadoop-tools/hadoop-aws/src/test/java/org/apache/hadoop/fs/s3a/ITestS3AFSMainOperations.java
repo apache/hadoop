@@ -25,6 +25,8 @@ import org.apache.hadoop.fs.FSMainOperationsBaseTest;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
+import org.apache.hadoop.test.tags.IntegrationTest;
+
 import org.junit.jupiter.api.Disabled;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createTestPath;
@@ -36,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * S3A Test suite for the FSMainOperationsBaseTest tests.
  */
+@IntegrationTest
 public class ITestS3AFSMainOperations extends FSMainOperationsBaseTest {
 
   private S3AContract contract;
@@ -53,13 +56,6 @@ public class ITestS3AFSMainOperations extends FSMainOperationsBaseTest {
     contract = new S3AContract(conf);
     contract.init();
     return contract.getTestFileSystem();
-  }
-
-  @Override
-  public void tearDown() throws Exception {
-    if (contract.getTestFileSystem() != null) {
-      super.tearDown();
-    }
   }
 
   @Override

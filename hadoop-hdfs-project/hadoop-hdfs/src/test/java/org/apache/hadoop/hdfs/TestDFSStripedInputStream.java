@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -50,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
@@ -735,4 +738,63 @@ public class TestDFSStripedInputStream {
     assertEquals(rangesExpected, ranges);
   }
 
+  @Test
+  public void testStatefulReadRetryWhenMoreThanParityFailOnce() throws Exception {
+    HdfsConfiguration hdfsConf = new HdfsConfiguration();
+    String testBaseDir = "/testECRead";
+    String testfileName = "testfile";
+    DFSClientFaultInjector old = DFSClientFaultInjector.get();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(hdfsConf)
+        .numDataNodes(9).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      Path dir = new Path(testBaseDir);
+      assertTrue(dfs.mkdirs(dir));
+      dfs.enableErasureCodingPolicy("RS-6-3-1024k");
+      dfs.setErasureCodingPolicy(dir, "RS-6-3-1024k");
+      assertEquals("RS-6-3-1024k", dfs.getErasureCodingPolicy(dir).getName());
+
+      int writeBufSize = 30 * 1024 * 1024 + 1;
+      byte[] writeBuf = new byte[writeBufSize];
+      try (FSDataOutputStream fsdos = dfs.create(
+          new Path(testBaseDir + Path.SEPARATOR + testfileName))) {
+        Random random = new Random();
+        random.nextBytes(writeBuf);
+        fsdos.write(writeBuf, 0, writeBuf.length);
+        Thread.sleep(1000);
+      }
+      FileStatus fileStatus = dfs.getFileStatus(
+          new Path(testBaseDir + Path.SEPARATOR + testfileName));
+      assertEquals(writeBufSize, fileStatus.getLen());
+
+      DFSClientFaultInjector.set(new DFSClientFaultInjector() {
+        @Override
+        public void failWhenReadWithStrategy(boolean isRetryRead) throws IOException {
+          if (!isRetryRead) {
+            throw new IOException("Mock more than parity num blocks fail when readOneStripe.");
+          }
+        }
+      });
+
+      // We use unaligned buffer size to trigger some corner cases.
+      byte[] readBuf = new byte[4095];
+      byte[] totalReadBuf = new byte[writeBufSize]; // Buffer to store all read data
+      int ret = 0;
+      int totalReadBytes = 0;
+      try (FSDataInputStream fsdis = dfs.open(
+          new Path(testBaseDir + Path.SEPARATOR + testfileName))) {
+        while((ret = fsdis.read(readBuf)) > 0) {
+          System.arraycopy(readBuf, 0, totalReadBuf, totalReadBytes, ret);
+          totalReadBytes += ret;
+        }
+
+        // Compare the read data with the original writeBuf.
+        assertEquals(writeBufSize, totalReadBytes, "Total bytes read should match writeBuf size");
+        assertArrayEquals(writeBuf, totalReadBuf, "Read data should match original write data");
+      }
+      assertTrue(dfs.delete(new Path(testBaseDir + Path.SEPARATOR + testfileName), true));
+    } finally {
+      DFSClientFaultInjector.set(old);
+    }
+  }
 }

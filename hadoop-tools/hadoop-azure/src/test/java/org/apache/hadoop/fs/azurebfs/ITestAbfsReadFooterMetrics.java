@@ -43,8 +43,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Random;
@@ -58,6 +57,8 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 
+import static org.assertj.core.api.Assumptions.assumeThat;
+
 public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
 
   public ITestAbfsReadFooterMetrics() throws Exception {
@@ -70,11 +71,13 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
     checkIfConfigIsSet(FS_AZURE_METRIC_URI);
   }
 
-  private void checkIfConfigIsSet(String configKey){
+  private void checkIfConfigIsSet(String configKey) {
     AbfsConfiguration conf = getConfiguration();
     String value = conf.get(configKey);
-    Assume.assumeTrue(configKey + " config is mandatory for the test to run",
-        value != null && value.trim().length() > 1);
+    assumeThat(value)
+        .as(configKey + " config is mandatory for the test to run")
+        .isNotNull()
+        .matches(v -> v.trim().length() > 1, "trimmed length > 1");
   }
 
   private static final String TEST_PATH = "/testfile";
@@ -127,8 +130,9 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
    */
   private void assertMetricsEquality(AzureBlobFileSystem fs, String expectedMetrics) {
     AbfsReadFooterMetrics actualMetrics = fs.getAbfsClient().getAbfsCounters().getAbfsReadFooterMetrics();
-    assertNotNull("AbfsReadFooterMetrics is null", actualMetrics);
-    assertEquals("The computed metrics differs from the actual metrics", expectedMetrics, actualMetrics.toString());
+    assertNotNull(actualMetrics, "AbfsReadFooterMetrics is null");
+    assertEquals(expectedMetrics, actualMetrics.toString(),
+        "The computed metrics differs from the actual metrics");
   }
 
   /**
@@ -188,7 +192,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
             IOSTATISTICS_LOGGING_LEVEL_INFO, statisticsSource);
 
     // Ensure data is read successfully and matches the written data.
-    assertNotEquals("data read in final read()", -1, result);
+    assertNotEquals(-1, result, "data read in final read()");
     assertArrayEquals(readBuffer, b);
 
     // Get non-Parquet metrics and assert metrics equality.

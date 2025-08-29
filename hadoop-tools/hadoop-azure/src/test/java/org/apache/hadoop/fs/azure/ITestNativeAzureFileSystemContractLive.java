@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azure;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
@@ -53,7 +53,7 @@ public class ITestNativeAzureFileSystemContractLive extends
     if (testAccount != null) {
       fs = testAccount.getFileSystem();
     }
-    assumeTrue(fs != null);
+    assumeThat(fs).isNotNull();
     basePath = fs.makeQualified(
         AzureTestUtils.createTestPath(
             new Path("NativeAzureFileSystemContractLive")));

@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +45,7 @@ import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -212,8 +212,9 @@ public final class RoleTestUtils {
    */
   public static String probeForAssumedRoleARN(Configuration conf) {
     String arn = conf.getTrimmed(ASSUMED_ROLE_ARN, "");
-    Assume.assumeTrue("No ARN defined in " + ASSUMED_ROLE_ARN,
-        !arn.isEmpty());
+    assumeThat(arn)
+        .as("No ARN defined in " + ASSUMED_ROLE_ARN)
+        .isNotEmpty();
     return arn;
   }
 

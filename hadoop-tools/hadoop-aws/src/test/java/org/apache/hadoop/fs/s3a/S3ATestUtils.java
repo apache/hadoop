@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -70,7 +71,6 @@ import org.apache.hadoop.util.functional.FutureIO;
 
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Assumptions;
-import org.junit.Assume;
 import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,6 +107,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.impl.FlagSet.createFlagSet;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_S3;
 import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Analytics;
+import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Classic;
 import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Prefetch;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
@@ -125,6 +126,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.FunctionalIO.uncheckIOExceptions;
 import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
 import static org.apache.hadoop.util.functional.RemoteIterators.toList;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -232,8 +234,9 @@ public final class S3ATestUtils {
     }
     // This doesn't work with our JUnit 3 style test cases, so instead we'll
     // make this whole class not run by default
-    Assume.assumeTrue("No test filesystem in " + TEST_FS_S3A_NAME,
-        liveTest);
+    assumeThat(liveTest)
+        .as("No test filesystem in " + TEST_FS_S3A_NAME)
+        .isTrue();
 
     S3AFileSystem fs1 = new S3AFileSystem();
     //enable purging in tests
@@ -274,8 +277,9 @@ public final class S3ATestUtils {
     }
     // This doesn't work with our JUnit 3 style test cases, so instead we'll
     // make this whole class not run by default
-    Assume.assumeTrue("No test filesystem in " + TEST_FS_S3A_NAME,
-        liveTest);
+    assumeThat(liveTest)
+        .as("No test filesystem in " + TEST_FS_S3A_NAME)
+        .isTrue();
     FileContext fc = FileContext.getFileContext(testURI, conf);
     return fc;
   }
@@ -1198,6 +1202,17 @@ public final class S3ATestUtils {
   }
 
   /**
+   * CLose the filesystem if it not in the cache.
+   * @param fs filesystem to check. May be null
+   */
+  public static void maybeCloseFilesystem(final S3AFileSystem fs) {
+    if (fs != null && fs.getConf().getBoolean(FS_S3A_IMPL_DISABLE_CACHE,
+        false)) {
+      IOUtils.closeQuietly(fs);
+    }
+  }
+
+  /**
    * Helper class to do diffs of metrics.
    */
   public static final class MetricDiff {
@@ -1867,6 +1882,18 @@ public final class S3ATestUtils {
     removeBaseAndBucketOverrides(conf,
         INPUT_STREAM_TYPE);
     conf.setEnum(INPUT_STREAM_TYPE, Analytics);
+    return conf;
+  }
+
+  /**
+   * Disable analytics stream for S3A S3AFileSystem in tests.
+   * @param conf Configuration to update
+   * @return patched config
+   */
+  public static Configuration disableAnalyticsAccelerator(Configuration conf) {
+    removeBaseAndBucketOverrides(conf,
+        INPUT_STREAM_TYPE);
+    conf.setEnum(INPUT_STREAM_TYPE, Classic);
     return conf;
   }
 

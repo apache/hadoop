@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContextCreateMkdirBaseTest;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -27,6 +28,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * Extends FileContextCreateMkdirBaseTest for a S3a FileContext with
  * create performance mode.
  */
+@IntegrationTest
 public class ITestS3AFileContextCreateMkdirCreatePerf
         extends FileContextCreateMkdirBaseTest {
 

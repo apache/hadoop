@@ -35,9 +35,7 @@ import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
-import org.hamcrest.core.IsEqual;
-import org.hamcrest.core.IsNot;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -48,6 +46,7 @@ import org.apache.hadoop.fs.Path;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_APPEND_BLOB_KEY;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasStreamCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksStreamCapabilities;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test flush operation.
@@ -94,8 +93,8 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
       while (inputStream.available() != 0) {
         int result = inputStream.read(r);
 
-        assertNotEquals("read returned -1", -1, result);
-        assertArrayEquals("buffer read from stream", r, b);
+        assertNotEquals(-1, result, "read returned -1");
+        assertArrayEquals(r, b, "buffer read from stream");
       }
     }
   }
@@ -170,7 +169,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     es.shutdownNow();
     FileStatus fileStatus = fs.getFileStatus(testFilePath);
     long expectedWrites = (long) TEST_BUFFER_SIZE * FLUSH_TIMES;
-    assertEquals("Wrong file length in " + testFilePath, expectedWrites, fileStatus.getLen());
+    assertEquals(expectedWrites, fileStatus.getLen(), "Wrong file length in " + testFilePath);
   }
 
   @Test
@@ -400,15 +399,11 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
       int numBytesRead = stream.read(readBuffer, 0, readBuffer.length);
 
       if (isEqual) {
-        assertArrayEquals(
-            "Bytes read do not match bytes written.",
-            writeBuffer,
-            readBuffer);
+        assertArrayEquals(writeBuffer, readBuffer, "Bytes read do not match bytes written.");
       } else {
-        assertThat(
-            "Bytes read unexpectedly match bytes written.",
-            readBuffer,
-            IsNot.not(IsEqual.equalTo(writeBuffer)));
+        assertThat(readBuffer)
+            .as("Bytes read unexpectedly match bytes written.")
+            .isNotEqualTo(writeBuffer);
       }
     } finally {
       stream.close();
@@ -420,14 +415,14 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
       byte[] readBuffer = new byte[TEST_FILE_LENGTH];
       int numBytesRead = inputStream.read(readBuffer, 0, readBuffer.length);
       if (isEqual) {
-        assertArrayEquals(
-                String.format("Bytes read do not match bytes written to %1$s", filePath), writeBuffer, readBuffer);
+        assertArrayEquals(writeBuffer, readBuffer,
+            String.format("Bytes read do not match bytes written to %1$s", filePath));
       } else {
-        assertThat(
-                String.format("Bytes read unexpectedly match bytes written to %1$s",
-                        filePath),
-                readBuffer,
-                IsNot.not(IsEqual.equalTo(writeBuffer)));
+        String message = String.format(
+            "Bytes read unexpectedly match bytes written to %s", filePath);
+        assertThat(readBuffer)
+            .as(message)
+            .isNotEqualTo(writeBuffer);
       }
     }
   }

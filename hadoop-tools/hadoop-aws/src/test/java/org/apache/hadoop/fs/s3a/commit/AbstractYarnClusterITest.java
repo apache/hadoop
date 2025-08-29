@@ -25,6 +25,7 @@ import java.time.format.DateTimeFormatter;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -226,6 +227,7 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
    * the user's home directory, as that is often rejected by CI test
    * runners.
    */
+  @TempDir
   public File stagingFilesDir;
 
   /**
@@ -259,7 +261,6 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
     assertNotNull(
        getClusterBinding(), "cluster is not bound");
     String methodName = getMethodName();
-    stagingFilesDir = File.createTempFile(methodName, "");
   }
 
   @Override

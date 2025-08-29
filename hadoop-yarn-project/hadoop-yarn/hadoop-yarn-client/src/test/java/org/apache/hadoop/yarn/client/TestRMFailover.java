@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.yarn.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
@@ -56,10 +56,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEventType;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -81,7 +81,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
   private MiniYARNCluster cluster;
   private ApplicationId fakeAppId;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     fakeAppId = ApplicationId.newInstance(System.currentTimeMillis(), 0);
     conf = new YarnConfiguration();
@@ -98,7 +98,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
     cluster = new MiniYARNCluster(TestRMFailover.class.getName(), 2, 1, 1, 1);
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     cluster.stop();
   }
@@ -123,8 +123,8 @@ public class TestRMFailover extends ClientBaseWithFixes {
   }
 
   private void verifyConnections() throws InterruptedException, YarnException {
-    assertTrue("NMs failed to connect to the RM",
-        cluster.waitForNodeManagersToConnect(20000));
+    assertTrue(
+        cluster.waitForNodeManagersToConnect(20000), "NMs failed to connect to the RM");
     verifyClientConnection();
   }
 
@@ -137,15 +137,15 @@ public class TestRMFailover extends ClientBaseWithFixes {
     int newActiveRMIndex = (activeRMIndex + 1) % 2;
     getAdminService(activeRMIndex).transitionToStandby(req);
     getAdminService(newActiveRMIndex).transitionToActive(req);
-    assertEquals("Failover failed", newActiveRMIndex, cluster.getActiveRMIndex());
+    assertEquals(newActiveRMIndex, cluster.getActiveRMIndex(), "Failover failed");
   }
 
   private void failover()
       throws IOException, InterruptedException, YarnException {
     int activeRMIndex = cluster.getActiveRMIndex();
     cluster.stopResourceManager(activeRMIndex);
-    assertEquals("Failover failed",
-        (activeRMIndex + 1) % 2, cluster.getActiveRMIndex());
+    assertEquals(
+        (activeRMIndex + 1) % 2, cluster.getActiveRMIndex(), "Failover failed");
     cluster.restartResourceManager(activeRMIndex);
   }
 
@@ -155,7 +155,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
     conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     cluster.init(conf);
     cluster.start();
-    assertFalse("RM never turned active", -1 == cluster.getActiveRMIndex());
+    assertFalse(-1 == cluster.getActiveRMIndex(), "RM never turned active");
     verifyConnections();
 
     explicitFailover();
@@ -189,7 +189,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
 
     cluster.init(conf);
     cluster.start();
-    assertFalse("RM never turned active", -1 == cluster.getActiveRMIndex());
+    assertFalse(-1 == cluster.getActiveRMIndex(), "RM never turned active");
     verifyConnections();
 
     failover();
@@ -220,14 +220,14 @@ public class TestRMFailover extends ClientBaseWithFixes {
       cluster.init(conf);
       cluster.start();
       getAdminService(0).transitionToActive(req);
-      assertFalse("RM never turned active", -1 == cluster.getActiveRMIndex());
+      assertFalse(-1 == cluster.getActiveRMIndex(), "RM never turned active");
       verifyConnections();
       webAppProxyServer.init(conf);
 
       // Start webAppProxyServer
-      Assert.assertEquals(STATE.INITED, webAppProxyServer.getServiceState());
+      Assertions.assertEquals(STATE.INITED, webAppProxyServer.getServiceState());
       webAppProxyServer.start();
-      Assert.assertEquals(STATE.STARTED, webAppProxyServer.getServiceState());
+      Assertions.assertEquals(STATE.STARTED, webAppProxyServer.getServiceState());
 
       // send httpRequest with fakeApplicationId
       // expect to get "Not Found" response and 404 response code
@@ -253,7 +253,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
     conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     cluster.init(conf);
     cluster.start();
-    assertFalse("RM never turned active", -1 == cluster.getActiveRMIndex());
+    assertFalse(-1 == cluster.getActiveRMIndex(), "RM never turned active");
     verifyConnections();
 
     // send httpRequest with fakeApplicationId
@@ -391,7 +391,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
     conf.set(YarnConfiguration.RM_ZK_ADDRESS, hostPort);
     cluster.init(conf);
     cluster.start();
-    assertFalse("RM never turned active", -1 == cluster.getActiveRMIndex());
+    assertFalse(-1 == cluster.getActiveRMIndex(), "RM never turned active");
 
     ResourceManager resourceManager = cluster.getResourceManager(
         cluster.getActiveRMIndex());

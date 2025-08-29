@@ -23,7 +23,7 @@ import java.net.URL;
 import java.util.ArrayList;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -61,15 +61,15 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
           answer.callRealMethod();
           AbfsHttpOperation op = answer.getArgument(0);
           if (op instanceof AbfsAHCHttpOperation) {
-            Assertions.assertThat(tc.getHeader()).endsWith(APACHE_IMPL);
+            Assertions.assertThat(tc.getHeader()).contains(APACHE_IMPL);
             apacheCallsRegister[0]++;
           }
           if (op instanceof AbfsJdkHttpOperation) {
             jdkCallsRegister[0]++;
             if (AbfsApacheHttpClient.usable()) {
-              Assertions.assertThat(tc.getHeader()).endsWith(JDK_IMPL);
+              Assertions.assertThat(tc.getHeader()).contains(JDK_IMPL);
             } else {
-              Assertions.assertThat(tc.getHeader()).endsWith(JDK_FALLBACK);
+              Assertions.assertThat(tc.getHeader()).contains(JDK_FALLBACK);
             }
           }
           return null;

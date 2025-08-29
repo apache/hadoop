@@ -42,9 +42,9 @@ import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -60,11 +60,11 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -83,7 +83,7 @@ public class TestFsVolumeList {
   private final static int DEFAULT_BLOCK_SIZE = 102400;
   private final static int BUFFER_LENGTH = 1024;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     dataset = mock(FsDatasetImpl.class);
     baseDir = new FileSystemTestHelper().getTestRootDir();
@@ -94,7 +94,8 @@ public class TestFsVolumeList {
     conf = new Configuration();
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testGetNextVolumeWithClosedVolume() throws IOException {
     FsVolumeList volumeList = new FsVolumeList(
         Collections.<VolumeFailureInfo>emptyList(),
@@ -138,7 +139,8 @@ public class TestFsVolumeList {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testReleaseVolumeRefIfNoBlockScanner() throws IOException {
     FsVolumeList volumeList = new FsVolumeList(
         Collections.<VolumeFailureInfo>emptyList(), null, blockChooser, conf, null);
@@ -172,7 +174,7 @@ public class TestFsVolumeList {
         .setStorageID("storage-id")
         .setConf(conf)
         .build();
-    assertEquals("", 100L, volume.getReserved());
+    assertEquals(100L, volume.getReserved(), "");
     // when storage type reserved is configured.
     conf.setLong(
         DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY + "."
@@ -190,7 +192,7 @@ public class TestFsVolumeList {
         .setStorageID("storage-id")
         .setConf(conf)
         .build();
-    assertEquals("", 1L, volume1.getReserved());
+    assertEquals(1L, volume1.getReserved(), "");
     FsVolumeImpl volume2 = new FsVolumeImplBuilder().setDataset(dataset)
         .setStorageDirectory(
             new StorageDirectory(
@@ -198,7 +200,7 @@ public class TestFsVolumeList {
         .setStorageID("storage-id")
         .setConf(conf)
         .build();
-    assertEquals("", 2L, volume2.getReserved());
+    assertEquals(2L, volume2.getReserved(), "");
     FsVolumeImpl volume3 = new FsVolumeImplBuilder().setDataset(dataset)
         .setStorageDirectory(
             new StorageDirectory(
@@ -206,7 +208,7 @@ public class TestFsVolumeList {
         .setStorageID("storage-id")
         .setConf(conf)
         .build();
-    assertEquals("", 100L, volume3.getReserved());
+    assertEquals(100L, volume3.getReserved(), "");
     FsVolumeImpl volume4 = new FsVolumeImplBuilder().setDataset(dataset)
         .setStorageDirectory(
             new StorageDirectory(
@@ -214,7 +216,7 @@ public class TestFsVolumeList {
         .setStorageID("storage-id")
         .setConf(conf)
         .build();
-    assertEquals("", 100L, volume4.getReserved());
+    assertEquals(100L, volume4.getReserved(), "");
     FsVolumeImpl volume5 = new FsVolumeImplBuilder().setDataset(dataset)
         .setStorageDirectory(
             new StorageDirectory(
@@ -367,7 +369,8 @@ public class TestFsVolumeList {
     assertEquals(200, volume5.getAvailable());
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testAddRplicaProcessorForAddingReplicaInMap() throws Exception {
     BlockPoolSlice.reInitializeAddReplicaThreadPool();
     Configuration cnf = new Configuration();
@@ -414,13 +417,13 @@ public class TestFsVolumeList {
     // It will create BlockPoolSlice.AddReplicaProcessor task's and lunch in
     // ForkJoinPool recursively
     vol.getVolumeMap(bpid, volumeMap, ramDiskReplicaMap);
-    assertTrue("Failed to add all the replica to map", volumeMap.replicas(bpid)
-        .size() == 1000);
-    assertEquals("Fork pool should be initialize with configured pool size",
-        poolSize, BlockPoolSlice.getAddReplicaForkPoolSize());
+    assertTrue(volumeMap.replicas(bpid).size() == 1000, "Failed to add all the replica to map");
+    assertEquals(poolSize, BlockPoolSlice.getAddReplicaForkPoolSize(),
+        "Fork pool should be initialize with configured pool size");
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testInstanceOfAddReplicaThreadPool() throws Exception {
     // Start cluster with multiple namespace
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(
@@ -436,9 +439,8 @@ public class TestFsVolumeList {
           cluster.getNamesystem(0).getBlockPoolId()).getAddReplicaThreadPool();
       ForkJoinPool threadPool2 = vol.getBlockPoolSlice(
           cluster.getNamesystem(1).getBlockPoolId()).getAddReplicaThreadPool();
-      assertEquals(
-          "Thread pool instance should be same in all the BlockPoolSlice",
-          threadPool1, threadPool2);
+      assertEquals(threadPool1, threadPool2,
+          "Thread pool instance should be same in all the BlockPoolSlice");
     }
   }
 
@@ -529,13 +531,11 @@ public class TestFsVolumeList {
 
     // 1) getVolumeRef should return correct reference.
     assertEquals(diskVolume,
-        volumeList.getMountVolumeMap()
-            .getVolumeRefByMountAndStorageType(
-            device, StorageType.DISK).getVolume());
+        volumeList.getMountVolumeMap().getVolumeRefByMountAndStorageType(device, StorageType.DISK)
+            .getVolume());
     assertEquals(archivalVolume,
         volumeList.getMountVolumeMap()
-            .getVolumeRefByMountAndStorageType(
-            device, StorageType.ARCHIVE).getVolume());
+            .getVolumeRefByMountAndStorageType(device, StorageType.ARCHIVE).getVolume());
 
     // 2) removeVolume should work as expected
     volumeList.removeVolume(diskVolume.getStorageLocation(), true);
@@ -543,8 +543,7 @@ public class TestFsVolumeList {
             .getVolumeRefByMountAndStorageType(
             device, StorageType.DISK));
     assertEquals(archivalVolume, volumeList.getMountVolumeMap()
-        .getVolumeRefByMountAndStorageType(
-        device, StorageType.ARCHIVE).getVolume());
+        .getVolumeRefByMountAndStorageType(device, StorageType.ARCHIVE).getVolume());
   }
 
   // Test dfs stats with same disk archival
@@ -619,10 +618,8 @@ public class TestFsVolumeList {
         .when(spyDiskVolume).getDfUsed();
     Mockito.doReturn(dfUsage)
         .when(spyArchivalVolume).getDfUsed();
-    assertEquals(expectedActualNonDfsUsage,
-        spyDiskVolume.getActualNonDfsUsed());
-    assertEquals(expectedActualNonDfsUsage,
-        spyArchivalVolume.getActualNonDfsUsed());
+    assertEquals(expectedActualNonDfsUsage, spyDiskVolume.getActualNonDfsUsed());
+    assertEquals(expectedActualNonDfsUsage, spyArchivalVolume.getActualNonDfsUsed());
 
     // 3) When there is only one volume on a disk mount,
     // we allocate the full disk capacity regardless of the default ratio.
@@ -714,14 +711,14 @@ public class TestFsVolumeList {
         DEFAULT_BLOCK_SIZE, (short) 3, 0, false, null);
 
     // Asserts that the number of blocks created on a slow disk is 0.
-    Assert.assertEquals(0, dn0.getVolumeReport().stream()
-        .filter(v -> (v.getPath() + "/").equals(slowDisk0OnDn0)).collect(Collectors.toList()).get(0)
-        .getNumBlocks());
-    Assert.assertEquals(0, dn1.getVolumeReport().stream()
-        .filter(v -> (v.getPath() + "/").equals(slowDisk0OnDn1)).collect(Collectors.toList()).get(0)
-        .getNumBlocks());
-    Assert.assertEquals(0, dn2.getVolumeReport().stream()
-        .filter(v -> (v.getPath() + "/").equals(slowDisk0OnDn2)).collect(Collectors.toList()).get(0)
-        .getNumBlocks());
+    assertEquals(0,
+        dn0.getVolumeReport().stream().filter(v -> (v.getPath() + "/").equals(slowDisk0OnDn0))
+            .collect(Collectors.toList()).get(0).getNumBlocks());
+    assertEquals(0,
+        dn1.getVolumeReport().stream().filter(v -> (v.getPath() + "/").equals(slowDisk0OnDn1))
+            .collect(Collectors.toList()).get(0).getNumBlocks());
+    assertEquals(0,
+        dn2.getVolumeReport().stream().filter(v -> (v.getPath() + "/").equals(slowDisk0OnDn2))
+            .collect(Collectors.toList()).get(0).getNumBlocks());
   }
 }

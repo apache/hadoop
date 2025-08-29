@@ -24,9 +24,11 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,7 +76,7 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
   /***
    * Set up the clusters.
    */
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     resetUGI();
     cluster = new KerberizedAbfsCluster();
@@ -86,7 +88,7 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
    * Tear down the Cluster.
    */
   @SuppressWarnings("ThrowableNotThrown")
-  @AfterClass
+  @AfterAll
   public static void teardownCluster() throws Exception {
     resetUGI();
     ServiceOperations.stopQuietly(LOG, cluster);
@@ -95,6 +97,7 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
   public ITestAbfsDelegationTokens() throws Exception {
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     // create the FS
@@ -112,8 +115,8 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
     StubDelegationTokenManager.useStubDTManager(conf);
     FileSystem.closeAllForUGI(UserGroupInformation.getLoginUser());
     super.setup();
-    assertNotNull("No StubDelegationTokenManager created in filesystem init",
-        getStubDTManager());
+    assertNotNull(
+       getStubDTManager(), "No StubDelegationTokenManager created in filesystem init");
   }
 
   protected StubDelegationTokenManager getStubDTManager() throws IOException {
@@ -124,6 +127,7 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
    * Cleanup removes cached filesystems and the last instance of the
    * StubDT manager.
    */
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     // clean up all of alice's instances.
@@ -135,8 +139,8 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
    * General assertion that security is turred on for a cluster.
    */
   public static void assertSecurityEnabled() {
-    assertTrue("Security is needed for this test",
-        UserGroupInformation.isSecurityEnabled());
+    assertTrue(
+       UserGroupInformation.isSecurityEnabled(), "Security is needed for this test");
   }
 
   /**
@@ -163,10 +167,10 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
   public void testTokenManagerBinding() throws Throwable {
     StubDelegationTokenManager instance
         = getStubDTManager();
-    assertNotNull("No StubDelegationTokenManager created in filesystem init",
-        instance);
-    assertTrue("token manager not initialized: " + instance,
-        instance.isInitialized());
+    assertNotNull(
+       instance, "No StubDelegationTokenManager created in filesystem init");
+    assertTrue(
+       instance.isInitialized(), "token manager not initialized: " + instance);
   }
 
   /**
@@ -176,10 +180,9 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
   @Test
   public void testCanonicalization() throws Throwable {
     String service = getCanonicalServiceName();
-    assertNotNull("No canonical service name from filesystem " + getFileSystem(),
-        service);
-    assertEquals("canonical URI and service name mismatch",
-        getFilesystemURI(), new URI(service));
+    assertNotNull(
+       service, "No canonical service name from filesystem " + getFileSystem());
+    assertEquals(getFilesystemURI(), new URI(service), "canonical URI and service name mismatch");
   }
 
   protected URI getFilesystemURI() throws IOException {
@@ -199,8 +202,8 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
     FileSystem fs = getFileSystem();
     clearTokenServiceName();
 
-    assertEquals("canonicalServiceName is not the default",
-        getDefaultServiceName(fs), getCanonicalServiceName());
+    assertEquals(getDefaultServiceName(fs), getCanonicalServiceName(),
+        "canonicalServiceName is not the default");
   }
 
   protected String getDefaultServiceName(final FileSystem fs) {
@@ -218,8 +221,7 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
   public void testRequestToken() throws Throwable {
     AzureBlobFileSystem fs = getFileSystem();
     Credentials credentials = mkTokens(fs);
-    assertEquals("Number of collected tokens", 1,
-        credentials.numberOfTokens());
+    assertEquals(1, credentials.numberOfTokens(), "Number of collected tokens");
     verifyCredentialsContainsToken(credentials, fs);
   }
 
@@ -231,12 +233,11 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
     clearTokenServiceName();
 
     AzureBlobFileSystem fs = getFileSystem();
-    assertEquals("canonicalServiceName is not the default",
-        getDefaultServiceName(fs), fs.getCanonicalServiceName());
+    assertEquals(getDefaultServiceName(fs), fs.getCanonicalServiceName(),
+        "canonicalServiceName is not the default");
 
     Credentials credentials = mkTokens(fs);
-    assertEquals("Number of collected tokens", 1,
-        credentials.numberOfTokens());
+    assertEquals(1, credentials.numberOfTokens(), "Number of collected tokens");
     verifyCredentialsContainsToken(credentials,
         getDefaultServiceName(fs), getFilesystemURI().toString());
   }
@@ -264,16 +265,13 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
     Token<? extends TokenIdentifier> token = credentials.getToken(
         new Text(serviceName));
 
-    assertEquals("Token Kind in " + token,
-        StubAbfsTokenIdentifier.TOKEN_KIND, token.getKind());
-    assertEquals("Token Service Kind in " + token,
-        tokenService, token.getService().toString());
+    assertEquals(StubAbfsTokenIdentifier.TOKEN_KIND, token.getKind(), "Token Kind in " + token);
+    assertEquals(tokenService, token.getService().toString(), "Token Service Kind in " + token);
 
     StubAbfsTokenIdentifier abfsId = (StubAbfsTokenIdentifier)
         token.decodeIdentifier();
     LOG.info("Created token {}", abfsId);
-    assertEquals("token URI in " + abfsId,
-        tokenService, abfsId.getUri().toString());
+    assertEquals(tokenService, abfsId.getUri().toString(), "token URI in " + abfsId);
     return abfsId;
   }
 
@@ -315,9 +313,8 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
         () -> ToolRunner.run(conf, dt, args));
     String s = dtUtilContent.toString();
     LOG.info("\n{}", s);
-    assertEquals("Exit code from command dtutil "
-        + StringUtils.join(" ", args) + " with output " + s,
-        expected, r);
+    assertEquals(expected, r,
+        "Exit code from command dtutil "+ StringUtils.join(" ", args) + " with output " + s);
     return s;
   }
 
@@ -334,18 +331,18 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
         "get", fsURI,
         "-format", "protobuf",
         tfs);
-    assertTrue("not created: " + tokenfile,
-        tokenfile.exists());
-    assertTrue("File is empty " + tokenfile,
-        tokenfile.length() > 0);
-    assertTrue("File only contains header " + tokenfile,
-        tokenfile.length() > 6);
+    assertTrue(
+       tokenfile.exists(), "not created: " + tokenfile);
+    assertTrue(
+       tokenfile.length() > 0, "File is empty " + tokenfile);
+    assertTrue(
+       tokenfile.length() > 6, "File only contains header " + tokenfile);
 
     String printed = dtutil(0, getRawConfiguration(), "print", tfs);
-    assertTrue("no " + fsURI + " in " + printed,
-        printed.contains(fsURI));
-    assertTrue("no " + StubAbfsTokenIdentifier.ID + " in " + printed,
-        printed.contains(StubAbfsTokenIdentifier.ID));
+    assertTrue(
+       printed.contains(fsURI), "no " + fsURI + " in " + printed);
+    assertTrue(
+       printed.contains(StubAbfsTokenIdentifier.ID), "no " + StubAbfsTokenIdentifier.ID + " in " + printed);
   }
 
   /**
@@ -360,8 +357,7 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
     ClassicDelegationTokenManager.useClassicDTManager(conf);
     try (FileSystem fs = FileSystem.newInstance(getFilesystemURI(), conf)) {
       Credentials credentials = mkTokens(fs);
-      assertEquals("Number of collected tokens", 1,
-          credentials.numberOfTokens());
+      assertEquals(1, credentials.numberOfTokens(), "Number of collected tokens");
       verifyCredentialsContainsToken(credentials,
           fs.getCanonicalServiceName(),
           ClassicDelegationTokenManager.UNSET);

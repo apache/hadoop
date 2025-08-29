@@ -139,6 +139,7 @@ import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
 import org.apache.hadoop.thirdparty.protobuf.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.security.AuthorizationContext;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -1004,6 +1005,7 @@ public abstract class Server {
     final byte[] clientId;
     private final Span span; // the trace span on the server side
     private final CallerContext callerContext; // the call context
+    private  final byte[] authHeader; // the auth header
     private boolean deferredResponse = false;
     private int priorityLevel;
     // the priority level assigned by scheduler, 0 by default
@@ -1035,6 +1037,11 @@ public abstract class Server {
 
     Call(int id, int retryCount, RPC.RpcKind kind, byte[] clientId,
         Span span, CallerContext callerContext) {
+      this(id, retryCount, kind, clientId, span, callerContext, null);
+    }
+
+    Call(int id, int retryCount, RPC.RpcKind kind, byte[] clientId,
+        Span span, CallerContext callerContext, byte[] authHeader) {
       this.callId = id;
       this.retryCount = retryCount;
       this.timestampNanos = Time.monotonicNowNanos();
@@ -1043,6 +1050,7 @@ public abstract class Server {
       this.clientId = clientId;
       this.span = span;
       this.callerContext = callerContext;
+      this.authHeader = authHeader;
       this.clientStateId = Long.MIN_VALUE;
       this.isCallCoordinated = false;
     }
@@ -1243,7 +1251,14 @@ public abstract class Server {
     RpcCall(Connection connection, int id, int retryCount,
         Writable param, RPC.RpcKind kind, byte[] clientId,
         Span span, CallerContext context) {
-      super(id, retryCount, kind, clientId, span, context);
+      this(connection, id, retryCount, param, kind, clientId,
+          span, context, new byte[0]);
+    }
+
+    RpcCall(Connection connection, int id, int retryCount,
+        Writable param, RPC.RpcKind kind, byte[] clientId,
+        Span span, CallerContext context, byte[] authHeader) {
+      super(id, retryCount, kind, clientId, span, context, authHeader);
       this.connection = connection;
       this.rpcRequest = param;
     }
@@ -2975,51 +2990,61 @@ public abstract class Server {
                 .build();
       }
 
-      RpcCall call = new RpcCall(this, header.getCallId(),
-          header.getRetryCount(), rpcRequest,
-          ProtoUtil.convert(header.getRpcKind()),
-          header.getClientId().toByteArray(), span, callerContext);
-
-      // Save the priority level assignment by the scheduler
-      call.setPriorityLevel(callQueue.getPriorityLevel(call));
-      call.markCallCoordinated(false);
-      if(alignmentContext != null && call.rpcRequest != null &&
-          (call.rpcRequest instanceof ProtobufRpcEngine2.RpcProtobufRequest)) {
-        // if call.rpcRequest is not RpcProtobufRequest, will skip the following
-        // step and treat the call as uncoordinated. As currently only certain
-        // ClientProtocol methods request made through RPC protobuf needs to be
-        // coordinated.
-        String methodName;
-        String protoName;
-        ProtobufRpcEngine2.RpcProtobufRequest req =
-            (ProtobufRpcEngine2.RpcProtobufRequest) call.rpcRequest;
-        try {
-          methodName = req.getRequestHeader().getMethodName();
-          protoName = req.getRequestHeader().getDeclaringClassProtocolName();
-          if (alignmentContext.isCoordinatedCall(protoName, methodName)) {
-            call.markCallCoordinated(true);
-            long stateId;
-            stateId = alignmentContext.receiveRequestState(
-                header, getMaxIdleTime());
-            call.setClientStateId(stateId);
-            if (header.hasRouterFederatedState()) {
-              call.setFederatedNamespaceState(header.getRouterFederatedState());
-            }
-          }
-        } catch (IOException ioe) {
-          throw new RpcServerException("Processing RPC request caught ", ioe);
-        }
-      }
-
+      // Set AuthorizationContext for this thread if present
+      byte[] authHeader = null;
       try {
-        internalQueueCall(call);
-      } catch (RpcServerException rse) {
-        throw rse;
-      } catch (IOException ioe) {
-        throw new FatalRpcServerException(
-            RpcErrorCodeProto.ERROR_RPC_SERVER, ioe);
+        if (header.hasAuthorizationHeader()) {
+          authHeader = header.getAuthorizationHeader().toByteArray();
+        }
+
+        RpcCall call = new RpcCall(this, header.getCallId(),
+            header.getRetryCount(), rpcRequest,
+            ProtoUtil.convert(header.getRpcKind()),
+            header.getClientId().toByteArray(), span, callerContext, authHeader);
+
+        // Save the priority level assignment by the scheduler
+        call.setPriorityLevel(callQueue.getPriorityLevel(call));
+        call.markCallCoordinated(false);
+        if (alignmentContext != null && call.rpcRequest != null &&
+            (call.rpcRequest instanceof ProtobufRpcEngine2.RpcProtobufRequest)) {
+          // if call.rpcRequest is not RpcProtobufRequest, will skip the following
+          // step and treat the call as uncoordinated. As currently only certain
+          // ClientProtocol methods request made through RPC protobuf needs to be
+          // coordinated.
+          String methodName;
+          String protoName;
+          ProtobufRpcEngine2.RpcProtobufRequest req =
+              (ProtobufRpcEngine2.RpcProtobufRequest) call.rpcRequest;
+          try {
+            methodName = req.getRequestHeader().getMethodName();
+            protoName = req.getRequestHeader().getDeclaringClassProtocolName();
+            if (alignmentContext.isCoordinatedCall(protoName, methodName)) {
+              call.markCallCoordinated(true);
+              long stateId;
+              stateId = alignmentContext.receiveRequestState(
+                  header, getMaxIdleTime());
+              call.setClientStateId(stateId);
+              if (header.hasRouterFederatedState()) {
+                call.setFederatedNamespaceState(header.getRouterFederatedState());
+              }
+            }
+          } catch (IOException ioe) {
+            throw new RpcServerException("Processing RPC request caught ", ioe);
+          }
+        }
+
+        try {
+          internalQueueCall(call);
+        } catch (RpcServerException rse) {
+          throw rse;
+        } catch (IOException ioe) {
+          throw new FatalRpcServerException(
+              RpcErrorCodeProto.ERROR_RPC_SERVER, ioe);
+        }
+        incRpcCount();  // Increment the rpc count
+      } finally {
+        AuthorizationContext.clear();
       }
-      incRpcCount();  // Increment the rpc count
     }
 
     /**
@@ -3245,6 +3270,7 @@ public abstract class Server {
           }
           // always update the current call context
           CallerContext.setCurrent(call.callerContext);
+          AuthorizationContext.setCurrentAuthorizationHeader(call.authHeader);
           UserGroupInformation remoteUser = call.getRemoteUser();
           connDropped = !call.isOpen();
           if (remoteUser != null) {

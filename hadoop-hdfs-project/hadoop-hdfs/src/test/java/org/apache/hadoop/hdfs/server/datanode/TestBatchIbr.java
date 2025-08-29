@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INCREMENTAL_INTERVAL_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -45,7 +47,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.Time;
 import org.slf4j.event.Level;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -161,7 +162,7 @@ public class TestBatchIbr {
         });
       }
       for(int i = 0; i < NUM_FILES; i++) {
-        Assertions.assertTrue(verifyService.take().get());
+        assertTrue(verifyService.take().get());
       }
       final long testEndTime = Time.monotonicNow();
 
@@ -247,7 +248,7 @@ public class TestBatchIbr {
       for(int i = 0; i < numBlocks; i++) {
         in.read(computed);
         nextBytes(i, seed, expected);
-        Assertions.assertArrayEquals(expected, computed);
+        assertArrayEquals(expected, computed);
       }
       return true;
     } catch(Exception e) {

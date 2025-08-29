@@ -77,5 +77,6 @@ public final class AbfsErrors {
   public static final String ERR_BLOB_LIST_PARSING = "Parsing of XML List Response Failed in BlobClient.";
   public static final String ERR_DFS_LIST_PARSING = "Parsing of Json List Response Failed in DfsClient.";
   public static final String INCORRECT_INGRESS_TYPE = "Ingress Type Cannot be DFS for Blob endpoint configured filesystem.";
+  public static final String ERR_INVALID_ABFS_STATE = "Invalid state for AzureBlobFilesystem. Either Filesystem was closed or not initialized.";
   private AbfsErrors() {}
 }
