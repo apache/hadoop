@@ -2,6 +2,6 @@
   "ubuntu:focal",
   "ubuntu:focal::arch64",
   "ubuntu:noble",
-  "centos:8",
+  "rockylinux:8",
   "debian:10"
 ]

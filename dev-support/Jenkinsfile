@@ -84,10 +84,10 @@ pipeline {
         stage ('setup sources') {
             steps {
 
-                dir("${WORKSPACE}/centos-8") {
+                dir("${WORKSPACE}/rockylinux-8") {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/centos-8
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/rockylinux-8
                     '''
                 }
 
@@ -111,11 +111,11 @@ pipeline {
         // C++/C++ build/platform.
         // This stage serves as a means of cross platform validation, which is
         // really needed to ensure that any C++ related/platform change doesn't
-        // break the Hadoop build on Centos 8.
-        stage ('precommit-run Centos 8') {
+        // break the Hadoop build on Rocky Linux 8.
+        stage ('precommit-run Rocky Linux 8') {
             environment {
-                SOURCEDIR = "${WORKSPACE}/centos-8/src"
-                PATCHDIR = "${WORKSPACE}/centos-8/out"
+                SOURCEDIR = "${WORKSPACE}/rockylinux-8/src"
+                PATCHDIR = "${WORKSPACE}/rockylinux-8/out"
                 DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_centos_8"
                 IS_OPTIONAL = 1
             }
@@ -136,7 +136,7 @@ pipeline {
                 failure {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp "${WORKSPACE}/centos-8/out" "${WORKSPACE}"
+                    cp -Rp "${WORKSPACE}/rockylinux-8/out" "${WORKSPACE}"
                     '''
                     archiveArtifacts "out/**"
                 }
