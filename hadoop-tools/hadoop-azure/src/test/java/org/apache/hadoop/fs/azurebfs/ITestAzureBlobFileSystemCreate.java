@@ -89,6 +89,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MET
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CREATE_IDEMPOTENCY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
@@ -466,6 +467,7 @@ public class ITestAzureBlobFileSystemCreate extends
       Configuration config = new Configuration(this.getRawConfiguration());
       config.set("fs.azure.enable.conditional.create.overwrite",
           Boolean.toString(enableConditionalCreateOverwrite));
+      config.set("fs.azure.enable.create.idempotency", "false");
       AzureBlobFileSystemStore store = currentFs.getAbfsStore();
       AbfsClient client = store.getClientHandler().getIngressClient();
 
@@ -1089,6 +1091,7 @@ public class ITestAzureBlobFileSystemCreate extends
       throws Exception {
     Configuration configuration = getRawConfiguration();
     configuration.set(FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE, "false");
+    configuration.set(FS_AZURE_ENABLE_CREATE_IDEMPOTENCY, "false");
     try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
         configuration)) {
       ExecutorService executorService = Executors.newFixedThreadPool(5);
@@ -2253,13 +2256,13 @@ public class ITestAzureBlobFileSystemCreate extends
   @Test
   public void testCreateIdempotencyForNonHnsBlob() throws Exception {
     assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
+    assumeHnsDisabled();
+    assumeBlobServiceType();
     // Create a spy of AzureBlobFileSystem
     try (AzureBlobFileSystem fs = Mockito.spy(
         (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration()))) {
-      assumeHnsDisabled();
       // Create a spy of AzureBlobFileSystemStore
       AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
-      assumeBlobServiceType();
 
       // Create spies for the client handler and blob client
       AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());

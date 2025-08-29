@@ -427,6 +427,8 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_BLOB_DIR_DELETE_MAX_THREAD = "fs.azure.blob.dir.delete.max.thread";
   /**Flag to enable/disable sending client transactional ID during create/rename operations: {@value}*/
   public static final String FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = "fs.azure.enable.client.transaction.id";
+  /**Flag to enable/disable create idempotency during create operation: {@value}*/
+  public static final String FS_AZURE_ENABLE_CREATE_IDEMPOTENCY = "fs.azure.enable.create.idempotency";
 
   private ConfigurationKeys() {}
 }

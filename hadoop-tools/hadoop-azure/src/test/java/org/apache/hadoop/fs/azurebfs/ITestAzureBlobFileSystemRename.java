@@ -1720,13 +1720,13 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameIdempotencyForNonHnsBlob() throws Exception {
     assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
+    assumeHnsDisabled();
+    assumeBlobServiceType();
     // Create a spy of AzureBlobFileSystem
     try (AzureBlobFileSystem fs = Mockito.spy(
         (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration()))) {
-      assumeHnsDisabled();
       // Create a spy of AzureBlobFileSystemStore
       AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
-      assumeBlobServiceType();
 
       // Create spies for the client handler and blob client
       AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
