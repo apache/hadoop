@@ -20,7 +20,7 @@
 
   <property>
     <name>fs.cosn.credentials.provider</name>
-    <value>org.apache.hadoop.fs.cosn.auth.SimpleCredentialProvider</value>
+    <value>org.apache.hadoop.fs.cosn.auth.SimpleCredentialsProvider</value>
     <description>
       This option allows the user to specify how to get the credentials.
       Comma-separated class names of credential provider classes which

@@ -298,6 +298,91 @@ public class TestGpuDiscoverer {
   }
 
   @Test
+  public void testGetGpuDeviceInformationOverrideMaxErrors()
+      throws YarnException, IOException {
+    Configuration conf = new Configuration(false);
+    // The default is 10 max errors. Override to 11.
+    conf.setInt(YarnConfiguration.NM_GPU_DISCOVERY_MAX_ERRORS, 11);
+
+    // Initial creation will call the script once. Start out with a successful
+    // script. Otherwise, our error count assertions will be off by one later.
+    File fakeBinary = createFakeNvidiaSmiScriptAsRunnableFile(
+        this::createNvidiaSmiScript);
+
+    GpuDiscoverer discoverer = creatediscovererWithGpuPathDefined(conf);
+    assertEquals(fakeBinary.getAbsolutePath(),
+        discoverer.getPathOfGpuBinary());
+    assertNull(discoverer.getEnvironmentToRunCommand().get(PATH));
+
+    LOG.debug("Replacing script with faulty version!");
+    createFaultyNvidiaSmiScript(fakeBinary);
+
+    final String terminateMsg = "Failed to execute GPU device " +
+        "detection script (" + fakeBinary.getAbsolutePath() + ") for 11 times";
+    final String msg = "Failed to execute GPU device detection script";
+
+    // We expect 11 attempts (not the default of 10).
+    for (int i = 0; i < 11; i++) {
+      try {
+        LOG.debug("Executing faulty nvidia-smi script...");
+        discoverer.getGpuDeviceInformation();
+        fail("Query of GPU device info via nvidia-smi should fail as " +
+            "script should be faulty: " + fakeBinary);
+      } catch (YarnException e) {
+        assertThat(e.getMessage()).contains(msg);
+        assertThat(e.getMessage()).doesNotContain(terminateMsg);
+      }
+    }
+
+    // On a 12th attempt, we've exceed the configured max of 11, so we expect
+    // the termination message.
+    try {
+      LOG.debug("Executing faulty nvidia-smi script again..." +
+          "We should reach the error threshold now!");
+      discoverer.getGpuDeviceInformation();
+      fail("Query of GPU device info via nvidia-smi should fail as " +
+          "script should be faulty: " + fakeBinary);
+    } catch (YarnException e) {
+      assertThat(e.getMessage()).contains(terminateMsg);
+    }
+
+    LOG.debug("Verifying if GPUs are still hold the value of " +
+        "first successful query");
+    assertNotNull(discoverer.getGpusUsableByYarn());
+  }
+
+  @Test
+  public void testGetGpuDeviceInformationDisableMaxErrors()
+      throws YarnException, IOException {
+    Configuration conf = new Configuration(false);
+    // A negative value should disable max errors enforcement.
+    conf.setInt(YarnConfiguration.NM_GPU_DISCOVERY_MAX_ERRORS, -1);
+
+    File fakeBinary = createFakeNvidiaSmiScriptAsRunnableFile(
+        this::createFaultyNvidiaSmiScript);
+
+    GpuDiscoverer discoverer = creatediscovererWithGpuPathDefined(conf);
+    assertEquals(fakeBinary.getAbsolutePath(),
+        discoverer.getPathOfGpuBinary());
+    assertNull(discoverer.getEnvironmentToRunCommand().get(PATH));
+
+    final String terminateMsg = "Failed to execute GPU device " +
+        "detection script (" + fakeBinary.getAbsolutePath() + ") for 10 times";
+    final String msg = "Failed to execute GPU device detection script";
+
+    // The default max errors is 10. Verify that it keeps going for more, and we
+    // never see the termination message.
+    for (int i = 0; i < 20; ++i) {
+      YarnException exception = assertThrows(YarnException.class, () -> {
+        discoverer.getGpuDeviceInformation();
+      });
+
+      assertThat(exception.getMessage()).contains(msg);
+      assertThat(exception.getMessage()).doesNotContain(terminateMsg);
+    }
+  }
+
+  @Test
   public void testGetGpuDeviceInformationNvidiaSmiScriptWithInvalidXml()
       throws YarnException, IOException {
 

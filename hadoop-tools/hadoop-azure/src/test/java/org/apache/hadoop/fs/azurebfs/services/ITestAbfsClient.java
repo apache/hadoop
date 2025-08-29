@@ -29,10 +29,9 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -95,12 +94,14 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_W
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test useragent of abfs client.
  *
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="{0}")
+@MethodSource("params")
 public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   private static final String ACCOUNT_NAME = "bogusAccountName.dfs.core.windows.net";
@@ -115,10 +116,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   private final Pattern userAgentStringPattern;
 
-  @Parameterized.Parameter
   public HttpOperationType httpOperationType;
 
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {HttpOperationType.JDK_HTTP_URL_CONNECTION},
@@ -126,7 +125,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     });
   }
 
-  public ITestAbfsClient() throws Exception {
+  public ITestAbfsClient(HttpOperationType pHttpOperationType) throws Exception {
+    this.httpOperationType = pHttpOperationType;
     StringBuilder regEx = new StringBuilder();
     regEx.append("^");
     regEx.append(APN_VERSION);
@@ -183,7 +183,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   @Test
   public void verifyBasicInfo() throws Exception {
-    Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
+    assumeThat(JDK_HTTP_URL_CONNECTION).isEqualTo(httpOperationType);
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
@@ -213,7 +213,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   public void verifyUserAgentPrefix()
       throws IOException, IllegalAccessException, URISyntaxException {
-    Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
+    assumeThat(JDK_HTTP_URL_CONNECTION).isEqualTo(httpOperationType);
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     configuration.set(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY, FS_AZURE_USER_AGENT_PREFIX);
@@ -248,7 +248,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   public void verifyUserAgentExpectHeader()
           throws IOException, IllegalAccessException, URISyntaxException {
-    Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
+    assumeThat(JDK_HTTP_URL_CONNECTION).isEqualTo(httpOperationType);
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     configuration.set(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY, FS_AZURE_USER_AGENT_PREFIX);
@@ -275,7 +275,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   @Test
   public void verifyUserAgentWithoutSSLProvider() throws Exception {
-    Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
+    assumeThat(JDK_HTTP_URL_CONNECTION).isEqualTo(httpOperationType);
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     configuration.set(ConfigurationKeys.FS_AZURE_SSL_CHANNEL_MODE_KEY,
@@ -299,7 +299,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   @Test
   public void verifyUserAgentClusterName() throws Exception {
-    Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
+    assumeThat(JDK_HTTP_URL_CONNECTION).isEqualTo(httpOperationType);
     final String clusterName = "testClusterName";
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
@@ -328,7 +328,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   @Test
   public void verifyUserAgentClusterType() throws Exception {
-    Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
+    assumeThat(JDK_HTTP_URL_CONNECTION).isEqualTo(httpOperationType);
     final String clusterType = "testClusterType";
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
@@ -488,9 +488,9 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         abfsConfig.getAccountName());
     AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
 
-    org.junit.Assume.assumeTrue(
-        (currentAuthType == AuthType.SharedKey)
-        || (currentAuthType == AuthType.OAuth));
+    assumeThat(currentAuthType)
+        .as("Auth type must be SharedKey or OAuth for this test")
+        .isIn(AuthType.SharedKey, AuthType.OAuth);
 
     AbfsClient client;
     if (AbfsServiceType.DFS.equals(abfsConfig.getFsConfiguredServiceType())) {

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -31,8 +31,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
-
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * This class tests that a file system adheres to the limit of
@@ -84,8 +84,7 @@ public class TestFileLimit {
       // check that / exists
       //
       Path path = new Path("/");
-      assertTrue("/ should be a directory", 
-                 fs.getFileStatus(path).isDirectory());
+      assertTrue(fs.getFileStatus(path).isDirectory(), "/ should be a directory");
       currentNodes = 1;          // root inode
 
       // verify that we can create the specified number of files. We leave
@@ -107,7 +106,7 @@ public class TestFileLimit {
       } catch (IOException e) {
         hitException = true;
       }
-      assertTrue("Was able to exceed file limit", hitException);
+      assertTrue(hitException, "Was able to exceed file limit");
 
       // delete one file
       Path file0 = new Path("/filestatus0");
@@ -147,7 +146,7 @@ public class TestFileLimit {
       } catch (IOException e) {
         hitException = true;
       }
-      assertTrue("Was able to exceed dir limit", hitException);
+      assertTrue(hitException, "Was able to exceed dir limit");
 
     } finally {
       fs.close();
@@ -162,7 +161,8 @@ public class TestFileLimit {
     simulatedStorage = false;
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testMaxBlocksPerFileLimit() throws Exception {
     Configuration conf = new HdfsConfiguration();
     // Make a small block size and a low limit
@@ -192,7 +192,8 @@ public class TestFileLimit {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testMinBlockSizeLimit() throws Exception {
     final long blockSize = 4096;
     Configuration conf = new HdfsConfiguration();
