@@ -33,14 +33,6 @@
     <name>hadoop.security.authentication</name>
     <value>simple</value>
   </property>
-  <property>
-    <name>fs.gs.impl</name>
-    <value>org.apache.hadoop.fs.gs.GoogleHadoopFileSystem</value>
-  </property>
-  <property>
-    <name>fs.AbstractFileSystem.gs.impl</name>
-    <value>org.apache.hadoop.fs.gs.Gs</value>
-  </property>
 
   <!--
   To run these tests.

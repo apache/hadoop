@@ -1285,7 +1285,7 @@
 
 <property>
   <name>fs.viewfs.overload.scheme.target.gs.impl</name>
-  <value>com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS</value>
+  <value>org.apache.hadoop.fs.gs.GoogleHadoopFileSystem</value>
   <description>The GoogleHadoopFS/Google Cloud Storage file system for view
    file system overload scheme when child file system and ViewFSOverloadScheme's
    schemes are gs.
@@ -2372,12 +2372,6 @@ The switch to turn S3A auditing on or off.
       Yarn container path will be used as default value on yarn applications,
       otherwise fall back to hadoop.tmp.dir </description>
   </property>
-
-<property>
-  <name>fs.AbstractFileSystem.gs.impl</name>
-  <value>com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS</value>
-  <description>The AbstractFileSystem for gs: uris.</description>
-</property>
 
 <property>
   <name>fs.azure.enable.readahead</name>
@@ -4509,4 +4503,196 @@ The switch to turn S3A auditing on or off.
       If the value is less than or equal to 0, the cache is disabled entirely.
     </description>
   </property>
+
+  <property>
+    <name>fs.gs.impl</name>
+    <value>org.apache.hadoop.fs.gs.GoogleHadoopFileSystem</value>
+    <description>The FileSystem for gs: uris.</description>
+  </property>
+
+  <property>
+    <name>fs.AbstractFileSystem.gs.impl</name>
+    <value>org.apache.hadoop.fs.gs.Gs</value>
+    <description>The AbstractFileSystem for gs: uris.</description>
+  </property>
+
+  <property>
+    <name>fs.gs.project.id</name>
+    <description>
+      Google Cloud Project ID with access to Google Cloud Storage buckets.
+      Required only for list buckets and create bucket operations.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.working.dir</name>
+    <value>/</value>
+    <description>
+      The directory relative gs: uris resolve in inside the default bucket.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.rewrite.max.chunk.size</name>
+    <value>512m</value>
+    <description>
+      Maximum size of object chunk that will be rewritten in a single rewrite
+      request when fs.gs.copy.with.rewrite.enable is set to true.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.bucket.delete.enable</name>
+    <value>false</value>
+    <description>
+      If true, recursive delete on a path that refers to a Cloud Storage bucket
+      itself or delete on that path when it is empty will result in deletion of
+      the bucket itself. If false, any operation that normally would have
+      deleted the bucket will be ignored. Setting to false preserves the typical
+      behavior of rm -rf / which translates to deleting everything inside of
+      root, but without clobbering the filesystem authority corresponding to that
+      root path in the process.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.block.size</name>
+    <value>64m</value>
+    <description>
+      The reported block size of the file system. This does not change any
+      behavior of the connector or the underlying Google Cloud Storage objects.
+      However, it will affect the number of splits Hadoop MapReduce uses for a
+      given input.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.create.items.conflict.check.enable</name>
+    <value>true</value>
+    <description>
+      Enables a check that ensures that conflicting directories do not exist when
+      creating files and conflicting files do not exist when creating directories.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.marker.file.pattern</name>
+    <description>
+      If set, files that match specified pattern are copied last during folder
+      rename operation.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.auth.type</name>
+    <value>COMPUTE_ENGINE</value>
+    <description>
+      What type of authentication mechanism to use for Google Cloud Storage
+      access. Valid values: APPLICATION_DEFAULT, COMPUTE_ENGINE,
+      SERVICE_ACCOUNT_JSON_KEYFILE, UNAUTHENTICATED, USER_CREDENTIALS.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.auth.service.account.json.keyfile</name>
+    <description>
+      The path to the JSON keyfile for the service account when fs.gs.auth.type
+      property is set to SERVICE_ACCOUNT_JSON_KEYFILE. The file must exist at
+      the same path on all nodes
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.auth.client.id</name>
+    <description>
+      The OAuth2 client ID.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.auth.client.secret</name>
+    <description>
+      The OAuth2 client secret.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.auth.refresh.token</name>
+    <description>
+      The refresh token.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.inputstream.support.gzip.encoding.enable</name>
+    <value>false</value>
+    <description>
+      If set to false then reading files with GZIP content encoding (HTTP header
+      Content-Encoding: gzip) will result in failure (IOException is thrown).
+
+      This feature is disabled by default because processing of
+      GZIP encoded files is inefficient and error-prone in Hadoop and Spark.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.outputstream.buffer.size</name>
+    <value>8m</value>
+    <description>
+      Write buffer size used by the file system API to send the data to be
+      uploaded to Cloud Storage upload thread via pipes. The various pipe types
+      are documented below.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.outputstream.sync.min.interval</name>
+    <value>0</value>
+    <description>
+      Output stream configuration that controls the minimum interval between
+      consecutive syncs. This allows to avoid getting rate-limited by Google Cloud
+      Storage. Default is 0 - no wait between syncs. Note that hflush() will
+      be no-op if called more frequently than minimum sync interval and hsync()
+      will block until an end of a min sync interval.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.inputstream.fadvise</name>
+    <value>AUTO</value>
+    <description>
+      Tunes reading objects behavior to optimize HTTP GET requests for various use
+      cases. Valid values: SEQUENTIAL, RANDOM, AUTO, AUTO_RANDOM.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.fadvise.request.track.count</name>
+    <value>3</value>
+    <description>
+      Self adaptive fadvise mode uses distance between the served requests to
+      decide the access pattern. This property controls how many such requests
+      need to be tracked. It is used when AUTO_RANDOM is selected.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.inputstream.inplace.seek.limit</name>
+    <value>8m</value>
+    <description>
+      If forward seeks are within this many bytes of the current position, seeks
+      are performed by reading and discarding bytes in-place rather than opening a
+      new underlying stream.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.gs.inputstream.min.range.request.size</name>
+    <value>2m</value>
+    <description>
+      Minimum size in bytes of the read range for Cloud Storage request when
+      opening a new stream to read an object.
+    </description>
+  </property>
+
 </configuration>
