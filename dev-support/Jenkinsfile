@@ -116,7 +116,7 @@ pipeline {
             environment {
                 SOURCEDIR = "${WORKSPACE}/rockylinux-8/src"
                 PATCHDIR = "${WORKSPACE}/rockylinux-8/out"
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_centos_8"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_rockylinux_8"
                 IS_OPTIONAL = 1
             }
 
