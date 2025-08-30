@@ -881,7 +881,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testKeepAliveCacheInitializationWithApacheHttpClient() throws Exception {
-    Assume.assumeTrue(APACHE_HTTP_CLIENT == httpOperationType);
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
     final AzureBlobFileSystem fs = this.getFileSystem();
     AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
 
@@ -898,7 +898,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testStaleConnectionBehavior() throws Exception {
-    Assume.assumeTrue(APACHE_HTTP_CLIENT == httpOperationType);
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
     Configuration conf = this.getFileSystem().getConf();
 
     // This is to avoid actual metric calls during the test
@@ -933,7 +933,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testApacheConnectionReuse() throws Exception {
-    Assume.assumeTrue(APACHE_HTTP_CLIENT == httpOperationType);
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
     AzureBlobFileSystem fs = this.getFileSystem();
 
     AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
@@ -953,7 +953,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testConnectionNotReusedOnIOException() throws Exception {
-    Assume.assumeTrue(APACHE_HTTP_CLIENT == httpOperationType);
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
     AzureBlobFileSystem fs = this.getFileSystem();
 
     AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
@@ -1000,7 +1000,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testNumberOfConnectionsInKacWithoutWarmup() throws Exception {
-    Assume.assumeTrue(APACHE_HTTP_CLIENT == httpOperationType);
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
     final Configuration configuration = this.getFileSystem().getConf();
     configuration.setInt(FS_AZURE_CACHE_WARMUP_CONNECTION_COUNT, 0);
     AzureBlobFileSystem fs = this.getFileSystem(configuration);
