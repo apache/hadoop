@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
@@ -71,19 +71,36 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
   private final String accountNamePath;
 
   /**
+   * Executor server to trigger connection refresh from cache manager.
+   */
+  public ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor(r -> {
+      Thread thread = new Thread(r);
+      thread.setName("CacheRefreshThread");
+      thread.setDaemon(true);
+      return thread;
+  });
+
+  public ExecutorService fixedThreadPool = Executors.newFixedThreadPool(5, r -> {
+      Thread thread = new Thread(r);
+      thread.setName("AsyncCacheConnectionThread");
+      thread.setDaemon(true);
+      return thread;
+  });
+
+  /**
    * Creates an {@link KeepAliveCache} instance using filesystem's configuration.
    * <p>
    * The size of the cache is determined by the configuration
-   * {@value org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys#FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE}.
+   * {@value org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys#FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE}.
    * If the configuration is not set, the default value is
-   * {@value org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations#DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS}.
+   * {@value org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations#DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE}.
    * <p>.
    */
   KeepAliveCache(AbfsConfiguration abfsConfiguration) {
     this.accountNamePath =
         abfsConfiguration.getAccountName();
     this.maxCacheConnections =
-        abfsConfiguration.getMaxApacheHttpClientCacheConnections();
+        abfsConfiguration.getApacheMaxCacheSize();
   }
 
   /**
@@ -111,8 +128,27 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
       return;
     }
     closeInternal();
+    if (singleThreadExecutor != null && !singleThreadExecutor.isShutdown()) {
+        singleThreadExecutor.shutdownNow();
+    }
+
+    if (fixedThreadPool != null && !fixedThreadPool.isShutdown()) {
+        fixedThreadPool.shutdownNow();
+    }
   }
 
+  /**
+   * @return true if the cache is closed, false otherwise.
+   */
+  public boolean getIsClosed() {
+      return isClosed.get();
+  }
+
+  /**
+   * Internal close method to close all connections in the cache.
+   * This method does not change the state of isClosed.
+   * It is expected that the caller of this method has set the isClosed flag.
+   */
   @VisibleForTesting
   void closeInternal() {
     while (size() != 0) {
@@ -131,7 +167,7 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
    * @throws IOException if the cache is closed.
    */
   public HttpClientConnection get() throws IOException {
-    if (isClosed.get()) {
+    if (getIsClosed()) {
       throw new ClosedIOException(accountNamePath, KEEP_ALIVE_CACHE_CLOSED);
     }
     HttpClientConnection httpClientConnection;
@@ -160,7 +196,7 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
           accountNamePath);
       return false;
     }
-    if (isClosed.get() || maxCacheConnections <= 0
+    if (getIsClosed() || maxCacheConnections <= 0
         || !conn.isOpen() || conn.isStale()) {
       closeHttpClientConnection(conn);
       return false;
@@ -184,6 +220,6 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
   @Override
   public String toString() {
     return String.format("KeepAliveCache[closed=%s, size=%d, max=%d]",
-        isClosed.get(), size(), maxCacheConnections);
+        getIsClosed(), size(), maxCacheConnections);
   }
 }
