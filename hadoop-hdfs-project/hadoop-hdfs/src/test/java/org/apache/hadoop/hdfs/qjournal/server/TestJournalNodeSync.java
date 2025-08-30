@@ -37,17 +37,19 @@ import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import static org.apache.hadoop.hdfs.server.namenode.FileJournalManager
     .getLogFile;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.TestName;
 import org.apache.hadoop.util.Lists;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -68,10 +70,11 @@ public class TestJournalNodeSync {
   private int activeNNindex=0;
   private static final int DFS_HA_TAILEDITS_PERIOD_SECONDS=1;
 
-  @Rule
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  @RegisterExtension
   public TestName testName = new TestName();
 
-  @Before
+  @BeforeEach
   public void setUpMiniCluster() throws IOException {
     conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_KEY, true);
@@ -94,7 +97,7 @@ public class TestJournalNodeSync {
     namesystem = dfsCluster.getNamesystem(0);
   }
 
-  @After
+  @AfterEach
   public void shutDownMiniCluster() throws IOException {
     if (qjmhaCluster != null) {
       qjmhaCluster.shutdown();
@@ -134,13 +137,13 @@ public class TestJournalNodeSync {
     assertEquals(2, boundHostAddrList.size());
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testJournalNodeSync() throws Exception {
 
     //As by default 3 journal nodes are started;
-    for(int i=0; i<3; i++) {
-      assertEquals(true,
-          jCluster.getJournalNode(i).getJournalSyncerStatus("ns1"));
+    for (int i = 0; i < 3; i++) {
+      assertEquals(true, jCluster.getJournalNode(i).getJournalSyncerStatus("ns1"));
     }
 
     File firstJournalDir = jCluster.getJournalDir(0, jid);
@@ -159,7 +162,8 @@ public class TestJournalNodeSync {
         500, 10000);
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testSyncForMultipleMissingLogs() throws Exception {
     File firstJournalDir = jCluster.getJournalDir(0, jid);
     File firstJournalCurrentDir = new StorageDirectory(firstJournalDir)
@@ -176,7 +180,8 @@ public class TestJournalNodeSync {
     GenericTestUtils.waitFor(editLogExists(missingLogs), 500, 10000);
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testSyncForDiscontinuousMissingLogs() throws Exception {
     File firstJournalDir = jCluster.getJournalDir(0, jid);
     File firstJournalCurrentDir = new StorageDirectory(firstJournalDir)
@@ -194,7 +199,8 @@ public class TestJournalNodeSync {
     GenericTestUtils.waitFor(editLogExists(missingLogs), 500, 10000);
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testMultipleJournalsMissingLogs() throws Exception {
     File firstJournalDir = jCluster.getJournalDir(0, jid);
     File firstJournalCurrentDir = new StorageDirectory(firstJournalDir)
@@ -215,7 +221,8 @@ public class TestJournalNodeSync {
     GenericTestUtils.waitFor(editLogExists(missingLogs), 500, 10000);
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testMultipleJournalsMultipleMissingLogs() throws Exception {
     File firstJournalDir = jCluster.getJournalDir(0, jid);
     File firstJournalCurrentDir = new StorageDirectory(firstJournalDir)
@@ -245,7 +252,8 @@ public class TestJournalNodeSync {
 
   // Test JournalNode Sync by randomly deleting edit logs from one or two of
   // the journals.
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testRandomJournalMissingLogs() throws Exception {
     List<File> missingLogs = deleteEditLogsFromRandomJN();
 
@@ -254,7 +262,8 @@ public class TestJournalNodeSync {
 
   // Test JournalNode Sync when a JN id down while NN is actively writing
   // logs and comes back up after some time.
-  @Test (timeout=300_000)
+  @Test
+  @Timeout(value = 300)
   public void testSyncAfterJNdowntime() throws Exception {
     File firstJournalDir = jCluster.getJournalDir(0, jid);
     File firstJournalCurrentDir = new StorageDirectory(firstJournalDir)
@@ -301,7 +310,8 @@ public class TestJournalNodeSync {
    * Queuing disabled during the cluster setup {@link #setUpMiniCluster()}
    * @throws Exception
    */
-  @Test (timeout=300_000)
+  @Test
+  @Timeout(value = 300)
   public void testSyncAfterJNdowntimeWithoutQJournalQueue() throws Exception{
     // QJournal Queuing is disabled during the cluster setup
     // {@link #setUpMiniCluster()}
@@ -351,14 +361,15 @@ public class TestJournalNodeSync {
     // JournalNodeSyncer alone (as the edit log queueing has been disabled)
     long numEditLogsSynced = jCluster.getJournalNode(0).getOrCreateJournal(jid)
         .getMetrics().getNumEditLogsSynced().value();
-    Assert.assertTrue("Edit logs downloaded outside syncer. Expected 8 or " +
-            "more downloads, got " + numEditLogsSynced + " downloads instead",
-        numEditLogsSynced >= 8);
+    assertTrue(numEditLogsSynced >= 8,
+        "Edit logs downloaded outside syncer. Expected 8 or " + "more downloads, got "
+            + numEditLogsSynced + " downloads instead");
   }
 
   // Test JournalNode Sync when a JN is formatted while NN is actively writing
   // logs.
-  @Test (timeout=300_000)
+  @Test
+  @Timeout(value = 300)
   public void testSyncAfterJNformat() throws Exception{
     File firstJournalDir = jCluster.getJournalDir(0, jid);
     File firstJournalCurrentDir = new StorageDirectory(firstJournalDir)
@@ -404,7 +415,8 @@ public class TestJournalNodeSync {
   }
 
   // Test JournalNode Sync during a Rolling Upgrade of NN.
-  @Test (timeout=300_000)
+  @Test
+  @Timeout(value = 300)
   public void testSyncDuringRollingUpgrade() throws Exception {
 
     DistributedFileSystem dfsActive;
@@ -424,14 +436,12 @@ public class TestJournalNodeSync {
           HdfsConstants.RollingUpgradeAction.PREPARE);
 
     //query rolling upgrade
-    assertEquals(info, dfsActive.rollingUpgrade(
-        HdfsConstants.RollingUpgradeAction.QUERY));
+    assertEquals(info, dfsActive.rollingUpgrade(HdfsConstants.RollingUpgradeAction.QUERY));
 
     // Restart the Standby NN with rollingUpgrade option
     dfsCluster.restartNameNode(standbyNNindex, true,
         "-rollingUpgrade", "started");
-    assertEquals(info, dfsActive.rollingUpgrade(
-        HdfsConstants.RollingUpgradeAction.QUERY));
+    assertEquals(info, dfsActive.rollingUpgrade(HdfsConstants.RollingUpgradeAction.QUERY));
 
     // Do some edits and delete some edit logs
     List<File> missingLogs = deleteEditLogsFromRandomJN();
@@ -452,14 +462,13 @@ public class TestJournalNodeSync {
     standbyNNindex=((activeNNindex+1)%2);
     dfsActive = dfsCluster.getFileSystem(activeNNindex);
 
-    Assert.assertTrue(dfsCluster.getNameNode(activeNNindex).isActiveState());
-    Assert.assertFalse(dfsCluster.getNameNode(standbyNNindex).isActiveState());
+    assertTrue(dfsCluster.getNameNode(activeNNindex).isActiveState());
+    assertFalse(dfsCluster.getNameNode(standbyNNindex).isActiveState());
 
     // Restart the current standby NN (previously active)
     dfsCluster.restartNameNode(standbyNNindex, true,
         "-rollingUpgrade", "started");
-    assertEquals(info, dfsActive.rollingUpgrade(
-        HdfsConstants.RollingUpgradeAction.QUERY));
+    assertEquals(info, dfsActive.rollingUpgrade(HdfsConstants.RollingUpgradeAction.QUERY));
     dfsCluster.waitActive();
 
     // Do some edits and delete some edit logs
@@ -471,16 +480,17 @@ public class TestJournalNodeSync {
     //finalize rolling upgrade
     final RollingUpgradeInfo finalize = dfsActive.rollingUpgrade(
         HdfsConstants.RollingUpgradeAction.FINALIZE);
-    Assert.assertTrue(finalize.isFinalized());
+    assertTrue(finalize.isFinalized());
 
     // Check the missing edit logs exist after finalizing rolling upgrade
     for (File editLog : missingLogs) {
-      Assert.assertTrue("Edit log missing after finalizing rolling upgrade",
-          editLog.exists());
+      assertTrue(editLog.exists(),
+          "Edit log missing after finalizing rolling upgrade");
     }
   }
 
-  @Test(timeout=300_000)
+  @Test
+  @Timeout(value = 300)
   public void testFormatWithSyncer() throws Exception {
     File firstJournalDir = jCluster.getJournalDir(0, jid);
     File firstJournalCurrentDir = new StorageDirectory(firstJournalDir)
@@ -515,7 +525,7 @@ public class TestJournalNodeSync {
       logFile = getLogFile(currentDir, startTxId);
     }
     File deleteFile = logFile.getFile();
-    Assert.assertTrue("Couldn't delete edit log file", deleteFile.delete());
+    assertTrue(deleteFile.delete(), "Couldn't delete edit log file");
 
     return deleteFile;
   }
@@ -590,7 +600,7 @@ public class TestJournalNodeSync {
     long lastWrittenTxId = dfsCluster.getNameNode(activeNNindex).getFSImage()
         .getEditLog().getLastWrittenTxId();
     for (int i = 1; i <= numEdits; i++) {
-      Assert.assertTrue("Failed to do an edit", doAnEdit());
+      assertTrue(doAnEdit(), "Failed to do an edit");
     }
     dfsCluster.getNameNode(activeNNindex).getRpcServer().rollEditLog();
     return lastWrittenTxId;

@@ -20,7 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode.fgl;
 import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +45,8 @@ public class TestFineGrainedFSNamesystemLock {
   /**
    * Test read/write lock of Global, FS and BM model through multi-threading.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testMultipleThreadsUsingLocks()
       throws InterruptedException, ExecutionException {
     FineGrainedFSNamesystemLock fsn = new FineGrainedFSNamesystemLock(new Configuration(), null);

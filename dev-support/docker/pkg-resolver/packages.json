@@ -4,8 +4,7 @@
     "ubuntu:focal": "ant",
     "ubuntu:focal::arch64": "ant",
     "ubuntu:noble": "ant",
-    "centos:7": "ant",
-    "centos:8": "ant"
+    "rockylinux:8": "ant"
   },
   "apt-utils": {
     "debian:10": "apt-utils",
@@ -18,11 +17,7 @@
     "ubuntu:focal": "automake",
     "ubuntu:noble": "automake",
     "ubuntu:focal::arch64": "automake",
-    "centos:7": "automake",
-    "centos:8": "automake"
-  },
-  "autoconf": {
-    "centos:7": "autoconf"
+    "rockylinux:8": "automake"
   },
   "bats": {
     "debian:10": "bats",
@@ -34,8 +29,7 @@
     "debian:10": "build-essential",
     "ubuntu:focal": "build-essential",
     "ubuntu:noble": "build-essential",
-    "ubuntu:focal::arch64": "build-essential",
-    "centos:7": "build-essential"
+    "ubuntu:focal::arch64": "build-essential"
   },
   "bzip2": {
     "debian:10": [
@@ -54,11 +48,7 @@
       "bzip2",
       "libbz2-dev"
     ],
-    "centos:7": [
-      "bzip2",
-      "bzip2-devel"
-    ],
-    "centos:8": [
+    "rockylinux:8": [
       "bzip2",
       "bzip2-devel"
     ]
@@ -68,8 +58,7 @@
     "ubuntu:focal": "clang",
     "ubuntu:noble": "clang",
     "ubuntu:focal::arch64": "clang",
-    "centos:7": "clang",
-    "centos:8": "clang"
+    "rockylinux:8": "clang"
   },
   "cmake": {
     "ubuntu:focal": "cmake",
@@ -93,11 +82,7 @@
       "curl",
       "libcurl4-openssl-dev"
     ],
-    "centos:7": [
-      "curl",
-      "libcurl-devel"
-    ],
-    "centos:8": [
+    "rockylinux:8": [
       "curl",
       "libcurl-devel"
     ]
@@ -106,11 +91,10 @@
     "debian:10": "doxygen",
     "ubuntu:focal": "doxygen",
     "ubuntu:noble": "doxygen",
-    "ubuntu:focal::arch64": "doxygen",
-    "centos:7": "doxygen"
+    "ubuntu:focal::arch64": "doxygen"
   },
   "dnf": {
-    "centos:8": "dnf"
+    "rockylinux:8": "dnf"
   },
   "fuse": {
     "debian:10": [
@@ -129,12 +113,7 @@
       "fuse",
       "libfuse-dev"
     ],
-    "centos:7": [
-      "fuse",
-      "fuse-libs",
-      "fuse-devel"
-    ],
-    "centos:8": [
+    "rockylinux:8": [
       "fuse",
       "fuse-libs",
       "fuse-devel"
@@ -158,21 +137,14 @@
     "ubuntu:focal::arch64": [
       "gcc",
       "g++"
-    ],
-    "centos:7": [
-      "centos-release-scl",
-      "devtoolset-9"
     ]
-  },
-  "gettext": {
-    "centos:7": "gettext-devel"
   },
   "git": {
     "debian:10": "git",
     "ubuntu:focal": "git",
     "ubuntu:noble": "git",
     "ubuntu:focal::arch64": "git",
-    "centos:8": "git"
+    "rockylinux:8": "git"
   },
   "gnupg-agent": {
     "debian:10": "gnupg-agent",
@@ -197,19 +169,17 @@
     "ubuntu:focal": "libtool",
     "ubuntu:noble": "libtool",
     "ubuntu:focal::arch64": "libtool",
-    "centos:7": "libtool",
-    "centos:8": "libtool"
+    "rockylinux:8": "libtool"
   },
   "openssl": {
     "debian:10": "libssl-dev",
     "ubuntu:focal": "libssl-dev",
     "ubuntu:noble": "libssl-dev",
     "ubuntu:focal::arch64": "libssl-dev",
-    "centos:7": "openssl-devel",
-    "centos:8": "openssl-devel"
+    "rockylinux:8": "openssl-devel"
   },
   "perl": {
-    "centos:7": [
+    "rockylinux:7": [
       "perl-CPAN",
       "perl-devel"
     ]
@@ -237,15 +207,13 @@
     "ubuntu:focal": "libsasl2-dev",
     "ubuntu:noble": "libsasl2-dev",
     "ubuntu:focal::arch64": "libsasl2-dev",
-    "centos:7": "cyrus-sasl-devel",
-    "centos:8": "cyrus-sasl-devel"
+    "rockylinux:8": "cyrus-sasl-devel"
   },
   "snappy": {
     "debian:10": "libsnappy-dev",
     "ubuntu:focal": "libsnappy-dev",
     "ubuntu:noble": "libsnappy-dev",
-    "ubuntu:focal::arch64": "libsnappy-dev",
-    "centos:7": "snappy-devel"
+    "ubuntu:focal::arch64": "libsnappy-dev"
   },
   "zlib": {
     "debian:10": [
@@ -264,11 +232,7 @@
       "libzstd-dev",
       "zlib1g-dev"
     ],
-    "centos:7": [
-      "zlib-devel",
-      "lz4-devel"
-    ],
-    "centos:8": [
+    "rockylinux:8": [
       "zlib-devel",
       "lz4-devel"
     ]
@@ -280,20 +244,15 @@
     "ubuntu:focal::arch64": "locales"
   },
   "libtirpc-devel": {
-    "centos:7": "libtirpc-devel",
-    "centos:8": "libtirpc-devel",
+    "rockylinux:8": "libtirpc-devel",
     "ubuntu:noble": "libtirpc-dev"
-  },
-  "libpmem": {
-    "centos:7": "libpmem-devel"
   },
   "make": {
     "debian:10": "make",
     "ubuntu:focal": "make",
     "ubuntu:noble": "make",
     "ubuntu:focal::arch64": "make",
-    "centos:7": "make",
-    "centos:8": "make"
+    "rockylinux:8": "make"
   },
   "maven": {
     "debian:10": "maven",
@@ -326,15 +285,14 @@
     "ubuntu:focal": "pinentry-curses",
     "ubuntu:noble": "pinentry-curses",
     "ubuntu:focal::arch64": "pinentry-curses",
-    "centos:7": "pinentry-curses",
-    "centos:8": "pinentry-curses"
+    "rockylinux:8": "pinentry-curses"
   },
   "pkg-config": {
     "debian:10": "pkg-config",
     "ubuntu:focal": "pkg-config",
     "ubuntu:noble": "pkg-config",
     "ubuntu:focal::arch64": "pkg-config",
-    "centos:8": "pkg-config"
+    "rockylinux:8": "pkg-config"
   },
   "python": {
     "debian:10": [
@@ -366,13 +324,7 @@
       "python3-setuptools",
       "python3-wheel"
     ],
-    "centos:7": [
-      "python3",
-      "python3-pip",
-      "python3-setuptools",
-      "python3-wheel"
-    ],
-    "centos:8": [
+    "rockylinux:8": [
       "python3",
       "python3-pip",
       "python3-setuptools",
@@ -384,8 +336,7 @@
     "ubuntu:focal": "rsync",
     "ubuntu:noble": "rsync",
     "ubuntu:focal::arch64": "rsync",
-    "centos:7": "rsync",
-    "centos:8": "rsync"
+    "rockylinux:8": "rsync"
   },
   "shellcheck": {
     "debian:10": "shellcheck",
@@ -394,8 +345,7 @@
     "ubuntu:focal::arch64": "shellcheck"
   },
   "shasum": {
-    "centos:7": "perl-Digest-SHA",
-    "centos:8": "perl-Digest-SHA"
+    "rockylinux:8": "perl-Digest-SHA"
   },
   "software-properties-common": {
     "debian:10": "software-properties-common",
@@ -408,16 +358,14 @@
     "ubuntu:focal": "sudo",
     "ubuntu:noble": "sudo",
     "ubuntu:focal::arch64": "sudo",
-    "centos:7": "sudo",
-    "centos:8": "sudo"
+    "rockylinux:8": "sudo"
   },
   "valgrind": {
     "debian:10": "valgrind",
     "ubuntu:focal": "valgrind",
     "ubuntu:noble": "valgrind",
     "ubuntu:focal::arch64": "valgrind",
-    "centos:7": "valgrind",
-    "centos:8": "valgrind"
+    "rockylinux:8": "valgrind"
   },
   "yasm": {
     "debian:10": "yasm",
