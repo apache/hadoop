@@ -66,7 +66,10 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_1
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_VALUE_UNKNOWN;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_HTTP_METHOD_OVERRIDE;
@@ -879,6 +882,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   public void testKeepAliveCacheInitializationWithApacheHttpClient() throws Exception {
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
     final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
+        fs.getAbfsStore().getAbfsConfiguration().getPreferredHttpOperationType());
     AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
 
     AbfsClient dfsClient = abfsClientHandler.getDfsClient();
@@ -895,7 +900,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   public void testStaleConnectionBehavior() throws Exception {
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
-    Configuration conf = this.getFileSystem().getConf();
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
+        fs.getAbfsStore().getAbfsConfiguration().getPreferredHttpOperationType());
+    Configuration conf = fs.getConf();
 
     // This is to avoid actual metric calls during the test
     conf.unset(FS_AZURE_METRIC_ACCOUNT_NAME);
@@ -931,6 +939,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   public void testApacheConnectionReuse() throws Exception {
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
     AzureBlobFileSystem fs = this.getFileSystem();
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
+        fs.getAbfsStore().getAbfsConfiguration().getPreferredHttpOperationType());
 
     AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
     AbfsClient dfsClient = abfsClientHandler.getDfsClient();
@@ -951,6 +961,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   public void testConnectionNotReusedOnIOException() throws Exception {
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
     AzureBlobFileSystem fs = this.getFileSystem();
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
+        fs.getAbfsStore().getAbfsConfiguration().getPreferredHttpOperationType());
 
     AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
     AbfsClient dfsClient = abfsClientHandler.getDfsClient();
@@ -997,9 +1009,12 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   public void testNumberOfConnectionsInKacWithoutWarmup() throws Exception {
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
-    final Configuration configuration = this.getFileSystem().getConf();
+    AzureBlobFileSystem fs = this.getFileSystem();
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
+        fs.getAbfsStore().getAbfsConfiguration().getPreferredHttpOperationType());
+    final Configuration configuration = fs.getConf();
     configuration.setInt(FS_AZURE_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT, 0);
-    AzureBlobFileSystem fs = this.getFileSystem(configuration);
+    fs = this.getFileSystem(configuration);
 
     AbfsClient dfsClient = fs.getAbfsStore().getClientHandler().getDfsClient();
     AbfsClient blobClient = fs.getAbfsStore().getClientHandler().getBlobClient();

@@ -21,8 +21,10 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.net.URL;
 import java.util.UUID;
-import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,15 +68,16 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
    */
   private final HttpClientConnectionOperator connectionOperator;
 
-    /**
-     * AbfsConfiguration instance to get configuration values.
-     */
+  /**
+   * AbfsConfiguration instance to get configuration values.
+   */
   private final AbfsConfiguration abfsConfiguration;
 
   /**
    * Atomic boolean to ensure only one thread can trigger cache refresh at a time.
    */
-  private final AtomicBoolean isCacheRefreshInProgress = new AtomicBoolean(false);
+  private final AtomicBoolean isCacheRefreshInProgress = new AtomicBoolean(
+      false);
 
   /**
    * Lock object for synchronizing connection retrieval and caching.
@@ -101,7 +104,8 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
       this.baseHost = new HttpHost(baseUrl.getHost(),
           baseUrl.getDefaultPort(), baseUrl.getProtocol());
       HttpRoute route = new HttpRoute(baseHost, null, true);
-      cacheExtraConnection(route, abfsConfiguration.getApacheCacheWarmupCount());
+      cacheExtraConnection(route,
+          abfsConfiguration.getApacheCacheWarmupCount());
     }
   }
 
@@ -126,7 +130,8 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
         logDebug("Connection requested for request {}", requestId);
         if (!route.getTargetHost().equals(baseHost)) {
           // If the route target host does not match the base host, create a new connection
-          logDebug("Route target host {} does not match base host {}, creating new connection",
+          logDebug(
+              "Route target host {} does not match base host {}, creating new connection",
               route.getTargetHost(), baseHost);
           return createNewConnection();
         }
@@ -143,8 +148,9 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
           synchronized (connectionLock) {
             triggerConnectionRefreshIfNeeded();
 
-            final long deadline = System.nanoTime() + TimeUnit.NANOSECONDS.toNanos(
-                    abfsConfiguration.getApacheMaxRefreshWaitTimeInMillis());
+            final long deadline = System.nanoTime()
+                + TimeUnit.NANOSECONDS.toNanos(
+                abfsConfiguration.getApacheMaxRefreshWaitTimeInMillis());
 
             while ((conn = kac.get()) == null && System.nanoTime() < deadline) {
               long waitTime = deadline - System.nanoTime();
@@ -187,10 +193,11 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
        */
       private void triggerConnectionRefreshIfNeeded() {
         if (kac.size() <= abfsConfiguration.getApacheMinTriggerRefreshCount()
-             && !isCacheRefreshInProgress.get() && !kac.getIsClosed()) {
+            && !isCacheRefreshInProgress.get() && !kac.getIsClosed()) {
           // Use a single-threaded executor or thread pool instead of raw thread
-          kac.singleThreadExecutor.submit(() ->
-             cacheExtraConnection(route, abfsConfiguration.getApacheCacheRefreshCount()));
+          kac.getSingleThreadExecutor().submit(() ->
+              cacheExtraConnection(route,
+                  abfsConfiguration.getApacheCacheRefreshCount()));
         }
       }
 
@@ -238,7 +245,7 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
     logDebug("Connection established: {}", conn);
     if (context instanceof AbfsManagedHttpClientContext) {
       ((AbfsManagedHttpClientContext) context).setConnectTime(
-              TimeUnit.MILLISECONDS.toMillis(System.nanoTime()-start));
+          TimeUnit.MILLISECONDS.toMillis(System.nanoTime() - start));
     }
   }
 
@@ -291,17 +298,19 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
    * @param route the HTTP route for which connections are created
    * @param numberOfConnections the number of connections to create
    */
-  private void cacheExtraConnection(final HttpRoute route, final int numberOfConnections) {
+  private void cacheExtraConnection(final HttpRoute route,
+      final int numberOfConnections) {
     if (!isCacheRefreshInProgress.getAndSet(true)) {
       long start = System.nanoTime();
       CountDownLatch latch = new CountDownLatch(numberOfConnections);
 
       for (int i = 0; i < numberOfConnections; i++) {
-        kac.fixedThreadPool.submit(() -> {
+        kac.getFixedThreadPool().submit(() -> {
           HttpClientConnection conn = null;
           try {
             conn = httpConnectionFactory.create(route, null);
-            connect(conn, route, abfsConfiguration.getHttpConnectionTimeout(), new AbfsManagedHttpClientContext());
+            connect(conn, route, abfsConfiguration.getHttpConnectionTimeout(),
+                new AbfsManagedHttpClientContext());
             addConnectionToCache(conn);
           } catch (Exception e) {
             logDebug("Error creating connection: {}", e.getMessage());
@@ -309,7 +318,8 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
               try {
                 conn.close();
               } catch (IOException ioException) {
-                logDebug("Error closing connection: {}", ioException.getMessage());
+                logDebug("Error closing connection: {}",
+                    ioException.getMessage());
               }
             }
           } finally {
@@ -326,7 +336,7 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
       } finally {
         isCacheRefreshInProgress.set(false);
         logDebug("Connection refresh completed in {} ms",
-           TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
+            TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
       }
     }
   }
@@ -339,7 +349,8 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
    */
   private void addConnectionToCache(HttpClientConnection conn) {
     if (conn instanceof AbfsManagedApacheHttpConnection) {
-      if (((AbfsManagedApacheHttpConnection) conn).getTargetHost().equals(baseHost)) {
+      if (((AbfsManagedApacheHttpConnection) conn).getTargetHost()
+          .equals(baseHost)) {
         boolean connAddedInKac = kac.add(conn);
         synchronized (connectionLock) {
           connectionLock.notify(); // wake up one thread only

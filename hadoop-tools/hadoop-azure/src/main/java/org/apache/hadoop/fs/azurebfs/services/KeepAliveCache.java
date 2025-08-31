@@ -20,8 +20,10 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +54,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KEEP_ALI
 class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
     implements Closeable {
 
-  private static final Logger LOG = LoggerFactory.getLogger(KeepAliveCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      KeepAliveCache.class);
 
   /**
    * Flag to indicate if the cache is closed.
@@ -73,18 +76,20 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
   /**
    * Executor server to trigger connection refresh from cache manager.
    */
-  public ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor(r -> {
-      Thread thread = new Thread(r);
-      thread.setName("CacheRefreshThread");
-      thread.setDaemon(true);
-      return thread;
+  private final ExecutorService singleThreadExecutor
+      = Executors.newSingleThreadExecutor(r -> {
+    Thread thread = new Thread(r);
+    thread.setName("CacheRefreshThread");
+    thread.setDaemon(true);
+    return thread;
   });
 
-  public ExecutorService fixedThreadPool = Executors.newFixedThreadPool(5, r -> {
-      Thread thread = new Thread(r);
-      thread.setName("AsyncCacheConnectionThread");
-      thread.setDaemon(true);
-      return thread;
+  private final ExecutorService fixedThreadPool
+      = Executors.newFixedThreadPool(5, r -> {
+    Thread thread = new Thread(r);
+    thread.setName("AsyncCacheConnectionThread");
+    thread.setDaemon(true);
+    return thread;
   });
 
   /**
@@ -129,11 +134,11 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
     }
     closeInternal();
     if (singleThreadExecutor != null && !singleThreadExecutor.isShutdown()) {
-        singleThreadExecutor.shutdownNow();
+      singleThreadExecutor.shutdownNow();
     }
 
     if (fixedThreadPool != null && !fixedThreadPool.isShutdown()) {
-        fixedThreadPool.shutdownNow();
+      fixedThreadPool.shutdownNow();
     }
   }
 
@@ -141,7 +146,15 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
    * @return true if the cache is closed, false otherwise.
    */
   public boolean getIsClosed() {
-      return isClosed.get();
+    return isClosed.get();
+  }
+
+  ExecutorService getSingleThreadExecutor() {
+    return singleThreadExecutor;
+  }
+
+  ExecutorService getFixedThreadPool() {
+    return fixedThreadPool;
   }
 
   /**
@@ -192,7 +205,8 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
    */
   public boolean add(HttpClientConnection conn) {
     if (conn == null) {
-      LOG.warn("Attempt to add null HttpClientConnection to the cache for account: {}",
+      LOG.warn(
+          "Attempt to add null HttpClientConnection to the cache for account: {}",
           accountNamePath);
       return false;
     }
