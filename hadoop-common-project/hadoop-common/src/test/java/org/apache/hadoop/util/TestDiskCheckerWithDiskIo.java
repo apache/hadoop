@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 
 /**
@@ -48,7 +49,7 @@ public final class TestDiskCheckerWithDiskIo {
   @Test
   public final void testDiskIoIgnoresTransientCreateErrors() throws Throwable {
     DiskChecker.replaceFileOutputStreamProvider(new TestFileIoProvider(
-        DiskChecker.DISK_IO_MAX_ITERATIONS - 1, 0));
+        DiskChecker.DISK_IO_MAX_ITERATIONS - 1, 0, false));
     checkDirs(true);
   }
 
@@ -59,7 +60,7 @@ public final class TestDiskCheckerWithDiskIo {
   public final void testDiskIoDetectsCreateErrors() throws Throwable {
     assertThrows(DiskErrorException.class, () -> {
       DiskChecker.replaceFileOutputStreamProvider(new TestFileIoProvider(
-          DiskChecker.DISK_IO_MAX_ITERATIONS, 0));
+          DiskChecker.DISK_IO_MAX_ITERATIONS, 0, false));
       checkDirs(false);
     });
   }
@@ -70,7 +71,7 @@ public final class TestDiskCheckerWithDiskIo {
   @Test
   public final void testDiskIoIgnoresTransientWriteErrors() throws Throwable {
     DiskChecker.replaceFileOutputStreamProvider(new TestFileIoProvider(
-        0, DiskChecker.DISK_IO_MAX_ITERATIONS - 1));
+        0, DiskChecker.DISK_IO_MAX_ITERATIONS - 1, false));
     checkDirs(true);
   }
 
@@ -81,7 +82,7 @@ public final class TestDiskCheckerWithDiskIo {
   public final void testDiskIoDetectsWriteErrors() throws Throwable {
     assertThrows(DiskErrorException.class, ()->{
       DiskChecker.replaceFileOutputStreamProvider(new TestFileIoProvider(
-          0, DiskChecker.DISK_IO_MAX_ITERATIONS));
+          0, DiskChecker.DISK_IO_MAX_ITERATIONS, false));
       checkDirs(false);
     });
   }
@@ -105,6 +106,18 @@ public final class TestDiskCheckerWithDiskIo {
   }
 
   /**
+   * Verify DiskChecker doesn't fail on ENOSPC errors.
+   */
+  @Test
+  public void testDiskIoDetectsENOSPCWriteErrors() {
+    assertDoesNotThrow(()->{
+      DiskChecker.replaceFileOutputStreamProvider(new TestFileIoProvider(
+          0, DiskChecker.DISK_IO_MAX_ITERATIONS, true));
+      checkDirs(true);
+    });
+  }
+
+  /**
    * A dummy {@link DiskChecker#FileIoProvider} that can throw a programmable
    * number of times.
    */
@@ -114,11 +127,13 @@ public final class TestDiskCheckerWithDiskIo {
 
     private final int numTimesToThrowOnCreate;
     private final int numTimesToThrowOnWrite;
+    private final boolean throwENOSPCError;
 
     public TestFileIoProvider(
-        int numTimesToThrowOnCreate, int numTimesToThrowOnWrite) {
+        int numTimesToThrowOnCreate, int numTimesToThrowOnWrite, boolean throwENOSPCError) {
       this.numTimesToThrowOnCreate = numTimesToThrowOnCreate;
       this.numTimesToThrowOnWrite = numTimesToThrowOnWrite;
+      this.throwENOSPCError = throwENOSPCError;
     }
 
     /**
@@ -139,7 +154,11 @@ public final class TestDiskCheckerWithDiskIo {
     @Override
     public void write(FileOutputStream fos, byte[] data) throws IOException {
       if (numWriteCalls.getAndIncrement() < numTimesToThrowOnWrite) {
-        throw new IOException("Dummy exception for testing");
+        if (!throwENOSPCError) {
+          throw new IOException("Dummy exception for testing");
+        } else {
+          throw new IOException("No space left on device");
+        }
       }
       fos.write(data);
     }

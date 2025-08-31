@@ -44,6 +44,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceStability.Unstable
 public class DiskChecker {
   public static final Logger LOG = LoggerFactory.getLogger(DiskChecker.class);
+  private static final String LINUX_DISK_FULL_MESSAGE = "No space left on device";
+  private static final String WINDOWS_DISK_FULL_MESSAGE = "There is not enough space on the disk";
 
   public static class DiskErrorException extends IOException {
     public DiskErrorException(String msg) {
@@ -267,7 +269,11 @@ public class DiskChecker {
           ioe = e;
         }
       }
-      throw ioe;  // Just rethrow the last exception to signal failure.
+      // Throw the exception only if it's not about disk being full.
+      if (!ioe.getMessage().contains(LINUX_DISK_FULL_MESSAGE) &&
+          !ioe.getMessage().contains(WINDOWS_DISK_FULL_MESSAGE)) {
+        throw ioe;  // Just rethrow the last exception to signal failure.
+      }
     } catch(IOException e) {
       throw new DiskErrorException("Error checking directory " + dir, e);
     }

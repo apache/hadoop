@@ -190,6 +190,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long DFS_DN_CACHED_DFSUSED_CHECK_INTERVAL_DEFAULT_MS =
       600000;
 
+  public static final String DFS_DATANODE_CHECK_DIR_WITH_DISKIO =
+      "dfs.datanode.check.dir.with.diskio";
+  public static final boolean DFS_DATANODE_CHECK_DIR_WITH_DISKIO_DEFAULT = false;
+
   public static final String  DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT =
       "dfs.namenode.path.based.cache.block.map.allocation.percent";
   public static final float    DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT_DEFAULT = 0.25f;

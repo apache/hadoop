@@ -120,6 +120,7 @@ public class BlockPoolSlice {
   private final long cachedDfsUsedCheckTime;
   private final Timer timer;
   private final int maxDataLength;
+  private final boolean checkDirWithDiskIo;
   private final FileIoProvider fileIoProvider;
   private final Configuration config;
   private final File bpDir;
@@ -178,6 +179,10 @@ public class BlockPoolSlice {
     this.maxDataLength = conf.getInt(
         CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH,
         CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
+
+    this.checkDirWithDiskIo = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_CHECK_DIR_WITH_DISKIO,
+        DFSConfigKeys.DFS_DATANODE_CHECK_DIR_WITH_DISKIO_DEFAULT);
 
     this.timer = timer;
 
@@ -484,9 +489,15 @@ public class BlockPoolSlice {
   }
 
   void checkDirs() throws DiskErrorException {
-    DiskChecker.checkDir(finalizedDir);
-    DiskChecker.checkDir(tmpDir);
-    DiskChecker.checkDir(rbwDir);
+    if (checkDirWithDiskIo) {
+      DiskChecker.checkDirWithDiskIo(finalizedDir);
+      DiskChecker.checkDirWithDiskIo(tmpDir);
+      DiskChecker.checkDirWithDiskIo(rbwDir);
+    } else {
+      DiskChecker.checkDir(finalizedDir);
+      DiskChecker.checkDir(tmpDir);
+      DiskChecker.checkDir(rbwDir);
+    }
   }
 
 
