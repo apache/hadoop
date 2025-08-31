@@ -330,8 +330,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     } catch (ExecutionException e) {
       LOG.error("Error freeing leases", e);
     } finally {
-      IOUtils.cleanupWithLogger(LOG, getClientHandler().getDfsClient(),
-          getClientHandler().getBlobClient());
+      IOUtils.cleanupWithLogger(LOG, getClientHandler());
     }
   }
 

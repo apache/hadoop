@@ -140,6 +140,10 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
           "Unsupported HTTP method: " + getMethod());
     }
 
+    // Set the request headers in the http request object.
+    // Earlier we were setting it just before sending the request.
+    // Setting here ensures that same header will get used while signing
+    // the request as well as validating the request at server's end.
     for (AbfsHttpHeader header : requestHeaders) {
       setRequestProperty(header.getName(), header.getValue());
     }
@@ -282,6 +286,8 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   /**{@inheritDoc}*/
   @Override
   public void setRequestProperty(final String key, final String value) {
+    // Content-Length is managed by HttpClient for entity enclosing requests.
+    // Setting it manually can lead to protocol errors.
     if (httpRequestBase instanceof HttpEntityEnclosingRequestBase
         && CONTENT_LENGTH.equals(key)) {
       return;

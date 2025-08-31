@@ -33,9 +33,9 @@ import org.apache.http.HttpClientConnection;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KEEP_ALIVE_CACHE_CLOSED;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 public class TestApacheClientConnectionPool extends
@@ -48,7 +48,7 @@ public class TestApacheClientConnectionPool extends
   @Test
   public void testPoolSizeWithNotConfigured() throws Exception {
     Configuration configuration = new Configuration();
-    configuration.unset(FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE);
+    configuration.unset(FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE);
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
         EMPTY_STRING);
     try (KeepAliveCache keepAliveCache = new KeepAliveCache(
@@ -56,7 +56,7 @@ public class TestApacheClientConnectionPool extends
       Assertions.assertThat(keepAliveCache.getMaxCacheConnections())
           .describedAs("In case configured cache size is 0, "
               + "the pool size should be minimum possible value")
-          .isEqualTo(DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS);
+          .isEqualTo(DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE);
 
       assertCachePutSuccess(keepAliveCache, getValidMockConnection());
       assertCacheGetIsNonNull(keepAliveCache);
@@ -68,7 +68,7 @@ public class TestApacheClientConnectionPool extends
     Configuration configuration = new Configuration();
     // In case the max cache size is set to 0,
     // the pool will set the sze to minimum possible value (which is 5).
-    configuration.set(FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE, "0");
+    configuration.set(FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, "0");
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
         EMPTY_STRING);
     try (KeepAliveCache keepAliveCache = new KeepAliveCache(
@@ -76,7 +76,7 @@ public class TestApacheClientConnectionPool extends
       Assertions.assertThat(keepAliveCache.getMaxCacheConnections())
               .describedAs("In case configured cache size is 0, "
                   + "the pool size should be minimum possible value")
-                  .isEqualTo(MIN_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS);
+                  .isEqualTo(MIN_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE);
 
       assertCachePutSuccess(keepAliveCache, getValidMockConnection());
       assertCacheGetIsNonNull(keepAliveCache);
@@ -197,11 +197,11 @@ public class TestApacheClientConnectionPool extends
         new AbfsConfiguration(new Configuration(), EMPTY_STRING))) {
       keepAliveCache.clear();
       HttpClientConnection[] connections =
-          new HttpClientConnection[DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS];
+          new HttpClientConnection[DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE];
 
       // Fill up the cache.
       for (int i = 0;
-          i < DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS;
+          i < DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE;
           i++) {
         connections[i] = getValidMockConnection();
         keepAliveCache.add(connections[i]);
@@ -209,17 +209,17 @@ public class TestApacheClientConnectionPool extends
 
       // Mark all but the last two connections as stale.
       for (int i = 0;
-          i < DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS - 2;
+          i < DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE - 2;
           i++) {
         Mockito.doReturn(true).when(connections[i]).isStale();
       }
 
       // Verify that the stale connections are removed.
-      for (int i = DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS - 1;
-          i >= 0;
-          i--) {
+      for (int i = DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE - 1;
+           i >= 0;
+           i--) {
         // The last two connections are not stale and would be returned.
-        if (i >= (DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS - 2)) {
+        if (i >= (DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE - 2)) {
           assertCacheGetIsNonNull(keepAliveCache);
         } else {
           // Stale connections are closed and removed.
@@ -394,7 +394,7 @@ public class TestApacheClientConnectionPool extends
 
       // Add connections up to the maximum size.
       HttpClientConnection[] connections =
-          new HttpClientConnection[DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS + 1];
+          new HttpClientConnection[DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE + 1];
       for (int i = 0; i < connections.length; i++) {
         connections[i] = getValidMockConnection();
         keepAliveCache.add(connections[i]);
@@ -403,7 +403,7 @@ public class TestApacheClientConnectionPool extends
       // Verify that the cache size does not exceed the maximum size.
       Assertions.assertThat(keepAliveCache.size())
           .describedAs("Cache size should not exceed the maximum allowed size")
-          .isEqualTo(DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS);
+          .isEqualTo(DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE);
 
       // Verify that the oldest connection is closed when the cache exceeds the maximum size.
       Mockito.verify(connections[0], Mockito.times(1)).close();

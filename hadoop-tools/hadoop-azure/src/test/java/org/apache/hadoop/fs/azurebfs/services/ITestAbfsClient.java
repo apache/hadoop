@@ -26,7 +26,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -67,8 +66,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_1
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CACHE_WARMUP_CONNECTION_COUNT;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_VALUE_UNKNOWN;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_HTTP_METHOD_OVERRIDE;
@@ -96,8 +94,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
@@ -881,7 +877,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testKeepAliveCacheInitializationWithApacheHttpClient() throws Exception {
-    Assume.assumeTrue(APACHE_HTTP_CLIENT == httpOperationType);
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
     final AzureBlobFileSystem fs = this.getFileSystem();
     AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
 
@@ -898,7 +894,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testStaleConnectionBehavior() throws Exception {
-    Assume.assumeTrue(APACHE_HTTP_CLIENT == httpOperationType);
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
     Configuration conf = this.getFileSystem().getConf();
 
     // This is to avoid actual metric calls during the test
@@ -933,7 +929,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testApacheConnectionReuse() throws Exception {
-    Assume.assumeTrue(APACHE_HTTP_CLIENT == httpOperationType);
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
     AzureBlobFileSystem fs = this.getFileSystem();
 
     AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
@@ -953,7 +949,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testConnectionNotReusedOnIOException() throws Exception {
-    Assume.assumeTrue(APACHE_HTTP_CLIENT == httpOperationType);
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
     AzureBlobFileSystem fs = this.getFileSystem();
 
     AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
@@ -1000,9 +996,9 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testNumberOfConnectionsInKacWithoutWarmup() throws Exception {
-    Assume.assumeTrue(APACHE_HTTP_CLIENT == httpOperationType);
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
     final Configuration configuration = this.getFileSystem().getConf();
-    configuration.setInt(FS_AZURE_CACHE_WARMUP_CONNECTION_COUNT, 0);
+    configuration.setInt(FS_AZURE_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT, 0);
     AzureBlobFileSystem fs = this.getFileSystem(configuration);
 
     AbfsClient dfsClient = fs.getAbfsStore().getClientHandler().getDfsClient();
@@ -1033,7 +1029,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     Assertions.assertThat(keepAliveCache.size())
         .describedAs("KeepAliveCache should be warm with default connection count")
-        .isEqualTo(this.getConfiguration().getCacheWarmupConnections());
+        .isEqualTo(this.getConfiguration().getApacheCacheWarmupCount());
 
     Assertions.assertThat(keepAliveCache.get())
         .describedAs("KeepAliveCache should not be null")
@@ -1044,7 +1040,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     // after the get call.
     Assertions.assertThat(keepAliveCache.size())
         .describedAs("KeepAliveCache size should be one less than the warmup count")
-        .isEqualTo(this.getConfiguration().getCacheWarmupConnections() - 1);
+        .isEqualTo(this.getConfiguration().getApacheCacheWarmupCount() - 1);
   }
 
   /**
@@ -1074,7 +1070,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
    */
   private void checkConnectionReuse(AbfsClient abfsClient) throws IOException {
     KeepAliveCache dfsKeepAliveCache = abfsClient.getKeepAliveCache();
-    for (int i = 0; i < this.getConfiguration().getCacheWarmupConnections(); i++) {
+    for (int i = 0; i < this.getConfiguration().getApacheCacheWarmupCount(); i++) {
       // Check first connection in the cache before the operation
       HttpClientConnection connection = dfsKeepAliveCache.peekFirst();
       // Perform a list operation to reuse the connection

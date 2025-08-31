@@ -470,24 +470,33 @@ public class AbfsConfiguration{
       FS_AZURE_BLOB_DIR_DELETE_MAX_THREAD, DefaultValue = DEFAULT_FS_AZURE_BLOB_DELETE_THREAD)
   private int blobDeleteDirConsumptionParallelism;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES,
+      DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
   private int maxApacheHttpClientIoExceptionsRetries;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE, DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS,
-      MinValue = MIN_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS, MaxValue = MAX_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS)
-  private int maxApacheHttpClientCacheConnections;
+      FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE,
+      MinValue = MIN_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, MaxValue = MAX_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE)
+  private int apacheMaxCacheSize;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_CACHE_WARMUP_CONNECTION_COUNT, DefaultValue = DEFAULT_APACHE_CACHE_WARMUP_CONNECTION_COUNT,
-      MinValue = 0, MaxValue = MIN_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS)
-  private int cacheWarmupConnections;
+      FS_AZURE_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT,
+      MinValue = 0, MaxValue = MAX_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT)
+  private int apacheCacheWarmupCount;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_CACHE_REFRESH_CONNECTION_COUNT, DefaultValue = DEFAULT_APACHE_CACHE_REFRESH_CONNECTION_COUNT,
-      MinValue = 0, MaxValue = MIN_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS)
-  private int cacheRefreshConnections;
+      FS_AZURE_APACHE_HTTP_CLIENT_CACHE_REFRESH_COUNT, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_CACHE_REFRESH_COUNT,
+      MinValue = 0, MaxValue = MAX_APACHE_HTTP_CLIENT_CACHE_REFRESH_COUNT)
+  private int apacheCacheRefreshCount;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_MAX_REFRESH_WAIT_TIME_MILLIS,
+      DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_REFRESH_WAIT_TIME_MILLIS)
+  private long apacheMaxRefreshWaitTimeInMillis;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_MIN_TRIGGER_REFRESH_COUNT,
+      DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MIN_TRIGGER_REFRESH_COUNT,
+      MinValue = 0, MaxValue = MAX_APACHE_HTTP_CLIENT_MIN_TRIGGER_REFRESH_COUNT)
+  private int apacheMinTriggerRefreshCount;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID,
       DefaultValue = DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID)
@@ -1168,16 +1177,24 @@ public class AbfsConfiguration{
     return maxApacheHttpClientIoExceptionsRetries;
   }
 
-  public int getMaxApacheHttpClientCacheConnections() {
-    return maxApacheHttpClientCacheConnections;
+  public int getApacheMaxCacheSize() {
+    return apacheMaxCacheSize;
   }
 
-  public int getCacheWarmupConnections() {
-    return cacheWarmupConnections;
+  public int getApacheCacheWarmupCount() {
+    return apacheCacheWarmupCount;
   }
 
-  public int getCacheRefreshConnections() {
-    return cacheRefreshConnections;
+  public int getApacheCacheRefreshCount() {
+    return apacheCacheRefreshCount;
+  }
+
+  public long getApacheMaxRefreshWaitTimeInMillis() {
+    return apacheMaxRefreshWaitTimeInMillis;
+  }
+
+  public int getApacheMinTriggerRefreshCount() {
+    return apacheMinTriggerRefreshCount;
   }
 
   public boolean getIsClientTransactionIdEnabled() {

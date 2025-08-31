@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -59,10 +59,10 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,7 +91,7 @@ public class TestSnapshotDiffReport {
   private DistributedFileSystem hdfs;
   private final HashMap<Path, Integer> snapshotNumberMap = new HashMap<Path, Integer>();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.setBoolean(
@@ -110,7 +110,7 @@ public class TestSnapshotDiffReport {
     hdfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -207,7 +207,8 @@ public class TestSnapshotDiffReport {
   /**
    * Test the computation and representation of diff between snapshots.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testDiffReport() throws Exception {
     cluster.getNamesystem().getSnapshotManager().setAllowNestedSnapshots(true);
 
@@ -322,7 +323,8 @@ public class TestSnapshotDiffReport {
             DFSUtil.string2Bytes("subsub1/subsubsub1/link13")));
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testSnapRootDescendantDiffReport() throws Exception {
     Path subSub = new Path(sub1, "subsub1");
     Path subSubSub = new Path(subSub, "subsubsub1");
@@ -780,7 +782,8 @@ public class TestSnapshotDiffReport {
    * sure the diff report computation correctly retrieve the diff from the
    * deleted sub-directory.
    */
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testDiffReport2() throws Exception {
     Path subsub1 = new Path(sub1, "subsub1");
     Path subsubsub1 = new Path(subsub1, "subsubsub1");
@@ -824,7 +827,7 @@ public class TestSnapshotDiffReport {
     final SnapshotDiffReport report =
         hdfs.getSnapshotDiffReport(testdir, "s0", "");
     // The diff should be null. Snapshot dir inode should keep the quota.
-    Assert.assertEquals(0, report.getDiffList().size());
+    assertEquals(0, report.getDiffList().size());
     // Cleanup
     hdfs.deleteSnapshot(testdir, "s0");
     hdfs.disallowSnapshot(testdir);
@@ -1054,7 +1057,8 @@ public class TestSnapshotDiffReport {
    * Test Snapshot diff report for snapshots with open files captures in them.
    * Also verify if the diff report remains the same across NameNode restarts.
    */
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testDiffReportWithOpenFiles() throws Exception {
     // Construct the directory tree
     final Path level0A = new Path("/level_0_A");
@@ -1075,8 +1079,7 @@ public class TestSnapshotDiffReport {
     final long flumeFileLengthAfterS1 = hdfs.getFileStatus(flumeFile).getLen();
 
     // Verify if Snap S1 file length is same as the the live one
-    Assert.assertEquals(flumeFileLengthAfterS1,
-        hdfs.getFileStatus(flumeS1Path).getLen());
+    assertEquals(flumeFileLengthAfterS1, hdfs.getFileStatus(flumeS1Path).getLen());
 
     verifyDiffReport(level0A, flumeSnap1Name, "",
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")));
@@ -1097,11 +1100,10 @@ public class TestSnapshotDiffReport {
 
     // Verify live files length is same as all data written till now
     final long flumeFileLengthAfterS2 = hdfs.getFileStatus(flumeFile).getLen();
-    Assert.assertEquals(flumeFileWrittenDataLength, flumeFileLengthAfterS2);
+    assertEquals(flumeFileWrittenDataLength, flumeFileLengthAfterS2);
 
     // Verify if Snap S2 file length is same as the live one
-    Assert.assertEquals(flumeFileLengthAfterS2,
-        hdfs.getFileStatus(flumeS2Path).getLen());
+    assertEquals(flumeFileLengthAfterS2, hdfs.getFileStatus(flumeS2Path).getLen());
 
     verifyDiffReport(level0A, flumeSnap1Name, "",
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
@@ -1120,22 +1122,19 @@ public class TestSnapshotDiffReport {
 
     // Verify old flume snapshots have point-in-time / frozen file lengths
     // even after the live file have moved forward.
-    Assert.assertEquals(flumeFileLengthAfterS1,
-        hdfs.getFileStatus(flumeS1Path).getLen());
-    Assert.assertEquals(flumeFileLengthAfterS2,
-        hdfs.getFileStatus(flumeS2Path).getLen());
+    assertEquals(flumeFileLengthAfterS1, hdfs.getFileStatus(flumeS1Path).getLen());
+    assertEquals(flumeFileLengthAfterS2, hdfs.getFileStatus(flumeS2Path).getLen());
 
     flumeOutputStream.close();
 
     // Verify if Snap S2 file length is same as the live one
-    Assert.assertEquals(flumeFileWrittenDataLength,
-        hdfs.getFileStatus(flumeFile).getLen());
+    assertEquals(flumeFileWrittenDataLength, hdfs.getFileStatus(flumeFile).getLen());
 
     // Verify old flume snapshots have point-in-time / frozen file lengths
     // even after the live file have moved forward.
-    Assert.assertEquals(flumeFileLengthAfterS1,
+    assertEquals(flumeFileLengthAfterS1,
         hdfs.getFileStatus(flumeS1Path).getLen());
-    Assert.assertEquals(flumeFileLengthAfterS2,
+    assertEquals(flumeFileLengthAfterS2,
         hdfs.getFileStatus(flumeS2Path).getLen());
 
     verifyDiffReport(level0A, flumeSnap1Name, "",
@@ -1554,10 +1553,10 @@ public class TestSnapshotDiffReport {
     try {
       iterator.next();
     } catch (Exception e) {
-      Assert.assertTrue(
+      assertTrue(
           e.getMessage().contains("No more entry in SnapshotDiffReport for /"));
     }
-    Assert.assertNotEquals(0, reportList.size());
+    assertNotEquals(0, reportList.size());
     // generate the snapshotDiffReport and Verify
     snapshotDiffReport = new SnapshotDiffReportGenerator("/", "s0", "s1",
         report.getIsFromEarlier(), modifiedList, createdList, deletedList);
@@ -1598,7 +1597,7 @@ public class TestSnapshotDiffReport {
     try {
       hdfs.snapshotDiffReportListingRemoteIterator(root, "s0", "");
     } catch (Exception e) {
-      Assert.assertTrue(e.getMessage().contains("Remote Iterator is"
+      assertTrue(e.getMessage().contains("Remote Iterator is"
           + "supported for snapshotDiffReport between two snapshots"));
     }
   }
@@ -1613,15 +1612,15 @@ public class TestSnapshotDiffReport {
 
     final SnapshottableDirectoryStatus[] snapshottables
         = hdfs.getSnapshottableDirListing();
-    Assert.assertEquals(1, snapshottables.length);
-    Assert.assertEquals(3, snapshottables[0].getSnapshotNumber());
+    assertEquals(1, snapshottables.length);
+    assertEquals(3, snapshottables[0].getSnapshotNumber());
 
     final SnapshotStatus[] statuses = hdfs.getSnapshotListing(root);
-    Assert.assertEquals(3, statuses.length);
+    assertEquals(3, statuses.length);
     for (int i = 0; i < statuses.length; i++) {
       final SnapshotStatus s = statuses[i];
       LOG.info("Snapshot #{}: {}", s.getSnapshotID(), s.getFullPath());
-      Assert.assertEquals(i, s.getSnapshotID());
+      assertEquals(i, s.getSnapshotID());
     }
 
     for (int i = 0; i <= 2; i++) {
@@ -1635,11 +1634,11 @@ public class TestSnapshotDiffReport {
       String from, String to) throws Exception {
     final String barDiff = diff(bar, from, to);
     final String fooDiff = diff(foo, from, to);
-    Assert.assertEquals(barDiff, fooDiff.replace("/bar", ""));
+    assertEquals(barDiff, fooDiff.replace("/bar", ""));
 
     final String rootDiff = diff(root, from, to);
-    Assert.assertEquals(fooDiff, rootDiff.replace("/foo", ""));
-    Assert.assertEquals(barDiff, rootDiff.replace("/foo/bar", ""));
+    assertEquals(fooDiff, rootDiff.replace("/foo", ""));
+    assertEquals(barDiff, rootDiff.replace("/foo/bar", ""));
   }
 
   private String diff(Path path, String from, String to) throws Exception {
