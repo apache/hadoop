@@ -3,5 +3,5 @@
   "ubuntu:focal::arch64",
   "ubuntu:noble",
   "rockylinux:8",
-  "debian:10"
+  "debian:11"
 ]
