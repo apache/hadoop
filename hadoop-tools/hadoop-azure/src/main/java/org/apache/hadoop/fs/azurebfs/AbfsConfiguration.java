@@ -488,8 +488,8 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID)
   private boolean enableClientTransactionId;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_CREATE_IDEMPOTENCY,
-      DefaultValue = DEFAULT_FS_AZURE_ENABLE_ENABLE_CREATE_IDEMPOTENCY)
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY)
   private boolean enableCreateIdempotency;
 
   private String clientProvidedEncryptionKey;
