@@ -20,11 +20,12 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
 import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -73,8 +74,8 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
@@ -129,14 +130,18 @@ public class TestINodeFile {
     }
   }
 
-  @Test(expected=IllegalArgumentException.class)
-  public void testStoragePolicyIdBelowLowerBound () throws IllegalArgumentException {
-    createINodeFile((byte)-1);
+  @Test
+  public void testStoragePolicyIdBelowLowerBound() throws IllegalArgumentException {
+    assertThrows(IllegalArgumentException.class, () -> {
+      createINodeFile((byte) -1);
+    });
   }
 
-  @Test(expected=IllegalArgumentException.class)
-  public void testStoragePolicyIdAboveUpperBound () throws IllegalArgumentException {
-    createINodeFile((byte)16);
+  @Test
+  public void testStoragePolicyIdAboveUpperBound() throws IllegalArgumentException {
+    assertThrows(IllegalArgumentException.class, () -> {
+      createINodeFile((byte) 16);
+    });
   }
 
   @Test
@@ -189,9 +194,8 @@ public class TestINodeFile {
         null, perm, 0L, 0L, null, replication, null /*ec policy*/,
         preferredBlockSize, HdfsConstants.WARM_STORAGE_POLICY_ID, CONTIGUOUS);
 
-    Assert.assertTrue(!inodeFile.isStriped());
-    Assert.assertEquals(replication.shortValue(),
-        inodeFile.getFileReplication());
+    assertTrue(!inodeFile.isStriped());
+    assertEquals(replication.shortValue(), inodeFile.getFileReplication());
   }
 
   /**
@@ -203,8 +207,7 @@ public class TestINodeFile {
     replication = 3;
     preferredBlockSize = 128*1024*1024;
     INodeFile inf = createINodeFile(replication, preferredBlockSize);
-    assertEquals("True has to be returned in this case", replication,
-                 inf.getFileReplication());
+    assertEquals(replication, inf.getFileReplication(), "True has to be returned in this case");
   }
 
   /**
@@ -212,12 +215,14 @@ public class TestINodeFile {
    * for Replication.
    * @throws IllegalArgumentException as the result
    */
-  @Test(expected=IllegalArgumentException.class)
-  public void testReplicationBelowLowerBound ()
-              throws IllegalArgumentException {
-    replication = -1;
-    preferredBlockSize = 128*1024*1024;
-    createINodeFile(replication, preferredBlockSize);
+  @Test
+  public void testReplicationBelowLowerBound()
+      throws IllegalArgumentException {
+    assertThrows(IllegalArgumentException.class, () -> {
+      replication = -1;
+      preferredBlockSize = 128 * 1024 * 1024;
+      createINodeFile(replication, preferredBlockSize);
+    });
   }
 
   /**
@@ -229,8 +234,8 @@ public class TestINodeFile {
     replication = 3;
     preferredBlockSize = 128*1024*1024;
     INodeFile inf = createINodeFile(replication, preferredBlockSize);
-   assertEquals("True has to be returned in this case", preferredBlockSize,
-        inf.getPreferredBlockSize());
+    assertEquals(preferredBlockSize, inf.getPreferredBlockSize(),
+        "True has to be returned in this case");
  }
 
   @Test
@@ -238,8 +243,8 @@ public class TestINodeFile {
     replication = 3;
     preferredBlockSize = BLKSIZE_MAXVALUE;
     INodeFile inf = createINodeFile(replication, preferredBlockSize);
-    assertEquals("True has to be returned in this case", BLKSIZE_MAXVALUE,
-                 inf.getPreferredBlockSize());
+    assertEquals(BLKSIZE_MAXVALUE, inf.getPreferredBlockSize(),
+        "True has to be returned in this case");
   }
 
   /**
@@ -247,26 +252,30 @@ public class TestINodeFile {
    * for PreferredBlockSize.
    * @throws IllegalArgumentException as the result
    */
-  @Test(expected=IllegalArgumentException.class)
-  public void testPreferredBlockSizeBelowLowerBound ()
-              throws IllegalArgumentException {
-    replication = 3;
-    preferredBlockSize = -1;
-    createINodeFile(replication, preferredBlockSize);
-  } 
+  @Test
+  public void testPreferredBlockSizeBelowLowerBound()
+      throws IllegalArgumentException {
+    assertThrows(IllegalArgumentException.class, () -> {
+      replication = 3;
+      preferredBlockSize = -1;
+      createINodeFile(replication, preferredBlockSize);
+    });
+  }
 
   /**
    * IllegalArgumentException is expected for setting above upper bound
    * for PreferredBlockSize.
    * @throws IllegalArgumentException as the result
    */
-  @Test(expected=IllegalArgumentException.class)
-  public void testPreferredBlockSizeAboveUpperBound ()
-              throws IllegalArgumentException {
-    replication = 3;
-    preferredBlockSize = BLKSIZE_MAXVALUE+1;
-    createINodeFile(replication, preferredBlockSize);
- }
+  @Test
+  public void testPreferredBlockSizeAboveUpperBound()
+      throws IllegalArgumentException {
+    assertThrows(IllegalArgumentException.class, () -> {
+      replication = 3;
+      preferredBlockSize = BLKSIZE_MAXVALUE + 1;
+      createINodeFile(replication, preferredBlockSize);
+    });
+  }
 
   @Test
   public void testGetFullPathName() {
@@ -358,12 +367,12 @@ public class TestINodeFile {
   @Test
   public void testConcatBlocks() {
     INodeFile origFile = createINodeFiles(1, "origfile")[0];
-    assertEquals("Number of blocks didn't match", origFile.numBlocks(), 1L);
+    assertEquals(origFile.numBlocks(), 1L, "Number of blocks didn't match");
 
     INodeFile[] appendFiles = createINodeFiles(4, "appendfile");
     BlockManager bm = Mockito.mock(BlockManager.class);
     origFile.concatBlocks(appendFiles, bm);
-    assertEquals("Number of blocks didn't match", origFile.numBlocks(), 5L);
+    assertEquals(origFile.numBlocks(), 5L, "Number of blocks didn't match");
   }
   
   /** 
@@ -589,7 +598,8 @@ public class TestINodeFile {
     }
   }
 
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testWriteToDeletedFile() throws IOException {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
@@ -690,8 +700,7 @@ public class TestINodeFile {
       fs.setReplication(testFileInodePath, (short)1);
       
       // ClientProtocol#getPreferredBlockSize
-      assertEquals(testFileBlockSize,
-          nnRpc.getPreferredBlockSize(testFileInodePath.toString()));
+      assertEquals(testFileBlockSize, nnRpc.getPreferredBlockSize(testFileInodePath.toString()));
 
       /*
        * HDFS-6749 added missing calls to FSDirectory.resolvePath in the
@@ -1261,7 +1270,7 @@ public class TestINodeFile {
       ContentSummary cs = dfs.getContentSummary(new Path(dir));
       QuotaUsage qu = dfs.getQuotaUsage(new Path(dir));
 
-      Assert.assertEquals(cs.getFileCount() + cs.getDirectoryCount(),
+      assertEquals(cs.getFileCount() + cs.getDirectoryCount(),
           qu.getFileAndDirectoryCount());
     }
   }

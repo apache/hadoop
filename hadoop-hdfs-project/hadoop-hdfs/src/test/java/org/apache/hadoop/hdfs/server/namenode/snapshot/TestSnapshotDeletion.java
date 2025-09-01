@@ -18,7 +18,13 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.AssertionsKt.assertNotNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
@@ -60,12 +66,10 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,11 +94,8 @@ public class TestSnapshotDeletion {
   protected FSDirectory fsdir;
   protected BlockManager blockmanager;
   protected DistributedFileSystem hdfs;
-  
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
@@ -107,7 +108,7 @@ public class TestSnapshotDeletion {
     hdfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -118,7 +119,8 @@ public class TestSnapshotDeletion {
   /**
    * Deleting snapshottable directory with snapshots must fail.
    */
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testDeleteDirectoryWithSnapshot() throws Exception {
     Path file0 = new Path(sub, "file0");
     Path file1 = new Path(sub, "file1");
@@ -130,12 +132,13 @@ public class TestSnapshotDeletion {
     hdfs.createSnapshot(sub, "s1");
 
     // Deleting a snapshottable dir with snapshots should fail
-    exception.expect(RemoteException.class);
     String error = "The directory " + sub.toString()
         + " cannot be deleted since " + sub.toString()
         + " is snapshottable and already has snapshots";
-    exception.expectMessage(error);
-    hdfs.delete(sub, true);
+    RemoteException ex = assertThrows(RemoteException.class, () -> {
+      hdfs.delete(sub, true);
+    });
+    assertTrue(ex.getMessage().contains(error));
   }
 
   /**
@@ -143,7 +146,8 @@ public class TestSnapshotDeletion {
    * without snapshots. The snapshottable dir list in snapshot manager should be
    * updated.
    */
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testApplyEditLogForDeletion() throws Exception {
     final Path foo = new Path("/foo");
     final Path bar1 = new Path(foo, "bar1");
@@ -176,7 +180,8 @@ public class TestSnapshotDeletion {
   /**
    * Deleting directory with snapshottable descendant with snapshots must fail.
    */
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testDeleteDirectoryWithSnapshot2() throws Exception {
     Path file0 = new Path(sub, "file0");
     Path file1 = new Path(sub, "file1");
@@ -193,11 +198,12 @@ public class TestSnapshotDeletion {
     hdfs.createSnapshot(subsub, "s1");
 
     // Deleting dir while its descedant subsub1 having snapshots should fail
-    exception.expect(RemoteException.class);
     String error = subsub.toString()
         + " is snapshottable and already has snapshots";
-    exception.expectMessage(error);
-    hdfs.delete(dir, true);
+    RemoteException ex = assertThrows(RemoteException.class, () -> {
+      hdfs.delete(dir, true);
+    });
+    assertTrue(ex.getMessage().contains(error));
   }
   
   private static INodeDirectory getDir(final FSDirectory fsdir, final Path dir)
@@ -211,15 +217,15 @@ public class TestSnapshotDeletion {
     INodeDirectory dirNode = getDir(fsdir, dirPath);
     assertTrue(dirNode.isQuotaSet());
     QuotaCounts q = dirNode.getDirectoryWithQuotaFeature().getSpaceConsumed();
-    assertEquals(dirNode.dumpTreeRecursively().toString(), expectedNs,
-        q.getNameSpace());
-    assertEquals(dirNode.dumpTreeRecursively().toString(), expectedDs,
-        q.getStorageSpace());
+    assertEquals(expectedNs, q.getNameSpace(),
+        dirNode.dumpTreeRecursively().toString());
+    assertEquals(expectedDs, q.getStorageSpace(),
+        dirNode.dumpTreeRecursively().toString());
     QuotaCounts counts = dirNode.computeQuotaUsage(fsdir.getBlockStoragePolicySuite(), false);
-    assertEquals(dirNode.dumpTreeRecursively().toString(), expectedNs,
-        counts.getNameSpace());
-    assertEquals(dirNode.dumpTreeRecursively().toString(), expectedDs,
-        counts.getStorageSpace());
+    assertEquals(expectedNs, counts.getNameSpace(),
+        dirNode.dumpTreeRecursively().toString());
+    assertEquals(expectedDs, counts.getStorageSpace(),
+        dirNode.dumpTreeRecursively().toString());
   }
   
   /**
@@ -234,7 +240,9 @@ public class TestSnapshotDeletion {
    * 4. Delete current INodeDirectoryWithSnapshot.
    * </pre>
    */
-  @Test (timeout=300000)
+  @SuppressWarnings("checkstyle:methodlength")
+  @Test
+  @Timeout(value = 300)
   public void testDeleteCurrentFileDirectory() throws Exception {
     // create a folder which will be deleted before taking snapshots
     Path deleteDir = new Path(subsub, "deleteDir");
@@ -363,8 +371,7 @@ public class TestSnapshotDeletion {
     assertTrue(snapshotNode4Sub.isWithSnapshot());
     // the snapshot copy of sub has only one child subsub.
     // newFile should have been destroyed
-    assertEquals(1, snapshotNode4Sub.getChildrenList(Snapshot.CURRENT_STATE_ID)
-        .size());
+    assertEquals(1, snapshotNode4Sub.getChildrenList(Snapshot.CURRENT_STATE_ID).size());
     // but should have two children, subsub and noChangeDir, when s1 was taken  
     assertEquals(2, snapshotNode4Sub.getChildrenList(snapshot1.getId()).size());
     
@@ -402,7 +409,8 @@ public class TestSnapshotDeletion {
    * snapshots are taken on the same directory, and we do not need to combine
    * snapshot diffs.
    */
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testDeleteEarliestSnapshot1() throws Exception {
     // create files under sub
     Path file0 = new Path(sub, "file0");
@@ -460,8 +468,7 @@ public class TestSnapshotDeletion {
     FileStatus statusAfterDeletion = hdfs.getFileStatus(ss);
     System.out.println("Before deletion: " + statusBeforeDeletion.toString()
         + "\n" + "After deletion: " + statusAfterDeletion.toString());
-    assertEquals(statusBeforeDeletion.toString(),
-        statusAfterDeletion.toString());
+    assertEquals(statusBeforeDeletion.toString(), statusAfterDeletion.toString());
   }
   
   /**
@@ -475,7 +482,8 @@ public class TestSnapshotDeletion {
    * Also, the recursive cleanTree process should cover both INodeFile and 
    * INodeDirectory.
    */
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testDeleteEarliestSnapshot2() throws Exception {
     Path noChangeDir = new Path(sub, "noChangeDir");
     Path noChangeFile = new Path(noChangeDir, "noChangeFile");
@@ -573,7 +581,8 @@ public class TestSnapshotDeletion {
    * Delete a snapshot that is taken before a directory deletion,
    * directory diff list should be combined correctly.
    */
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testDeleteSnapshot1() throws Exception {
     final Path root = new Path("/");
 
@@ -610,7 +619,8 @@ public class TestSnapshotDeletion {
    * Delete a snapshot that is taken before a directory deletion (recursively),
    * directory diff list should be combined correctly.
    */
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testDeleteSnapshot2() throws Exception {
     final Path root = new Path("/");
 
@@ -647,7 +657,8 @@ public class TestSnapshotDeletion {
    * Test deleting snapshots in a more complicated scenario: need to combine
    * snapshot diffs, but no need to handle diffs distributed in a dir tree
    */
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testCombineSnapshotDiff1() throws Exception {
     testCombineSnapshotDiffImpl(sub, "", 1);
   }
@@ -656,7 +667,8 @@ public class TestSnapshotDeletion {
    * Test deleting snapshots in more complicated scenarios (snapshot diffs are
    * distributed in the directory sub-tree)
    */
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testCombineSnapshotDiff2() throws Exception {
     testCombineSnapshotDiffImpl(sub, "subsub1/subsubsub1/", 3);
   }
@@ -665,7 +677,8 @@ public class TestSnapshotDeletion {
    * When combine two snapshots, make sure files/directories created after the 
    * prior snapshot get destroyed.
    */
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testCombineSnapshotDiff3() throws Exception {
     // create initial dir and subdir
     Path dir = new Path("/dir");
@@ -863,7 +876,8 @@ public class TestSnapshotDeletion {
   }
   
   /** Test deleting snapshots with modification on the metadata of directory */ 
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testDeleteSnapshotWithDirModification() throws Exception {
     Path file = new Path(sub, "file");
     DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPLICATION, seed);
@@ -943,7 +957,8 @@ public class TestSnapshotDeletion {
    * A test covering the case where the snapshot diff to be deleted is renamed 
    * to its previous snapshot. 
    */
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testRenameSnapshotDiff() throws Exception {
     cluster.getNamesystem().getSnapshotManager().setAllowNestedSnapshots(true);
 
@@ -1082,7 +1097,8 @@ public class TestSnapshotDeletion {
    * OP_DELETE_SNAPSHOT edits op was not decrementing the safemode threshold on
    * restart in HA mode. HDFS-5504
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testHANNRestartAfterSnapshotDeletion() throws Exception {
     hdfs.close();
     cluster.shutdown();
@@ -1235,13 +1251,13 @@ public class TestSnapshotDeletion {
 
     // make sure bar has been removed from its parent
     INode p = fsdir.getInode(parentId);
-    Assert.assertNotNull(p);
+    assertNotNull(p);
     INodeDirectory pd = p.asDirectory();
-    Assert.assertNotNull(pd);
-    Assert.assertNull(pd.getChild("bar".getBytes(), Snapshot.CURRENT_STATE_ID));
+    assertNotNull(pd);
+    assertNull(pd.getChild("bar".getBytes(), Snapshot.CURRENT_STATE_ID));
 
     // make sure bar has been cleaned from inodeMap
-    Assert.assertNull(fsdir.getInode(fileId));
+    assertNull(fsdir.getInode(fileId));
   }
 
   @Test
@@ -1267,17 +1283,18 @@ public class TestSnapshotDeletion {
 
     hdfs.createSnapshot(st, "s0");
 
-    // Verify the SnapshotException is thrown as expected for HDFS-4529
-    exception.expect(RemoteException.class);
+    // Verify the SnapshotException is thrown as expected for HDFS-4529;
     String error = "Concat: the source file /st/0.txt is in snapshot";
-    exception.expectMessage(error);
-    hdfs.concat(dest, files);
+    RemoteException ex = assertThrows(RemoteException.class, () -> {
+      hdfs.concat(dest, files);
 
-    hdfs.setSafeMode(SafeModeAction.ENTER);
-    hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.LEAVE);
+      hdfs.setSafeMode(SafeModeAction.ENTER);
+      hdfs.saveNamespace();
+      hdfs.setSafeMode(SafeModeAction.LEAVE);
 
-    cluster.restartNameNodes();
+      cluster.restartNameNodes();
+    });
+    assertTrue(ex.getMessage().contains(error));
   }
 
   @Test
@@ -1345,11 +1362,11 @@ public class TestSnapshotDeletion {
 
       SnapshotDiffReport sdr = hdfs.getSnapshotDiffReport(st, "s" + i, "ss");
       LOG.info("Snapshot Diff s{} to ss : {}", i, sdr);
-      Assert.assertEquals(sdr.getDiffList().size(), 1);
-      Assert.assertTrue(sdr.getDiffList().get(0).getType() ==
+      assertEquals(sdr.getDiffList().size(), 1);
+      assertTrue(sdr.getDiffList().get(0).getType() ==
           SnapshotDiffReport.DiffType.MODIFY);
-      Assert.assertTrue(new Path(st, DFSUtilClient.bytes2String(
-          sdr.getDiffList().get(0).getSourcePath())).equals(dest));
+      assertTrue(new Path(st,
+          DFSUtilClient.bytes2String(sdr.getDiffList().get(0).getSourcePath())).equals(dest));
     }
 
     hdfs.deleteSnapshot(st, "s1");
