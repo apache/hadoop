@@ -486,8 +486,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   private void waitForProcess(final String eTag, final long position, boolean isFirstRead) {
     ReadBuffer readBuf;
     synchronized (this) {
-      clearFromReadAheadQueue(eTag, position, isFirstRead);
-      readBuf = getFromList(getInProgressList(), eTag, position);
+      readBuf = clearFromReadAheadQueue(eTag, position, isFirstRead);
+      if (readBuf == null) {
+        readBuf = getFromList(getInProgressList(), eTag, position);
+      }
     }
     if (readBuf != null) {         // if in in-progress queue, then block for it
       try {
@@ -509,19 +511,23 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     }
   }
 
-  private void clearFromReadAheadQueue(final String eTag, final long requestedOffset, boolean isFirstRead) {
+  private ReadBuffer clearFromReadAheadQueue(final String eTag, final long requestedOffset, boolean isFirstRead) {
     ReadBuffer buffer = getFromList(getReadAheadQueue(), eTag, requestedOffset);
     /*
      * If this prefetch was triggered by first read of this input stream,
-     * we should not remove it from queue and cache it for future purpose.
+     * we should not remove it from queue and let it complete by backend threads.
      */
-    if (buffer != null && !isFirstRead) {
+    if (buffer != null && isFirstRead) {
+      return buffer;
+    }
+    if (buffer != null) {
       synchronized (this) {
         getReadAheadQueue().remove(buffer);
         notifyAll();   // lock is held in calling method
         getFreeList().push(buffer.getBufferindex());
       }
     }
+    return null;
   }
 
   private int getBlockFromCompletedQueue(final String eTag, final long position,
