@@ -41,6 +41,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private boolean isReadAheadEnabled = true;
 
+  private boolean isReadAheadV2Enabled;
+
   private boolean alwaysReadBufferSize;
 
   private int readAheadBlockSize;
@@ -61,8 +63,6 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   private BackReference fsBackRef;
 
   private ContextEncryptionAdapter contextEncryptionAdapter = null;
-
-  private ReadBufferManager readBufferManager;
 
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -90,6 +90,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   public AbfsInputStreamContext isReadAheadEnabled(
           final boolean isReadAheadEnabled) {
     this.isReadAheadEnabled = isReadAheadEnabled;
+    return this;
+  }
+
+  public AbfsInputStreamContext isReadAheadV2Enabled(
+      final boolean isReadAheadV2Enabled) {
+    this.isReadAheadV2Enabled = isReadAheadV2Enabled;
     return this;
   }
 
@@ -152,13 +158,15 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
-  public AbfsInputStreamContext withReadBufferManager(
-      ReadBufferManager readBufferManager){
-    this.readBufferManager = readBufferManager;
-    return this;
-  }
-
   public AbfsInputStreamContext build() {
+    if (readBufferSize > readAheadBlockSize) {
+      LOG.debug(
+          "fs.azure.read.request.size[={}] is configured for higher size than "
+              + "fs.azure.read.readahead.blocksize[={}]. Auto-align "
+              + "readAhead block size to be same as readRequestSize.",
+          readBufferSize, readAheadBlockSize);
+      readAheadBlockSize = readBufferSize;
+    }
     // Validation of parameters to be done here.
     Preconditions.checkArgument(readAheadRange > 0,
             "Read ahead range should be greater than 0");
@@ -179,6 +187,10 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   public boolean isReadAheadEnabled() {
     return isReadAheadEnabled;
+  }
+
+  public boolean isReadAheadV2Enabled() {
+    return isReadAheadV2Enabled;
   }
 
   public int getReadAheadRange() {
@@ -219,9 +231,5 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   public ContextEncryptionAdapter getEncryptionAdapter() {
     return contextEncryptionAdapter;
-  }
-
-  public ReadBufferManager getReadBufferManager() {
-    return readBufferManager;
   }
 }

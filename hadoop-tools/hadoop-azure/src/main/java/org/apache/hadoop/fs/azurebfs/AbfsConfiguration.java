@@ -1448,7 +1448,7 @@ public class AbfsConfiguration{
   }
 
   public boolean isReadAheadEnabled() {
-    return this.enabledReadAhead || this.isReadAheadV2Enabled;
+    return this.enabledReadAhead;
   }
 
   /**

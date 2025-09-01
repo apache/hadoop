@@ -63,7 +63,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   private int threadPoolUpscalePercentage;
   private int threadPoolDownscalePercentage;
   private int executorServiceKeepAliveTimeInMilliSec;
-  private final double threadPoolRequirementBuffer = 1.2; // 20% more threads than the queue size
+  private static final double threadPoolRequirementBuffer = 1.2; // 20% more threads than the queue size
   private boolean isDynamicScalingEnabled;
   private ScheduledExecutorService cpuMonitorThread;
 

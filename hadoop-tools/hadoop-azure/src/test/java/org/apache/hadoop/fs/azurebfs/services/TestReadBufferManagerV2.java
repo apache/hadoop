@@ -28,8 +28,11 @@ import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.addGeneralMockBehaviourToAbfsClient;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 /**
  * Unit Tests around different components of Read Buffer Manager V2
@@ -88,26 +91,22 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     }
   }
 
-  /**
-   * Test to verify that prefetch for same file and same position is not queued
-   * even when attempted by different input streams instances.
-   * @throws Exception if test fails
-   */
-  @Test
-  public void testPrefetchAlreadyQueued() throws Exception {
-
-  }
-
   @Test
   public void demo() throws Exception {
-    Path testPath = new Path("/testReadBufferManagerV2.txt");
-    Configuration conf = new Configuration(getRawConfiguration());
-    AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getUri(), conf);
-    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getUri(), conf);
-    fs1.create(testPath);
-    AbfsInputStream stream1 = (AbfsInputStream) fs1.open(testPath).getWrappedStream();
-    AbfsInputStream stream2 = (AbfsInputStream) fs2.open(testPath).getWrappedStream();
-    int br = stream1.read();
-    br = stream2.read();
+    AbfsClient abfsClient = mock(AbfsClient.class);
+    ExponentialRetryPolicy exponentialRetryPolicy = mock(
+        ExponentialRetryPolicy.class);
+    StaticRetryPolicy staticRetryPolicy = mock(StaticRetryPolicy.class);
+    AbfsThrottlingIntercept intercept = mock(
+        AbfsThrottlingIntercept.class);
+    addGeneralMockBehaviourToAbfsClient(abfsClient, exponentialRetryPolicy, staticRetryPolicy, intercept, mock(
+        ListResponseData.class));
+    Path testPath = new Path("/testPath");
+    AbfsInputStreamContext inputStreamContext = new AbfsInputStreamContext(-1)
+        .withReadBufferSize(ONE_MB)
+        .withReadAheadBlockSize(ONE_MB);
+    AbfsInputStream stream1 = new AbfsInputStream(abfsClient, null, testPath.getName(),
+        ONE_MB, inputStreamContext, "eTag", getTestTracingContext(getFileSystem(), false));
+
   }
 }
