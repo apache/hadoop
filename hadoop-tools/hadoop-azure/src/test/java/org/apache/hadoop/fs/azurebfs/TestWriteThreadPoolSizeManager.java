@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
@@ -397,7 +398,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
         while (System.currentTimeMillis() < end) {
           // Alternate between high load (shrink) and low load (expand)
           if (high) {
-            mgr.adjustThreadPoolSizeBasedOnCPU(HIGH_CPU_USAGE_RATIO );
+            mgr.adjustThreadPoolSizeBasedOnCPU(HIGH_CPU_USAGE_RATIO);
           } else {
             mgr.adjustThreadPoolSizeBasedOnCPU(LOW_CPU_USAGE_RATIO);
           }
@@ -408,7 +409,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
           observedMinMax.updateAndGet(prev -> Math.min(prev, cur));
           observedMaxMax.updateAndGet(prev -> Math.max(prev, cur));
 
-          Thread.sleep(SLEEP_DURATION_MS );
+          Thread.sleep(SLEEP_DURATION_MS);
         }
       } catch (Exception ignore) {
         // No-op: this is best-effort simulation
@@ -418,7 +419,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     resizer.start();
 
     // Wait for all tasks to finish (ensures no deadlock)
-    boolean finished = done.await(AWAIT_TIMEOUT_SECONDS , TimeUnit.SECONDS);
+    boolean finished = done.await(AWAIT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
     // Join resizer thread
     resizer.join(RESIZER_JOIN_TIMEOUT_MS);
@@ -496,96 +497,100 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   @Test
   void testThreadPoolScalesDownOnHighCpuLoad() throws Exception {
     // Initialize filesystem and thread pool manager
-    AzureBlobFileSystem fs = getFileSystem();
-    WriteThreadPoolSizeManager instance =
-        WriteThreadPoolSizeManager.getInstance(getFileSystemName(), mockConfig);
-    ThreadPoolExecutor executor =
-        (ThreadPoolExecutor) instance.getExecutorService();
+    try (FileSystem fileSystem = FileSystem.newInstance(
+        mockConfig.getRawConfiguration())) {
+      AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
+      WriteThreadPoolSizeManager instance =
+          WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
+              mockConfig);
+      ThreadPoolExecutor executor =
+          (ThreadPoolExecutor) instance.getExecutorService();
 
-    // Start monitoring CPU load
-    instance.startCPUMonitoring();
+      // Start monitoring CPU load
+      instance.startCPUMonitoring();
 
-    // Capture baseline pool size for comparison later
-    int initialMax = executor.getMaximumPoolSize();
+      // Capture baseline pool size for comparison later
+      int initialMax = executor.getMaximumPoolSize();
 
-    // Define a CPU-bound task: tight loop of math ops for ~5s
-    Runnable cpuBurn = () -> {
-      long end = System.currentTimeMillis() + WAIT_TIMEOUT_MS;
-      while (System.currentTimeMillis() < end) {
-        double waste = Math.sin(Math.random()) * Math.cos(Math.random());
-      }
-    };
-
-    // Launch two CPU hogs in parallel
-    Thread cpuHog1 = new Thread(cpuBurn, "cpu-hog-thread-1");
-    Thread cpuHog2 = new Thread(cpuBurn, "cpu-hog-thread-2");
-    cpuHog1.start();
-    cpuHog2.start();
-
-    // Submit multiple write tasks while CPU is under stress
-    int taskCount = 10;
-    CountDownLatch latch = new CountDownLatch(taskCount);
-    Path base = new Path(TEST_DIR_PATH);
-    fs.mkdirs(base);
-    final byte[] buffer = new byte[TEST_FILE_LENGTH];
-    new Random().nextBytes(buffer);
-
-    for (int i = 0; i < taskCount; i++) {
-      final Path part = new Path(base, "part-" + i);
-      executor.submit(() -> {
-        try (FSDataOutputStream out = fs.create(part, true)) {
-          for (int j = 0; j < 5; j++) {
-            out.write(buffer);
-            out.hflush();
-          }
-        } catch (IOException e) {
-          Assertions.fail("Write task failed under CPU stress", e);
-        } finally {
-          latch.countDown();
+      // Define a CPU-bound task: tight loop of math ops for ~5s
+      Runnable cpuBurn = () -> {
+        long end = System.currentTimeMillis() + WAIT_TIMEOUT_MS;
+        while (System.currentTimeMillis() < end) {
+          double waste = Math.sin(Math.random()) * Math.cos(Math.random());
         }
-      });
-    }
+      };
 
-    // Ensure all tasks complete (avoid deadlock/starvation)
-    boolean finished = latch.await(LATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+      // Launch two CPU hogs in parallel
+      Thread cpuHog1 = new Thread(cpuBurn, "cpu-hog-thread-1");
+      Thread cpuHog2 = new Thread(cpuBurn, "cpu-hog-thread-2");
+      cpuHog1.start();
+      cpuHog2.start();
 
-    // Wait for CPU hogs to end and give monitor time to react
-    cpuHog1.join();
-    cpuHog2.join();
-    Thread.sleep(SLEEP_DURATION_30S_MS);
+      // Submit multiple write tasks while CPU is under stress
+      int taskCount = 10;
+      CountDownLatch latch = new CountDownLatch(taskCount);
+      Path base = new Path(TEST_DIR_PATH);
+      abfs.mkdirs(base);
+      final byte[] buffer = new byte[TEST_FILE_LENGTH];
+      new Random().nextBytes(buffer);
 
-    int resizedMax = executor.getMaximumPoolSize();
+      for (int i = 0; i < taskCount; i++) {
+        final Path part = new Path(base, "part-" + i);
+        executor.submit(() -> {
+          try (FSDataOutputStream out = abfs.create(part, true)) {
+            for (int j = 0; j < 5; j++) {
+              out.write(buffer);
+              out.hflush();
+            }
+          } catch (IOException e) {
+            Assertions.fail("Write task failed under CPU stress", e);
+          } finally {
+            latch.countDown();
+          }
+        });
+      }
 
-    // Verify outcomes:
-    // 1. All write tasks succeeded despite CPU pressure
-    Assertions.assertThat(finished)
-        .as("All ABFS write tasks must complete despite CPU stress")
-        .isTrue();
+      // Ensure all tasks complete (avoid deadlock/starvation)
+      boolean finished = latch.await(LATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-    // 2. Thread pool scaled down as expected
-    Assertions.assertThat(resizedMax)
-        .as("Thread pool should scale down under high CPU load")
-        .isLessThanOrEqualTo(initialMax);
+      // Wait for CPU hogs to end and give monitor time to react
+      cpuHog1.join();
+      cpuHog2.join();
+      Thread.sleep(SLEEP_DURATION_30S_MS);
 
-    // 3. No leftover tasks in the queue
-    Assertions.assertThat(executor.getQueue().size())
-        .as("No backlog should remain in the queue after workload")
-        .isEqualTo(0);
+      int resizedMax = executor.getMaximumPoolSize();
 
-    // Cleanup test data
-    for (int i = 0; i < taskCount; i++) {
+      // Verify outcomes:
+      // 1. All write tasks succeeded despite CPU pressure
+      Assertions.assertThat(finished)
+          .as("All ABFS write tasks must complete despite CPU stress")
+          .isTrue();
+
+      // 2. Thread pool scaled down as expected
+      Assertions.assertThat(resizedMax)
+          .as("Thread pool should scale down under high CPU load")
+          .isLessThanOrEqualTo(initialMax);
+
+      // 3. No leftover tasks in the queue
+      Assertions.assertThat(executor.getQueue().size())
+          .as("No backlog should remain in the queue after workload")
+          .isEqualTo(0);
+
+      // Cleanup test data
+      for (int i = 0; i < taskCount; i++) {
+        try {
+          abfs.delete(new Path(base, "part-" + i), false);
+        } catch (IOException ignore) {
+          // Ignored: cleanup failures are non-fatal in tests
+        }
+      }
       try {
-        fs.delete(new Path(base, "part-" + i), false);
+        abfs.delete(base, true);
       } catch (IOException ignore) {
         // Ignored: cleanup failures are non-fatal in tests
       }
+      instance.close();
     }
-    try {
-      fs.delete(base, true);
-    } catch (IOException ignore) {
-      // Ignored: cleanup failures are non-fatal in tests
-    }
-    instance.close();
   }
 
 
@@ -597,108 +602,112 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   @Test
   void testScalesDownOnParallelHighMemoryLoad() throws Exception {
     // Initialize filesystem and thread pool manager
-    AzureBlobFileSystem fs = getFileSystem();
-    WriteThreadPoolSizeManager instance =
-        WriteThreadPoolSizeManager.getInstance(getFileSystemName(), mockConfig);
-    ThreadPoolExecutor executor =
-        (ThreadPoolExecutor) instance.getExecutorService();
+    try (FileSystem fileSystem = FileSystem.newInstance(
+        mockConfig.getRawConfiguration())) {
+      AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
+      WriteThreadPoolSizeManager instance =
+          WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
+              mockConfig);
+      ThreadPoolExecutor executor =
+          (ThreadPoolExecutor) instance.getExecutorService();
 
-    // Begin monitoring resource usage (CPU + memory)
-    instance.startCPUMonitoring();
+      // Begin monitoring resource usage (CPU + memory)
+      instance.startCPUMonitoring();
 
-    // Capture the initial thread pool size for later comparison
-    int initialMax = executor.getMaximumPoolSize();
+      // Capture the initial thread pool size for later comparison
+      int initialMax = executor.getMaximumPoolSize();
 
-    // Define a workload that continuously allocates memory (~5 MB chunks)
-    // for ~5 seconds to simulate memory pressure in the JVM.
-    Runnable memoryBurn = () -> {
-      List<byte[]> allocations = new ArrayList<>();
-      long end = System.currentTimeMillis() + WAIT_TIMEOUT_MS ;
-      while (System.currentTimeMillis() < end) {
+      // Define a workload that continuously allocates memory (~5 MB chunks)
+      // for ~5 seconds to simulate memory pressure in the JVM.
+      Runnable memoryBurn = () -> {
+        List<byte[]> allocations = new ArrayList<>();
+        long end = System.currentTimeMillis() + WAIT_TIMEOUT_MS;
+        while (System.currentTimeMillis() < end) {
+          try {
+            allocations.add(new byte[5 * 1024 * 1024]); // allocate 5 MB
+            Thread.sleep(SMALL_PAUSE_MS); // small pause to avoid instant OOM
+          } catch (OutOfMemoryError oom) {
+            // Clear allocations if JVM runs out of memory and continue
+            allocations.clear();
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+        }
+      };
+
+      // Start two threads running the memory hog workload in parallel
+      Thread memHog1 = new Thread(memoryBurn, "mem-hog-thread-1");
+      Thread memHog2 = new Thread(memoryBurn, "mem-hog-thread-2");
+      memHog1.start();
+      memHog2.start();
+
+      // Submit several write tasks to ABFS while memory is under stress
+      int taskCount = 10;
+      CountDownLatch latch = new CountDownLatch(taskCount);
+      Path base = new Path(TEST_DIR_PATH);
+      abfs.mkdirs(base);
+      final byte[] buffer = new byte[TEST_FILE_LENGTH];
+      new Random().nextBytes(buffer);
+
+      for (int i = 0; i < taskCount; i++) {
+        final Path part = new Path(base, "part-" + i);
+        executor.submit(() -> {
+          try (FSDataOutputStream out = abfs.create(part, true)) {
+            for (int j = 0; j < 5; j++) {
+              out.write(buffer);
+              out.hflush();
+            }
+          } catch (IOException e) {
+            Assertions.fail("Write task failed under memory stress", e);
+          } finally {
+            latch.countDown();
+          }
+        });
+      }
+
+      // Ensure all tasks finish within a timeout
+      boolean finished = latch.await(LATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+      // Wait for memory hog threads to finish
+      memHog1.join();
+      memHog2.join();
+
+      // Give monitoring thread time to detect memory pressure and react
+      Thread.sleep(SLEEP_DURATION_30S_MS);
+
+      int resizedMax = executor.getMaximumPoolSize();
+
+      // Validate that:
+      // 1. All ABFS writes succeeded despite memory stress
+      Assertions.assertThat(finished)
+          .as("All ABFS write tasks must complete despite parallel memory stress")
+          .isTrue();
+
+      // 2. The thread pool scaled down under memory pressure
+      Assertions.assertThat(resizedMax)
+          .as("Thread pool should scale down under parallel high memory load")
+          .isLessThanOrEqualTo(initialMax);
+
+      // 3. No tasks remain queued after workload completion
+      Assertions.assertThat(executor.getQueue().size())
+          .as("No backlog should remain in the queue after workload")
+          .isEqualTo(0);
+
+      // Clean up temporary test files
+      for (int i = 0; i < taskCount; i++) {
         try {
-          allocations.add(new byte[5 * 1024 * 1024]); // allocate 5 MB
-          Thread.sleep(SMALL_PAUSE_MS); // small pause to avoid instant OOM
-        } catch (OutOfMemoryError oom) {
-          // Clear allocations if JVM runs out of memory and continue
-          allocations.clear();
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
+          abfs.delete(new Path(base, "part-" + i), false);
+        } catch (IOException ignore) {
+          // Ignored: cleanup failures are non-fatal in tests
         }
       }
-    };
-
-    // Start two threads running the memory hog workload in parallel
-    Thread memHog1 = new Thread(memoryBurn, "mem-hog-thread-1");
-    Thread memHog2 = new Thread(memoryBurn, "mem-hog-thread-2");
-    memHog1.start();
-    memHog2.start();
-
-    // Submit several write tasks to ABFS while memory is under stress
-    int taskCount = 10;
-    CountDownLatch latch = new CountDownLatch(taskCount);
-    Path base = new Path(TEST_DIR_PATH);
-    fs.mkdirs(base);
-    final byte[] buffer = new byte[TEST_FILE_LENGTH];
-    new Random().nextBytes(buffer);
-
-    for (int i = 0; i < taskCount; i++) {
-      final Path part = new Path(base, "part-" + i);
-      executor.submit(() -> {
-        try (FSDataOutputStream out = fs.create(part, true)) {
-          for (int j = 0; j < 5; j++) {
-            out.write(buffer);
-            out.hflush();
-          }
-        } catch (IOException e) {
-          Assertions.fail("Write task failed under memory stress", e);
-        } finally {
-          latch.countDown();
-        }
-      });
-    }
-
-    // Ensure all tasks finish within a timeout
-    boolean finished = latch.await(LATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-
-    // Wait for memory hog threads to finish
-    memHog1.join();
-    memHog2.join();
-
-    // Give monitoring thread time to detect memory pressure and react
-    Thread.sleep(SLEEP_DURATION_30S_MS);
-
-    int resizedMax = executor.getMaximumPoolSize();
-
-    // Validate that:
-    // 1. All ABFS writes succeeded despite memory stress
-    Assertions.assertThat(finished)
-        .as("All ABFS write tasks must complete despite parallel memory stress")
-        .isTrue();
-
-    // 2. The thread pool scaled down under memory pressure
-    Assertions.assertThat(resizedMax)
-        .as("Thread pool should scale down under parallel high memory load")
-        .isLessThanOrEqualTo(initialMax);
-
-    // 3. No tasks remain queued after workload completion
-    Assertions.assertThat(executor.getQueue().size())
-        .as("No backlog should remain in the queue after workload")
-        .isEqualTo(0);
-
-    // Clean up temporary test files
-    for (int i = 0; i < taskCount; i++) {
       try {
-        fs.delete(new Path(base, "part-" + i), false);
+        abfs.delete(base, true);
       } catch (IOException ignore) {
         // Ignored: cleanup failures are non-fatal in tests
       }
+      instance.close();
     }
-    try {
-      fs.delete(base, true);
-    } catch (IOException ignore) {
-      // Ignored: cleanup failures are non-fatal in tests
-    }
-    instance.close();
   }
 
   /**
@@ -709,55 +718,59 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   @Test
   void testThreadPoolScalesUpAfterIdleBurstLoad() throws Exception {
     // Initialize filesystem and thread pool manager
-    AzureBlobFileSystem fs = getFileSystem();
-    WriteThreadPoolSizeManager instance =
-        WriteThreadPoolSizeManager.getInstance(getFileSystemName(),
-            fs.getAbfsStore().getAbfsConfiguration());
-    ThreadPoolExecutor executor =
-        (ThreadPoolExecutor) instance.getExecutorService();
+    try (FileSystem fileSystem = FileSystem.newInstance(
+        getRawConfiguration())) {
+      AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
+      WriteThreadPoolSizeManager instance =
+          WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
+              abfs.getAbfsStore().getAbfsConfiguration());
+      ThreadPoolExecutor executor =
+          (ThreadPoolExecutor) instance.getExecutorService();
 
-    // --- Step 1: Simulate idle period ---
-    // Let the executor sit idle with no work for a few seconds
-    Thread.sleep(WAIT_TIMEOUT_MS);
-    int poolSizeAfterIdle = executor.getPoolSize();
+      // --- Step 1: Simulate idle period ---
+      // Let the executor sit idle with no work for a few seconds
+      Thread.sleep(WAIT_TIMEOUT_MS);
+      int poolSizeAfterIdle = executor.getPoolSize();
 
-    // Verify that after idling, the pool is at or close to its minimum size
-    Assertions.assertThat(poolSizeAfterIdle)
-        .as("Pool size should remain minimal after idle")
-        .isLessThanOrEqualTo(executor.getCorePoolSize());
+      // Verify that after idling, the pool is at or close to its minimum size
+      Assertions.assertThat(poolSizeAfterIdle)
+          .as("Pool size should remain minimal after idle")
+          .isLessThanOrEqualTo(executor.getCorePoolSize());
 
-    // --- Step 2: Submit a sudden burst of tasks ---
-    // Launch many short, CPU-heavy tasks at once to simulate burst load
-    int burstLoad = BURST_LOAD;
-    CountDownLatch latch = new CountDownLatch(burstLoad);
-    for (int i = 0; i < burstLoad; i++) {
-      executor.submit(() -> {
-        // Busy loop for ~200ms to simulate CPU work
-        long end = System.currentTimeMillis() + THREAD_SLEEP_DURATION_MS;
-        while (System.currentTimeMillis() < end) {
-          Math.sqrt(Math.random()); // burn CPU cycles
-        }
-        latch.countDown();
-      });
-    }
+      // --- Step 2: Submit a sudden burst of tasks ---
+      // Launch many short, CPU-heavy tasks at once to simulate burst load
+      int burstLoad = BURST_LOAD;
+      CountDownLatch latch = new CountDownLatch(burstLoad);
+      for (int i = 0; i < burstLoad; i++) {
+        executor.submit(() -> {
+          // Busy loop for ~200ms to simulate CPU work
+          long end = System.currentTimeMillis() + THREAD_SLEEP_DURATION_MS;
+          while (System.currentTimeMillis() < end) {
+            Math.sqrt(Math.random()); // burn CPU cycles
+          }
+          latch.countDown();
+        });
+      }
 
-    // --- Step 3: Give pool time to react ---
-    // Wait briefly so the pool’s scaling logic has a chance to expand
-    Thread.sleep(LOAD_SLEEP_DURATION_MS);
-    int poolSizeDuringBurst = executor.getPoolSize();
+      // --- Step 3: Give pool time to react ---
+      // Wait briefly so the pool’s scaling logic has a chance to expand
+      Thread.sleep(LOAD_SLEEP_DURATION_MS);
+      int poolSizeDuringBurst = executor.getPoolSize();
 
-    // Verify that the pool scaled up compared to idle
-    Assertions.assertThat(poolSizeDuringBurst)
-        .as("Pool size should increase after burst load")
-        .isGreaterThanOrEqualTo(poolSizeAfterIdle);
+      // Verify that the pool scaled up compared to idle
+      Assertions.assertThat(poolSizeDuringBurst)
+          .as("Pool size should increase after burst load")
+          .isGreaterThanOrEqualTo(poolSizeAfterIdle);
 
 // --- Step 4: Verify completion ---
 // Ensure all tasks complete successfully in a reasonable time,
 // proving there was no degradation or deadlock under burst load
-    Assertions.assertThat(latch.await(LATCH_TIMEOUT_SECONDS/2, TimeUnit.SECONDS))
-        .as("All burst tasks should finish in reasonable time")
-        .isTrue();
-    instance.close();
+      Assertions.assertThat(
+              latch.await(LATCH_TIMEOUT_SECONDS / 2, TimeUnit.SECONDS))
+          .as("All burst tasks should finish in reasonable time")
+          .isTrue();
+      instance.close();
+    }
   }
 }
 
