@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,8 +67,8 @@ public class TestDatanodeAdminMonitorBase {
 
     for (int i = 0; i < NUM_DATANODE; i++) {
       final DatanodeDescriptor dn = pendingNodes.poll();
-      Assert.assertNotNull(dn);
-      Assert.assertEquals(ORDERED_LAST_UPDATE_TIMES[i], dn.getLastUpdate());
+      Assertions.assertNotNull(dn);
+      Assertions.assertEquals(ORDERED_LAST_UPDATE_TIMES[i], dn.getLastUpdate());
     }
   }
 
@@ -83,9 +83,9 @@ public class TestDatanodeAdminMonitorBase {
         nodes.stream().sorted(DatanodeAdminMonitorBase.PENDING_NODES_QUEUE_COMPARATOR.reversed())
             .collect(Collectors.toList());
 
-    Assert.assertEquals(NUM_DATANODE, reverseOrderNodes.size());
+    Assertions.assertEquals(NUM_DATANODE, reverseOrderNodes.size());
     for (int i = 0; i < NUM_DATANODE; i++) {
-      Assert.assertEquals(REVERSE_ORDER_LAST_UPDATE_TIMES[i],
+      Assertions.assertEquals(REVERSE_ORDER_LAST_UPDATE_TIMES[i],
           reverseOrderNodes.get(i).getLastUpdate());
     }
   }
