@@ -110,8 +110,31 @@ End-of-message
 
 # -------------------------------------------------------
 
+function showTips {
+    CPU_ARCH=$(uname -m)
+    if [[ "$CPU_ARCH" == "riscv64" ]]; then
+        cat <<End-of-message
+
+You must install 'com.google.protobuf:protoc:exe:linux-riscv64:3.25.5'
+into maven local repository (~/.m2) manually on riscv64 platform.
+
+  mvn install:install-file \\
+    -DgroupId=com.google.protobuf \\
+    -DartifactId=protoc \\
+    -Dversion=3.25.5 \\
+    -Dclassifier=linux-riscv64 \\
+    -Dpackaging=exe \\
+    -Dfile=${PROTOBUF_HOME}/bin/protoc
+
+End-of-message
+    fi
+}
+
+# -------------------------------------------------------
+
 showWelcome
 warnIfLowMemory
 failIfUserIsRoot
+showTips
 
 # -------------------------------------------------------

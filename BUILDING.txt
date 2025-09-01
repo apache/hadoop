@@ -37,7 +37,7 @@ On Linux / Mac:
         Note:
           CPU arch emulation may have significant performance overhead.
           To enable cross-platform container support, run this command first:
-          $ docker run --rm --privileged tonistiigi/binfmt --install amd64,arm64
+          $ docker run --rm --privileged tonistiigi/binfmt --install amd64,arm64,riscv64
           To run an x86_64 container on arm machine, use this command:
           $ CPU_ARCH=x86_64 ./start-build-env.sh ubuntu_24
 

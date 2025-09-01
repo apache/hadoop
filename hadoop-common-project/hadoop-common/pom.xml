@@ -1152,13 +1152,13 @@
         </plugins>
       </build>
     </profile>
-    <!-- profile to use already generated protobuf code using 2.5.0 for aarch64-->
+    <!-- profile to use already generated protobuf code using 2.5.0 -->
+    <!-- for non-x86_64 platforms, e.g., aarch64, riscv64. -->
     <profile>
-      <id>aarch64</id>
+      <id>non-x86_64</id>
       <activation>
-        <activeByDefault>false</activeByDefault>
         <os>
-          <arch>aarch64</arch>
+          <arch>!x86_64</arch>
         </os>
       </activation>
       <build>
@@ -1200,9 +1200,8 @@
     <profile>
       <id>x86_64</id>
       <activation>
-        <activeByDefault>false</activeByDefault>
         <os>
-          <arch>!aarch64</arch>
+          <arch>x86_64</arch>
         </os>
       </activation>
       <build>

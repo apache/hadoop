@@ -7,6 +7,7 @@
     "ubuntu:focal::arch64": "ant",
     "ubuntu:noble": "ant",
     "ubuntu:noble::arch64": "ant",
+    "ubuntu:noble::riscv64": "ant",
     "rockylinux:8": "ant"
   },
   "apt-utils": {
@@ -16,6 +17,7 @@
     "ubuntu:focal": "apt-utils",
     "ubuntu:noble": "apt-utils",
     "ubuntu:noble::arch64": "apt-utils",
+    "ubuntu:noble::riscv64": "apt-utils",
     "ubuntu:focal::arch64": "apt-utils"
   },
   "automake": {
@@ -25,6 +27,7 @@
     "ubuntu:focal": "automake",
     "ubuntu:noble": "automake",
     "ubuntu:noble::arch64": "automake",
+    "ubuntu:noble::riscv64": "automake",
     "ubuntu:focal::arch64": "automake",
     "rockylinux:8": "automake"
   },
@@ -35,6 +38,7 @@
     "ubuntu:focal": "bats",
     "ubuntu:noble": "bats",
     "ubuntu:noble::arch64": "bats",
+    "ubuntu:noble::riscv64": "bats",
     "ubuntu:focal::arch64": "bats",
     "rockylinux:8": "bats"
   },
@@ -45,6 +49,7 @@
     "ubuntu:focal": "build-essential",
     "ubuntu:noble": "build-essential",
     "ubuntu:noble::arch64": "build-essential",
+    "ubuntu:noble::riscv64": "build-essential",
     "ubuntu:focal::arch64": "build-essential"
   },
   "bzip2": {
@@ -72,6 +77,10 @@
       "bzip2",
       "libbz2-dev"
     ],
+    "ubuntu:noble::riscv64": [
+      "bzip2",
+      "libbz2-dev"
+    ],
     "ubuntu:focal::arch64": [
       "bzip2",
       "libbz2-dev"
@@ -88,6 +97,7 @@
     "ubuntu:focal": "clang",
     "ubuntu:noble": "clang",
     "ubuntu:noble::arch64": "clang",
+    "ubuntu:noble::riscv64": "clang",
     "ubuntu:focal::arch64": "clang",
     "rockylinux:8": "clang"
   },
@@ -98,6 +108,7 @@
     "ubuntu:focal": "cmake",
     "ubuntu:noble": "cmake",
     "ubuntu:noble::arch64": "cmake",
+    "ubuntu:noble::riscv64": "cmake",
     "ubuntu:focal::arch64": "cmake"
   },
   "curl": {
@@ -125,6 +136,10 @@
       "curl",
       "libcurl4-openssl-dev"
     ],
+    "ubuntu:noble::riscv64": [
+      "curl",
+      "libcurl4-openssl-dev"
+    ],
     "ubuntu:focal::arch64": [
       "curl",
       "libcurl4-openssl-dev"
@@ -141,6 +156,7 @@
     "ubuntu:focal": "doxygen",
     "ubuntu:noble": "doxygen",
     "ubuntu:noble::arch64": "doxygen",
+    "ubuntu:noble::riscv64": "doxygen",
     "ubuntu:focal::arch64": "doxygen"
   },
   "dnf": {
@@ -168,6 +184,10 @@
       "libfuse-dev"
     ],
     "ubuntu:noble::arch64": [
+      "fuse",
+      "libfuse-dev"
+    ],
+    "ubuntu:noble::riscv64": [
       "fuse",
       "libfuse-dev"
     ],
@@ -208,6 +228,10 @@
       "gcc",
       "g++"
     ],
+    "ubuntu:noble::riscv64": [
+      "gcc",
+      "g++"
+    ],
     "ubuntu:focal::arch64": [
       "gcc",
       "g++"
@@ -220,6 +244,7 @@
     "ubuntu:focal": "git",
     "ubuntu:noble": "git",
     "ubuntu:noble::arch64": "git",
+    "ubuntu:noble::riscv64": "git",
     "ubuntu:focal::arch64": "git",
     "rockylinux:8": "git"
   },
@@ -230,6 +255,7 @@
     "ubuntu:focal": "gnupg-agent",
     "ubuntu:noble": "gnupg-agent",
     "ubuntu:noble::arch64": "gnupg-agent",
+    "ubuntu:noble::riscv64": "gnupg-agent",
     "ubuntu:focal::arch64": "gnupg-agent"
   },
   "hugo": {
@@ -239,6 +265,7 @@
     "ubuntu:focal": "hugo",
     "ubuntu:noble": "hugo",
     "ubuntu:noble::arch64": "hugo",
+    "ubuntu:noble::riscv64": "hugo",
     "ubuntu:focal::arch64": "hugo"
   },
   "libbcprov-java": {
@@ -248,6 +275,7 @@
     "ubuntu:focal": "libbcprov-java",
     "ubuntu:noble": "libbcprov-java",
     "ubuntu:noble::arch64": "libbcprov-java",
+    "ubuntu:noble::riscv64": "libbcprov-java",
     "ubuntu:focal::arch64": "libbcprov-java"
   },
   "libtool": {
@@ -257,6 +285,7 @@
     "ubuntu:focal": "libtool",
     "ubuntu:noble": "libtool",
     "ubuntu:noble::arch64": "libtool",
+    "ubuntu:noble::riscv64": "libtool",
     "ubuntu:focal::arch64": "libtool",
     "rockylinux:8": "libtool"
   },
@@ -267,6 +296,7 @@
     "ubuntu:focal": "libssl-dev",
     "ubuntu:noble": "libssl-dev",
     "ubuntu:noble::arch64": "libssl-dev",
+    "ubuntu:noble::riscv64": "libssl-dev",
     "ubuntu:focal::arch64": "libssl-dev",
     "rockylinux:8": "openssl-devel"
   },
@@ -301,6 +331,10 @@
       "libprotobuf-dev",
       "libprotoc-dev"
     ],
+    "ubuntu:noble::riscv64": [
+      "libprotobuf-dev",
+      "libprotoc-dev"
+    ],
     "ubuntu:focal::arch64": [
       "libprotobuf-dev",
       "libprotoc-dev"
@@ -318,6 +352,7 @@
     "ubuntu:focal": "libsasl2-dev",
     "ubuntu:noble": "libsasl2-dev",
     "ubuntu:noble::arch64": "libsasl2-dev",
+    "ubuntu:noble::riscv64": "libsasl2-dev",
     "ubuntu:focal::arch64": "libsasl2-dev",
     "rockylinux:8": "cyrus-sasl-devel"
   },
@@ -328,6 +363,7 @@
     "ubuntu:focal": "libsnappy-dev",
     "ubuntu:noble": "libsnappy-dev",
     "ubuntu:noble::arch64": "libsnappy-dev",
+    "ubuntu:noble::riscv64": "libsnappy-dev",
     "ubuntu:focal::arch64": "libsnappy-dev"
   },
   "zlib": {
@@ -355,6 +391,10 @@
       "libzstd-dev",
       "zlib1g-dev"
     ],
+    "ubuntu:noble::riscv64": [
+      "libzstd-dev",
+      "zlib1g-dev"
+    ],
     "ubuntu:focal::arch64": [
       "libzstd-dev",
       "zlib1g-dev"
@@ -371,6 +411,7 @@
     "ubuntu:focal": "locales",
     "ubuntu:noble": "locales",
     "ubuntu:noble::arch64": "locales",
+    "ubuntu:noble::riscv64": "locales",
     "ubuntu:focal::arch64": "locales"
   },
   "libtirpc-devel": {
@@ -378,7 +419,8 @@
     "debian:13": "libtirpc-dev",
     "rockylinux:8": "libtirpc-devel",
     "ubuntu:noble": "libtirpc-dev",
-    "ubuntu:noble::arch64": "libtirpc-dev"
+    "ubuntu:noble::arch64": "libtirpc-dev",
+    "ubuntu:noble::riscv64": "libtirpc-dev"
   },
   "make": {
     "debian:11": "make",
@@ -387,6 +429,7 @@
     "ubuntu:focal": "make",
     "ubuntu:noble": "make",
     "ubuntu:noble::arch64": "make",
+    "ubuntu:noble::riscv64": "make",
     "ubuntu:focal::arch64": "make",
     "rockylinux:8": "make"
   },
@@ -426,6 +469,11 @@
       "openjdk-17-jdk",
       "openjdk-21-jdk"
     ],
+    "ubuntu:noble::riscv64": [
+      "openjdk-17-jdk",
+      "openjdk-21-jdk",
+      "openjdk-25-jdk"
+    ],
     "ubuntu:focal::arch64": [
       "temurin-25-jdk",
       "openjdk-8-jdk",
@@ -441,6 +489,7 @@
     "ubuntu:focal": "pinentry-curses",
     "ubuntu:noble": "pinentry-curses",
     "ubuntu:noble::arch64": "pinentry-curses",
+    "ubuntu:noble::riscv64": "pinentry-curses",
     "ubuntu:focal::arch64": "pinentry-curses",
     "rockylinux:8": "pinentry-curses"
   },
@@ -451,6 +500,7 @@
     "ubuntu:focal": "pkg-config",
     "ubuntu:noble": "pkg-config",
     "ubuntu:noble::arch64": "pkg-config",
+    "ubuntu:noble::riscv64": "pkg-config",
     "ubuntu:focal::arch64": "pkg-config",
     "rockylinux:8": "pkg-config"
   },
@@ -497,6 +547,13 @@
       "python3-setuptools",
       "python3-wheel"
     ],
+    "ubuntu:noble::riscv64": [
+      "python3",
+      "python3-pip",
+      "python3-pkg-resources",
+      "python3-setuptools",
+      "python3-wheel"
+    ],
     "ubuntu:focal::arch64": [
       "python2.7",
       "python3",
@@ -519,6 +576,7 @@
     "ubuntu:focal": "rsync",
     "ubuntu:noble": "rsync",
     "ubuntu:noble::arch64": "rsync",
+    "ubuntu:noble::riscv64": "rsync",
     "ubuntu:focal::arch64": "rsync",
     "rockylinux:8": "rsync"
   },
@@ -529,6 +587,7 @@
     "ubuntu:focal": "shellcheck",
     "ubuntu:noble": "shellcheck",
     "ubuntu:noble::arch64": "shellcheck",
+    "ubuntu:noble::riscv64": "shellcheck",
     "ubuntu:focal::arch64": "shellcheck"
   },
   "shasum": {
@@ -539,6 +598,7 @@
     "ubuntu:focal": "software-properties-common",
     "ubuntu:noble": "software-properties-common",
     "ubuntu:noble::arch64": "software-properties-common",
+    "ubuntu:noble::riscv64": "software-properties-common",
     "ubuntu:focal::arch64": "software-properties-common"
   },
   "sudo": {
@@ -548,6 +608,7 @@
     "ubuntu:focal": "sudo",
     "ubuntu:noble": "sudo",
     "ubuntu:noble::arch64": "sudo",
+    "ubuntu:noble::riscv64": "sudo",
     "ubuntu:focal::arch64": "sudo",
     "rockylinux:8": "sudo"
   },
@@ -568,6 +629,7 @@
     "ubuntu:focal": "yasm",
     "ubuntu:noble": "yasm",
     "ubuntu:noble::arch64": "yasm",
+    "ubuntu:noble::riscv64": "yasm",
     "ubuntu:focal::arch64": "yasm"
   }
 }

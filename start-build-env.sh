@@ -42,6 +42,9 @@ if [[ "$CPU_ARCH" == "x86_64" || "$CPU_ARCH" == "amd64" ]]; then
 elif [[ "$CPU_ARCH" == "aarch64" || "$CPU_ARCH" == "arm64" ]]; then
   DOCKER_FILE="${DOCKER_DIR}/Dockerfile${OS_PLATFORM_SUFFIX}_aarch64"
   DOCKER_PLATFORM_ARGS=("--platform" "linux/arm64")
+elif [[ "$CPU_ARCH" == "riscv64" ]]; then
+  DOCKER_FILE="${DOCKER_DIR}/Dockerfile${OS_PLATFORM_SUFFIX}_riscv64"
+  DOCKER_PLATFORM_ARGS=("--platform" "linux/riscv64")
 fi
 
 if [ ! -e "${DOCKER_FILE}" ] ; then
