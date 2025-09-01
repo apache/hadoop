@@ -463,6 +463,10 @@ public class ITestAzureBlobFileSystemCreate extends
 
   public void testCreateFileOverwrite(boolean enableConditionalCreateOverwrite)
       throws Throwable {
+    if (enableConditionalCreateOverwrite) {
+      assumeHnsEnabled();
+      assumeDfsServiceType();
+    }
     try (AzureBlobFileSystem currentFs = getFileSystem()) {
       Configuration config = new Configuration(this.getRawConfiguration());
       config.set("fs.azure.enable.conditional.create.overwrite",
@@ -599,7 +603,8 @@ public class ITestAzureBlobFileSystemCreate extends
   @Test
   public void testNegativeScenariosForCreateOverwriteDisabled()
       throws Throwable {
-
+    assumeHnsEnabled();
+    assumeDfsServiceType();
     try (AzureBlobFileSystem currentFs = getFileSystem()) {
       Configuration config = new Configuration(this.getRawConfiguration());
       config.set("fs.azure.enable.conditional.create.overwrite",
