@@ -17,45 +17,28 @@
  */
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.util.ArrayList;
-
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import org.apache.hadoop.fs.azurebfs.utils.TestCachedSASToken;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.addGeneralMockBehaviourToAbfsClient;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.addGeneralMockBehaviourToRestOpAndHttpOp;
-import static org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient.getMockAbfsClient;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_CPU_MONITORING_INTERVAL_MILLIS;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_MAX_THREAD_POOL_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_MIN_THREAD_POOL_SIZE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.nullable;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
 
 /**
  * Unit Tests around different components of Read Buffer Manager V2
  */
 public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
+  volatile boolean running = true;
 
   public TestReadBufferManagerV2() throws Exception {
     super();
@@ -115,5 +98,46 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
           .as("CPU Monitor thread should not be initialized").isNull();
       bufferManagerV2.resetBufferManager();
     }
+  }
+
+  @Test
+  public void testThreadPoolUpscale() throws Exception {
+    TestAbfsInputStream testAbfsInputStream = new TestAbfsInputStream();
+    AbfsClient client = testAbfsInputStream.getMockAbfsClient();
+    AbfsInputStream inputStream = testAbfsInputStream.getAbfsInputStream(client, "testFailedReadAhead.txt");
+    Configuration configuration = getReabAheadV2Configuration();
+    AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
+        getAccountName());
+    ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
+    ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
+    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
+    assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isEqualTo(2);
+    int[] reqOffset = {0};
+    int reqLength = 1;
+    Thread t = new Thread(() -> {
+      while(running) {
+        bufferManagerV2.queueReadAhead(inputStream, reqOffset[0], reqLength,
+            inputStream.getTracingContext());
+        reqOffset[0] += reqLength;
+      }
+    });
+    t.start();
+    Thread.sleep(2L * bufferManagerV2.getCpuMonitoringIntervalInMilliSec());
+    assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isEqualTo(4);
+    running = false;
+    t.join();
+    Thread.sleep(4L * bufferManagerV2.getCpuMonitoringIntervalInMilliSec());
+    assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isLessThan(4);
+  }
+
+  private Configuration getReabAheadV2Configuration() {
+    Configuration conf = new Configuration(getRawConfiguration());
+    conf.setBoolean(FS_AZURE_ENABLE_READAHEAD_V2, true);
+    conf.setBoolean(FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING, true);
+    conf.setInt(FS_AZURE_READAHEAD_V2_MIN_THREAD_POOL_SIZE, 2);
+    conf.setInt(FS_AZURE_READAHEAD_V2_MAX_THREAD_POOL_SIZE, 4);
+    conf.setInt(FS_AZURE_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENT, 90);
+    conf.setInt(FS_AZURE_READAHEAD_V2_CPU_MONITORING_INTERVAL_MILLIS, 1000);
+    return conf;
   }
 }

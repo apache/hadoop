@@ -27,14 +27,12 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.SynchronousQueue;
@@ -59,7 +57,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   private static int minThreadPoolSize;
   private static int maxThreadPoolSize;
   private static int cpuMonitoringIntervalInMilliSec;
-  private static int cpuThreshold;
+  private static double cpuThreshold;
   private static int threadPoolUpscalePercentage;
   private static int threadPoolDownscalePercentage;
   private static int executorServiceKeepAliveTimeInMilliSec;
@@ -124,7 +122,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       minThreadPoolSize = abfsConfiguration.getMinReadAheadV2ThreadPoolSize();
       maxThreadPoolSize = abfsConfiguration.getMaxReadAheadV2ThreadPoolSize();
       cpuMonitoringIntervalInMilliSec = abfsConfiguration.getReadAheadV2CpuMonitoringIntervalMillis();
-      cpuThreshold = abfsConfiguration.getReadAheadV2CpuUsageThresholdPercent();
+      cpuThreshold = abfsConfiguration.getReadAheadV2CpuUsageThresholdPercent()/ ONE_HUNDRED;
       threadPoolUpscalePercentage = abfsConfiguration.getReadAheadV2ThreadPoolUpscalePercentage();
       threadPoolDownscalePercentage = abfsConfiguration.getReadAheadV2ThreadPoolDownscalePercentage();
       executorServiceKeepAliveTimeInMilliSec = abfsConfiguration.getReadAheadExecutorServiceTTLInMillis();
@@ -132,7 +130,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       minBufferPoolSize = abfsConfiguration.getMinReadAheadV2BufferPoolSize();
       maxBufferPoolSize = abfsConfiguration.getMaxReadAheadV2BufferPoolSize();
       memoryMonitoringIntervalInMilliSec = abfsConfiguration.getReadAheadV2MemoryMonitoringIntervalMillis();
-      memoryThreshold = abfsConfiguration.getReadAheadV2MemoryUsageThresholdPercent();
+      memoryThreshold = abfsConfiguration.getReadAheadV2MemoryUsageThresholdPercent()/ ONE_HUNDRED;
       setThresholdAgeMilliseconds(abfsConfiguration.getReadAheadV2CachedBufferTTLMillis());
       isDynamicScalingEnabled = abfsConfiguration.isReadAheadV2DynamicScalingEnabled();
       setReadAheadBlockSize(readAheadBlockSize);
@@ -229,7 +227,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       buffer.setLatch(new CountDownLatch(1));
       buffer.setTracingContext(tracingContext);
 
-      if (getFreeList().empty()) {
+      if (getFreeList().isEmpty()) {
         /*
          * By now there should be at least one buffer available.
          * This is to double sure that after upscaling or eviction,
@@ -645,12 +643,9 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   private void adjustThreadPool() {
-    OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
-        OperatingSystemMXBean.class);
-    double cpuLoad = osBean.getSystemCpuLoad();
     int currentPoolSize = workerRefs.size();
-    int requiredPoolSize = (int) Math.ceil(threadPoolRequirementBuffer
-        * (getReadAheadQueue().size() + getInProgressList().size())); // 20% more for buffer
+    double cpuLoad = getCpuLoad();
+    int requiredPoolSize = getRequiredThreadPoolSize();
     int newThreadPoolSize;
     printTraceLog("Current CPU load: {}, Current worker pool size: {}, Current queue size: {}", cpuLoad, currentPoolSize, requiredPoolSize);
     if (currentPoolSize < requiredPoolSize && cpuLoad < cpuThreshold) {
@@ -734,6 +729,9 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         bufferPool[i] = null;
       }
       bufferPool = null;
+      cpuMonitorThread.shutdownNow();
+      memoryMonitorThread.shutdownNow();
+      workerPool.shutdownNow();
       resetBufferManager();
     }
   }
@@ -838,5 +836,17 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   @VisibleForTesting
   public ScheduledExecutorService getCpuMonitoringThread() {
     return cpuMonitorThread;
+  }
+
+  @VisibleForTesting
+  public double getCpuLoad() {
+    OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
+        OperatingSystemMXBean.class);
+    return osBean.getSystemCpuLoad();
+  }
+
+  public int getRequiredThreadPoolSize() {
+    return (int) Math.ceil(threadPoolRequirementBuffer
+        * (getReadAheadQueue().size() + getInProgressList().size())); // 20% more for buffer
   }
 }
