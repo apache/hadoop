@@ -52,8 +52,31 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   private static final String TEST_FILE_PATH = "testFilePath";
   private static final String TEST_DIR_PATH = "testDirPath";
   private static final int TEST_FILE_LENGTH = 1024 * 1024 * 8;
+  private static final int MAX_CONCURRENT_REQUEST_COUNT = 15;
+  private static final int CORE_POOL_SIZE = 1;
+  private static final int THREAD_POOL_KEEP_ALIVE_TIME = 10;
+  private static final int LOW_TIER_MEMORY_MULTIPLIER = 4;
+  private static final int MEDIUM_TIER_MEMORY_MULTIPLIER = 6;
+  private static final int HIGH_TIER_MEMORY_MULTIPLIER = 8;
+  private static final int HIGH_CPU_THRESHOLD = 15;
+  private static final int MEDIUM_CPU_THRESHOLD = 10;
+  private static final int LOW_CPU_THRESHOLD = 5;
+  private static final int CPU_MONITORING_INTERVAL = 15;
+  private static final int WAIT_DURATION_MS = 3000;
+  private static final int LATCH_TIMEOUT_SECONDS = 60;
+  private static final int RESIZE_WAIT_TIME_MS = 6_000;
+  private static final double HIGH_CPU_USAGE_RATIO = 0.95;
+  private static final double LOW_CPU_USAGE_RATIO = 0.05;
+  private static final int SLEEP_DURATION_MS = 150;
+  private static final int AWAIT_TIMEOUT_SECONDS = 45;
+  private static final int RESIZER_JOIN_TIMEOUT_MS = 2_000;
+  private static final int WAIT_TIMEOUT_MS = 5000;
+  private static final int SLEEP_DURATION_30S_MS = 30000;
+  private static final int SMALL_PAUSE_MS = 50;
+  private static final int BURST_LOAD = 50;
+  private static final long LOAD_SLEEP_DURATION_MS = 2000;
 
-  public TestWriteThreadPoolSizeManager() throws Exception {
+  TestWriteThreadPoolSizeManager() throws Exception {
     super.setup();
   }
 
@@ -63,16 +86,16 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   @BeforeEach
   public void setUp() {
     mockConfig = mock(AbfsConfiguration.class);
-    when(mockConfig.getWriteMaxConcurrentRequestCount()).thenReturn(15);
-    when(mockConfig.getWriteCorePoolSize()).thenReturn(1);
-    when(mockConfig.getWriteThreadPoolKeepAliveTime()).thenReturn(10);
-    when(mockConfig.getLowTierMemoryMultiplier()).thenReturn(4);
-    when(mockConfig.getMediumTierMemoryMultiplier()).thenReturn(6);
-    when(mockConfig.getHighTierMemoryMultiplier()).thenReturn(8);
-    when(mockConfig.getWriteHighCpuThreshold()).thenReturn(15);
-    when(mockConfig.getWriteMediumCpuThreshold()).thenReturn(10);
-    when(mockConfig.getWriteLowCpuThreshold()).thenReturn(5);
-    when(mockConfig.getWriteCpuMonitoringInterval()).thenReturn(15);
+    when(mockConfig.getWriteMaxConcurrentRequestCount()).thenReturn(MAX_CONCURRENT_REQUEST_COUNT);
+    when(mockConfig.getWriteCorePoolSize()).thenReturn(CORE_POOL_SIZE);
+    when(mockConfig.getWriteThreadPoolKeepAliveTime()).thenReturn(THREAD_POOL_KEEP_ALIVE_TIME);
+    when(mockConfig.getLowTierMemoryMultiplier()).thenReturn(LOW_TIER_MEMORY_MULTIPLIER);
+    when(mockConfig.getMediumTierMemoryMultiplier()).thenReturn(MEDIUM_TIER_MEMORY_MULTIPLIER);
+    when(mockConfig.getHighTierMemoryMultiplier()).thenReturn(HIGH_TIER_MEMORY_MULTIPLIER);
+    when(mockConfig.getWriteHighCpuThreshold()).thenReturn(HIGH_CPU_THRESHOLD);
+    when(mockConfig.getWriteMediumCpuThreshold()).thenReturn(MEDIUM_CPU_THRESHOLD);
+    when(mockConfig.getWriteLowCpuThreshold()).thenReturn(LOW_CPU_THRESHOLD);
+    when(mockConfig.getWriteCpuMonitoringInterval()).thenReturn(CPU_MONITORING_INTERVAL);
   }
 
   /**
@@ -229,7 +252,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     // Launch a background thread that generates CPU stress for ~3 seconds.
     // This simulates contention on the system and should cause the pool to adjust.
     Thread stressThread = new Thread(() -> {
-      long end = System.currentTimeMillis() + 3000;
+      long end = System.currentTimeMillis() + WAIT_DURATION_MS;
       while (System.currentTimeMillis() < end) {
         // Busy-work loop: repeatedly compute random powers to waste CPU cycles
         double waste = Math.pow(Math.random(), Math.random());
@@ -249,7 +272,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
       int finalI = i;
       executor.submit(() -> {
         try (FSDataOutputStream out = fs.create(
-            new Path(testFile.toString() + "_" + finalI), true)) {
+            new Path(testFile + "_" + finalI), true)) {
           for (int j = 0; j < 5; j++) {
             out.write(b); // perform multiple writes to add sustained pressure
           }
@@ -265,7 +288,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     }
 
     // Wait for all tasks to finish (up to 60s timeout to guard against deadlock/starvation)
-    boolean finished = latch.await(60, TimeUnit.SECONDS);
+    boolean finished = latch.await(LATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
     // Record the pool size after CPU stress to confirm resizing took place
     int resizedPoolSize = executor.getMaximumPoolSize();
@@ -297,7 +320,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
    * eventually drains cleanly.
    */
   @Test
-  void testDynamicResize_NoDeadlocks_NoTaskLoss() throws Exception {
+  void testDynamicResizeNoDeadlocksNoTaskLoss() throws Exception {
     // Initialize filesystem and thread pool manager
     AzureBlobFileSystem fs = getFileSystem();
     WriteThreadPoolSizeManager mgr =
@@ -369,14 +392,14 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
         // Release worker tasks
         startBarrier.await(10, TimeUnit.SECONDS);
 
-        long end = System.currentTimeMillis() + 6_000; // keep resizing for ~6s
+        long end = System.currentTimeMillis() + RESIZE_WAIT_TIME_MS; // keep resizing for ~6s
         boolean high = true;
         while (System.currentTimeMillis() < end) {
           // Alternate between high load (shrink) and low load (expand)
           if (high) {
-            mgr.adjustThreadPoolSizeBasedOnCPU(0.95);
+            mgr.adjustThreadPoolSizeBasedOnCPU(HIGH_CPU_USAGE_RATIO );
           } else {
-            mgr.adjustThreadPoolSizeBasedOnCPU(0.05);
+            mgr.adjustThreadPoolSizeBasedOnCPU(LOW_CPU_USAGE_RATIO);
           }
           high = !high;
 
@@ -385,7 +408,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
           observedMinMax.updateAndGet(prev -> Math.min(prev, cur));
           observedMaxMax.updateAndGet(prev -> Math.max(prev, cur));
 
-          Thread.sleep(150);
+          Thread.sleep(SLEEP_DURATION_MS );
         }
       } catch (Exception ignore) {
         // No-op: this is best-effort simulation
@@ -395,10 +418,10 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     resizer.start();
 
     // Wait for all tasks to finish (ensures no deadlock)
-    boolean finished = done.await(45, TimeUnit.SECONDS);
+    boolean finished = done.await(AWAIT_TIMEOUT_SECONDS , TimeUnit.SECONDS);
 
     // Join resizer thread
-    resizer.join(2_000);
+    resizer.join(RESIZER_JOIN_TIMEOUT_MS);
 
     // 1. All tasks must complete in time → proves there are no deadlocks
     Assertions.assertThat(finished)
@@ -407,7 +430,9 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
 
     // 2. Every task should complete exactly once → proves no task loss
     int completedCount = 0;
-    for (int i = 0; i < taskCount; i++) completedCount += completed.get(i);
+    for (int i = 0; i < taskCount; i++) {
+      completedCount += completed.get(i);
+    }
     Assertions.assertThat(completedCount)
         .as("Every task should complete exactly once (no task loss)")
         .isEqualTo(taskCount);
@@ -447,9 +472,17 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     // Cleanup
     for (int i = 0; i < taskCount; i++) {
       Path p = new Path(base, "part-" + i);
-      try { fs.delete(p, false); } catch (IOException ignore) {}
+      try {
+        fs.delete(p, false);
+      } catch (IOException ignore) {
+        // Ignored: delete failures are non-fatal for test cleanup
+      }
     }
-    try { fs.delete(base, true); } catch (IOException ignore) {}
+    try {
+      fs.delete(base, true);
+    } catch (IOException ignore) {
+      // Ignored: cleanup failures are non-fatal in tests
+    }
     mgr.close();
   }
 
@@ -477,7 +510,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
 
     // Define a CPU-bound task: tight loop of math ops for ~5s
     Runnable cpuBurn = () -> {
-      long end = System.currentTimeMillis() + 5000;
+      long end = System.currentTimeMillis() + WAIT_TIMEOUT_MS;
       while (System.currentTimeMillis() < end) {
         double waste = Math.sin(Math.random()) * Math.cos(Math.random());
       }
@@ -514,12 +547,12 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     }
 
     // Ensure all tasks complete (avoid deadlock/starvation)
-    boolean finished = latch.await(60, TimeUnit.SECONDS);
+    boolean finished = latch.await(LATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
     // Wait for CPU hogs to end and give monitor time to react
     cpuHog1.join();
     cpuHog2.join();
-    Thread.sleep(30000);
+    Thread.sleep(SLEEP_DURATION_30S_MS);
 
     int resizedMax = executor.getMaximumPoolSize();
 
@@ -541,9 +574,17 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
 
     // Cleanup test data
     for (int i = 0; i < taskCount; i++) {
-      try { fs.delete(new Path(base, "part-" + i), false); } catch (IOException ignore) {}
+      try {
+        fs.delete(new Path(base, "part-" + i), false);
+      } catch (IOException ignore) {
+        // Ignored: cleanup failures are non-fatal in tests
+      }
     }
-    try { fs.delete(base, true); } catch (IOException ignore) {}
+    try {
+      fs.delete(base, true);
+    } catch (IOException ignore) {
+      // Ignored: cleanup failures are non-fatal in tests
+    }
     instance.close();
   }
 
@@ -572,11 +613,11 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     // for ~5 seconds to simulate memory pressure in the JVM.
     Runnable memoryBurn = () -> {
       List<byte[]> allocations = new ArrayList<>();
-      long end = System.currentTimeMillis() + 5000;
+      long end = System.currentTimeMillis() + WAIT_TIMEOUT_MS ;
       while (System.currentTimeMillis() < end) {
         try {
           allocations.add(new byte[5 * 1024 * 1024]); // allocate 5 MB
-          Thread.sleep(50); // small pause to avoid instant OOM
+          Thread.sleep(SMALL_PAUSE_MS); // small pause to avoid instant OOM
         } catch (OutOfMemoryError oom) {
           // Clear allocations if JVM runs out of memory and continue
           allocations.clear();
@@ -617,14 +658,14 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     }
 
     // Ensure all tasks finish within a timeout
-    boolean finished = latch.await(60, TimeUnit.SECONDS);
+    boolean finished = latch.await(LATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
     // Wait for memory hog threads to finish
     memHog1.join();
     memHog2.join();
 
     // Give monitoring thread time to detect memory pressure and react
-    Thread.sleep(20000);
+    Thread.sleep(SLEEP_DURATION_30S_MS);
 
     int resizedMax = executor.getMaximumPoolSize();
 
@@ -646,9 +687,17 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
 
     // Clean up temporary test files
     for (int i = 0; i < taskCount; i++) {
-      try { fs.delete(new Path(base, "part-" + i), false); } catch (IOException ignore) {}
+      try {
+        fs.delete(new Path(base, "part-" + i), false);
+      } catch (IOException ignore) {
+        // Ignored: cleanup failures are non-fatal in tests
+      }
     }
-    try { fs.delete(base, true); } catch (IOException ignore) {}
+    try {
+      fs.delete(base, true);
+    } catch (IOException ignore) {
+      // Ignored: cleanup failures are non-fatal in tests
+    }
     instance.close();
   }
 
@@ -669,7 +718,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
 
     // --- Step 1: Simulate idle period ---
     // Let the executor sit idle with no work for a few seconds
-    Thread.sleep(5000);
+    Thread.sleep(WAIT_TIMEOUT_MS);
     int poolSizeAfterIdle = executor.getPoolSize();
 
     // Verify that after idling, the pool is at or close to its minimum size
@@ -679,12 +728,12 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
 
     // --- Step 2: Submit a sudden burst of tasks ---
     // Launch many short, CPU-heavy tasks at once to simulate burst load
-    int burstLoad = 50;
+    int burstLoad = BURST_LOAD;
     CountDownLatch latch = new CountDownLatch(burstLoad);
     for (int i = 0; i < burstLoad; i++) {
       executor.submit(() -> {
         // Busy loop for ~200ms to simulate CPU work
-        long end = System.currentTimeMillis() + 200;
+        long end = System.currentTimeMillis() + THREAD_SLEEP_DURATION_MS;
         while (System.currentTimeMillis() < end) {
           Math.sqrt(Math.random()); // burn CPU cycles
         }
@@ -694,7 +743,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
 
     // --- Step 3: Give pool time to react ---
     // Wait briefly so the pool’s scaling logic has a chance to expand
-    Thread.sleep(2000);
+    Thread.sleep(LOAD_SLEEP_DURATION_MS);
     int poolSizeDuringBurst = executor.getPoolSize();
 
     // Verify that the pool scaled up compared to idle
@@ -705,7 +754,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
 // --- Step 4: Verify completion ---
 // Ensure all tasks complete successfully in a reasonable time,
 // proving there was no degradation or deadlock under burst load
-    Assertions.assertThat(latch.await(30, TimeUnit.SECONDS))
+    Assertions.assertThat(latch.await(LATCH_TIMEOUT_SECONDS/2, TimeUnit.SECONDS))
         .as("All burst tasks should finish in reasonable time")
         .isTrue();
     instance.close();
