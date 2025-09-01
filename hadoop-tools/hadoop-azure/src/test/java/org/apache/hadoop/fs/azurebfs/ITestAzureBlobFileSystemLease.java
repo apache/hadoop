@@ -160,7 +160,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
 
     try (FSDataOutputStream out = fs.create(testFilePath)) {
       LambdaTestUtils.intercept(IOException.class,
-          isHNSEnabled ? PARALLEL_ACCESS
+          isHNSEnabled && getIngressServiceType() == AbfsServiceType.DFS ? PARALLEL_ACCESS
               : client instanceof AbfsBlobClient
                   ? ERR_NO_LEASE_ID_SPECIFIED_BLOB
                   : ERR_NO_LEASE_ID_SPECIFIED, () -> {

@@ -466,6 +466,9 @@ public class ITestAzureBlobFileSystemCreate extends
     if (enableConditionalCreateOverwrite) {
       assumeHnsEnabled();
       assumeDfsServiceType();
+      assumeThat(getIngressServiceType())
+          .as("DFS service type is required for this test")
+          .isEqualTo(AbfsServiceType.DFS);
     }
     try (AzureBlobFileSystem currentFs = getFileSystem()) {
       Configuration config = new Configuration(this.getRawConfiguration());
@@ -605,6 +608,9 @@ public class ITestAzureBlobFileSystemCreate extends
       throws Throwable {
     assumeHnsEnabled();
     assumeDfsServiceType();
+    assumeThat(getIngressServiceType())
+        .as("DFS service type is required for this test")
+        .isEqualTo(AbfsServiceType.DFS);
     try (AzureBlobFileSystem currentFs = getFileSystem()) {
       Configuration config = new Configuration(this.getRawConfiguration());
       config.set("fs.azure.enable.conditional.create.overwrite",

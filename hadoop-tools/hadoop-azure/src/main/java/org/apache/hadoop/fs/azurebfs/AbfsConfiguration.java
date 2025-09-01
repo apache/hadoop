@@ -1049,8 +1049,8 @@ public class AbfsConfiguration{
   public boolean isConditionalCreateOverwriteEnabled() {
     // If either the configured FS service type or the ingress service type is BLOB,
     // conditional create-overwrite is not used.
-    if (getFsConfiguredServiceType() == AbfsServiceType.BLOB
-        || getIngressServiceType() == AbfsServiceType.BLOB) {
+    if (getIsCreateIdempotencyEnabled() && (getFsConfiguredServiceType() == AbfsServiceType.BLOB
+        || getIngressServiceType() == AbfsServiceType.BLOB)) {
       return false;
     }
     return this.enableConditionalCreateOverwrite;
