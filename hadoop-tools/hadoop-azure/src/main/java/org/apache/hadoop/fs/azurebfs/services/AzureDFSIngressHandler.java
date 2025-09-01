@@ -179,7 +179,10 @@ public class AzureDFSIngressHandler extends AzureIngressHandler {
       tracingContextFlush.setIngressHandler(DFS_FLUSH);
       tracingContextFlush.setPosition(String.valueOf(offset));
     }
-    String fullBlobMd5 = computeFullBlobMd5();
+    String fullBlobMd5 = null;
+    if (getClient().isFullBlobChecksumValidationEnabled()) {
+      fullBlobMd5 = computeFullBlobMd5();
+    }
     LOG.trace("Flushing data at offset {} and path {}", offset, getAbfsOutputStream().getPath());
     AbfsRestOperation op;
     try {
@@ -194,7 +197,9 @@ public class AzureDFSIngressHandler extends AzureIngressHandler {
           getAbfsOutputStream().getPath(), offset, ex);
       throw ex;
     } finally {
-      getAbfsOutputStream().getFullBlobContentMd5().reset();
+      if (getClient().isFullBlobChecksumValidationEnabled()) {
+        getAbfsOutputStream().getFullBlobContentMd5().reset();
+      }
     }
     return op;
   }
