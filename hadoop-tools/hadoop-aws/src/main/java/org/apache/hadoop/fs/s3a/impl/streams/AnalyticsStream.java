@@ -21,9 +21,16 @@ package org.apache.hadoop.fs.s3a.impl.streams;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import java.util.function.IntFunction;
 
 import software.amazon.s3.analyticsaccelerator.S3SeekableInputStreamFactory;
 import software.amazon.s3.analyticsaccelerator.S3SeekableInputStream;
+import software.amazon.s3.analyticsaccelerator.common.ObjectRange;
 import software.amazon.s3.analyticsaccelerator.request.ObjectMetadata;
 import software.amazon.s3.analyticsaccelerator.util.InputPolicy;
 import software.amazon.s3.analyticsaccelerator.util.OpenStreamInformation;
@@ -37,6 +44,11 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.VectoredReadUtils;
+
+import static org.apache.hadoop.fs.VectoredReadUtils.LOG_BYTE_BUFFER_RELEASED;
+
 
 /**
  * Analytics stream creates a stream using aws-analytics-accelerator-s3. This stream supports
@@ -128,6 +140,42 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
     return bytesRead;
   }
 
+  /**
+   * Pass to {@link #readVectored(List, IntFunction, Consumer)}
+   * with the {@link VectoredReadUtils#LOG_BYTE_BUFFER_RELEASED} releaser.
+   * {@inheritDoc}
+   */
+  @Override
+  public void readVectored(List<? extends FileRange> ranges,
+                                        IntFunction<ByteBuffer> allocate) throws IOException {
+    readVectored(ranges, allocate, LOG_BYTE_BUFFER_RELEASED);
+  }
+
+  /**
+   * Pass to {@link #readVectored(List, IntFunction, Consumer)}
+   * with the {@link VectoredReadUtils#LOG_BYTE_BUFFER_RELEASED} releaser.
+   * {@inheritDoc}
+   */
+  @Override
+  public void readVectored(final List<? extends FileRange> ranges,
+                           final IntFunction<ByteBuffer> allocate,
+                           final Consumer<ByteBuffer> release) throws IOException {
+    LOG.debug("AAL: Starting vectored read on path {} for ranges {} ", getPathStr(), ranges);
+    throwIfClosed();
+
+    List<ObjectRange> objectRanges = new ArrayList<>();
+
+    for (FileRange range : ranges) {
+      CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
+      ObjectRange objectRange = new ObjectRange(result, range.getOffset(), range.getLength());
+      objectRanges.add(objectRange);
+      range.setData(result);
+    }
+
+    // AAL does not do any range coalescing, so input and combined ranges are the same.
+    this.getS3AStreamStatistics().readVectoredOperationStarted(ranges.size(), ranges.size());
+    inputStream.readVectored(objectRanges, allocate, release);
+  }
 
   @Override
   public boolean seekToNewSource(long l) throws IOException {

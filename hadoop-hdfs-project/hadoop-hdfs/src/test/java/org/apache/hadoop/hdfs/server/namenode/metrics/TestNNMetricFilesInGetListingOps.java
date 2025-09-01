@@ -31,9 +31,9 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test case for FilesInGetListingOps metric in Namenode
@@ -52,7 +52,7 @@ public class TestNNMetricFilesInGetListingOps {
   private DistributedFileSystem fs;
   private final Random rand = new Random();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     cluster = new MiniDFSCluster.Builder(CONF).build();
     cluster.waitActive();
@@ -60,7 +60,7 @@ public class TestNNMetricFilesInGetListingOps {
     fs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();

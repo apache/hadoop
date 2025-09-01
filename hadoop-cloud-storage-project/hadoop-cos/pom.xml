@@ -34,6 +34,7 @@
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
+    <tencentcloud.verion>3.1.1322</tencentcloud.verion>
   </properties>
 
   <profiles>
@@ -106,6 +107,19 @@
       <artifactId>cos_api-bundle</artifactId>
       <version>5.6.69</version>
       <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.tencentcloudapi</groupId>
+      <artifactId>tencentcloud-sdk-java</artifactId>
+      <version>${tencentcloud.verion}</version>
+      <scope>test</scope>
     </dependency>
 
     <dependency>

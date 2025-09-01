@@ -608,12 +608,12 @@ public class ITestAzureBlobFileSystemAppend extends
    **/
   @Test
   public void testRecreateAppendAndFlush() throws IOException {
+      assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
+      assumeThat(getIngressServiceType()).isEqualTo(AbfsServiceType.BLOB);
       assertThrows(IOException.class, () -> {
-          assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
           final AzureBlobFileSystem fs = getFileSystem();
           final Path filePath = path(TEST_FILE_PATH);
           fs.create(filePath);
-          assumeThat(getIngressServiceType()).isEqualTo(AbfsServiceType.BLOB);
           FSDataOutputStream outputStream = fs.append(filePath);
           outputStream.write(TEN);
           try (AzureBlobFileSystem fs1

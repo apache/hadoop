@@ -153,12 +153,6 @@
       <artifactId>hadoop-yarn-server-common</artifactId>
     </dependency>
 
-    <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
-    <dependency>
-      <groupId>org.glassfish.jersey.test-framework</groupId>
-      <artifactId>jersey-test-framework-core</artifactId>
-    </dependency>
-
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-collections4</artifactId>
