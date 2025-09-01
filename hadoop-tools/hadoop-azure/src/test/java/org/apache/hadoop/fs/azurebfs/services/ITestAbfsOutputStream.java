@@ -431,7 +431,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
             Mockito.any(TracingContext.class));
     Mockito.verify(blobClient, Mockito.times(1)).
         flush(Mockito.any(byte[].class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.any(), Mockito.any(), Mockito.anyString(), Mockito.any(),
-            Mockito.any(TracingContext.class), Mockito.anyString());
+            Mockito.any(TracingContext.class), Mockito.nullable(String.class));
   }
 
   /**
