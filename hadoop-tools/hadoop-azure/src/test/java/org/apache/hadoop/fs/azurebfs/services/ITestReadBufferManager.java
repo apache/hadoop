@@ -170,7 +170,9 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
   private ReadBufferManager getBufferManager(AzureBlobFileSystem fs) {
     int blockSize = fs.getAbfsStore().getAbfsConfiguration().getReadAheadBlockSize();
     if (getConfiguration().isReadAheadV2Enabled()) {
-      return ReadBufferManagerV2.getBufferManager(getConfiguration());
+      ReadBufferManagerV2.setReadBufferManagerConfigs(blockSize,
+          getConfiguration());
+      return ReadBufferManagerV2.getBufferManager();
     }
     ReadBufferManagerV1.setReadBufferManagerConfigs(blockSize);
     return ReadBufferManagerV1.getBufferManager();

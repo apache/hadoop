@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.util.ArrayList;
+
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -25,14 +29,28 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.apache.hadoop.fs.azurebfs.utils.TestCachedSASToken;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.addGeneralMockBehaviourToAbfsClient;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.addGeneralMockBehaviourToRestOpAndHttpOp;
+import static org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient.getMockAbfsClient;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit Tests around different components of Read Buffer Manager V2
@@ -51,9 +69,13 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
   public void testReadBufferManagerV2Init() throws Exception {
     assertThat(ReadBufferManagerV2.getInstance())
         .as("ReadBufferManager should be uninitialized").isNull();
+    intercept(IllegalStateException.class, "ReadBufferManagerV2 is not configured.", () -> {
+      ReadBufferManagerV2.getBufferManager();
+    });
     // verify that multiple invocations of getBufferManager returns same instance.
-    ReadBufferManagerV2 bufferManager = ReadBufferManagerV2.getBufferManager(getConfiguration());
-    ReadBufferManagerV2 bufferManager2 = ReadBufferManagerV2.getBufferManager(getConfiguration());
+    ReadBufferManagerV2.setReadBufferManagerConfigs(getConfiguration().getReadAheadBlockSize(), getConfiguration());
+    ReadBufferManagerV2 bufferManager = ReadBufferManagerV2.getBufferManager();
+    ReadBufferManagerV2 bufferManager2 = ReadBufferManagerV2.getBufferManager();
     ReadBufferManagerV2 bufferManager3 = ReadBufferManagerV2.getInstance();
     assertThat(bufferManager).isNotNull();
     assertThat(bufferManager2).isNotNull();
@@ -77,36 +99,21 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING, true);
     try(AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getUri(), conf)) {
       AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
-      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(abfsConfiguration);
+      ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfiguration.getReadAheadBlockSize(), abfsConfiguration);
+      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
       assertThat(bufferManagerV2.getCpuMonitoringThread())
           .as("CPU Monitor thread should be initialized").isNotNull();
+      bufferManagerV2.resetBufferManager();
     }
 
     conf.setBoolean(FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING, false);
     try(AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getUri(), conf)) {
       AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
-      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(abfsConfiguration);
+      ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfiguration.getReadAheadBlockSize(), abfsConfiguration);
+      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
       assertThat(bufferManagerV2.getCpuMonitoringThread())
           .as("CPU Monitor thread should not be initialized").isNull();
+      bufferManagerV2.resetBufferManager();
     }
-  }
-
-  @Test
-  public void demo() throws Exception {
-    AbfsClient abfsClient = mock(AbfsClient.class);
-    ExponentialRetryPolicy exponentialRetryPolicy = mock(
-        ExponentialRetryPolicy.class);
-    StaticRetryPolicy staticRetryPolicy = mock(StaticRetryPolicy.class);
-    AbfsThrottlingIntercept intercept = mock(
-        AbfsThrottlingIntercept.class);
-    addGeneralMockBehaviourToAbfsClient(abfsClient, exponentialRetryPolicy, staticRetryPolicy, intercept, mock(
-        ListResponseData.class));
-    Path testPath = new Path("/testPath");
-    AbfsInputStreamContext inputStreamContext = new AbfsInputStreamContext(-1)
-        .withReadBufferSize(ONE_MB)
-        .withReadAheadBlockSize(ONE_MB);
-    AbfsInputStream stream1 = new AbfsInputStream(abfsClient, null, testPath.getName(),
-        ONE_MB, inputStreamContext, "eTag", getTestTracingContext(getFileSystem(), false));
-
   }
 }
