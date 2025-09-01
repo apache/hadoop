@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import software.amazon.s3.analyticsaccelerator.util.retry.RetryStrategy;
 import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.VectoredReadUtils;
 
@@ -64,11 +65,12 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
   public static final Logger LOG = LoggerFactory.getLogger(AnalyticsStream.class);
 
   public AnalyticsStream(final ObjectReadParameters parameters,
-      final S3SeekableInputStreamFactory s3SeekableInputStreamFactory) throws IOException {
+                         final S3SeekableInputStreamFactory s3SeekableInputStreamFactory,
+                         final RetryStrategy retryStrategy) throws IOException {
     super(InputStreamType.Analytics, parameters);
     S3ObjectAttributes s3Attributes = parameters.getObjectAttributes();
     this.inputStream = s3SeekableInputStreamFactory.createStream(S3URI.of(s3Attributes.getBucket(),
-        s3Attributes.getKey()), buildOpenStreamInformation(parameters));
+        s3Attributes.getKey()), buildOpenStreamInformation(parameters, retryStrategy));
     getS3AStreamStatistics().streamOpened(InputStreamType.Analytics);
   }
 
@@ -241,7 +243,8 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
     this.close();
   }
 
-  private OpenStreamInformation buildOpenStreamInformation(ObjectReadParameters parameters) {
+  private OpenStreamInformation buildOpenStreamInformation(ObjectReadParameters parameters,
+                                                           RetryStrategy retries) {
     OpenStreamInformation.OpenStreamInformationBuilder openStreamInformationBuilder =
         OpenStreamInformation.builder()
             .inputPolicy(mapS3AInputPolicyToAAL(parameters.getContext()
@@ -251,6 +254,10 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
       openStreamInformationBuilder.objectMetadata(ObjectMetadata.builder()
           .contentLength(parameters.getObjectAttributes().getLen())
           .etag(parameters.getObjectAttributes().getETag()).build());
+    }
+
+    if(retries != null) {
+      openStreamInformationBuilder.retryStrategy(retries);
     }
 
     return openStreamInformationBuilder.build();

@@ -25,7 +25,9 @@ import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStream;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamFactory;
+import org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration;
 import org.assertj.core.api.Assertions;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
@@ -68,6 +70,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
    * Test input stream content: charAt(x) == hex value of x.
    */
   private static final String INPUT = "012345678ABCDEF";
+  private static ObjectInputStreamFactory factory = null;
 
   /**
    * Status code to raise by default.
@@ -76,7 +79,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
 
   @Test
   public void testInputStreamReadRetryForException() throws IOException {
-    S3AInputStream s3AInputStream = getMockedS3AInputStream(failingInputStreamCallbacks(
+    ObjectInputStream s3AInputStream = getMockedInputStream(failingInputStreamCallbacks(
         awsServiceException(STATUS)));
     assertEquals(INPUT.charAt(0), s3AInputStream.read(),
         "'0' from the test input stream should be the first " +
@@ -89,7 +92,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
   @Test
   public void testInputStreamReadLengthRetryForException() throws IOException {
     byte[] result = new byte[INPUT.length()];
-    S3AInputStream s3AInputStream = getMockedS3AInputStream(
+    ObjectInputStream s3AInputStream = getMockedInputStream(
         failingInputStreamCallbacks(awsServiceException(STATUS)));
     s3AInputStream.read(result, 0, INPUT.length());
 
@@ -101,7 +104,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
   @Test
   public void testInputStreamReadFullyRetryForException() throws IOException {
     byte[] result = new byte[INPUT.length()];
-    S3AInputStream s3AInputStream = getMockedS3AInputStream(failingInputStreamCallbacks(
+    ObjectInputStream s3AInputStream = getMockedInputStream(failingInputStreamCallbacks(
         awsServiceException(STATUS)));
     s3AInputStream.readFully(0, result);
 
@@ -118,7 +121,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
   public void testReadMultipleSeeksNoHttpResponse() throws Throwable {
     final RuntimeException ex = sdkClientException(new NoHttpResponseException("no response"));
     // fail on even reads
-    S3AInputStream stream = getMockedS3AInputStream(
+    ObjectInputStream stream = getMockedInputStream(
         maybeFailInGetCallback(ex, (index) -> (index % 2 == 0)));
     // 10 reads with repeated failures.
     for (int i = 0; i < 10; i++) {
@@ -136,7 +139,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
   public void testReadMultipleSeeksStreamClosed() throws Throwable {
     final RuntimeException ex = sdkClientException(new NoHttpResponseException("no response"));
     // fail on even reads
-    S3AInputStream stream = getMockedS3AInputStream(
+    ObjectInputStream stream = getMockedInputStream(
         maybeFailInGetCallback(ex, (index) -> (index % 2 == 0)));
     // 10 reads with repeated failures.
     for (int i = 0; i < 10; i++) {
@@ -167,8 +170,8 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
    * @param streamCallback callback to use on GET calls
    * @return a stream.
    */
-  private S3AInputStream getMockedS3AInputStream(
-      ObjectInputStreamCallbacks streamCallback) {
+  private ObjectInputStream getMockedInputStream(
+      ObjectInputStreamCallbacks streamCallback) throws IOException {
     Path path = new Path("test-path");
     String eTag = "test-etag";
     String versionId = "test-version-id";
@@ -198,8 +201,15 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
         .withStreamStatistics(
             s3AReadOpContext.getS3AStatisticsContext().newInputStreamStatistics())
         .withBoundedThreadPool(null);
+    ObjectInputStreamFactory factory = getFactory();
+    return factory.readObject(parameters);
+  }
 
-    return new S3AInputStream(parameters);
+  protected ObjectInputStreamFactory getFactory() throws IOException {
+    if (factory == null) {
+      factory = StreamIntegration.factoryFromConfig(conf);
+    }
+    return factory;
   }
 
   /**
@@ -240,7 +250,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
 
   /**
    * Create mocked InputStreamCallbacks which returns a mocked S3Object and fails
-   * when the the predicate indicates that it should.
+   * when the predicate indicates that it should.
    * The stream response itself does not fail.
    * @param ex exception to raise on failure
    * @return mocked object.
@@ -339,7 +349,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
    * @param ioe exception to raise
    * @return mocked object.
    */
-  private ResponseInputStream<GetObjectResponse> mockedInputStream(
+  protected ResponseInputStream<GetObjectResponse> mockedInputStream(
       GetObjectResponse objectResponse,
       boolean triggerFailure,
       final IOException ioe) {
