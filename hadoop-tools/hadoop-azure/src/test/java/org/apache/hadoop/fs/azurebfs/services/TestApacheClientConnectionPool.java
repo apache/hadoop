@@ -74,9 +74,9 @@ public class TestApacheClientConnectionPool extends
     try (KeepAliveCache keepAliveCache = new KeepAliveCache(
         abfsConfiguration)) {
       Assertions.assertThat(keepAliveCache.getMaxCacheConnections())
-              .describedAs("In case configured cache size is 0, "
-                  + "the pool size should be minimum possible value")
-                  .isEqualTo(MIN_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE);
+          .describedAs("In case configured cache size is 0, "
+              + "the pool size should be minimum possible value")
+          .isEqualTo(MIN_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE);
 
       assertCachePutSuccess(keepAliveCache, getValidMockConnection());
       assertCacheGetIsNonNull(keepAliveCache);
@@ -216,8 +216,8 @@ public class TestApacheClientConnectionPool extends
 
       // Verify that the stale connections are removed.
       for (int i = DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE - 1;
-           i >= 0;
-           i--) {
+          i >= 0;
+          i--) {
         // The last two connections are not stale and would be returned.
         if (i >= (DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE - 2)) {
           assertCacheGetIsNonNull(keepAliveCache);
@@ -323,20 +323,27 @@ public class TestApacheClientConnectionPool extends
   @Test
   public void testKeepAliveCacheCloseWithMultipleConnections() throws Exception {
     try (KeepAliveCache keepAliveCache = new KeepAliveCache(
-      new AbfsConfiguration(new Configuration(), EMPTY_STRING))) {
+        new AbfsConfiguration(new Configuration(), EMPTY_STRING))) {
       keepAliveCache.clear();
       HttpClientConnection[] connections = new HttpClientConnection[10];
 
       // Add multiple connections to the cache.
       for (int i = 0; i < connections.length; i++) {
-          connections[i] = getValidMockConnection();
-          keepAliveCache.add(connections[i]);
+        connections[i] = getValidMockConnection();
+        keepAliveCache.add(connections[i]);
       }
+
+      Assertions.assertThat(keepAliveCache.getSingleThreadPool().isShutdown())
+          .describedAs("singleThreadPool should not be shutdown")
+          .isFalse();
+      Assertions.assertThat(keepAliveCache.getFixedThreadPool().isShutdown())
+          .describedAs("fixedThreadPool should not be shutdown")
+          .isFalse();
 
       // Close the cache and verify all connections are closed.
       keepAliveCache.close();
       for (HttpClientConnection connection : connections) {
-          Mockito.verify(connection, Mockito.times(1)).close();
+        Mockito.verify(connection, Mockito.times(1)).close();
       }
 
       // Verify the cache size is 0.
@@ -348,6 +355,13 @@ public class TestApacheClientConnectionPool extends
       // This should throw a ClosedIOException.
       LambdaTestUtils.intercept(ClosedIOException.class,
           KEEP_ALIVE_CACHE_CLOSED, keepAliveCache::get);
+
+      Assertions.assertThat(keepAliveCache.getSingleThreadPool().isShutdown())
+          .describedAs("singleThreadPool should be shutdown after close()")
+          .isTrue();
+      Assertions.assertThat(keepAliveCache.getFixedThreadPool().isShutdown())
+          .describedAs("fixedThreadPool should be shutdown after close()")
+          .isTrue();
     }
   }
 

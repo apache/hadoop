@@ -54,6 +54,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KEEP_ALI
 class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
     implements Closeable {
 
+  /**
+   * Logger instance.
+   */
   private static final Logger LOG = LoggerFactory.getLogger(
       KeepAliveCache.class);
 
@@ -76,21 +79,13 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
   /**
    * Executor server to trigger connection refresh from cache manager.
    */
-  private final ExecutorService singleThreadExecutor
-      = Executors.newSingleThreadExecutor(r -> {
-    Thread thread = new Thread(r);
-    thread.setName("CacheRefreshThread");
-    thread.setDaemon(true);
-    return thread;
-  });
+  private ExecutorService singleThreadPool = null;
 
-  private final ExecutorService fixedThreadPool
-      = Executors.newFixedThreadPool(5, r -> {
-    Thread thread = new Thread(r);
-    thread.setName("AsyncCacheConnectionThread");
-    thread.setDaemon(true);
-    return thread;
-  });
+  /**
+   * Executor service to trigger async cache warmup.
+   */
+  private ExecutorService fixedThreadPool = null;
+
 
   /**
    * Creates an {@link KeepAliveCache} instance using filesystem's configuration.
@@ -106,6 +101,28 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
         abfsConfiguration.getAccountName();
     this.maxCacheConnections =
         abfsConfiguration.getApacheMaxCacheSize();
+    // Initialise singleThreadPool if cache refresh is enabled.
+    if (abfsConfiguration.getApacheCacheRefreshCount() > 0) {
+      this.singleThreadPool = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r);
+        thread.setName("CacheRefreshThread");
+        thread.setDaemon(true);
+        return thread;
+      });
+    }
+
+    // Initialise fixedThreadPool if cache warmup or cache refresh is enabled.
+    if (abfsConfiguration.getApacheCacheWarmupCount() > 0
+        || abfsConfiguration.getApacheCacheRefreshCount() > 0) {
+      this.fixedThreadPool = Executors.newFixedThreadPool(Math.min(5,
+          Math.max(abfsConfiguration.getApacheCacheWarmupCount(),
+              abfsConfiguration.getApacheCacheRefreshCount())), r -> {
+        Thread thread = new Thread(r);
+        thread.setName("AsyncCacheConnectionThread");
+        thread.setDaemon(true);
+        return thread;
+      });
+    }
   }
 
   /**
@@ -133,8 +150,8 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
       return;
     }
     closeInternal();
-    if (singleThreadExecutor != null && !singleThreadExecutor.isShutdown()) {
-      singleThreadExecutor.shutdownNow();
+    if (singleThreadPool != null && !singleThreadPool.isShutdown()) {
+      singleThreadPool.shutdownNow();
     }
 
     if (fixedThreadPool != null && !fixedThreadPool.isShutdown()) {
@@ -149,11 +166,17 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
     return isClosed.get();
   }
 
-  ExecutorService getSingleThreadExecutor() {
-    return singleThreadExecutor;
+  /**
+   * @return ExecutorService to trigger connection refresh from cache manager.
+   */
+  public ExecutorService getSingleThreadPool() {
+    return singleThreadPool;
   }
 
-  ExecutorService getFixedThreadPool() {
+  /**
+   * @return ExecutorService to trigger async create connections and put in cache.
+   */
+  public ExecutorService getFixedThreadPool() {
     return fixedThreadPool;
   }
 
@@ -172,7 +195,6 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
   /**
    * Gets the oldest added HttpClientConnection from the cache. The returned connection
    * is open.
-   *
    * The cache follows the FIFO strategy. If the connection is not open, it will
    * be closed and the next connection is checked. Once a valid connection is found,
    * it is returned.
@@ -210,12 +232,12 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
           accountNamePath);
       return false;
     }
-    if (getIsClosed() || maxCacheConnections <= 0
+    if (getIsClosed() || getMaxCacheConnections() <= 0
         || !conn.isOpen() || conn.isStale()) {
       closeHttpClientConnection(conn);
       return false;
     }
-    while (size() >= maxCacheConnections) {
+    while (size() >= getMaxCacheConnections()) {
       HttpClientConnection httpClientConnection = pollFirst();
       if (httpClientConnection != null) {
         closeHttpClientConnection(httpClientConnection);
@@ -226,14 +248,20 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
     return offerLast(conn);
   }
 
+  /**
+   * @return maximum number of connections that can be cached.
+   */
   @VisibleForTesting
   public int getMaxCacheConnections() {
     return maxCacheConnections;
   }
 
+  /**
+   * @return String representation of the KeepAliveCache instance.
+   */
   @Override
   public String toString() {
     return String.format("KeepAliveCache[closed=%s, size=%d, max=%d]",
-        getIsClosed(), size(), maxCacheConnections);
+        getIsClosed(), size(), getMaxCacheConnections());
   }
 }

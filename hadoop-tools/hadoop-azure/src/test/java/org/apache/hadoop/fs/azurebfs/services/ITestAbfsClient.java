@@ -881,9 +881,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   public void testKeepAliveCacheInitializationWithApacheHttpClient() throws Exception {
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
-    final AzureBlobFileSystem fs = this.getFileSystem();
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
-        fs.getAbfsStore().getAbfsConfiguration().getPreferredHttpOperationType());
+        this.getFileSystem().getAbfsStore()
+            .getAbfsConfiguration().getPreferredHttpOperationType());
+    final AzureBlobFileSystem fs = this.getFileSystem();
     AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
 
     AbfsClient dfsClient = abfsClientHandler.getDfsClient();
@@ -900,9 +901,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   public void testStaleConnectionBehavior() throws Exception {
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
-    final AzureBlobFileSystem fs = this.getFileSystem();
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
-        fs.getAbfsStore().getAbfsConfiguration().getPreferredHttpOperationType());
+        this.getFileSystem().getAbfsStore()
+            .getAbfsConfiguration().getPreferredHttpOperationType());
+    final AzureBlobFileSystem fs = this.getFileSystem();
     Configuration conf = fs.getConf();
 
     // This is to avoid actual metric calls during the test
@@ -938,9 +940,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   public void testApacheConnectionReuse() throws Exception {
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
-    AzureBlobFileSystem fs = this.getFileSystem();
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
-        fs.getAbfsStore().getAbfsConfiguration().getPreferredHttpOperationType());
+        this.getFileSystem().getAbfsStore()
+            .getAbfsConfiguration().getPreferredHttpOperationType());
+    AzureBlobFileSystem fs = this.getFileSystem();
 
     AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
     AbfsClient dfsClient = abfsClientHandler.getDfsClient();
@@ -960,9 +963,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   public void testConnectionNotReusedOnIOException() throws Exception {
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
-    AzureBlobFileSystem fs = this.getFileSystem();
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
-        fs.getAbfsStore().getAbfsConfiguration().getPreferredHttpOperationType());
+        this.getFileSystem().getAbfsStore()
+            .getAbfsConfiguration().getPreferredHttpOperationType());
+    AzureBlobFileSystem fs = this.getFileSystem();
 
     AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
     AbfsClient dfsClient = abfsClientHandler.getDfsClient();
@@ -1009,9 +1013,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   public void testNumberOfConnectionsInKacWithoutWarmup() throws Exception {
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
-    AzureBlobFileSystem fs = this.getFileSystem();
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
-        fs.getAbfsStore().getAbfsConfiguration().getPreferredHttpOperationType());
+        this.getFileSystem().getAbfsStore()
+            .getAbfsConfiguration().getPreferredHttpOperationType());
+    AzureBlobFileSystem fs = this.getFileSystem();
     final Configuration configuration = fs.getConf();
     configuration.setInt(FS_AZURE_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT, 0);
     fs = this.getFileSystem(configuration);
@@ -1026,7 +1031,6 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         .describedAs("KeepAliveCache will be empty when warmup count is set to 0")
         .isEqualTo(0);
   }
-
 
   /**
    * Helper method to check the KeepAliveCache on both clients.
