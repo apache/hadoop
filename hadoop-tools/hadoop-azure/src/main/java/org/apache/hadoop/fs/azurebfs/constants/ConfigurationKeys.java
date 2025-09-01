@@ -356,6 +356,9 @@ public final class ConfigurationKeys {
   /** Add extra layer of verification of the integrity of the request content during transport: {@value}. */
   public static final String FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION = "fs.azure.enable.checksum.validation";
 
+  /** Add extra layer of verification of the integrity of the full blob request content during transport: {@value}. */
+  public static final String FS_AZURE_ENABLE_FULL_BLOB_CHECKSUM_VALIDATION = "fs.azure.enable.full.blob.checksum.validation";
+
   public static String accountProperty(String property, String account) {
     return property + DOT + account;
   }

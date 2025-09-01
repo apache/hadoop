@@ -1415,12 +1415,23 @@ public abstract class AbfsClient implements Closeable {
   /**
    * Conditions check for allowing checksum support for write operation.
    * Server will support this if client sends the MD5 Hash as a request header.
-   * For azure stoage service documentation and more details refer to
+   * For azure storage service documentation and more details refer to
    * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">Path - Update Azure Rest API</a>.
    * @return true if checksum validation enabled.
    */
   protected boolean isChecksumValidationEnabled() {
     return getAbfsConfiguration().getIsChecksumValidationEnabled();
+  }
+
+  /**
+   * Conditions check for allowing checksum support for write operation.
+   * Server will support this if client sends the MD5 Hash as a request header.
+   * For azure storage service documentation and more details refer to
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">Path - Update Azure Rest API</a>.
+   * @return true if full blob checksum validation enabled.
+   */
+  protected boolean isFullBlobChecksumValidationEnabled() {
+    return getAbfsConfiguration().isFullBlobChecksumValidationEnabled();
   }
 
   /**

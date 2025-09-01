@@ -201,6 +201,7 @@ public class TestAddOverReplicatedStripedBlocks {
     // let a internal block be corrupt
     BlockManager bm = cluster.getNamesystem().getBlockManager();
     List<DatanodeInfo> infos = Arrays.asList(bg.getLocations());
+    cluster.stopDataNode(infos.get(0).getXferAddr());
     List<String> storages = Arrays.asList(bg.getStorageIDs());
     cluster.getNamesystem().writeLock(RwLockMode.BM);
     try {
