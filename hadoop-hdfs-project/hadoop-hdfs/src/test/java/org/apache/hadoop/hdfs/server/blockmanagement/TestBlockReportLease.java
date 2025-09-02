@@ -43,6 +43,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
@@ -312,16 +313,19 @@ public class TestBlockReportLease {
           any(DatanodeStorageInfo.class),
           any(BlockListAsLongs.class));
 
-      ExecutorService pool = Executors.newFixedThreadPool(2);
+      ExecutorService pool = Executors.newFixedThreadPool(1);
       // Trigger sendBlockReport.
       BlockReportContext brContext = new BlockReportContext(1, 0,
           rand.nextLong(), hbResponse.getFullBlockReportLeaseId());
       // Build every storage with 100 blocks for sending report.
-      DatanodeStorage[] datanodeStorages
-          = new DatanodeStorage[storages.length];
       for (int i = 0; i < storages.length; i++) {
-        datanodeStorages[i] = storages[i].getStorage();
-        StorageBlockReport[] reports = createReports(datanodeStorages, 100);
+        DatanodeStorage s = storages[i].getStorage();
+        StorageBlockReport[] reports = createReports(new DatanodeStorage[]{s}, 100);
+        DatanodeStorageInfo target = Arrays.stream(datanodeDescriptor.getStorageInfos())
+            .filter(info -> info.getStorageID().equals(s.getStorageID()))
+            .findFirst()
+            .get();
+        int before = target.getBlockReportCount();
 
         Future<DatanodeCommand> f1 = null;
         // The first multiple send once, simulating the failure of the first report,
@@ -334,9 +338,15 @@ public class TestBlockReportLease {
           f1.get();
         }
 
+        HeartbeatResponse hbResponse2 = rpcServer.sendHeartbeat(
+            dnRegistration, storages, 0, 0, 0, 0, 0, null, true,
+            SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
+
+        BlockReportContext brContext2 = new BlockReportContext(
+            1, 0, rand.nextLong(), hbResponse2.getFullBlockReportLeaseId());
         // Send blockReport.
         Future<DatanodeCommand> f2 = pool.submit(() ->
-            rpcServer.blockReport(dnRegistration, poolId, reports, brContext));
+            rpcServer.blockReport(dnRegistration, poolId, reports, brContext2));
 
         // Wait until BlockManager calls processReport.
         delayer.waitForCall();
@@ -350,9 +360,11 @@ public class TestBlockReportLease {
         assertEquals(poolId, ((FinalizeCommand) datanodeCommand)
             .getBlockPoolId());
         if(i == 0){
-          assertEquals(2, datanodeDescriptor.getStorageInfos()[i].getBlockReportCount());
-        }else{
-          assertEquals(1, datanodeDescriptor.getStorageInfos()[i].getBlockReportCount());
+          assertEquals(2,
+              target.getBlockReportCount() - before);
+        } else {
+          assertEquals(1,
+              target.getBlockReportCount() - before);
         }
       }
     }

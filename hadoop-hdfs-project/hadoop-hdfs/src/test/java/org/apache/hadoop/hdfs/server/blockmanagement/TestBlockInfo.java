@@ -131,16 +131,16 @@ public class TestBlockInfo {
     assertThat(blockInfos[NUM_BLOCKS / 2].getStorageInfo(0)).isEqualTo(storage2);
   }
 
-@Test
+  @Test
   public void testAddStorageWithDifferentBlock() throws Exception {
-  Assertions.assertThrows(IllegalArgumentException.class, () -> {
-    BlockInfo blockInfo1 = new BlockInfoContiguous(new Block(1000L), (short) 3);
-    BlockInfo blockInfo2 = new BlockInfoContiguous(new Block(1001L), (short) 3);
-    final DatanodeStorageInfo storage = DFSTestUtil.createDatanodeStorageInfo(
-        "storageID", "127.0.0.1");
-    blockInfo1.addStorage(storage, blockInfo2);
-  });
-}
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      BlockInfo blockInfo1 = new BlockInfoContiguous(new Block(1000L), (short) 3);
+      BlockInfo blockInfo2 = new BlockInfoContiguous(new Block(1001L), (short) 3);
+      final DatanodeStorageInfo storage = DFSTestUtil.createDatanodeStorageInfo(
+          "storageID", "127.0.0.1");
+      blockInfo1.addStorage(storage, blockInfo2);
+    });
+  }
 
   @Test
   public void testBlockListMoveToHead() throws Exception {
@@ -204,8 +204,8 @@ public class TestBlockInfo {
     assertNotNull(temp, "Head should not be null");
     int c = maxBlocks - 1;
     while (temp != null) {
-        assertEquals(blockInfoList.get(c--), temp, "Expected element is not on the list");
-        temp = temp.getNext(0);
+      assertEquals(blockInfoList.get(c--), temp, "Expected element is not on the list");
+      temp = temp.getNext(0);
     }
 
     LOG.info("Moving random blocks to the head of the list...");

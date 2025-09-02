@@ -266,8 +266,8 @@ public class TestDatanodeManager {
           "version" + rng.nextInt(5));
 
         LOG.info("Registering node storageID: " + dr.getDatanodeUuid() +
-          ", version: " + dr.getSoftwareVersion() + ", IP address: "
-          + dr.getXferAddr()+ ", hostname: " + dr.getHostName());
+            ", version: " + dr.getSoftwareVersion() + ", IP address: "
+            + dr.getXferAddr() + ", hostname: " + dr.getHostName());
 
         //Register this random node
         dm.registerDatanode(dr);

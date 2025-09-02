@@ -38,9 +38,9 @@ import java.util.Iterator;
 
 
 public class TestUnderReplicatedBlocks {
-    @Test
-    @Timeout(value = 120)
-    public void testSetRepIncWithUnderReplicatedBlocks() throws Exception {
+  @Test
+  @Timeout(value = 120)
+  public void testSetRepIncWithUnderReplicatedBlocks() throws Exception {
     Configuration conf = new HdfsConfiguration();
     final short REPLICATION_FACTOR = 2;
     final String FILE_NAME = "/testFile";
@@ -80,13 +80,13 @@ public class TestUnderReplicatedBlocks {
       // increment this file's replication factor
       FsShell shell = new FsShell(conf);
       assertEquals(0, shell.run(
-          new String[] { "-setrep", "-w", Integer.toString(1 + REPLICATION_FACTOR), FILE_NAME }));
+          new String[]{"-setrep", "-w", Integer.toString(1 + REPLICATION_FACTOR), FILE_NAME}));
       BlockManagerTestUtil.updateState(bm);
       DFSTestUtil.verifyClientStats(conf, cluster);
     } finally {
       cluster.shutdown();
     }
-    
+
   }
 
   /**

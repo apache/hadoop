@@ -121,9 +121,9 @@ public class TestBlockManagerSafeMode {
   @Test
   @Timeout(value = 30)
   public void testInitialize() {
-      assertFalse(bmSafeMode.isInSafeMode(),
-          "Block manager should not be in safe mode at beginning.");
-      bmSafeMode.activate(BLOCK_TOTAL);
+    assertFalse(bmSafeMode.isInSafeMode(),
+        "Block manager should not be in safe mode at beginning.");
+    bmSafeMode.activate(BLOCK_TOTAL);
     assertEquals(BMSafeModeStatus.PENDING_THRESHOLD, getSafeModeStatus());
     assertTrue(bmSafeMode.isInSafeMode());
   }
@@ -546,8 +546,8 @@ public class TestBlockManagerSafeMode {
         "Leaving safe mode should succeed after blocks with future GS " + "are cleared.");
   }
 
-@Test
-@Timeout(value = 10)
+  @Test
+  @Timeout(value = 10)
   public void testExtensionConfig() {
     final Configuration conf = new HdfsConfiguration();
     bmSafeMode = new BlockManagerSafeMode(bm, fsn, false, conf);

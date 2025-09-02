@@ -187,9 +187,10 @@ public class TestOverReplicatedBlocks {
       assertEquals(SMALL_FILE_LENGTH / SMALL_BLOCK_SIZE, dnBlocks,
           "Replicas on node " + lastDNid + " should have been deleted");
       namesystem.readUnlock(RwLockMode.BM, "excessSize4Testing");
-      for (BlockLocation location : locs)
+      for (BlockLocation location : locs) {
         assertEquals(4, location.getNames().length,
             "Block should still have 4 replicas");
+      }
     } finally {
       if(fs != null) fs.close();
       if(cluster != null) cluster.shutdown();
