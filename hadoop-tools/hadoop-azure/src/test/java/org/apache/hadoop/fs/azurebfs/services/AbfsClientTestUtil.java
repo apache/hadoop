@@ -166,7 +166,12 @@ public final class AbfsClientTestUtil {
     requestHeaders.add(new AbfsHttpHeader(CONTENT_LENGTH, String.valueOf(buffer.length)));
     requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, APPLICATION_XML));
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
-    requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, blobMd5));
+    requestHeaders.add(new AbfsHttpHeader(
+        X_MS_BLOB_CONTENT_MD5,
+        (spiedClient.isFullBlobChecksumValidationEnabled() && blobMd5 != null)
+            ? blobMd5
+            : spiedClient.computeMD5Hash(buffer, 0, buffer.length)
+    ));
     final AbfsUriQueryBuilder abfsUriQueryBuilder = spiedClient.createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCKLIST);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(false));

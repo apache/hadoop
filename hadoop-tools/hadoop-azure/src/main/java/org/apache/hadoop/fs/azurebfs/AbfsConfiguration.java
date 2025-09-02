@@ -439,7 +439,7 @@ public class AbfsConfiguration{
   private boolean isChecksumValidationEnabled;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_ABFS_ENABLE_FULL_BLOB_CHECKSUM_VALIDATION, DefaultValue = DEFAULT_ENABLE_FULL_BLOB_ABFS_CHECKSUM_VALIDATION)
+      FS_AZURE_ENABLE_FULL_BLOB_CHECKSUM_VALIDATION, DefaultValue = DEFAULT_ENABLE_FULL_BLOB_ABFS_CHECKSUM_VALIDATION)
   private boolean isFullBlobChecksumValidationEnabled;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey =

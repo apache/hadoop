@@ -1076,9 +1076,10 @@ public class AbfsBlobClient extends AbfsClient {
     if (leaseId != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
     }
-    if (blobMd5 != null) {
-      requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, blobMd5));
-    }
+    String md5Value = (isFullBlobChecksumValidationEnabled() && blobMd5 != null)
+        ? blobMd5
+        : computeMD5Hash(buffer, 0, buffer.length);
+    requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, md5Value));
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCKLIST);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(isClose));
@@ -1103,7 +1104,12 @@ public class AbfsBlobClient extends AbfsClient {
         AbfsRestOperation op1 = getPathStatus(path, true, tracingContext,
             contextEncryptionAdapter);
         String metadataMd5 = op1.getResult().getResponseHeader(CONTENT_MD5);
-        if (blobMd5 != null && !blobMd5.equals(metadataMd5)) {
+        /*
+         * Validate the response by comparing the server's MD5 metadata against either:
+         * 1. The full blob content MD5 (if full blob checksum validation is enabled), or
+         * 2. The full block ID list buffer MD5 (fallback if blob checksum validation is disabled)
+         */
+        if (md5Value != null && !md5Value.equals(metadataMd5)) {
           throw ex;
         }
         return op;
