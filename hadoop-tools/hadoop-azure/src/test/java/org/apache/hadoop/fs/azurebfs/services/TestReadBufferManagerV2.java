@@ -41,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Unit Tests around different components of Read Buffer Manager V2
  */
 public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
-  volatile boolean running = true;
+  private volatile boolean running = true;
 
   public TestReadBufferManagerV2() throws Exception {
     super();
@@ -120,7 +120,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     int[] reqOffset = {0};
     int reqLength = 1;
     Thread t = new Thread(() -> {
-      while(running) {
+      while (running) {
         bufferManagerV2.queueReadAhead(inputStream, reqOffset[0], reqLength,
             inputStream.getTracingContext());
         reqOffset[0] += reqLength;
@@ -163,7 +163,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING, true);
     conf.setInt(FS_AZURE_READAHEAD_V2_MIN_THREAD_POOL_SIZE, 2);
     conf.setInt(FS_AZURE_READAHEAD_V2_MAX_THREAD_POOL_SIZE, 4);
-    conf.setInt(FS_AZURE_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENT, 90);
+    conf.setInt(FS_AZURE_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENT, 100);
     conf.setInt(FS_AZURE_READAHEAD_V2_CPU_MONITORING_INTERVAL_MILLIS, 1000);
     conf.setInt(FS_AZURE_READAHEAD_V2_MEMORY_MONITORING_INTERVAL_MILLIS, 1000);
     conf.setInt(FS_AZURE_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS, 1000);

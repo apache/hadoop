@@ -61,7 +61,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   private static int threadPoolUpscalePercentage;
   private static int threadPoolDownscalePercentage;
   private static int executorServiceKeepAliveTimeInMilliSec;
-  private static final double threadPoolRequirementBuffer = 1.2; // 20% more threads than the queue size
+  private static final double THREAD_POOL_REQUIREMENT_BUFFER = 1.2; // 20% more threads than the queue size
   private static boolean isDynamicScalingEnabled;
 
   private ScheduledExecutorService cpuMonitorThread;
@@ -463,7 +463,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   private boolean evict(final ReadBuffer buf) {
     if (buf.getRefCount() > 0) {
       // If the buffer is still being read, then we cannot evict it.
-      printTraceLog("Cannot evict buffer with index: {}, file: {}, with eTag: {}, offset: {} as it is still being read by some input stream",
+      printTraceLog(
+          "Cannot evict buffer with index: {}, file: {}, with eTag: {}, offset: {} as it is still being read by some input stream",
           buf.getBufferindex(), buf.getPath(), buf.getETag(), buf.getOffset());
       return false;
     }
@@ -476,8 +477,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     }
     getCompletedReadList().remove(buf);
     buf.setTracingContext(null);
-    printTraceLog("Eviction of Buffer Completed for BufferIndex: {}, file: {}, with eTag: {}, offset: {}, is fully consumed: {}, is partially consumed: {}",
-        buf.getBufferindex(), buf.getPath(), buf.getETag(), buf.getOffset(), buf.isFullyConsumed(), buf.isAnyByteConsumed());
+    printTraceLog(
+        "Eviction of Buffer Completed for BufferIndex: {}, file: {}, with eTag: {}, offset: {}, is fully consumed: {}, is partially consumed: {}",
+        buf.getBufferindex(), buf.getPath(), buf.getETag(), buf.getOffset(),
+        buf.isFullyConsumed(), buf.isAnyByteConsumed());
     return true;
   }
 
@@ -841,7 +844,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   public int getRequiredThreadPoolSize() {
-    return (int) Math.ceil(threadPoolRequirementBuffer
+    return (int) Math.ceil(THREAD_POOL_REQUIREMENT_BUFFER
         * (getReadAheadQueue().size() + getInProgressList().size())); // 20% more for buffer
   }
 }

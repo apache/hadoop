@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus.READ_FAILED;
 
-public class ReadBuffer {
+class ReadBuffer {
 
   private AbfsInputStream stream;
   private String eTag;

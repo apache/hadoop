@@ -84,7 +84,7 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     long requestsMadeAfterTest = metricMap
         .get(CONNECTIONS_MADE.getStatName());
     int expectedRequests = numFiles // Get Path Status for each file
-        + ((int)Math.ceil((double)fileSize/BLOCK_SIZE)) * numFiles; // Read requests for each file
+        + ((int) Math.ceil((double) fileSize/BLOCK_SIZE)) * numFiles; // Read requests for each file
     assertEquals(expectedRequests, requestsMadeAfterTest - requestsMadeBeforeTest);
   }
 
@@ -122,7 +122,7 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     long requestsMadeAfterTest = metricMap
         .get(CONNECTIONS_MADE.getStatName());
     int expectedRequests = numFiles // Get Path Status for each file
-        + ((int)Math.ceil((double)fileSize/BLOCK_SIZE)); // Read requests for each file
+        + ((int) Math.ceil((double) fileSize/BLOCK_SIZE)); // Read requests for each file
     assertEquals(expectedRequests, requestsMadeAfterTest - requestsMadeBeforeTest);
   }
 }
