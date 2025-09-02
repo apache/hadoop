@@ -472,9 +472,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     // As failed ReadBuffers (bufferIndx = -1) are saved in getCompletedReadList(),
     // avoid adding it to availableBufferList.
     if (buf.getBufferindex() != -1) {
-      synchronized (this) {
-        pushToFreeList(buf.getBufferindex());
-      }
+      pushToFreeList(buf.getBufferindex());
     }
     getCompletedReadList().remove(buf);
     buf.setTracingContext(null);
@@ -523,11 +521,9 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
       return buffer;
     }
     if (buffer != null) {
-      synchronized (this) {
-        getReadAheadQueue().remove(buffer);
-        notifyAll();   // lock is held in calling method
-        pushToFreeList(buffer.getBufferindex());
-      }
+      getReadAheadQueue().remove(buffer);
+      notifyAll();   // lock is held in calling method
+      pushToFreeList(buffer.getBufferindex());
     }
     return null;
   }
@@ -593,11 +589,11 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
       return false; // Dynamic scaling is disabled, so no upscaling.
     }
     double memoryLoad = getMemoryLoad();
-    if (memoryLoad < memoryThreshold && numberOfActiveBuffers < maxBufferPoolSize) {
+    if (memoryLoad < memoryThreshold && getNumBuffers() < maxBufferPoolSize) {
       // Create and Add more buffers in getFreeList().
       if (removedBufferList.isEmpty()) {
-        bufferPool[numberOfActiveBuffers] = new byte[getReadAheadBlockSize()];
-        pushToFreeList(numberOfActiveBuffers);
+        bufferPool[getNumBuffers()] = new byte[getReadAheadBlockSize()];
+        pushToFreeList(getNumBuffers());
       } else {
         // Reuse a removed buffer index.
         int freeIndex = removedBufferList.pop();
@@ -609,12 +605,12 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
         bufferPool[freeIndex] = new byte[getReadAheadBlockSize()];
         pushToFreeList(freeIndex);
       }
-      numberOfActiveBuffers++;
-      printTraceLog("Current Memory Load: {}. Incrementing buffer pool size to {}", memoryLoad, numberOfActiveBuffers);
+      incrementActiveBufferCount();
+      printTraceLog("Current Memory Load: {}. Incrementing buffer pool size to {}", memoryLoad, getNumBuffers());
       return true;
     }
     printTraceLog("Could not Upscale memory. Total buffers: {} Memory Load: {}",
-        numberOfActiveBuffers, memoryLoad);
+        getNumBuffers(), memoryLoad);
     return false;
   }
 
@@ -638,8 +634,8 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
         int freeIndex = popFromFreeList();
         bufferPool[freeIndex] = null;
         removedBufferList.add(freeIndex);
-        numberOfActiveBuffers--;
-        printTraceLog("Current Memory Load: {}. Decrementing buffer pool size to {}", memoryLoad, numberOfActiveBuffers);
+        decrementActiveBufferCount();
+        printTraceLog("Current Memory Load: {}. Decrementing buffer pool size to {}", memoryLoad, getNumBuffers());
       }
     }
   }
@@ -702,9 +698,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
         // As failed ReadBuffers (bufferIndex = -1) are already pushed to free
         // list in doneReading method, we will skip adding those here again.
         if (readBuffer.getBufferindex() != -1) {
-          synchronized (this) {
-            pushToFreeList(readBuffer.getBufferindex());
-          }
+          pushToFreeList(readBuffer.getBufferindex());
         }
       }
     }
@@ -757,11 +751,13 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     tryEvict();
   }
 
-
   @VisibleForTesting
   public int getNumBuffers() {
-    synchronized (this) {
+    LOCK.lock();
+    try {
       return numberOfActiveBuffers;
+    } finally {
+      LOCK.unlock();
     }
   }
 
@@ -875,6 +871,24 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     LOCK.lock();
     try {
       getFreeList().push(idx);
+    } finally {
+      LOCK.unlock();
+    }
+  }
+
+  private void incrementActiveBufferCount() {
+    LOCK.lock();
+    try {
+      numberOfActiveBuffers++;
+    } finally {
+      LOCK.unlock();
+    }
+  }
+
+  private void decrementActiveBufferCount() {
+    LOCK.lock();
+    try {
+      numberOfActiveBuffers--;
     } finally {
       LOCK.unlock();
     }
