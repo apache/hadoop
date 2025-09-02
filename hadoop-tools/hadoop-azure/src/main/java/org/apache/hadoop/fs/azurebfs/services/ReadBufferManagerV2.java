@@ -209,7 +209,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
             stream.getPath(), stream.getETag(), requestedOffset, stream.hashCode());
         return;
       }
-      if (getFreeList().isEmpty() && !tryMemoryUpscale() && !tryEvict()) {
+      if (isFreeListEmpty() && !tryMemoryUpscale() && !tryEvict()) {
         // No buffers are available and more buffers cannot be created. Skip queuing.
         printTraceLog("Skipping queuing readAhead for file: {}, with eTag: {}, offset: {}, triggered by stream: {} as no buffers are available",
             stream.getPath(), stream.getETag(), requestedOffset, stream.hashCode());
@@ -228,7 +228,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
       buffer.setLatch(new CountDownLatch(1));
       buffer.setTracingContext(tracingContext);
 
-      if (getFreeList().isEmpty()) {
+      if (isFreeListEmpty()) {
         /*
          * By now there should be at least one buffer available.
          * This is to double sure that after upscaling or eviction,
@@ -236,7 +236,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
          */
         return;
       }
-      Integer bufferIndex = getFreeList().pop();
+      Integer bufferIndex = popFromFreeList();
       buffer.setBuffer(bufferPool[bufferIndex]);
       buffer.setBufferindex(bufferIndex);
       getReadAheadQueue().add(buffer);
@@ -337,7 +337,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
         } else {
           // Failed read, reuse buffer for next read, this buffer will be
           // evicted later based on eviction policy.
-          getFreeList().push(buffer.getBufferindex());
+          pushToFreeList(buffer.getBufferindex());
         }
         // completed list also contains FAILED read buffers
         // for sending exception message to clients.
@@ -473,7 +473,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     // avoid adding it to availableBufferList.
     if (buf.getBufferindex() != -1) {
       synchronized (this) {
-        getFreeList().push(buf.getBufferindex());
+        pushToFreeList(buf.getBufferindex());
       }
     }
     getCompletedReadList().remove(buf);
@@ -526,7 +526,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
       synchronized (this) {
         getReadAheadQueue().remove(buffer);
         notifyAll();   // lock is held in calling method
-        getFreeList().push(buffer.getBufferindex());
+        pushToFreeList(buffer.getBufferindex());
       }
     }
     return null;
@@ -597,7 +597,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
       // Create and Add more buffers in getFreeList().
       if (removedBufferList.isEmpty()) {
         bufferPool[numberOfActiveBuffers] = new byte[getReadAheadBlockSize()];
-        getFreeList().add(numberOfActiveBuffers);
+        pushToFreeList(numberOfActiveBuffers);
       } else {
         // Reuse a removed buffer index.
         int freeIndex = removedBufferList.pop();
@@ -607,7 +607,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
           return false;
         }
         bufferPool[freeIndex] = new byte[getReadAheadBlockSize()];
-        getFreeList().add(freeIndex);
+        pushToFreeList(freeIndex);
       }
       numberOfActiveBuffers++;
       printTraceLog("Current Memory Load: {}. Incrementing buffer pool size to {}", memoryLoad, numberOfActiveBuffers);
@@ -631,11 +631,11 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     double memoryLoad = getMemoryLoad();
     if (isDynamicScalingEnabled && memoryLoad > memoryThreshold) {
       synchronized (this) {
-        if (getFreeList().isEmpty()) {
+        if (isFreeListEmpty()) {
           printTraceLog("No free buffers available. Skipping downscale of buffer pool");
           return; // No free buffers available, so cannot downscale.
         }
-        int freeIndex = getFreeList().pop();
+        int freeIndex = popFromFreeList();
         bufferPool[freeIndex] = null;
         removedBufferList.add(freeIndex);
         numberOfActiveBuffers--;
@@ -703,7 +703,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
         // list in doneReading method, we will skip adding those here again.
         if (readBuffer.getBufferindex() != -1) {
           synchronized (this) {
-            getFreeList().push(readBuffer.getBufferindex());
+            pushToFreeList(readBuffer.getBufferindex());
           }
         }
       }
@@ -851,5 +851,32 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
   public int getRequiredThreadPoolSize() {
     return (int) Math.ceil(THREAD_POOL_REQUIREMENT_BUFFER
         * (getReadAheadQueue().size() + getInProgressList().size())); // 20% more for buffer
+  }
+
+  private boolean isFreeListEmpty() {
+    LOCK.lock();
+    try {
+      return getFreeList().isEmpty();
+    } finally {
+      LOCK.unlock();
+    }
+  }
+
+  private Integer popFromFreeList() {
+    LOCK.lock();
+    try {
+      return getFreeList().pop();
+    } finally {
+      LOCK.unlock();
+    }
+  }
+
+  private void pushToFreeList(int idx) {
+    LOCK.lock();
+    try {
+      getFreeList().push(idx);
+    } finally {
+      LOCK.unlock();
+    }
   }
 }
