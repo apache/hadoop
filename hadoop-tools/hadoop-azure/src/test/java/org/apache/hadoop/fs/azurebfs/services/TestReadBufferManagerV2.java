@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,6 +38,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_MAX_THREAD_POOL_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_MEMORY_MONITORING_INTERVAL_MILLIS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_MIN_THREAD_POOL_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,6 +47,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
   private volatile boolean running = true;
+  private final List<byte[]> allocations = new ArrayList<>();
+
 
   public TestReadBufferManagerV2() throws Exception {
     super();
@@ -155,6 +162,85 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     assertThat(bufferManagerV2.getCompletedReadListSize()).isEqualTo(2);
     Thread.sleep(2L * bufferManagerV2.getMemoryMonitoringIntervalInMilliSec());
     assertThat(bufferManagerV2.getCompletedReadListSize()).isEqualTo(0);
+  }
+
+  @Test
+  public void testMemoryUpscaleNotAllowedIfMemoryAboveThreshold() throws Exception {
+    TestAbfsInputStream testAbfsInputStream = new TestAbfsInputStream();
+    AbfsClient client = testAbfsInputStream.getMockAbfsClient();
+    AbfsInputStream inputStream = testAbfsInputStream.getAbfsInputStream(client, "testFailedReadAhead.txt");
+    Configuration configuration = getReabAheadV2Configuration();
+    AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
+        getAccountName());
+    ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
+    ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
+    ReadBufferManagerV2 bufferManagerV2 = Mockito.spy(ReadBufferManagerV2.getBufferManager());
+    Mockito.doReturn(0.6).when(bufferManagerV2).getMemoryLoad();
+    // Add a failed buffer to completed queue and set to no free buffers to read ahead.
+    ReadBuffer buff = new ReadBuffer();
+    buff.setStatus(ReadBufferStatus.READ_FAILED);
+    buff.setStream(inputStream);
+    bufferManagerV2.testMimicFullUseAndAddFailedBuffer(buff);
+    assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(bufferManagerV2.getMinBufferPoolSize());
+    bufferManagerV2.queueReadAhead(inputStream, 0, ONE_KB,
+        inputStream.getTracingContext());
+    assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(bufferManagerV2.getMinBufferPoolSize());
+  }
+
+  @Test
+  public void testMemoryUpscaleIfMemoryBelowThreshold() throws Exception {
+    TestAbfsInputStream testAbfsInputStream = new TestAbfsInputStream();
+    AbfsClient client = testAbfsInputStream.getMockAbfsClient();
+    AbfsInputStream inputStream = testAbfsInputStream.getAbfsInputStream(client, "testFailedReadAhead.txt");
+    Configuration configuration = getReabAheadV2Configuration();
+    AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
+        getAccountName());
+    ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
+    ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
+    ReadBufferManagerV2 bufferManagerV2 = Mockito.spy(ReadBufferManagerV2.getBufferManager());
+    Mockito.doReturn(0.4).when(bufferManagerV2).getMemoryLoad();
+    // Add a failed buffer to completed queue and set to no free buffers to read ahead.
+    ReadBuffer buff = new ReadBuffer();
+    buff.setStatus(ReadBufferStatus.READ_FAILED);
+    buff.setStream(inputStream);
+    bufferManagerV2.testMimicFullUseAndAddFailedBuffer(buff);
+    assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(bufferManagerV2.getMinBufferPoolSize());
+    bufferManagerV2.queueReadAhead(inputStream, 0, ONE_KB,
+        inputStream.getTracingContext());
+    assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(bufferManagerV2.getMinBufferPoolSize() + 1);
+  }
+
+  @Test
+  public void testMemoryDownscaleIfMemoryAboveThreshold() throws Exception {
+    TestAbfsInputStream testAbfsInputStream = new TestAbfsInputStream();
+    AbfsClient client = testAbfsInputStream.getMockAbfsClient();
+    AbfsInputStream inputStream = testAbfsInputStream.getAbfsInputStream(client, "testFailedReadAhead.txt");
+    Configuration configuration = getReabAheadV2Configuration();
+    AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
+        getAccountName());
+    ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
+    ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
+    ReadBufferManagerV2 bufferManagerV2 = Mockito.spy(ReadBufferManagerV2.getBufferManager());
+    assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(bufferManagerV2.getMinBufferPoolSize());
+    running = true;
+    Thread t = new Thread(() -> {
+      while (running) {
+        long maxMemory = Runtime.getRuntime().maxMemory();
+        long usedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        double usage = (double) usedMemory / maxMemory;
+
+        if (usage < 0.6) {
+          // Allocate more memory
+          allocations.add(new byte[10 * 1024 * 1024]); // 10MB
+        }
+      }
+    }, "MemoryLoadThread");
+    t.setDaemon(true);
+    t.start();
+    Thread.sleep(bufferManagerV2.getMemoryMonitoringIntervalInMilliSec());
+    running = false;
+    t.join();
+    assertThat(bufferManagerV2.getNumBuffers()).isLessThan(bufferManagerV2.getMinBufferPoolSize());
   }
 
   private Configuration getReabAheadV2Configuration() {

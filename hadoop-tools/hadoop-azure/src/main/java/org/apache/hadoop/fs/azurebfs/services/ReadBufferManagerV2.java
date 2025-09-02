@@ -49,7 +49,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.O
 /**
  * The Improved Read Buffer Manager for Rest AbfsClient.
  */
-public final class ReadBufferManagerV2 extends ReadBufferManager {
+public class ReadBufferManagerV2 extends ReadBufferManager {
   // Internal constants
   private static final ReentrantLock LOCK = new ReentrantLock();
 
@@ -118,7 +118,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   public static void setReadBufferManagerConfigs(final int readAheadBlockSize,
       final AbfsConfiguration abfsConfiguration) {
     // Set Configs only before initializations.
-    if (bufferManager == null) {
+    if (bufferManager == null && !isConfigured) {
       minThreadPoolSize = abfsConfiguration.getMinReadAheadV2ThreadPoolSize();
       maxThreadPoolSize = abfsConfiguration.getMaxReadAheadV2ThreadPoolSize();
       cpuMonitoringIntervalInMilliSec = abfsConfiguration.getReadAheadV2CpuMonitoringIntervalMillis();
@@ -143,9 +143,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
    */
   @Override
   void init() {
-    // Initialize Buffer Pool
+    // Initialize Buffer Pool. Size can never be more than max pool size
     bufferPool = new byte[maxBufferPoolSize][];
     for (int i = 0; i < minBufferPoolSize; i++) {
+      // Start with just minimum number of buffers.
       bufferPool[i] = new byte[getReadAheadBlockSize()];  // same buffers are reused. The byte array never goes back to GC
       getFreeList().add(i);
       numberOfActiveBuffers++;
@@ -630,6 +631,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     double memoryLoad = getMemoryLoad();
     if (isDynamicScalingEnabled && memoryLoad > memoryThreshold) {
       synchronized (this) {
+        if (getFreeList().isEmpty()) {
+          printTraceLog("No free buffers available. Skipping downscale of buffer pool");
+          return; // No free buffers available, so cannot downscale.
+        }
         int freeIndex = getFreeList().pop();
         bufferPool[freeIndex] = null;
         removedBufferList.add(freeIndex);
