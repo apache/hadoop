@@ -24,12 +24,15 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_CPU_MONITORING_INTERVAL_MILLIS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_MAX_THREAD_POOL_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_MEMORY_MONITORING_INTERVAL_MILLIS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_MIN_THREAD_POOL_SIZE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,6 +53,8 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testReadBufferManagerV2Init() throws Exception {
+    ReadBufferManagerV2.setReadBufferManagerConfigs(getConfiguration().getReadAheadBlockSize(), getConfiguration());
+    ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
     assertThat(ReadBufferManagerV2.getInstance())
         .as("ReadBufferManager should be uninitialized").isNull();
     intercept(IllegalStateException.class, "ReadBufferManagerV2 is not configured.", () -> {
@@ -101,7 +106,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testThreadPoolUpscale() throws Exception {
+  public void testThreadPoolDynamicScaling() throws Exception {
     TestAbfsInputStream testAbfsInputStream = new TestAbfsInputStream();
     AbfsClient client = testAbfsInputStream.getMockAbfsClient();
     AbfsInputStream inputStream = testAbfsInputStream.getAbfsInputStream(client, "testFailedReadAhead.txt");
@@ -130,6 +135,28 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isLessThan(4);
   }
 
+  @Test
+  public void testScheduledEviction() throws Exception {
+    TestAbfsInputStream testAbfsInputStream = new TestAbfsInputStream();
+    AbfsClient client = testAbfsInputStream.getMockAbfsClient();
+    AbfsInputStream inputStream = testAbfsInputStream.getAbfsInputStream(client, "testFailedReadAhead.txt");
+    Configuration configuration = getReabAheadV2Configuration();
+    AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
+        getAccountName());
+    ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
+    ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
+    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
+    // Add a failed buffer to completed queue and set to no free buffers to read ahead.
+    ReadBuffer buff = new ReadBuffer();
+    buff.setStatus(ReadBufferStatus.READ_FAILED);
+    buff.setStream(inputStream);
+    bufferManagerV2.testMimicFullUseAndAddFailedBuffer(buff);
+    bufferManagerV2.testMimicFullUseAndAddFailedBuffer(buff);
+    assertThat(bufferManagerV2.getCompletedReadListSize()).isEqualTo(2);
+    Thread.sleep(2L * bufferManagerV2.getMemoryMonitoringIntervalInMilliSec());
+    assertThat(bufferManagerV2.getCompletedReadListSize()).isEqualTo(0);
+  }
+
   private Configuration getReabAheadV2Configuration() {
     Configuration conf = new Configuration(getRawConfiguration());
     conf.setBoolean(FS_AZURE_ENABLE_READAHEAD_V2, true);
@@ -138,6 +165,8 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     conf.setInt(FS_AZURE_READAHEAD_V2_MAX_THREAD_POOL_SIZE, 4);
     conf.setInt(FS_AZURE_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENT, 90);
     conf.setInt(FS_AZURE_READAHEAD_V2_CPU_MONITORING_INTERVAL_MILLIS, 1000);
+    conf.setInt(FS_AZURE_READAHEAD_V2_MEMORY_MONITORING_INTERVAL_MILLIS, 1000);
+    conf.setInt(FS_AZURE_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS, 1000);
     return conf;
   }
 }

@@ -156,7 +156,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       return t;
     });
     memoryMonitorThread.scheduleAtFixedRate(this::scheduledEviction,
-        memoryMonitoringIntervalInMilliSec, memoryMonitoringIntervalInMilliSec, TimeUnit.MILLISECONDS);
+        getMemoryMonitoringIntervalInMilliSec(), getMemoryMonitoringIntervalInMilliSec(), TimeUnit.MILLISECONDS);
 
     // Initialize a Fixed Size Thread Pool with minThreadPoolSize threads
     workerPool = new ThreadPoolExecutor(
@@ -181,7 +181,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         return t;
       });
       cpuMonitorThread.scheduleAtFixedRate(this::adjustThreadPool,
-          cpuMonitoringIntervalInMilliSec, cpuMonitoringIntervalInMilliSec,
+          getCpuMonitoringIntervalInMilliSec(), getCpuMonitoringIntervalInMilliSec(),
           TimeUnit.MILLISECONDS);
     }
 
@@ -799,18 +799,15 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   @VisibleForTesting
+  public double getCpuLoad() {
+    OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
+        OperatingSystemMXBean.class);
+    return osBean.getSystemCpuLoad();
+  }
+
+  @VisibleForTesting
   public static ReadBufferManagerV2 getInstance() {
     return bufferManager;
-  }
-
-  @VisibleForTesting
-  public int getMinThreadPoolSize() {
-    return minThreadPoolSize;
-  }
-
-  @VisibleForTesting
-  public int getMaxThreadPoolSize() {
-    return maxThreadPoolSize;
   }
 
   @VisibleForTesting
@@ -834,15 +831,13 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   @VisibleForTesting
-  public ScheduledExecutorService getCpuMonitoringThread() {
-    return cpuMonitorThread;
+  public int getMemoryMonitoringIntervalInMilliSec() {
+    return memoryMonitoringIntervalInMilliSec;
   }
 
   @VisibleForTesting
-  public double getCpuLoad() {
-    OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
-        OperatingSystemMXBean.class);
-    return osBean.getSystemCpuLoad();
+  public ScheduledExecutorService getCpuMonitoringThread() {
+    return cpuMonitorThread;
   }
 
   public int getRequiredThreadPoolSize() {

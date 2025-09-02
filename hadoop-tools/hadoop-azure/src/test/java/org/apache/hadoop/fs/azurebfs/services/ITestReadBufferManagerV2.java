@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
 
@@ -50,12 +51,12 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     int fileSize = LARGE_FILE_SIZE;
     int numFiles = MORE_NUM_FILES;
+    byte[] fileContent = getRandomBytesArray(fileSize);
 
     Path[] testPaths = new Path[numFiles];
     int[] idx = {0};
     for (int i = 0; i < numFiles; i++) {
       final String fileName = methodName.getMethodName() + i;
-      byte[] fileContent = getRandomBytesArray(fileSize);
       testPaths[i] = createFileWithContent(fs, fileName, fileContent);
     }
     ExecutorService executorService = Executors.newFixedThreadPool(numFiles);
@@ -67,7 +68,9 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
         executorService.submit((Callable<Void>) () -> {
           try (FSDataInputStream iStream = fs.open(testPaths[idx[0]++])) {
             byte[] buffer = new byte[fileSize];
-            iStream.read(buffer, 0, fileSize);
+            int bytesRead = iStream.read(buffer, 0, fileSize);
+            assertThat(bytesRead).isEqualTo(fileSize);
+            assertThat(buffer).isEqualTo(fileContent);
           }
           return null;
         });
@@ -90,9 +93,9 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     int fileSize = SMALL_FILE_SIZE;
     int numFiles = LESS_NUM_FILES;
+    byte[] fileContent = getRandomBytesArray(fileSize);
 
     final String fileName = methodName.getMethodName();
-    byte[] fileContent = getRandomBytesArray(fileSize);
     Path testPath = createFileWithContent(fs, fileName, fileContent);
     ExecutorService executorService = Executors.newFixedThreadPool(numFiles);
     Map<String, Long> metricMap = getInstrumentationMap(fs);
@@ -103,7 +106,9 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
         executorService.submit((Callable<Void>) () -> {
           try (FSDataInputStream iStream = fs.open(testPath)) {
             byte[] buffer = new byte[fileSize];
-            iStream.read(buffer, 0, fileSize);
+            int bytesRead = iStream.read(buffer, 0, fileSize);
+            assertThat(bytesRead).isEqualTo(fileSize);
+            assertThat(buffer).isEqualTo(fileContent);
           }
           return null;
         });
