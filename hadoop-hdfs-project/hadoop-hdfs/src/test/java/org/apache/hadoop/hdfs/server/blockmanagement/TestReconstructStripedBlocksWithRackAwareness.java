@@ -37,7 +37,6 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -49,6 +48,11 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestReconstructStripedBlocksWithRackAwareness {
   public static final Logger LOG = LoggerFactory.getLogger(
@@ -179,7 +183,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
       DatanodeStorageInfo storage = it.next();
       rackSet.add(storage.getDatanodeDescriptor().getNetworkLocation());
     }
-    Assertions.assertEquals(dataBlocks - 1, rackSet.size(),
+    assertEquals(dataBlocks - 1, rackSet.size(),
         "rackSet size is wrong: " + rackSet);
 
     // restart the stopped datanode
@@ -189,8 +193,8 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     // make sure we have 6 racks again
     NetworkTopology topology = bm.getDatanodeManager().getNetworkTopology();
     LOG.info("topology is: {}", topology);
-    Assertions.assertEquals(hosts.length, topology.getNumOfLeaves());
-    Assertions.assertEquals(dataBlocks, topology.getNumOfRacks());
+    assertEquals(hosts.length, topology.getNumOfLeaves());
+    assertEquals(dataBlocks, topology.getNumOfRacks());
 
     // pause all the heartbeats
     for (DataNode dn : cluster.getDataNodes()) {
@@ -212,7 +216,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
         DatanodeStorageInfo storage = it.next();
         if (storage != null) {
           DatanodeDescriptor dn = storage.getDatanodeDescriptor();
-          Assertions.assertEquals(0, dn.getNumberOfBlocksToBeErasureCoded(),
+          assertEquals(0, dn.getNumberOfBlocksToBeErasureCoded(),
               "Block to be erasure coded is wrong for datanode:" + dn);
           if (dn.getNumberOfBlocksToBeReplicated() == 1) {
             scheduled = true;
@@ -224,7 +228,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
       }
       Thread.sleep(1000);
     }
-    Assertions.assertTrue(scheduled);
+    assertTrue(scheduled);
   }
 
   @Test
@@ -271,7 +275,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     LocatedBlocks blks = fs.getClient().getLocatedBlocks(file.toString(), 0);
     LocatedStripedBlock block = (LocatedStripedBlock) blks.getLastLocatedBlock();
     for (DatanodeInfo dn : block.getLocations()) {
-      Assertions.assertFalse(dn.getHostName().equals("host1"));
+      assertFalse(dn.getHostName().equals("host1"));
     }
   }
 
@@ -322,11 +326,11 @@ public class TestReconstructStripedBlocksWithRackAwareness {
       recovered = bm.countNodes(blockInfo).liveReplicas() >=
           dataBlocks + parityBlocks;
     }
-    Assertions.assertTrue(recovered);
+    assertTrue(recovered);
 
     // mark h9 as decommissioning
     DataNode datanode9 = getDataNode(hostNames[hostNames.length - 3]);
-    Assertions.assertNotNull(datanode9);
+    assertNotNull(datanode9);
     final DatanodeDescriptor dn9 = dm.getDatanode(datanode9.getDatanodeId());
     dn9.startDecommission();
 
@@ -339,7 +343,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
 
     // start decommissioning h9
     boolean satisfied = bm.isPlacementPolicySatisfied(blockInfo);
-    Assertions.assertFalse(satisfied);
+    assertFalse(satisfied);
     final DatanodeAdminManager decomManager =
         (DatanodeAdminManager) Whitebox.getInternalState(
             dm, "datanodeAdminManager");
@@ -358,7 +362,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
       Thread.sleep(1000);
       decommissioned = dn9.isDecommissioned();
     }
-    Assertions.assertTrue(decommissioned);
-    Assertions.assertTrue(bm.isPlacementPolicySatisfied(blockInfo));
+    assertTrue(decommissioned);
+    assertTrue(bm.isPlacementPolicySatisfied(blockInfo));
   }
 }

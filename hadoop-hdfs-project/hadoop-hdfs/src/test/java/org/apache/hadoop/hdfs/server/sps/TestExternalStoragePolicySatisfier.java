@@ -39,6 +39,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSF
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
@@ -97,7 +98,6 @@ import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.Ignore;
 import org.junit.jupiter.api.Test;
@@ -297,7 +297,7 @@ public class TestExternalStoragePolicySatisfier {
     baseDir = GenericTestUtils
         .getTestDir(TestExternalStoragePolicySatisfier.class.getSimpleName());
     FileUtil.fullyDelete(baseDir);
-    Assertions.assertTrue(baseDir.mkdirs());
+    assertTrue(baseDir.mkdirs());
 
     Properties kdcConf = MiniKdc.createConf();
     kdc = new MiniKdc(kdcConf, baseDir);
@@ -307,7 +307,7 @@ public class TestExternalStoragePolicySatisfier {
         UserGroupInformation.AuthenticationMethod.KERBEROS, conf);
     UserGroupInformation.setConfiguration(conf);
     KerberosName.resetDefaultRealm();
-    Assertions.assertTrue(UserGroupInformation.isSecurityEnabled(),
+    assertTrue(UserGroupInformation.isSecurityEnabled(),
         "Expected configuration to enable security");
 
     keytabFile = new File(baseDir, username + ".keytab");
@@ -367,7 +367,7 @@ public class TestExternalStoragePolicySatisfier {
           // verify that sps runs Ok.
           testWhenStoragePolicySetToALLSSD();
           // verify that UGI was logged in using keytab.
-          Assertions.assertTrue(UserGroupInformation.isLoginKeytabBased());
+          assertTrue(UserGroupInformation.isLoginKeytabBased());
           return null;
         }
       });
@@ -409,7 +409,7 @@ public class TestExternalStoragePolicySatisfier {
       writeContent(fileExceeds);
       try {
         fs.satisfyStoragePolicy(new Path(fileExceeds));
-        Assertions.fail("Should throw exception as it exceeds "
+        fail("Should throw exception as it exceeds "
             + "outstanding SPS call Q limit");
       } catch (IOException ioe) {
         GenericTestUtils.assertExceptionContains(
@@ -436,7 +436,7 @@ public class TestExternalStoragePolicySatisfier {
           HdfsServerConstants.MOVER_ID_PATH, 0, (short) 1, 0);
       restartNamenode();
       boolean running = externalCtxt.isRunning();
-      Assertions.assertTrue(running, "SPS should be running as " + "no Mover really running");
+      assertTrue(running, "SPS should be running as " + "no Mover really running");
     } finally {
       shutdownCluster();
     }
@@ -808,7 +808,7 @@ public class TestExternalStoragePolicySatisfier {
 
       try {
         hdfsAdmin.satisfyStoragePolicy(new Path(FILE));
-        Assertions.fail(String.format(
+        fail(String.format(
             "Should failed to satisfy storage policy "
                 + "for %s since %s is set to false.",
             FILE, DFS_STORAGE_POLICY_ENABLED_KEY));
@@ -825,7 +825,7 @@ public class TestExternalStoragePolicySatisfier {
       hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(config), config);
       try {
         hdfsAdmin.satisfyStoragePolicy(new Path(nonExistingFile));
-        Assertions.fail("Should throw FileNotFoundException for " +
+        fail("Should throw FileNotFoundException for " +
             nonExistingFile);
       } catch (FileNotFoundException e) {
 
@@ -835,7 +835,7 @@ public class TestExternalStoragePolicySatisfier {
         hdfsAdmin.satisfyStoragePolicy(new Path(FILE));
         hdfsAdmin.satisfyStoragePolicy(new Path(FILE));
       } catch (Exception e) {
-        Assertions.fail(String.format("Allow to invoke mutlipe times "
+        fail(String.format("Allow to invoke mutlipe times "
             + "#satisfyStoragePolicy() api for a path %s , internally just "
             + "skipping addtion to satisfy movement queue.", FILE));
       }
@@ -1275,7 +1275,7 @@ public class TestExternalStoragePolicySatisfier {
           client.getBlockLocations(testFile, 0, fileLen);
       for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
         for (StorageType type : lb.getStorageTypes()) {
-          Assertions.assertEquals(StorageType.DISK, type);
+          assertEquals(StorageType.DISK, type);
         }
       }
 
@@ -1307,11 +1307,11 @@ public class TestExternalStoragePolicySatisfier {
           .getEditLog();
       long lastWrittenTxId = editlog.getLastWrittenTxId();
       fs.satisfyStoragePolicy(filePath);
-      Assertions.assertEquals(lastWrittenTxId, editlog.getLastWrittenTxId(),
+      assertEquals(lastWrittenTxId, editlog.getLastWrittenTxId(),
           "Xattr should not be added for the file");
       INode inode = hdfsCluster.getNameNode().getNamesystem().getFSDirectory()
           .getINode(filePath.toString());
-      Assertions.assertTrue(inode.getXAttrFeature() == null,
+      assertTrue(inode.getXAttrFeature() == null,
           "XAttrFeature should be null for file");
     } finally {
       shutdownCluster();
@@ -1737,19 +1737,19 @@ public class TestExternalStoragePolicySatisfier {
         DEFAULT_BLOCK_SIZE, (short) 3, 0, false, favoredNodes);
 
     LocatedBlocks locatedBlocks = dfs.getClient().getLocatedBlocks(file1, 0);
-    Assertions.assertEquals(1, locatedBlocks.locatedBlockCount(), "Wrong block count");
+    assertEquals(1, locatedBlocks.locatedBlockCount(), "Wrong block count");
 
     // verify storage type before movement
     LocatedBlock lb = locatedBlocks.get(0);
     StorageType[] storageTypes = lb.getStorageTypes();
     for (StorageType storageType : storageTypes) {
-      Assertions.assertTrue(StorageType.DISK == storageType);
+      assertTrue(StorageType.DISK == storageType);
     }
 
     // Mock FsDatasetSpi#getPinning to show that the block is pinned.
     DatanodeInfo[] locations = lb.getLocations();
-    Assertions.assertEquals(3, locations.length);
-    Assertions.assertTrue(favoredNodesCount < locations.length);
+    assertEquals(3, locations.length);
+    assertTrue(favoredNodesCount < locations.length);
     for(DatanodeInfo dnInfo: locations){
       LOG.info("Simulate block pinning in datanode {}",
           locations[favoredNodesCount]);

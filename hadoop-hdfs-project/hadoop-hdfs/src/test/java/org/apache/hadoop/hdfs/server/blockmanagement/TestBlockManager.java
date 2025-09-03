@@ -87,7 +87,6 @@ import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.LightWeightGSet;
 import org.slf4j.event.Level;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -1403,11 +1402,11 @@ public class TestBlockManager {
     BlockPlacementPolicyDefault policyDefault =
         (BlockPlacementPolicyDefault) bm.getBlockPlacementPolicy();
     excessTypes.add(StorageType.DEFAULT);
-    Assertions.assertTrue(policyDefault.useDelHint(delHint, null, moreThan1Racks,
+    assertTrue(policyDefault.useDelHint(delHint, null, moreThan1Racks,
         null, excessTypes));
     excessTypes.remove(0);
     excessTypes.add(StorageType.SSD);
-    Assertions.assertFalse(policyDefault.useDelHint(delHint, null, moreThan1Racks,
+    assertFalse(policyDefault.useDelHint(delHint, null, moreThan1Racks,
         null, excessTypes));
   }
 

@@ -46,7 +46,6 @@ import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.event.Level;
@@ -67,6 +66,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestNameNodePrunesMissingStorages {
   static final Logger LOG =
@@ -212,7 +212,7 @@ public class TestNameNodePrunesMissingStorages {
       int datanodeToRemoveStorageFromIdx = 0;
       while (true) {
         if (datanodeToRemoveStorageFromIdx >= cluster.getDataNodes().size()) {
-          Assertions.fail("failed to find datanode with uuid " + datanodeUuid);
+          fail("failed to find datanode with uuid " + datanodeUuid);
           datanodeToRemoveStorageFrom = null;
           break;
         }

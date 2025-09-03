@@ -69,15 +69,18 @@ import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestDatanodeManager {
   
@@ -331,12 +334,12 @@ public class TestDatanodeManager {
     try {
       //Register this node
       dm.registerDatanode(dr);
-      Assertions.fail("Expected an UnresolvedTopologyException");
+      fail("Expected an UnresolvedTopologyException");
     } catch (UnresolvedTopologyException ute) {
       LOG.info("Expected - topology is not resolved and " +
           "registration is rejected.");
     } catch (Exception e) {
-      Assertions.fail("Expected an UnresolvedTopologyException");
+      fail("Expected an UnresolvedTopologyException");
     }
   }
   
@@ -956,10 +959,10 @@ public class TestDatanodeManager {
     // Sort the list so that we know which one is which
     Collections.sort(both);
 
-    Assertions.assertEquals(2, both.size(), "Incorrect number of hosts reported");
-    Assertions.assertEquals("127.0.0.1:12345", both.get(0).getInfoAddr(),
+    assertEquals(2, both.size(), "Incorrect number of hosts reported");
+    assertEquals("127.0.0.1:12345", both.get(0).getInfoAddr(),
         "Unexpected host or host in unexpected position");
-    Assertions.assertEquals("127.0.0.1:23456", both.get(1).getInfoAddr(),
+    assertEquals("127.0.0.1:23456", both.get(1).getInfoAddr(),
         "Unexpected host or host in unexpected position");
 
     // Remove one node from includes, but do not add it to excludes.
@@ -969,9 +972,9 @@ public class TestDatanodeManager {
     List<DatanodeDescriptor> onlyOne =
         dm.getDatanodeListForReport(HdfsConstants.DatanodeReportType.ALL);
 
-    Assertions.assertEquals(1, onlyOne.size(),
+    assertEquals(1, onlyOne.size(),
         "Incorrect number of hosts reported");
-    Assertions.assertEquals("127.0.0.1:23456", onlyOne.get(0).getInfoAddr(),
+    assertEquals("127.0.0.1:23456", onlyOne.get(0).getInfoAddr(),
         "Unexpected host reported");
 
     // Remove all nodes from includes
@@ -984,11 +987,11 @@ public class TestDatanodeManager {
     // Sort the list so that we know which one is which
     Collections.sort(bothAgain);
 
-    Assertions.assertEquals(2, bothAgain.size(),
+    assertEquals(2, bothAgain.size(),
         "Incorrect number of hosts reported");
-    Assertions.assertEquals("127.0.0.1:12345", bothAgain.get(0).getInfoAddr(),
+    assertEquals("127.0.0.1:12345", bothAgain.get(0).getInfoAddr(),
         "Unexpected host or host in unexpected position");
-    Assertions.assertEquals("127.0.0.1:23456", bothAgain.get(1).getInfoAddr(),
+    assertEquals("127.0.0.1:23456", bothAgain.get(1).getInfoAddr(),
         "Unexpected host or host in unexpected position");
   }
 
