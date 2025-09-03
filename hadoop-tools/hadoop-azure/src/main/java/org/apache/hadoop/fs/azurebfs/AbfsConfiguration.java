@@ -498,6 +498,10 @@ public class AbfsConfiguration{
       MinValue = 0, MaxValue = MAX_APACHE_HTTP_CLIENT_MIN_TRIGGER_REFRESH_COUNT)
   private int apacheMinTriggerRefreshCount;
 
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_WARMUP_CACHE_TIMEOUT_MILLIS,
+      DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_WARMUP_CACHE_TIMEOUT_MILLIS)
+  private long apacheWarmupCacheTimeoutInMillis;
+
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID,
       DefaultValue = DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID)
   private boolean enableClientTransactionId;
@@ -1195,6 +1199,10 @@ public class AbfsConfiguration{
 
   public int getApacheMinTriggerRefreshCount() {
     return apacheMinTriggerRefreshCount;
+  }
+
+  public long getApacheWarmupCacheTimeoutInMillis() {
+    return apacheWarmupCacheTimeoutInMillis;
   }
 
   public boolean getIsClientTransactionIdEnabled() {

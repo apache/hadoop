@@ -420,6 +420,10 @@ public final class ConfigurationKeys {
    */
   public static final String FS_AZURE_APACHE_HTTP_CLIENT_MIN_TRIGGER_REFRESH_COUNT = "fs.azure.apache.http.client.min.trigger.refresh.count";
   /**
+   * Time duration to wait for ApacheHttpClient connection cache to warmup/refresh: {@value}
+   */
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_WARMUP_CACHE_TIMEOUT_MILLIS = "fs.azure.apache.http.client.warmup.cache.timeout.millis";
+  /**
    * Blob copy API is an async API, this configuration defines polling duration
    * for checking copy status: {@value}
    */

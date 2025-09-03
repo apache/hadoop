@@ -225,7 +225,7 @@ public final class FileSystemConfigurations {
 
   public static final int DEFAULT_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT = 5;
 
-    public static final int MAX_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT = 5;
+  public static final int MAX_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT = 5;
 
   public static final int DEFAULT_APACHE_HTTP_CLIENT_CACHE_REFRESH_COUNT = 5;
 
@@ -234,6 +234,8 @@ public final class FileSystemConfigurations {
   public static final long DEFAULT_APACHE_HTTP_CLIENT_MAX_REFRESH_WAIT_TIME_MILLIS = 500L;
 
   public static final int DEFAULT_APACHE_HTTP_CLIENT_MIN_TRIGGER_REFRESH_COUNT = 2;
+
+  public static final long DEFAULT_APACHE_HTTP_CLIENT_WARMUP_CACHE_TIMEOUT_MILLIS = 2_000L;
 
   public static final int MAX_APACHE_HTTP_CLIENT_MIN_TRIGGER_REFRESH_COUNT = 5;
 

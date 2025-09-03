@@ -188,7 +188,7 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
   @VisibleForTesting
   void closeInternal() {
     while (size() != 0) {
-      closeHttpClientConnection(removeFirst());
+      closeHttpClientConnection(pollFirst());
     }
   }
 
@@ -203,6 +203,8 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
    */
   public HttpClientConnection get() throws IOException {
     if (getIsClosed()) {
+      LOG.debug("Attempt to get connection from closed cache for account: {}",
+          accountNamePath);
       throw new ClosedIOException(accountNamePath, KEEP_ALIVE_CACHE_CLOSED);
     }
     HttpClientConnection httpClientConnection;
@@ -213,6 +215,8 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
       }
       return httpClientConnection;
     }
+    LOG.debug("No valid connection found in cache for account: {}",
+        accountNamePath);
     return null;
   }
 
@@ -234,6 +238,11 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
     }
     if (getIsClosed() || getMaxCacheConnections() <= 0
         || !conn.isOpen() || conn.isStale()) {
+      LOG.debug(
+          "Not adding connection to cache. closed: {}, "
+              + "maxCacheSize: {}, isOpen: {}, isStale: {} for account: {}",
+          getIsClosed(), getMaxCacheConnections(), conn.isOpen(),
+          conn.isStale(), accountNamePath);
       closeHttpClientConnection(conn);
       return false;
     }
