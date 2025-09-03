@@ -84,7 +84,7 @@ Refer to  dev-support/docker/Dockerfile):
   $ tar -zxvf protobuf-3.25.5.tar.gz
   $ tar -zxvf abseil-cpp-20230802.1.tar.gz --strip-components 1 -C protobuf-3.25.5/third_party/abseil-cpp
   $ cd protobuf-3.25.5
-  $ cmake -S . -B build -Dprotobuf_BUILD_TESTS=OFF
+  $ cmake -S . -B build -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF
   $ cmake --build build --parallel $(nproc)
   $ sudo cmake --install build
 * Boost
@@ -441,7 +441,7 @@ you may optionally install zlib, lz4, etc.
   $ tar -zxvf protobuf-3.25.5.tar.gz
   $ tar -zxvf abseil-cpp-20230802.1.tar.gz --strip-components 1 -C protobuf-3.25.5/third_party/abseil-cpp
   $ cd protobuf-3.25.5
-  $ cmake -S . -B build -Dprotobuf_BUILD_TESTS=OFF
+  $ cmake -S . -B build -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF
   $ cmake --build build --parallel $(nproc)
   $ cmake --install build
   $ protoc --version
@@ -481,7 +481,7 @@ Building on Rocky Linux 8
   $ tar -zxvf protobuf-3.25.5.tar.gz
   $ tar -zxvf abseil-cpp-20230802.1.tar.gz --strip-components 1 -C protobuf-3.25.5/third_party/abseil-cpp
   $ cd protobuf-3.25.5
-  $ cmake -S . -B build -Dprotobuf_BUILD_TESTS=OFF
+  $ cmake -S . -B build -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF
   $ cmake --build build --parallel $(nproc)
   $ sudo cmake --install build --prefix /usr/local
   $ cd ..
