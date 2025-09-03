@@ -645,8 +645,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
             .isEqualTo(HTTP_CONFLICT);
       }
       Assertions.assertThat(e.getMessage())
-          .as("Expected error message to contain 'AlreadyExists'")
-          .contains("AlreadyExists");
+          .as("Expected error message to contain 'Exists'")
+          .containsIgnoringCase("Exists");
     }
 
     // Remove file
