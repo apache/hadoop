@@ -45,13 +45,12 @@ if [ "$version_to_install" == "3.25.5" ]; then
       https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.25.5.tar.gz \
       -o /opt/protobuf.tar.gz &&
     tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src &&
-    mkdir -p /opt/abseil-cpp-src &&
     curl -L -s -S \
       https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz \
       -o /opt/abseil-cpp.tar.gz &&
     tar xzf /opt/abseil-cpp.tar.gz --strip-components 1 -C /opt/protobuf-src/third_party/abseil-cpp &&
     cd /opt/protobuf-src &&
-    cmake -S . -B build -Dprotobuf_BUILD_TESTS=OFF &&
+    cmake -S . -B build -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF &&
     cmake --build build --parallel $(nproc) &&
     cmake --install build --prefix /opt/protobuf &&
     cd /root &&
