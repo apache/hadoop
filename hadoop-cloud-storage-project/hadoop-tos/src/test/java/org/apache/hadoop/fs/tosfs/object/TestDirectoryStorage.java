@@ -24,13 +24,13 @@ import org.apache.hadoop.fs.tosfs.conf.TosKeys;
 import org.apache.hadoop.fs.tosfs.util.CommonUtils;
 import org.apache.hadoop.fs.tosfs.util.TestUtility;
 import org.apache.hadoop.fs.tosfs.util.UUIDUtils;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.tosfs.util.TestUtility.scheme;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -96,12 +96,12 @@ public class TestDirectoryStorage {
     touchFile(file2, TestUtility.rand(8));
     touchFile(file3, TestUtility.rand(8));
 
-    Assertions.assertThat(directoryStorage().listDir(root, false))
+    assertThat(directoryStorage().listDir(root, false))
         .hasSize(3)
         .extracting(ObjectInfo::key)
         .contains(dir1, file1, file2);
 
-    Assertions.assertThat(directoryStorage().listDir(root, true))
+    assertThat(directoryStorage().listDir(root, true))
         .hasSize(4)
         .extracting(ObjectInfo::key)
         .contains(dir1, file1, file2, file3);
@@ -129,7 +129,7 @@ public class TestDirectoryStorage {
       touchFile(String.format("root/b-dir-%d/file2", j), TestUtility.rand(8));
     }
 
-    Assertions.assertThat(directoryStorage().listDir(root, false))
+    assertThat(directoryStorage().listDir(root, false))
         .hasSize(6)
         .extracting(ObjectInfo::key)
         .contains(
@@ -137,7 +137,7 @@ public class TestDirectoryStorage {
             "root/b-dir-1/", "root/b-dir-2/",
             "root/c-file-1", "root/c-file-2");
 
-    Assertions.assertThat(directoryStorage().listDir(root, true))
+    assertThat(directoryStorage().listDir(root, true))
         .hasSize(10)
         .extracting(ObjectInfo::key)
         .contains(
@@ -154,7 +154,7 @@ public class TestDirectoryStorage {
     mkdir(root);
     mkdir(dir1);
 
-    Assertions.assertThat(directoryStorage().listDir("", true))
+    assertThat(directoryStorage().listDir("", true))
         .hasSize(2)
         .extracting(ObjectInfo::key)
         .contains("root/", "root/dir1/");
