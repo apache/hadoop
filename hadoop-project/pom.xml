@@ -68,6 +68,9 @@
     <!-- jersey version -->
     <jersey2.version>2.46</jersey2.version>
 
+    <!-- jaxb version -->
+    <jaxb.version>2.3.9</jaxb.version>
+
     <!-- jackson versions -->
     <jackson2.version>2.14.3</jackson2.version>
     <jackson2.databind.version>2.14.3</jackson2.databind.version>
@@ -2151,6 +2154,11 @@
         <groupId>org.glassfish.jersey.media</groupId>
         <artifactId>jersey-media-json-jettison</artifactId>
         <version>${jersey2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.glassfish.jaxb</groupId>
+        <artifactId>jaxb-runtime</artifactId>
+        <version>${jaxb.version}</version>
       </dependency>
       <dependency>
         <groupId>net.jodah</groupId>

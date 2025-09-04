@@ -510,6 +510,7 @@ Eclipse Distribution License (EDL) 1.0
 --------------------------
 
 jakarta.xml.bind:jakarta.xml.bind-api:2.3.3
+org.glassfish.jaxb:jaxb-runtime:2.3.9
 
 Eclipse Public License 1.0
 --------------------------
