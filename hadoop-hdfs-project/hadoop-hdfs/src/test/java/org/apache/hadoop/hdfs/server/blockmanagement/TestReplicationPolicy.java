@@ -18,12 +18,13 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -73,13 +74,13 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
+@MethodSource("data")
+@ParameterizedClass
 public class TestReplicationPolicy extends BaseReplicationPolicyTest {
 
   private static final String filename = "/dummyfile.txt";
@@ -87,14 +88,11 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
   private static final long staleInterval =
       DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT;
   private static AtomicLong mockINodeId = new AtomicLong(0);
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
   public TestReplicationPolicy(String blockPlacementPolicyClassName) {
     this.blockPlacementPolicy = blockPlacementPolicyClassName;
   }
 
-  @Parameterized.Parameters
   public static Iterable<Object[]> data() {
     return Arrays.asList(new Object[][] {
         { BlockPlacementPolicyDefault.class.getName() },
@@ -844,7 +842,8 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
    * Test for the high priority blocks are processed before the low priority
    * blocks.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReplicationWithPriority() throws Exception {
     int DFS_NAMENODE_REPLICATION_INTERVAL = 1000;
     int HIGH_PRIORITY = 0;
@@ -875,8 +874,8 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
 
       // Check replication completed successfully. Need not wait till it process
       // all the 100 normal blocks.
-      assertFalse("Not able to clear the element from high priority list",
-          neededReconstruction.iterator(HIGH_PRIORITY).hasNext());
+      assertFalse(neededReconstruction.iterator(HIGH_PRIORITY).hasNext(),
+          "Not able to clear the element from high priority list");
     } finally {
       cluster.shutdown();
     }
@@ -946,11 +945,11 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
       List<List<BlockInfo>> chosenBlocks, int... expectedSizes) {
     int i = 0;
     for(; i < chosenBlocks.size(); i++) {
-      assertEquals("Not returned the expected number for i=" + i,
-          expectedSizes[i], chosenBlocks.get(i).size());
+      assertEquals(expectedSizes[i], chosenBlocks.get(i).size(),
+          "Not returned the expected number for i=" + i);
     }
     for(; i < expectedSizes.length; i++) {
-      assertEquals("Expected size is non-zero for i=" + i, 0, expectedSizes[i]);
+      assertEquals(0, expectedSizes[i], "Expected size is non-zero for i=" + i);
     }
   }
   
@@ -1294,8 +1293,9 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     
     conf.set(DFSConfigKeys.
         DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION, "0.0f");
-    exception.expect(IllegalArgumentException.class);
-    blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
+    assertThrows(IllegalArgumentException.class, () -> {
+      DFSUtil.getInvalidateWorkPctPerIteration(conf);
+    });
   }
   
   /**
@@ -1312,8 +1312,9 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     
     conf.set(DFSConfigKeys.
         DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION, "-0.5f");
-    exception.expect(IllegalArgumentException.class);
-    blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
+    assertThrows(IllegalArgumentException.class, () -> {
+      DFSUtil.getInvalidateWorkPctPerIteration(conf);
+    });
   }
   
   /**
@@ -1330,8 +1331,9 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     
     conf.set(DFSConfigKeys.
         DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION, "1.5f");
-    exception.expect(IllegalArgumentException.class);
-    blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
+    assertThrows(IllegalArgumentException.class, () -> {
+      DFSUtil.getInvalidateWorkPctPerIteration(conf);
+    });
   }
 
   /**
@@ -1353,11 +1355,13 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     
     conf.set(DFSConfigKeys.
         DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION,"-1");
-    exception.expect(IllegalArgumentException.class);
-    blocksReplWorkMultiplier = DFSUtil.getReplWorkMultiplier(conf);
+    assertThrows(IllegalArgumentException.class, () -> {
+      DFSUtil.getReplWorkMultiplier(conf);
+    });
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testUpdateDoesNotCauseSkippedReplication() {
     LowRedundancyBlocks lowRedundancyBlocks = new LowRedundancyBlocks();
 
@@ -1401,7 +1405,8 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     assertTheChosenBlocks(chosenBlocks, 0, 0, 1, 0, 0);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testAddStoredBlockDoesNotCauseSkippedReplication()
       throws IOException {
     FSNamesystem mockNS = mock(FSNamesystem.class);
@@ -1456,7 +1461,8 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void
       testConvertLastBlockToUnderConstructionDoesNotCauseSkippedReplication()
           throws IOException {
@@ -1530,7 +1536,8 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testupdateNeededReplicationsDoesNotCauseSkippedReplication()
       throws IOException {
     Namesystem mockNS = mock(Namesystem.class);
@@ -1591,8 +1598,8 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     targets = chooseTarget(5, dataNodes[2], null, favouredNodes);
     assertEquals(targets.length, 5);
     for (int i = 0; i < targets.length; i++) {
-      assertTrue("Target should be a part of Expected Targets",
-          expectedTargets.contains(targets[i].getDatanodeDescriptor()));
+      assertTrue(expectedTargets.contains(targets[i].getDatanodeDescriptor()),
+          "Target should be a part of Expected Targets");
     }
   }
 
@@ -1611,8 +1618,8 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
           favouredNodes);
       assertEquals(targets.length, 2);
       for (int i = 0; i < targets.length; i++) {
-        assertTrue("Target should be a part of Expected Targets",
-            expectedTargets.contains(targets[i].getDatanodeDescriptor()));
+        assertTrue(expectedTargets.contains(targets[i].getDatanodeDescriptor()),
+            "Target should be a part of Expected Targets");
       }
     } finally {
       ((BlockPlacementPolicyDefault) replicator).setPreferLocalNode(true);

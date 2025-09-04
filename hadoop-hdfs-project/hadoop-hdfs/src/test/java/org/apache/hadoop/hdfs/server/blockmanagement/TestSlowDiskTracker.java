@@ -18,11 +18,9 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,6 +32,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys
 import static org.apache.hadoop.hdfs.DFSConfigKeys
     .DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
+import static org.assertj.core.api.Assertions.assertThat;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -48,10 +47,9 @@ import org.apache.hadoop.util.FakeTimer;
 import java.util.function.Supplier;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,16 +61,12 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Tests for {@link SlowDiskTracker}.
+ * Set a timeout for every test case.
  */
+@Timeout(300)
 public class TestSlowDiskTracker {
   public static final Logger LOG = LoggerFactory.getLogger(
       TestSlowDiskTracker.class);
-
-  /**
-   * Set a timeout for every test case.
-   */
-  @Rule
-  public Timeout testTimeout = new Timeout(300_000);
 
   private static Configuration conf;
   private SlowDiskTracker tracker;
@@ -89,7 +83,8 @@ public class TestSlowDiskTracker {
     conf.setTimeDuration(DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
         OUTLIERS_REPORT_INTERVAL, TimeUnit.MILLISECONDS);
   }
-  @Before
+
+  @BeforeEach
   public void setup() {
     timer = new FakeTimer();
     tracker = new SlowDiskTracker(conf, timer);
@@ -136,7 +131,7 @@ public class TestSlowDiskTracker {
       Map<String, DiskLatency> slowDisksReport = getSlowDisksReportForTesting(
           slowDiskTracker);
 
-      assertThat(slowDisksReport.size(), is(4));
+      assertThat(slowDisksReport.size()).isEqualTo(4);
       assertTrue(Math.abs(slowDisksReport.get(dn1ID + ":disk1")
           .getLatency(DiskOp.WRITE) - 1.3) < 0.0000001);
       assertTrue(Math.abs(slowDisksReport.get(dn1ID + ":disk2")
@@ -152,7 +147,7 @@ public class TestSlowDiskTracker {
       ArrayList<DiskLatency> jsonReport = getAndDeserializeJson(
           slowDiskTracker.getSlowDiskReportAsJsonString());
 
-      assertThat(jsonReport.size(), is(4));
+      assertThat(jsonReport.size()).isEqualTo(4);
       assertTrue(isDiskInReports(jsonReport, dn1ID, "disk1", DiskOp.WRITE, 1.3));
       assertTrue(isDiskInReports(jsonReport, dn1ID, "disk2", DiskOp.READ, 1.6));
       assertTrue(isDiskInReports(jsonReport, dn1ID, "disk2", DiskOp.WRITE, 1.1));
@@ -193,7 +188,7 @@ public class TestSlowDiskTracker {
 
     Map<String, DiskLatency> reports = getSlowDisksReportForTesting(tracker);
 
-    assertThat(reports.size(), is(3));
+    assertThat(reports.size()).isEqualTo(3);
     assertTrue(Math.abs(reports.get("dn1:disk1")
         .getLatency(DiskOp.METADATA) - 1.1) < 0.0000001);
     assertTrue(Math.abs(reports.get("dn1:disk1")
@@ -229,7 +224,7 @@ public class TestSlowDiskTracker {
 
     Map<String, DiskLatency> reports = getSlowDisksReportForTesting(tracker);
 
-    assertThat(reports.size(), is(3));
+    assertThat(reports.size()).isEqualTo(3);
     assertTrue(Math.abs(reports.get("dn1:disk1")
         .getLatency(DiskOp.METADATA) - 1.1) < 0.0000001);
     assertTrue(Math.abs(reports.get("dn1:disk1")
@@ -252,7 +247,7 @@ public class TestSlowDiskTracker {
 
     reports = getSlowDisksReportForTesting(tracker);
 
-    assertThat(reports.size(), is(0));
+    assertThat(reports.size()).isEqualTo(0);
   }
 
   /**
@@ -280,7 +275,7 @@ public class TestSlowDiskTracker {
 
     Map<String, DiskLatency> reports = getSlowDisksReportForTesting(tracker);
 
-    assertThat(reports.size(), is(1));
+    assertThat(reports.size()).isEqualTo(1);
     assertTrue(Math.abs(reports.get("dn2:disk2")
         .getLatency(DiskOp.WRITE) - 1.1) < 0.0000001);
   }
@@ -307,7 +302,7 @@ public class TestSlowDiskTracker {
 
     Map<String, DiskLatency> reports = getSlowDisksReportForTesting(tracker);
 
-    assertThat(reports.size(), is(1));
+    assertThat(reports.size()).isEqualTo(1);
     assertTrue(reports.get("dn1:disk1").getLatency(DiskOp.METADATA) == null);
     assertTrue(Math.abs(reports.get("dn1:disk1")
         .getLatency(DiskOp.READ) - 1.4) < 0.0000001);
@@ -337,7 +332,7 @@ public class TestSlowDiskTracker {
         tracker.getSlowDiskReportAsJsonString());
 
     // And ensure its contents are what we expect.
-    assertThat(jsonReport.size(), is(4));
+    assertThat(jsonReport.size()).isEqualTo(4);
     assertTrue(isDiskInReports(jsonReport, "dn1", "disk1", DiskOp.METADATA,
         1.1));
     assertTrue(isDiskInReports(jsonReport, "dn1", "disk1", DiskOp.READ, 1.8));
@@ -378,7 +373,7 @@ public class TestSlowDiskTracker {
         tracker.getSlowDiskReportAsJsonString());
 
     // Ensure that only the top 5 highest latencies are in the report.
-    assertThat(jsonReport.size(), is(5));
+    assertThat(jsonReport.size()).isEqualTo(5);
     assertTrue(isDiskInReports(jsonReport, "dn3", "disk2", DiskOp.READ, 1.7));
     assertTrue(isDiskInReports(jsonReport, "dn3", "disk1", DiskOp.WRITE, 1.6));
     assertTrue(isDiskInReports(jsonReport, "dn2", "disk2", DiskOp.READ, 1.5));
