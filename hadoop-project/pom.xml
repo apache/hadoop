@@ -239,7 +239,6 @@
     <junit.platform.version>1.13.3</junit.platform.version>
     <assertj.version>3.12.2</assertj.version>
     <jline.version>3.9.0</jline.version>
-    <powermock.version>2.0.9</powermock.version>
     <mockito.version>4.11.0</mockito.version>
     <solr.version>8.11.2</solr.version>
     <openssl-wildfly.version>2.1.4.Final</openssl-wildfly.version>
