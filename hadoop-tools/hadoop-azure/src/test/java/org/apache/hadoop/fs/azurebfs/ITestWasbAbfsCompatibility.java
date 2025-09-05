@@ -25,8 +25,7 @@ import java.util.EnumSet;
 import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,7 +109,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testReadFile() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     boolean[] createFileWithAbfs = new boolean[]{false, true, false, true};
     boolean[] readFileWithAbfs = new boolean[]{false, true, true, false};
 
@@ -139,8 +138,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
         try (BufferedReader br = new BufferedReader(
             new InputStreamReader(readFs.open(path)))) {
           String line = br.readLine();
-          assertEquals("Wrong text from " + readFs,
-              TEST_CONTEXT, line);
+          assertEquals(TEST_CONTEXT, line, "Wrong text from " + readFs);
         }
 
         // Remove file
@@ -155,7 +153,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testwriteFile() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     AzureBlobFileSystem abfs = getFileSystem();
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
@@ -175,8 +173,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
     try (FSDataOutputStream abfsOutputStream = abfs.append(path)) {
       abfsOutputStream.write(TEST_CONTEXT.getBytes());
@@ -194,7 +191,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testwriteFile1() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     AzureBlobFileSystem abfs = getFileSystem();
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
@@ -232,7 +229,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testazcopywasbcompatibility() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     AzureBlobFileSystem abfs = getFileSystem();
     Path testFile = path("/testReadFile");
     Path path = new Path(
@@ -340,8 +337,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
     }
 
     // Remove file
@@ -354,7 +350,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario2() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     AzureBlobFileSystem abfs = getFileSystem();
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
@@ -374,8 +370,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(abfs.open(path)))) {
       String line = br.readLine();
-      assertEquals("Wrong text from " + abfs,
-          TEST_CONTEXT, line);
+      assertEquals(TEST_CONTEXT, line, "Wrong text from " + wasb);
     }
 
     // Write
@@ -395,7 +390,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario3() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ENABLE_FULL_BLOB_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -419,8 +414,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(wasb.open(path)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + wasb,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + wasb);
       }
       // Remove file
       assertDeleted(abfs, path, true);
@@ -433,7 +427,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario4() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     AzureBlobFileSystem abfs = getFileSystem();
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
@@ -467,7 +461,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario5() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, false);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -491,8 +485,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(path)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
 
       // Remove file
@@ -506,7 +499,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario6() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -531,8 +524,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(path)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
 
       // Remove file
@@ -546,7 +538,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario7() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -567,8 +559,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(path)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       abfs.create(path, true);
       FileStatus fileStatus = abfs.getFileStatus(path);
@@ -587,7 +578,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario8() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -609,8 +600,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(path)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       try {
         abfs.create(path, false);
@@ -637,7 +627,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario9() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -659,8 +649,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(path)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       wasb.create(path, true);
       FileStatus fileStatus = abfs.getFileStatus(path);
@@ -700,8 +689,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(path)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       try {
         wasb.create(path, false);
@@ -729,7 +717,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario11() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -753,8 +741,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(path)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       abfs.delete(path, true);
     }
@@ -789,8 +776,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(path)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       wasb.delete(path, true);
     }
@@ -802,7 +788,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario13() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -826,8 +812,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(wasb.open(path)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + wasb,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + wasb);
       }
       abfs.delete(path, true);
     }
@@ -839,7 +824,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario14() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -863,8 +848,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(wasb.open(path)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + wasb,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + wasb);
       }
       wasb.delete(path, true);
     }
@@ -898,8 +882,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(wasb.open(path)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + wasb,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + wasb);
       }
       abfs.delete(path, true);
     }
@@ -911,7 +894,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario16() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -935,8 +918,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(path)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       wasb.delete(path, true);
     }
@@ -1077,7 +1059,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario20() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -1128,7 +1110,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario21() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -1273,7 +1255,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario24() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -1364,7 +1346,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario26() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -1408,7 +1390,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario27() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -1432,8 +1414,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(testPath1)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       // --- RENAME FILE ---
       boolean renamed = wasb.rename(testPath1, testPath2);
@@ -1482,8 +1463,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(testPath1)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       // --- RENAME FILE ---
       boolean renamed = abfs.rename(testPath1, testPath2);
@@ -1507,7 +1487,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario29() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -1532,8 +1512,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(testPath1)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       // --- RENAME FILE ---
       boolean renamed = abfs.rename(testPath1, testPath2);
@@ -1581,8 +1560,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(testPath1)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       // --- RENAME FILE ---
       boolean renamed = wasb.rename(testPath1, testPath2);
@@ -1635,8 +1613,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(testPath1)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       wasb.delete(testPath1, true);
 
@@ -1682,8 +1659,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(testPath1)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       // --- RENAME DIR ---
       boolean renamed = abfs.rename(testFile, testFile1);
@@ -1704,7 +1680,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testScenario33() throws Exception {
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
     FileSystem fileSystem = FileSystem.newInstance(conf);
@@ -1733,8 +1709,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(testPath1)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       // --- RENAME DIR ---
       boolean renamed = wasb.rename(testFile, testFile1);
@@ -1781,8 +1756,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(testPath1)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       // --- RENAME DIR ---
       boolean renamed = wasb.rename(testPath1, testPath2);
@@ -1829,8 +1803,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(testPath1)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       // --- RENAME DIR ---
       boolean renamed = abfs.rename(testPath1, testPath2);
@@ -1877,8 +1850,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(testPath1)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       // --- RENAME DIR ---
       boolean renamed = abfs.rename(testFile, testFile);
@@ -1920,8 +1892,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(testPath1)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       // --- RENAME NON EXISTENT FILE ---
       boolean renamed = wasb.rename(testPath2, testPath3);
@@ -2013,8 +1984,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       try (BufferedReader br = new BufferedReader(
           new InputStreamReader(abfs.open(testPath1)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + abfs,
-            TEST_CONTEXT, line);
+        assertEquals(TEST_CONTEXT, line, "Wrong text from " + abfs);
       }
       // --- RENAME DIR ---
       boolean renamed = wasb.rename(testPath1, testPath2);
