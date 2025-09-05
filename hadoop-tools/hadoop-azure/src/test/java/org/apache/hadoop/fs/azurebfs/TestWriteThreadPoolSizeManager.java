@@ -243,7 +243,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     // Initialize the filesystem and thread pool manager
     AzureBlobFileSystem fs = getFileSystem();
     WriteThreadPoolSizeManager instance =
-        WriteThreadPoolSizeManager.getInstance(getFileSystemName(), mockConfig);
+        WriteThreadPoolSizeManager.getInstance(getFileSystemName(), getConfiguration());
     ThreadPoolExecutor executor =
         (ThreadPoolExecutor) instance.getExecutorService();
 
@@ -497,12 +497,10 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   @Test
   void testThreadPoolScalesDownOnHighCpuLoad() throws Exception {
     // Initialize filesystem and thread pool manager
-    try (FileSystem fileSystem = FileSystem.newInstance(
-        mockConfig.getRawConfiguration())) {
+    try (FileSystem fileSystem = FileSystem.newInstance(getRawConfiguration())) {
       AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
       WriteThreadPoolSizeManager instance =
-          WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
-              mockConfig);
+          WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(), getConfiguration());
       ThreadPoolExecutor executor =
           (ThreadPoolExecutor) instance.getExecutorService();
 
@@ -602,12 +600,11 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   @Test
   void testScalesDownOnParallelHighMemoryLoad() throws Exception {
     // Initialize filesystem and thread pool manager
-    try (FileSystem fileSystem = FileSystem.newInstance(
-        mockConfig.getRawConfiguration())) {
+    try (FileSystem fileSystem = FileSystem.newInstance(getRawConfiguration())) {
       AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
       WriteThreadPoolSizeManager instance =
           WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
-              mockConfig);
+              getConfiguration());
       ThreadPoolExecutor executor =
           (ThreadPoolExecutor) instance.getExecutorService();
 
