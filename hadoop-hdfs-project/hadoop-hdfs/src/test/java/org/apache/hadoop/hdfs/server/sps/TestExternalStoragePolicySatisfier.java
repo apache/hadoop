@@ -99,7 +99,7 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -446,7 +446,7 @@ public class TestExternalStoragePolicySatisfier {
    * This test need not run as external scan is not a batch based scanning right
    * now.
    */
-  @Ignore("ExternalFileIdCollector is not batch based right now."
+  @Disabled("ExternalFileIdCollector is not batch based right now."
       + " So, ignoring it.")
   public void testBatchProcessingForSPSDirectory() throws Exception {
   }
@@ -454,7 +454,7 @@ public class TestExternalStoragePolicySatisfier {
   /**
    * This test case is more specific to internal.
    */
-  @Ignore("This test is specific to internal, so skipping here.")
+  @Disabled("This test is specific to internal, so skipping here.")
   public void testWhenMoverIsAlreadyRunningBeforeStoragePolicySatisfier()
       throws Exception {
   }
@@ -462,14 +462,14 @@ public class TestExternalStoragePolicySatisfier {
   /**
    * This test is specific to internal SPS. So, ignoring it.
    */
-  @Ignore("This test is specific to internal SPS. So, ignoring it.")
+  @Disabled("This test is specific to internal SPS. So, ignoring it.")
   public void testTraverseWhenParentDeleted() throws Exception {
   }
 
   /**
    * This test is specific to internal SPS. So, ignoring it.
    */
-  @Ignore("This test is specific to internal SPS. So, ignoring it.")
+  @Disabled("This test is specific to internal SPS. So, ignoring it.")
   public void testTraverseWhenRootParentDeleted() throws Exception {
   }
 
