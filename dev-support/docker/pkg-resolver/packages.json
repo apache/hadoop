@@ -23,7 +23,8 @@
     "debian:11": "bats",
     "ubuntu:focal": "bats",
     "ubuntu:noble": "bats",
-    "ubuntu:focal::arch64": "bats"
+    "ubuntu:focal::arch64": "bats",
+    "rockylinux:8": "bats"
   },
   "build-essential": {
     "debian:11": "build-essential",
@@ -179,7 +180,7 @@
     "rockylinux:8": "openssl-devel"
   },
   "perl": {
-    "rockylinux:7": [
+    "rockylinux:8": [
       "perl-CPAN",
       "perl-devel"
     ]
