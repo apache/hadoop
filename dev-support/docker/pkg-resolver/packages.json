@@ -203,6 +203,9 @@
       "libprotoc-dev"
     ]
   },
+  "procps": {
+    "debian:11": "procps"
+  },
   "sasl": {
     "debian:11": "libsasl2-dev",
     "ubuntu:focal": "libsasl2-dev",
