@@ -4520,6 +4520,10 @@ Current supported items:
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
 | resourceRequests | comma separated string | Skip resource requests of application in return |
+| timeouts | comma separated string | Skip timeouts of application in return |
+| appNodeLabelExpression | comma separated string | Skip app node label expression of application in return |
+| amNodeLabelExpression | comma separated string | Skip am node label expression of application in return |
+| resourceInfo | comma separated string | Skip resource info of application in return |
 
 e.g:
 

@@ -93,7 +93,7 @@ public class DeSelectFields {
      */
     RESOURCE_REQUESTS("resourceRequests"),
     /**
-     * <code>APP_TIMEOUTS, APP_NODE_LABEL_EXPRESSION, AM_NODE_LABEL_EXPRESSION,
+     * <code>TIMEOUTS, APP_NODE_LABEL_EXPRESSION, AM_NODE_LABEL_EXPRESSION,
      * RESOURCE_INFO</code> are additionally supported parameters added in
      * YARN-6871.
      */
