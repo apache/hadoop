@@ -33,7 +33,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.util.CpuTimeTracker;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
