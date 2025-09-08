@@ -56,8 +56,12 @@ public final class S3xLoginHelper {
     // look for login secrets and fail if they are present.
     Objects.requireNonNull(uri, "null uri");
     Objects.requireNonNull(uri.getScheme(), "null uri.getScheme()");
-    Objects.requireNonNull(uri.getHost(), "null uri host.");
-    return URI.create(uri.getScheme() + "://" + uri.getHost());
+    String host = uri.getHost();
+    if (host == null) {
+      host = uri.getAuthority();
+    }
+    Objects.requireNonNull(host, "null uri host.");
+    return URI.create(uri.getScheme() + "://" + host);
   }
 
   /**

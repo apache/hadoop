@@ -883,7 +883,11 @@ public final class S3ATestUtils {
   public static String getTestBucketName(final Configuration conf) {
     String bucket = checkNotNull(conf.get(TEST_FS_S3A_NAME),
         "No test bucket");
-    return URI.create(bucket).getHost();
+    URI uri = URI.create(bucket);
+    if (uri.getHost() != null) {
+      return uri.getHost();
+    }
+    return uri.getAuthority();
   }
 
   /**

@@ -573,8 +573,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   public void initialize(URI name, Configuration originalConf)
       throws IOException {
-    // get the host; this is guaranteed to be non-null, non-empty
+    // get the host; fallback to authority if getHost() returns null
     bucket = name.getHost();
+    if (bucket == null) {
+      bucket = name.getAuthority();
+    }
     AuditSpan span = null;
     // track initialization duration; will only be set after
     // statistics are set up.

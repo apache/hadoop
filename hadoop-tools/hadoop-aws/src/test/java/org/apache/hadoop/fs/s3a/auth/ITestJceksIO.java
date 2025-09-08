@@ -187,8 +187,12 @@ public class ITestJceksIO extends AbstractS3ATestBase {
    */
   private String toJceksProvider(Path keystore) {
     final URI uri = keystore.toUri();
+    String bucket = uri.getHost();
+    if (bucket == null) {
+      bucket = uri.getAuthority();
+    }
     return String.format("jceks://%s@%s%s",
-        uri.getScheme(), uri.getHost(), uri.getPath());
+        uri.getScheme(), bucket, uri.getPath());
   }
 
 }

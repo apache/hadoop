@@ -48,6 +48,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -594,11 +595,26 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
   public void testConfOptionPropagationToFS() throws Exception {
     Configuration config = new Configuration();
     String testFSName = config.getTrimmed(TEST_FS_S3A_NAME, "");
-    String bucket = new URI(testFSName).getHost();
+    URI uri = new URI(testFSName);
+    String bucket = uri.getHost();
+    if (bucket == null) {
+      bucket = uri.getAuthority();
+    }
     setBucketOption(config, bucket, "propagation", "propagated");
     fs = S3ATestUtils.createTestFileSystem(config);
     Configuration updated = fs.getConf();
     assertOptionEquals(updated, "fs.s3a.propagation", "propagated");
+  }
+
+  @Test
+  public void testBucketNameWithDotAndNumber() throws Exception {
+    Configuration config = new Configuration();
+    Path path = new Path("s3a://test-bucket-v1.1");
+    try (FileSystem fs = path.getFileSystem(config)) {
+      assertThat(fs instanceof S3AFileSystem)
+          .describedAs("FileSystem should be S3AFileSystem instance")
+          .isTrue();
+    }
   }
 
   @Test

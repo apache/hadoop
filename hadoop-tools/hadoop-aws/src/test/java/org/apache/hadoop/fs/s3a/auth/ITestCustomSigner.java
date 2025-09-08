@@ -283,6 +283,17 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
 
       String host = request.host();
       String bucketName = parseBucketFromHost(host);
+      // If host-based parsing fails (path-style requests), extract from path
+      if (bucketName.equals("s3")) {
+        String path = request.encodedPath();
+        if (path != null && path.startsWith("/") && path.length() > 1) {
+          String[] pathParts = path.substring(1).split("/", 2);
+          if (pathParts.length > 0 && !pathParts[0].isEmpty()) {
+            bucketName = pathParts[0];
+          }
+        }
+      }
+
       try {
         lastStoreValue = CustomSignerInitializer
             .getStoreValue(bucketName, UserGroupInformation.getCurrentUser());

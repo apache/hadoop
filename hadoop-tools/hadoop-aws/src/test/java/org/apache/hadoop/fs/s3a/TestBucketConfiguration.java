@@ -29,6 +29,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
+import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
@@ -73,6 +74,24 @@ public class TestBucketConfiguration extends AbstractHadoopTestBase {
   public void setup() throws Exception {
     // forces in deprecation wireup, even when this test method is running isolated
     S3AFileSystem.initializeClass();
+  }
+
+  @Test
+  public void testS3xLoginHelperWithDotInBucketName() throws Throwable {
+    // Test buildFSURI with bucket name containing dot followed by number
+    URI uri = URI.create("s3a://bucket-v1.1/path");
+    URI result = S3xLoginHelper.buildFSURI(uri);
+    assertEquals("s3a://bucket-v1.1", result.toString());
+
+    // Test with normal bucket name
+    URI normalUri = URI.create("s3a://normal-bucket/path");
+    URI normalResult = S3xLoginHelper.buildFSURI(normalUri);
+    assertEquals("s3a://normal-bucket", normalResult.toString());
+
+    // Test edge case with multiple dots
+    URI multiDotUri = URI.create("s3a://bucket.v1.2.test/path");
+    URI multiDotResult = S3xLoginHelper.buildFSURI(multiDotUri);
+    assertEquals("s3a://bucket.v1.2.test", multiDotResult.toString());
   }
 
   @Test

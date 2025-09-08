@@ -172,7 +172,7 @@ public final class BucketTool extends S3GuardTool {
     final String bucketPath = parsedArgs.get(0);
     final Path source = new Path(bucketPath);
     URI fsURI = source.toUri();
-    String bucket = fsURI.getHost();
+    String bucket = fsURI.getHost() != null ? fsURI.getHost() : fsURI.getAuthority();
 
     println(out, "Filesystem %s", fsURI);
     if (!"s3a".equals(fsURI.getScheme())) {
