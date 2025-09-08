@@ -718,8 +718,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     try (FileSystem fileSystem = FileSystem.newInstance(
         getRawConfiguration())) {
       AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-      WriteThreadPoolSizeManager instance =
-          WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
+      WriteThreadPoolSizeManager instance = WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
               abfs.getAbfsStore().getAbfsConfiguration());
       ThreadPoolExecutor executor =
           (ThreadPoolExecutor) instance.getExecutorService();
