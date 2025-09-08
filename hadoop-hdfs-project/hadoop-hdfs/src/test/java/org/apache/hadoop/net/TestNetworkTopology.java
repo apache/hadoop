@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.net;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,15 +44,14 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
+@Timeout(30)
 public class TestNetworkTopology {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestNetworkTopology.class);
@@ -59,10 +59,7 @@ public class TestNetworkTopology {
       NetworkTopology.getInstance(new Configuration());
   private DatanodeDescriptor dataNodes[];
 
-  @Rule
-  public Timeout testTimeout = new Timeout(30000, TimeUnit.MILLISECONDS);
-
-  @Before
+  @BeforeEach
   public void setupDatanodes() {
     dataNodes = new DatanodeDescriptor[] {
         DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/d1/r1"),
@@ -314,7 +311,7 @@ public class TestNetworkTopology {
         }
       }
     }
-    assertTrue("Expected to find a different first location", foundRandom);
+    assertTrue(foundRandom, "Expected to find a different first location");
 
     // Array of just remote nodes
     // Expect random first node
@@ -333,7 +330,7 @@ public class TestNetworkTopology {
         }
       }
     }
-    assertTrue("Expected to find a different first location", foundRandom);
+    assertTrue(foundRandom, "Expected to find a different first location");
 
     //Reader is not a datanode, but is in one of the datanode's rack.
     testNodes[0] = dataNodes[0];
@@ -457,18 +454,18 @@ public class TestNetworkTopology {
     excludedNodes.add(dataNodes[18]);
     Map<Node, Integer> frequency = pickNodesAtRandom(100, scope, excludedNodes);
 
-    assertEquals("dn[3] should be excluded", 0,
-        frequency.get(dataNodes[3]).intValue());
-    assertEquals("dn[5] should be exclude18d", 0,
-        frequency.get(dataNodes[5]).intValue());
-    assertEquals("dn[7] should be excluded", 0,
-        frequency.get(dataNodes[7]).intValue());
-    assertEquals("dn[9] should be excluded", 0,
-        frequency.get(dataNodes[9]).intValue());
-    assertEquals("dn[13] should be excluded", 0,
-        frequency.get(dataNodes[13]).intValue());
-    assertEquals("dn[18] should be excluded", 0,
-        frequency.get(dataNodes[18]).intValue());
+    assertEquals(0, frequency.get(dataNodes[3]).intValue(),
+        "dn[3] should be excluded");
+    assertEquals(0, frequency.get(dataNodes[5]).intValue(),
+        "dn[5] should be exclude18d");
+    assertEquals(0, frequency.get(dataNodes[7]).intValue(),
+        "dn[7] should be excluded");
+    assertEquals(0, frequency.get(dataNodes[9]).intValue(),
+        "dn[9] should be excluded");
+    assertEquals(0, frequency.get(dataNodes[13]).intValue(),
+        "dn[13] should be excluded");
+    assertEquals(0, frequency.get(dataNodes[18]).intValue(),
+        "dn[18] should be excluded");
     for (Node key : dataNodes) {
       if (excludedNodes.contains(key)) {
         continue;
@@ -495,7 +492,8 @@ public class TestNetworkTopology {
     }
   }
 
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testInvalidNetworkTopologiesNotCachedInHdfs() throws Exception {
     // start a cluster
     Configuration conf = new HdfsConfiguration();
@@ -509,14 +507,14 @@ public class TestNetworkTopology {
       cluster.waitActive();
       
       NamenodeProtocols nn = cluster.getNameNodeRpc();
-      Assert.assertNotNull(nn);
+      assertNotNull(nn);
       
       // Wait for one DataNode to register.
       // The other DataNode will not be able to register up because of the rack mismatch.
       DatanodeInfo[] info;
       while (true) {
         info = nn.getDatanodeReport(DatanodeReportType.LIVE);
-        Assert.assertFalse(info.length == 2);
+        assertFalse(info.length == 2);
         if (info.length == 1) {
           break;
         }
@@ -546,8 +544,8 @@ public class TestNetworkTopology {
         }
         Thread.sleep(1000);
       }
-      Assert.assertEquals(info[0].getNetworkLocation(),
-                          info[1].getNetworkLocation());
+      assertEquals(info[0].getNetworkLocation(),
+          info[1].getNetworkLocation());
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -596,10 +594,10 @@ public class TestNetworkTopology {
       final Node n = dataNodes[i];
       LOG.info("Verifying node {}", n);
       if (excludedNodes.contains(n)) {
-        assertEquals(n + " should not have been chosen.", 0,
-            (int) frequency.get(n));
+        assertEquals(0, (int) frequency.get(n),
+            n + " should not have been chosen.");
       } else {
-        assertTrue(n + " should have been chosen", frequency.get(n) > 0);
+        assertTrue(frequency.get(n) > 0, n + " should have been chosen");
       }
     }
   }
@@ -614,8 +612,8 @@ public class TestNetworkTopology {
     LOG.info("No node is excluded.");
     for (int i = 0; i < 5; ++i) {
       // all nodes should be more than zero
-      assertTrue(dataNodes[i] + " should have been chosen.",
-          frequency.get(dataNodes[i]) > 0);
+      assertTrue(frequency.get(dataNodes[i]) > 0,
+          dataNodes[i] + " should have been chosen.");
     }
   }
 
@@ -682,7 +680,7 @@ public class TestNetworkTopology {
     cluster.shuffle(testNodes, activeLen);
 
     for (int i = 0; i < testNodes.length; ++i) {
-      Assert.assertEquals(testNodes[i], dataNodes[idxList.get(i)]);
+      assertEquals(testNodes[i], dataNodes[idxList.get(i)]);
     }
   }
 }
