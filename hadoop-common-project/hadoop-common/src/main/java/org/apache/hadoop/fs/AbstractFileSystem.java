@@ -335,7 +335,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
     int port = uri.getPort();
     port = (port == -1 ? defaultPort : port);
     if (port == -1) { // no port supplied and default port is not specified
-      return URI.create(supportedScheme + "://" + authority);
+      return URI.create(supportedScheme + "://" + authority + "/");
     }
     return new URI(supportedScheme + "://" + uri.getHost() + ":" + port);
   }
