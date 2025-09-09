@@ -29,6 +29,7 @@ jobs:
     steps:
       - uses: actions/stale@v1
         with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
           stale-pr-message: >
             We're closing this stale PR because it has been open for 100 days with
             no activity. This isn't a judgement on the merit of the PR in any way.
