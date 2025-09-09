@@ -335,6 +335,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final Integer DEFAULT_CONFIGURATION_APPLICATION_PRIORITY = 0;
 
   @Private
+  public static final String DEFAULT_APPLICATION_PRIORITY_GLOBAL =
+      PREFIX + "default-application-priority";
+
+  @Private
   public static final String AVERAGE_CAPACITY = "average-capacity";
 
   @Private
@@ -1815,11 +1819,17 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         YarnConfiguration.DEFAULT_CLUSTER_LEVEL_APPLICATION_PRIORITY));
   }
 
-  public Integer getDefaultApplicationPriorityConfPerQueue(QueuePath queue) {
-    Integer defaultPriority = getInt(getQueuePrefix(queue)
-        + DEFAULT_APPLICATION_PRIORITY,
+  /**
+   * Get the global default application priority setting.
+   * @return global default priority or DEFAULT_CONFIGURATION_APPLICATION_PRIORITY if not set */
+  private Integer getDefaultApplicationPriority() {
+    return getInt(DEFAULT_APPLICATION_PRIORITY_GLOBAL,
         DEFAULT_CONFIGURATION_APPLICATION_PRIORITY);
-    return defaultPriority;
+  }
+
+  public Integer getDefaultApplicationPriorityConfPerQueue(QueuePath queue) {
+    return getInt(getQueuePrefix(queue) + DEFAULT_APPLICATION_PRIORITY,
+        getDefaultApplicationPriority());
   }
 
   @VisibleForTesting

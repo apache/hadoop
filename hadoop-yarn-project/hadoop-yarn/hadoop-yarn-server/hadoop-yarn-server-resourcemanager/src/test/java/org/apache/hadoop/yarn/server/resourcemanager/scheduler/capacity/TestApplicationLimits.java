@@ -384,6 +384,20 @@ public class TestApplicationLimits {
         csConf.getMaximumApplicationMasterResourcePerQueuePercent(
           queue.getQueuePathObject()), epsilon);
 
+    assertEquals(
+        (int)CapacitySchedulerConfiguration.DEFAULT_CONFIGURATION_APPLICATION_PRIORITY,
+        (int)csConf.getDefaultApplicationPriorityConfPerQueue(
+            queue.getQueuePathObject())
+    );
+
+    csConf.setInt(PREFIX + queue.getQueuePath()
+        + ".default-application-priority", 6);
+
+    assertEquals((int) 6,
+        (int) csConf.getDefaultApplicationPriorityConfPerQueue(
+            queue.getQueuePathObject())
+    );
+
     assertThat(queue.calculateAndGetAMResourceLimit()).isEqualTo(
         Resource.newInstance(800 * GB, 1));
     assertThat(queue.getUserAMResourceLimit()).isEqualTo(
