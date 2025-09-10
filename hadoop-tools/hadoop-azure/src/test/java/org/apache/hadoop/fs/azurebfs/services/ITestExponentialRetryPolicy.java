@@ -33,7 +33,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -154,8 +154,8 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
       // check if accountName is set using different config key
       accountName = config.get(FS_AZURE_ABFS_ACCOUNT1_NAME);
     }
-    assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT1_NAME,
-        accountName != null && !accountName.isEmpty());
+    assumeTrue(accountName != null && !accountName.isEmpty(),
+        "Not set: " + FS_AZURE_ABFS_ACCOUNT1_NAME);
 
     Configuration rawConfig1 = new Configuration();
     rawConfig1.addResource(TEST_CONFIGURATION_FILE_NAME);
@@ -173,8 +173,8 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     AbfsThrottlingIntercept instance1 = AbfsThrottlingInterceptFactory.getInstance(accountName, configuration);
     String accountName1 = config.get(FS_AZURE_ABFS_ACCOUNT1_NAME);
 
-    assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT1_NAME,
-        accountName1 != null && !accountName1.isEmpty());
+    assumeTrue(accountName1 != null && !accountName1.isEmpty(),
+        "Not set: " + FS_AZURE_ABFS_ACCOUNT1_NAME);
 
     AbfsThrottlingIntercept instance2 = AbfsThrottlingInterceptFactory.getInstance(accountName1, configuration);
     //if singleton is enabled, for different accounts both the instances should return same value
@@ -233,8 +233,8 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs1 = new AzureBlobFileSystem();
     Configuration config = new Configuration(getRawConfiguration());
     String accountName1 = config.get(FS_AZURE_ABFS_ACCOUNT1_NAME);
-    assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT1_NAME,
-        accountName1 != null && !accountName1.isEmpty());
+    assumeTrue(accountName1 != null && !accountName1.isEmpty(),
+        "Not set: " + FS_AZURE_ABFS_ACCOUNT1_NAME);
     final String abfsUrl1 = this.getFileSystemName() + "12" + "@" + accountName1;
     URI defaultUri1 = null;
     defaultUri1 = new URI("abfss", abfsUrl1, null, null, null);
