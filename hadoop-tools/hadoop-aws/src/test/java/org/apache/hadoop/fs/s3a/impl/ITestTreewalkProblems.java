@@ -316,7 +316,7 @@ public class ITestTreewalkProblems extends AbstractS3ACostTest {
           options, getConfiguration());
     } else {
       // distcp fails if uploads are visible
-      intercept(org.junit.ComparisonFailure.class, () -> {
+      intercept(org.opentest4j.AssertionFailedError.class, () -> {
         DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, src.toString(), dest.toString(),
             options, getConfiguration());
       });
@@ -339,7 +339,7 @@ public class ITestTreewalkProblems extends AbstractS3ACostTest {
           options, getConfiguration());
     } else {
       // distcp fails if uploads are visible
-      intercept(org.junit.ComparisonFailure.class, () -> {
+      intercept(org.opentest4j.AssertionFailedError.class, () -> {
         DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, src.toString(), dest.toString(),
             options, getConfiguration());
       });
