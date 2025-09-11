@@ -21,7 +21,7 @@ import java.net.URI;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Strings;
 
 /**
  * Utilities for config variables of the viewFs See {@link ViewFs}
@@ -152,7 +152,7 @@ public class ConfigUtil {
 
     conf.set(getConfigViewFsPrefix(mountTableName) + "." +
             Constants.CONFIG_VIEWFS_LINK_NFLY + "." + settings + "." + src,
-        StringUtils.uriToString(targets));
+        Strings.CS.uriToString(targets));
   }
 
   public static void addLinkNfly(final Configuration conf, final String src,

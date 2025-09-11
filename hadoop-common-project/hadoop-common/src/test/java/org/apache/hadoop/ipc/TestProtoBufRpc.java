@@ -20,7 +20,7 @@ package org.apache.hadoop.ipc;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
@@ -199,13 +199,13 @@ public class TestProtoBufRpc extends TestRpcBase {
   @Test(timeout=6000)
   public void testExtraLongRpc() throws Exception {
     TestRpcService2 client = getClient2();
-    final String shortString = StringUtils.repeat("X", 4);
+    final String shortString = Strings.repeat("X", 4);
     // short message goes through
     EchoResponseProto echoResponse = client.echo2(null,
         newEchoRequest(shortString));
     Assert.assertEquals(shortString, echoResponse.getMessage());
     
-    final String longString = StringUtils.repeat("X", 4096);
+    final String longString = Strings.repeat("X", 4096);
     try {
       client.echo2(null, newEchoRequest(longString));
       Assert.fail("expected extra-long RPC to fail");

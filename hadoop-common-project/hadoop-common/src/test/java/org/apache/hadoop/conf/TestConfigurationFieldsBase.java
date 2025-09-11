@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.conf;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.RegExUtils;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -697,7 +697,7 @@ public abstract class TestConfigurationFieldsBase {
         // Apply the name filter to the default parameters.
         if (ent.getKey().contains(filter)) {
           // Check only for numerical values.
-          if (StringUtils.isNumeric(ent.getValue())) {
+          if (RegExUtils.isNumeric(ent.getValue())) {
             String crtValue =
                 filteredValues.putIfAbsent(ent.getValue(), ent.getKey());
             assertNull("Parameters " + ent.getKey() + " and " + crtValue +

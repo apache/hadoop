@@ -122,7 +122,7 @@ public class AclEntry {
       sb.append("default:");
     }
     if (type != null) {
-      sb.append(StringUtils.toLowerCase(type.toStringStable()));
+      sb.append(org.apache.commons.lang3.Strings.CI.toLowerCase(type.toStringStable()));
     }
     sb.append(':');
     if (name != null) {
@@ -284,7 +284,7 @@ public class AclEntry {
     AclEntryType aclType = null;
     try {
       aclType = Enum.valueOf(
-          AclEntryType.class, StringUtils.toUpperCase(split[index]));
+          AclEntryType.class, org.apache.commons.lang3.Strings.CI.toUpperCase(split[index]));
       builder.setType(aclType);
       index++;
     } catch (IllegalArgumentException iae) {

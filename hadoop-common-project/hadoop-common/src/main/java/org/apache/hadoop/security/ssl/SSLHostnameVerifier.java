@@ -374,7 +374,7 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
             buf.append('<');
             for (int i = 0; i < hosts.length; i++) {
                 String h = hosts[i];
-                h = h != null ? StringUtils.toLowerCase(h.trim()) : "";
+                h = h != null ? Strings.CI.toLowerCase(h.trim()) : "";
                 hosts[i] = h;
                 if (i > 0) {
                     buf.append('/');
@@ -415,7 +415,7 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
             out:
             for (Iterator<String> it = names.iterator(); it.hasNext();) {
                 // Don't trim the CN, though!
-                final String cn = StringUtils.toLowerCase(it.next());
+                final String cn = Strings.CI.toLowerCase(it.next());
                 // Store CN in StringBuffer in case we need to report an error.
                 buf.append(" <");
                 buf.append(cn);
@@ -434,7 +434,7 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
 
                 for (int i = 0; i < hosts.length; i++) {
                     final String hostName =
-                        StringUtils.toLowerCase(hosts[i].trim());
+                        Strings.CI.toLowerCase(hosts[i].trim());
                     if (doWildcard) {
                         match = hostName.endsWith(cn.substring(1));
                         if (match && strictWithSubDomains) {
@@ -489,7 +489,7 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
         }
 
         public static boolean isLocalhost(String host) {
-            host = host != null ? StringUtils.toLowerCase(host.trim()) : "";
+            host = host != null ? Strings.CI.toLowerCase(host.trim()) : "";
             if (host.startsWith("::1")) {
                 int x = host.lastIndexOf('%');
                 if (x >= 0) {

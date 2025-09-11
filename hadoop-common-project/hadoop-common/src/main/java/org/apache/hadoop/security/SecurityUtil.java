@@ -225,7 +225,7 @@ public final class SecurityUtil {
       fqdn = getLocalHostName(null);
     }
     return components[0] + "/" +
-        StringUtils.toLowerCase(fqdn) + "@" + components[2];
+        org.apache.commons.lang3.Strings.CS.toLowerCase(fqdn) + "@" + components[2];
   }
 
   /**
@@ -447,7 +447,7 @@ public final class SecurityUtil {
       }
       host = addr.getAddress().getHostAddress();
     } else {
-      host = StringUtils.toLowerCase(addr.getHostName());
+      host = org.apache.commons.lang3.Strings.CS.toLowerCase(addr.getHostName());
     }
     return new Text(host + ":" + addr.getPort());
   }
@@ -690,7 +690,7 @@ public final class SecurityUtil {
     String value = conf.get(HADOOP_SECURITY_AUTHENTICATION, "simple");
     try {
       return Enum.valueOf(AuthenticationMethod.class,
-          StringUtils.toUpperCase(value));
+          org.apache.commons.lang3.Strings.CS.toUpperCase(value));
     } catch (IllegalArgumentException iae) {
       throw new IllegalArgumentException("Invalid attribute value for " +
           HADOOP_SECURITY_AUTHENTICATION + " of " + value);
@@ -703,7 +703,7 @@ public final class SecurityUtil {
       authenticationMethod = AuthenticationMethod.SIMPLE;
     }
     conf.set(HADOOP_SECURITY_AUTHENTICATION,
-        StringUtils.toLowerCase(authenticationMethod.toString()));
+        org.apache.commons.lang3.Strings.CS.toLowerCase(authenticationMethod.toString()));
   }
 
   /*

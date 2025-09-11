@@ -25,6 +25,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.commons.text.RegExUtils;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
@@ -585,9 +586,9 @@ public class TestLocalFileSystem {
     byte[] expected = Arrays.copyOfRange(fileContents, seekOff, seekOff+toRead);
     if (!Arrays.equals(out, expected)) {
       String s ="\nExpected: " +
-          StringUtils.byteToHexString(expected) +
+          RegExUtils.removeAll(StringUtils.byteToHexString(expected), "") +
           "\ngot:      " +
-          StringUtils.byteToHexString(out) + 
+          RegExUtils.removeAll(StringUtils.byteToHexString(out), "") + 
           "\noff=" + seekOff + " len=" + toRead;
       fail(s);
     }

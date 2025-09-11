@@ -98,7 +98,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
   public static String resolvePropertyName(SSLFactory.Mode mode,
                                            String template) {
     return MessageFormat.format(
-        template, StringUtils.toLowerCase(mode.toString()));
+        template, org.apache.commons.lang3.Strings.CS.toLowerCase(mode.toString()));
   }
 
   /**

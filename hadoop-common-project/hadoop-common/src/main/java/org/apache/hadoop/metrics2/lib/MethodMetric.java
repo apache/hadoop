@@ -21,7 +21,7 @@ package org.apache.hadoop.metrics2.lib;
 import java.lang.reflect.Method;
 
 import static com.google.common.base.Preconditions.*;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -149,8 +149,8 @@ class MethodMetric extends MutableMetric {
   static String nameFrom(Method method) {
     String methodName = method.getName();
     if (methodName.startsWith("get")) {
-      return StringUtils.capitalize(methodName.substring(3));
+      return Strings.CS.capitalize(methodName.substring(3));
     }
-    return StringUtils.capitalize(methodName);
+    return Strings.CS.capitalize(methodName);
   }
 }

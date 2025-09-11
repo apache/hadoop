@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -59,12 +59,12 @@ public class MutableStat extends MutableMetric {
    */
   public MutableStat(String name, String description,
                      String sampleName, String valueName, boolean extended) {
-    String ucName = StringUtils.capitalize(name);
-    String usName = StringUtils.capitalize(sampleName);
-    String uvName = StringUtils.capitalize(valueName);
-    String desc = StringUtils.uncapitalize(description);
-    String lsName = StringUtils.uncapitalize(sampleName);
-    String lvName = StringUtils.uncapitalize(valueName);
+    String ucName = Strings.CI.capitalize(name);
+    String usName = Strings.CI.capitalize(sampleName);
+    String uvName = Strings.CI.capitalize(valueName);
+    String desc = Strings.CI.uncapitalize(description);
+    String lsName = Strings.CI.uncapitalize(sampleName);
+    String lvName = Strings.CI.uncapitalize(valueName);
     numInfo = info(ucName +"Num"+ usName, "Number of "+ lsName +" for "+ desc);
     iNumInfo = info(ucName +"INum"+ usName,
                     "Interval number of "+ lsName +" for "+ desc);

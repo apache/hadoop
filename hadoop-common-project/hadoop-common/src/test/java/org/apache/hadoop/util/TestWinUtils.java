@@ -402,11 +402,11 @@ public class TestWinUtils {
 
   private void assertOwners(File file, String expectedUser,
       String expectedGroup) throws IOException {
-    String [] args = lsF(file).trim().split("[\\|]");
-    assertEquals(StringUtils.toLowerCase(expectedUser),
-        StringUtils.toLowerCase(args[2]));
-    assertEquals(StringUtils.toLowerCase(expectedGroup),
-        StringUtils.toLowerCase(args[3]));
+    String [] args = lsF(file).trim().split("[\|]");
+    assertEquals(Strings.CI.toLowerCase(expectedUser),
+        Strings.CI.toLowerCase(args[2]));
+    assertEquals(Strings.CI.toLowerCase(expectedGroup),
+        Strings.CI.toLowerCase(args[3]));
   }
 
   @Test (timeout = 30000)

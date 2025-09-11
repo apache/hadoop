@@ -122,7 +122,7 @@ public class PowerShellFencer extends Configured implements FenceMethod {
       writer = new BufferedWriter(osw);
 
       // Filter to identify the Namenode process
-      String filter = StringUtils.join(" and ", new String[] {
+      String filter = Strings.CS.join(" and ", new String[] {
           "Name LIKE '%java.exe%'",
           "CommandLine LIKE '%" + processName+ "%'"});
 

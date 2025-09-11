@@ -40,7 +40,7 @@ import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.LocalJavaKeyStoreProvider;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Strings;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -118,13 +118,13 @@ public class TestSecurityUtil {
     String principalInConf = service + SecurityUtil.HOSTNAME_PATTERN + realm;
     String hostname = "FooHost";
     String principal =
-        service + StringUtils.toLowerCase(hostname) + realm;
+        service + Strings.CI.toLowerCase(hostname) + realm;
     verify(principalInConf, hostname, principal);
   }
 
   @Test
   public void testLocalHostNameForNullOrWild() throws Exception {
-    String local = StringUtils.toLowerCase(SecurityUtil.getLocalHostName(null));
+    String local = Strings.CI.toLowerCase(SecurityUtil.getLocalHostName(null));
     assertEquals("hdfs/" + local + "@REALM",
                  SecurityUtil.getServerPrincipal("hdfs/_HOST@REALM", (String)null));
     assertEquals("hdfs/" + local + "@REALM",
@@ -284,7 +284,7 @@ public class TestSecurityUtil {
     conf.setBoolean(
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, useIp);
     SecurityUtil.setConfiguration(conf);
-    String serviceHost = useIp ? ip : StringUtils.toLowerCase(host);
+    String serviceHost = useIp ? ip : Strings.CI.toLowerCase(host);
     
     Token<?> token = new Token<TokenIdentifier>();
     Text service = new Text(serviceHost+":"+port);

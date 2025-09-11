@@ -47,7 +47,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.util.HttpExceptionUtils;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -213,7 +213,7 @@ public abstract class DelegationTokenAuthenticationHandler
       throws IOException {
     String op = ServletUtils.getParameter(request,
         KerberosDelegationTokenAuthenticator.OP_PARAM);
-    op = (op != null) ? StringUtils.toUpperCase(op) : null;
+    op = (op != null) ? Strings.CI.toUpperCase(op) : null;
     return DELEGATION_TOKEN_OPS.contains(op) &&
         !request.getMethod().equals("OPTIONS");
   }
@@ -227,7 +227,7 @@ public abstract class DelegationTokenAuthenticationHandler
     LOG.trace("Processing operation for req=({}), token: {}", request, token);
     String op = ServletUtils.getParameter(request,
         KerberosDelegationTokenAuthenticator.OP_PARAM);
-    op = (op != null) ? StringUtils.toUpperCase(op) : null;
+    op = (op != null) ? Strings.CI.toUpperCase(op) : null;
     if (isManagementOperation(request)) {
       KerberosDelegationTokenAuthenticator.DelegationTokenOperation dtOp =
           KerberosDelegationTokenAuthenticator.

@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Strings;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,7 +113,7 @@ public class TestProxyUsers {
     conf.set(
         DefaultImpersonationProvider.getTestProvider().
             getProxySuperuserGroupConfKey(REAL_USER_NAME),
-        StringUtils.join(",", Arrays.asList(NETGROUP_NAMES)));
+        Strings.CI.join(",", Arrays.asList(NETGROUP_NAMES)));
     conf.set(
         DefaultImpersonationProvider.getTestProvider().
             getProxySuperuserIpConfKey(REAL_USER_NAME),
@@ -139,7 +139,7 @@ public class TestProxyUsers {
     conf.set(
       DefaultImpersonationProvider.getTestProvider().
           getProxySuperuserGroupConfKey(REAL_USER_NAME),
-      StringUtils.join(",", Arrays.asList(GROUP_NAMES)));
+      Strings.CI.join(",", Arrays.asList(GROUP_NAMES)));
     conf.set(
       DefaultImpersonationProvider.getTestProvider().
           getProxySuperuserIpConfKey(REAL_USER_NAME),
@@ -174,7 +174,7 @@ public class TestProxyUsers {
     conf.set(
         DefaultImpersonationProvider.getTestProvider().
             getProxySuperuserUserConfKey(REAL_USER_NAME),
-        StringUtils.join(",", Arrays.asList(AUTHORIZED_PROXY_USER_NAME)));
+        Strings.CI.join(",", Arrays.asList(AUTHORIZED_PROXY_USER_NAME)));
     conf.set(
         DefaultImpersonationProvider.getTestProvider().
             getProxySuperuserIpConfKey(REAL_USER_NAME),
@@ -282,7 +282,7 @@ public class TestProxyUsers {
     conf.set(
       DefaultImpersonationProvider.getTestProvider().
           getProxySuperuserGroupConfKey(REAL_USER_NAME),
-      StringUtils.join(",", Arrays.asList(GROUP_NAMES)));
+      Strings.CI.join(",", Arrays.asList(GROUP_NAMES)));
     conf.set(
       DefaultImpersonationProvider.getTestProvider().
           getProxySuperuserIpConfKey(REAL_USER_NAME),
@@ -379,7 +379,7 @@ public class TestProxyUsers {
     conf.set(
       DefaultImpersonationProvider.getTestProvider().
           getProxySuperuserGroupConfKey(REAL_USER_NAME),
-      StringUtils.join(",", Arrays.asList(GROUP_NAMES,GROUP_NAMES)));
+      Strings.CI.join(",", Arrays.asList(GROUP_NAMES,GROUP_NAMES)));
     conf.set(
       DefaultImpersonationProvider.getTestProvider().
           getProxySuperuserIpConfKey(REAL_USER_NAME),
@@ -400,11 +400,11 @@ public class TestProxyUsers {
     conf.set(
       DefaultImpersonationProvider.getTestProvider()
           .getProxySuperuserGroupConfKey(REAL_USER_NAME),
-      StringUtils.join(",", Arrays.asList(GROUP_NAMES)));
+      Strings.CI.join(",", Arrays.asList(GROUP_NAMES)));
     conf.set(
       DefaultImpersonationProvider.getTestProvider().
           getProxySuperuserIpConfKey(REAL_USER_NAME),
-      StringUtils.join(",", Arrays.asList(PROXY_IP,PROXY_IP)));
+      Strings.CI.join(",", Arrays.asList(PROXY_IP,PROXY_IP)));
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
     
     Collection<String> hosts = 
@@ -452,12 +452,12 @@ public class TestProxyUsers {
     conf.set(
         DefaultImpersonationProvider.getTestProvider().
             getProxySuperuserUserConfKey(REAL_USER_NAME),
-        StringUtils.join(",", Arrays.asList(PROXY_USER_NAME + " ",AUTHORIZED_PROXY_USER_NAME, "ONEMORE")));
+        Strings.CI.join(",", Arrays.asList(PROXY_USER_NAME + " ",AUTHORIZED_PROXY_USER_NAME, "ONEMORE")));
 
     conf.set(
       DefaultImpersonationProvider.getTestProvider().
           getProxySuperuserGroupConfKey(REAL_USER_NAME),
-      StringUtils.join(",", Arrays.asList(GROUP_NAMES)));
+      Strings.CI.join(",", Arrays.asList(GROUP_NAMES)));
     
     conf.set(
       DefaultImpersonationProvider.getTestProvider().
@@ -490,7 +490,7 @@ public class TestProxyUsers {
   public void testProxyUsersWithCustomPrefix() throws Exception {
     Configuration conf = new Configuration(false);
     conf.set("x." + REAL_USER_NAME + ".users",
-        StringUtils.join(",", Arrays.asList(AUTHORIZED_PROXY_USER_NAME)));
+        Strings.CI.join(",", Arrays.asList(AUTHORIZED_PROXY_USER_NAME)));
     conf.set("x." + REAL_USER_NAME+ ".hosts", PROXY_IP);
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf, "x");
 
@@ -521,7 +521,7 @@ public class TestProxyUsers {
   public void testNoHostsForUsers() throws Exception {
     Configuration conf = new Configuration(false);
     conf.set("y." + REAL_USER_NAME + ".users",
-      StringUtils.join(",", Arrays.asList(AUTHORIZED_PROXY_USER_NAME)));
+      Strings.CI.join(",", Arrays.asList(AUTHORIZED_PROXY_USER_NAME)));
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf, "y");
 
     UserGroupInformation realUserUgi = UserGroupInformation
@@ -588,7 +588,7 @@ public class TestProxyUsers {
     conf.set(
         DefaultImpersonationProvider.getTestProvider().
             getProxySuperuserGroupConfKey(REAL_USER_NAME),
-        StringUtils.join(",", Arrays.asList(GROUP_NAMES)));
+        Strings.CI.join(",", Arrays.asList(GROUP_NAMES)));
 
     conf.set(
         DefaultImpersonationProvider.getTestProvider().

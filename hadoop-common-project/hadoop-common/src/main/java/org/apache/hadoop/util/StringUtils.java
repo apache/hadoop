@@ -453,7 +453,7 @@ public class StringUtils {
       return emptyStringArray;
     }
 
-    return str.trim().split("\\s*[,\n]\\s*");
+    return str.trim().split("\\s*[,\\n]\\s*");
   }
 
   final public static String[] emptyStringArray = {};
@@ -987,7 +987,7 @@ public class StringUtils {
     String[] words = split(StringUtils.toLowerCase(s), ESCAPE_CHAR,  '_');
 
     for (String word : words)
-      sb.append(org.apache.commons.lang.StringUtils.capitalize(word));
+      sb.append(org.apache.commons.lang3.Strings.CS.capitalize(word));
 
     return sb.toString();
   }
@@ -999,7 +999,7 @@ public class StringUtils {
    * to look up the replacement.  If no replacement is found for the token, then
    * it is replaced with the empty string.
    * 
-   * For example, assume template is "%foo%_%bar%_%baz%", pattern is "%(.*?)%",
+   * For example, assume template is "%foo%_%bar%_%baz%", pattern is "%(.+?)%",
    * and replacements contains 2 entries, mapping "foo" to "zoo" and "baz" to
    * "zaz".  The result returned would be "zoo__zaz".
    * 

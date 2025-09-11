@@ -25,7 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,10 +67,10 @@ public class CompressionCodecFactory {
     codecsByClassName.put(codec.getClass().getCanonicalName(), codec);
 
     String codecName = codec.getClass().getSimpleName();
-    codecsByName.put(StringUtils.toLowerCase(codecName), codec);
+    codecsByName.put(Strings.CI.toLowerCase(codecName), codec);
     if (codecName.endsWith("Codec")) {
       codecName = codecName.substring(0, codecName.length() - "Codec".length());
-      codecsByName.put(StringUtils.toLowerCase(codecName), codec);
+      codecsByName.put(Strings.CI.toLowerCase(codecName), codec);
     }
   }
 
@@ -247,7 +247,7 @@ public class CompressionCodecFactory {
       if (codec == null) {
         // trying to get the codec by name in case the name was specified
         // instead a class
-        codec = codecsByName.get(StringUtils.toLowerCase(codecName));
+        codec = codecsByName.get(Strings.CI.toLowerCase(codecName));
       }
       return codec;
     }

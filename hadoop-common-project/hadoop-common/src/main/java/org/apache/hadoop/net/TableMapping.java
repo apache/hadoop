@@ -28,7 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -92,7 +92,7 @@ public class TableMapping extends CachedDNSToSwitchMapping {
       Map<String, String> loadMap = new HashMap<String, String>();
   
       String filename = getConf().get(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, null);
-      if (StringUtils.isBlank(filename)) {
+      if (Strings.CI.isBlank(filename)) {
         LOG.warn(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY + " not configured. ");
         return null;
       }

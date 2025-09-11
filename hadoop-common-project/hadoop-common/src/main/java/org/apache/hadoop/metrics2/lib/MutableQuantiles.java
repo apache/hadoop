@@ -26,7 +26,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -84,12 +84,12 @@ public class MutableQuantiles extends MutableMetric {
    */
   public MutableQuantiles(String name, String description, String sampleName,
       String valueName, int interval) {
-    String ucName = StringUtils.capitalize(name);
-    String usName = StringUtils.capitalize(sampleName);
-    String uvName = StringUtils.capitalize(valueName);
-    String desc = StringUtils.uncapitalize(description);
-    String lsName = StringUtils.uncapitalize(sampleName);
-    String lvName = StringUtils.uncapitalize(valueName);
+    String ucName = Strings.CI.capitalize(name);
+    String usName = Strings.CI.capitalize(sampleName);
+    String uvName = Strings.CI.capitalize(valueName);
+    String desc = Strings.CI.uncapitalize(description);
+    String lsName = Strings.CI.uncapitalize(sampleName);
+    String lvName = Strings.CI.uncapitalize(valueName);
 
     numInfo = info(ucName + "Num" + usName, String.format(
         "Number of %s for %s with %ds interval", lsName, desc, interval));

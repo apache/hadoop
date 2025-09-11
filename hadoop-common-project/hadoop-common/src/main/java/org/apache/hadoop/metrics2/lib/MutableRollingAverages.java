@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -119,9 +119,9 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
       metricValueName = "";
     }
     avgInfoNameTemplate = "[%s]" + "RollingAvg" +
-        StringUtils.capitalize(metricValueName);
+        Strings.CS.capitalize(metricValueName);
     avgInfoDescTemplate = "Rolling average " +
-        StringUtils.uncapitalize(metricValueName) +" for "+ "%s";
+        Strings.CS.uncapitalize(metricValueName) +" for "+ "%s";
     numWindows = NUM_WINDOWS_DEFAULT;
     scheduledTask = SCHEDULER.scheduleAtFixedRate(new RatesRoller(this),
         WINDOW_SIZE_MS_DEFAULT, WINDOW_SIZE_MS_DEFAULT, TimeUnit.MILLISECONDS);
@@ -146,8 +146,8 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
           : averages.entrySet()) {
         final String name = entry.getKey();
         final MetricsInfo avgInfo = info(
-            String.format(avgInfoNameTemplate, StringUtils.capitalize(name)),
-            String.format(avgInfoDescTemplate, StringUtils.uncapitalize(name)));
+            String.format(avgInfoNameTemplate, Strings.CS.capitalize(name)),
+            String.format(avgInfoDescTemplate, Strings.CS.uncapitalize(name)));
         double totalSum = 0;
         long totalCount = 0;
 

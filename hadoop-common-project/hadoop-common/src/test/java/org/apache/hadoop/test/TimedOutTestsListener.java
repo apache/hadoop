@@ -95,7 +95,7 @@ public class TimedOutTestsListener extends RunListener {
           thread.getId(),
           Thread.State.WAITING.equals(thread.getState()) ? 
               "in Object.wait()" :
-              StringUtils.toLowerCase(thread.getState().name()),
+              org.apache.commons.lang3.Strings.CI.toLowerCase(thread.getState().name()),
           Thread.State.WAITING.equals(thread.getState()) ?
               "WAITING (on object monitor)" : thread.getState()));
       for (StackTraceElement stackTraceElement : e.getValue()) {

@@ -29,7 +29,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.XAttrCodec;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Strings;
 
 /**
  * XAttr related operations
@@ -70,11 +70,11 @@ class XAttrCommands extends FsCommand {
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      name = StringUtils.popOptionWithArgument("-n", args);
-      String en = StringUtils.popOptionWithArgument("-e", args);
+      name = Strings.CI.popOptionWithArgument("-n", args);
+      String en = Strings.CI.popOptionWithArgument("-e", args);
       if (en != null) {
         try {
-          encoding = XAttrCodec.valueOf(StringUtils.toUpperCase(en));
+          encoding = XAttrCodec.valueOf(Strings.CI.toUpperCase(en));
         } catch (IllegalArgumentException e) {
           throw new IllegalArgumentException(
               "Invalid/unsupported encoding option specified: " + en);
@@ -83,9 +83,9 @@ class XAttrCommands extends FsCommand {
             "Invalid/unsupported encoding option specified: " + en);
       }
 
-      boolean r = StringUtils.popOption("-R", args);
+      boolean r = Strings.CI.popOption("-R", args);
       setRecursive(r);
-      dump = StringUtils.popOption("-d", args);
+      dump = Strings.CI.popOption("-d", args);
 
       if (!dump && name == null) {
         throw new HadoopIllegalArgumentException(
@@ -153,12 +153,12 @@ class XAttrCommands extends FsCommand {
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      name = StringUtils.popOptionWithArgument("-n", args);
-      String v = StringUtils.popOptionWithArgument("-v", args);
+      name = Strings.CI.popOptionWithArgument("-n", args);
+      String v = Strings.CI.popOptionWithArgument("-v", args);
       if (v != null) {
         value = XAttrCodec.decodeValue(v);
       }
-      xname = StringUtils.popOptionWithArgument("-x", args);
+      xname = Strings.CI.popOptionWithArgument("-x", args);
 
       if (name != null && xname != null) {
         throw new HadoopIllegalArgumentException(

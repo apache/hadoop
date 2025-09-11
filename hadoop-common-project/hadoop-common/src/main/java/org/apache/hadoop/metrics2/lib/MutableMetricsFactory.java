@@ -21,7 +21,7 @@ package org.apache.hadoop.metrics2.lib;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsException;
@@ -127,7 +127,7 @@ public class MutableMetricsFactory {
   }
 
   protected String getName(Field field) {
-    return StringUtils.capitalize(field.getName());
+    return Strings.CS.capitalize(field.getName());
   }
 
   protected MetricsInfo getInfo(Metric annotation, Method method) {
@@ -148,9 +148,9 @@ public class MutableMetricsFactory {
   protected String getName(Method method) {
     String methodName = method.getName();
     if (methodName.startsWith("get")) {
-      return StringUtils.capitalize(methodName.substring(3));
+      return Strings.CS.capitalize(methodName.substring(3));
     }
-    return StringUtils.capitalize(methodName);
+    return Strings.CS.capitalize(methodName);
   }
 
   protected MetricsInfo getInfo(Metric annotation, String defaultName) {

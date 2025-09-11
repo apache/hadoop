@@ -121,7 +121,7 @@ class FsUsage extends FsCommand {
           formatSize(size),
           formatSize(used),
           formatSize(free),
-          StringUtils.formatPercent((double) used / (double) size, 0),
+          Strings.CS.formatPercent((double) used / (double) size, 0),
           mountedOnPath
       );
     }

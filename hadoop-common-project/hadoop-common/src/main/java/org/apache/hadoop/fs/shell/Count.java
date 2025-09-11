@@ -67,12 +67,12 @@ public class Count extends FsCommand {
   public static final String DESCRIPTION =
       "Count the number of directories, files and bytes under the paths\n" +
           "that match the specified file pattern.  The output columns are:\n" +
-          StringUtils.join(ContentSummary.getHeaderFields(), ' ') +
+          org.apache.commons.lang3.Strings.CI.join(ContentSummary.getHeaderFields(), ' ') +
           " PATHNAME\n" +
           "or, with the -" + OPTION_QUOTA + " option:\n" +
-          StringUtils.join(ContentSummary.getQuotaHeaderFields(), ' ') + "\n" +
+          org.apache.commons.lang3.Strings.CI.join(ContentSummary.getQuotaHeaderFields(), ' ') + "\n" +
           "      " +
-          StringUtils.join(ContentSummary.getHeaderFields(), ' ') +
+          org.apache.commons.lang3.Strings.CI.join(ContentSummary.getHeaderFields(), ' ') +
           " PATHNAME\n" +
           "The -" + OPTION_HUMAN +
           " option shows file sizes in human readable format.\n" +
@@ -175,7 +175,7 @@ public class Count extends FsCommand {
       return StorageType.getTypesSupportingQuota();
     }
 
-    String[] typeArray = StringUtils.split(types, ',');
+    String[] typeArray = org.apache.commons.lang3.Strings.CI.split(types, ',');
     List<StorageType> stTypes = new ArrayList<>();
 
     for (String t : typeArray) {

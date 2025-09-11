@@ -171,7 +171,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     SSLSocketFactory sslSocketF = clientSslFactory.createSSLSocketFactory();
     PrefferedCipherSSLSocketFactory testPreferredCipherSSLSocketF
         = new PrefferedCipherSSLSocketFactory(sslSocketF,
-        StringUtils.getTrimmedStrings(excludeCiphers));
+        Strings.CI.getTrimmedStrings(excludeCiphers));
     conn.setSSLSocketFactory(testPreferredCipherSSLSocketF);
     assertFalse("excludedCipher list is empty", excludeCiphers.isEmpty());
     try {
@@ -195,7 +195,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     SSLSocketFactory sslSocketF = clientSslFactory.createSSLSocketFactory();
     PrefferedCipherSSLSocketFactory testPreferredCipherSSLSocketF
         = new PrefferedCipherSSLSocketFactory(sslSocketF,
-        StringUtils.getTrimmedStrings(oneEnabledCiphers));
+        Strings.CI.getTrimmedStrings(oneEnabledCiphers));
     conn.setSSLSocketFactory(testPreferredCipherSSLSocketF);
     assertFalse("excludedCipher list is empty", oneEnabledCiphers.isEmpty());
     try {
@@ -221,7 +221,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     SSLSocketFactory sslSocketF = clientSslFactory.createSSLSocketFactory();
     PrefferedCipherSSLSocketFactory testPreferredCipherSSLSocketF
         = new PrefferedCipherSSLSocketFactory(sslSocketF,
-        StringUtils.getTrimmedStrings(exclusiveEnabledCiphers));
+        Strings.CI.getTrimmedStrings(exclusiveEnabledCiphers));
     conn.setSSLSocketFactory(testPreferredCipherSSLSocketF);
     assertFalse("excludedCipher list is empty",
         exclusiveEnabledCiphers.isEmpty());

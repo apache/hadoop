@@ -34,7 +34,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 import com.google.common.annotations.VisibleForTesting;
 import java.util.stream.Collectors;
@@ -155,12 +155,12 @@ public class CrossOriginFilter implements Filter {
 
   @VisibleForTesting
   String getAllowedHeadersHeader() {
-    return StringUtils.join(allowedHeaders, ',');
+    return Strings.CI.join(allowedHeaders, ',');
   }
 
   @VisibleForTesting
   String getAllowedMethodsHeader() {
-    return StringUtils.join(allowedMethods, ',');
+    return Strings.CI.join(allowedMethods, ',');
   }
 
   private void initializeAllowedMethods(FilterConfig filterConfig) {
@@ -194,7 +194,7 @@ public class CrossOriginFilter implements Filter {
     allowedOrigins.addAll(
         Arrays.asList(allowedOriginsConfig.trim().split("\\s*,\\s*")));
     allowAllOrigins = allowedOrigins.contains("*");
-    LOG.info("Allowed Origins: " + StringUtils.join(allowedOrigins, ','));
+    LOG.info("Allowed Origins: " + Strings.CI.join(allowedOrigins, ','));
     LOG.info("Allow All Origins: " + allowAllOrigins);
     List<String> discouragedAllowedOrigins = allowedOrigins.stream()
             .filter(s -> s.length() > 1 && s.contains("*"))

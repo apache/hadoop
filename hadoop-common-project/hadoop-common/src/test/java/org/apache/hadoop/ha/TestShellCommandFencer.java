@@ -89,7 +89,7 @@ public class TestShellCommandFencer {
       fail("Didn't throw when passing no args to shell");
     } catch (BadFencingConfigurationException confe) {
       assertTrue(
-        "Unexpected exception:" + StringUtils.stringifyException(confe),
+        "Unexpected exception:" + Strings.CI.stringifyException(confe),
         confe.getMessage().contains("No argument passed"));    
     }
   }
@@ -102,7 +102,7 @@ public class TestShellCommandFencer {
       fail("Didn't throw when passing no args to shell");
     } catch (BadFencingConfigurationException confe) {
       assertTrue(
-        "Unexpected exception:" + StringUtils.stringifyException(confe),
+        "Unexpected exception:" + Strings.CI.stringifyException(confe),
         confe.getMessage().contains("Unable to parse line: 'shell()'"));
     }
   }

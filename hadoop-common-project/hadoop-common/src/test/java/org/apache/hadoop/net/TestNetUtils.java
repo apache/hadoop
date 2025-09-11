@@ -669,7 +669,7 @@ public class TestNetUtils {
         "localhost", oneHost, "UnknownHost123");
     List<String> normalizedHosts = NetUtils.normalizeHostNames(hosts);
     String summary = "original [" + StringUtils.join(hosts, ", ") + "]"
-        + " normalized [" + StringUtils.join(normalizedHosts, ", ") + "]";
+        + " normalized [" + Strings.CI.join(normalizedHosts, ", ") + "]";
     // when ipaddress is normalized, same address is expected in return
     assertEquals(summary, hosts.get(0), normalizedHosts.get(0));
     // for normalizing a resolvable hostname, resolved ipaddress is expected in return
@@ -716,8 +716,8 @@ public class TestNetUtils {
   }
 
   private <T> void assertBetterArrayEquals(T[] expect, T[]got) {
-    String expectStr = StringUtils.join(expect, ", ");
-    String gotStr = StringUtils.join(got, ", ");
+    String expectStr = Strings.CI.join(expect, ", ");
+    String gotStr = Strings.CI.join(got, ", ");
     assertEquals(expectStr, gotStr);
   }
 }

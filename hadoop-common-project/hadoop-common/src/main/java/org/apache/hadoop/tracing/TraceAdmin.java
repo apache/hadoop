@@ -33,7 +33,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.TableListing;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Strings;
 import org.apache.hadoop.util.Tool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,7 +90,7 @@ public class TraceAdmin extends Configured implements Tool {
   private final static String CONFIG_PREFIX = "-C";
 
   private int addSpanReceiver(List<String> args) throws IOException {
-    String className = StringUtils.popOptionWithArgument("-class", args);
+    String className = Strings.CS.popOptionWithArgument("-class", args);
     if (className == null) {
       System.err.println("You must specify the classname with -class.");
       return 1;
@@ -133,7 +133,7 @@ public class TraceAdmin extends Configured implements Tool {
   }
 
   private int removeSpanReceiver(List<String> args) throws IOException {
-    String indexStr = StringUtils.popFirstNonOption(args);
+    String indexStr = Strings.CS.popFirstNonOption(args);
     long id = -1;
     try {
       id = Long.parseLong(indexStr);
@@ -153,15 +153,15 @@ public class TraceAdmin extends Configured implements Tool {
     for (String arg : argv) {
       args.add(arg);
     }
-    if (StringUtils.popOption("-h", args) ||
-        StringUtils.popOption("-help", args)) {
+    if (Strings.CS.popOption("-h", args) ||
+        Strings.CS.popOption("-help", args)) {
       usage();
       return 0;
     } else if (args.size() == 0) {
       usage();
       return 0;
     }
-    String hostPort = StringUtils.popOptionWithArgument("-host", args);
+    String hostPort = Strings.CS.popOptionWithArgument("-host", args);
     if (hostPort == null) {
       System.err.println("You must specify a host with -host.");
       return 1;
@@ -170,7 +170,7 @@ public class TraceAdmin extends Configured implements Tool {
       System.err.println("You must specify an operation.");
       return 1;
     }
-    String servicePrincipal = StringUtils.popOptionWithArgument("-principal",
+    String servicePrincipal = Strings.CS.popOptionWithArgument("-principal",
         args);
     if (servicePrincipal != null) {
       LOG.debug("Set service principal: {}", servicePrincipal);
