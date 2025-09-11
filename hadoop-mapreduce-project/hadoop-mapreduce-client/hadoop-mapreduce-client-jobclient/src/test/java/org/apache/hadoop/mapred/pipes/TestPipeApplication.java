@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
@@ -70,6 +71,8 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
 
 import static org.junit.Assert.*;
 
@@ -78,6 +81,15 @@ public class TestPipeApplication {
           TestPipeApplication.class.getName() + "-workSpace");
 
   private static String taskName = "attempt_001_02_r03_04_05";
+
+
+  /**
+   * This rule applies a 10-second timeout to every test method in this class.
+   * In JUnit 4, the Timeout rule runs tests in a separate thread, which is
+   * the equivalent of JUnit 5's 'threadMode = SEPARATE_THREAD'.
+   */
+  @Rule
+  public Timeout globalTimeout = new Timeout(10, TimeUnit.SECONDS);
 
   /**
    * test PipesMapRunner    test the transfer data from reader
@@ -617,7 +629,8 @@ public class TestPipeApplication {
     if (clazz == null) {
       os.write(("ls ").getBytes());
     } else {
-      os.write(("java -cp " + classpath + " " + clazz).getBytes());
+      // On Java 8 java.home returns "${JAVA_HOME}/jre", but that's good enough for this test
+      os.write((System.getProperty("java.home") + "/bin/java -cp " + classpath + " " + clazz).getBytes());
     }
     os.flush();
     os.close();
