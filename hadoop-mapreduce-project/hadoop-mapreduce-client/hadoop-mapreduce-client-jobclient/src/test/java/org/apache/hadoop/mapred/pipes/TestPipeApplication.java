@@ -618,6 +618,7 @@ public class TestPipeApplication {
     if (clazz == null) {
       os.write(("ls ").getBytes());
     } else {
+      // On Java 8 java.home returns "${JAVA_HOME}/jre", but that's good enough for this test
       os.write((System.getProperty("java.home") + "/bin/java -cp " + classpath + " " + clazz).getBytes());
     }
     os.flush();
