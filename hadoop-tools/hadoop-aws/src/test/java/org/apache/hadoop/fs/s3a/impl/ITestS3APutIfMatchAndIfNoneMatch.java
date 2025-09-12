@@ -41,7 +41,7 @@ import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.apache.hadoop.fs.s3a.Statistic;;
+import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 
 import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE;
