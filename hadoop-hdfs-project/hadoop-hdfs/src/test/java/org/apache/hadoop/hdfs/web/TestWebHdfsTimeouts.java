@@ -37,12 +37,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -152,8 +154,8 @@ public class TestWebHdfsTimeouts {
       fs.listFiles(new Path("/"), false);
       fail("expected timeout");
     } catch (SocketTimeoutException e) {
-      GenericTestUtils.assertExceptionContains(fs.getUri().getAuthority()
-          + ": connect timed out",e);
+      GenericTestUtils.assertExceptionMatches(Pattern.compile(
+          ".*" + Pattern.quote(fs.getUri().getAuthority()) + ": [Cc]onnect timed out"), e);
     }
   }
 
@@ -190,8 +192,8 @@ public class TestWebHdfsTimeouts {
       fs.getDelegationToken("renewer");
       fail("expected timeout");
     } catch (SocketTimeoutException e) {
-      GenericTestUtils.assertExceptionContains(fs.getUri().getAuthority() +
-          ": connect timed out", e);
+      GenericTestUtils.assertExceptionMatches(Pattern.compile(
+          ".*" + Pattern.quote(fs.getUri().getAuthority()) + ": [Cc]onnect timed out"), e);
     }
   }
 
@@ -230,8 +232,8 @@ public class TestWebHdfsTimeouts {
       fail("expected timeout");
     } catch (SocketTimeoutException e) {
       assumeBacklogConsumed();
-      GenericTestUtils.assertExceptionContains(
-          fs.getUri().getAuthority() + ": connect timed out", e);
+      GenericTestUtils.assertExceptionMatches(Pattern.compile(
+          ".*" + Pattern.quote(fs.getUri().getAuthority()) + ": [Cc]onnect timed out"), e);
     }
   }
 
@@ -272,8 +274,8 @@ public class TestWebHdfsTimeouts {
       fail("expected timeout");
     } catch (SocketTimeoutException e) {
       assumeBacklogConsumed();
-      GenericTestUtils.assertExceptionContains(
-          fs.getUri().getAuthority() + ": connect timed out", e);
+      GenericTestUtils.assertExceptionMatches(Pattern.compile(
+          ".*" + Pattern.quote(fs.getUri().getAuthority()) + ": [Cc]onnect timed out"), e);
     } finally {
       IOUtils.cleanupWithLogger(LOG, os);
     }

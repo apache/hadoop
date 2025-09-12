@@ -320,6 +320,17 @@ public abstract class GenericTestUtils {
 
   /**
    * Assert that an exception's <code>toString()</code> value
+   * matches the regex pattern.
+   * @param pattern regex pattern to match
+   * @param t thrown exception
+   * @throws AssertionError if the pattern does not match
+   */
+  public static void assertExceptionMatches(Pattern pattern, Throwable t) {
+    assertExceptionMatches(pattern, t, "");
+  }
+
+  /**
+   * Assert that an exception's <code>toString()</code> value
    * contained the expected text.
    * @param expectedText expected string
    * @param t thrown exception
@@ -340,6 +351,33 @@ public abstract class GenericTestUtils {
       throw new AssertionError(
           String.format("%s Expected to find '%s' %s: %s",
               prefix, expectedText, E_UNEXPECTED_EXCEPTION,
+              StringUtils.stringifyException(t)),
+          t);
+    }
+  }
+
+  /**
+   * Assert that an exception's <code>toString()</code> value
+   * matches the pattern.
+   * @param pattern regex pattern to match
+   * @param t thrown exception
+   * @param message any extra text for the string
+   * @throws AssertionError if the expected string is not found
+   */
+  public static void assertExceptionMatches(Pattern pattern,
+      Throwable t,
+      String message) {
+    assertNotNull(t, E_NULL_THROWABLE);
+    String msg = t.toString();
+    if (msg == null) {
+      throw new AssertionError(E_NULL_THROWABLE_STRING, t);
+    }
+    if (pattern != null && !pattern.matcher(msg).matches()) {
+      String prefix = org.apache.commons.lang3.StringUtils.isEmpty(message)
+          ? "" : (message + ": ");
+      throw new AssertionError(
+          String.format("%s Expected to match '%s' %s: %s",
+              prefix, pattern, E_UNEXPECTED_EXCEPTION,
               StringUtils.stringifyException(t)),
           t);
     }
