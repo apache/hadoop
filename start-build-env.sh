@@ -86,6 +86,14 @@ fi
 # Set the home directory in the Docker container.
 DOCKER_HOME_DIR=${DOCKER_HOME_DIR:-/home/${USER_NAME}}
 
+echo "=================================="
+echo "USER_NAME=${USER_NAME:-<empty>}"
+echo "USER_ID=${USER_ID:-<empty>}"
+echo "GROUP_ID=${GROUP_ID:-<empty>}"
+echo "DOCKER_HOME_DIR=${DOCKER_HOME_DIR:-<empty>}"
+echo "OS_PLATFORM_SUFFIX=${OS_PLATFORM_SUFFIX:-<empty>}"
+echo "=================================="
+
 docker build -t "hadoop-build${OS_PLATFORM_SUFFIX}-${USER_ID}" - <<UserSpecificDocker
 FROM hadoop-build
 RUN rm -f /var/log/faillog /var/log/lastlog
