@@ -32,9 +32,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.TestZKDelegationTokenSecretManager;
+import org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
 import org.apache.hadoop.util.Time;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +45,14 @@ public class TestZKDelegationTokenSecretManagerImpl
     extends TestZKDelegationTokenSecretManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestZKDelegationTokenSecretManagerImpl.class);
+
+  @Override
+  @AfterEach
+  public void tearDown() throws Exception {
+    super.tearDown();
+    // Prevent a STOPPED Curator from leaking into the next test.
+    ZKDelegationTokenSecretManager.setCurator(null);
+  }
 
   @SuppressWarnings("unchecked")
   @Test
