@@ -96,6 +96,8 @@ public class TestZKDelegationTokenSecretManager {
     if (zkServer != null) {
       zkServer.close();
     }
+    // Prevent a STOPPED Curator from leaking into the next test.
+    ZKDelegationTokenSecretManager.setCurator(null);
   }
 
   protected Configuration getSecretConf(String connectString) {
