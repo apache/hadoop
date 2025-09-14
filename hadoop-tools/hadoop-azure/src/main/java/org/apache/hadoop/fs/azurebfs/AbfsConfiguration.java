@@ -1280,13 +1280,13 @@ public class AbfsConfiguration{
               getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
           
           // Check if a custom ClientAssertionProvider is configured
-          String clientAssertionProviderClassName = 
-              getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_CLASS);
+          String clientAssertionProviderType =
+              getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_TYPE);
           
-          if (clientAssertionProviderClassName != null && !clientAssertionProviderClassName.trim().isEmpty()) {
+          if (clientAssertionProviderType != null && !clientAssertionProviderType.trim().isEmpty()) {
             // Use custom ClientAssertionProvider
             try {
-              Class<?> providerClass = Class.forName(clientAssertionProviderClassName.trim());
+              Class<?> providerClass = Class.forName(clientAssertionProviderType.trim());
               ClientAssertionProvider clientAssertionProvider = 
                   (ClientAssertionProvider) providerClass.getDeclaredConstructor().newInstance();
               
@@ -1296,10 +1296,10 @@ public class AbfsConfiguration{
               tokenProvider = new WorkloadIdentityTokenProvider(
                   authority, tenantGuid, clientId, clientAssertionProvider);
               LOG.trace("WorkloadIdentityTokenProvider initialized with custom ClientAssertionProvider: {}", 
-                  clientAssertionProviderClassName);
+                  clientAssertionProviderType);
             } catch (Exception e) {
               throw new TokenAccessProviderException(
-                  "Failed to initialize custom ClientAssertionProvider: " + clientAssertionProviderClassName, e);
+                  "Failed to initialize custom ClientAssertionProvider: " + clientAssertionProviderType, e);
             }
           } else {
             // Use file-based approach (backward compatibility)
