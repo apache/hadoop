@@ -20,13 +20,18 @@ package org.apache.hadoop.fs.azurebfs.oauth2;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.util.Preconditions;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 
 /**
  * Provides tokens based on Azure AD Workload Identity.
@@ -45,7 +50,7 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
   private static class FileBasedClientAssertionProvider implements ClientAssertionProvider {
     private final String tokenFile;
 
-    public FileBasedClientAssertionProvider(String tokenFile) {
+    FileBasedClientAssertionProvider(String tokenFile) {
       this.tokenFile = tokenFile;
     }
 
@@ -56,13 +61,14 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
 
     @Override
     public String getClientAssertion() throws IOException {
-      String clientAssertion = "";
+      String clientAssertion = EMPTY_STRING;
       try {
         File file = new File(tokenFile);
-        clientAssertion = FileUtils.readFileToString(file, "UTF-8");
+        clientAssertion = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
       } catch (Exception e) {
         throw new IOException(TOKEN_FILE_READ_ERROR + tokenFile, e);
       }
+      clientAssertion = clientAssertion.trim();
       if (Strings.isNullOrEmpty(clientAssertion)) {
         throw new IOException(EMPTY_TOKEN_FILE_ERROR + tokenFile);
       }
