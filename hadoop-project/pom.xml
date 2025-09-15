@@ -245,7 +245,8 @@
     <openssl-wildfly.version>2.1.4.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
     <woodstox.version>5.4.0</woodstox.version>
-    <nimbus-jose-jwt.version>9.37.2</nimbus-jose-jwt.version>
+    <nimbus-jose-jwt.version>10.4</nimbus-jose-jwt.version>
+    <jcip-annotations.version>1.0-1</jcip-annotations.version>
     <nodejs.version>v12.22.1</nodejs.version>
     <yarnpkg.version>v1.22.5</yarnpkg.version>
     <apache-ant.version>1.10.13</apache-ant.version>
@@ -1550,6 +1551,11 @@
         <groupId>com.google.code.findbugs</groupId>
         <artifactId>jsr305</artifactId>
         <version>3.0.2</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.stephenc.jcip</groupId>
+        <artifactId>jcip-annotations</artifactId>
+        <version>${jcip-annotations.version}</version>
       </dependency>
       <dependency>
         <groupId>jakarta.xml.bind</groupId>
