@@ -296,7 +296,8 @@ public class TestZookeeperClientCreation {
         .withKeytab("keytabLoc");
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage()).isEqualTo("Zookeeper client's Kerberos Principal must be specified!");
+    assertThat(t.getMessage()).isEqualTo(
+        "Zookeeper client's Kerberos Principal must be specified!");
   }
 
   @Test
@@ -307,7 +308,8 @@ public class TestZookeeperClientCreation {
         .withPrincipal("");
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage()).isEqualTo("Zookeeper client's Kerberos Principal must be specified!");
+    assertThat(t.getMessage()).isEqualTo(
+        "Zookeeper client's Kerberos Principal must be specified!");
   }
 
   @Test
@@ -340,7 +342,8 @@ public class TestZookeeperClientCreation {
         .enableSSL(true);
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage()).isEqualTo("The keystore location parameter is empty for the ZooKeeper client connection.");
+    assertThat(t.getMessage()).isEqualTo(
+        "The keystore location parameter is empty for the ZooKeeper client connection.");
   }
 
   @Test
@@ -350,7 +353,8 @@ public class TestZookeeperClientCreation {
         .withKeystore("");
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage()).isEqualTo("The keystore location parameter is empty for the ZooKeeper client connection.");
+    assertThat(t.getMessage()).isEqualTo(
+        "The keystore location parameter is empty for the ZooKeeper client connection.");
   }
 
   @Test
@@ -360,7 +364,8 @@ public class TestZookeeperClientCreation {
         .withKeystore("keyStoreLoc");
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage()).isEqualTo("The truststore location parameter is empty for the ZooKeeper client connection.");
+    assertThat(t.getMessage()).isEqualTo(
+        "The truststore location parameter is empty for the ZooKeeper client connection.");
   }
 
   @Test
@@ -371,7 +376,8 @@ public class TestZookeeperClientCreation {
         .withTruststore("");
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage()).isEqualTo("The truststore location parameter is empty for the ZooKeeper client connection.");
+    assertThat(t.getMessage()).isEqualTo(
+        "The truststore location parameter is empty for the ZooKeeper client connection.");
   }
 
   private void testSaslAuthType(String vendor) {
@@ -419,9 +425,11 @@ public class TestZookeeperClientCreation {
       assertThat(entry.getOptions().get("refreshKrb5Config")).isEqualTo("true");
 
       if (System.getProperty("java.vendor").contains("IBM")){
-        assertThat(entry.getLoginModuleName()).isEqualTo("com.ibm.security.auth.module.Krb5LoginModule");
+        assertThat(entry.getLoginModuleName()).isEqualTo(
+            "com.ibm.security.auth.module.Krb5LoginModule");
       } else {
-        assertThat(entry.getLoginModuleName()).isEqualTo("com.sun.security.auth.module.Krb5LoginModule");
+        assertThat(entry.getLoginModuleName()).isEqualTo(
+            "com.sun.security.auth.module.Krb5LoginModule");
       }
     } finally {
       Configuration.setConfiguration(origConf);
@@ -477,13 +485,13 @@ public class TestZookeeperClientCreation {
 
     assertThat(conf.getProperty(ZKClientConfig.SECURE_CLIENT))
         .satisfiesAnyOf(value -> assertThat(value).isNullOrEmpty(),
-        value -> assertThat(value).isEqualTo("false"));
+            value -> assertThat(value).isEqualTo("false"));
 
     try (ClientX509Util sslOpts = new ClientX509Util()) {
-       assertThat(conf.getProperty(sslOpts.getSslKeystoreLocationProperty())).isNullOrEmpty();
-       assertThat(conf.getProperty(sslOpts.getSslKeystorePasswdProperty())).isNullOrEmpty();
-       assertThat(conf.getProperty(sslOpts.getSslTruststoreLocationProperty())).isNullOrEmpty();
-       assertThat(conf.getProperty(sslOpts.getSslTruststorePasswdProperty())).isNullOrEmpty();
+      assertThat(conf.getProperty(sslOpts.getSslKeystoreLocationProperty())).isNullOrEmpty();
+      assertThat(conf.getProperty(sslOpts.getSslKeystorePasswdProperty())).isNullOrEmpty();
+      assertThat(conf.getProperty(sslOpts.getSslTruststoreLocationProperty())).isNullOrEmpty();
+      assertThat(conf.getProperty(sslOpts.getSslTruststorePasswdProperty())).isNullOrEmpty();
     }
   }
 
