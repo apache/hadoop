@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -74,6 +75,7 @@ import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_TMP_PATH;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
@@ -82,6 +84,7 @@ import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_
 import static org.apache.hadoop.fs.s3a.commit.staging.Paths.getMultipartUploadCommitsDirectory;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.STAGING_UPLOADS;
 import static org.apache.hadoop.mapred.JobConf.MAPRED_TASK_ENV;
+import static org.apache.hadoop.mapreduce.lib.input.FileInputFormat.LIST_STATUS_NUM_THREADS;
 
 /**
  * Test an MR Job with all the different committers.
@@ -105,24 +108,24 @@ import static org.apache.hadoop.mapred.JobConf.MAPRED_TASK_ENV;
  *   <li>
  *     The test suites are declared to be executed in ascending order, so
  *     that for a specific binding, the order is
- *     {@link #test_000(CommitterTestBinding)},
- *     {@link #test_100(CommitterTestBinding)}
- *     {@link #test_200_execute(CommitterTestBinding, java.nio.file.Path)} and finally
- *     {@link #test_500(CommitterTestBinding)}.
+ *     {@link #test_000()},
+ *     {@link #test_100()}
+ *     {@link #test_200_execute()} and finally
+ *     {@link #test_500()}.
  *   </li>
  *   <li>
- *     {@link #test_000(CommitterTestBinding)} calls
+ *     {@link #test_000()} calls
  *     {@link CommitterTestBinding#validate()} to
  *     as to validate the state of the committer. This is primarily to
  *     verify that the binding setup mechanism is working.
  *   </li>
  *   <li>
- *     {@link #test_100(CommitterTestBinding)} is relayed to
+ *     {@link #test_100()} is relayed to
  *     {@link CommitterTestBinding#test_100()},
  *     for any preflight tests.
  *   </li>
  *   <li>
- *     The {@link #test_200_execute(CommitterTestBinding, java.nio.file.Path)}
+ *     The {@link #test_200_execute()}
  *     test runs the MR job for that
  *     particular binding with standard reporting and verification of the
  *     outcome.
@@ -165,6 +168,9 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
    */
   private final CommitterTestBinding committerTestBinding;
 
+  @TempDir
+  private java.nio.file.Path localFilesDir;
+
   /**
    * Parameterized constructor.
    * @param committerTestBinding binding for the test.
@@ -186,6 +192,9 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     disableFilesystemCaching(conf);
+    removeBaseAndBucketOverrides(conf,
+        LIST_STATUS_NUM_THREADS);
+    conf.setInt(LIST_STATUS_NUM_THREADS, 16);
     return conf;
   }
 
@@ -208,9 +217,9 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   }
 
   @Test
-  public void test_200_execute(
-      @TempDir java.nio.file.Path localFilesDir) throws Exception {
+  public void test_200_execute() throws Exception {
     describe("Run an MR with committer %s", committerName());
+    LOG.info("Local Temp directory is {}", localFilesDir);
 
     S3AFileSystem fs = getFileSystem();
     // final dest is in S3A
@@ -253,8 +262,10 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     jobConf.set(FS_S3A_COMMITTER_UUID, commitUUID);
 
     mrJob.setInputFormatClass(TextInputFormat.class);
-    FileInputFormat.addInputPath(mrJob,
-        new Path(localFilesDir.getRoot().toUri()));
+
+    final URI inputPath = localFilesDir.toUri();
+    LOG.info("Job input path {}", inputPath);
+    FileInputFormat.addInputPath(mrJob, new Path(inputPath));
 
     mrJob.setMapperClass(MapClass.class);
     mrJob.setNumReduceTasks(0);
