@@ -26,13 +26,13 @@ import org.apache.hadoop.conf.Configuration;
 
 /**
  * Interface for providing client assertions for Azure Workload Identity authentication.
- * 
+ *
  * This interface allows custom implementations to provide JWT tokens through various mechanisms:
  * - Kubernetes Token Request API
  * - HashiCorp Vault
  * - Custom token services
  * - File-based tokens with custom logic
- * 
+ *
  * Implementations should be thread-safe as they may be called concurrently.
  */
 @InterfaceAudience.Public
@@ -42,7 +42,7 @@ public interface ClientAssertionProvider {
   /**
    * Initializes the provider with the given configuration.
    * This method is called once after the provider is instantiated via reflection.
-   * 
+   *
    * @param configuration Hadoop configuration containing provider-specific settings
    * @param accountName Azure storage account name for account-specific configuration
    * @throws IOException if initialization fails
@@ -51,10 +51,10 @@ public interface ClientAssertionProvider {
 
   /**
    * Retrieves a client assertion (JWT token) for Azure Workload Identity authentication.
-   * 
+   *
    * The returned string should be a valid JWT token that can be used as a client assertion
    * in OAuth 2.0 client credentials flow with JWT bearer assertion.
-   * 
+   *
    * @return JWT token as a string
    * @throws IOException if token retrieval fails
    */
@@ -63,7 +63,7 @@ public interface ClientAssertionProvider {
   /**
    * Optional: Cleanup resources when the provider is no longer needed.
    * Default implementation does nothing.
-   * 
+   *
    * @throws IOException if cleanup fails
    */
   default void close() throws IOException {

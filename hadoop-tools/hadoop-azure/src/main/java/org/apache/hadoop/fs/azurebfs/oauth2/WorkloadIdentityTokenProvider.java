@@ -84,10 +84,10 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
   /**
    * Constructor with custom ClientAssertionProvider.
    * Use this for custom token retrieval mechanisms like Kubernetes Token Request API.
-   * 
+   *
    * @param authority OAuth authority URL
    * @param tenantId Azure AD tenant ID
-   * @param clientId Azure AD client ID 
+   * @param clientId Azure AD client ID
    * @param clientAssertionProvider Custom provider for client assertions
    */
   public WorkloadIdentityTokenProvider(final String authority, final String tenantId,
@@ -104,7 +104,7 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
 
   /**
    * Constructor with file-based token reading (backward compatibility).
-   * 
+   *
    * @param authority OAuth authority URL
    * @param tenantId Azure AD tenant ID
    * @param clientId Azure AD client ID
