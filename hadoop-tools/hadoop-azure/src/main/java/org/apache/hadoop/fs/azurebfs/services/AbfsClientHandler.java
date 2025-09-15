@@ -68,13 +68,13 @@ public class AbfsClientHandler implements Closeable {
       final SASTokenProvider sasTokenProvider,
       final EncryptionContextProvider encryptionContextProvider,
       final AbfsClientContext abfsClientContext) throws IOException {
+    initServiceType(abfsConfiguration);
     this.dfsAbfsClient = createDfsClient(baseUrl, sharedKeyCredentials,
         abfsConfiguration, null, sasTokenProvider, encryptionContextProvider,
         abfsClientContext);
     this.blobAbfsClient = createBlobClient(baseUrl, sharedKeyCredentials,
         abfsConfiguration, null, sasTokenProvider, encryptionContextProvider,
         abfsClientContext);
-    initServiceType(abfsConfiguration);
   }
 
   /**

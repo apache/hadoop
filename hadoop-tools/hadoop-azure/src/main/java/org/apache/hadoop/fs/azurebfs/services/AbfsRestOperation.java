@@ -487,9 +487,6 @@ public class AbfsRestOperation {
       retryPolicy = client.getRetryPolicy(failureReason);
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
-      if (httpOperation instanceof AbfsAHCHttpOperation) {
-        registerApacheHttpClientIoException();
-      }
       if (abfsBackoffMetrics != null) {
         synchronized (this) {
           abfsBackoffMetrics.incrementMetricValue(NUMBER_OF_NETWORK_FAILED_REQUESTS);

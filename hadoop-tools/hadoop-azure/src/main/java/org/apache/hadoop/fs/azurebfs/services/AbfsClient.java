@@ -55,9 +55,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ApiVersion;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
@@ -199,6 +201,8 @@ public abstract class AbfsClient implements Closeable {
 
   private AbfsApacheHttpClient abfsApacheHttpClient;
 
+  private AbfsServiceType abfsServiceType;
+
   /**
    * logging the rename failure if metadata is in an incomplete state.
    */
@@ -208,7 +212,8 @@ public abstract class AbfsClient implements Closeable {
       final SharedKeyCredentials sharedKeyCredentials,
       final AbfsConfiguration abfsConfiguration,
       final EncryptionContextProvider encryptionContextProvider,
-      final AbfsClientContext abfsClientContext) throws IOException {
+      final AbfsClientContext abfsClientContext,
+      final AbfsServiceType abfsServiceType) throws IOException {
     this.baseUrl = baseUrl;
     this.sharedKeyCredentials = sharedKeyCredentials;
     String baseUrlString = baseUrl.toString();
@@ -220,6 +225,7 @@ public abstract class AbfsClient implements Closeable {
     this.authType = abfsConfiguration.getAuthType(accountName);
     this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
     this.renameResilience = abfsConfiguration.getRenameResilience();
+    this.abfsServiceType = abfsServiceType;
 
     if (encryptionContextProvider != null) {
       this.encryptionContextProvider = encryptionContextProvider;
@@ -254,7 +260,8 @@ public abstract class AbfsClient implements Closeable {
 
       abfsApacheHttpClient = new AbfsApacheHttpClient(
           DelegatingSSLSocketFactory.getDefaultFactory(),
-          abfsConfiguration, keepAliveCache, baseUrl);
+          abfsConfiguration, keepAliveCache, baseUrl,
+          abfsConfiguration.getFsConfiguredServiceType() == abfsServiceType);
     }
 
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);
@@ -328,25 +335,29 @@ public abstract class AbfsClient implements Closeable {
     LOG.trace("primaryUserGroup is {}", this.primaryUserGroup);
   }
 
-  public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
-                    final AbfsConfiguration abfsConfiguration,
-                    final AccessTokenProvider tokenProvider,
-                    final EncryptionContextProvider encryptionContextProvider,
-                    final AbfsClientContext abfsClientContext)
+  public AbfsClient(final URL baseUrl,
+      final SharedKeyCredentials sharedKeyCredentials,
+      final AbfsConfiguration abfsConfiguration,
+      final AccessTokenProvider tokenProvider,
+      final EncryptionContextProvider encryptionContextProvider,
+      final AbfsClientContext abfsClientContext,
+      final AbfsServiceType abfsServiceType)
       throws IOException {
     this(baseUrl, sharedKeyCredentials, abfsConfiguration,
-        encryptionContextProvider, abfsClientContext);
+        encryptionContextProvider, abfsClientContext, abfsServiceType);
     this.tokenProvider = tokenProvider;
   }
 
-  public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
-                    final AbfsConfiguration abfsConfiguration,
-                    final SASTokenProvider sasTokenProvider,
-                    final EncryptionContextProvider encryptionContextProvider,
-                    final AbfsClientContext abfsClientContext)
+  public AbfsClient(final URL baseUrl,
+      final SharedKeyCredentials sharedKeyCredentials,
+      final AbfsConfiguration abfsConfiguration,
+      final SASTokenProvider sasTokenProvider,
+      final EncryptionContextProvider encryptionContextProvider,
+      final AbfsClientContext abfsClientContext,
+      final AbfsServiceType abfsServiceType)
       throws IOException {
     this(baseUrl, sharedKeyCredentials, abfsConfiguration,
-        encryptionContextProvider, abfsClientContext);
+        encryptionContextProvider, abfsClientContext, abfsServiceType);
     this.sasTokenProvider = sasTokenProvider;
   }
 
