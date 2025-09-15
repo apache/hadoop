@@ -233,7 +233,8 @@
     <openssl-wildfly.version>2.1.4.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
     <woodstox.version>5.4.0</woodstox.version>
-    <nimbus-jose-jwt.version>9.37.2</nimbus-jose-jwt.version>
+    <nimbus-jose-jwt.version>10.4</nimbus-jose-jwt.version>
+    <jcip-annotations.version>1.0-1</jcip-annotations.version>
     <nodejs.version>v12.22.1</nodejs.version>
     <yarnpkg.version>v1.22.5</yarnpkg.version>
     <apache-ant.version>1.10.13</apache-ant.version>
@@ -1601,6 +1602,11 @@
         <groupId>javax.xml.bind</groupId>
         <artifactId>jaxb-api</artifactId>
         <version>2.2.11</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.stephenc.jcip</groupId>
+        <artifactId>jcip-annotations</artifactId>
+        <version>${jcip-annotations.version}</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jettison</groupId>
