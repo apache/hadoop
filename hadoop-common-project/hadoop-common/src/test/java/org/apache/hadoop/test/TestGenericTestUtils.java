@@ -37,33 +37,39 @@ public class TestGenericTestUtils extends GenericTestUtils {
 
   @Test
   public void testAssertExceptionContainsNullEx() throws Throwable {
+    boolean assertTriggered = false;
     try {
       assertExceptionContains("", null);
     } catch (AssertionError e) {
-      // AssertionError not actually thrown
+      assertTriggered = true;
       if (!e.toString().contains(E_NULL_THROWABLE)) {
         throw e;
       }
     }
+    assertTrue(assertTriggered);
   }
 
   @Test
   public void testAssertExceptionContainsNullString() throws Throwable {
+    boolean assertTriggered = false;
     try {
       assertExceptionContains("", new BrokenException());
     } catch (AssertionError e) {
-      // AssertionError not actually thrown
+      assertTriggered = true;
       if (!e.toString().contains(E_NULL_THROWABLE_STRING)) {
         throw e;
       }
     }
+    assertTrue(assertTriggered);
   }
 
   @Test
   public void testAssertExceptionContainsWrongText() throws Throwable {
+    boolean assertTriggered = false;
     try {
       assertExceptionContains("Expected", new Exception("(actual)"));
     } catch (AssertionError e) {
+      assertTriggered = true;
       String s = e.toString();
       if (!s.contains(E_UNEXPECTED_EXCEPTION)
           || !s.contains("(actual)") ) {
@@ -73,6 +79,7 @@ public class TestGenericTestUtils extends GenericTestUtils {
         throw new AssertionError("No nested cause in assertion", e);
       }
     }
+    assertTrue(assertTriggered);
   }
 
   @Test
@@ -82,33 +89,40 @@ public class TestGenericTestUtils extends GenericTestUtils {
 
   @Test
   public void testAssertExceptionMatchesNullEx() throws Throwable {
+    boolean assertTriggered = false;
     try {
       assertExceptionMatches(null, null);
     } catch (AssertionError e) {
-      // AssertionError not actually thrown
+      assertTriggered = true;
       if (!e.toString().contains(E_NULL_THROWABLE)) {
         throw e;
       }
     }
+    assertTrue(assertTriggered);
   }
 
   @Test
   public void testAssertExceptionMatchesNullString() throws Throwable {
+    boolean assertTriggered = false;
     try {
       assertExceptionMatches(null, new BrokenException());
+      fail("assertion should have failed");
     } catch (AssertionError e) {
-      // AssertionError not actually thrown
+      assertTriggered = true;
       if (!e.toString().contains(E_NULL_THROWABLE_STRING)) {
         throw e;
       }
     }
+    assertTrue(assertTriggered);
   }
 
   @Test
   public void testAssertExceptionMatchesWrongText() throws Throwable {
+    boolean assertTriggered = false;
     try {
       assertExceptionMatches(Pattern.compile(".*Expected.*"), new Exception("(actual)"));
     } catch (AssertionError e) {
+      assertTriggered = true;
       String s = e.toString();
       if (!s.contains(E_UNEXPECTED_EXCEPTION)
           || !s.contains("(actual)") ) {
@@ -118,6 +132,7 @@ public class TestGenericTestUtils extends GenericTestUtils {
         throw new AssertionError("No nested cause in assertion", e);
       }
     }
+    assertTrue(assertTriggered);
   }
 
   @Test
