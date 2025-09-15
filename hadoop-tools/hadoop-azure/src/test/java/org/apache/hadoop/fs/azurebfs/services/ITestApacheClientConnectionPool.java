@@ -72,7 +72,6 @@ public class ITestApacheClientConnectionPool extends
     Configuration configuration = new Configuration(getRawConfiguration());
     configuration.set(FS_AZURE_NETWORKING_LIBRARY, APACHE_HTTP_CLIENT.name());
     configuration.unset(FS_AZURE_METRIC_FORMAT);
-    AbfsApacheHttpClient.setUsable();
     try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
         configuration)) {
       KeepAliveCache kac = fs.getAbfsStore().getClientHandler().getIngressClient()
@@ -150,6 +149,7 @@ public class ITestApacheClientConnectionPool extends
       Assertions.assertThat(AbfsApacheHttpClient.usable())
           .describedAs("Apache HttpClient should be not usable")
           .isFalse();
+      AbfsApacheHttpClient.setUsable();
     }
   }
 
