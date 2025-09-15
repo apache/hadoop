@@ -25,6 +25,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
+
 import org.slf4j.event.Level;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,6 +40,7 @@ public class TestGenericTestUtils extends GenericTestUtils {
     try {
       assertExceptionContains("", null);
     } catch (AssertionError e) {
+      // AssertionError not actually thrown
       if (!e.toString().contains(E_NULL_THROWABLE)) {
         throw e;
       }
@@ -49,6 +52,7 @@ public class TestGenericTestUtils extends GenericTestUtils {
     try {
       assertExceptionContains("", new BrokenException());
     } catch (AssertionError e) {
+      // AssertionError not actually thrown
       if (!e.toString().contains(E_NULL_THROWABLE_STRING)) {
         throw e;
       }
@@ -74,6 +78,51 @@ public class TestGenericTestUtils extends GenericTestUtils {
   @Test
   public void testAssertExceptionContainsWorking() throws Throwable {
     assertExceptionContains("Expected", new Exception("Expected"));
+  }
+
+  @Test
+  public void testAssertExceptionMatchesNullEx() throws Throwable {
+    try {
+      assertExceptionMatches(null, null);
+    } catch (AssertionError e) {
+      // AssertionError not actually thrown
+      if (!e.toString().contains(E_NULL_THROWABLE)) {
+        throw e;
+      }
+    }
+  }
+
+  @Test
+  public void testAssertExceptionMatchesNullString() throws Throwable {
+    try {
+      assertExceptionMatches(null, new BrokenException());
+    } catch (AssertionError e) {
+      // AssertionError not actually thrown
+      if (!e.toString().contains(E_NULL_THROWABLE_STRING)) {
+        throw e;
+      }
+    }
+  }
+
+  @Test
+  public void testAssertExceptionMatchesWrongText() throws Throwable {
+    try {
+      assertExceptionMatches(Pattern.compile(".*Expected.*"), new Exception("(actual)"));
+    } catch (AssertionError e) {
+      String s = e.toString();
+      if (!s.contains(E_UNEXPECTED_EXCEPTION)
+          || !s.contains("(actual)") ) {
+        throw e;
+      }
+      if (e.getCause() == null) {
+        throw new AssertionError("No nested cause in assertion", e);
+      }
+    }
+  }
+
+  @Test
+  public void testAssertExceptionMatchesWorking() throws Throwable {
+    assertExceptionMatches(Pattern.compile(".*Expected.*"), new Exception("Expected"));
   }
 
   private static class BrokenException extends Exception {
