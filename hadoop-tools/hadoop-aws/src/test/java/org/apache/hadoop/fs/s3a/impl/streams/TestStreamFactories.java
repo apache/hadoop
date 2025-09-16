@@ -23,7 +23,6 @@ import java.io.UncheckedIOException;
 
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.VectoredIOContext;
