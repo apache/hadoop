@@ -27,6 +27,10 @@ Most of the commands in FS shell behave like corresponding Unix commands. Differ
 
 If HDFS is being used, `hdfs dfs` is a synonym.
 
+See also: [FileSystem API](../api/org/apache/hadoop/fs/FileSystem.html) for programmatic access
+to the same operations.
+
+
 Relative paths can be used. For HDFS, the current working directory is the
 HDFS home directory `/user/<username>` that often has to be created manually.
 The HDFS home directory can also be implicitly accessed, e.g., when using the
