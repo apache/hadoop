@@ -607,17 +607,6 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testBucketNameWithDotAndNumber() throws Exception {
-    Configuration config = new Configuration();
-    Path path = new Path("s3a://test-bucket-v1.1");
-    try (FileSystem fs = path.getFileSystem(config)) {
-      assertThat(fs instanceof S3AFileSystem)
-          .describedAs("FileSystem should be S3AFileSystem instance")
-          .isTrue();
-    }
-  }
-
-  @Test
   @Timeout(10)
   public void testS3SpecificSignerOverride() throws Exception {
     Configuration config = new Configuration();

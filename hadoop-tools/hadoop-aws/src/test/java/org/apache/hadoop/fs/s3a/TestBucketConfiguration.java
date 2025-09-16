@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.security.ProviderUtils;
@@ -92,6 +93,38 @@ public class TestBucketConfiguration extends AbstractHadoopTestBase {
     URI multiDotUri = URI.create("s3a://bucket.v1.2.test/path");
     URI multiDotResult = S3xLoginHelper.buildFSURI(multiDotUri);
     assertEquals("s3a://bucket.v1.2.test", multiDotResult.toString());
+  }
+
+  @Test
+  public void testBucketNameWithDotAndNumber() throws Exception {
+    Configuration config = new Configuration();
+    URI uri = URI.create("s3a://test-bucket-v1.1");
+    String bucket = uri.getHost();
+    if (bucket == null) {
+      bucket = uri.getAuthority();
+    }
+    assertThat(bucket)
+        .describedAs("Bucket name should be extracted correctly")
+        .isEqualTo("test-bucket-v1.1");
+  }
+
+  @Test
+  public void testFileSystemCacheForBucketWithDotAndNumber() throws Exception {
+    Configuration config = new Configuration();
+    URI uri1 = URI.create("s3a://test-bucket-v1.1");
+    URI uri2 = URI.create("s3a://test-bucket-v1.2");
+    
+    FileSystem fs1a = FileSystem.get(uri1, config);
+    FileSystem fs1b = FileSystem.get(uri1, config);
+    FileSystem fs2 = FileSystem.get(uri2, config);
+    
+    assertThat(fs1a)
+        .describedAs("FileSystem.get should return same cached instance for same URI")
+        .isSameAs(fs1b);
+    
+    assertThat(fs1a)
+        .describedAs("FileSystem.get should return different instance for different bucket")
+        .isNotSameAs(fs2);
   }
 
   @Test

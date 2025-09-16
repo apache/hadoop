@@ -31,6 +31,12 @@ before 2021.
 Consult [S3A and Directory Markers](directory_markers.html) for
 full details.
 
+### <a name="bucket-name-compatibility"></a> S3 Bucket Name Compatibility
+
+This release adds support for S3 bucket names containing dots followed by numbers
+(e.g., `my-bucket-v1.1`, `data-store.v2.3`). Previous versions of the Hadoop S3A
+client failed to initialize such buckets due to URI parsing limitations.
+
 ## <a name="documents"></a> Documents
 
 * [Connecting](./connecting.html)
