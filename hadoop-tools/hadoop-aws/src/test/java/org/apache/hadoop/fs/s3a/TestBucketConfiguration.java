@@ -116,11 +116,11 @@ public class TestBucketConfiguration extends AbstractHadoopTestBase {
     FileSystem fs1a = FileSystem.get(uri1, config);
     FileSystem fs1b = FileSystem.get(uri1, config);
     FileSystem fs2 = FileSystem.get(uri2, config);
-    
+
     assertThat(fs1a)
         .describedAs("The call should return same cached instance for same URI")
         .isSameAs(fs1b);
-    
+
     assertThat(fs1a)
         .describedAs("The call should return different instance for different bucket")
         .isNotSameAs(fs2);
