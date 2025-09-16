@@ -116,7 +116,9 @@ M2_REPOSITORY=${M2_REPOSITORY:-"${HOME}/.m2"}
 docker run --rm=true $DOCKER_INTERACTIVE_RUN \
   -v "${PWD}:${DOCKER_HOME_DIR}/hadoop${V_OPTS:-}" \
   -w "${DOCKER_HOME_DIR}/hadoop" \
+  -v "${M2_REPOSITORY}:${DOCKER_HOME_DIR}/.m2${V_OPTS:-}" \
   -v "${HOME}/.gnupg:${DOCKER_HOME_DIR}/.gnupg${V_OPTS:-}" \
   -u "${USER_ID}" \
+  --env-file cloudera/docker.env \
   --name "hadoop-build${OS_PLATFORM_SUFFIX}" \
   "hadoop-build${OS_PLATFORM_SUFFIX}-${USER_ID}" "$@"
