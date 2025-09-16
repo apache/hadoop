@@ -140,7 +140,7 @@
     <hikari.version>4.0.3</hikari.version>
     <derby.version>10.14.2.0</derby.version>
     <mssql.version>6.2.1.jre7</mssql.version>
-    <okhttp3.version>4.11.0</okhttp3.version>
+    <okhttp3.version>5.1.0</okhttp3.version>
     <kotlin-stdlib.version>1.6.20</kotlin-stdlib.version>
     <jdom2.version>2.0.6.1</jdom2.version>
     <jna.version>5.2.0</jna.version>
@@ -256,14 +256,10 @@
     <dependencies>
       <dependency>
         <groupId>com.squareup.okhttp3</groupId>
-        <artifactId>mockwebserver</artifactId>
+        <artifactId>mockwebserver3-junit5</artifactId>
         <version>${okhttp3.version}</version>
         <scope>test</scope>
         <exclusions>
-          <exclusion>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-          </exclusion>
           <exclusion>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib-jdk8</artifactId>
