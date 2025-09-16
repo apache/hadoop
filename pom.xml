@@ -314,6 +314,17 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                       <bannedImport>org.apache.commons.logging.**</bannedImport>
                     </bannedImports>
                   </restrictImports>
+                  <restrictImports>
+                     <includeTestCode>true</includeTestCode>
+                     <reason>Use JUnit5</reason>
+                     <bannedImports>
+                        <bannedImport>org.junit.**</bannedImport>
+                     </bannedImports>
+                     <allowedImports>
+                        <allowedImport>org.junit.jupiter.**</allowedImport>
+                        <allowedImport>org.junit.platform.**</allowedImport>
+                     </allowedImports>
+                  </restrictImports>
                 </rules>
               </configuration>
             </execution>
