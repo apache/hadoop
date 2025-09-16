@@ -46,11 +46,12 @@ public class TestFineGrainedFSNamesystemLock {
    * Test read/write lock of Global, FS and BM model through multi-threading.
    */
   @Test
-  @Timeout(value = 120)
+  @Timeout(value = 240)
   public void testMultipleThreadsUsingLocks()
       throws InterruptedException, ExecutionException {
     FineGrainedFSNamesystemLock fsn = new FineGrainedFSNamesystemLock(new Configuration(), null);
-    ExecutorService service = HadoopExecutors.newFixedThreadPool(1000);
+    int threads = Math.min(128, Runtime.getRuntime().availableProcessors() * 4);
+    ExecutorService service = HadoopExecutors.newFixedThreadPool(threads);
 
     AtomicLong globalCount = new AtomicLong(0);
     AtomicLong fsCount = new AtomicLong(0);

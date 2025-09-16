@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
-import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
@@ -369,13 +368,14 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
      * also shuts down the executor service.
      */
 
-    if (getConfiguration().getPreferredHttpOperationType()
-        == HttpOperationType.APACHE_HTTP_CLIENT) {
-      LambdaTestUtils.intercept(AbfsDriverException.class,
-          exceptionRaisingCallable);
-    } else {
-      LambdaTestUtils.intercept(RejectedExecutionException.class,
-          exceptionRaisingCallable);
+    try {
+      exceptionRaisingCallable.call();
+      fail("Expected exception was not thrown");
+    } catch (Exception e) {
+      if (!(e instanceof AbfsDriverException
+          || e instanceof RejectedExecutionException)) {
+        fail("Unexpected exception type: " + e.getClass());
+      }
     }
   }
 

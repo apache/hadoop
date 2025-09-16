@@ -26,6 +26,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import org.assertj.core.api.Assertions;
@@ -55,6 +56,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.test.ReflectionUtils;
+import org.apache.http.HttpClientConnection;
 import org.apache.http.HttpResponse;
 
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
@@ -64,7 +66,11 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_1
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_VALUE_UNKNOWN;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_HTTP_METHOD_OVERRIDE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_ACTION;
@@ -91,8 +97,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
@@ -868,5 +872,234 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     Mockito.verify(spiedClient, times(expectedInvocations))
         .listPath(eq("/testPath"), eq(false), eq(1),
             any(), any(TracingContext.class), any());
+  }
+
+  /**
+   * Test to verify that the KeepAliveCache is initialized with the correct number of connections.
+   * This test is applicable only for ApacheHttpClient.
+   */
+  @Test
+  public void testKeepAliveCacheInitializationWithApacheHttpClient() throws Exception {
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
+        this.getFileSystem().getAbfsStore()
+            .getAbfsConfiguration().getPreferredHttpOperationType());
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
+
+    AbfsClient dfsClient = abfsClientHandler.getDfsClient();
+    AbfsClient blobClient = abfsClientHandler.getBlobClient();
+
+    checkKacOnBothClientsAfterFSInit(dfsClient);
+    checkKacOnBothClientsAfterFSInit(blobClient);
+  }
+
+  /**
+   * Test to verify the behavior of stale connections in the KeepAliveCache.
+   * This test is applicable only for ApacheHttpClient.
+   */
+  @Test
+  public void testStaleConnectionBehavior() throws Exception {
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
+        this.getFileSystem().getAbfsStore()
+            .getAbfsConfiguration().getPreferredHttpOperationType());
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    Configuration conf = fs.getConf();
+
+    // This is to avoid actual metric calls during the test
+    conf.unset(FS_AZURE_METRIC_ACCOUNT_NAME);
+
+    // Initialize the file system
+    AzureBlobFileSystemStore store = this.getFileSystem(conf).getAbfsStore();
+    AbfsClientHandler abfsClientHandler = store.getClientHandler();
+
+    AbfsClient dfsClient = abfsClientHandler.getDfsClient();
+    AbfsClient blobClient = abfsClientHandler.getBlobClient();
+
+    checkKacOnBothClientsAfterFSInit(dfsClient);
+    checkKacOnBothClientsAfterFSInit(blobClient);
+
+    // Wait for 5 minutes to make the cached connections stale
+    // This will ensure all the connections in the KeepAliveCache are stale
+    // and will be removed by the Apache HttpClient's KeepAliveStrategy.
+    Thread.sleep(TimeUnit.MINUTES.toMillis(5));
+
+    // Verify that the KeepAliveCache returns null after making connections stale
+    // This is because the connections are stale and should not be reused.
+    // The size of the KeepAliveCache should also be 0.
+    // This indicates that the cache has been cleared of stale connections.
+    checkKacAfterMakingConnectionsStale(dfsClient);
+    checkKacAfterMakingConnectionsStale(blobClient);
+  }
+
+  /**
+   * Test to verify that the KeepAliveCache is reused for both DFS and Blob clients.
+   * This test is applicable only for ApacheHttpClient.
+   */
+  @Test
+  public void testApacheConnectionReuse() throws Exception {
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
+        this.getFileSystem().getAbfsStore()
+            .getAbfsConfiguration().getPreferredHttpOperationType());
+    AzureBlobFileSystem fs = this.getFileSystem();
+
+    AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
+    AbfsClient dfsClient = abfsClientHandler.getDfsClient();
+    AbfsClient blobClient = abfsClientHandler.getBlobClient();
+
+    checkKacOnBothClientsAfterFSInit(dfsClient);
+    checkKacOnBothClientsAfterFSInit(blobClient);
+
+    checkConnectionReuse(dfsClient);
+    checkConnectionReuse(blobClient);
+  }
+
+  /**
+   * Test to verify that the connection is not reused after an IOException occurs.
+   * This test is applicable only for ApacheHttpClient.
+   */
+  @Test
+  public void testConnectionNotReusedOnIOException() throws Exception {
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
+        this.getFileSystem().getAbfsStore()
+            .getAbfsConfiguration().getPreferredHttpOperationType());
+    AzureBlobFileSystem fs = this.getFileSystem();
+
+    AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
+    AbfsClient dfsClient = abfsClientHandler.getDfsClient();
+    KeepAliveCache keepAliveCache = dfsClient.getKeepAliveCache();
+
+    HttpClientConnection connection = keepAliveCache.pollFirst();
+    Assertions.assertThat(connection)
+        .describedAs("Connection should be present in the cache")
+        .isNotNull();
+    HttpClientConnection spiedConnection = Mockito.spy(connection);
+    HttpClientConnection successfulConnection = keepAliveCache.peekFirst();
+
+    keepAliveCache.addFirst(spiedConnection);
+    Assertions.assertThat(spiedConnection)
+        .describedAs("Connection should be present in the cache")
+        .isNotNull();
+    Mockito.doThrow(new IOException("Incomplete input stream"))
+        .when(spiedConnection).receiveResponseEntity(any());
+
+    // First list call fail with IOException exception and that connection will not be reused.
+    // Subsequent retry call will use a new connection from the cache.
+    dfsClient.listPath("/", false, 1,
+          null, getTestTracingContext(fs, true), null);
+
+    // After the failed operation, connection should NOT be reused
+    Assertions.assertThat(keepAliveCache.peekLast())
+        .describedAs("Connection should not be reused after IO failure.")
+        .isNotEqualTo(spiedConnection);
+
+    // After the failed operation, connection should NOT be reused
+    Assertions.assertThat(keepAliveCache.peekLast())
+        .describedAs("Successful connection should be reused.")
+        .isEqualTo(successfulConnection);
+
+    // Optionally, ensure it's not in cache at all
+    Assertions.assertThat(keepAliveCache.contains(spiedConnection)).isFalse();
+  }
+
+  /**
+   * Test to verify that the KeepAliveCache is initialized with 0 connection
+   * when warmup count is set to 0.
+   * This test is applicable only for ApacheHttpClient.
+   */
+  @Test
+  public void testNumberOfConnectionsInKacWithoutWarmup() throws Exception {
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
+        this.getFileSystem().getAbfsStore()
+            .getAbfsConfiguration().getPreferredHttpOperationType());
+    AzureBlobFileSystem fs = this.getFileSystem();
+    final Configuration configuration = fs.getConf();
+    configuration.setInt(FS_AZURE_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT, 0);
+    fs = this.getFileSystem(configuration);
+
+    AbfsClient dfsClient = fs.getAbfsStore().getClientHandler().getDfsClient();
+    AbfsClient blobClient = fs.getAbfsStore().getClientHandler().getBlobClient();
+
+    Assertions.assertThat(dfsClient.getKeepAliveCache().size())
+        .describedAs("KeepAliveCache will be empty when warmup count is set to 0")
+        .isEqualTo(0);
+    Assertions.assertThat(blobClient.getKeepAliveCache().size())
+        .describedAs("KeepAliveCache will be empty when warmup count is set to 0")
+        .isEqualTo(0);
+  }
+
+  /**
+   * Helper method to check the KeepAliveCache on both clients.
+   * @param abfsClient AbfsClient instance to check
+   *
+   * @throws IOException if an error occurs while checking the cache
+   */
+  private void checkKacOnBothClientsAfterFSInit(AbfsClient abfsClient) throws IOException {
+    AbfsApacheHttpClient abfsApacheHttpClient = abfsClient.getAbfsApacheHttpClient();
+    Assertions.assertThat(abfsApacheHttpClient)
+        .describedAs("AbfsApacheHttpClient should not be null")
+        .isNotNull();
+
+    KeepAliveCache keepAliveCache = abfsClient.getKeepAliveCache();
+
+    Assertions.assertThat(keepAliveCache.size())
+        .describedAs("KeepAliveCache should be warm with default connection count")
+        .isEqualTo(this.getConfiguration().getApacheCacheWarmupCount());
+
+    Assertions.assertThat(keepAliveCache.get())
+        .describedAs("KeepAliveCache should not be null")
+        .isNotNull();
+
+    // 1 connection is taken in above get call, so size should be
+    // DEFAULT_APACHE_CACHE_WARMUP_CONNECTION_COUNT - 1
+    // after the get call.
+    Assertions.assertThat(keepAliveCache.size())
+        .describedAs("KeepAliveCache size should be one less than the warmup count")
+        .isEqualTo(this.getConfiguration().getApacheCacheWarmupCount() - 1);
+  }
+
+  /**
+   * Helper method to check the KeepAliveCache after making connections stale.
+   * @param abfsClient AbfsClient instance to check
+   *
+   * @throws IOException if an error occurs while checking the cache
+   */
+  private void checkKacAfterMakingConnectionsStale(AbfsClient abfsClient)
+      throws IOException {
+    KeepAliveCache keepAliveCache = abfsClient.getKeepAliveCache();
+    Assertions.assertThat(keepAliveCache.get())
+        .describedAs("KeepAliveCache should return null")
+        .isNull();
+
+    // Verify that the cache is empty after making connections stale
+    Assertions.assertThat(keepAliveCache.size())
+        .describedAs("KeepAliveCache should be empty after making connections stale")
+        .isEqualTo(0);
+  }
+
+  /**
+   * Helper method to check connection reuse in the KeepAliveCache.
+   * @param abfsClient AbfsClient instance to check
+   *
+   * @throws IOException if an error occurs while checking the cache
+   */
+  private void checkConnectionReuse(AbfsClient abfsClient) throws IOException {
+    KeepAliveCache dfsKeepAliveCache = abfsClient.getKeepAliveCache();
+    for (int i = 0; i < this.getConfiguration().getApacheCacheWarmupCount(); i++) {
+      // Check first connection in the cache before the operation
+      HttpClientConnection connection = dfsKeepAliveCache.peekFirst();
+      // Perform a list operation to reuse the connection
+      // This will use the first connection in the cache.
+      abfsClient.listPath("/", false, 1,
+          null, getTestTracingContext(this.getFileSystem(), true), null);
+      // After the operation, the connection should be kept back in the last position
+      Assertions.assertThat(connection)
+          .describedAs("Connection will be put back to the cache for reuse.")
+          .isEqualTo(dfsKeepAliveCache.peekLast());
+    }
   }
 }

@@ -237,9 +237,27 @@ public final class FileSystemConfigurations {
 
   public static final int DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = 3;
 
-  public static final long DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME = 5_000L;
+  public static final int DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE = 10;
 
-  public static final int DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS = 5;
+  public static final int MIN_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE = 5;
+
+  public static final int MAX_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE = 20;
+
+  public static final int DEFAULT_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT = 5;
+
+  public static final int MAX_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT = 5;
+
+  public static final int DEFAULT_APACHE_HTTP_CLIENT_CACHE_REFRESH_COUNT = 5;
+
+  public static final int MAX_APACHE_HTTP_CLIENT_CACHE_REFRESH_COUNT = 5;
+
+  public static final long DEFAULT_APACHE_HTTP_CLIENT_MAX_REFRESH_WAIT_TIME_MILLIS = 500L;
+
+  public static final int DEFAULT_APACHE_HTTP_CLIENT_MIN_TRIGGER_REFRESH_COUNT = 2;
+
+  public static final long DEFAULT_APACHE_HTTP_CLIENT_WARMUP_CACHE_TIMEOUT_MILLIS = 2_000L;
+
+  public static final int MAX_APACHE_HTTP_CLIENT_MIN_TRIGGER_REFRESH_COUNT = 5;
 
   public static final long DEFAULT_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS = 1_000L;
 

@@ -31,6 +31,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -103,10 +104,15 @@ public final class WriteThreadPoolSizeManager implements Closeable {
 
     /* Set the upper bound for the thread pool size */
     this.maxThreadPoolSize = Math.max(computedMaxPoolSize, initialPoolSize);
-
-    /*  Initialize the bounded thread pool executor */
-    this.boundedThreadPool = Executors.newFixedThreadPool(initialPoolSize);
-
+    AtomicInteger threadCount = new AtomicInteger(1);
+    this.boundedThreadPool = Executors.newFixedThreadPool(
+        initialPoolSize,
+        r -> {
+          Thread t = new Thread(r);
+          t.setName("abfs-boundedwrite-" + threadCount.getAndIncrement());
+          return t;
+        }
+    );
     ThreadPoolExecutor executor = (ThreadPoolExecutor) this.boundedThreadPool;
     executor.setKeepAliveTime(
         abfsConfiguration.getWriteThreadPoolKeepAliveTime(), TimeUnit.SECONDS);

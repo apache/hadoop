@@ -32,15 +32,17 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.event.Level;
 
 
 import java.util.function.Supplier;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test if we can correctly delay the deletion of blocks.
@@ -57,7 +59,7 @@ public class TestPendingInvalidateBlock {
   private MiniDFSCluster cluster;
   private DistributedFileSystem dfs;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCKSIZE);
@@ -75,7 +77,7 @@ public class TestPendingInvalidateBlock {
     dfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -102,23 +104,23 @@ public class TestPendingInvalidateBlock {
     dfs.delete(foo, true);
 
     waitForNumPendingDeletionBlocks(REPLICATION);
-    Assert.assertEquals(0, cluster.getNamesystem().getBlocksTotal());
-    Assert.assertEquals(REPLICATION, cluster.getNamesystem()
+    assertEquals(0, cluster.getNamesystem().getBlocksTotal());
+    assertEquals(REPLICATION, cluster.getNamesystem()
         .getPendingDeletionBlocks());
-    Assert.assertEquals(REPLICATION,
+    assertEquals(REPLICATION,
         dfs.getPendingDeletionBlocksCount());
     Mockito.doReturn(0L).when(mockIb).getInvalidationDelay();
 
     waitForNumPendingDeletionBlocks(0);
-    Assert.assertEquals(0, cluster.getNamesystem().getBlocksTotal());
-    Assert.assertEquals(0, cluster.getNamesystem().getPendingDeletionBlocks());
-    Assert.assertEquals(0, dfs.getPendingDeletionBlocksCount());
+    assertEquals(0, cluster.getNamesystem().getBlocksTotal());
+    assertEquals(0, cluster.getNamesystem().getPendingDeletionBlocks());
+    assertEquals(0, dfs.getPendingDeletionBlocksCount());
     long nnStarted = cluster.getNamesystem().getNNStartedTimeInMillis();
     long blockDeletionStartTime = cluster.getNamesystem()
         .getBlockDeletionStartTime();
-    Assert.assertTrue(String.format(
+    assertTrue(blockDeletionStartTime > nnStarted, String.format(
         "Expect blockDeletionStartTime = %d > nnStarted = %d.",
-        blockDeletionStartTime, nnStarted), blockDeletionStartTime > nnStarted);
+        blockDeletionStartTime, nnStarted));
 
     // test client protocol compatibility
     Method method = DFSClient.class.
@@ -130,8 +132,8 @@ public class TestPendingInvalidateBlock {
     // get an out of index value
     long invalidState = (Long) method.invoke(dfs.getClient(),
         ClientProtocol.STATS_ARRAY_LENGTH);
-    Assert.assertEquals(0, validState);
-    Assert.assertEquals(-1, invalidState);
+    assertEquals(0, validState);
+    assertEquals(-1, invalidState);
   }
 
   /**
@@ -170,7 +172,7 @@ public class TestPendingInvalidateBlock {
     Whitebox.setInternalState(cluster.getNamesystem().getBlockManager(),
         "invalidateBlocks", mockIb);
 
-    Assert.assertEquals(0L, cluster.getNamesystem().getPendingDeletionBlocks());
+    assertEquals(0L, cluster.getNamesystem().getPendingDeletionBlocks());
     // restart DataNodes
     for (int i = 0; i < REPLICATION; i++) {
       cluster.restartDataNode(dnprops[i]);
@@ -182,13 +184,13 @@ public class TestPendingInvalidateBlock {
     }
     Thread.sleep(2000);
     // make sure we have received block reports by checking the total block #
-    Assert.assertEquals(3, cluster.getNamesystem().getBlocksTotal());
-    Assert.assertEquals(4, cluster.getNamesystem().getPendingDeletionBlocks());
+    assertEquals(3, cluster.getNamesystem().getBlocksTotal());
+    assertEquals(4, cluster.getNamesystem().getPendingDeletionBlocks());
 
     cluster.restartNameNode(true);
     waitForNumPendingDeletionBlocks(0);
-    Assert.assertEquals(3, cluster.getNamesystem().getBlocksTotal());
-    Assert.assertEquals(0, cluster.getNamesystem().getPendingDeletionBlocks());
+    assertEquals(3, cluster.getNamesystem().getBlocksTotal());
+    assertEquals(0, cluster.getNamesystem().getPendingDeletionBlocks());
   }
 
   private long waitForReplication() throws Exception {

@@ -22,9 +22,9 @@ import java.io.IOException;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
-import org.junit.FixMethodOrder;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -43,7 +43,7 @@ import static org.apache.hadoop.fs.azurebfs.commit.AbfsCommitTestHelper.prepareT
 /**
  * Test the Manifest committer stages against ABFS.
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.MethodName.class)
 public class ITestAbfsJobThroughManifestCommitter
     extends TestJobThroughManifestCommitter {
 

@@ -203,6 +203,9 @@
       "libprotoc-dev"
     ]
   },
+  "procps": {
+    "debian:11": "procps"
+  },
   "sasl": {
     "debian:11": "libsasl2-dev",
     "ubuntu:focal": "libsasl2-dev",
@@ -270,18 +273,21 @@
       "temurin-24-jdk",
       "openjdk-8-jdk",
       "openjdk-11-jdk",
-      "openjdk-17-jdk"
+      "openjdk-17-jdk",
+      "openjdk-21-jdk"
     ],
     "ubuntu:noble": [
       "temurin-24-jdk",
       "openjdk-11-jdk",
-      "openjdk-17-jdk"
+      "openjdk-17-jdk",
+      "openjdk-21-jdk"
     ],
     "ubuntu:focal::arch64": [
       "temurin-24-jdk",
       "openjdk-8-jdk",
       "openjdk-11-jdk",
-      "openjdk-17-jdk"
+      "openjdk-17-jdk",
+      "openjdk-21-jdk"
     ]
   },
   "pinentry-curses": {

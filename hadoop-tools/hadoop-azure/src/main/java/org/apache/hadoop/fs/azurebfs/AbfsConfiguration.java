@@ -474,8 +474,8 @@ public class AbfsConfiguration{
       FS_AZURE_BLOB_DIR_DELETE_MAX_THREAD, DefaultValue = DEFAULT_FS_AZURE_BLOB_DELETE_THREAD)
   private int blobDeleteDirConsumptionParallelism;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES,
+      DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
   private int maxApacheHttpClientIoExceptionsRetries;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT,
@@ -529,15 +529,33 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_WRITE_HIGH_TIER_MEMORY_MULTIPLIER)
   private int highTierMemoryMultiplier;
 
-  /**
-   * Max idle TTL configuration for connection given in
-   * {@value org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys#FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL}
-   * with default of
-   * {@value org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations#DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME}
-   */
-  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL,
-      DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME)
-  private long maxApacheHttpClientConnectionIdleTime;
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE,
+      MinValue = MIN_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, MaxValue = MAX_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE)
+  private int apacheMaxCacheSize;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT,
+      MinValue = 0, MaxValue = MAX_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT)
+  private int apacheCacheWarmupCount;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_APACHE_HTTP_CLIENT_CACHE_REFRESH_COUNT, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_CACHE_REFRESH_COUNT,
+      MinValue = 0, MaxValue = MAX_APACHE_HTTP_CLIENT_CACHE_REFRESH_COUNT)
+  private int apacheCacheRefreshCount;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_MAX_REFRESH_WAIT_TIME_MILLIS,
+      DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_REFRESH_WAIT_TIME_MILLIS)
+  private long apacheMaxRefreshWaitTimeInMillis;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_MIN_TRIGGER_REFRESH_COUNT,
+      DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MIN_TRIGGER_REFRESH_COUNT,
+      MinValue = 0, MaxValue = MAX_APACHE_HTTP_CLIENT_MIN_TRIGGER_REFRESH_COUNT)
+  private int apacheMinTriggerRefreshCount;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_WARMUP_CACHE_TIMEOUT_MILLIS,
+      DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_WARMUP_CACHE_TIMEOUT_MILLIS)
+  private long apacheWarmupCacheTimeoutInMillis;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID,
       DefaultValue = DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID)
@@ -1228,11 +1246,28 @@ public class AbfsConfiguration{
     return maxApacheHttpClientIoExceptionsRetries;
   }
 
-  /**
-   * @return {@link #maxApacheHttpClientConnectionIdleTime}.
-   */
-  public long getMaxApacheHttpClientConnectionIdleTime() {
-    return maxApacheHttpClientConnectionIdleTime;
+  public int getApacheMaxCacheSize() {
+    return apacheMaxCacheSize;
+  }
+
+  public int getApacheCacheWarmupCount() {
+    return apacheCacheWarmupCount;
+  }
+
+  public int getApacheCacheRefreshCount() {
+    return apacheCacheRefreshCount;
+  }
+
+  public long getApacheMaxRefreshWaitTimeInMillis() {
+    return apacheMaxRefreshWaitTimeInMillis;
+  }
+
+  public int getApacheMinTriggerRefreshCount() {
+    return apacheMinTriggerRefreshCount;
+  }
+
+  public long getApacheWarmupCacheTimeoutInMillis() {
+    return apacheWarmupCacheTimeoutInMillis;
   }
 
   public boolean getIsClientTransactionIdEnabled() {

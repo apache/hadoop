@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
@@ -291,7 +292,8 @@ public class ITestAzureBlobFileSystemFileStatus extends
    * verifying the correct header and directory state.
    */
   private void testIsDirectory(boolean expected, String... configName) throws Exception {
-    try (AzureBlobFileSystem fs = Mockito.spy(getFileSystem())) {
+    try (AzureBlobFileSystem fs = Mockito.spy(
+        (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getConf()))) {
       assumeBlobServiceType();
       AbfsBlobClient abfsBlobClient = mockIngressClientHandler(fs);
       // Mock the operation to modify the headers

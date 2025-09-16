@@ -68,6 +68,9 @@
     <!-- jersey version -->
     <jersey2.version>2.46</jersey2.version>
 
+    <!-- jaxb version -->
+    <jaxb.version>2.3.9</jaxb.version>
+
     <!-- jackson versions -->
     <jackson2.version>2.14.3</jackson2.version>
     <jackson2.databind.version>2.14.3</jackson2.databind.version>
@@ -239,7 +242,7 @@
     <junit.platform.version>1.13.3</junit.platform.version>
     <assertj.version>3.12.2</assertj.version>
     <jline.version>3.9.0</jline.version>
-    <powermock.version>2.0.9</powermock.version>
+    <mockito.version>4.11.0</mockito.version>
     <solr.version>8.11.2</solr.version>
     <openssl-wildfly.version>2.1.4.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
@@ -795,6 +798,12 @@
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-gcp</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-kms</artifactId>
         <version>${hadoop.version}</version>
       </dependency>
@@ -1310,19 +1319,24 @@
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
+        <artifactId>mockito-core</artifactId>
+        <version>${mockito.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-junit-jupiter</artifactId>
+        <version>${mockito.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
         <artifactId>mockito-inline</artifactId>
-        <version>4.11.0</version>
+        <version>${mockito.version}</version>
         <exclusions>
           <exclusion>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
           </exclusion>
         </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.mockito</groupId>
-        <artifactId>mockito-all</artifactId>
-        <version>1.10.19</version>
       </dependency>
       <dependency>
         <groupId>org.objenesis</groupId>
@@ -1347,11 +1361,6 @@
             <artifactId>hamcrest-core</artifactId>
           </exclusion>
         </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.mockito</groupId>
-        <artifactId>mockito-junit-jupiter</artifactId>
-        <version>4.11.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.avro</groupId>
@@ -2153,10 +2162,20 @@
         <version>${jersey2.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.glassfish.jaxb</groupId>
+        <artifactId>jaxb-runtime</artifactId>
+        <version>${jaxb.version}</version>
+      </dependency>
+      <dependency>
         <groupId>net.jodah</groupId>
         <artifactId>failsafe</artifactId>
         <version>2.4.4</version>
       </dependency>
+      <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-storage</artifactId>
+      <version>2.52.0</version>
+    </dependency>
     </dependencies>
   </dependencyManagement>
 

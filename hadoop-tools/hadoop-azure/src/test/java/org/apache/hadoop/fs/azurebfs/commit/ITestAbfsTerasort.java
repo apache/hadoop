@@ -26,10 +26,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import org.junit.FixMethodOrder;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.MethodOrderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,7 +65,7 @@ import static org.assertj.core.api.Assumptions.assumeThat;
  * The tests run in sequence, so each operation is isolated.
  * Scale test only (it is big and slow)
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.MethodName.class)
 @SuppressWarnings({"StaticNonFinalField", "OptionalUsedAsFieldOrParameterType"})
 public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
 
