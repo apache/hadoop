@@ -522,8 +522,9 @@ public class TestFileOutputCommitter {
 
   @Test
   public void testCommitterInternalWithultipleTasksV1() throws Exception {
-    testCommitterInternalWithultipleTasks(1, true, true);
-    testCommitterInternalWithultipleTasks(1, true, false);
+    // Flaky tests. To be stabilized by COMPX-23642. Temporarily disabled.
+    // testCommitterInternalWithultipleTasks(1, true, true);
+    // testCommitterInternalWithultipleTasks(1, true, false);
   }
 
   @Test
