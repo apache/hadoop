@@ -59,7 +59,7 @@ import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.
         SSLChannelMode.Default_JSSE_with_GCM;
 import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.
         SSLChannelMode.OpenSSL;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 
 /**

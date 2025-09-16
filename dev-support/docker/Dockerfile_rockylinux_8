@@ -30,6 +30,11 @@ COPY pkg-resolver pkg-resolver
 RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
     && chmod a+r pkg-resolver/*.json
 
+####
+# Install EPEL
+####
+RUN pkg-resolver/install-epel.sh rockylinux:8
+
 ######
 # Install packages from yum
 ######
@@ -37,11 +42,6 @@ RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
 RUN yum update -y \
     && yum install -y python3 \
     && yum install -y $(pkg-resolver/resolve.py rockylinux:8)
-
-####
-# Install EPEL
-####
-RUN pkg-resolver/install-epel.sh rockylinux:8
 
 RUN dnf --enablerepo=powertools install -y \
     doxygen \

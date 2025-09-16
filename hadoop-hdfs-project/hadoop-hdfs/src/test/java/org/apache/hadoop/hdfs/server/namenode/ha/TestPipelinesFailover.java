@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -58,7 +58,8 @@ import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.slf4j.event.Level;
 
@@ -120,19 +121,22 @@ public class TestPipelinesFailover {
   /**
    * Tests continuing a write pipeline over a failover.
    */
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testWriteOverGracefulFailover() throws Exception {
     doWriteOverFailoverTest(TestScenario.GRACEFUL_FAILOVER,
         MethodToTestIdempotence.ALLOCATE_BLOCK);
   }
   
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAllocateBlockAfterCrashFailover() throws Exception {
     doWriteOverFailoverTest(TestScenario.ORIGINAL_ACTIVE_CRASHED,
         MethodToTestIdempotence.ALLOCATE_BLOCK);
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testCompleteFileAfterCrashFailover() throws Exception {
     doWriteOverFailoverTest(TestScenario.ORIGINAL_ACTIVE_CRASHED,
         MethodToTestIdempotence.COMPLETE_FILE);
@@ -205,12 +209,14 @@ public class TestPipelinesFailover {
    * after the failover - ensures that updating the pipeline succeeds
    * even when the pipeline was constructed on a different NN.
    */
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testWriteOverGracefulFailoverWithDnFail() throws Exception {
     doTestWriteOverFailoverWithDnFail(TestScenario.GRACEFUL_FAILOVER);
   }
   
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testWriteOverCrashFailoverWithDnFail() throws Exception {
     doTestWriteOverFailoverWithDnFail(TestScenario.ORIGINAL_ACTIVE_CRASHED);
   }
@@ -272,7 +278,8 @@ public class TestPipelinesFailover {
    * Tests lease recovery if a client crashes. This approximates the
    * use case of HBase WALs being recovered after a NN failover.
    */
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testLeaseRecoveryAfterFailover() throws Exception {
     final Configuration conf = new Configuration();
     // Disable permissions so that another user can recover the lease.
@@ -324,7 +331,8 @@ public class TestPipelinesFailover {
    * DN running the recovery should then fail to commit the synchronization
    * and a later retry will succeed.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testFailoverRightBeforeCommitSynchronization() throws Exception {
     final Configuration conf = new Configuration();
     // Disable permissions so that another user can recover the lease.
@@ -426,7 +434,8 @@ public class TestPipelinesFailover {
    * break the lease. While these threads run, failover proceeds
    * back and forth between two namenodes.
    */
-  @Test(timeout=STRESS_RUNTIME*3)
+  @Test
+  @Timeout(STRESS_RUNTIME*3)
   public void testPipelineRecoveryStress() throws Exception {
 
     // The following section of code is to help debug HDFS-6694 about

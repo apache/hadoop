@@ -95,7 +95,9 @@ public class AzureBlobBlockManager extends AzureBlockManager {
       setBlockCount(getBlockCount() + 1);
       AbfsBlock activeBlock = new AbfsBlobBlock(getAbfsOutputStream(), position, getBlockIdLength(), getBlockCount());
       activeBlock.setBlockEntry(addNewEntry(activeBlock.getBlockId(), activeBlock.getOffset()));
-      getAbfsOutputStream().getMessageDigest().reset();
+      if (getAbfsOutputStream().isChecksumValidationEnabled()) {
+        getAbfsOutputStream().getMessageDigest().reset();
+      }
       setActiveBlock(activeBlock);
     }
     return getActiveBlock();

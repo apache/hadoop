@@ -109,32 +109,32 @@ public class ITestAzureBlobFileSystemListStatus extends
     config.set(AZURE_LIST_MAX_RESULTS, "5000");
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(getFileSystem().getUri(), config);
-      final List<Future<Void>> tasks = new ArrayList<>();
+    final List<Future<Void>> tasks = new ArrayList<>();
 
-      ExecutorService es = Executors.newFixedThreadPool(10);
-      for (int i = 0; i < TEST_FILES_NUMBER; i++) {
-        final Path fileName = new Path("/test" + i);
-        Callable<Void> callable = new Callable<Void>() {
-          @Override
-          public Void call() throws Exception {
-            touch(fileName);
-            return null;
-          }
-        };
+    ExecutorService es = Executors.newFixedThreadPool(10);
+    for (int i = 0; i < TEST_FILES_NUMBER; i++) {
+      final Path fileName = new Path("/test" + i);
+      Callable<Void> callable = new Callable<Void>() {
+        @Override
+        public Void call() throws Exception {
+          touch(fileName);
+          return null;
+        }
+      };
 
-        tasks.add(es.submit(callable));
-      }
+      tasks.add(es.submit(callable));
+    }
 
-      for (Future<Void> task : tasks) {
-        task.get();
-      }
+    for (Future<Void> task : tasks) {
+      task.get();
+    }
 
-      es.shutdownNow();
-      fs.registerListener(
-              new TracingHeaderValidator(getConfiguration().getClientCorrelationId(),
-                      fs.getFileSystemId(), FSOperationType.LISTSTATUS, true, 0));
-      FileStatus[] files = fs.listStatus(new Path("/"));
-      assertEquals(TEST_FILES_NUMBER, files.length /* user directory */);
+    es.shutdownNow();
+    fs.registerListener(
+            new TracingHeaderValidator(getConfiguration().getClientCorrelationId(),
+                    fs.getFileSystemId(), FSOperationType.LISTSTATUS, true, 0));
+    FileStatus[] files = fs.listStatus(new Path("/"));
+    assertEquals(TEST_FILES_NUMBER, files.length /* user directory */);
     fs.registerListener(
             new TracingHeaderValidator(getConfiguration().getClientCorrelationId(),
                     fs.getFileSystemId(), FSOperationType.GET_ATTR, true, 0));
@@ -832,7 +832,8 @@ public class ITestAzureBlobFileSystemListStatus extends
    * verifying the correct header and directory state.
    */
   private void testIsDirectory(boolean expected, String... configName) throws Exception {
-    try (AzureBlobFileSystem fs = Mockito.spy(getFileSystem())) {
+    try (AzureBlobFileSystem fs = Mockito.spy(
+        (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getConf()))) {
       assumeBlobServiceType();
       AbfsBlobClient abfsBlobClient = mockIngressClientHandler(fs);
       // Mock the operation to modify the headers

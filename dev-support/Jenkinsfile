@@ -91,10 +91,10 @@ pipeline {
                     '''
                 }
 
-                dir("${WORKSPACE}/debian-10") {
+                dir("${WORKSPACE}/debian-11") {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/debian-10
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/debian-11
                     '''
                 }
 
@@ -157,12 +157,12 @@ pipeline {
         // C++/C++ build/platform.
         // This stage serves as a means of cross platform validation, which is
         // really needed to ensure that any C++ related/platform change doesn't
-        // break the Hadoop build on Debian 10.
-        stage ('precommit-run Debian 10') {
+        // break the Hadoop build on Debian 11.
+        stage ('precommit-run Debian 11') {
             environment {
-                SOURCEDIR = "${WORKSPACE}/debian-10/src"
-                PATCHDIR = "${WORKSPACE}/debian-10/out"
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_10"
+                SOURCEDIR = "${WORKSPACE}/debian-11/src"
+                PATCHDIR = "${WORKSPACE}/debian-11/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_11"
                 IS_OPTIONAL = 1
             }
 
@@ -182,7 +182,7 @@ pipeline {
                 failure {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp "${WORKSPACE}/debian-10/out" "${WORKSPACE}"
+                    cp -Rp "${WORKSPACE}/debian-11/out" "${WORKSPACE}"
                     '''
                     archiveArtifacts "out/**"
                 }

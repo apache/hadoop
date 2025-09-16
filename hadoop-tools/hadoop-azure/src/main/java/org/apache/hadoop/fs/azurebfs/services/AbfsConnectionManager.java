@@ -19,21 +19,25 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.net.URL;
 import java.util.UUID;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.http.HttpClientConnection;
+import org.apache.http.HttpHost;
 import org.apache.http.config.Registry;
 import org.apache.http.config.SocketConfig;
-import org.apache.http.conn.ConnectionPoolTimeoutException;
 import org.apache.http.conn.ConnectionRequest;
 import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.HttpClientConnectionOperator;
-import org.apache.http.conn.ManagedHttpClientConnection;
 import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.impl.conn.DefaultHttpClientConnectionOperator;
@@ -47,6 +51,9 @@ import org.apache.http.protocol.HttpContext;
  */
 class AbfsConnectionManager implements HttpClientConnectionManager {
 
+  /**
+   * Logger instance for logging in this class.
+   */
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsConnectionManager.class);
 
@@ -65,12 +72,46 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
    */
   private final HttpClientConnectionOperator connectionOperator;
 
+  /**
+   * AbfsConfiguration instance to get configuration values.
+   */
+  private final AbfsConfiguration abfsConfiguration;
+
+  /**
+   * Atomic boolean to ensure only one thread can trigger cache refresh at a time.
+   */
+  private final AtomicBoolean isCacheRefreshInProgress = new AtomicBoolean(
+      false);
+
+  /**
+   * Lock object for synchronizing connection retrieval and caching.
+   */
+  private final Object connectionLock = new Object();
+
+  /**
+   * The base host for which connections are managed.
+   */
+  private HttpHost baseHost;
+
   AbfsConnectionManager(Registry<ConnectionSocketFactory> socketFactoryRegistry,
-      AbfsHttpClientConnectionFactory connectionFactory, KeepAliveCache kac) {
+      AbfsHttpClientConnectionFactory connectionFactory, KeepAliveCache kac,
+      final AbfsConfiguration abfsConfiguration, final URL baseUrl) {
     this.httpConnectionFactory = connectionFactory;
     this.kac = kac;
     this.connectionOperator = new DefaultHttpClientConnectionOperator(
         socketFactoryRegistry, null, null);
+    this.abfsConfiguration = abfsConfiguration;
+    if (abfsConfiguration.getApacheCacheWarmupCount() > 0
+        && kac.getFixedThreadPool() != null) {
+      // Warm up the cache with connections.
+      LOG.debug("Warming up the KeepAliveCache with {} connections",
+          abfsConfiguration.getApacheCacheWarmupCount());
+      this.baseHost = new HttpHost(baseUrl.getHost(),
+          baseUrl.getDefaultPort(), baseUrl.getProtocol());
+      HttpRoute route = new HttpRoute(baseHost, null, true);
+      cacheExtraConnection(route,
+          abfsConfiguration.getApacheCacheWarmupCount());
+    }
   }
 
   /**
@@ -89,31 +130,103 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
        */
       @Override
       public HttpClientConnection get(final long timeout,
-          final TimeUnit timeUnit)
-          throws InterruptedException, ExecutionException,
-          ConnectionPoolTimeoutException {
+          final TimeUnit timeUnit) throws ExecutionException {
         String requestId = UUID.randomUUID().toString();
-        logDebug("Connection requested for request {}", requestId);
+        LOG.debug("Connection requested for request {}", requestId);
+        long start = System.nanoTime();
         try {
-          HttpClientConnection clientConn = kac.get();
-          if (clientConn != null) {
-            logDebug("Connection retrieved from KAC: {} for requestId: {}",
-                clientConn, requestId);
-            return clientConn;
+          if (!route.getTargetHost().equals(baseHost)) {
+            // If the route target host does not match the base host, create a new connection
+            LOG.debug(
+                "Route target host {} does not match base host {}, creating new connection",
+                route.getTargetHost(), baseHost);
+            return createNewConnection();
           }
-          logDebug("Creating new connection for requestId: {}", requestId);
-          ManagedHttpClientConnection conn = httpConnectionFactory.create(route,
-              null);
-          logDebug("Connection created: {} for requestId: {}", conn, requestId);
-          return conn;
-        } catch (IOException ex) {
-          throw new ExecutionException(ex);
+          try {
+            HttpClientConnection conn = kac.get();
+
+            // If a valid connection is available, return it and trigger background refresh if needed
+            if (conn != null) {
+              triggerConnectionRefreshIfNeeded();
+              return conn;
+            }
+
+            // No connection available — wait up to timeout for one to appear
+            synchronized (connectionLock) {
+              triggerConnectionRefreshIfNeeded();
+
+              final long deadline = System.nanoTime()
+                  + TimeUnit.MILLISECONDS.toNanos(
+                  abfsConfiguration.getApacheMaxRefreshWaitTimeInMillis());
+
+              while ((conn = kac.get()) == null
+                  && System.nanoTime() < deadline) {
+                long waitTime = deadline - System.nanoTime();
+                if (waitTime <= 0) {
+                  break;
+                }
+
+                try {
+                  connectionLock.wait(TimeUnit.NANOSECONDS.toMillis(waitTime));
+                } catch (InterruptedException e) {
+                  Thread.currentThread().interrupt();
+                  return null;
+                }
+              }
+
+              if (conn != null) {
+                LOG.debug("Connection retrieved from KAC: {} for requestId: {}",
+                    conn, requestId);
+                return conn;
+              }
+
+              // Timed out — create a new connection
+              LOG.debug("Creating new connection for requestId: {}", requestId);
+              return createNewConnection();
+            }
+          } catch (IOException ex) {
+            throw new ExecutionException(ex);
+          }
+        } finally {
+          LOG.debug("Connection request for requestId: {} completed in {} ms",
+              requestId, elapsedTimeMillis(start));
         }
       }
 
       @Override
       public boolean cancel() {
         return false;
+      }
+
+      /**
+       * Trigger a background refresh of the connection cache if needed.
+       * This method checks if the cache size is small and if caching is not already in progress.
+       * If so, it starts a new thread to cache extra connections.
+       */
+      private void triggerConnectionRefreshIfNeeded() {
+        if (!isCacheRefreshInProgress.get() && !kac.getIsClosed()
+            && kac.getFixedThreadPool() != null
+            && kac.getSingleThreadPool() != null
+            && kac.size()
+            <= abfsConfiguration.getApacheMinTriggerRefreshCount()) {
+          // Use a single-threaded executor or thread pool instead of raw thread
+          try {
+            kac.getSingleThreadPool().submit(() ->
+                cacheExtraConnection(route,
+                    abfsConfiguration.getApacheCacheRefreshCount()));
+          } catch (RejectedExecutionException e) {
+            LOG.debug("Task rejected for connection refresh: {}",
+                e.getMessage());
+          }
+        }
+      }
+
+      /**
+       * Creates new Http Client Connection.
+       * @return HttpClientConnection a new connection instance
+       */
+      private HttpClientConnection createNewConnection() {
+        return httpConnectionFactory.create(route, null);
       }
     };
   }
@@ -132,16 +245,15 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
       final Object newState,
       final long validDuration,
       final TimeUnit timeUnit) {
-    if (validDuration == 0) {
-      return;
-    }
-    if (conn.isOpen() && conn instanceof AbfsManagedApacheHttpConnection) {
-      boolean connAddedInKac = kac.put(conn);
-      if (connAddedInKac) {
-        logDebug("Connection cached: {}", conn);
-      } else {
-        logDebug("Connection not cached, and is released: {}", conn);
+    long start = System.nanoTime();
+    try {
+      if (validDuration == 0) {
+        return;
       }
+      addConnectionToCache(conn);
+    } finally {
+      LOG.debug("Connection released: {} in {} ms", conn,
+          elapsedTimeMillis(start));
     }
   }
 
@@ -151,15 +263,15 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
       final HttpRoute route,
       final int connectTimeout,
       final HttpContext context) throws IOException {
-    long start = System.currentTimeMillis();
-    logDebug("Connecting {} to {}", conn, route.getTargetHost());
+    long start = System.nanoTime();
+    LOG.debug("Connecting {} to {}", conn, route.getTargetHost());
     connectionOperator.connect((AbfsManagedApacheHttpConnection) conn,
         route.getTargetHost(), route.getLocalSocketAddress(),
         connectTimeout, SocketConfig.DEFAULT, context);
-    logDebug("Connection established: {}", conn);
+    LOG.debug("Connection established: {}", conn);
     if (context instanceof AbfsManagedHttpClientContext) {
       ((AbfsManagedHttpClientContext) context).setConnectTime(
-          System.currentTimeMillis() - start);
+          TimeUnit.MILLISECONDS.toMillis(System.nanoTime() - start));
     }
   }
 
@@ -184,13 +296,13 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
   @Override
   public void closeIdleConnections(final long idletime,
       final TimeUnit timeUnit) {
-    kac.evictIdleConnection();
+    // Do nothing, as we are not managing idle connections
   }
 
   /**{@inheritDoc}*/
   @Override
   public void closeExpiredConnections() {
-    kac.evictIdleConnection();
+    // Do nothing, as we are not managing expired connections
   }
 
   /**{@inheritDoc}*/
@@ -199,9 +311,97 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
     kac.close();
   }
 
-  private void logDebug(String message, Object... args) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(message, args);
+  /**
+   * Caches extra connections in the {@link KeepAliveCache} to warm it up.
+   * This method is called during initialization and when the cache is empty.
+   *
+   * @param route the HTTP route for which connections are created
+   * @param numberOfConnections the number of connections to create
+   */
+  private void cacheExtraConnection(final HttpRoute route,
+      final int numberOfConnections) {
+    if (!isCacheRefreshInProgress.getAndSet(true)) {
+      long start = System.nanoTime();
+      CountDownLatch latch = new CountDownLatch(numberOfConnections);
+
+      for (int i = 0; i < numberOfConnections; i++) {
+        try {
+          kac.getFixedThreadPool().submit(() -> {
+            HttpClientConnection conn = null;
+            try {
+              conn = httpConnectionFactory.create(route, null);
+              connect(conn, route, abfsConfiguration.getHttpConnectionTimeout(),
+                  new AbfsManagedHttpClientContext());
+              addConnectionToCache(conn);
+            } catch (Exception e) {
+              LOG.debug("Error creating connection: {}", e.getMessage());
+              if (conn != null) {
+                try {
+                  conn.close();
+                } catch (IOException ioException) {
+                  LOG.debug("Error closing connection: {}",
+                      ioException.getMessage());
+                }
+              }
+            } finally {
+              latch.countDown();
+            }
+          });
+        } catch (RejectedExecutionException e) {
+          LOG.debug("Task rejected for connection creation: {}",
+              e.getMessage());
+          return;
+        }
+      }
+
+      try {
+        // Wait for all connections to be created before releasing the lock
+        boolean result = latch.await(
+            abfsConfiguration.getApacheWarmupCacheTimeoutInMillis(),
+            TimeUnit.MILLISECONDS);
+        if (!result) {
+          LOG.debug("Timeout waiting for connections to be created");
+        }
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();  // Handle interruption
+      } finally {
+        isCacheRefreshInProgress.set(false);
+        LOG.debug("Connection refresh completed in {} ms",
+            elapsedTimeMillis(start));
+      }
     }
+  }
+
+  /**
+   * Adds a connection to the cache if it is open and not stale.
+   * If the connection is added to the cache, it notifies one waiting thread.
+   *
+   * @param conn the connection to add to the cache
+   */
+  private void addConnectionToCache(HttpClientConnection conn) {
+    if (conn instanceof AbfsManagedApacheHttpConnection) {
+      if (((AbfsManagedApacheHttpConnection) conn).getTargetHost()
+          .equals(baseHost)) {
+        boolean connAddedInKac = kac.add(conn);
+        synchronized (connectionLock) {
+          connectionLock.notify(); // wake up one thread only
+        }
+        if (connAddedInKac) {
+          LOG.debug("Connection cached: {}", conn);
+        } else {
+          LOG.debug("Connection not cached, and is released: {}", conn);
+        }
+      }
+    }
+  }
+
+  /**
+   * Calculates the elapsed time in milliseconds since the given start time.
+   *
+   * @param startTime the start time in nanoseconds
+   * @return the elapsed time in milliseconds
+   */
+  private static long elapsedTimeMillis(long startTime) {
+    return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
   }
 }
