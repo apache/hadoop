@@ -98,14 +98,13 @@ public class TestBucketConfiguration extends AbstractHadoopTestBase {
   @Test
   public void testBucketNameWithDotAndNumber() throws Exception {
     Configuration config = new Configuration();
-    URI uri = URI.create("s3a://test-bucket-v1.1");
-    String bucket = uri.getHost();
-    if (bucket == null) {
-      bucket = uri.getAuthority();
+    org.apache.hadoop.fs.Path path =
+        new org.apache.hadoop.fs.Path("s3a://test-bucket-v1.1");
+    try (FileSystem fs = path.getFileSystem(config)) {
+      assertThat(fs)
+          .describedAs("FileSystem should be S3AFileSystem instance")
+          .isInstanceOf(S3AFileSystem.class);
     }
-    assertThat(bucket)
-        .describedAs("Bucket name should be extracted correctly")
-        .isEqualTo("test-bucket-v1.1");
   }
 
   @Test
@@ -119,11 +118,11 @@ public class TestBucketConfiguration extends AbstractHadoopTestBase {
     FileSystem fs2 = FileSystem.get(uri2, config);
     
     assertThat(fs1a)
-        .describedAs("FileSystem.get should return same cached instance for same URI")
+        .describedAs("The call should return same cached instance for same URI")
         .isSameAs(fs1b);
     
     assertThat(fs1a)
-        .describedAs("FileSystem.get should return different instance for different bucket")
+        .describedAs("The call should return different instance for different bucket")
         .isNotSameAs(fs2);
   }
 
