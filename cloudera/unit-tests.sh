@@ -20,7 +20,7 @@ SONAR_TOKEN="${SONAR_TOKEN:-}"
 SONAR_PROJECT_KEY="${SONAR_PROJECT_KEY:-}"
 SONAR_PROJECT_NAME="${SONAR_PROJECT_NAME:-}"
 
-export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64/
 export PATH=$JAVA_HOME/bin:$PATH
 
 mvn -s "$MAVEN_SETTINGS" -B -e -Pclover -f "${SCRIPT_DIR}/../pom.xml" clean install -DskipTests -DskipShade \
