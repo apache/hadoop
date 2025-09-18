@@ -204,9 +204,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_ARN, roleARN);
     conf.set(ASSUMED_ROLE_SESSION_NAME, "valid");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "45m");
-    // disable create session so there's no need to
-    // add a role policy for it.
-    //disableCreateSession(conf);
 
     bindRolePolicy(conf, RESTRICTED_POLICY);
     return conf;
