@@ -201,7 +201,7 @@ release as the original build target.
 For MapReduce applications in particular, i.e. applications using the
 org.apache.hadoop.mapred and/or org.apache.hadoop.mapreduce APIs, the developer
 community SHALL support binary compatibility across major releases. The
-MapReduce APIs SHALL be supported compatibly across major releases. 
+MapReduce APIs SHALL be supported compatibly across major releases.
 
 Some applications may be affected by changes to disk layouts or other internal
 changes. See the sections that follow for policies on how incompatible
