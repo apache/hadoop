@@ -36,7 +36,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Test for store closure.
  */
-public class ITestStoreClose extends AbstractS3ATestBase {Ò
+public class ITestStoreClose extends AbstractS3ATestBase {
 
   /**
    * Open a file in forced multipart, then close the fs.

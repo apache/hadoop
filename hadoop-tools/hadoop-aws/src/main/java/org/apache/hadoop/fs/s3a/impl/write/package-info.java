@@ -18,6 +18,13 @@
 
 /**
  * Classes related to writing objects.
+ * <p>
+ * {@link org.apache.hadoop.fs.s3a.impl.write.StoreWriter} and
+ * its implementation {@link org.apache.hadoop.fs.s3a.impl.write.StoreWriterService}
+ * export the object model of S3 itself.
+ * <p>
+ * The {@code Write*} classes bridge from the filesystem APIs to the store, being
+ * invoked by filesystem, output stream and committer services.
  */
 @InterfaceAudience.Private
 package org.apache.hadoop.fs.s3a.impl.write;

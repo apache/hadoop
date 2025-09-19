@@ -278,6 +278,7 @@ public class S3AStoreImpl
 
     // init all child services, including the stream factory
     super.serviceInit(conf);
+    // complete store writer binding
     storeWriter.bind(this, clientManager, this);
 
     // pass down extra information to the stream factory.

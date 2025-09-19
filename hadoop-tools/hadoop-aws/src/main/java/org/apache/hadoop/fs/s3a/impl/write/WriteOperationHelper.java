@@ -136,7 +136,7 @@ public class WriteOperationHelper implements WriteOperations {
    * @param auditSpan span to activate
    * @param callbacks callbacks used by writeOperationHelper
    */
-  protected WriteOperationHelper(
+  public WriteOperationHelper(
       final AuditSpanSource auditSpanSource,
       final AuditSpan auditSpan,
       final WriteOperationHelperCallbacks callbacks) {
@@ -157,7 +157,10 @@ public class WriteOperationHelper implements WriteOperations {
    * @param retries number of retries
    * @param idempotent is the method idempotent
    */
-  void operationRetried(String text, Exception ex, int retries,
+  void operationRetried(
+      String text,
+      Exception ex,
+      int retries,
       boolean idempotent) {
     LOG.info("{}: Retried {}: {}", text, retries, ex.toString());
     LOG.debug("Stack", ex);
@@ -176,7 +179,8 @@ public class WriteOperationHelper implements WriteOperations {
    * @return the result of the call
    * @throws IOException any IOE raised, or translated exception
    */
-  public <T> T retry(String action,
+  public <T> T retry(
+      String action,
       String path,
       boolean idempotent,
       CallableRaisingIOE<T> operation)
@@ -285,6 +289,7 @@ public class WriteOperationHelper implements WriteOperations {
       long length,
       PutObjectOptions putOptions,
       Retried retrying) throws IOException {
+
     if (partETags.isEmpty()) {
       throw new PathIOException(destKey,
           "No upload parts in multipart upload");
@@ -305,43 +310,6 @@ public class WriteOperationHelper implements WriteOperations {
   }
 
   /**
-   * This completes a multipart upload to the destination key via
-   * {@code finalizeMultipartUpload()}.
-   * Retry policy: retrying, translated.
-   * Retries increment the {@code errorCount} counter.
-   * @param destKey destination
-   * @param uploadId multipart operation Id
-   * @param partETags list of partial uploads
-   * @param length length of the upload
-   * @param errorCount a counter incremented by 1 on every error; for
-   * use in statistics
-   * @param putOptions put object options
-   * @return the result of the operation.
-   * @throws IOException if problems arose which could not be retried, or
-   * the retry count was exceeded
-   */
-  @Retries.RetryTranslated
-  public CompleteMultipartUploadResponse completeMPUwithRetries(
-      String destKey,
-      String uploadId,
-      List<CompletedPart> partETags,
-      long length,
-      AtomicInteger errorCount,
-      PutObjectOptions putOptions)
-      throws IOException {
-    requireNonNull(uploadId);
-    requireNonNull(partETags);
-    LOG.debug("Completing multipart upload {} with {} parts",
-        uploadId, partETags.size());
-    return finalizeMultipartUpload(destKey,
-        uploadId,
-        partETags,
-        length,
-        putOptions,
-        (text, e, r, i) -> errorCount.incrementAndGet());
-  }
-
-  /**
    * Abort a multipart upload operation.
    * @param destKey destination key of the upload
    * @param uploadId multipart operation Id
@@ -351,8 +319,11 @@ public class WriteOperationHelper implements WriteOperations {
    * @throws FileNotFoundException if the abort ID is unknown
    */
   @Retries.RetryTranslated
-  public void abortMultipartUpload(String destKey, String uploadId,
-      boolean shouldRetry, Retried retrying)
+  public void abortMultipartUpload(
+      String destKey,
+      String uploadId,
+      boolean shouldRetry,
+      Retried retrying)
       throws IOException {
     if (shouldRetry) {
       // retrying option
@@ -538,8 +509,8 @@ public class WriteOperationHelper implements WriteOperations {
       throws IOException {
     requireNonNull(uploadId);
     requireNonNull(partETags);
-    LOG.debug("Completing multipart upload {} with {} parts",
-        uploadId, partETags.size());
+    LOG.debug("Committing multipart upload {} to {} with {} parts",
+        uploadId, destKey, partETags.size());
     return finalizeMultipartUpload(destKey,
         uploadId,
         partETags,
@@ -547,6 +518,44 @@ public class WriteOperationHelper implements WriteOperations {
         PutObjectOptions.defaultOptions(),
         Invoker.NO_OP);
   }
+
+  /**
+   * This completes a multipart upload to the destination key via
+   * {@code finalizeMultipartUpload()}.
+   * Retry policy: retrying, translated.
+   * Retries increment the {@code errorCount} counter.
+   * @param destKey destination
+   * @param uploadId multipart operation Id
+   * @param partETags list of partial uploads
+   * @param length length of the upload
+   * @param errorCount a counter incremented by 1 on every error; for
+   * use in statistics
+   * @param putOptions put object options
+   * @return the result of the operation.
+   * @throws IOException if problems arose which could not be retried, or
+   * the retry count was exceeded
+   */
+  @Retries.RetryTranslated
+  public CompleteMultipartUploadResponse completeMPUwithRetries(
+      String destKey,
+      String uploadId,
+      List<CompletedPart> partETags,
+      long length,
+      AtomicInteger errorCount,
+      PutObjectOptions putOptions)
+      throws IOException {
+    requireNonNull(uploadId);
+    requireNonNull(partETags);
+    LOG.debug("Completing multipart upload {} to {} with {} parts",
+        uploadId, destKey, partETags.size());
+    return finalizeMultipartUpload(destKey,
+        uploadId,
+        partETags,
+        length,
+        putOptions,
+        (text, e, r, i) -> errorCount.incrementAndGet());
+  }
+
 
   /**
    * Upload part of a multi-partition file.

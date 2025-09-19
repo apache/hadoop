@@ -92,6 +92,10 @@ import static org.apache.hadoop.util.Preconditions.checkState;
 
 /**
  * Store Writing Operations.
+ * <p>
+ * Everything related to writing objects should go through here,
+ * including listing and aborting multipart uploads.
+ * <p>
  * The service is not ready to use until
  * {@link #bind(S3AStore, ClientManager, IORateLimiting)}
  * is invoked and the service started.
@@ -206,9 +210,10 @@ public class StoreWriterService extends AbstractService
     return new UploadInfo(upload, len);
   }
 
-  @Retries.OnceRaw("For PUT; post-PUT actions are RetryExceptionsSwallowed")
   @Override
-  public PutObjectResponse putObjectDirect(PutObjectRequest putObjectRequest,
+  @Retries.OnceRaw
+  public PutObjectResponse putObjectDirect(
+      PutObjectRequest putObjectRequest,
       PutObjectOptions putOptions,
       S3ADataBlocks.BlockUploadData uploadData,
       DurationTrackerFactory trackerFactory)

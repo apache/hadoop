@@ -105,8 +105,7 @@ public interface StoreWriter extends Service {
    * @return the upload initiated
    * @throws SdkException on problems
    */
-  @VisibleForTesting
-  @Retries.OnceRaw("For PUT; post-PUT actions are RetryExceptionsSwallowed")
+  @Retries.OnceRaw
   PutObjectResponse putObjectDirect(PutObjectRequest putObjectRequest,
       PutObjectOptions putOptions,
       S3ADataBlocks.BlockUploadData uploadData,
