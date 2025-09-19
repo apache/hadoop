@@ -114,7 +114,7 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
     // Expect 4 audited requests. One HEAD, and 3 GETs. The 3 GETs are because the read policy is WHOLE_FILE,
     // in which case, AAL will start prefetching till EoF on file open in 8MB chunks. The file read here
     // s3://noaa-cors-pds/raw/2023/017/ohfh/OHFH017d.23_.gz, has a size of ~21MB, resulting in 3 GETS:
-    // [5-8388612, 8388613-16777220, 16777221-21511173].
+    // [0-8388607, 8388608-16777215, 16777216-21511173].
     verifyStatisticCounterValue(fs.getIOStatistics(), AUDIT_REQUEST_EXECUTION, 4);
   }
 

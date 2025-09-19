@@ -51,7 +51,7 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_DELETE_
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_PUT_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.STORE_EXISTS_PROBE;
-import static software.amazon.awssdk.core.interceptor.SdkExecutionAttribute.OPERATION_NAME;
+import static software.amazon.s3.analyticsaccelerator.request.Constants.OPERATION_NAME;
 import static software.amazon.s3.analyticsaccelerator.request.Constants.SPAN_ID;
 
 /**
