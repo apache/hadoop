@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
+import java.util.Arrays;
+import java.util.Collection;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -30,6 +32,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.io.IOUtils;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
@@ -40,10 +44,10 @@ import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITH
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeStoreAwsHosted;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.enableAnalyticsAccelerator;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeSkipRootTests;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -54,6 +58,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * Equally "vexing" has been the optimizations of getFileStatus(), wherein
  * LIST comes before HEAD path + /
  */
+@RunWith(Parameterized.class)
 public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
 
   private static final String SERVICE_AMAZON_S3_STATUS_CODE_403
@@ -73,6 +78,20 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
    */
   private S3AFileSystem fsKeyB;
 
+  private final boolean analyticsAcceleratorEnabled;
+
+  @Parameterized.Parameters(name = "analyticsAcceleratorEnabled={0}")
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+            {true},
+            {false}
+    });
+  }
+
+  public ITestS3AEncryptionSSEC (final boolean analyticsAcceleratorEnabled) {
+    this.analyticsAcceleratorEnabled = analyticsAcceleratorEnabled;
+  }
+
 
   @SuppressWarnings("deprecation")
   @Override
@@ -90,14 +109,17 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
         getSSEAlgorithm().getMethod());
     conf.set(S3_ENCRYPTION_KEY, KEY_1);
     conf.setBoolean(ETAG_CHECKSUM_ENABLED, true);
+
+    if (analyticsAcceleratorEnabled) {
+      enableAnalyticsAccelerator(conf);
+    }
+
     return conf;
   }
 
   @Override
   public void setup() throws Exception {
     super.setup();
-    skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
-        "Analytics Accelerator currently does not support SSE-C");
     assumeEnabled();
     // although not a root dir test, this confuses paths enough it shouldn't be run in
     // parallel with other jobs
