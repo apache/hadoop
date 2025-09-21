@@ -85,9 +85,8 @@ class FSDirRenameOp {
     // Verify srcPath and dstPath without valid 'DirectoryWithQuotaFeature'
     // Note: In overwrite scenarios, quota calculation is still required because:
     // Overwrite operations delete existing content (affecting rootDir's quota)
-    if (FSDirectory.verifyPathWithoutValidQuotaFeature(src, src.length() - 1)
-        && FSDirectory.verifyPathWithoutValidQuotaFeature(dst, dst.length() - 1) 
-        && !overwrite) {
+    if (!overwrite && FSDirectory.verifyPathWithoutValidQuotaFeature(src)
+        && FSDirectory.verifyPathWithoutValidQuotaFeature(dst)) {
       return Triple.of(false, srcDelta, dstDelta);
     }
     
@@ -768,9 +767,9 @@ class FSDirRenameOp {
         throw new IOException(error);
       } else {
         // update the quota count if necessary
-        Optional<QuotaCounts> countOp = sameStoragePolicy ?
-            srcSubTreeCount : Optional.empty();
         if (updateQuota) {
+          Optional<QuotaCounts> countOp = sameStoragePolicy ?
+              srcSubTreeCount : Optional.empty();
           fsd.updateCountForDelete(srcChild, srcIIP, countOp);
         }
         srcIIP = INodesInPath.replace(srcIIP, srcIIP.length() - 1, null);
@@ -787,9 +786,9 @@ class FSDirRenameOp {
         return false;
       } else {
         // update the quota count if necessary
-        Optional<QuotaCounts> countOp = sameStoragePolicy ?
-            srcSubTreeCount : Optional.empty();
         if (updateQuota) {
+          Optional<QuotaCounts> countOp = sameStoragePolicy ?
+              srcSubTreeCount : Optional.empty();
           fsd.updateCountForDelete(srcChild, srcIIP, countOp);
         }
         srcIIP = INodesInPath.replace(srcIIP, srcIIP.length() - 1, null);

@@ -172,7 +172,7 @@ public class TestCorrectnessOfQuotaAfterRenameOp {
   public void testRenameWithoutValidQuotaFeature() throws Exception {
     final int fileLen = 1024;
     final short replication = 3;
-    final Path root = new Path("/testRoot");
+    final Path root = new Path("/testRename");
     assertTrue(dfs.mkdirs(root));
 
     Path testParentDir1 = new Path(root, "testDir1");
@@ -189,36 +189,38 @@ public class TestCorrectnessOfQuotaAfterRenameOp {
     }
 
     // 1. Test rename1
-    QuotaUsage quotaUsage1 = dfs.getQuotaUsage(new Path("/"));
-    final Path dstDir1 = new Path(testParentDir2, "dst-dir");
-    ContentSummary cs1 = dfs.getContentSummary(testParentDir1);
-
-    // srcDir=/testRoot/testDir1/src-dir
-    // dstDir=/testRoot/testDir2/dst-dir dstDir1 not exist
-    boolean rename = dfs.rename(srcDir, dstDir1);
-    assertTrue(rename);
-    ContentSummary cs2 = dfs.getContentSummary(testParentDir2);
-    assertEquals(cs1, cs2);
-
-    QuotaUsage quotaUsage2 = dfs.getQuotaUsage(new Path("/"));
-    assertEquals(quotaUsage1.getFileAndDirectoryCount(), quotaUsage2.getFileAndDirectoryCount());
+    ContentSummary rootContentSummary1 = dfs.getContentSummary(new Path("/"));
+    QuotaUsage rootQuotaUsage1 = dfs.getQuotaUsage(new Path("/"));
+    ContentSummary contentSummary1 = dfs.getContentSummary(testParentDir1);
+    // srcDir=/testRename/testDir1/src-dir
+    // dstDir=/testRename/testDir2/dst-dir dstDir1 not exist
+    final Path dstDir2 = new Path(testParentDir2, "dst-dir");
+    assertTrue(dfs.rename(srcDir, dstDir2));
+    ContentSummary contentSummary2 = dfs.getContentSummary(testParentDir2);
+    assertEquals(contentSummary1, contentSummary2);
+    QuotaUsage rootQuotaUsage2 = dfs.getQuotaUsage(new Path("/"));
+    assertEquals(rootQuotaUsage1.getFileAndDirectoryCount(),
+        rootQuotaUsage2.getFileAndDirectoryCount());
+    // The return values of the getContentSummary() and getQuotaUsage() should be consistent
+    assertEquals(rootContentSummary1.getFileAndDirectoryCount(),
+        rootQuotaUsage2.getFileAndDirectoryCount());
 
     // 2. Test rename2
-    final Path dstDir2 = new Path(testParentDir3, "dst-dir");
-    assertTrue(dfs.mkdirs(dstDir2));
-    long originDstDir2Usage = dfs.getQuotaUsage(dstDir2).getFileAndDirectoryCount();
-    // The usage for covering the root dir should not include dstDir2 usage
+    final Path dstDir3 = new Path(testParentDir3, "dst-dir");
+    assertTrue(dfs.mkdirs(dstDir3));
+    long originDstDir2Usage = dfs.getQuotaUsage(dstDir3).getFileAndDirectoryCount();
+    // Exclude dstDir2 usage
     long rootINodeCount1 =
         dfs.getQuotaUsage(new Path("/")).getFileAndDirectoryCount() - originDstDir2Usage;
-    ContentSummary cs3 = dfs.getContentSummary(testParentDir2);
+    ContentSummary contentSummary3 = dfs.getContentSummary(testParentDir2);
 
     // Src and dst must be same (all file or all dir)
-    // dstDir1=/testRoot/testDir3/dst-dir
-    // dstDir2=/testRoot/testDir3/dst-dir
-    dfs.rename(dstDir1, dstDir2, Options.Rename.OVERWRITE);
+    // dstDir2=/testRename/testDir3/dst-dir
+    // dstDir3=/testRename/testDir3/dst-dir
+    dfs.rename(dstDir2, dstDir3, Options.Rename.OVERWRITE);
     long rootINodeCount2 = dfs.getQuotaUsage(new Path("/")).getFileAndDirectoryCount();
     assertEquals(rootINodeCount1, rootINodeCount2);
-    ContentSummary cs4 = dfs.getContentSummary(testParentDir3);
-    assertEquals(cs3, cs4);
+    ContentSummary contentSummary4 = dfs.getContentSummary(testParentDir3);
+    assertEquals(contentSummary3, contentSummary4);
   }
 }

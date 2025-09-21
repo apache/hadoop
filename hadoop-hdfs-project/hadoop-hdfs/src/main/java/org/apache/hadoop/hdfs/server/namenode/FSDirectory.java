@@ -1241,19 +1241,18 @@ public class FSDirectory implements Closeable {
       }
     }
   }
-  
+
   /**
    * Verifies that the path from the specified position to the root
    * (excluding the root itself) does not contain any valid quota features.
    *
    * @param iip the INodesInPath containing all the ancestral INodes.
-   * @param pos Starting position in the path (0-based index).
    * @return true if no valid quota features are found along the path (root excluded),
    * false if any directory in the path has an active quota feature.
    */
-  static boolean verifyPathWithoutValidQuotaFeature(INodesInPath iip, int pos) {
-    // Does not include the root path
-    for (int i = Math.min(pos, iip.length()) - 1; i >= 1; i--) {
+  static boolean verifyPathWithoutValidQuotaFeature(INodesInPath iip) {
+    // Exclude the root inode
+    for (int i = iip.length() - 2; i >= 1; i--) {
       final DirectoryWithQuotaFeature q =
           iip.getINode(i).asDirectory().getDirectoryWithQuotaFeature();
       if (q != null) {
@@ -1367,8 +1366,8 @@ public class FSDirectory implements Closeable {
    * @return an INodesInPath instance containing the new INode
    */
   @VisibleForTesting
-  public INodesInPath addLastINode(INodesInPath existing, INode inode,
-      FsPermission modes, boolean checkQuota, Optional<QuotaCounts> quotaCount, boolean updateQuota)
+  public INodesInPath addLastINode(INodesInPath existing, INode inode, FsPermission modes,
+      boolean checkQuota, Optional<QuotaCounts> quotaCount, boolean updateQuota)
       throws QuotaExceededException {
     assert existing.getLastINode() != null &&
         existing.getLastINode().isDirectory();
@@ -1400,9 +1399,8 @@ public class FSDirectory implements Closeable {
     // always verify inode name
     verifyINodeName(inode.getLocalNameBytes());
 
-    QuotaCounts counts;
     if (updateQuota) {
-      counts = quotaCount.orElseGet(() -> inode.
+      QuotaCounts counts = quotaCount.orElseGet(() -> inode.
           computeQuotaUsage(getBlockStoragePolicySuite(),
           parent.getStoragePolicyID(), false,
           Snapshot.CURRENT_STATE_ID));
@@ -1413,7 +1411,7 @@ public class FSDirectory implements Closeable {
     final boolean added = parent.addChild(inode, true,
         existing.getLatestSnapshotId());
     if (!added && updateQuota) {
-      counts = quotaCount.orElseGet(() -> inode.
+      QuotaCounts counts = quotaCount.orElseGet(() -> inode.
           computeQuotaUsage(getBlockStoragePolicySuite(),
           parent.getStoragePolicyID(), false,
           Snapshot.CURRENT_STATE_ID));
