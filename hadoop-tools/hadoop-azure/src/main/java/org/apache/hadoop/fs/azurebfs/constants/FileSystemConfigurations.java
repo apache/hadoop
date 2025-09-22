@@ -301,7 +301,7 @@ public final class FileSystemConfigurations {
 
   public static final int MAX_WRITE_LOW_CPU_THRESHOLD = 40;
 
-  public static final int DEFAULT_WRITE_LOW_CPU_THRESHOLD = 30;
+  public static final int DEFAULT_WRITE_LOW_CPU_THRESHOLD = 35;
 
   public static final int MIN_WRITE_LOW_TIER_MEMORY_MULTIPLIER = 3;
 
