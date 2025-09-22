@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 
 import static java.util.Objects.requireNonNull;
@@ -68,6 +69,29 @@ public final class ObjectReadParameters {
    * Allocator of local FS storage.
    */
   private LocalDirAllocator directoryAllocator;
+
+  /**
+   * Encryption secrets for this stream.
+   */
+  private EncryptionSecrets encryptionSecrets;
+
+  /**
+   * Getter.
+   * @return Encryption secrets.
+   */
+  public EncryptionSecrets getEncryptionSecrets() {
+    return encryptionSecrets;
+  }
+
+  /**
+   * Set encryption secrets.
+   * @param value new value
+   * @return the builder
+   */
+  public ObjectReadParameters withEncryptionSecrets(final EncryptionSecrets value) {
+    encryptionSecrets = value;
+    return this;
+  }
 
   /**
    * @return Read operation context.
@@ -185,6 +209,7 @@ public final class ObjectReadParameters {
     requireNonNull(directoryAllocator, "directoryAllocator");
     requireNonNull(objectAttributes, "objectAttributes");
     requireNonNull(streamStatistics, "streamStatistics");
+    requireNonNull(encryptionSecrets, "encryptionSecrets");
     return this;
   }
 }

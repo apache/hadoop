@@ -993,10 +993,10 @@ public class S3AStoreImpl
   private class FactoryCallbacks implements StreamFactoryCallbacks {
 
     @Override
-    public S3AsyncClient getOrCreateAsyncClient(final boolean requireCRT) throws IOException {
+    public S3Client getOrCreateSyncClient() throws IOException {
       // Needs support of the CRT before the requireCRT can be used
       LOG.debug("Stream factory requested async client");
-      return clientManager().getOrCreateAsyncClient();
+      return clientManager().getOrCreateS3Client();
     }
 
     @Override

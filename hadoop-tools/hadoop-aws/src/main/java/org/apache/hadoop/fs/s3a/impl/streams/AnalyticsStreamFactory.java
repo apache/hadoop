@@ -23,9 +23,10 @@ import java.io.IOException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.s3.analyticsaccelerator.S3SdkObjectClient;
+
 import software.amazon.s3.analyticsaccelerator.S3SeekableInputStreamConfiguration;
 import software.amazon.s3.analyticsaccelerator.S3SeekableInputStreamFactory;
+import software.amazon.s3.analyticsaccelerator.S3SyncSdkObjectClient;
 import software.amazon.s3.analyticsaccelerator.common.ConnectorConfiguration;
 
 import org.apache.hadoop.conf.Configuration;
@@ -118,7 +119,7 @@ public class AnalyticsStreamFactory extends AbstractObjectInputStreamFactory {
 
   private CallableRaisingIOE<S3SeekableInputStreamFactory> createS3SeekableInputStreamFactory() {
     return () -> new S3SeekableInputStreamFactory(
-            new S3SdkObjectClient(callbacks().getOrCreateAsyncClient(requireCrt)),
+            new S3SyncSdkObjectClient(callbacks().getOrCreateSyncClient()),
             seekableInputStreamConfiguration);
   }
 
