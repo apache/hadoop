@@ -21,10 +21,10 @@ import static org.apache.hadoop.fs.permission.AclEntryScope.*;
 import static org.apache.hadoop.fs.permission.AclEntryType.*;
 import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -46,11 +46,12 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestPermissionSymlinks {
 
@@ -70,7 +71,7 @@ public class TestPermissionSymlinks {
   private static FileSystem fs;
   private static FileSystemTestWrapper wrapper;
   
-  @BeforeClass
+  @BeforeAll
   public static void beforeClassSetUp() throws Exception {
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
@@ -81,7 +82,7 @@ public class TestPermissionSymlinks {
     wrapper = new FileSystemTestWrapper(fs);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClassTearDown() throws Exception {
     if (fs != null) {
       fs.close();
@@ -91,7 +92,7 @@ public class TestPermissionSymlinks {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // Create initial test files
     fs.mkdirs(linkParent);
@@ -100,14 +101,15 @@ public class TestPermissionSymlinks {
     wrapper.createSymlink(target, link, false);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     // Wipe out everything
     fs.delete(linkParent, true);
     fs.delete(targetParent, true);
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testDelete() throws Exception {
     fs.setPermission(linkParent, new FsPermission((short) 0555));
     doDeleteLinkParentNotWritable();
@@ -173,13 +175,14 @@ public class TestPermissionSymlinks {
       }
     });
     // Make sure only the link was deleted
-    assertTrue("Target should not have been deleted!",
-        wrapper.exists(target));
-    assertFalse("Link should have been deleted!",
-        wrapper.exists(link));
+    assertTrue(wrapper.exists(target),
+        "Target should not have been deleted!");
+    assertFalse(wrapper.exists(link),
+        "Link should have been deleted!");
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testReadWhenTargetNotReadable() throws Exception {
     fs.setPermission(target, new FsPermission((short) 0000));
     doReadTargetNotReadable();
@@ -212,7 +215,8 @@ public class TestPermissionSymlinks {
     }
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testFileStatus() throws Exception {
     fs.setPermission(target, new FsPermission((short) 0000));
     doGetFileLinkStatusTargetNotReadable();
@@ -235,17 +239,17 @@ public class TestPermissionSymlinks {
       public Object run() throws IOException {
         FileContext myfc = FileContext.getFileContext(conf);
         FileStatus stat = myfc.getFileLinkStatus(link);
-        assertEquals("Expected link's FileStatus path to match link!",
-            link.makeQualified(fs.getUri(), fs.getWorkingDirectory()), stat.getPath());
+        assertEquals(link.makeQualified(fs.getUri(), fs.getWorkingDirectory()), stat.getPath(),
+            "Expected link's FileStatus path to match link!");
         Path linkTarget = myfc.getLinkTarget(link);
-        assertEquals("Expected link's target to match target!",
-            target, linkTarget);
+        assertEquals(target, linkTarget, "Expected link's target to match target!");
         return null;
       }
     });
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testRenameLinkTargetNotWritableFC() throws Exception {
     fs.setPermission(target, new FsPermission((short) 0555));
     fs.setPermission(targetParent, new FsPermission((short) 0555));
@@ -277,15 +281,15 @@ public class TestPermissionSymlinks {
         Path newlink = new Path(linkParent, "newlink");
         myfc.rename(link, newlink, Rename.NONE);
         Path linkTarget = myfc.getLinkTarget(newlink);
-        assertEquals("Expected link's target to match target!",
-            target, linkTarget);
+        assertEquals(target, linkTarget, "Expected link's target to match target!");
         return null;
       }
     });
-    assertTrue("Expected target to exist", wrapper.exists(target));
+    assertTrue(wrapper.exists(target), "Expected target to exist");
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testRenameSrcNotWritableFC() throws Exception {
     fs.setPermission(linkParent, new FsPermission((short) 0555));
     doRenameSrcNotWritableFC();
@@ -322,7 +326,8 @@ public class TestPermissionSymlinks {
   // Need separate FileSystem tests since the server-side impl is different
   // See {@link ClientProtocol#rename} and {@link ClientProtocol#rename2}.
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testRenameLinkTargetNotWritableFS() throws Exception {
     fs.setPermission(target, new FsPermission((short) 0555));
     fs.setPermission(targetParent, new FsPermission((short) 0555));
@@ -354,15 +359,15 @@ public class TestPermissionSymlinks {
         Path newlink = new Path(linkParent, "newlink");
         myfs.rename(link, newlink);
         Path linkTarget = myfs.getLinkTarget(newlink);
-        assertEquals("Expected link's target to match target!",
-            target, linkTarget);
+        assertEquals(target, linkTarget, "Expected link's target to match target!");
         return null;
       }
     });
-    assertTrue("Expected target to exist", wrapper.exists(target));
+    assertTrue(wrapper.exists(target), "Expected target to exist");
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testRenameSrcNotWritableFS() throws Exception {
     fs.setPermission(linkParent, new FsPermission((short) 0555));
     doRenameSrcNotWritableFS();
@@ -427,7 +432,7 @@ public class TestPermissionSymlinks {
     } catch (AccessControlException ace) {
       // expected
       String message = ace.getMessage();
-      assertTrue(message, message.contains("is not a directory"));
+      assertTrue(message.contains("is not a directory"), message);
       assertTrue(message.contains(target.toString()));
       assertFalse(message.contains(badPath.toString()));
     }

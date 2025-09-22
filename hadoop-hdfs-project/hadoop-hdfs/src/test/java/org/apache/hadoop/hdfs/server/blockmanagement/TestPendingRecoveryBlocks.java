@@ -18,12 +18,12 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This class contains unit tests for PendingRecoveryBlocks.java functionality.
@@ -37,7 +37,7 @@ public class TestPendingRecoveryBlocks {
   private final BlockInfo blk2 = getBlock(2);
   private final BlockInfo blk3 = getBlock(3);
 
-  @Before
+  @BeforeEach
   public void setUp() {
     pendingRecoveryBlocks =
         Mockito.spy(new PendingRecoveryBlocks(recoveryTimeout));

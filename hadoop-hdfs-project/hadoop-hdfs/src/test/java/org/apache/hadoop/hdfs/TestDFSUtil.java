@@ -555,10 +555,10 @@ public class TestDFSUtil {
     assertTrue(HAUtil.isHAEnabled(conf, "ns2"));
     assertFalse(HAUtil.isHAEnabled(conf, "ns3"));
 
-    assertEquals(NS1_NN1_HOST, map.get("ns1").get("ns1-nn1").toString());
-    assertEquals(NS1_NN2_HOST, map.get("ns1").get("ns1-nn2").toString());
-    assertEquals(NS2_NN1_HOST, map.get("ns2").get("ns2-nn1").toString());
-    assertEquals(NS2_NN2_HOST, map.get("ns2").get("ns2-nn2").toString());
+    assertEquals(resolvedName(NS1_NN1_HOST), map.get("ns1").get("ns1-nn1").toString());
+    assertEquals(resolvedName(NS1_NN2_HOST), map.get("ns1").get("ns1-nn2").toString());
+    assertEquals(resolvedName(NS2_NN1_HOST), map.get("ns2").get("ns2-nn1").toString());
+    assertEquals(resolvedName(NS2_NN2_HOST), map.get("ns2").get("ns2-nn2").toString());
 
     assertEquals(NS1_NN1_HOST,
         DFSUtil.getNamenodeServiceAddr(conf, "ns1", "ns1-nn1"));
@@ -634,8 +634,8 @@ public class TestDFSUtil {
     Map<String, Map<String, InetSocketAddress>> map =
         DFSUtilClient.getHaNnWebHdfsAddresses(conf, "webhdfs");
 
-    assertEquals(NS1_NN1_ADDR, map.get("ns1").get("nn1").toString());
-    assertEquals(NS1_NN2_ADDR, map.get("ns1").get("nn2").toString());
+    assertEquals(resolvedName(NS1_NN1_ADDR), map.get("ns1").get("nn1").toString());
+    assertEquals(resolvedName(NS1_NN2_ADDR), map.get("ns1").get("nn2").toString());
   }
 
   private static Configuration createWebHDFSHAConfiguration(String logicalHostName, String nnaddr1, String nnaddr2) {
@@ -1211,5 +1211,12 @@ public class TestDFSUtil {
         assertEquals(inetSocketAddress.getPort(), 8020);
       });
     });
+  }
+
+  private String resolvedName(String jdk13) {
+    if (Shell.isJavaVersionAtLeast(14)) {
+      return jdk13.replaceAll(":", "/<unresolved>:");
+    }
+    return jdk13;
   }
 }

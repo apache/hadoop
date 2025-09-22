@@ -25,10 +25,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.visitor.NamespacePrintVisitor;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.event.Level;
 
 import java.io.File;
@@ -36,7 +36,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test FSImage correctness with ordered snapshot deletion.
@@ -60,7 +61,7 @@ public class TestFSImageWithOrderedSnapshotDeletion {
   FSNamesystem fsn;
   DistributedFileSystem hdfs;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.setBoolean(DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED, true);
@@ -71,7 +72,7 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     hdfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -101,7 +102,8 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     printTree("deleted snapshot " + snapshotName);
   }
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testDoubleRename() throws Exception {
     final Path parent = new Path("/parent");
     hdfs.mkdirs(parent);
@@ -189,11 +191,12 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     output.println(b);
 
     final String s = NamespacePrintVisitor.print2Sting(fsn);
-    Assert.assertEquals(b, s);
+    assertEquals(b, s);
     return b;
   }
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testFSImageWithDoubleRename() throws Exception {
     final Path dir1 = new Path("/dir1");
     final Path dir2 = new Path("/dir2");
@@ -234,7 +237,8 @@ public class TestFSImageWithOrderedSnapshotDeletion {
   }
 
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testFSImageWithRename1() throws Exception {
     final Path dir1 = new Path("/dir1");
     final Path dir2 = new Path("/dir2");
@@ -279,7 +283,8 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     hdfs = cluster.getFileSystem();
   }
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testFSImageWithRename2() throws Exception {
     final Path dir1 = new Path("/dir1");
     final Path dir2 = new Path("/dir2");
@@ -320,7 +325,8 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     hdfs = cluster.getFileSystem();
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testFSImageWithRename3() throws Exception {
     final Path dir1 = new Path("/dir1");
     final Path dir2 = new Path("/dir2");
@@ -365,7 +371,8 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     hdfs = cluster.getFileSystem();
   }
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testFSImageWithRename4() throws Exception {
     final Path dir1 = new Path("/dir1");
     final Path dir2 = new Path("/dir2");
@@ -454,7 +461,8 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     hdfs = cluster.getFileSystem();
   }
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testDoubleRenamesWithSnapshotDelete() throws Exception {
     final Path sub1 = new Path(dir, "sub1");
     hdfs.mkdirs(sub1);

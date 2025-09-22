@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.compat.cases;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.compat.common.*;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +27,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @HdfsCompatCaseGroup(name = "StoragePolicy")
 public class HdfsCompatStoragePolicy extends AbstractHdfsCompatCase {
@@ -79,7 +80,7 @@ public class HdfsCompatStoragePolicy extends AbstractHdfsCompatCase {
   public void setStoragePolicy() throws IOException {
     fs().setStoragePolicy(dir, policyName);
     BlockStoragePolicySpi policy = fs().getStoragePolicy(dir);
-    Assert.assertEquals(policyName, policy.getName());
+    assertEquals(policyName, policy.getName());
   }
 
   @HdfsCompatCase
@@ -88,7 +89,7 @@ public class HdfsCompatStoragePolicy extends AbstractHdfsCompatCase {
     fs().unsetStoragePolicy(dir);
     BlockStoragePolicySpi policy = fs().getStoragePolicy(dir);
     String policyNameAfterUnset = (policy == null) ? null : policy.getName();
-    Assert.assertEquals(defaultPolicyName, policyNameAfterUnset);
+    assertEquals(defaultPolicyName, policyNameAfterUnset);
   }
 
   @HdfsCompatCase(ifDef = "org.apache.hadoop.fs.FileSystem#satisfyStoragePolicy")
@@ -101,6 +102,6 @@ public class HdfsCompatStoragePolicy extends AbstractHdfsCompatCase {
   public void getStoragePolicy() throws IOException {
     BlockStoragePolicySpi policy = fs().getStoragePolicy(file);
     String initialPolicyName = (policy == null) ? null : policy.getName();
-    Assert.assertEquals(defaultPolicyName, initialPolicyName);
+    assertEquals(defaultPolicyName, initialPolicyName);
   }
 }
