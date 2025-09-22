@@ -82,11 +82,14 @@ class FSDirRenameOp {
       return Triple.of(false, srcDelta, dstDelta);
     }
 
-    // Verify srcPath and dstPath without valid 'DirectoryWithQuotaFeature'
-    // Note: In overwrite scenarios, quota calculation is still required because:
-    // Overwrite operations delete existing content (affecting rootDir's quota)
-    if (!overwrite && FSDirectory.verifyPathWithoutValidQuotaFeature(src)
-        && FSDirectory.verifyPathWithoutValidQuotaFeature(dst)) {
+    // Verify path without valid 'DirectoryWithQuotaFeature' or 'DirectorySnapshottableFeature'
+    // Note: 
+    // 1. In overwrite scenarios, quota calculation is still required, 
+    //    overwrite operations delete existing content, which affects the root directory's quota.
+    // 2. For directories enabled for snapshot creation, quota calculation is also necessary,
+    //    deleting snapshot files may affect the root directory's quota.
+    if (!overwrite && FSDirectory.verifyPathWithoutValidFeature(src)
+        && FSDirectory.verifyPathWithoutValidFeature(dst)) {
       return Triple.of(false, srcDelta, dstDelta);
     }
     

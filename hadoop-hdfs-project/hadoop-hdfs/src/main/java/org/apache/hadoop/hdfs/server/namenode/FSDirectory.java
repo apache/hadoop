@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.util.StringUtils;
 
@@ -1244,18 +1245,22 @@ public class FSDirectory implements Closeable {
 
   /**
    * Verifies that the path from the specified position to the root
-   * (excluding the root itself) does not contain any valid quota features.
+   * does not contain any valid features.
    *
    * @param iip the INodesInPath containing all the ancestral INodes.
-   * @return true if no valid quota features are found along the path (root excluded),
-   * false if any directory in the path has an active quota feature.
+   * @return true if no valid features are found along the path,
+   * false if any directory in the path has an active feature.
    */
-  static boolean verifyPathWithoutValidQuotaFeature(INodesInPath iip) {
+  static boolean verifyPathWithoutValidFeature(INodesInPath iip) {
+    // Check whether the root inode with 'DirectoryWithSnapshotFeature'
+    INodeDirectory d = iip.getINode(0).asDirectory();
+    if (d.isWithSnapshot()) {
+      return false;
+    }
     // Exclude the root inode
     for (int i = iip.length() - 2; i >= 1; i--) {
-      final DirectoryWithQuotaFeature q =
-          iip.getINode(i).asDirectory().getDirectoryWithQuotaFeature();
-      if (q != null) {
+      d = iip.getINode(i).asDirectory();
+      if (d.isWithSnapshot() || d.isWithQuota()) {
         return false;
       }
     }
