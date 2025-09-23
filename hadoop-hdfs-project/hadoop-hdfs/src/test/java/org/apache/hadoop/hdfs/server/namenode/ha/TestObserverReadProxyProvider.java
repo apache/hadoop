@@ -144,7 +144,7 @@ public class TestObserverReadProxyProvider {
               InetSocketAddress nnAddr, Class<ClientProtocol> xface,
               UserGroupInformation ugi, boolean withRetries,
               AtomicBoolean fallbackToSimpleAuth) {
-            return proxyMap.get(nnAddr.toString());
+            return proxyMap.get(nnAddr.toString().replaceAll("/<unresolved>", ""));
           }
         })  {
       @Override
@@ -531,7 +531,7 @@ public class TestObserverReadProxyProvider {
 
   private void assertHandledBy(int namenodeIdx) {
     assertEquals(namenodeAddrs[namenodeIdx],
-        proxyProvider.getLastProxy().proxyInfo);
+        proxyProvider.getLastProxy().proxyInfo.replaceAll("/<unresolved>", ""));
   }
 
   private static void doWrite(ClientProtocol client) throws Exception {
