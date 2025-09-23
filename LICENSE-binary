@@ -203,7 +203,10 @@
 
 --------------------------------------------------------------------------------
 This project bundles some components that are also licensed under the Apache
-License Version 2.0:
+License Version 2.0.
+Note: some of the listed artifacts may not be included in a given build of the binary
+distribution; it depends on the build options. This list intends
+to be inclusive of all which may be included:
 
 
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/nvd3-1.8.5.* (css and js files)
@@ -215,6 +218,7 @@ com.aliyun:aliyun-java-sdk-core:4.5.10
 com.aliyun:aliyun-java-sdk-kms:2.11.0
 com.aliyun:aliyun-java-sdk-ram:3.1.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
+com.aliyun:java-trace-api:0.2.11-beta.jar
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
@@ -268,8 +272,13 @@ com.google.http-client:google-http-client-jackson2:1.46.3
 com.google.http-client:google-http-client:1.46.3
 com.google.j2objc:j2objc-annotations:3.0.0
 com.google.oauth-client:google-oauth-client:1.37.0
+com.huaweicloud:esdk-obs-java:3.20.4.2
+com.jamesmurty.utils:java-xmlbuilder-1.2.jar
 com.microsoft.azure:azure-storage:7.0.0
 com.nimbusds:nimbus-jose-jwt:10.4
+com.squareup.okhttp3:okhttp:jar:3.14.2
+com.squareup.okio:okio:jar:1.17.2
+com.volcengine:ve-tos-java-sdk-hadoop:2.8.9.jar
 com.zaxxer:HikariCP:4.0.3
 commons-beanutils:commons-beanutils:1.9.4
 commons-cli:commons-cli:1.9.0
@@ -346,6 +355,9 @@ io.opentelemetry:opentelemetry-sdk-logs:1.47.0
 io.opentelemetry:opentelemetry-sdk-metrics:1.47.0
 io.opentelemetry:opentelemetry-sdk-trace:1.47.0
 io.opentelemetry.semconv:opentelemetry-semconv:1.29.0-alpha
+io.opentracing:opentracing-api:0.33.0.jar
+io.opentracing:opentracing-noop:0.33.0.jar
+io.opentracing:opentracing-util:0.33.0.jar
 io.reactivex:rxjava:1.3.8
 io.reactivex:rxjava-string:1.1.1
 io.reactivex:rxnetty:0.4.20
@@ -496,6 +508,7 @@ hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanage
 bootstrap v3.3.6
 broccoli-asset-rev v2.4.2
 broccoli-funnel v1.0.1
+cos_api-bundle-5.6.19.jar
 datatables v1.11.5
 em-helpers v0.5.13
 em-table v0.1.6
@@ -552,6 +565,7 @@ org.codehaus.mojo:animal-sniffer-annotations:1.24
 org.jruby.jcodings:jcodings:1.0.13
 org.jruby.joni:joni:2.1.2
 org.ojalgo:ojalgo:43.0
+org.reactivestreams:reactive-streams:1.0.3.jar
 org.slf4j:jul-to-slf4j:1.7.36
 org.slf4j:slf4j-api:1.7.36
 org.slf4j:slf4j-reload4j:1.7.36
@@ -622,3 +636,8 @@ Public Domain
 -------------
 
 aopalliance:aopalliance:1.0
+
+Dom4J license
+-------------
+
+org.dom4j:dom4j:2.1.4.jar

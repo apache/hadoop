@@ -99,6 +99,12 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-aliyun</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>*</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -119,6 +125,12 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-cos</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>*</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -126,7 +138,7 @@
       <scope>compile</scope>
       <exclusions>
         <exclusion>
-          <groupId>com.fasterxml.jackson</groupId>
+          <groupId>*</groupId>
           <artifactId>*</artifactId>
         </exclusion>
       </exclusions>
@@ -169,7 +181,10 @@
       </plugin>
     </plugins>
   </build>
+
   <profiles>
+
+    <!-- distribution profile builds the artifacts. -->
     <profile>
       <id>dist</id>
       <activation>
@@ -208,5 +223,56 @@
         </plugins>
       </build>
     </profile>
+
+    <!-- Pull in all the huaweicloud dependencies-->
+    <profile>
+      <id>huaweicloud</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-huaweicloud</artifactId>
+          <scope>compile</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>com.fasterxml.jackson</groupId>
+              <artifactId>*</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <!-- Pull in all the cos -->
+    <profile>
+      <id>cos</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-cos</artifactId>
+          <scope>compile</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+    <!-- Pull in all the cos -->
+    <profile>
+      <id>aliyun</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-aliyun</artifactId>
+          <scope>compile</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+
   </profiles>
 </project>
