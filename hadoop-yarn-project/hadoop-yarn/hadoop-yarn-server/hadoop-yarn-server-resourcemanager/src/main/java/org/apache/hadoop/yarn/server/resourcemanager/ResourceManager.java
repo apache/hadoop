@@ -1586,6 +1586,8 @@ public class ResourceManager extends CompositeService
     if (state == HAServiceProtocol.HAServiceState.ACTIVE) {
       stopActiveServices();
       reinitialize(initialize);
+      EmbeddedElector elector = rmContext.getLeaderElectorService();
+      if (elector != null) elector.rejoinElection();
     }
     LOG.info("Transitioned to standby state");
   }
