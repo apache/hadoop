@@ -29,57 +29,34 @@ import java.util.regex.Pattern;
 
 import org.slf4j.event.Level;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+
 
 public class TestGenericTestUtils extends GenericTestUtils {
 
   @Test
   public void testAssertExceptionContainsNullEx() throws Throwable {
-    boolean assertTriggered = false;
-    try {
-      assertExceptionContains("", null);
-    } catch (AssertionError e) {
-      assertTriggered = true;
-      if (!e.toString().contains(E_NULL_THROWABLE)) {
-        throw e;
-      }
-    }
-    assertTrue(assertTriggered);
+    intercept(AssertionError.class, E_NULL_THROWABLE, () -> assertExceptionContains("", null));
   }
 
   @Test
   public void testAssertExceptionContainsNullString() throws Throwable {
-    boolean assertTriggered = false;
-    try {
-      assertExceptionContains("", new BrokenException());
-    } catch (AssertionError e) {
-      assertTriggered = true;
-      if (!e.toString().contains(E_NULL_THROWABLE_STRING)) {
-        throw e;
-      }
-    }
-    assertTrue(assertTriggered);
+    intercept(AssertionError.class, E_NULL_THROWABLE_STRING, () -> assertExceptionContains("", new BrokenException()));
   }
 
   @Test
   public void testAssertExceptionContainsWrongText() throws Throwable {
-    boolean assertTriggered = false;
-    try {
-      assertExceptionContains("Expected", new Exception("(actual)"));
-    } catch (AssertionError e) {
-      assertTriggered = true;
-      String s = e.toString();
-      if (!s.contains(E_UNEXPECTED_EXCEPTION)
-          || !s.contains("(actual)") ) {
-        throw e;
-      }
-      if (e.getCause() == null) {
-        throw new AssertionError("No nested cause in assertion", e);
-      }
+    AssertionError e = intercept(AssertionError.class, E_UNEXPECTED_EXCEPTION,
+        () -> assertExceptionContains("Expected", new Exception("(actual)")));
+    if (!e.toString().contains("(actual)")) {
+      throw new AssertionError("no actual string in exception", e);
     }
-    assertTrue(assertTriggered);
+    if (e.getCause() == null) {
+      throw new AssertionError("No nested cause in assertion", e);
+    }
   }
 
   @Test
@@ -89,50 +66,24 @@ public class TestGenericTestUtils extends GenericTestUtils {
 
   @Test
   public void testAssertExceptionMatchesNullEx() throws Throwable {
-    boolean assertTriggered = false;
-    try {
-      assertExceptionMatches(null, null);
-    } catch (AssertionError e) {
-      assertTriggered = true;
-      if (!e.toString().contains(E_NULL_THROWABLE)) {
-        throw e;
-      }
-    }
-    assertTrue(assertTriggered);
+    intercept(AssertionError.class, E_NULL_THROWABLE, () -> assertExceptionMatches(null, null));
   }
 
   @Test
   public void testAssertExceptionMatchesNullString() throws Throwable {
-    boolean assertTriggered = false;
-    try {
-      assertExceptionMatches(null, new BrokenException());
-      fail("assertion should have failed");
-    } catch (AssertionError e) {
-      assertTriggered = true;
-      if (!e.toString().contains(E_NULL_THROWABLE_STRING)) {
-        throw e;
-      }
-    }
-    assertTrue(assertTriggered);
+    intercept(AssertionError.class, E_NULL_THROWABLE_STRING, () -> assertExceptionMatches(null, new BrokenException()));
   }
 
   @Test
   public void testAssertExceptionMatchesWrongText() throws Throwable {
-    boolean assertTriggered = false;
-    try {
-      assertExceptionMatches(Pattern.compile(".*Expected.*"), new Exception("(actual)"));
-    } catch (AssertionError e) {
-      assertTriggered = true;
-      String s = e.toString();
-      if (!s.contains(E_UNEXPECTED_EXCEPTION)
-          || !s.contains("(actual)") ) {
-        throw e;
-      }
-      if (e.getCause() == null) {
-        throw new AssertionError("No nested cause in assertion", e);
-      }
+    AssertionError e = intercept(AssertionError.class, E_UNEXPECTED_EXCEPTION,
+        () -> assertExceptionMatches(Pattern.compile(".*Expected.*"), new Exception("(actual)")));
+    if (!e.toString().contains("(actual)")) {
+      throw new AssertionError("no actual string in exception", e);
     }
-    assertTrue(assertTriggered);
+    if (e.getCause() == null) {
+      throw new AssertionError("No nested cause in assertion", e);
+    }
   }
 
   @Test
