@@ -129,6 +129,14 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <shell-executable>bash</shell-executable>
 
     <leveldbjni.group>org.fusesource.leveldbjni</leveldbjni.group>
+
+    <!--
+     Surefire option to not fail a build if -Dtest=NAME doesn't find a
+     test called NAME. This is needed when running integration tests through
+     failsafe, as setting -Dtest=none is the way to stop surefire
+     running all unit tests before the it.test option is picked up.
+    -->
+    <surefire.failIfNoSpecifiedTests>false</surefire.failIfNoSpecifiedTests>
   </properties>
 
   <modules>

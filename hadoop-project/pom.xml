@@ -33,7 +33,6 @@
     <!-- Set the Release year during release -->
     <release-year>2025</release-year>
 
-    <failIfNoTests>false</failIfNoTests>
     <!--Whether to proceed to next module if any test failures exist-->
     <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
@@ -193,13 +192,6 @@
     <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
-    <!--
-     Surefire option to not fail a build if -Dtest=NAME doesn't find a
-     test called NAME. This is needed when running integration tests through
-     failsafe, as setting -Dtest=none is the way to stop surefire
-     running all unit tests before the it.test option is picked up.
-    -->
-    <surefire.failIfNoSpecifiedTests>false</surefire.failIfNoSpecifiedTests>
     <!-- Flag to stop surefire from shortening test stacks  -->
     <trimStackTrace>false</trimStackTrace>
 

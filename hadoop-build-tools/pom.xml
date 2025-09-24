@@ -25,9 +25,6 @@
   <description>Apache Hadoop Build Tools Project</description>
   <name>Apache Hadoop Build Tools</name>
 
-  <properties>
-    <failIfNoTests>false</failIfNoTests>
-  </properties>
   <build>
     <resources>
       <resource>
