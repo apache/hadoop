@@ -237,6 +237,12 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
         return;
       }
       Integer bufferIndex = popFromFreeList();
+      if (bufferIndex > bufferPool.length) {
+        // This should never happen.
+        printTraceLog("Skipping queuing readAhead for file: {}, with eTag: {}, offset: {}, triggered by stream: {} as invalid buffer index popped from free list",
+            stream.getPath(), stream.getETag(), requestedOffset, stream.hashCode());
+        return;
+      }
       buffer.setBuffer(bufferPool[bufferIndex]);
       buffer.setBufferindex(bufferIndex);
       getReadAheadQueue().add(buffer);
@@ -591,13 +597,14 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     double memoryLoad = getMemoryLoad();
     if (memoryLoad < memoryThreshold && getNumBuffers() < maxBufferPoolSize) {
       // Create and Add more buffers in getFreeList().
-      if (removedBufferList.isEmpty()) {
-        bufferPool[getNumBuffers()] = new byte[getReadAheadBlockSize()];
-        pushToFreeList(getNumBuffers());
+      int nextIndx = getNumBuffers();
+      if (removedBufferList.isEmpty() && nextIndx < bufferPool.length) {
+        bufferPool[nextIndx] = new byte[getReadAheadBlockSize()];
+        pushToFreeList(nextIndx);
       } else {
         // Reuse a removed buffer index.
         int freeIndex = removedBufferList.pop();
-        if (freeIndex >= bufferPool.length) {
+        if (freeIndex >= bufferPool.length || bufferPool[freeIndex] != null) {
           printTraceLog("Invalid free index: {}. Current buffer pool size: {}",
               freeIndex, bufferPool.length);
           return false;
@@ -632,6 +639,11 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
           return; // No free buffers available, so cannot downscale.
         }
         int freeIndex = popFromFreeList();
+        if (freeIndex > bufferPool.length || bufferPool[freeIndex] == null) {
+          printTraceLog("Invalid free index: {}. Current buffer pool size: {}",
+              freeIndex, bufferPool.length);
+          return;
+        }
         bufferPool[freeIndex] = null;
         removedBufferList.add(freeIndex);
         decrementActiveBufferCount();
