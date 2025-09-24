@@ -555,10 +555,10 @@ public class TestDFSUtil {
     assertTrue(HAUtil.isHAEnabled(conf, "ns2"));
     assertFalse(HAUtil.isHAEnabled(conf, "ns3"));
 
-    assertEquals(resolvedName(NS1_NN1_HOST), map.get("ns1").get("ns1-nn1").toString());
-    assertEquals(resolvedName(NS1_NN2_HOST), map.get("ns1").get("ns1-nn2").toString());
-    assertEquals(resolvedName(NS2_NN1_HOST), map.get("ns2").get("ns2-nn1").toString());
-    assertEquals(resolvedName(NS2_NN2_HOST), map.get("ns2").get("ns2-nn2").toString());
+    assertInetSocketAddress(NS1_NN1_HOST, map.get("ns1").get("ns1-nn1"));
+    assertInetSocketAddress(NS1_NN2_HOST, map.get("ns1").get("ns1-nn2"));
+    assertInetSocketAddress(NS2_NN1_HOST, map.get("ns2").get("ns2-nn1"));
+    assertInetSocketAddress(NS2_NN2_HOST, map.get("ns2").get("ns2-nn2"));
 
     assertEquals(NS1_NN1_HOST,
         DFSUtil.getNamenodeServiceAddr(conf, "ns1", "ns1-nn1"));
@@ -626,7 +626,7 @@ public class TestDFSUtil {
   }
 
   @Test
-  public void testGetHaNnHttpAddresses() throws IOException {
+  public void testGetHaNnHttpAddresses() {
     final String LOGICAL_HOST_NAME = "ns1";
 
     Configuration conf = createWebHDFSHAConfiguration(LOGICAL_HOST_NAME, NS1_NN1_ADDR, NS1_NN2_ADDR);
@@ -634,8 +634,17 @@ public class TestDFSUtil {
     Map<String, Map<String, InetSocketAddress>> map =
         DFSUtilClient.getHaNnWebHdfsAddresses(conf, "webhdfs");
 
-    assertEquals(resolvedName(NS1_NN1_ADDR), map.get("ns1").get("nn1").toString());
-    assertEquals(resolvedName(NS1_NN2_ADDR), map.get("ns1").get("nn2").toString());
+    assertInetSocketAddress(NS1_NN1_ADDR, map.get("ns1").get("nn1"));
+    assertInetSocketAddress(NS1_NN2_ADDR, map.get("ns1").get("nn2"));
+  }
+
+  static void assertInetSocketAddress(String expected, InetSocketAddress computed) {
+    final int i = expected.indexOf(':');
+    final String host = expected.substring(0, i);
+    final int port = Integer.parseInt(expected.substring(i + 1));
+    assertEquals(host, computed.getHostName());
+    assertEquals(port, computed.getPort());
+    assertEquals(InetSocketAddress.createUnresolved(host, port), computed);
   }
 
   private static Configuration createWebHDFSHAConfiguration(String logicalHostName, String nnaddr1, String nnaddr2) {
@@ -956,7 +965,7 @@ public class TestDFSUtil {
     checkAllResults(new Long[]{1l}, true);
     checkAllResults(new Long[]{1l, 1l}, true);
     checkAllResults(new Long[]{1l, 1l, 1l}, true);
-    checkAllResults(new Long[]{new Long(1), new Long(1)}, true);
+    checkAllResults(new Long[]{1L, 1L}, true);
     checkAllResults(new Long[]{null, null, null}, true);
 
     checkAllResults(new Long[]{1l, 2l}, false);
