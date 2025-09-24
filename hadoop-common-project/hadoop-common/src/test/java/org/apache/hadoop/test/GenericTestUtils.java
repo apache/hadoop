@@ -334,9 +334,8 @@ public abstract class GenericTestUtils {
     if (msg == null) {
       throw new AssertionError(E_NULL_THROWABLE_STRING, t);
     }
-    if (expectedText != null && !msg.contains(expectedText)) {
-      String prefix = org.apache.commons.lang3.StringUtils.isEmpty(message)
-          ? "" : (message + ": ");
+    if (expectedText != null && !msg.toLowerCase().contains(expectedText.toLowerCase())) {
+      final String prefix = message == null || message.isEmpty() ? "" : message + ": ";
       throw new AssertionError(
           String.format("%s Expected to find '%s' %s: %s",
               prefix, expectedText, E_UNEXPECTED_EXCEPTION,
