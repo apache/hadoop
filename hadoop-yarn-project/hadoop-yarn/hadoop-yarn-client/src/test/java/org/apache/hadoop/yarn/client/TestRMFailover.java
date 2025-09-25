@@ -482,7 +482,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
     verifyRMTransitionToStandby(cluster.getResourceManager(activeRMIndex));
     // the standby RM transition to active.
     int newActiveRMIndex = (activeRMIndex + 1) % 2;
-    assertEquals(newActiveRMIndex, cluster.getActiveRMIndex(),"Failover failed");
+    assertEquals(newActiveRMIndex, cluster.getActiveRMIndex(), "Failover failed");
     verifyConnections();
   }
 }
