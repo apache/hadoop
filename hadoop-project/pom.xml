@@ -45,7 +45,7 @@
 
     <!-- These 2 versions are defined here because they are used -->
     <!-- JDIFF generation from embedded ant in the antrun plugin -->
-    <jdiff.version>1.0.9</jdiff.version>
+    <jdiff.version>1.1.2-hadoop</jdiff.version>
     <!-- Version number for xerces used by JDiff -->
     <xerces.jdiff.version>2.12.2</xerces.jdiff.version>
 
@@ -268,7 +268,7 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>jdiff</groupId>
+        <groupId>io.github.zhtttylz</groupId>
         <artifactId>jdiff</artifactId>
         <version>${jdiff.version}</version>
       </dependency>
