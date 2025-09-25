@@ -181,22 +181,6 @@ public class TestRMFailover extends ClientBaseWithFixes {
     }
   }
 
-  private void verifyRMTransitionToActive(ResourceManager rm)
-      throws InterruptedException {
-    try {
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          return rm.getRMContext().getHAServiceState() ==
-              HAServiceState.ACTIVE;
-        }
-      }, 100, 20000);
-    } catch (TimeoutException e) {
-      fail("RM didn't transition to Active.");
-    }
-  }
-
-
   @Test
   public void testAutomaticFailover()
       throws YarnException, InterruptedException, IOException {
@@ -478,7 +462,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
   }
 
   @Test
-  public void testTransitionedToStandby()
+  public void testTransitionedToStandbyWhenAutoFailover()
       throws YarnException, InterruptedException, IOException {
     conf.set(YarnConfiguration.RM_CLUSTER_ID, "yarn-test-cluster");
     conf.set(YarnConfiguration.RM_ZK_ADDRESS, hostPort);
@@ -491,14 +475,14 @@ public class TestRMFailover extends ClientBaseWithFixes {
     assertNotEquals(-1, activeRMIndex, "RM never turned active");
     verifyConnections();
 
-    int standbyRMIndex = (activeRMIndex + 1) % 2;
     HAServiceProtocol.StateChangeRequestInfo requestInfo = new HAServiceProtocol.StateChangeRequestInfo(
         HAServiceProtocol.RequestSource.REQUEST_BY_USER_FORCED);
     // transit the active RM to standby.
     getAdminService(activeRMIndex).transitionToStandby(requestInfo);
     verifyRMTransitionToStandby(cluster.getResourceManager(activeRMIndex));
     // the standby RM transition to active.
-    verifyRMTransitionToActive(cluster.getResourceManager(standbyRMIndex));
+    int newActiveRMIndex = (activeRMIndex + 1) % 2;
+    assertEquals(newActiveRMIndex, cluster.getActiveRMIndex(),"Failover failed");
     verifyConnections();
   }
 }
