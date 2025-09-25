@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -34,6 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.collections4.MapUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.EnhancedHeadroom;
@@ -46,7 +48,6 @@ import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
-import org.apache.hadoop.yarn.server.federation.policies.exceptions.NoActiveSubclustersException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
@@ -267,7 +268,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
   @Override
   public Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
       List<ResourceRequest> resourceRequests,
-      Set<SubClusterId> timedOutSubClusters) throws YarnException {
+      Set<SubClusterId> timedOutSubClusters) throws YarnException, IOException {
 
     // object used to accumulate statistics about the answer, initialize with
     // active subclusters. Create a new instance per call because this method
@@ -712,7 +713,8 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
 
     private void reinitialize(
         Map<SubClusterId, SubClusterInfo> activeSubclusters,
-        Set<SubClusterId> timedOutSubClusters, Configuration pConf) throws YarnException {
+        Set<SubClusterId> timedOutSubClusters, Configuration pConf)
+        throws YarnException, IOException {
 
       if (MapUtils.isEmpty(activeSubclusters)) {
         throw new YarnRuntimeException("null activeSubclusters received");
@@ -752,7 +754,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
         String errorMsg = "None of the subClusters enabled in this Policy (weight > 0) are "
             + "currently active we cannot forward the ResourceRequest(s)";
         if (failOnError) {
-          throw new NoActiveSubclustersException(errorMsg);
+          throw new RetriableException(errorMsg);
         } else {
           LOG.error(errorMsg + ", continuing by enabling all active subClusters.");
           activeAndEnabledSC.addAll(activeSubclusters.keySet());

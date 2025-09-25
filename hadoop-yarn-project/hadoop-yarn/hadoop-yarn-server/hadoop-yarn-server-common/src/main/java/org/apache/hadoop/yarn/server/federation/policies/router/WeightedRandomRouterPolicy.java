@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
 
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
@@ -35,7 +37,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {
   @Override
   protected SubClusterId chooseSubCluster(
-      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
+      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters)
+          throws YarnException, IOException {
 
     // note: we cannot pre-compute the weights, as the set of activeSubCluster
     // changes dynamically (and this would unfairly spread the load to
@@ -55,7 +58,7 @@ public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {
 
     int pickedIndex = FederationPolicyUtils.getWeightedRandom(weightList);
     if (pickedIndex == -1) {
-      throw new FederationPolicyException("No positive weight found on active subclusters");
+      throw new RetriableException("No positive weight found on active subclusters");
     }
     return scIdList.get(pickedIndex);
   }

@@ -17,11 +17,13 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContextValidator;
@@ -59,9 +61,10 @@ public class UniformRandomRouterPolicy extends AbstractRouterPolicy {
 
   @Override
   protected SubClusterId chooseSubCluster(
-      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
+      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters)
+          throws YarnException, IOException {
     if (preSelectSubclusters == null || preSelectSubclusters.isEmpty()) {
-      throw new FederationPolicyException("No available subcluster to choose from.");
+      throw new RetriableException("No available subcluster to choose from.");
     }
     List<SubClusterId> list = new ArrayList<>(preSelectSubclusters.keySet());
     return list.get(rand.nextInt(list.size()));

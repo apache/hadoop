@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -109,7 +110,7 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
   }
 
   @Test
-  public void testLoadIsRespected() throws YarnException {
+  public void testLoadIsRespected() throws YarnException, IOException {
 
     SubClusterId chosen = ((FederationRouterPolicy) getPolicy())
         .getHomeSubcluster(getApplicationSubmissionContext(), null);
@@ -141,13 +142,13 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
     FederationPoliciesTestUtil.initializePolicyContext(policy,
         getPolicyInfo(), getActiveSubclusters());
 
-    LambdaTestUtils.intercept(YarnException.class, "Zero Active Subcluster with weight 1.",
+    LambdaTestUtils.intercept(IOException.class, "Zero Active Subcluster with weight 1.",
         () ->  ((FederationRouterPolicy) policy).
         getHomeSubcluster(getApplicationSubmissionContext(), null));
   }
 
   @Test
-  public void testUpdateReservation() throws YarnException {
+  public void testUpdateReservation() throws YarnException, IOException {
     long now = Time.now();
     ReservationSubmissionRequest resReq = getReservationSubmissionRequest();
     when(resReq.getQueue()).thenReturn("queue1");

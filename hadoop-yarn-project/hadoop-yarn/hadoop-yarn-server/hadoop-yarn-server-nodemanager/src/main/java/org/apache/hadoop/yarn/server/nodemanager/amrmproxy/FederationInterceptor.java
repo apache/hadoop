@@ -762,12 +762,12 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       }
     }
 
-    try {
-      // Split the heart beat request into multiple requests, one for each
-      // sub-cluster RM that is used by this application.
-      Map<SubClusterId, AllocateRequest> requests =
-          splitAllocateRequest(request);
+    // Split the heart beat request into multiple requests, one for each
+    // sub-cluster RM that is used by this application.
+    Map<SubClusterId, AllocateRequest> requests =
+        splitAllocateRequest(request);
 
+    try {
       /**
        * Send the requests to the all sub-cluster resource managers. All
        * requests are synchronously triggered but sent asynchronously. Later the
@@ -1143,7 +1143,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
    * sub-cluster RM.
    */
   private Map<SubClusterId, AllocateRequest> splitAllocateRequest(
-      AllocateRequest request) throws YarnException {
+      AllocateRequest request) throws YarnException, IOException {
     Map<SubClusterId, AllocateRequest> requestMap = new HashMap<>();
 
     // Create heart beat request for home sub-cluster resource manager
@@ -1791,7 +1791,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
    * @throws YarnException if split fails
    */
   protected Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
-      List<ResourceRequest> askList) throws YarnException {
+      List<ResourceRequest> askList) throws YarnException, IOException {
     return policyInterpreter.splitResourceRequests(askList,
         getTimedOutSCs(true));
   }

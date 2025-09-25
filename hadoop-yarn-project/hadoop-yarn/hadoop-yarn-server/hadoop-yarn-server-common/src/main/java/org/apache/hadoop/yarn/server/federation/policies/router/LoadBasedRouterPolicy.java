@@ -17,8 +17,10 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
@@ -62,7 +64,8 @@ public class LoadBasedRouterPolicy extends AbstractRouterPolicy {
 
   @Override
   protected SubClusterId chooseSubCluster(
-      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
+      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters)
+          throws YarnException, IOException {
     Map<SubClusterIdInfo, Float> weights = getPolicyInfo().getRouterPolicyWeights();
     SubClusterIdInfo chosen = null;
     long currBestMem = -1;
@@ -77,7 +80,7 @@ public class LoadBasedRouterPolicy extends AbstractRouterPolicy {
       }
     }
     if (chosen == null) {
-      throw new FederationPolicyException(
+      throw new RetriableException(
           "Zero Active Subcluster with weight 1.");
     }
     return chosen.toId();

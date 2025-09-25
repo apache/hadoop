@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.federation.policies;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,7 +86,7 @@ public class TestRouterPolicyFacade {
   }
 
   @Test
-  public void testConfigurationUpdate() throws YarnException {
+  public void testConfigurationUpdate() throws YarnException, IOException {
 
     // in this test we see what happens when the configuration is changed
     // between calls. We achieve this by changing what is in the store.
@@ -115,7 +116,7 @@ public class TestRouterPolicyFacade {
   }
 
   @Test
-  public void testGetHomeSubcluster() throws YarnException {
+  public void testGetHomeSubcluster() throws YarnException, IOException {
 
     ApplicationSubmissionContext applicationSubmissionContext =
         mock(ApplicationSubmissionContext.class);
@@ -146,7 +147,7 @@ public class TestRouterPolicyFacade {
   }
 
   @Test
-  public void testFallbacks() throws YarnException {
+  public void testFallbacks() throws YarnException, IOException {
 
     // this tests the behavior of the system when the queue requested is
     // not configured (or null) and there is no default policy configured

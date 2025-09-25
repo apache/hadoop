@@ -405,8 +405,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         routerMetrics.succeededAppsCreated(stopTime - startTime);
         return response;
       }
-    } catch (FederationPolicyException e) {
-      // If a FederationPolicyException is thrown, the service is unavailable.
+    } catch (IOException e) {
+      // If a IOException is thrown, the service is unavailable.
       routerMetrics.incrAppsFailedCreated();
       RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_NEW_APP, UNKNOWN,
           TARGET_WEB_SERVICE, e.getLocalizedMessage());
@@ -2466,7 +2466,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   private Response invokeCreateNewReservation(Map<SubClusterId, SubClusterInfo> subClustersActive,
       List<SubClusterId> blackList, HttpServletRequest hsr, int retryCount)
-      throws YarnException {
+      throws YarnException, IOException {
     SubClusterId subClusterId = getRandomActiveSubCluster(subClustersActive, blackList);
     LOG.info("createNewReservation try #{} on SubCluster {}.", retryCount, subClusterId);
     SubClusterInfo subClusterInfo = subClustersActive.get(subClusterId);

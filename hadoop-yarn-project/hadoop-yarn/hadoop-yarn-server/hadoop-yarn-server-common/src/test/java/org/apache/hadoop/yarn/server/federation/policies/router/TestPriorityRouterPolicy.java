@@ -18,9 +18,11 @@ package org.apache.hadoop.yarn.server.federation.policies.router;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
@@ -78,7 +80,7 @@ public class TestPriorityRouterPolicy extends BaseRouterPoliciesTest {
   }
 
   @Test
-  public void testPickLowestWeight() throws YarnException {
+  public void testPickLowestWeight() throws YarnException, IOException {
     SubClusterId chosen = ((FederationRouterPolicy) getPolicy())
         .getHomeSubcluster(getApplicationSubmissionContext(), null);
     assertEquals("sc5", chosen.getId());
@@ -104,7 +106,7 @@ public class TestPriorityRouterPolicy extends BaseRouterPoliciesTest {
     FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
         getPolicyInfo(), getActiveSubclusters());
 
-    intercept(FederationPolicyException.class,
+    intercept(RetriableException.class,
         "No Active Subcluster with weight vector greater than zero.",
         () -> ((FederationRouterPolicy) getPolicy())
             .getHomeSubcluster(getApplicationSubmissionContext(), null));

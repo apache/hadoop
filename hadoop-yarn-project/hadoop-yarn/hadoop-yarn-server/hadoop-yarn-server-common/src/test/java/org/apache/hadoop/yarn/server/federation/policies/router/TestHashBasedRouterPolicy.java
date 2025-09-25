@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.federation.policies.router;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -54,7 +55,7 @@ public class TestHashBasedRouterPolicy extends BaseRouterPoliciesTest {
   }
 
   @Test
-  public void testHashSpreadUniformlyAmongSubclusters() throws YarnException {
+  public void testHashSpreadUniformlyAmongSubclusters() throws YarnException, IOException {
     SubClusterId chosen;
 
     Map<SubClusterId, AtomicLong> counter = new HashMap<>();

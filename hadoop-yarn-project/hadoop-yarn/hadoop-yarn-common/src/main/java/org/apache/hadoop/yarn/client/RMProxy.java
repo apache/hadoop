@@ -343,7 +343,7 @@ public class RMProxy<T> {
 
       return RetryPolicies.failoverOnNetworkException(
           RetryPolicies.TRY_ONCE_THEN_FAIL, maxFailoverAttempts,
-          failoverSleepBaseMs, failoverSleepMaxMs);
+          maxFailoverAttempts, failoverSleepBaseMs, failoverSleepMaxMs);
     }
 
     if (rmConnectionRetryIntervalMS < 0) {

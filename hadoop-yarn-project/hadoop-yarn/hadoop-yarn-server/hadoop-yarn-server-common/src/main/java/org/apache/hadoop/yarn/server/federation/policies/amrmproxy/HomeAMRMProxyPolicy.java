@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
@@ -57,14 +59,14 @@ public class HomeAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
   @Override
   public Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
       List<ResourceRequest> resourceRequests,
-      Set<SubClusterId> timedOutSubClusters) throws YarnException {
+      Set<SubClusterId> timedOutSubClusters) throws YarnException, IOException {
     if (homeSubcluster == null) {
       throw new FederationPolicyException("No home subcluster available");
     }
 
     Map<SubClusterId, SubClusterInfo> active = getActiveSubclusters();
     if (!active.containsKey(homeSubcluster)) {
-      throw new FederationPolicyException(
+      throw new RetriableException(
           "The local subcluster " + homeSubcluster + " is not active");
     }
 

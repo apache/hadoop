@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
@@ -800,16 +801,16 @@ public final class FederationStateStoreFacade {
    * @param activeSubClusters List of active subClusters.
    * @param blackList blacklist.
    * @return Active SubClusterId.
-   * @throws YarnException When there is no Active SubCluster,
+   * @throws IOException When there is no Active SubCluster,
    * an exception will be thrown (No active SubCluster available to submit the request.)
    */
   public static SubClusterId getRandomActiveSubCluster(
       Map<SubClusterId, SubClusterInfo> activeSubClusters, List<SubClusterId> blackList)
-      throws YarnException {
+      throws YarnException, IOException {
 
     // Check if activeSubClusters is empty, if it is empty, we need to throw an exception
     if (MapUtils.isEmpty(activeSubClusters)) {
-      throw new FederationPolicyException(
+      throw new RetriableException(
           FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE);
     }
 
@@ -823,7 +824,7 @@ public final class FederationStateStoreFacade {
 
     // Check there are still active subcluster after removing the blacklist
     if (CollectionUtils.isEmpty(subClusterIds)) {
-      throw new FederationPolicyException(
+      throw new RetriableException(
           FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE);
     }
 

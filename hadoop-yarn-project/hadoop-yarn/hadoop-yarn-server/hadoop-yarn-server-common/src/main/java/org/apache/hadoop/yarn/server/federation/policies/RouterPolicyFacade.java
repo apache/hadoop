@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.yarn.server.federation.policies;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -127,7 +128,7 @@ public class RouterPolicyFacade {
    */
   public SubClusterId getHomeSubcluster(
       ApplicationSubmissionContext appSubmissionContext,
-      List<SubClusterId> blackListSubClusters) throws YarnException {
+      List<SubClusterId> blackListSubClusters) throws YarnException, IOException {
 
     // the maps are concurrent, but we need to protect from reset()
     // reinitialization mid-execution by creating a new reference local to this
@@ -233,7 +234,7 @@ public class RouterPolicyFacade {
    *           valid sub-cluster id could be found for this reservation.
    */
   public SubClusterId getReservationHomeSubCluster(
-      ReservationSubmissionRequest request) throws YarnException {
+      ReservationSubmissionRequest request) throws YarnException, IOException {
 
     // the maps are concurrent, but we need to protect from reset()
     // reinitialization mid-execution by creating a new reference local to this

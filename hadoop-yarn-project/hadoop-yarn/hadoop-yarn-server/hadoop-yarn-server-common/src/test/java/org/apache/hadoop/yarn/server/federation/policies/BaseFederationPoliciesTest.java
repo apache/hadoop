@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.federation.policies;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 
@@ -30,16 +32,19 @@ import java.util.Map;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
+import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.RejectAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouterPolicy;
+import org.apache.hadoop.yarn.server.federation.policies.router.RejectRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -125,23 +130,39 @@ public abstract class BaseFederationPoliciesTest {
 
   @Test
   public void testNoSubclusters() throws YarnException {
-    assertThrows(FederationPolicyException.class, () -> {
-      // empty the activeSubclusters map
-      FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-          getPolicyInfo(), new HashMap<>());
+    // empty the activeSubclusters map
+    FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
+        getPolicyInfo(), new HashMap<>());
 
-      ConfigurableFederationPolicy localPolicy = getPolicy();
-      if (localPolicy instanceof FederationRouterPolicy) {
+    ConfigurableFederationPolicy localPolicy = getPolicy();
+    if (localPolicy instanceof FederationRouterPolicy) {
+      try {
         ((FederationRouterPolicy) localPolicy)
-        .getHomeSubcluster(getApplicationSubmissionContext(), null);
-      } else {
+            .getHomeSubcluster(getApplicationSubmissionContext(), null);
+        fail();
+      } catch (Exception e) {
+        if (localPolicy instanceof RejectRouterPolicy) {
+          assertTrue(e instanceof FederationPolicyException);
+        } else {
+          assertTrue(e instanceof RetriableException);
+        }
+      }
+    } else {
+      try {
         String[] hosts = new String[] {"host1", "host2"};
         List<ResourceRequest> resourceRequests = FederationPoliciesTestUtil
             .createResourceRequests(hosts, 2 * 1024, 2, 1, 3, null, false);
         ((FederationAMRMProxyPolicy) localPolicy).splitResourceRequests(
             resourceRequests, new HashSet<SubClusterId>());
+        fail();
+      } catch (Exception e) {
+        if (localPolicy instanceof RejectAMRMProxyPolicy) {
+          assertTrue(e instanceof FederationPolicyException);
+        } else {
+          assertTrue(e instanceof RetriableException);
+        }
       }
-    });
+    }
   }
 
   public ConfigurableFederationPolicy getPolicy() {

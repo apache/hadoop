@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.federation.policies.router;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -90,7 +91,7 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
   }
 
   @Test
-  public void testClusterChosenWithRightProbability() throws YarnException {
+  public void testClusterChosenWithRightProbability() throws YarnException, IOException {
 
     ApplicationSubmissionContext context =
         mock(ApplicationSubmissionContext.class);

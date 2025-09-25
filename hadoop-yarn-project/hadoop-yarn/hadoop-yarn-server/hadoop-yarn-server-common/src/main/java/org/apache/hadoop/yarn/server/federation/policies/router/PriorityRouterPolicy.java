@@ -17,8 +17,10 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -34,7 +36,8 @@ public class PriorityRouterPolicy extends AbstractRouterPolicy {
 
   @Override
   protected SubClusterId chooseSubCluster(
-      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
+      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters)
+          throws YarnException, IOException {
     // This finds the sub-cluster with the highest weight among the
     // currently active ones.
     Map<SubClusterIdInfo, Float> weights = getPolicyInfo().getRouterPolicyWeights();
@@ -48,7 +51,7 @@ public class PriorityRouterPolicy extends AbstractRouterPolicy {
       }
     }
     if (chosen == null) {
-      throw new FederationPolicyException(
+      throw new RetriableException(
           "No Active Subcluster with weight vector greater than zero.");
     }
     return chosen;

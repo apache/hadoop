@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -683,7 +684,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
   }
 
   @Test
-  public void testCancelWithLocalizedResource() throws YarnException {
+  public void testCancelWithLocalizedResource() throws YarnException, IOException {
     // Configure policy to be 100% headroom based
     getPolicyInfo().setHeadroomAlpha(1.0f);
 
@@ -814,7 +815,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
       Map<SubClusterId, SubClusterInfo> activeClusters = null;
       try {
         activeClusters = getActiveSubclusters();
-      } catch (YarnException e) {
+      } catch (Exception e) {
         throw new RuntimeException(e);
       }
       // The randomly selected sub-cluster should at least be active

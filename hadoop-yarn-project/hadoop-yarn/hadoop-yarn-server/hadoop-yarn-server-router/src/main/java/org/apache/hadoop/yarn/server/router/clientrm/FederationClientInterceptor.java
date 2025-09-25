@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.router.clientrm;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -306,10 +307,10 @@ public class FederationClientInterceptor
   }
 
   private SubClusterId getRandomActiveSubCluster(
-      Map<SubClusterId, SubClusterInfo> activeSubClusters) throws YarnException {
+      Map<SubClusterId, SubClusterInfo> activeSubClusters) throws IOException {
     if (activeSubClusters == null || activeSubClusters.isEmpty()) {
-      RouterServerUtil.logAndThrowException(
-          FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
+      throw new RetriableException(
+          FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE);
     }
     List<SubClusterId> list = new ArrayList<>(activeSubClusters.keySet());
     return list.get(rand.nextInt(list.size()));

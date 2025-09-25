@@ -193,7 +193,7 @@ public class TestFederationClientInterceptorRetry
     setupCluster(Arrays.asList(bad2));
 
     GetNewApplicationRequest request = GetNewApplicationRequest.newInstance();
-    LambdaTestUtils.intercept(YarnException.class, NO_ACTIVE_SUBCLUSTER_AVAILABLE,
+    LambdaTestUtils.intercept(IOException.class, NO_ACTIVE_SUBCLUSTER_AVAILABLE,
         () -> interceptor.getNewApplication(request));
   }
 
@@ -209,7 +209,7 @@ public class TestFederationClientInterceptorRetry
     setupCluster(Arrays.asList(bad1, bad2));
 
     GetNewApplicationRequest request = GetNewApplicationRequest.newInstance();
-    LambdaTestUtils.intercept(YarnException.class, NO_ACTIVE_SUBCLUSTER_AVAILABLE,
+    LambdaTestUtils.intercept(IOException.class, NO_ACTIVE_SUBCLUSTER_AVAILABLE,
         () -> interceptor.getNewApplication(request));
   }
 
@@ -247,7 +247,7 @@ public class TestFederationClientInterceptorRetry
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
     final SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
-    LambdaTestUtils.intercept(YarnException.class, NO_ACTIVE_SUBCLUSTER_AVAILABLE,
+    LambdaTestUtils.intercept(IOException.class, NO_ACTIVE_SUBCLUSTER_AVAILABLE,
         () -> interceptor.submitApplication(request));
   }
 
@@ -277,7 +277,7 @@ public class TestFederationClientInterceptorRetry
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
     final SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
-    LambdaTestUtils.intercept(YarnException.class, NO_ACTIVE_SUBCLUSTER_AVAILABLE,
+    LambdaTestUtils.intercept(IOException.class, NO_ACTIVE_SUBCLUSTER_AVAILABLE,
         () -> interceptor.submitApplication(request));
   }
 

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -59,7 +60,7 @@ public abstract class BaseRouterPoliciesTest
     extends BaseFederationPoliciesTest {
 
   @Test
-  public void testNullQueueRouting() throws YarnException {
+  public void testNullQueueRouting() throws YarnException, IOException {
     FederationRouterPolicy localPolicy = (FederationRouterPolicy) getPolicy();
     ApplicationSubmissionContext applicationSubmissionContext =
         ApplicationSubmissionContext.newInstance(null, null, null, null, null,
@@ -77,7 +78,7 @@ public abstract class BaseRouterPoliciesTest
   }
 
   @Test
-  public void testBlacklistSubcluster() throws YarnException {
+  public void testBlacklistSubcluster() throws YarnException, IOException {
     FederationRouterPolicy localPolicy = (FederationRouterPolicy) getPolicy();
     ApplicationSubmissionContext applicationSubmissionContext =
         ApplicationSubmissionContext.newInstance(null, null, null, null, null,
@@ -127,7 +128,7 @@ public abstract class BaseRouterPoliciesTest
         localPolicy.getHomeSubcluster(applicationSubmissionContext,
             blacklistSubclusters);
         fail();
-      } catch (YarnException e) {
+      } catch (Exception e) {
         assertTrue(e.getMessage()
             .equals(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE));
       }
@@ -167,7 +168,7 @@ public abstract class BaseRouterPoliciesTest
   }
 
   @Test
-  public void testFollowReservation() throws YarnException {
+  public void testFollowReservation() throws YarnException, IOException {
 
     long now = Time.now();
     ReservationSubmissionRequest resReq = getReservationSubmissionRequest();
@@ -201,7 +202,7 @@ public abstract class BaseRouterPoliciesTest
   }
 
   @Test
-  public void testUpdateReservation() throws YarnException {
+  public void testUpdateReservation() throws YarnException, IOException {
     long now = Time.now();
     ReservationSubmissionRequest resReq = getReservationSubmissionRequest();
     when(resReq.getQueue()).thenReturn("queue1");

@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -99,7 +100,7 @@ public class TestLocalityRouterPolicy extends TestWeightedRandomRouterPolicy {
    * the node belongs to an active subcluster.
    */
   @Test
-  public void testNodeInActiveSubCluster() throws YarnException {
+  public void testNodeInActiveSubCluster() throws YarnException, IOException {
     List<ResourceRequest> requests = new ArrayList<ResourceRequest>();
     requests.add(ResourceRequest
         .newInstance(Priority.UNDEFINED, "node1", Resource.newInstance(10, 1),
@@ -135,7 +136,7 @@ public class TestLocalityRouterPolicy extends TestWeightedRandomRouterPolicy {
    * TestWeightedRandomRouterPolicy.
    */
   @Test
-  public void testMultipleResourceRequests() throws YarnException {
+  public void testMultipleResourceRequests() throws YarnException, IOException {
     List<ResourceRequest> requests = new ArrayList<ResourceRequest>();
     requests.add(ResourceRequest
         .newInstance(Priority.UNDEFINED, "node1", Resource.newInstance(10, 1),
@@ -161,7 +162,7 @@ public class TestLocalityRouterPolicy extends TestWeightedRandomRouterPolicy {
    * the node does not exist in the Resolver MachineList file.
    */
   @Test
-  public void testNodeNotExists() throws YarnException {
+  public void testNodeNotExists() throws YarnException, IOException {
     List<ResourceRequest> requests = new ArrayList<ResourceRequest>();
     boolean relaxLocality = true;
     requests.add(ResourceRequest
@@ -190,7 +191,7 @@ public class TestLocalityRouterPolicy extends TestWeightedRandomRouterPolicy {
    * the node is in a blacklist subclusters.
    */
   @Test
-  public void testNodeInABlacklistSubCluster() throws YarnException {
+  public void testNodeInABlacklistSubCluster() throws YarnException, IOException {
     // Blacklist SubCluster3
     String subClusterToBlacklist = "subcluster3";
     // Remember the current value of subcluster3
@@ -239,7 +240,7 @@ public class TestLocalityRouterPolicy extends TestWeightedRandomRouterPolicy {
    * the node is not in the policy weights.
    */
   @Test
-  public void testNodeNotInPolicy() throws YarnException {
+  public void testNodeNotInPolicy() throws YarnException, IOException {
     // Blacklist SubCluster3
     String subClusterToBlacklist = "subcluster3";
     // Remember the current value of subcluster3

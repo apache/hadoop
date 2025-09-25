@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Collections;
@@ -84,7 +85,8 @@ public abstract class AbstractRouterPolicy extends
    * @throws YarnException if the policy fails to choose a sub-cluster
    */
   protected abstract SubClusterId chooseSubCluster(String queue,
-      Map<SubClusterId, SubClusterInfo> preSelectSubClusters) throws YarnException;
+      Map<SubClusterId, SubClusterInfo> preSelectSubClusters)
+          throws YarnException, IOException;
 
   /**
    * Filter chosen SubCluster based on reservationId.
@@ -130,11 +132,11 @@ public abstract class AbstractRouterPolicy extends
    * @return a hash-based chosen {@link SubClusterId} that will be the "home"
    *         for this application.
    *
-   * @throws YarnException if there are no active subclusters.
+   * @throws IOException if there are no active subclusters.
    */
   @Override
   public SubClusterId getHomeSubcluster(ApplicationSubmissionContext appContext,
-      List<SubClusterId> blackLists) throws YarnException {
+      List<SubClusterId> blackLists) throws YarnException, IOException {
 
     // null checks and default-queue behavior
     validate(appContext);
@@ -169,7 +171,7 @@ public abstract class AbstractRouterPolicy extends
    */
   @Override
   public SubClusterId getReservationHomeSubcluster(ReservationSubmissionRequest request)
-      throws YarnException {
+      throws YarnException, IOException {
     if (request == null) {
       throw new FederationPolicyException("The ReservationSubmissionRequest cannot be null.");
     }

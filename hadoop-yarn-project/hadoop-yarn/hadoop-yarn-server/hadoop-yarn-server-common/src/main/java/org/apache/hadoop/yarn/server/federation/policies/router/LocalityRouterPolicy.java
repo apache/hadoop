@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -90,7 +91,7 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
   @Override
   public SubClusterId getHomeSubcluster(
       ApplicationSubmissionContext appSubmissionContext,
-      List<SubClusterId> blackListSubClusters) throws YarnException {
+      List<SubClusterId> blackListSubClusters) throws YarnException, IOException {
 
     // null checks and default-queue behavior
     validate(appSubmissionContext);

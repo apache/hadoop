@@ -29,6 +29,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -55,7 +57,7 @@ public class TestUniformRandomRouterPolicy extends BaseRouterPoliciesTest {
   }
 
   @Test
-  public void testOneSubclusterIsChosen() throws YarnException {
+  public void testOneSubclusterIsChosen() throws YarnException, IOException {
     SubClusterId chosen = ((FederationRouterPolicy) getPolicy())
         .getHomeSubcluster(getApplicationSubmissionContext(), null);
     assertTrue(getActiveSubclusters().keySet().contains(chosen));

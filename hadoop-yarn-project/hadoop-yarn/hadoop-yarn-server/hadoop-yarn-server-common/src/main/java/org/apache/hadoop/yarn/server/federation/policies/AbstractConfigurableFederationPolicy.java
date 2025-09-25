@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.yarn.server.federation.policies;
 
+import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
@@ -137,16 +139,16 @@ public abstract class AbstractConfigurableFederationPolicy
    *
    * @return the map of ids to info for all active subclusters.
    *
-   * @throws YarnException if we can't get the list.
+   * @throws IOException if we can't get the list.
    */
   protected Map<SubClusterId, SubClusterInfo> getActiveSubclusters()
-      throws YarnException {
+      throws YarnException, IOException {
 
     Map<SubClusterId, SubClusterInfo> activeSubclusters =
         getPolicyContext().getFederationStateStoreFacade().getSubClusters(true);
 
     if (activeSubclusters == null || activeSubclusters.size() < 1) {
-      throw new NoActiveSubclustersException(
+      throw new RetriableException(
           "Zero active subclusters, cannot pick where to send job.");
     }
     return activeSubclusters;
