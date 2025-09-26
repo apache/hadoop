@@ -141,11 +141,7 @@ public abstract class BaseFederationPoliciesTest {
             .getHomeSubcluster(getApplicationSubmissionContext(), null);
         fail();
       } catch (Exception e) {
-        if (localPolicy instanceof RejectRouterPolicy) {
-          assertTrue(e instanceof FederationPolicyException);
-        } else {
-          assertTrue(e instanceof RetriableException);
-        }
+        assertTrue(e instanceof RetriableException);
       }
     } else {
       try {

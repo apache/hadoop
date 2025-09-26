@@ -47,6 +47,7 @@ public interface FederationAMRMProxyPolicy
    *         list of {@link ResourceRequest}s that should be forwarded to it
    * @throws YarnException in case the request is malformed or no viable
    *           sub-clusters can be found.
+   * @throws IOException if no active subclusters.
    */
   Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
       List<ResourceRequest> resourceRequests,

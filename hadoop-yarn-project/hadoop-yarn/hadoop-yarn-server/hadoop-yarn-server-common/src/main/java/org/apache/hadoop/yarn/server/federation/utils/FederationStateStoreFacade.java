@@ -48,7 +48,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.cache.FederationCache;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
-import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreRetriableException;
@@ -806,7 +805,7 @@ public final class FederationStateStoreFacade {
    */
   public static SubClusterId getRandomActiveSubCluster(
       Map<SubClusterId, SubClusterInfo> activeSubClusters, List<SubClusterId> blackList)
-      throws YarnException, IOException {
+      throws IOException {
 
     // Check if activeSubClusters is empty, if it is empty, we need to throw an exception
     if (MapUtils.isEmpty(activeSubClusters)) {

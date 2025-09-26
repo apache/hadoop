@@ -125,6 +125,7 @@ public class RouterPolicyFacade {
    *
    * @throws YarnException if there are issues initializing policies, or no
    *           valid sub-cluster id could be found for this app.
+   * @throws IOException if no active subclusters.
    */
   public SubClusterId getHomeSubcluster(
       ApplicationSubmissionContext appSubmissionContext,
@@ -232,6 +233,7 @@ public class RouterPolicyFacade {
    *
    * @throws YarnException if there are issues initializing policies, or no
    *           valid sub-cluster id could be found for this reservation.
+   * @throws IOException if no active subclusters.
    */
   public SubClusterId getReservationHomeSubCluster(
       ReservationSubmissionRequest request) throws YarnException, IOException {

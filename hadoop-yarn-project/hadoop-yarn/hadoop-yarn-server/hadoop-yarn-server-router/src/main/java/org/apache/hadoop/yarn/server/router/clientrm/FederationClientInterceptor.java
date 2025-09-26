@@ -365,6 +365,12 @@ public class FederationClientInterceptor
         routerMetrics.succeededAppsCreated(stopTime - startTime);
         return response;
       }
+    } catch (IOException e) {
+      routerMetrics.incrAppsFailedCreated();
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_APP, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, e.getMessage());
+      LOG.error(e.getMessage());
+      throw e;
     } catch (Exception e) {
       routerMetrics.incrAppsFailedCreated();
       RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_APP, UNKNOWN,

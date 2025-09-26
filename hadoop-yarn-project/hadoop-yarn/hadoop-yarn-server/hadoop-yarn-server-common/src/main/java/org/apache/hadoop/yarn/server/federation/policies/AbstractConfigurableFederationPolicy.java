@@ -25,7 +25,6 @@ import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
-import org.apache.hadoop.yarn.server.federation.policies.exceptions.NoActiveSubclustersException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 
@@ -139,7 +138,8 @@ public abstract class AbstractConfigurableFederationPolicy
    *
    * @return the map of ids to info for all active subclusters.
    *
-   * @throws IOException if we can't get the list.
+   * @throws YarnException if we can't get the list.
+   * @throws IOException if no active subclusters.
    */
   protected Map<SubClusterId, SubClusterInfo> getActiveSubclusters()
       throws YarnException, IOException {

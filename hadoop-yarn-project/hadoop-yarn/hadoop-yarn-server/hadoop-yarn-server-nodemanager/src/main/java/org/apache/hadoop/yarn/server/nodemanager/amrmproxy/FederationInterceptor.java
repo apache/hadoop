@@ -1789,6 +1789,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
    * @param askList the ask list to split
    * @return the split asks
    * @throws YarnException if split fails
+   * @throws IOException if no active subclusters.
    */
   protected Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
       List<ResourceRequest> askList) throws YarnException, IOException {

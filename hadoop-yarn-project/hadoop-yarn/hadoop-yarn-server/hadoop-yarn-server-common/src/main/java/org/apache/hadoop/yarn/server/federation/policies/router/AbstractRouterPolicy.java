@@ -83,6 +83,7 @@ public abstract class AbstractRouterPolicy extends
    * @return the chosen sub-cluster
    *
    * @throws YarnException if the policy fails to choose a sub-cluster
+   * @throws IOException if no active subclusters.
    */
   protected abstract SubClusterId chooseSubCluster(String queue,
       Map<SubClusterId, SubClusterInfo> preSelectSubClusters)

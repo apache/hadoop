@@ -1797,6 +1797,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
    * 4) Within a major upgrade, say 1.2 to 2.0:
    *    throw exception and indicate user to use a separate upgrade tool to
    *    upgrade NM state or remove incompatible old state.
+   * @throws IOException if NM state version is incompatible.
    */
   protected void checkVersion() throws IOException {
     Version loadedVersion = loadVersion();

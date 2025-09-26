@@ -47,6 +47,7 @@ public interface FederationRouterPolicy extends ConfigurableFederationPolicy {
    *         application.
    *
    * @throws YarnException if the policy cannot determine a viable subcluster.
+   * @throws IOException if no active subclusters.
    */
   SubClusterId getHomeSubcluster(
       ApplicationSubmissionContext appSubmissionContext,
@@ -60,6 +61,7 @@ public interface FederationRouterPolicy extends ConfigurableFederationPolicy {
    * @return a mapping of sub-clusters and the requests
    *
    * @throws YarnException if the policy fails to choose a sub-cluster
+   * @throws IOException if no active subclusters.
    */
   SubClusterId getReservationHomeSubcluster(
       ReservationSubmissionRequest request) throws YarnException, IOException;
