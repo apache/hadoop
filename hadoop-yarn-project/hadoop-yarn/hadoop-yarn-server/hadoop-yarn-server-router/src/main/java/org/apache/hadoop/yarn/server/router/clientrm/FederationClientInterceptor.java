@@ -530,6 +530,12 @@ public class FederationClientInterceptor
         return response;
       }
 
+    } catch (IOException e) {
+      routerMetrics.incrAppsFailedSubmitted();
+      RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, e.getMessage(), applicationId);
+      LOG.error(e.getMessage());
+      throw e;
     } catch (Exception e) {
       routerMetrics.incrAppsFailedSubmitted();
       RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
