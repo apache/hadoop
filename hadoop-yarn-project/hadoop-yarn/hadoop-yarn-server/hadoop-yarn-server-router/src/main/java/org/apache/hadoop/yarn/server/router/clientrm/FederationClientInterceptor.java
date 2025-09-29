@@ -365,7 +365,7 @@ public class FederationClientInterceptor
         routerMetrics.succeededAppsCreated(stopTime - startTime);
         return response;
       }
-    } catch (IOException e) {
+    } catch (RetriableException e) {
       routerMetrics.incrAppsFailedCreated();
       RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_APP, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, e.getMessage());
@@ -530,7 +530,7 @@ public class FederationClientInterceptor
         return response;
       }
 
-    } catch (IOException e) {
+    } catch (RetriableException e) {
       routerMetrics.incrAppsFailedSubmitted();
       RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, e.getMessage(), applicationId);
