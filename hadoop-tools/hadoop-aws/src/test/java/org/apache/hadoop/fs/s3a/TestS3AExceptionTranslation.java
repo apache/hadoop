@@ -22,6 +22,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_416_RANGE_NOT_SATISFIABLE;
 import static org.junit.Assert.*;
 
 import java.io.EOFException;
@@ -38,6 +39,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.s3a.impl.ErrorTranslation;
@@ -80,10 +82,10 @@ public class TestS3AExceptionTranslation {
         text != null && text.contains(contained));
   }
 
-  protected <E extends Throwable> void verifyTranslated(
+  protected <E extends Throwable> E verifyTranslated(
       int status,
       Class<E> expected) throws Exception {
-    verifyTranslated(expected, createS3Exception(status));
+    return verifyTranslated(expected, createS3Exception(status));
   }
 
   @Test
@@ -128,7 +130,12 @@ public class TestS3AExceptionTranslation {
 
   @Test
   public void test416isEOF() throws Exception {
-    verifyTranslated(416, EOFException.class);
+
+    // 416 maps the the subclass of EOFException
+    final IOException ex = verifyTranslated(SC_416_RANGE_NOT_SATISFIABLE,
+            RangeNotSatisfiableEOFException.class);
+    Assertions.assertThat(ex)
+        .isInstanceOf(EOFException.class);
   }
 
   @Test
