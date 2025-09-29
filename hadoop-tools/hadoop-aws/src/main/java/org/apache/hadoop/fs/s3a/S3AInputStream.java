@@ -100,6 +100,14 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   public static final String OPERATION_REOPEN = "re-open";
 
   /**
+   * Switch for behavior on when wrappedStream.read()
+   * returns -1 or raises an EOF; the original semantics
+   * are that the stream is kept open.
+   * Value {@value}.
+   */
+  private static final boolean CLOSE_WRAPPED_STREAM_ON_NEGATIVE_READ = true;
+
+  /**
    * This is the maximum temporary buffer size we use while
    * populating the data in direct byte buffers during a vectored IO
    * operation. This is to ensure that when a big range of data is
@@ -435,16 +443,23 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
   /**
    * Perform lazy seek and adjust stream to correct position for reading.
-   *
+   * If an EOF Exception is raised there are two possibilities
+   * <ol>
+   *   <li>the stream is at the end of the file</li>
+   *   <li>something went wrong with the network connection</li>
+   * </ol>
+   * This method does not attempt to distinguish; it assumes that an EOF
+   * exception is always "end of file".
    * @param targetPos position from where data should be read
    * @param len length of the content that needs to be read
+   * @throws RangeNotSatisfiableEOFException GET is out of range
+   * @throws IOException anything else.
    */
   @Retries.RetryTranslated
   private void lazySeek(long targetPos, long len) throws IOException {
 
     Invoker invoker = context.getReadInvoker();
-    invoker.maybeRetry(streamStatistics.getOpenOperations() == 0,
-        "lazySeek", pathStr, true,
+    invoker.retry("lazySeek to " + targetPos, pathStr, true,
         () -> {
           //For lazy seek
           seekInStream(targetPos, len);
@@ -478,7 +493,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     try {
       lazySeek(nextReadPos, 1);
-    } catch (EOFException e) {
+    } catch (RangeNotSatisfiableEOFException e) {
+      // attempt to GET beyond the end of the object
+      LOG.debug("Downgrading 416 response attempt to read at {} to -1 response", nextReadPos);
       return -1;
     }
 
@@ -494,8 +511,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
           }
           try {
             b = wrappedStream.read();
-          } catch (EOFException e) {
-            return -1;
           } catch (SocketTimeoutException e) {
             onReadFailure(e, true);
             throw e;
@@ -509,10 +524,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     if (byteRead >= 0) {
       pos++;
       nextReadPos++;
-    }
-
-    if (byteRead >= 0) {
       incrementBytesRead(1);
+    } else {
+      streamReadResultNegative();
     }
     return byteRead;
   }
@@ -535,6 +549,18 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     }
     streamStatistics.readException();
     closeStream("failure recovery", forceAbort, false);
+  }
+
+  /**
+   * the read() call returned -1.
+   * this means "the connection has gone past the end of the object" or
+   * the stream has broken for some reason.
+   * so close stream (without an abort).
+   */
+  private void streamReadResultNegative() {
+    if (CLOSE_WRAPPED_STREAM_ON_NEGATIVE_READ) {
+      closeStream("wrappedStream.read() returned -1", false, false);
+    }
   }
 
   /**
@@ -562,8 +588,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     try {
       lazySeek(nextReadPos, len);
-    } catch (EOFException e) {
-      // the end of the file has moved
+    } catch (RangeNotSatisfiableEOFException e) {
+      // attempt to GET beyond the end of the object
       return -1;
     }
 
@@ -581,12 +607,12 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
           }
           try {
             bytes = wrappedStream.read(buf, off, len);
-          } catch (EOFException e) {
-            // the base implementation swallows EOFs.
-            return -1;
           } catch (SocketTimeoutException e) {
             onReadFailure(e, true);
             throw e;
+          } catch (EOFException e) {
+            // the base implementation swallows EOFs.
+            return -1;
           } catch (IOException e) {
             onReadFailure(e, false);
             throw e;
@@ -597,8 +623,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     if (bytesRead > 0) {
       pos += bytesRead;
       nextReadPos += bytesRead;
+      incrementBytesRead(bytesRead);
+    } else {
+      streamReadResultNegative();
     }
-    incrementBytesRead(bytesRead);
     streamStatistics.readOperationCompleted(len, bytesRead);
     return bytesRead;
   }

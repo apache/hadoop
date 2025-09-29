@@ -89,7 +89,7 @@ import java.util.concurrent.TimeUnit;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.*;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateDeleteException;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
@@ -280,10 +280,13 @@ public final class S3AUtils {
         break;
 
       // out of range. This may happen if an object is overwritten with
-      // a shorter one while it is being read.
-      case 416:
-        ioe = new EOFException(message);
-        ioe.initCause(ase);
+      // a shorter one while it is being read or openFile() was invoked
+      // passing a FileStatus or file length less than that of the object.
+      // although the HTTP specification says that the response should
+      // include a range header specifying the actual range available,
+      // this isn't picked up here.
+      case SC_416_RANGE_NOT_SATISFIABLE:
+        ioe = new RangeNotSatisfiableEOFException(message, ase);
         break;
 
       // this has surfaced as a "no response from server" message.
