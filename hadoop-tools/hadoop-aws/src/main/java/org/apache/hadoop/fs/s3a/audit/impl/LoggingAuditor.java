@@ -271,7 +271,13 @@ public class LoggingAuditor
 
     private HttpReferrerAuditHeader referrer;
 
+    /**
+     * Builder for the referrer header. Requests that execute outside S3A, such as in AAL, will initially have SpanId
+     * of  the outside-span operation. For such requests, the spanId and operation name in this builder is overwritten
+     * in the modifyHttpRequest execution interceptor.
+     */
     private final HttpReferrerAuditHeader.Builder headerBuilder;
+
     /**
      * Attach Range of data for GetObject Request.
      * @param request the sdk request to be modified
@@ -413,7 +419,6 @@ public class LoggingAuditor
 
       // for delete op, attach the number of files to delete
       attachDeleteKeySizeAttribute(sdkRequest);
-
 
       // build the referrer header
       final String header = referrer.buildHttpReferrer();

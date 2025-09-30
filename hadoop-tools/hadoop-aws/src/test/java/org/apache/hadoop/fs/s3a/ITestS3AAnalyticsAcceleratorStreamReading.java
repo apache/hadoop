@@ -182,6 +182,8 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
     }
 
     verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
+
+    verifyStatisticCounterValue(getFileSystem().getIOStatistics(), AUDIT_REQUEST_EXECUTION, 4);
   }
 
   @Test
