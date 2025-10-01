@@ -19,16 +19,18 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.util.JarFinder;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -100,14 +102,14 @@ public class TestStreaming
     INPUT_FILE = new File(testDir, "input.txt");
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     UtilTest.recursiveDelete(TEST_DIR);
-    assertTrue("Creating " + TEST_DIR, TEST_DIR.mkdirs());
+    assertTrue(TEST_DIR.mkdirs(), "Creating " + TEST_DIR);
     args.clear();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     UtilTest.recursiveDelete(TEST_DIR);
   }
@@ -120,7 +122,7 @@ public class TestStreaming
   {
     DataOutputStream out = getFileSystem().create(new Path(
       INPUT_FILE.getPath()));
-    out.write(getInputData().getBytes("UTF-8"));
+    out.write(getInputData().getBytes(StandardCharsets.UTF_8));
     out.close();
   }
 

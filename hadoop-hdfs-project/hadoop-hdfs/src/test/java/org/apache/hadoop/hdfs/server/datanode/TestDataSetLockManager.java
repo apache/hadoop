@@ -19,24 +19,27 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.hdfs.server.common.AutoCloseDataSetLock;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestDataSetLockManager {
   private DataSetLockManager manager;
 
-  @Before
+  @BeforeEach
   public void init() {
     manager = new DataSetLockManager();
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testBaseFunc() {
     manager.addLock(LockLevel.BLOCK_POOl, "BPtest");
     manager.addLock(LockLevel.VOLUME, "BPtest", "Volumetest");
+    manager.addLock(LockLevel.DIR, "BPtest", "Volumetest", "SubDirtest");
 
     AutoCloseDataSetLock lock = manager.writeLock(LockLevel.BLOCK_POOl, "BPtest");
     AutoCloseDataSetLock lock1 = manager.readLock(LockLevel.BLOCK_POOl, "BPtest");
@@ -62,6 +65,16 @@ public class TestDataSetLockManager {
     manager.lockLeakCheck();
     assertNull(manager.getLastException());
 
+    AutoCloseDataSetLock lock6 = manager.writeLock(LockLevel.BLOCK_POOl, "BPtest");
+    AutoCloseDataSetLock lock7 = manager.readLock(LockLevel.VOLUME, "BPtest", "Volumetest");
+    AutoCloseDataSetLock lock8 = manager.readLock(LockLevel.DIR,
+        "BPtest", "Volumetest", "SubDirtest");
+    lock8.close();
+    lock7.close();
+    lock6.close();
+    manager.lockLeakCheck();
+    assertNull(manager.getLastException());
+
     manager.writeLock(LockLevel.VOLUME, "BPtest", "Volumetest");
     manager.lockLeakCheck();
 
@@ -69,7 +82,8 @@ public class TestDataSetLockManager {
     assertEquals(lastException.getMessage(), "lock Leak");
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testAcquireWriteLockError() throws InterruptedException {
     Thread t = new Thread(() -> {
       manager.readLock(LockLevel.BLOCK_POOl, "test");
@@ -82,7 +96,8 @@ public class TestDataSetLockManager {
     assertEquals(lastException.getMessage(), "lock Leak");
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testLockLeakCheck() {
     manager.writeLock(LockLevel.BLOCK_POOl, "test");
     manager.lockLeakCheck();

@@ -25,9 +25,10 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.util.ExitUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.event.Level;
 
 
@@ -39,7 +40,9 @@ import java.io.PrintStream;
 import java.util.zip.GZIPInputStream;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.slf4j.LoggerFactory.getLogger;
 
 public class TestGridmixSubmission extends CommonJobTest {
@@ -53,14 +56,14 @@ public class TestGridmixSubmission extends CommonJobTest {
   }
 
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws IOException {
     GridmixTestUtils.initCluster(TestGridmixSubmission.class);
 
     System.setProperty("src.test.data", inSpace.getAbsolutePath());
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutDown() throws IOException {
     GridmixTestUtils.shutdownCluster();
   }
@@ -73,12 +76,12 @@ public class TestGridmixSubmission extends CommonJobTest {
    * @param js the candidate JobStory.
    */
   private void verifyWordCountJobStory(JobStory js) {
-    assertNotNull("Null JobStory", js);
+    assertNotNull(js, "Null JobStory");
     String expectedJobStory = "WordCount:johndoe:default:1285322645148:3:1";
     String actualJobStory = js.getName() + ":" + js.getUser() + ":"
             + js.getQueueName() + ":" + js.getSubmissionTime() + ":"
             + js.getNumberMaps() + ":" + js.getNumberReduces();
-    assertEquals("Unexpected JobStory", expectedJobStory, actualJobStory);
+    assertEquals(expectedJobStory, actualJobStory, "Unexpected JobStory");
   }
 
   /**
@@ -110,7 +113,8 @@ public class TestGridmixSubmission extends CommonJobTest {
    *
    * @throws Exception if there was an error.
    */
-  @Test (timeout=20000)
+  @Test
+  @Timeout(value = 20)
   public void testTraceReader() throws Exception {
     Configuration conf = new Configuration();
     FileSystem lfs = FileSystem.getLocal(conf);
@@ -153,7 +157,8 @@ public class TestGridmixSubmission extends CommonJobTest {
     }
   }
 
-  @Test (timeout=500000)
+  @Test
+  @Timeout(value = 500)
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
     LOG.info(" Replay started at " + System.currentTimeMillis());
@@ -162,7 +167,8 @@ public class TestGridmixSubmission extends CommonJobTest {
 
   }
 
-  @Test (timeout=500000)
+  @Test
+  @Timeout(value = 500)
   public void testStressSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.STRESS;
     LOG.info(" Stress started at " + System.currentTimeMillis());
@@ -171,10 +177,9 @@ public class TestGridmixSubmission extends CommonJobTest {
   }
 
   // test empty request should be hint message
-  @Test (timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testMain() throws Exception {
-
-    SecurityManager securityManager = System.getSecurityManager();
 
     final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
     final PrintStream out = new PrintStream(bytes);
@@ -190,7 +195,6 @@ public class TestGridmixSubmission extends CommonJobTest {
       ExitUtil.resetFirstExitException();
     } finally {
       System.setErr(oldOut);
-      System.setSecurityManager(securityManager);
     }
     String print = bytes.toString();
     // should be printed tip in std error stream

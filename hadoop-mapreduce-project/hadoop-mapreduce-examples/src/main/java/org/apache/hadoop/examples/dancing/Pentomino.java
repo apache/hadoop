@@ -142,7 +142,7 @@ public class Pentomino {
   public static String stringifySolution(int width, int height, 
                                          List<List<ColumnName>> solution) {
     String[][] picture = new String[height][width];
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
     // for each piece placement...
     for(List<ColumnName> row: solution) {
       // go through to find which piece was placed

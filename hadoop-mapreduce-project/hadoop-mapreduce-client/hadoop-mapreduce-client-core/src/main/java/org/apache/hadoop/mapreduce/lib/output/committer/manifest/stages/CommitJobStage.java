@@ -37,6 +37,7 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_BYTES_COMMITTED_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_FILES_COMMITTED_COUNT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASK_DIRECTORY_COUNT_MEAN;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_COMMIT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CREATE_TARGET_DIRS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_LOAD_MANIFESTS;
@@ -161,7 +162,12 @@ public class CommitJobStage extends
       }
 
       // optional cleanup
-      new CleanupJobStage(stageConfig).apply(arguments.getCleanupArguments());
+      final CleanupJobStage.Arguments cleanupArguments = arguments.getCleanupArguments();
+      // determine the directory count
+      cleanupArguments.setDirectoryCount(iostats.counters()
+          .getOrDefault(COMMITTER_TASK_DIRECTORY_COUNT_MEAN, 0L));
+
+      new CleanupJobStage(stageConfig).apply(cleanupArguments);
 
       // and then, after everything else: optionally validate.
       if (arguments.isValidateOutput()) {

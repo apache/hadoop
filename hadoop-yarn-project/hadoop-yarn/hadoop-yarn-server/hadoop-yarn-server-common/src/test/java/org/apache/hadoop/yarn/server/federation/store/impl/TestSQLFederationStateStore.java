@@ -45,7 +45,7 @@ import org.apache.hadoop.yarn.server.federation.store.sql.FederationQueryRunner;
 import org.apache.hadoop.yarn.server.federation.store.sql.RouterMasterKeyHandler;
 import org.apache.hadoop.yarn.server.federation.store.sql.RouterStoreTokenHandler;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,8 +72,8 @@ import static org.apache.hadoop.yarn.server.federation.store.impl.HSQLDBFederati
 import static org.apache.hadoop.yarn.server.federation.store.impl.HSQLDBFederationStateStore.SP_UPDATERESERVATIONHOMESUBCLUSTER2;
 import static org.apache.hadoop.yarn.server.federation.store.impl.HSQLDBFederationStateStore.SP_DROP_DELETERESERVATIONHOMESUBCLUSTER;
 import static org.apache.hadoop.yarn.server.federation.store.impl.HSQLDBFederationStateStore.SP_DELETERESERVATIONHOMESUBCLUSTER2;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static java.sql.Types.VARCHAR;
 import static java.sql.Types.BIGINT;
 import static org.mockito.Mockito.mock;

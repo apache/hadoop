@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkException;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.s3a.HttpChannelEOFException;
@@ -64,6 +65,12 @@ public final class ErrorTranslation {
       "software.amazon.awssdk.thirdparty.org.apache.http.NoHttpResponseException";
 
   /**
+   * S3 encryption client exception class name: {@value}.
+   */
+  private static final String S3_ENCRYPTION_CLIENT_EXCEPTION =
+      "software.amazon.encryption.s3.S3EncryptionClientException";
+
+  /**
    * Private constructor for utility class.
    */
   private ErrorTranslation() {
@@ -103,6 +110,54 @@ public final class ErrorTranslation {
       return outer;
     }
     return getInnermostThrowable(thrown.getCause(), thrown);
+  }
+
+  /**
+   * Attempts to extract the underlying SdkException from an S3 encryption client exception.
+   *
+   * <p>This method is designed to handle exceptions that may be wrapped within
+   * S3EncryptionClientExceptions. It performs the following steps:
+   * <ol>
+   *   <li>Checks if the input exception is null.</li>
+   *   <li>Verifies if the exception contains the S3EncryptionClientException signature.</li>
+   *   <li>Examines the cause chain to find the most relevant SdkException.</li>
+   * </ol>
+   *
+   * <p>The method aims to unwrap nested exceptions to provide more meaningful
+   * error information, particularly in the context of S3 encryption operations.
+   *
+   * @param exception The SdkException to analyze. This may be a wrapper exception
+   *                  containing a more specific underlying cause.
+   * @return The extracted SdkException if found within the exception chain,
+   *         or the original exception if no relevant nested exception is found.
+   *         Returns null if the input exception is null.
+   *
+   * @see SdkException
+   * @see AwsServiceException
+   */
+  public static SdkException maybeProcessEncryptionClientException(
+      SdkException exception) {
+    if (exception == null) {
+      return null;
+    }
+
+    // check if the exception contains S3EncryptionClientException
+    if (!exception.toString().contains(S3_ENCRYPTION_CLIENT_EXCEPTION)) {
+      return exception;
+    }
+
+    Throwable cause = exception.getCause();
+    if (!(cause instanceof SdkException)) {
+      return exception;
+    }
+
+    // get the actual sdk exception.
+    SdkException sdkCause = (SdkException) cause;
+    if (sdkCause.getCause() instanceof AwsServiceException) {
+      return (SdkException) sdkCause.getCause();
+    }
+
+    return sdkCause;
   }
 
   /**

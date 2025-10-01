@@ -23,7 +23,7 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test config property KEY_PAGE_BLOB_DIRECTORIES.
@@ -36,9 +36,8 @@ public class TestKeyPageBlobDirectories extends AbstractWasbTestBase{
   }
 
   public void expectPageBlobKey(boolean expectedOutcome, AzureNativeFileSystemStore store, String path) {
-    assertEquals("Unexpected result for isPageBlobKey(" + path + ")",
-            expectedOutcome, store.isPageBlobKey(path));
-
+    assertEquals(expectedOutcome, store.isPageBlobKey(path),
+        "Unexpected result for isPageBlobKey(" + path + ")");
   }
 
   @Test

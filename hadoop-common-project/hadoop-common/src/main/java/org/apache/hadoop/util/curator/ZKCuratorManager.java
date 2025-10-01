@@ -126,7 +126,7 @@ public final class ZKCuratorManager {
    * Start the connection to the ZooKeeper ensemble.
    * @throws IOException If the connection cannot be started.
    */
-  public void start() throws IOException{
+  public void start() throws IOException {
     this.start(new ArrayList<>());
   }
 
@@ -141,23 +141,45 @@ public final class ZKCuratorManager {
 
   /**
    * Start the connection to the ZooKeeper ensemble.
+   * @param zkHostPort Host:Port of the ZooKeeper.
+   * @throws IOException If the connection cannot be started.
+   */
+  public void start(String zkHostPort) throws IOException {
+    this.start(new ArrayList<>(), false, zkHostPort);
+  }
+
+  /**
+   * Start the connection to the ZooKeeper ensemble.
+   * @param authInfos  List of authentication keys.
+   * @param sslEnabled If the connection should be SSL/TLS encrypted.
+   * @throws IOException If the connection cannot be started.
+   */
+  public void start(List<AuthInfo> authInfos, boolean sslEnabled) throws IOException {
+    this.start(authInfos, sslEnabled, null);
+  }
+
+  /**
+   * Start the connection to the ZooKeeper ensemble.
    *
    * @param authInfos  List of authentication keys.
    * @param sslEnabled If the connection should be SSL/TLS encrypted.
+   * @param zkHostPort Host:Port of the ZooKeeper.
    * @throws IOException            If the connection cannot be started.
    */
-  public void start(List<AuthInfo> authInfos, boolean sslEnabled)
-      throws IOException{
+  public void start(List<AuthInfo> authInfos, boolean sslEnabled, String zkHostPort)
+      throws IOException {
 
     ZKClientConfig zkClientConfig = new ZKClientConfig();
 
     // Connect to the ZooKeeper ensemble
-    String zkHostPort = conf.get(CommonConfigurationKeys.ZK_ADDRESS);
     if (zkHostPort == null) {
-      throw new IOException(
-          CommonConfigurationKeys.ZK_ADDRESS + " is not configured.");
+      zkHostPort = conf.get(CommonConfigurationKeys.ZK_ADDRESS);
+      if (zkHostPort == null) {
+        throw new IOException(
+            CommonConfigurationKeys.ZK_ADDRESS + " is not configured.");
+      }
+      LOG.debug("Configured {} as {}", CommonConfigurationKeys.ZK_ADDRESS, zkHostPort);
     }
-    LOG.debug("Configured {} as {}", CommonConfigurationKeys.ZK_ADDRESS, zkHostPort);
 
     int numRetries = conf.getInt(CommonConfigurationKeys.ZK_NUM_RETRIES,
         CommonConfigurationKeys.ZK_NUM_RETRIES_DEFAULT);

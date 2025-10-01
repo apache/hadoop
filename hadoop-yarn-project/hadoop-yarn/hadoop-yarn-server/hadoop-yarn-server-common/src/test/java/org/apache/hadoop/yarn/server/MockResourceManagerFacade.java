@@ -170,7 +170,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRespo
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersResponse;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
@@ -188,6 +187,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplica
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Mock Resource Manager facade implementation that exposes all the methods
@@ -347,8 +348,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
 
     synchronized (applicationContainerIdMap) {
       // Remove the containers that were being tracked for this application
-      Assert.assertTrue("The application id is NOT registered: " + attemptId,
-          applicationContainerIdMap.containsKey(appId));
+      assertTrue(applicationContainerIdMap.containsKey(appId),
+          "The application id is NOT registered: " + attemptId);
       applicationContainerIdMap.remove(appId);
     }
 
@@ -417,10 +418,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
           synchronized (applicationContainerIdMap) {
             // Keep track of the containers returned to this application. We
             // will need it in future
-            Assert.assertTrue(
-                "The application id is Not registered before allocate(): "
-                    + appId,
-                applicationContainerIdMap.containsKey(appId));
+            assertTrue(applicationContainerIdMap.containsKey(appId),
+                "The application id is Not registered before allocate(): " + appId);
             List<ContainerId> ids = applicationContainerIdMap.get(appId);
             ids.add(containerId);
           }
@@ -433,9 +432,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
         && request.getReleaseList().size() > 0) {
       LOG.info("Releasing containers: " + request.getReleaseList().size());
       synchronized (applicationContainerIdMap) {
-        Assert.assertTrue(
-            "The application id is not registered before allocate(): " + appId,
-            applicationContainerIdMap.containsKey(appId));
+        assertTrue(applicationContainerIdMap.containsKey(appId),
+            "The application id is not registered before allocate(): " + appId);
         List<ContainerId> ids = applicationContainerIdMap.get(appId);
 
         for (ContainerId id : request.getReleaseList()) {
@@ -447,9 +445,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
             }
           }
 
-          Assert.assertTrue("ContainerId " + id
-              + " being released is not valid for application: " + attemptId,
-              found);
+          assertTrue(found, "ContainerId " + id
+              + " being released is not valid for application: " + attemptId);
 
           ids.remove(id);
           completedList.add(
@@ -672,8 +669,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     synchronized (applicationContainerIdMap) {
       // Return the list of running containers that were being tracked for this
       // application
-      Assert.assertTrue("The application id is NOT registered: " + appId,
-          applicationContainerIdMap.containsKey(appId));
+      assertTrue(applicationContainerIdMap.containsKey(appId),
+          "The application id is NOT registered: " + appId);
       List<ContainerId> ids = applicationContainerIdMap.get(appId);
       for (ContainerId c : ids) {
         containers.add(ContainerReport.newInstance(c, null, null, null, 0, 0,

@@ -24,11 +24,11 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.concurrent.Callable;
 
-import org.junit.FixMethodOrder;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,8 +45,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Test semantics of the page blob input stream
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
-
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
+@Timeout(600)
 public class ITestPageBlobInputStream extends AbstractWasbTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestPageBlobInputStream.class);
@@ -58,14 +58,10 @@ public class ITestPageBlobInputStream extends AbstractWasbTestBase {
 
   private long testFileLength;
 
-  /**
-   * Long test timeout.
-   */
-  @Rule
-  public Timeout testTimeout = new Timeout(10 * 60 * 1000);
   private FileStatus testFileStatus;
   private Path hugefile;
 
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -132,7 +128,7 @@ public class ITestPageBlobInputStream extends AbstractWasbTestBase {
     ContractTestUtils.assertPathExists(fs, "huge file not created", hugefile);
     FileStatus status = fs.getFileStatus(hugefile);
     ContractTestUtils.assertIsFile(hugefile, status);
-    assertTrue("File " + hugefile + " is empty", status.getLen() > 0);
+    assertTrue(status.getLen() > 0, "File " + hugefile + " is empty");
   }
 
   @Test
@@ -246,14 +242,14 @@ public class ITestPageBlobInputStream extends AbstractWasbTestBase {
                                      long position) throws IOException {
     int size = buffer.length;
     final int numBytesRead = inputStream.read(buffer, 0, size);
-    assertEquals("Bytes read from stream", size, numBytesRead);
+    assertEquals(size, numBytesRead, "Bytes read from stream");
 
     byte[] expected = new byte[size];
     for (int i = 0; i < expected.length; i++) {
       expected[i] = (byte) ((position + i) % 256);
     }
 
-    assertArrayEquals("Mismatch", expected, buffer);
+    assertArrayEquals(expected, buffer, "Mismatch");
   }
 
   /**
@@ -264,7 +260,7 @@ public class ITestPageBlobInputStream extends AbstractWasbTestBase {
   public void test_0301_MarkSupported() throws IOException {
     assumeHugeFileExists();
     try (FSDataInputStream inputStream = fs.open(TEST_FILE_PATH)) {
-      assertTrue("mark is not supported", inputStream.markSupported());
+      assertTrue(inputStream.markSupported(), "mark is not supported");
     }
   }
 
@@ -284,7 +280,7 @@ public class ITestPageBlobInputStream extends AbstractWasbTestBase {
       assertEquals(buffer.length, bytesRead);
 
       inputStream.reset();
-      assertEquals("rest -> pos 0", 0, inputStream.getPos());
+      assertEquals(0, inputStream.getPos(), "rest -> pos 0");
 
       inputStream.mark(8 * KILOBYTE - 1);
 
@@ -374,7 +370,7 @@ public class ITestPageBlobInputStream extends AbstractWasbTestBase {
           }
       );
 
-      assertTrue("Test file length only " + testFileLength, testFileLength > 0);
+      assertTrue(testFileLength > 0, "Test file length only " + testFileLength);
       inputStream.seek(testFileLength);
       assertEquals(testFileLength, inputStream.getPos());
 

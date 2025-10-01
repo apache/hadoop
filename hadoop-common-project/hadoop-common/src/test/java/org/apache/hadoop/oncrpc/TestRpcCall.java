@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.oncrpc;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.apache.hadoop.oncrpc.security.CredentialsNone;
 import org.apache.hadoop.oncrpc.security.Credentials;
 import org.apache.hadoop.oncrpc.security.Verifier;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link RpcCall}
@@ -50,15 +51,20 @@ public class TestRpcCall {
     assertEquals(verifier, call.getVerifier());
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test
   public void testInvalidRpcVersion() {
-    int invalidRpcVersion = 3;
-    new RpcCall(0, RpcMessage.Type.RPC_CALL, invalidRpcVersion, 2, 3, 4, null, null);
+    assertThrows(IllegalArgumentException.class, () -> {
+      int invalidRpcVersion = 3;
+      new RpcCall(0, RpcMessage.Type.RPC_CALL, invalidRpcVersion, 2, 3, 4, null, null);
+    });
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test
   public void testInvalidRpcMessageType() {
-    RpcMessage.Type invalidMessageType = RpcMessage.Type.RPC_REPLY; // Message typ is not RpcMessage.RPC_CALL
-    new RpcCall(0, invalidMessageType, RpcCall.RPC_VERSION, 2, 3, 4, null, null);
+    assertThrows(IllegalArgumentException.class, () -> {
+      // Message typ is not RpcMessage.RPC_CALL
+      RpcMessage.Type invalidMessageType = RpcMessage.Type.RPC_REPLY;
+      new RpcCall(0, invalidMessageType, RpcCall.RPC_VERSION, 2, 3, 4, null, null);
+    });
   }
 }

@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.hadoop.io.erasurecode.ECChunk;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -29,7 +30,7 @@ import java.nio.ByteBuffer;
  * Test dummy raw coder.
  */
 public class TestDummyRawCoder extends TestRawCoderBase {
-  @Before
+  @BeforeEach
   public void setup() {
     encoderFactoryClass = DummyRawErasureCoderFactory.class;
     decoderFactoryClass = DummyRawErasureCoderFactory.class;
@@ -64,7 +65,7 @@ public class TestDummyRawCoder extends TestRawCoderBase {
     try {
       encoder.encode(dataChunks, parityChunks);
     } catch (IOException e) {
-      Assert.fail("Unexpected IOException: " + e.getMessage());
+      fail("Unexpected IOException: " + e.getMessage());
     }
     compareAndVerify(parityChunks, getEmptyChunks(parityChunks.length));
 
@@ -79,7 +80,7 @@ public class TestDummyRawCoder extends TestRawCoderBase {
       decoder.decode(inputChunks, getErasedIndexesForDecoding(),
           recoveredChunks);
     } catch (IOException e) {
-      Assert.fail("Unexpected IOException: " + e.getMessage());
+      fail("Unexpected IOException: " + e.getMessage());
     }
     compareAndVerify(recoveredChunks, getEmptyChunks(recoveredChunks.length));
   }

@@ -26,12 +26,12 @@ import static java.security.AccessController.*;
 
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedAction;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -106,8 +106,8 @@ class MetricsConfig extends SubsetConfiguration {
 
   /**
    * Load configuration from a list of files until the first successful load
-   * @param conf  the configuration object
-   * @param files the list of filenames to try
+   * @param prefix The prefix of the configuration.
+   * @param fileNames the list of filenames to try.
    * @return  the configuration object
    */
   static MetricsConfig loadFirst(String prefix, String... fileNames) {
@@ -119,10 +119,7 @@ class MetricsConfig extends SubsetConfiguration {
         fh.setFileName(fname);
         fh.load();
         Configuration cf = pcf.interpolatedConfiguration();
-        LOG.info("Loaded properties from {}", fname);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Properties: {}", toString(cf));
-        }
+        LOG.debug("Loaded properties from {}: {}", fname, cf);
         MetricsConfig mc = new MetricsConfig(cf, prefix);
         LOG.debug("Metrics Config: {}", mc);
         return mc;
@@ -135,8 +132,7 @@ class MetricsConfig extends SubsetConfiguration {
         throw new MetricsConfigException(e);
       }
     }
-    LOG.warn("Cannot locate configuration: tried " +
-             Joiner.on(",").join(fileNames));
+    LOG.debug("Cannot locate configuration: tried {}", Arrays.asList(fileNames));
     // default to an empty configuration
     return new MetricsConfig(new PropertiesConfiguration(), prefix);
   }

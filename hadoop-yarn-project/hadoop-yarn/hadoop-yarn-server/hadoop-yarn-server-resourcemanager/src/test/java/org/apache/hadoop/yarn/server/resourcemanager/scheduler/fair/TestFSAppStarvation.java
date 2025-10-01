@@ -29,13 +29,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
     .allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.util.ControlledClock;
 
-import org.junit.After;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
@@ -55,7 +55,7 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
 
   private FairSchedulerWithMockPreemption.MockPreemptionThread preemptionThread;
 
-  @Before
+  @BeforeEach
   public void setup() {
     createConfiguration();
     conf.set(YarnConfiguration.RM_SCHEDULER,
@@ -69,7 +69,7 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
     conf.setLong(FairSchedulerConfiguration.UPDATE_INTERVAL_MS, Long.MAX_VALUE);
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     ALLOC_FILE.delete();
     conf = null;
@@ -89,8 +89,8 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
 
     setupClusterAndSubmitJobs();
 
-    assertNull("Found starved apps even when preemption is turned off",
-        scheduler.getContext().getStarvedApps());
+    assertNull(scheduler.getContext().getStarvedApps(),
+        "Found starved apps even when preemption is turned off");
   }
 
   /*
@@ -109,18 +109,18 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
       Thread.sleep(10);
     }
 
-    assertNotNull("FSContext does not have an FSStarvedApps instance",
-        scheduler.getContext().getStarvedApps());
-    assertEquals("Expecting 3 starved applications, one each for the "
-            + "minshare and fairshare queues",
-        3, preemptionThread.uniqueAppsAdded());
+    assertNotNull(scheduler.getContext().getStarvedApps(),
+        "FSContext does not have an FSStarvedApps instance");
+    assertEquals(3, preemptionThread.uniqueAppsAdded(),
+        "Expecting 3 starved applications, one each for the "
+        + "minshare and fairshare queues");
 
     // Verify apps are added again only after the set delay for starvation has
     // passed.
     clock.tickSec(1);
     scheduler.update();
-    assertEquals("Apps re-added even before starvation delay passed",
-        preemptionThread.totalAppsAdded(), preemptionThread.uniqueAppsAdded());
+    assertEquals(preemptionThread.totalAppsAdded(), preemptionThread.uniqueAppsAdded(),
+        "Apps re-added even before starvation delay passed");
     verifyLeafQueueStarvation();
 
     clock.tickMsec(
@@ -136,10 +136,10 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
       Thread.sleep(10);
     }
 
-    assertEquals("Each app should be marked as starved once" +
-            " at each scheduler update above",
-        preemptionThread.totalAppsAdded(),
-        preemptionThread.uniqueAppsAdded() * 2);
+    assertEquals(preemptionThread.totalAppsAdded(),
+        preemptionThread.uniqueAppsAdded() * 2,
+        "Each app should be marked as starved once" +
+        " at each scheduler update above");
   }
 
   /*
@@ -153,10 +153,10 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
 
     setupClusterAndSubmitJobs();
 
-    assertNotNull("FSContext does not have an FSStarvedApps instance",
-        scheduler.getContext().getStarvedApps());
-    assertEquals("Found starved apps when preemption threshold is over 100%", 0,
-        preemptionThread.totalAppsAdded());
+    assertNotNull(scheduler.getContext().getStarvedApps(),
+        "FSContext does not have an FSStarvedApps instance");
+    assertEquals(0, preemptionThread.totalAppsAdded(),
+        "Found starved apps when preemption threshold is over 100%");
   }
 
   private void verifyLeafQueueStarvation() {
@@ -224,8 +224,8 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
             .build())
         .writeToFile(ALLOC_FILE.getAbsolutePath());
 
-    assertTrue("Allocation file does not exist, not running the test",
-        ALLOC_FILE.exists());
+    assertTrue(ALLOC_FILE.exists(),
+        "Allocation file does not exist, not running the test");
 
     resourceManager = new MockRM(conf);
     scheduler = (FairScheduler) resourceManager.getResourceScheduler();

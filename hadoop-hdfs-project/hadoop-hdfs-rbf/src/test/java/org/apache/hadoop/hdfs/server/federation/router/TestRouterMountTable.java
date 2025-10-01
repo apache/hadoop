@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -60,32 +60,33 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test a router end-to-end including the MountTable.
  */
+@SuppressWarnings("checkstyle:VisibilityModifier")
 public class TestRouterMountTable {
 
-  private static StateStoreDFSCluster cluster;
-  private static NamenodeContext nnContext0;
-  private static NamenodeContext nnContext1;
-  private static RouterContext routerContext;
-  private static MountTableResolver mountTable;
-  private static ClientProtocol routerProtocol;
-  private static long startTime;
-  private static FileSystem nnFs0;
-  private static FileSystem nnFs1;
-  private static FileSystem routerFs;
+  protected static StateStoreDFSCluster cluster;
+  protected static NamenodeContext nnContext0;
+  protected static NamenodeContext nnContext1;
+  protected static RouterContext routerContext;
+  protected static MountTableResolver mountTable;
+  protected static ClientProtocol routerProtocol;
+  protected static long startTime;
+  protected static FileSystem nnFs0;
+  protected static FileSystem nnFs1;
+  protected static FileSystem routerFs;
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     startTime = Time.now();
 
-    // Build and start a federated cluster
+    // Build and start a federated cluster.
     cluster = new StateStoreDFSCluster(false, 2);
     Configuration conf = new RouterConfigBuilder()
         .stateStore()
@@ -98,7 +99,7 @@ public class TestRouterMountTable {
     cluster.startRouters();
     cluster.waitClusterUp();
 
-    // Get the end points
+    // Get the end points.
     nnContext0 = cluster.getNamenode("ns0", null);
     nnContext1 = cluster.getNamenode("ns1", null);
     nnFs0 = nnContext0.getFileSystem();
@@ -110,7 +111,7 @@ public class TestRouterMountTable {
     mountTable = (MountTableResolver) router.getSubclusterResolver();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (cluster != null) {
       cluster.stopRouter(routerContext);
@@ -119,7 +120,7 @@ public class TestRouterMountTable {
     }
   }
 
-  @After
+  @AfterEach
   public void clearMountTable() throws IOException {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTableManager = client.getMountTableManager();
@@ -132,23 +133,24 @@ public class TestRouterMountTable {
           RemoveMountTableEntryRequest.newInstance(entry.getSourcePath());
       mountTableManager.removeMountTableEntry(req2);
     }
+    mountTable.setDefaultNSEnable(true);
   }
 
   @Test
   public void testReadOnly() throws Exception {
 
-    // Add a read only entry
+    // Add a read only entry.
     MountTable readOnlyEntry = MountTable.newInstance(
         "/readonly", Collections.singletonMap("ns0", "/testdir"));
     readOnlyEntry.setReadOnly(true);
     assertTrue(addMountTable(readOnlyEntry));
 
-    // Add a regular entry
+    // Add a regular entry.
     MountTable regularEntry = MountTable.newInstance(
         "/regular", Collections.singletonMap("ns0", "/testdir"));
     assertTrue(addMountTable(regularEntry));
 
-    // Create a folder which should show in all locations
+    // Create a folder which should show in all locations.
     assertTrue(routerFs.mkdirs(new Path("/regular/newdir")));
 
     FileStatus dirStatusNn =
@@ -161,7 +163,7 @@ public class TestRouterMountTable {
         routerFs.getFileStatus(new Path("/readonly/newdir"));
     assertTrue(dirStatusReadOnly.isDirectory());
 
-    // It should fail writing into a read only path
+    // It should fail writing into a read only path.
     try {
       routerFs.mkdirs(new Path("/readonly/newdirfail"));
       fail("We should not be able to write into a read only mount point");
@@ -186,7 +188,7 @@ public class TestRouterMountTable {
     AddMountTableEntryResponse addResponse =
         mountTableManager.addMountTableEntry(addRequest);
 
-    // Reload the Router cache
+    // Reload the Router cache.
     mountTable.loadCache(true);
 
     return addResponse.getStatus();
@@ -206,7 +208,7 @@ public class TestRouterMountTable {
     UpdateMountTableEntryResponse updateResponse =
         mountTableManager.updateMountTableEntry(updateRequest);
 
-    // Reload the Router cache
+    // Reload the Router cache.
     mountTable.loadCache(true);
 
     return updateResponse.getStatus();
@@ -218,7 +220,7 @@ public class TestRouterMountTable {
    */
   @Test
   public void testMountPointLimit() throws Exception {
-    // Add mount table entry
+    // Add mount table entry.
     MountTable addEntry = MountTable.newInstance("/testdir-shortlength",
         Collections.singletonMap("ns0", "/testdir-shortlength"));
     assertTrue(addMountTable(addEntry));
@@ -247,7 +249,7 @@ public class TestRouterMountTable {
   @Test
   public void testListFilesTime() throws Exception {
     try {
-      // Add mount table entry
+      // Add mount table entry.
       MountTable addEntry = MountTable.newInstance("/testdir",
           Collections.singletonMap("ns0", "/testdir"));
       assertTrue(addMountTable(addEntry));
@@ -264,7 +266,7 @@ public class TestRouterMountTable {
           Collections.singletonMap("ns0", "/test"));
       assertTrue(addMountTable(addEntry));
 
-      // Create test dir in NN
+      // Create test dir in NN.
       assertTrue(nnFs0.mkdirs(new Path("/newdir")));
 
       Map<String, Long> pathModTime = new TreeMap<>();
@@ -286,12 +288,12 @@ public class TestRouterMountTable {
       for (FileStatus file : iterator) {
         pathModTime.put(file.getPath().getName(), file.getModificationTime());
       }
-      // Fetch listing
+      // Fetch listing.
       DirectoryListing listing =
           routerProtocol.getListing("/", HdfsFileStatus.EMPTY_NAME, false);
       Iterator<String> pathModTimeIterator = pathModTime.keySet().iterator();
 
-      // Match date/time for each path returned
+      // Match date/time for each path returned.
       for (HdfsFileStatus f : listing.getPartialListing()) {
         String fileName = pathModTimeIterator.next();
         String currentFile = f.getFullPath(new Path("/")).getName();
@@ -302,7 +304,7 @@ public class TestRouterMountTable {
         assertTrue(currentTime > startTime);
         assertEquals(currentTime, expectedTime);
       }
-      // Verify the total number of results found/matched
+      // Verify the total number of results found/matched.
       assertEquals(pathModTime.size(), listing.getPartialListing().length);
     } finally {
       nnFs0.delete(new Path("/newdir"), true);
@@ -611,7 +613,6 @@ public class TestRouterMountTable {
       MountTable addEntry = MountTable.newInstance("/testdir", destMap);
       assertTrue(addMountTable(addEntry));
       nnFs0.mkdirs(new Path("/tmp/testdir"));
-      nnFs0.mkdirs(new Path("/tmp/testdir"));
       nnFs1.mkdirs(new Path("/tmp/testdir01"));
       nnFs0.mkdirs(new Path("/tmp/testdir/1"));
       nnFs1.mkdirs(new Path("/tmp/testdir01/1"));
@@ -619,7 +620,7 @@ public class TestRouterMountTable {
       assertEquals(2, ((HdfsFileStatus) finfo1[0]).getChildrenNum());
     } finally {
       nnFs0.delete(new Path("/tmp"), true);
-      nnFs0.delete(new Path("/tmp"), true);
+      nnFs1.delete(new Path("/tmp"), true);
     }
   }
 
@@ -645,7 +646,7 @@ public class TestRouterMountTable {
   @Test
   public void testGetListingWithTrailingSlash() throws IOException {
     try {
-      // Add mount table entry
+      // Add mount table entry.
       MountTable addEntry = MountTable.newInstance("/testlist",
           Collections.singletonMap("ns0", "/testlist"));
       assertTrue(addMountTable(addEntry));
@@ -658,11 +659,11 @@ public class TestRouterMountTable {
 
       nnFs0.mkdirs(new Path("/testlist/tmp0"));
       nnFs1.mkdirs(new Path("/testlist/tmp1"));
-      // Fetch listing
+      // Fetch listing.
       DirectoryListing list = routerProtocol.getListing(
           "/testlist/", HdfsFileStatus.EMPTY_NAME, false);
       HdfsFileStatus[] statuses = list.getPartialListing();
-      // should return tmp0 and tmp1
+      // Should return tmp0 and tmp1.
       assertEquals(2, statuses.length);
     } finally {
       nnFs0.delete(new Path("/testlist/tmp0"), true);
@@ -673,7 +674,7 @@ public class TestRouterMountTable {
   @Test
   public void testGetFileInfoWithMountPoint() throws IOException {
     try {
-      // Add mount table entry
+      // Add mount table entry.
       MountTable addEntry = MountTable.newInstance("/testgetfileinfo/ns1/dir",
           Collections.singletonMap("ns1", "/testgetfileinfo/ns1/dir"));
       assertTrue(addMountTable(addEntry));
@@ -739,7 +740,7 @@ public class TestRouterMountTable {
       nnFs0.mkdirs(new Path("/testrename1/sub/sub"));
       nnFs0.mkdirs(new Path("/testrename2"));
 
-      // Success: rename a directory to a mount point
+      // Success: rename a directory to a mount point.
       assertTrue(nnFs0.exists(new Path("/testrename1/sub/sub")));
       assertFalse(nnFs0.exists(new Path("/testrename2/sub")));
       assertTrue(routerFs.rename(new Path("/testrename1/sub/sub"),
@@ -747,19 +748,19 @@ public class TestRouterMountTable {
       assertFalse(nnFs0.exists(new Path("/testrename1/sub/sub")));
       assertTrue(nnFs0.exists(new Path("/testrename2/sub")));
 
-      // Fail: the target already exists
+      // Fail: the target already exists.
       nnFs0.mkdirs(new Path("/testrename1/sub/sub"));
       assertFalse(routerFs.rename(new Path("/testrename1/sub/sub"),
               new Path("/testrename2")));
 
-      // Fail: The src is a mount point
+      // Fail: The src is a mount point.
       LambdaTestUtils.intercept(AccessControlException.class,
           "The operation is not allowed because the path: "
               + "/testrename1/sub is a mount point",
           () -> routerFs.rename(new Path("/testrename1/sub"),
               new Path("/testrename2/sub")));
 
-      // Fail: There is a mount point under the src
+      // Fail: There is a mount point under the src.
       LambdaTestUtils.intercept(AccessControlException.class,
           "The operation is not allowed because there are mount points: "
               + "sub under the path: /testrename1",
@@ -790,7 +791,7 @@ public class TestRouterMountTable {
   @Test
   public void testGetEnclosingRoot() throws Exception {
 
-    // Add a read only entry
+    // Add a read only entry.
     MountTable readOnlyEntry = MountTable.newInstance(
         "/readonly", Collections.singletonMap("ns0", "/testdir"));
     readOnlyEntry.setReadOnly(true);
@@ -801,13 +802,13 @@ public class TestRouterMountTable {
     assertEquals(routerFs.getEnclosingRoot(new Path("/regular")),
         routerFs.getEnclosingRoot(routerFs.getEnclosingRoot(new Path("/regular"))));
 
-    // Add a regular entry
+    // Add a regular entry.
     MountTable regularEntry = MountTable.newInstance(
         "/regular", Collections.singletonMap("ns0", "/testdir"));
     assertTrue(addMountTable(regularEntry));
     assertEquals(routerFs.getEnclosingRoot(new Path("/regular")), new Path("/regular"));
 
-    // path does not need to exist
+    // Path does not need to exist.
     assertEquals(routerFs.getEnclosingRoot(new Path("/regular/pathDNE")), new Path("/regular"));
 
   }

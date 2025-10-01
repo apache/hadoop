@@ -24,18 +24,16 @@ import java.net.SocketException;
 import java.net.URL;
 import java.time.Duration;
 
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
-import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.Path;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.EtagSource;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
@@ -44,23 +42,30 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
-import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
-import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.PATH_ALREADY_EXISTS;
-import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_HTTP_CONNECTION_TIMEOUT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_HTTP_READ_TIMEOUT;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.PATH_ALREADY_EXISTS;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Testing Abfs Rename recovery using Mockito.
@@ -70,11 +75,8 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestAbfsRenameRetryRecovery.class);
 
-  private boolean isNamespaceEnabled;
-
   public TestAbfsRenameRetryRecovery() throws Exception {
-    isNamespaceEnabled = getConfiguration()
-            .getBoolean(TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
+    // do nothing
   }
 
   /**
@@ -96,14 +98,14 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // SuccessFul Result.
     AbfsRestOperation successOp =
         new AbfsRestOperation(AbfsRestOperationType.RenamePath, mockClient,
-            HTTP_METHOD_PUT, null, null);
+            HTTP_METHOD_PUT, null, null, mockClient.getAbfsConfiguration());
     AbfsClientRenameResult successResult = mock(AbfsClientRenameResult.class);
     doReturn(successOp).when(successResult).getOp();
     when(successResult.isIncompleteMetadataState()).thenReturn(false);
 
     // Failed Result.
     AbfsRestOperation failedOp = new AbfsRestOperation(AbfsRestOperationType.RenamePath, mockClient,
-        HTTP_METHOD_PUT, null, null);
+        HTTP_METHOD_PUT, null, null, mockClient.getAbfsConfiguration());
     AbfsClientRenameResult recoveredMetaDataIncompleteResult =
         mock(AbfsClientRenameResult.class);
 
@@ -118,8 +120,8 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     // We need to throw an exception once a rename is triggered with
     // destination having no parent, but after a retry it needs to succeed.
-    when(mockClient.renamePath(sourcePath, destNoParentPath, null, null,
-        null, false, isNamespaceEnabled))
+    when(mockClient.renamePath(sourcePath, destNoParentPath, null,
+        null, null, false))
         .thenThrow(destParentNotFound)
         .thenReturn(recoveredMetaDataIncompleteResult);
 
@@ -127,12 +129,12 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     intercept(AzureBlobFileSystemException.class,
         () -> mockClient.renamePath(sourcePath,
         destNoParentPath, null, null,
-        null, false, isNamespaceEnabled));
+        null, false));
 
     AbfsClientRenameResult resultOfSecondRenameCall =
         mockClient.renamePath(sourcePath,
         destNoParentPath, null, null,
-        null, false, isNamespaceEnabled);
+        null, false);
 
     // the second rename call should be the recoveredResult due to
     // metaDataIncomplete
@@ -141,15 +143,16 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
             + "being in incomplete state")
         .isSameAs(recoveredMetaDataIncompleteResult);
     // Verify Incomplete metadata state happened for our second rename call.
-    assertTrue("Metadata incomplete state should be true if a rename is "
-            + "retried after no Parent directory is found",
-        resultOfSecondRenameCall.isIncompleteMetadataState());
+    assertTrue(
+       resultOfSecondRenameCall.isIncompleteMetadataState(), "Metadata incomplete state should be true if a rename is "
+            + "retried after no Parent directory is found");
 
 
     // Verify renamePath occurred two times implying a retry was attempted.
     verify(mockClient, times(2))
-        .renamePath(sourcePath, destNoParentPath, null, null, null, false,
-                isNamespaceEnabled);
+        .renamePath(sourcePath, destNoParentPath, null,
+            null, null,
+            false);
 
   }
 
@@ -158,14 +161,29 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     // adding mock objects to current AbfsClient
     AbfsClient spyClient = Mockito.spy(fs.getAbfsStore().getClient());
+    AbfsConfiguration spiedConf = Mockito.spy(fs.getAbfsStore().getAbfsConfiguration());
+    Mockito.doReturn(DEFAULT_HTTP_CONNECTION_TIMEOUT).when(spiedConf).getHttpConnectionTimeout();
+    Mockito.doReturn(DEFAULT_HTTP_READ_TIMEOUT).when(spiedConf).getHttpReadTimeout();
+    Mockito.doReturn(spiedConf).when(spyClient).getAbfsConfiguration();
 
     Mockito.doAnswer(answer -> {
-      AbfsRestOperation op = new AbfsRestOperation(AbfsRestOperationType.RenamePath,
-              spyClient, HTTP_METHOD_PUT, answer.getArgument(0), answer.getArgument(1));
-      AbfsRestOperation spiedOp = Mockito.spy(op);
-      addSpyBehavior(spiedOp, op, spyClient);
-      return spiedOp;
-    }).when(spyClient).createRenameRestOperation(Mockito.any(URL.class), anyList());
+          AbfsRestOperation op = new AbfsRestOperation(
+              AbfsRestOperationType.RenamePath,
+              spyClient, HTTP_METHOD_PUT, answer.getArgument(0),
+              answer.getArgument(1),
+              spyClient.getAbfsConfiguration());
+          AbfsRestOperation spiedOp = Mockito.spy(op);
+          addSpyBehavior(spiedOp, op, spyClient);
+          return spiedOp;
+        })
+        .when(spyClient)
+        .createRenameRestOperation(Mockito.any(URL.class), anyList());
+
+    Mockito.doCallRealMethod()
+        .when(spyClient)
+        .getPathStatus(anyString(), anyBoolean(),
+            Mockito.any(TracingContext.class),
+            Mockito.any(ContextEncryptionAdapter.class));
 
     return spyClient;
 
@@ -188,12 +206,10 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     AbfsHttpOperation normalOp1 = normalRestOp.createHttpOperation();
     executeThenFail(client, normalRestOp, failingOperation, normalOp1);
     AbfsHttpOperation normalOp2 = normalRestOp.createHttpOperation();
-    normalOp2.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+    normalOp2.setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
             client.getAccessToken());
 
-    when(spiedRestOp.createHttpOperation())
-            .thenReturn(failingOperation)
-            .thenReturn(normalOp2);
+    Mockito.doReturn(failingOperation).doReturn(normalOp2).when(spiedRestOp).createHttpOperation();
   }
 
   /**
@@ -216,14 +232,14 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
       final int offset = answer.getArgument(1);
       final int length = answer.getArgument(2);
       normalRestOp.signRequest(normalOp, length);
-      normalOp.sendRequest(buffer, offset, length);
+      normalOp.sendPayload(buffer, offset, length);
       normalOp.processResponse(buffer, offset, length);
       LOG.info("Actual outcome is {} \"{}\" \"{}\"; injecting failure",
           normalOp.getStatusCode(),
           normalOp.getStorageErrorCode(),
           normalOp.getStorageErrorMessage());
       throw new SocketException("connection-reset");
-    }).when(failingOperation).sendRequest(Mockito.nullable(byte[].class),
+    }).when(failingOperation).sendPayload(Mockito.nullable(byte[].class),
         Mockito.nullable(int.class), Mockito.nullable(int.class));
 
   }
@@ -236,8 +252,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
-
-    Assume.assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
+    assumeThat(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext)).isTrue();
 
     AbfsClient mockClient = getMockAbfsClient();
 
@@ -264,9 +279,14 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // 4 calls should have happened in total for rename
     // 1 -> original rename rest call, 2 -> first retry,
     // +2 for getPathStatus calls
+    int totalConnections = 4;
+    if (!getConfiguration().getIsClientTransactionIdEnabled()) {
+      // 1 additional getPathStatus call to get dest etag
+      totalConnections++;
+    }
     assertThatStatisticCounter(ioStats,
             CONNECTIONS_MADE.getStatName())
-            .isEqualTo(4 + connMadeBeforeRename);
+            .isEqualTo(totalConnections + connMadeBeforeRename);
     // the RENAME_PATH_ATTEMPTS stat should be incremented by 1
     // retries happen internally within AbfsRestOperation execute()
     // the stat for RENAME_PATH_ATTEMPTS is updated only once before execute() is called
@@ -289,8 +309,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
-    Assume.assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
-
+    assumeThat(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext)).isTrue();
     AbfsClient mockClient = getMockAbfsClient();
 
     String base = "/" + getMethodName();
@@ -312,7 +331,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
-    Assume.assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
+    assumeThat(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext)).isTrue();
 
     AbfsClient mockClient = getMockAbfsClient();
 
@@ -334,17 +353,23 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     Long renamePathAttemptsBeforeRename = lookupCounterStatistic(ioStats, RENAME_PATH_ATTEMPTS.getStatName());
 
     // source eTag does not match -> rename should be a failure
+    int newConnections;
     boolean renameResult = fs.rename(path1, path2);
-    assertEquals(false, renameResult);
+    if (getConfiguration().getIsClientTransactionIdEnabled()) {
+      // Recovery based on client transaction id should be successful
+      assertTrue(renameResult);
+    } else {
+      assertFalse(renameResult);
+    }
 
     // validating stat counters after rename
-    // 3 calls should have happened in total for rename
+    // 4 calls should have happened in total for rename
     // 1 -> original rename rest call, 2 -> first retry,
     // +1 for getPathStatus calls
     // last getPathStatus call should be skipped
     assertThatStatisticCounter(ioStats,
             CONNECTIONS_MADE.getStatName())
-            .isEqualTo(3 + connMadeBeforeRename);
+            .isEqualTo(4 + connMadeBeforeRename);
 
     // the RENAME_PATH_ATTEMPTS stat should be incremented by 1
     // retries happen internally within AbfsRestOperation execute()
@@ -375,7 +400,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
-    Assume.assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
+    assumeThat(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext)).isTrue();
 
     AbfsClient spyClient = getMockAbfsClient();
 
@@ -385,10 +410,16 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     fs.mkdirs(new Path(path1));
 
-    // source eTag does not match -> throw exception
-    expectErrorCode(SOURCE_PATH_NOT_FOUND, intercept(AbfsRestOperationException.class, () ->
-            spyClient.renamePath(path1, path2, null, testTracingContext, null, false,
-                    isNamespaceEnabled)));
+    if (getConfiguration().getIsClientTransactionIdEnabled()) {
+      // Recovery based on client transaction id should be successful
+      assertTrue(fs.rename(new Path(path1), new Path(path2)));
+    } else {
+      // source eTag does not match -> throw exception
+      expectErrorCode(SOURCE_PATH_NOT_FOUND, intercept(AbfsRestOperationException.class, () ->
+          spyClient.renamePath(path1, path2, null,
+              testTracingContext, null,
+              false)));
+    }
   }
 
   /**
@@ -399,7 +430,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
-    Assume.assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
+    assumeThat(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext)).isTrue();
 
     AbfsClient spyClient = getMockAbfsClient();
 
@@ -413,8 +444,9 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     // source eTag does not match -> throw exception
     expectErrorCode(PATH_ALREADY_EXISTS, intercept(AbfsRestOperationException.class, () ->
-            spyClient.renamePath(path1, path2, null, testTracingContext, null, false,
-                    isNamespaceEnabled)));
+            spyClient.renamePath(path1, path2, null,
+                testTracingContext, null,
+                false)));
   }
 
   /**
@@ -423,7 +455,10 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testRenameRecoveryUnsupportedForFlatNamespace() throws Exception {
-    Assume.assumeTrue(!isNamespaceEnabled);
+    // In DFS endpoint, renamePath is O(1) API call and idempotency issue can happen.
+    // For blob endpoint, client orchestrates the rename operation.
+    assumeDfsServiceType();
+    assumeHnsDisabled();
     AzureBlobFileSystem fs = getFileSystem();
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
@@ -446,8 +481,9 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     Long renamePathAttemptsBeforeRename = lookupCounterStatistic(ioStats, RENAME_PATH_ATTEMPTS.getStatName());
 
     expectErrorCode(SOURCE_PATH_NOT_FOUND, intercept(AbfsRestOperationException.class, () ->
-            mockClient.renamePath(path1, path2, null, testTracingContext, null, false,
-                    isNamespaceEnabled)));
+            mockClient.renamePath(path1, path2, null,
+                testTracingContext, null,
+                false)));
 
     // validating stat counters after rename
 
@@ -477,7 +513,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
     final AzureBlobFileSystemStore store = fs.getAbfsStore();
-    Assume.assumeTrue(store.getIsNamespaceEnabled(testTracingContext));
+    assumeThat(store.getIsNamespaceEnabled(testTracingContext)).isTrue();
 
     // patch in the mock abfs client to the filesystem, for the resilient
     // commit API to pick up.
@@ -509,7 +545,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
     final AzureBlobFileSystemStore store = fs.getAbfsStore();
-    Assume.assumeTrue(store.getIsNamespaceEnabled(testTracingContext));
+    assumeThat(store.getIsNamespaceEnabled(testTracingContext)).isTrue();
 
     // patch in the mock abfs client to the filesystem, for the resilient
     // commit API to pick up.
@@ -522,11 +558,20 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     final Path source = new Path(path1);
     touch(source);
-    final String sourceTag = ((EtagSource) fs.getFileStatus(source)).getEtag();
 
     final ResilientCommitByRename commit = fs.createResilientCommitSupport(source);
-    intercept(FileNotFoundException.class, () ->
-        commit.commitSingleFileByRename(source, new Path(path2), "not the right tag"));
+    // When client transaction ID is enabled, the commit should succeed.
+    if (getConfiguration().getIsClientTransactionIdEnabled()) {
+      Pair<Boolean, Duration> response = commit.commitSingleFileByRename(source, new Path(path2),
+          "not the right tag");
+      Assertions.assertThat(response.getKey())
+          .describedAs("Recovery using client transaction ID")
+          .isTrue();
+    } else {
+      intercept(FileNotFoundException.class, () ->
+          commit.commitSingleFileByRename(source, new Path(path2),
+              "not the right tag"));
+    }
   }
 
   /**

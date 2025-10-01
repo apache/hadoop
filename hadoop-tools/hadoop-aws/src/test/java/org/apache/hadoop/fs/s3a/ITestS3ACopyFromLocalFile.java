@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -28,11 +29,12 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.apache.hadoop.fs.s3a.Constants.OPTIMIZED_COPY_FROM_LOCAL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
@@ -45,13 +47,14 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * Parameterized on whether or not the optimized
  * copyFromLocalFile is enabled.
  */
-@RunWith(Parameterized.class)
+@IntegrationTest
+@ParameterizedClass(name="optimized-{0}")
+@MethodSource("params")
 public class ITestS3ACopyFromLocalFile extends
         AbstractContractCopyFromLocalTest {
   /**
    * Parameterization.
    */
-  @Parameterized.Parameters(name = "enabled={0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {true},
@@ -106,5 +109,16 @@ public class ITestS3ACopyFromLocalFile extends
 
     intercept(IllegalArgumentException.class,
         () -> getFileSystem().copyFromLocalFile(true, true, dest, dest));
+  }
+
+  @Test
+  public void testCopyFromLocalWithNoFileScheme() throws IOException {
+    describe("Copying from local file with no file scheme to remote s3 destination");
+    File source = createTempFile("tempData");
+    Path dest = path(getMethodName());
+
+    Path sourcePathWithOutScheme = new Path(source.toURI().getPath());
+    assertNull(sourcePathWithOutScheme.toUri().getScheme());
+    getFileSystem().copyFromLocalFile(true, true, sourcePathWithOutScheme, dest);
   }
 }

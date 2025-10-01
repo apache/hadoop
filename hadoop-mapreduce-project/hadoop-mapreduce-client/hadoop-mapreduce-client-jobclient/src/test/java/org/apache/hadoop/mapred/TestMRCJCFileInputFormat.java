@@ -26,16 +26,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -94,8 +94,8 @@ public class TestMRCJCFileInputFormat {
                   blockLocs[0].equals(splitLocs[1])));
     }
 
-    assertEquals("Expected value of " + FileInputFormat.NUM_INPUT_FILES,
-                 1, job.getLong(FileInputFormat.NUM_INPUT_FILES, 0));
+    assertEquals(1, job.getLong(FileInputFormat.NUM_INPUT_FILES, 0),
+        "Expected value of " + FileInputFormat.NUM_INPUT_FILES);
   }
 
   private void createInputs(FileSystem fs, Path inDir, String fileName)
@@ -135,8 +135,8 @@ public class TestMRCJCFileInputFormat {
     inFormat.configure(job);
     InputSplit[] splits = inFormat.getSplits(job, 1);
 
-    assertEquals("Expected value of " + FileInputFormat.NUM_INPUT_FILES,
-                 numFiles, job.getLong(FileInputFormat.NUM_INPUT_FILES, 0));
+    assertEquals(numFiles, job.getLong(FileInputFormat.NUM_INPUT_FILES, 0),
+        "Expected value of " + FileInputFormat.NUM_INPUT_FILES);
   }
   
   final Path root = new Path("/TestFileInputFormat");
@@ -191,8 +191,8 @@ public class TestMRCJCFileInputFormat {
     } catch (Exception e) {
       exceptionThrown = true;
     }
-    assertTrue("Exception should be thrown by default for scanning a "
-        + "directory with directories inside.", exceptionThrown);
+    assertTrue(exceptionThrown, "Exception should be thrown by default for scanning a "
+        + "directory with directories inside.");
 
     // Enable multi-level/recursive inputs
     job.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, true);
@@ -314,7 +314,7 @@ public class TestMRCJCFileInputFormat {
     DFSTestUtil.waitReplication(fileSys, name, replication);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (dfs != null) {
       dfs.shutdown();

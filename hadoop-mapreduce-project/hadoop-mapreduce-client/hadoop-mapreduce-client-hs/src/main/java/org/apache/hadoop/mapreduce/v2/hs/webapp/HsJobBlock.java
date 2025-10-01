@@ -109,7 +109,7 @@ public class HsJobBlock extends HtmlBlock {
     // todo - switch to use JobInfo
     List<String> diagnostics = j.getDiagnostics();
     if(diagnostics != null && !diagnostics.isEmpty()) {
-      StringBuffer b = new StringBuffer();
+      StringBuilder b = new StringBuilder();
       for(String diag: diagnostics) {
         b.append(addTaskLinks(diag));
       }

@@ -39,13 +39,14 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
@@ -67,12 +68,12 @@ public class TestNodeHealthCheckerService {
   private File nodeHealthScriptFile = new File(TEST_ROOT_DIR,
       Shell.appendScriptExtension("failingscript"));
 
-  @Before
+  @BeforeEach
   public void setup() {
     TEST_ROOT_DIR.mkdirs();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (TEST_ROOT_DIR.exists()) {
       FileContext.getLocalFSFileContext().delete(
@@ -151,10 +152,10 @@ public class TestNodeHealthCheckerService {
         nodeHealthChecker.getLastHealthReportTime());
     LOG.info("Checking initial healthy condition");
     // Check proper report conditions.
-    Assert.assertTrue("Node health status reported unhealthy", healthStatus
-        .getIsNodeHealthy());
-    Assert.assertTrue("Node health status reported unhealthy", healthStatus
-        .getHealthReport().equals(nodeHealthChecker.getHealthReport()));
+    assertTrue(healthStatus
+        .getIsNodeHealthy(), "Node health status reported unhealthy");
+    assertTrue(healthStatus.getHealthReport().equals(nodeHealthChecker.getHealthReport()),
+        "Node health status reported unhealthy");
 
     doReturn(false).when(nodeHealthScriptRunner).isHealthy();
     // update health status
@@ -162,10 +163,11 @@ public class TestNodeHealthCheckerService {
         nodeHealthChecker.getHealthReport(),
         nodeHealthChecker.getLastHealthReportTime());
     LOG.info("Checking Healthy--->Unhealthy");
-    Assert.assertFalse("Node health status reported healthy", healthStatus
-        .getIsNodeHealthy());
-    Assert.assertTrue("Node health status reported healthy", healthStatus
-        .getHealthReport().equals(nodeHealthChecker.getHealthReport()));
+    assertFalse(healthStatus
+        .getIsNodeHealthy(), "Node health status reported healthy");
+    assertTrue(healthStatus
+        .getHealthReport().equals(nodeHealthChecker.getHealthReport()),
+        "Node health status reported healthy");
 
     doReturn(true).when(nodeHealthScriptRunner).isHealthy();
     setHealthStatus(healthStatus, nodeHealthChecker.isHealthy(),
@@ -173,10 +175,10 @@ public class TestNodeHealthCheckerService {
         nodeHealthChecker.getLastHealthReportTime());
     LOG.info("Checking UnHealthy--->healthy");
     // Check proper report conditions.
-    Assert.assertTrue("Node health status reported unhealthy", healthStatus
-        .getIsNodeHealthy());
-    Assert.assertTrue("Node health status reported unhealthy", healthStatus
-        .getHealthReport().equals(nodeHealthChecker.getHealthReport()));
+    assertTrue(healthStatus
+        .getIsNodeHealthy(), "Node health status reported unhealthy");
+    assertTrue(healthStatus.getHealthReport().equals(nodeHealthChecker.getHealthReport()),
+        "Node health status reported unhealthy");
 
     // Healthy to timeout transition.
     doReturn(false).when(nodeHealthScriptRunner).isHealthy();
@@ -186,16 +188,15 @@ public class TestNodeHealthCheckerService {
         nodeHealthChecker.getHealthReport(),
         nodeHealthChecker.getLastHealthReportTime());
     LOG.info("Checking Healthy--->timeout");
-    Assert.assertFalse("Node health status reported healthy even after timeout",
-        healthStatus.getIsNodeHealthy());
-    Assert.assertTrue("Node script time out message not propagated",
-        healthStatus.getHealthReport().equals(
-            Joiner.on(NodeHealthCheckerService.SEPARATOR).skipNulls().join(
-                NodeHealthScriptRunner.NODE_HEALTH_SCRIPT_TIMED_OUT_MSG,
-                Strings.emptyToNull(
-                    nodeHealthChecker.getDiskHandler()
-                        .getDisksHealthReport(false))
-            )));
+    assertFalse(healthStatus.getIsNodeHealthy(),
+        "Node health status reported healthy even after timeout");
+    assertTrue(healthStatus.getHealthReport().equals(
+        Joiner.on(NodeHealthCheckerService.SEPARATOR).skipNulls().join(
+            NodeHealthScriptRunner.NODE_HEALTH_SCRIPT_TIMED_OUT_MSG,
+            Strings.emptyToNull(
+                nodeHealthChecker.getDiskHandler()
+                    .getDisksHealthReport(false))
+        )), "Node script time out message not propagated");
   }
 
   private abstract class HealthReporterService extends AbstractService

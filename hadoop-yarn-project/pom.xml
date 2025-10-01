@@ -129,6 +129,12 @@
       <artifactId>hadoop-yarn-csi</artifactId>
       <version>${project.version}</version>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>animal-sniffer-annotations</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -148,6 +154,11 @@
       <version>${project.version}</version>
       <type>${yarn.ui.packaging}</type>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-timelineservice-hbase-server-2</artifactId>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
 
@@ -187,26 +198,6 @@
       <properties>
         <yarn.ui.packaging>war</yarn.ui.packaging>
       </properties>
-    </profile>
-    <profile>
-      <id>hbase1</id>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-yarn-server-timelineservice-hbase-server-1</artifactId>
-          <version>${project.version}</version>
-        </dependency>
-      </dependencies>
-    </profile>
-    <profile>
-      <id>hbase2</id>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-yarn-server-timelineservice-hbase-server-2</artifactId>
-          <version>${project.version}</version>
-        </dependency>
-      </dependencies>
     </profile>
     <profile>
       <id>dist</id>

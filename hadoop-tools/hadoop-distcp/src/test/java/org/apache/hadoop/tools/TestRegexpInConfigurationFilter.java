@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.tools;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test {@link RegexpInConfigurationFilter}.
@@ -40,16 +40,16 @@ public class TestRegexpInConfigurationFilter {
     RegexpInConfigurationFilter defaultCopyFilter =
             new RegexpInConfigurationFilter(configuration);
     Path shouldCopyPath = new Path("/user/bar");
-    assertTrue(shouldCopyPath.toString() + " should be copied",
-            defaultCopyFilter.shouldCopy(shouldCopyPath));
+    assertTrue(defaultCopyFilter.shouldCopy(shouldCopyPath),
+        shouldCopyPath.toString() + " should be copied");
     shouldCopyPath = new Path("/user/bar/_COPYING");
-    assertFalse(shouldCopyPath.toString() + " shouldn't be copied",
-            defaultCopyFilter.shouldCopy(shouldCopyPath));
+    assertFalse(defaultCopyFilter.shouldCopy(shouldCopyPath),
+        shouldCopyPath.toString() + " shouldn't be copied");
     shouldCopyPath = new Path("/user/bar/_COPYING_");
-    assertFalse(shouldCopyPath.toString() + " shouldn't be copied",
-            defaultCopyFilter.shouldCopy(shouldCopyPath));
+    assertFalse(defaultCopyFilter.shouldCopy(shouldCopyPath),
+        shouldCopyPath.toString() + " shouldn't be copied");
     shouldCopyPath = new Path("/temp/");
-    assertTrue(shouldCopyPath.toString() + " should be copied",
-            defaultCopyFilter.shouldCopy(shouldCopyPath));
+    assertTrue(defaultCopyFilter.shouldCopy(shouldCopyPath),
+        shouldCopyPath.toString() + " should be copied");
   }
 }

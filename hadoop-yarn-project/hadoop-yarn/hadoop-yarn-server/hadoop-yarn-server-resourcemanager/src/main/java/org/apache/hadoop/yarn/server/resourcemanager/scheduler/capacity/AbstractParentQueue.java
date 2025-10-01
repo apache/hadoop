@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.LockSupport;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
@@ -550,6 +551,15 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
   public boolean isEligibleForAutoQueueCreation() {
     return isDynamicQueue() || queueContext.getConfiguration().
         isAutoQueueCreationV2Enabled(getQueuePathObject());
+  }
+  /**
+   * Check whether this queue supports legacy(v1) dynamic child queue creation.
+   * @return true if queue is eligible to create child queues dynamically using
+   * the legacy system, false otherwise
+   */
+  public boolean isEligibleForLegacyAutoQueueCreation() {
+    return isDynamicQueue() || queueContext.getConfiguration().
+        isAutoCreateChildQueueEnabled(getQueuePathObject());
   }
 
   @Override
@@ -1345,6 +1355,18 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
       readLock.unlock();
     }
 
+  }
+
+  @Override
+  public List<CSQueue> getChildQueuesByTryLock() {
+    try {
+      while (!readLock.tryLock()){
+        LockSupport.parkNanos(10000);
+      }
+      return new ArrayList<>(childQueues);
+    } finally {
+      readLock.unlock();
+    }
   }
 
   @Override

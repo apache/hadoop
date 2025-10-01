@@ -18,14 +18,15 @@
 
 package org.apache.hadoop.fs.obs;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DelegateToFileSystem;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextMainOperationsBaseTest;
 import org.apache.hadoop.fs.FileSystem;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 
@@ -35,9 +36,9 @@ import java.net.URI;
 public class TestOBSFileContextMainOperations extends
     FileContextMainOperationsBaseTest {
 
-  @BeforeClass
+  @BeforeAll
   public static void skipTestCheck() {
-    Assume.assumeTrue(OBSContract.isContractTestEnabled());
+    assumeTrue(OBSContract.isContractTestEnabled());
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
@@ -67,11 +68,11 @@ public class TestOBSFileContextMainOperations extends
   @Override
   @Test
   public void testSetVerifyChecksum() {
-    Assume.assumeTrue("unsupport.", false);
+    assumeTrue(false, "unsupport.");
   }
 
   @Override
   public void testMkdirsFailsForSubdirectoryOfExistingFile() {
-    Assume.assumeTrue("unsupport.", false);
+    assumeTrue(false, "unsupport.");
   }
 }

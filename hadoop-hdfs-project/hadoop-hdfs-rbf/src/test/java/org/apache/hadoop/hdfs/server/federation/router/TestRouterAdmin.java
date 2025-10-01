@@ -19,12 +19,13 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createNamenodeReport;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.synchronizeRecords;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.HashMap;
@@ -63,31 +64,31 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.mockito.internal.util.reflection.FieldSetter;
 
 /**
  * The administrator interface of the {@link Router} implemented by
  * {@link RouterAdminServer}.
  */
+@SuppressWarnings("checkstyle:visibilitymodifier")
 public class TestRouterAdmin {
 
-  private static StateStoreDFSCluster cluster;
-  private static RouterContext routerContext;
+  protected static StateStoreDFSCluster cluster;
+  protected static RouterContext routerContext;
   public static final String RPC_BEAN =
       "Hadoop:service=Router,name=FederationRPC";
-  private static List<MountTable> mockMountTable;
-  private static StateStoreService stateStore;
-  private static RouterRpcClient mockRpcClient;
+  protected static List<MountTable> mockMountTable;
+  protected static StateStoreService stateStore;
+  protected static RouterRpcClient mockRpcClient;
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     cluster = new StateStoreDFSCluster(false, 1);
-    // Build and start a router with State Store + admin + RPC
+    // Build and start a router with State Store + admin + RPC.
     Configuration conf = new RouterConfigBuilder()
         .stateStore()
         .admin()
@@ -101,7 +102,7 @@ public class TestRouterAdmin {
     Router router = routerContext.getRouter();
     stateStore = router.getStateStore();
 
-    // Add two name services for testing disabling
+    // Add two name services for testing disabling.
     ActiveNamenodeResolver membership = router.getNamenodeResolver();
     membership.registerNamenode(
         createNamenodeReport("ns0", "nn1", HAServiceState.ACTIVE));
@@ -118,18 +119,25 @@ public class TestRouterAdmin {
    * @throws IOException
    * @throws NoSuchFieldException
    */
-  private static void setUpMocks() throws IOException, NoSuchFieldException {
+  public static void setField(Object target, String fieldName, Object value)
+      throws NoSuchFieldException, IllegalAccessException {
+    Field field = target.getClass().getDeclaredField(fieldName);
+    field.setAccessible(true);
+    field.set(target, value);
+  }
+
+  private static void setUpMocks()
+      throws IOException, NoSuchFieldException, IllegalAccessException {
     RouterRpcServer spyRpcServer =
         Mockito.spy(routerContext.getRouter().createRpcServer());
-    FieldSetter.setField(routerContext.getRouter(),
-        Router.class.getDeclaredField("rpcServer"), spyRpcServer);
+    // Used reflection to set the 'rpcServer field'.
+    setField(routerContext.getRouter(), "rpcServer", spyRpcServer);
     Mockito.doReturn(null).when(spyRpcServer).getFileInfo(Mockito.anyString());
 
-    // mock rpc client for destination check when editing mount tables.
+    // Mock rpc client for destination check when editing mount tables.
+    // Spy RPC client and used reflection to set the 'rpcClient' field.
     mockRpcClient = Mockito.spy(spyRpcServer.getRPCClient());
-    FieldSetter.setField(spyRpcServer,
-        RouterRpcServer.class.getDeclaredField("rpcClient"),
-        mockRpcClient);
+    setField(spyRpcServer, "rpcClient", mockRpcClient);
     RemoteLocation remoteLocation0 =
         new RemoteLocation("ns0", "/testdir", null);
     RemoteLocation remoteLocation1 =
@@ -156,16 +164,16 @@ public class TestRouterAdmin {
     );
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     cluster.stopRouter(routerContext);
   }
 
-  @Before
+  @BeforeEach
   public void testSetup() throws Exception {
     assertTrue(
         synchronizeRecords(stateStore, mockMountTable, MountTable.class));
-    // Avoid running with random users
+    // Avoid running with random users.
     routerContext.resetAdminClient();
   }
 
@@ -178,18 +186,18 @@ public class TestRouterAdmin {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTable = client.getMountTableManager();
 
-    // Existing mount table size
+    // Existing mount table size.
     List<MountTable> records = getMountTableEntries(mountTable);
     assertEquals(records.size(), mockMountTable.size());
 
-    // Add
+    // Add.
     AddMountTableEntryRequest addRequest =
         AddMountTableEntryRequest.newInstance(newEntry);
     AddMountTableEntryResponse addResponse =
         mountTable.addMountTableEntry(addRequest);
     assertTrue(addResponse.getStatus());
 
-    // New mount table size
+    // New mount table size.
     List<MountTable> records2 = getMountTableEntries(mountTable);
     assertEquals(records2.size(), mockMountTable.size() + 1);
   }
@@ -202,22 +210,22 @@ public class TestRouterAdmin {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTable = client.getMountTableManager();
 
-    // Existing mount table size
+    // Existing mount table size.
     List<MountTable> entries1 = getMountTableEntries(mountTable);
     assertEquals(entries1.size(), mockMountTable.size());
 
-    // Add
+    // Add.
     AddMountTableEntryRequest addRequest =
         AddMountTableEntryRequest.newInstance(newEntry);
     AddMountTableEntryResponse addResponse =
         mountTable.addMountTableEntry(addRequest);
     assertTrue(addResponse.getStatus());
 
-    // New mount table size
+    // New mount table size.
     List<MountTable> entries2 = getMountTableEntries(mountTable);
     assertEquals(entries2.size(), mockMountTable.size() + 1);
 
-    // Add again, should fail
+    // Add again, should fail.
     AddMountTableEntryResponse addResponse2 =
         mountTable.addMountTableEntry(addRequest);
     assertFalse(addResponse2.getStatus());
@@ -233,27 +241,27 @@ public class TestRouterAdmin {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTable = client.getMountTableManager();
 
-    // Existing mount table size
+    // Existing mount table size.
     List<MountTable> records = getMountTableEntries(mountTable);
     assertEquals(records.size(), mockMountTable.size());
 
-    // Add
+    // Add.
     AddMountTableEntryRequest addRequest =
         AddMountTableEntryRequest.newInstance(newEntry);
     AddMountTableEntryResponse addResponse =
         mountTable.addMountTableEntry(addRequest);
     assertTrue(addResponse.getStatus());
 
-    // New mount table size
+    // New mount table size.
     List<MountTable> records2 = getMountTableEntries(mountTable);
     assertEquals(records2.size(), mockMountTable.size() + 1);
 
-    // Check that we have the read only entry
+    // Check that we have the read only entry.
     MountTable record = getMountTableEntry("/readonly");
     assertEquals("/readonly", record.getSourcePath());
     assertTrue(record.isReadOnly());
 
-    // Removing the new entry
+    // Removing the new entry.
     RemoveMountTableEntryRequest removeRequest =
         RemoveMountTableEntryRequest.newInstance("/readonly");
     RemoveMountTableEntryResponse removeResponse =
@@ -280,19 +288,19 @@ public class TestRouterAdmin {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTable = client.getMountTableManager();
 
-    // Add
+    // Add.
     AddMountTableEntryRequest addRequest;
     AddMountTableEntryResponse addResponse;
     addRequest = AddMountTableEntryRequest.newInstance(newEntry);
     addResponse = mountTable.addMountTableEntry(addRequest);
     assertTrue(addResponse.getStatus());
 
-    // Check that we have the read only entry
+    // Check that we have the read only entry.
     MountTable record = getMountTableEntry(mnt);
     assertEquals(mnt, record.getSourcePath());
     assertEquals(order, record.getDestOrder());
 
-    // Removing the new entry
+    // Removing the new entry.
     RemoveMountTableEntryRequest removeRequest =
         RemoveMountTableEntryRequest.newInstance(mnt);
     RemoveMountTableEntryResponse removeResponse =
@@ -306,16 +314,16 @@ public class TestRouterAdmin {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTable = client.getMountTableManager();
 
-    // Existing mount table size
+    // Existing mount table size.
     List<MountTable> entries1 = getMountTableEntries(mountTable);
     assertEquals(entries1.size(), mockMountTable.size());
 
-    // Remove an entry
+    // Remove an entry.
     RemoveMountTableEntryRequest removeRequest =
         RemoveMountTableEntryRequest.newInstance("/");
     mountTable.removeMountTableEntry(removeRequest);
 
-    // New mount table size
+    // New mount table size.
     List<MountTable> entries2 = getMountTableEntries(mountTable);
     assertEquals(entries2.size(), mockMountTable.size() - 1);
   }
@@ -326,7 +334,7 @@ public class TestRouterAdmin {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTable = client.getMountTableManager();
 
-    // Verify starting condition
+    // Verify starting condition.
     MountTable entry = getMountTableEntry("/");
     assertEquals(
         Collections.singletonList(new RemoteLocation("ns0", "/", "/")),
@@ -339,7 +347,7 @@ public class TestRouterAdmin {
         UpdateMountTableEntryRequest.newInstance(updatedEntry);
     mountTable.updateMountTableEntry(updateRequest);
 
-    // Verify edited condition
+    // Verify edited condition.
     entry = getMountTableEntry("/");
     assertEquals(
         Collections.singletonList(new RemoteLocation("ns1", "/", "/")),
@@ -352,11 +360,11 @@ public class TestRouterAdmin {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTable = client.getMountTableManager();
 
-    // Verify size of table
+    // Verify size of table.
     List<MountTable> entries = getMountTableEntries(mountTable);
     assertEquals(mockMountTable.size(), entries.size());
 
-    // Verify all entries are present
+    // Verify all entries are present.
     int matches = 0;
     for (MountTable e : entries) {
       for (MountTable entry : mockMountTable) {
@@ -380,7 +388,7 @@ public class TestRouterAdmin {
 
   @Test
   public void testVerifyFileInDestinations() throws IOException {
-    // this entry has been created in the mock setup
+    // This entry has been created in the mock setup.
     MountTable newEntry = MountTable.newInstance(
         "/testpath", Collections.singletonMap("ns0", "/testdir"),
         Time.now(), Time.now());
@@ -389,7 +397,7 @@ public class TestRouterAdmin {
     List<String> result = adminServer.verifyFileInDestinations(newEntry);
     assertEquals(0, result.size());
 
-    // this entry was not created in the mock
+    // This entry was not created in the mock.
     newEntry = MountTable.newInstance(
         "/testpath", Collections.singletonMap("ns0", "/testdir1"),
         Time.now(), Time.now());
@@ -406,7 +414,7 @@ public class TestRouterAdmin {
    * @throws IOException If the state store could not be accessed.
    */
   private MountTable getMountTableEntry(final String mount) throws IOException {
-    // Refresh the cache
+    // Refresh the cache.
     stateStore.loadCache(MountTableStoreImpl.class, true);
 
     GetMountTableEntriesRequest request =
@@ -415,7 +423,7 @@ public class TestRouterAdmin {
     MountTableManager mountTable = client.getMountTableManager();
     List<MountTable> results = getMountTableEntries(mountTable, request);
     if (results.size() > 0) {
-      // First result is sorted to have the shortest mount string length
+      // First result is sorted to have the shortest mount string length.
       return results.get(0);
     }
     return null;
@@ -442,22 +450,22 @@ public class TestRouterAdmin {
     RouterClient client = routerContext.getAdminClient();
     NameserviceManager nsManager = client.getNameserviceManager();
 
-    // There shouldn't be any name service disabled
+    // There shouldn't be any name service disabled.
     Set<String> disabled = getDisabledNameservices(nsManager);
     assertTrue(disabled.isEmpty());
 
-    // Disable one and see it
+    // Disable one and see it.
     DisableNameserviceRequest disableReq =
         DisableNameserviceRequest.newInstance("ns0");
     DisableNameserviceResponse disableResp =
         nsManager.disableNameservice(disableReq);
     assertTrue(disableResp.getStatus());
-    // Refresh the cache
+    // Refresh the cache.
     disabled = getDisabledNameservices(nsManager);
     assertEquals(1, disabled.size());
     assertTrue(disabled.contains("ns0"));
 
-    // Enable one and we should have no disabled name services
+    // Enable one and we should have no disabled name services.
     EnableNameserviceRequest enableReq =
         EnableNameserviceRequest.newInstance("ns0");
     EnableNameserviceResponse enableResp =
@@ -466,7 +474,7 @@ public class TestRouterAdmin {
     disabled = getDisabledNameservices(nsManager);
     assertTrue(disabled.isEmpty());
 
-    // Non existing name services should fail
+    // Non existing name services should fail.
     disableReq = DisableNameserviceRequest.newInstance("nsunknown");
     disableResp = nsManager.disableNameservice(disableReq);
     assertFalse(disableResp.getStatus());
@@ -496,7 +504,7 @@ public class TestRouterAdmin {
 
   @Test
   public void testNameserviceManagerWithRules() throws Exception{
-    // Try to disable a name service with a kerberos principal name
+    // Try to disable a name service with a kerberos principal name.
     String username = RouterAdminServer.getSuperUser() + "@Example.com";
     DisableNameserviceResponse disableResp =
         testNameserviceManagerUser(username);

@@ -24,6 +24,8 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
@@ -61,9 +63,16 @@ public class ContainerLogsInfo {
 
   public ContainerLogsInfo(ContainerLogMeta logMeta,
       ContainerLogAggregationType logType) {
-    this.containerLogsInfo = new ArrayList<ContainerLogFileInfo>(
-        logMeta.getContainerLogMeta());
+    this.containerLogsInfo = new ArrayList<>(logMeta.getContainerLogMeta());
     this.logType = logType.toString();
+    this.containerId = logMeta.getContainerId();
+    this.nodeId = logMeta.getNodeId();
+  }
+
+  @VisibleForTesting
+  public ContainerLogsInfo(ContainerLogMeta logMeta, String logType) {
+    this.containerLogsInfo = new ArrayList<>(logMeta.getContainerLogMeta());
+    this.logType = logType;
     this.containerId = logMeta.getContainerId();
     this.nodeId = logMeta.getNodeId();
   }
@@ -82,5 +91,21 @@ public class ContainerLogsInfo {
 
   public String getNodeId() {
     return this.nodeId;
+  }
+
+  public void setContainerLogsInfo(List<ContainerLogFileInfo> containerLogsInfo) {
+    this.containerLogsInfo = containerLogsInfo;
+  }
+
+  public void setLogType(String logType) {
+    this.logType = logType;
+  }
+
+  public void setContainerId(String containerId) {
+    this.containerId = containerId;
+  }
+
+  public void setNodeId(String nodeId) {
+    this.nodeId = nodeId;
   }
 }

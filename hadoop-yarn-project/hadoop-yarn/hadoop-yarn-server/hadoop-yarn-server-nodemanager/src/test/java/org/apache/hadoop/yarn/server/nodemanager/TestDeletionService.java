@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,8 +36,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 
@@ -54,7 +55,7 @@ public class TestDeletionService {
   private static final Path base =
     lfs.makeQualified(new Path("target", TestDeletionService.class.getName()));
 
-  @AfterClass
+  @AfterAll
   public static void removeBase() throws IOException {
     lfs.delete(base, true);
   }
@@ -234,7 +235,8 @@ public class TestDeletionService {
     assertTrue(del.isTerminated());
   }
   
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testFileDeletionTaskDependency() throws Exception {
     FakeDefaultContainerExecutor exec = new FakeDefaultContainerExecutor();
     Configuration conf = new Configuration();

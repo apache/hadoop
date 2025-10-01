@@ -21,6 +21,9 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 import java.io.IOException;
 import java.util.Objects;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -50,6 +53,9 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Man
  * Isolated for ease of dev/test
  */
 public final class ManifestCommitterConfig implements IOStatisticsSource {
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      ManifestCommitterConfig.class);
 
   /**
    * Final destination of work.
@@ -154,6 +160,12 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
   private final int writerQueueCapacity;
 
   /**
+   * How many attempts to save a task manifest by save and rename
+   * before giving up.
+   */
+  private final int saveManifestAttempts;
+
+  /**
    * Constructor.
    * @param outputPath destination path of the job.
    * @param role role for log messages.
@@ -198,6 +210,14 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
     this.writerQueueCapacity = conf.getInt(
         OPT_WRITER_QUEUE_CAPACITY,
         DEFAULT_WRITER_QUEUE_CAPACITY);
+    int attempts = conf.getInt(OPT_MANIFEST_SAVE_ATTEMPTS,
+        OPT_MANIFEST_SAVE_ATTEMPTS_DEFAULT);
+    if (attempts < 1) {
+      LOG.warn("Invalid value for {}: {}",
+          OPT_MANIFEST_SAVE_ATTEMPTS, attempts);
+      attempts = 1;
+    }
+    this.saveManifestAttempts = attempts;
 
     // if constructed with a task attempt, build the task ID and path.
     if (context instanceof TaskAttemptContext) {
@@ -330,6 +350,10 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
 
   public String getName() {
     return name;
+  }
+
+  public int getSaveManifestAttempts() {
+    return saveManifestAttempts;
   }
 
   /**

@@ -21,8 +21,8 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.util.Map;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
@@ -42,7 +42,7 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
   public ITestAbfsStatistics() throws Exception {
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setup();
     // Setting IOStats to INFO level, to see the IOStats after close().
@@ -99,7 +99,6 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     getFileStatus is called 1 time after creating file and 1 time at time of
     initialising.
      */
-    assertAbfsStatistics(AbfsStatistic.CALL_CREATE, 1, metricMap);
     assertAbfsStatistics(AbfsStatistic.CALL_CREATE_NON_RECURSIVE, 1, metricMap);
     assertAbfsStatistics(AbfsStatistic.FILES_CREATED, 1, metricMap);
     assertAbfsStatistics(AbfsStatistic.DIRECTORIES_CREATED, 1, metricMap);
@@ -126,7 +125,6 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     getFileStatus is called 1 time at initialise() plus number of times file
     is created.
      */
-    assertAbfsStatistics(AbfsStatistic.CALL_CREATE, NUMBER_OF_OPS, metricMap);
     assertAbfsStatistics(AbfsStatistic.CALL_CREATE_NON_RECURSIVE, NUMBER_OF_OPS,
         metricMap);
     assertAbfsStatistics(AbfsStatistic.FILES_CREATED, NUMBER_OF_OPS, metricMap);
@@ -211,12 +209,12 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     assertAbfsStatistics(AbfsStatistic.CALL_RENAME, 1, metricMap);
 
     //Testing if file exists at path.
-    assertTrue(String.format("File with name %s should exist",
-        destCreateFilePath),
-        fs.exists(destCreateFilePath));
-    assertFalse(String.format("File with name %s should not exist",
-        createFilePath),
-        fs.exists(createFilePath));
+    assertTrue(
+       fs.exists(destCreateFilePath), String.format("File with name %s should exist",
+        destCreateFilePath));
+    assertFalse(
+       fs.exists(createFilePath), String.format("File with name %s should not exist",
+        createFilePath));
 
     metricMap = fs.getInstrumentationMap();
     //Testing exists() calls.
@@ -244,12 +242,12 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
       assertTrue(fs.rename(createFilePath, destCreateFilePath));
 
       //check if first name is existing and 2nd is not existing.
-      assertTrue(String.format("File with name %s should exist",
-          destCreateFilePath),
-          fs.exists(destCreateFilePath));
-      assertFalse(String.format("File with name %s should not exist",
-          createFilePath),
-          fs.exists(createFilePath));
+      assertTrue(
+         fs.exists(destCreateFilePath), String.format("File with name %s should exist",
+          destCreateFilePath));
+      assertFalse(
+         fs.exists(createFilePath), String.format("File with name %s should not exist",
+          createFilePath));
 
     }
 
@@ -275,6 +273,6 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
    */
   private void checkInitialValue(String statName, long statValue,
       long expectedInitialValue) {
-    assertEquals("Mismatch in " + statName, expectedInitialValue, statValue);
+    assertEquals(expectedInitialValue, statValue, "Mismatch in " + statName);
   }
 }

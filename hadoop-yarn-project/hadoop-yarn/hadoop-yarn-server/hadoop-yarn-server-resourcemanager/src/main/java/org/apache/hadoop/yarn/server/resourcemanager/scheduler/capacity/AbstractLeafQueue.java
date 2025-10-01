@@ -369,6 +369,11 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     return null;
   }
 
+  @Override
+  public List<CSQueue> getChildQueuesByTryLock() {
+    return null;
+  }
+
   /**
    * Set user limit.
    * @param userLimit new user limit
@@ -1207,6 +1212,11 @@ public class AbstractLeafQueue extends AbstractCSQueue {
          assignmentIterator.hasNext();) {
       FiCaSchedulerApp application = assignmentIterator.next();
 
+      // Skip processing if the application is already removed from the applicationAttemptMap
+      if (!applicationAttemptMap.containsKey(application.getApplicationAttemptId())) {
+        continue;
+      }
+
       ActivitiesLogger.APP.startAppAllocationRecording(activitiesManager,
           node, SystemClock.getInstance().getTime(), application);
 
@@ -1259,14 +1269,23 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         userAssignable = canAssignToUser(clusterResource, application.getUser(),
             userLimit, application, candidates.getPartition(),
             currentResourceLimits);
-        if (!userAssignable && Resources.fitsIn(cul.reservation, appReserved)) {
+        if (!userAssignable
+            && Resources.fitsIn(cul.reservation, appReserved)
+            // Consider updating cul only if the application attempt is active.
+            && applicationAttemptMap.containsKey(application.getApplicationAttemptId())) {
           cul.canAssign = false;
           cul.reservation = appReserved;
         }
       }
       if (!userAssignable) {
+        String userName = application.getUser();
+        User user = getUser(userName);
+        Resource usedResourceByUser =
+            user == null ? null : user.getUsed(candidates.getPartition());
         application.updateAMContainerDiagnostics(AMState.ACTIVATED,
-            "User capacity has reached its maximum limit.");
+            "User capacity has reached its maximum limit," +
+                " user limit is " + userLimit + ", resource used by " +
+                userName + " is " + usedResourceByUser + ".");
         ActivitiesLogger.APP.recordRejectedAppActivityFromLeafQueue(
             activitiesManager, node, application, application.getPriority(),
             ActivityDiagnosticConstant.QUEUE_HIT_USER_MAX_CAPACITY_LIMIT);

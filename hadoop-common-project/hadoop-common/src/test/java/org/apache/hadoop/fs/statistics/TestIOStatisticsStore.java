@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.fs.statistics;
 
-import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +35,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatis
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticMinimumValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test the IOStatisticStore implementation.
@@ -60,7 +60,7 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
 
   private IOStatisticsStore stats;
 
-  @Before
+  @BeforeEach
   public void setup() {
     stats = iostatisticsStore()
         .withCounters(COUNT)
@@ -71,7 +71,7 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
         .build();
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     LOG.info("stats {}", stats);
   }
@@ -87,13 +87,13 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
     verifyStatisticGaugeValue(stats, GAUGE, 2);
     stats.setGauge(GAUGE, -1);
     verifyStatisticGaugeValue(stats, GAUGE, -1);
-    Assertions.assertThat(stats.incrementGauge(GAUGE, -1))
+    assertThat(stats.incrementGauge(GAUGE, -1))
         .isEqualTo(-2);
     verifyStatisticGaugeValue(stats, GAUGE, -2);
-    Assertions.assertThat(stats.getGaugeReference(GAUGE).get())
+    assertThat(stats.getGaugeReference(GAUGE).get())
         .isEqualTo(-2);
     stats.setGauge(UNKNOWN, 1);
-    Assertions.assertThat(stats.incrementGauge(UNKNOWN, 1))
+    assertThat(stats.incrementGauge(UNKNOWN, 1))
         .isEqualTo(0);
   }
 
@@ -162,15 +162,15 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
 
   @Test
   public void testUnknownCounter() throws Throwable {
-    Assertions.assertThat(stats.incrementCounter("unknown", -10))
+    assertThat(stats.incrementCounter("unknown", -10))
         .isEqualTo(0);
   }
 
   @Test
   public void testNegativeCounterIncrementIgnored() throws Throwable {
-    Assertions.assertThat(stats.incrementCounter(COUNT, 2))
+    assertThat(stats.incrementCounter(COUNT, 2))
         .isEqualTo(2);
-    Assertions.assertThat(stats.incrementCounter(COUNT, -10))
+    assertThat(stats.incrementCounter(COUNT, -10))
         .isEqualTo(2);
   }
 

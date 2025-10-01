@@ -18,20 +18,22 @@
 package org.apache.hadoop.io.file.tfile;
 
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestCompression {
 
-  @BeforeClass
+  @BeforeAll
   public static void resetConfigBeforeAll() {
     Compression.Algorithm.LZO.conf.setBoolean("test.reload.lzo.codec", true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void resetConfigAfterAll() {
     Compression.Algorithm.LZO.conf.setBoolean("test.reload.lzo.codec", false);
   }

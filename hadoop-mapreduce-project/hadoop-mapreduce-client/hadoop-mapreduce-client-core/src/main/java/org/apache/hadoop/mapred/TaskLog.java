@@ -518,8 +518,8 @@ public class TaskLog {
                                 throws IOException {
     
     String stdout = FileUtil.makeShellPath(stdoutFilename);
-    String stderr = FileUtil.makeShellPath(stderrFilename);    
-    StringBuffer mergedCmd = new StringBuffer();
+    String stderr = FileUtil.makeShellPath(stderrFilename);
+    StringBuilder mergedCmd = new StringBuilder();
     
     // Export the pid of taskJvm to env variable JVM_PID.
     // Currently pid is not used on Windows
@@ -606,7 +606,7 @@ public class TaskLog {
    */
   public static String addCommand(List<String> cmd, boolean isExecutable) 
   throws IOException {
-    StringBuffer command = new StringBuffer();
+    StringBuilder command = new StringBuilder();
     for(String s: cmd) {
     	command.append('\'');
       if (isExecutable) {

@@ -128,7 +128,7 @@ public class StreamUtil {
   static final String regexpSpecials = "[]()?*+|.!^-\\~@";
 
   public static String regexpEscape(String plain) {
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
     char[] ch = plain.toCharArray();
     int csup = ch.length;
     for (int c = 0; c < csup; c++) {

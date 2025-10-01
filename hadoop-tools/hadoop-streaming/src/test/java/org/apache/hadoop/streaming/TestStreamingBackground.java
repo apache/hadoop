@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.streaming;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests if hadoopStreaming background works fine. A DelayEchoApp
@@ -57,7 +57,7 @@ public class TestStreamingBackground {
       "-jobconf", "mapreduce.task.io.sort.mb=10" 
   };
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     UtilTest.recursiveDelete(TEST_DIR);
     assertTrue(TEST_DIR.mkdirs());
@@ -74,7 +74,7 @@ public class TestStreamingBackground {
     StreamJob job = new StreamJob(args, mayExit);
     returnStatus = job.go();
 
-    assertEquals("Streaming Job expected to succeed", 0, returnStatus);
+    assertEquals(0, returnStatus, "Streaming Job expected to succeed");
     job.running_.killJob();
     job.running_.waitForCompletion();
   }

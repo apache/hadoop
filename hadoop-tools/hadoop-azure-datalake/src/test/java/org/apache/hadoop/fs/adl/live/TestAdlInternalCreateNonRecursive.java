@@ -23,14 +23,9 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.adl.common.Parallelized;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -38,10 +33,13 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 /**
  * Test createNonRecursive API.
  */
-@RunWith(Parallelized.class)
 public class TestAdlInternalCreateNonRecursive {
   private Path inputFileName;
   private FsPermission inputPermission;
@@ -51,9 +49,9 @@ public class TestAdlInternalCreateNonRecursive {
   private Class<IOException> expectedExceptionType;
   private FileSystem adlStore;
 
-  public TestAdlInternalCreateNonRecursive(String testScenario, String fileName,
+  public void initTestAdlInternalCreateNonRecursive(String testScenario, String fileName,
       FsPermission permission, boolean override, boolean fileAlreadyExist,
-      boolean parentAlreadyExist, Class<IOException> exceptionType) {
+      boolean parentAlreadyExist, Class<IOException> exceptionType) throws Exception {
 
     // Random parent path for each test so that parallel execution does not fail
     // other running test.
@@ -64,9 +62,9 @@ public class TestAdlInternalCreateNonRecursive {
     inputOverride = override;
     inputParentAlreadyExist = parentAlreadyExist;
     expectedExceptionType = exceptionType;
+    setUp();
   }
 
-  @Parameterized.Parameters(name = "{0}")
   public static Collection adlCreateNonRecursiveTestData()
       throws UnsupportedEncodingException {
     /*
@@ -92,14 +90,18 @@ public class TestAdlInternalCreateNonRecursive {
             IOException.class }*/});
   }
 
-  @Before
   public void setUp() throws Exception {
-    Assume.assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
+    assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
     adlStore = AdlStorageConfiguration.createStorageConnector();
   }
 
-  @Test
-  public void testCreateNonRecursiveFunctionality() throws IOException {
+  @MethodSource("adlCreateNonRecursiveTestData")
+  @ParameterizedTest(name = "{0}")
+  public void testCreateNonRecursiveFunctionality(String testScenario, String fileName,
+      FsPermission permission, boolean override, boolean fileAlreadyExist,
+      boolean parentAlreadyExist, Class<IOException> exceptionType) throws Exception {
+    initTestAdlInternalCreateNonRecursive(testScenario, fileName, permission,
+        override, fileAlreadyExist, parentAlreadyExist, exceptionType);
     if (inputFileAlreadyExist) {
       FileSystem.create(adlStore, inputFileName, inputPermission);
     }
@@ -122,12 +124,12 @@ public class TestAdlInternalCreateNonRecursive {
         throw e;
       }
 
-      Assert.assertEquals(expectedExceptionType, e.getClass());
+      assertEquals(expectedExceptionType, e.getClass());
       return;
     }
 
     if (expectedExceptionType != null) {
-      Assert.fail("CreateNonRecursive should have failed with exception "
+      fail("CreateNonRecursive should have failed with exception "
           + expectedExceptionType.getName());
     }
   }

@@ -31,9 +31,8 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -41,6 +40,7 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -56,7 +56,7 @@ public class TestContainerCleanup {
   private ContainerLaunch launch;
   private ContainerCleanup cleanup;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new YarnConfiguration();
     conf.setLong(NM_SLEEP_DELAY_BEFORE_SIGKILL_MS, 60000);
@@ -103,8 +103,8 @@ public class TestContainerCleanup {
         ArgumentCaptor.forClass(ContainerSignalContext.class);
 
     verify(executor, Mockito.times(1)).signalContainer(captor.capture());
-    Assert.assertEquals("signal", ContainerExecutor.Signal.TERM,
-        captor.getValue().getSignal());
+    assertEquals(ContainerExecutor.Signal.TERM,
+        captor.getValue().getSignal(), "signal");
   }
 
   @Test
@@ -115,7 +115,7 @@ public class TestContainerCleanup {
         ArgumentCaptor.forClass(ContainerSignalContext.class);
 
     verify(executor, Mockito.times(1)).signalContainer(captor.capture());
-    Assert.assertEquals("signal", ContainerExecutor.Signal.TERM,
-        captor.getValue().getSignal());
+    assertEquals(ContainerExecutor.Signal.TERM,
+        captor.getValue().getSignal(), "signal");
   }
 }

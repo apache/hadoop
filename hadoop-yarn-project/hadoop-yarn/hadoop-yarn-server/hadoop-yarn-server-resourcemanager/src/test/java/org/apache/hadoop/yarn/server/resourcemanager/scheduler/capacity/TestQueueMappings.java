@@ -17,19 +17,22 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
-import org.junit.After;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestQueueMappings {
 
@@ -50,7 +53,7 @@ public class TestQueueMappings {
   private CapacityScheduler cs;
   private YarnConfiguration conf;
 
-  @Before
+  @BeforeEach
   public void setup() {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
@@ -65,7 +68,7 @@ public class TestQueueMappings {
     cs.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cs != null) {
       cs.stop();
@@ -94,7 +97,7 @@ public class TestQueueMappings {
     } catch (IOException ioex) {
       fail = true;
     }
-    Assert.assertTrue("queue initialization failed for non-existent q", fail);
+    assertTrue(fail, "queue initialization failed for non-existent q");
   }
 
   @Test
@@ -117,28 +120,29 @@ public class TestQueueMappings {
         .parsePathString("leaf")
         .build();
 
-    Assert.assertEquals("leaf", leafOnly.getQueue());
-    Assert.assertEquals(null, leafOnly.getParentQueue());
-    Assert.assertEquals("leaf", leafOnly.getFullPath());
+    assertEquals("leaf", leafOnly.getQueue());
+    assertEquals(null, leafOnly.getParentQueue());
+    assertEquals("leaf", leafOnly.getFullPath());
 
     QueueMapping twoLevels = QueueMapping.QueueMappingBuilder.create()
         .parsePathString("root.leaf")
         .build();
 
-    Assert.assertEquals("leaf", twoLevels.getQueue());
-    Assert.assertEquals("root", twoLevels.getParentQueue());
-    Assert.assertEquals("root.leaf", twoLevels.getFullPath());
+    assertEquals("leaf", twoLevels.getQueue());
+    assertEquals("root", twoLevels.getParentQueue());
+    assertEquals("root.leaf", twoLevels.getFullPath());
 
     QueueMapping deep = QueueMapping.QueueMappingBuilder.create()
         .parsePathString("root.a.b.c.d.e.leaf")
         .build();
 
-    Assert.assertEquals("leaf", deep.getQueue());
-    Assert.assertEquals("root.a.b.c.d.e", deep.getParentQueue());
-    Assert.assertEquals("root.a.b.c.d.e.leaf", deep.getFullPath());
+    assertEquals("leaf", deep.getQueue());
+    assertEquals("root.a.b.c.d.e", deep.getParentQueue());
+    assertEquals("root.a.b.c.d.e.leaf", deep.getFullPath());
   }
 
-  @Test (timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testQueueMappingParsingInvalidCases() throws Exception {
     // configuration parsing tests - negative test cases
     checkInvalidQMapping(conf, cs, "x:a:b", "invalid specifier");
@@ -163,7 +167,7 @@ public class TestQueueMappings {
     } catch (IOException ex) {
       fail = true;
     }
-    Assert.assertTrue("invalid mapping did not throw exception for " + reason,
-        fail);
+    assertTrue(fail,
+        "invalid mapping did not throw exception for " + reason);
   }
 }

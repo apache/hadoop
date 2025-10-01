@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.io;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 
@@ -35,9 +35,10 @@ import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.io.serializer.JavaSerializationComparator;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestSequenceFileAppend {
 
@@ -46,7 +47,7 @@ public class TestSequenceFileAppend {
   private static Path ROOT_PATH =
       new Path(GenericTestUtils.getTestDir().getAbsolutePath());
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     conf = new Configuration();
     conf.set("io.serializations",
@@ -55,12 +56,13 @@ public class TestSequenceFileAppend {
     fs = FileSystem.get(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     fs.close();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppend() throws Exception {
 
     Path file = new Path(ROOT_PATH, "testseqappend.seq");
@@ -139,7 +141,8 @@ public class TestSequenceFileAppend {
     fs.deleteOnExit(file);
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppendRecordCompression() throws Exception {
     GenericTestUtils.assumeInNativeProfile();
 
@@ -173,7 +176,8 @@ public class TestSequenceFileAppend {
     fs.deleteOnExit(file);
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppendBlockCompression() throws Exception {
     GenericTestUtils.assumeInNativeProfile();
 
@@ -248,7 +252,8 @@ public class TestSequenceFileAppend {
     fs.deleteOnExit(file);
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppendNoneCompression() throws Exception {
     Path file = new Path(ROOT_PATH, "testseqappendnonecompr.seq");
     fs.delete(file, true);
@@ -315,7 +320,8 @@ public class TestSequenceFileAppend {
     fs.deleteOnExit(file);
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppendSort() throws Exception {
     GenericTestUtils.assumeInNativeProfile();
 

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.util;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
@@ -37,7 +37,7 @@ public class TestBasicDiskValidator extends TestDiskChecker {
 
       DiskValidatorFactory.getInstance(BasicDiskValidator.NAME).
           checkStatus(localDir);
-      assertTrue("call to checkDir() succeeded.", success);
+      assertTrue(success, "call to checkDir() succeeded.");
     } catch (DiskErrorException e) {
       // call to checkDir() succeeded even though it was expected to fail
       // if success is false, otherwise throw the exception

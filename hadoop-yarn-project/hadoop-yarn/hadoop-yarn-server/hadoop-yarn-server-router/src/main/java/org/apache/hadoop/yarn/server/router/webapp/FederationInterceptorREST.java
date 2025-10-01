@@ -40,11 +40,10 @@ import java.util.stream.Stream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
@@ -53,6 +52,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
@@ -104,6 +104,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
@@ -139,6 +140,7 @@ import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
+import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.util.Clock;
@@ -452,10 +454,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     try {
       Response response = interceptor.createNewApplication(hsr);
       if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
-        ApplicationId applicationId = ApplicationId.fromString(response.getEntity().toString());
+        NewApplication entity = response.readEntity(NewApplication.class);
+        ApplicationId applicationId = ApplicationId.fromString(entity.getApplicationId());
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_NEW_APP,
             TARGET_WEB_SERVICE, applicationId, subClusterId);
-        return response;
+        return Response.status(Status.OK).entity(entity).build();
       }
     } catch (Exception e) {
       blackList.add(subClusterId);
@@ -999,8 +1002,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     NodeInfo nodeInfo = null;
     for (Entry<SubClusterInfo, NodeInfo> entry : results.entrySet()) {
       NodeInfo nodeResponse = entry.getValue();
-      if (nodeInfo == null || nodeInfo.getLastHealthUpdate() <
-          nodeResponse.getLastHealthUpdate()) {
+      if (nodeInfo == null || (nodeResponse != null &&
+          nodeInfo.getLastHealthUpdate() < nodeResponse.getLastHealthUpdate())) {
         subcluster = entry.getKey();
         nodeInfo = nodeResponse;
       }
@@ -1135,6 +1138,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       }
     } catch (YarnException | IllegalArgumentException e) {
       LOG.error("getHomeSubClusterInfoByAppId error, applicationId = {}.", appId, e);
+      return null;
     }
     return new AppState();
   }
@@ -1906,7 +1910,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       ClientMethod remoteMethod = new ClientMethod("addToClusterNodeLabels", argsClasses, args);
       Map<SubClusterInfo, Response> responseInfoMap =
           invokeConcurrent(subClustersActives, remoteMethod, Response.class);
-      StringBuffer buffer = new StringBuffer();
+      StringBuilder buffer = new StringBuilder();
       // SubCluster-0:SUCCESS,SubCluster-1:SUCCESS
       responseInfoMap.forEach((subClusterInfo, response) ->
           buildAppendMsg(subClusterInfo, buffer, response));
@@ -1964,7 +1968,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           new ClientMethod("removeFromClusterNodeLabels", argsClasses, args);
       Map<SubClusterInfo, Response> responseInfoMap =
           invokeConcurrent(subClustersActives, remoteMethod, Response.class);
-      StringBuffer buffer = new StringBuffer();
+      StringBuilder buffer = new StringBuilder();
       // SubCluster-0:SUCCESS,SubCluster-1:SUCCESS
       responseInfoMap.forEach((subClusterInfo, response) ->
           buildAppendMsg(subClusterInfo, buffer, response));
@@ -1993,10 +1997,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * Build Append information.
    *
    * @param subClusterInfo subCluster information.
-   * @param buffer StringBuffer.
+   * @param buffer StringBuilder.
    * @param response response message.
    */
-  private void buildAppendMsg(SubClusterInfo subClusterInfo, StringBuffer buffer,
+  private void buildAppendMsg(SubClusterInfo subClusterInfo, StringBuilder buffer,
       Response response) {
     SubClusterId subClusterId = subClusterInfo.getSubClusterId();
     String state = response != null &&
@@ -3354,11 +3358,22 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         } catch (Exception e) {
           LOG.error("SubCluster {} failed to call {} method.",
               info.getSubClusterId(), request.getMethodName(), e);
+          Throwable cause = e.getCause();
+          if (cause instanceof YarnException) {
+            return new SubClusterResult<>(info, null, (YarnException) cause);
+          }
+          if (cause instanceof IllegalArgumentException) {
+            return new SubClusterResult<>(info, null, (IllegalArgumentException) cause);
+          }
+          if(cause instanceof ForbiddenException) {
+            return new SubClusterResult<>(info, null, (ForbiddenException) cause);
+          }
           return new SubClusterResult<>(info, null, e);
         }
       });
     }
 
+    Exception lastException = null;
     for (int i = 0; i < clusterIds.size(); i++) {
       SubClusterInfo subClusterInfo = null;
       try {
@@ -3373,6 +3388,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
         Exception exception = result.getException();
         if (exception != null) {
+          lastException = exception;
           throw exception;
         }
       } catch (Throwable e) {
@@ -3388,6 +3404,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       }
     }
 
+    if (results.isEmpty() && lastException != null) {
+      Throwable cause = lastException.getCause();
+      if (cause != null) {
+        throw new YarnRuntimeException(cause.getMessage());
+      }
+      throw new YarnRuntimeException(lastException.getMessage());
+    }
     return results;
   }
 

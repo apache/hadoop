@@ -26,14 +26,17 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Ensure during large directory delete, namenode does not block until the 
@@ -75,13 +78,13 @@ public class TestLargeDirectoryDelete {
       createFile(filename, 100);
     }
   }
-  
+
   private int getBlockCount() {
-    Assert.assertNotNull("Null cluster", mc);
-    Assert.assertNotNull("No Namenode in cluster", mc.getNameNode());
+    assertNotNull(mc, "Null cluster");
+    assertNotNull(mc.getNameNode(), "No Namenode in cluster");
     FSNamesystem namesystem = mc.getNamesystem();
-    Assert.assertNotNull("Null Namesystem in cluster", namesystem);
-    Assert.assertNotNull("Null Namesystem.blockmanager", namesystem.getBlockManager());
+    assertNotNull(namesystem, "Null Namesystem in cluster");
+    assertNotNull(namesystem.getBlockManager(), "Null Namesystem.blockmanager");
     return (int) namesystem.getBlocksTotal();
   }
 
@@ -120,11 +123,11 @@ public class TestLargeDirectoryDelete {
           try {
             int blockcount = getBlockCount();
             if (blockcount < TOTAL_BLOCKS && blockcount > 0) {
-              mc.getNamesystem().writeLock();
+              mc.getNamesystem().writeLock(RwLockMode.GLOBAL);
               try {
                 lockOps++;
               } finally {
-                mc.getNamesystem().writeUnlock();
+                mc.getNamesystem().writeUnlock(RwLockMode.GLOBAL, "runThreads");
               }
               Thread.sleep(1);
             }
@@ -148,7 +151,7 @@ public class TestLargeDirectoryDelete {
     LOG.info("Deletion took " + (end - start) + "msecs");
     LOG.info("createOperations " + createOps);
     LOG.info("lockOperations " + lockOps);
-    Assert.assertTrue(lockOps + createOps > 0);
+    assertTrue(lockOps + createOps > 0);
     threads[0].rethrow();
     threads[1].rethrow();
   }
@@ -217,9 +220,9 @@ public class TestLargeDirectoryDelete {
     mc = new MiniDFSCluster.Builder(CONF).build();
     try {
       mc.waitActive();
-      Assert.assertNotNull("No Namenode in cluster", mc.getNameNode());
+      assertNotNull(mc.getNameNode(), "No Namenode in cluster");
       createFiles();
-      Assert.assertEquals(TOTAL_BLOCKS, getBlockCount());
+      assertEquals(TOTAL_BLOCKS, getBlockCount());
       runThreads();
     } finally {
       mc.shutdown();

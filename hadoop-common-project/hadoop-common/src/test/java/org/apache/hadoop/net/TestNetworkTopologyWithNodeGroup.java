@@ -17,15 +17,15 @@
  */
 package org.apache.hadoop.net;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestNetworkTopologyWithNodeGroup {
   private final static NetworkTopologyWithNodeGroup cluster = new 
@@ -182,13 +182,13 @@ public class TestNetworkTopologyWithNodeGroup {
   @Test
   public void testNodeGroup() throws Exception {
     String res = cluster.getNodeGroup("");
-    assertTrue("NodeGroup should be NodeBase.ROOT for empty location",
-        res.equals(NodeBase.ROOT));
+    assertTrue(res.equals(NodeBase.ROOT),
+        "NodeGroup should be NodeBase.ROOT for empty location");
     try {
       cluster.getNodeGroup(null);
     } catch (IllegalArgumentException e) {
-      assertTrue("Null Network Location should throw exception!",
-          e.getMessage().contains("Network Location is null"));
+      assertTrue(e.getMessage().contains("Network Location is null"),
+          "Null Network Location should throw exception!");
     }
   }
 

@@ -20,6 +20,12 @@
 
 package org.apache.hadoop.resourceestimator.skylinestore.impl;
 
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -40,10 +46,9 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInterval;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test {@link SkylineStore} class.
@@ -61,7 +66,8 @@ public abstract class TestSkylineStore {
 
   protected abstract SkylineStore createSkylineStore();
 
-  @Before public final void setup() {
+  @BeforeEach
+  public final void setup() {
     skylineStore = createSkylineStore();
     resourceOverTime = new TreeMap<>();
     resource = Resource.newInstance(1024 * 100, 100);
@@ -69,18 +75,17 @@ public abstract class TestSkylineStore {
 
   private void compare(final ResourceSkyline skyline1,
       final ResourceSkyline skyline2) {
-    Assert.assertEquals(skyline1.getJobId(), skyline2.getJobId());
-    Assert.assertEquals(skyline1.getJobInputDataSize(),
+    assertEquals(skyline1.getJobId(), skyline2.getJobId());
+    assertEquals(skyline1.getJobInputDataSize(),
         skyline2.getJobInputDataSize(), 0);
-    Assert.assertEquals(skyline1.getJobSubmissionTime(),
+    assertEquals(skyline1.getJobSubmissionTime(),
         skyline2.getJobSubmissionTime());
-    Assert
-        .assertEquals(skyline1.getJobFinishTime(), skyline2.getJobFinishTime());
-    Assert.assertEquals(skyline1.getContainerSpec().getMemorySize(),
+    assertEquals(skyline1.getJobFinishTime(), skyline2.getJobFinishTime());
+    assertEquals(skyline1.getContainerSpec().getMemorySize(),
         skyline2.getContainerSpec().getMemorySize());
-    Assert.assertEquals(skyline1.getContainerSpec().getVirtualCores(),
+    assertEquals(skyline1.getContainerSpec().getVirtualCores(),
         skyline2.getContainerSpec().getVirtualCores());
-    Assert.assertEquals(true,
+    assertEquals(true,
         skyline2.getSkylineList().equals(skyline1.getSkylineList()));
   }
 
@@ -91,7 +96,7 @@ public abstract class TestSkylineStore {
     skylineStore.addHistory(recurrenceId, resourceSkylines);
     final List<ResourceSkyline> resourceSkylinesGet =
         skylineStore.getHistory(recurrenceId).get(recurrenceId);
-    Assert.assertTrue(resourceSkylinesGet.contains(resourceSkyline));
+    assertTrue(resourceSkylinesGet.contains(resourceSkyline));
   }
 
   private ResourceSkyline getSkyline(final int n) {
@@ -130,31 +135,31 @@ public abstract class TestSkylineStore {
     // test getHistory {pipelineId, runId}
     Map<RecurrenceId, List<ResourceSkyline>> jobHistory =
         skylineStore.getHistory(recurrenceId1);
-    Assert.assertEquals(1, jobHistory.size());
+    assertEquals(1, jobHistory.size());
     for (final Map.Entry<RecurrenceId, List<ResourceSkyline>> entry : jobHistory
         .entrySet()) {
-      Assert.assertEquals(recurrenceId1, entry.getKey());
+      assertEquals(recurrenceId1, entry.getKey());
       final List<ResourceSkyline> getSkylines = entry.getValue();
-      Assert.assertEquals(2, getSkylines.size());
+      assertEquals(2, getSkylines.size());
       compare(resourceSkyline1, getSkylines.get(0));
       compare(resourceSkyline2, getSkylines.get(1));
     }
     // test getHistory {pipelineId, *}
     RecurrenceId recurrenceIdTest = new RecurrenceId("FraudDetection", "*");
     jobHistory = skylineStore.getHistory(recurrenceIdTest);
-    Assert.assertEquals(2, jobHistory.size());
+    assertEquals(2, jobHistory.size());
     for (final Map.Entry<RecurrenceId, List<ResourceSkyline>> entry : jobHistory
         .entrySet()) {
-      Assert.assertEquals(recurrenceId1.getPipelineId(),
+      assertEquals(recurrenceId1.getPipelineId(),
           entry.getKey().getPipelineId());
       final List<ResourceSkyline> getSkylines = entry.getValue();
       if (entry.getKey().getRunId().equals("17/06/20 00:00:00")) {
-        Assert.assertEquals(2, getSkylines.size());
+        assertEquals(2, getSkylines.size());
         compare(resourceSkyline1, getSkylines.get(0));
         compare(resourceSkyline2, getSkylines.get(1));
       } else {
-        Assert.assertEquals(entry.getKey().getRunId(), "17/06/21 00:00:00");
-        Assert.assertEquals(2, getSkylines.size());
+        assertEquals(entry.getKey().getRunId(), "17/06/21 00:00:00");
+        assertEquals(2, getSkylines.size());
         compare(resourceSkyline3, getSkylines.get(0));
         compare(resourceSkyline4, getSkylines.get(1));
       }
@@ -162,26 +167,26 @@ public abstract class TestSkylineStore {
     // test getHistory {*, runId}
     recurrenceIdTest = new RecurrenceId("*", "some random runId");
     jobHistory = skylineStore.getHistory(recurrenceIdTest);
-    Assert.assertEquals(3, jobHistory.size());
+    assertEquals(3, jobHistory.size());
     for (final Map.Entry<RecurrenceId, List<ResourceSkyline>> entry : jobHistory
         .entrySet()) {
       if (entry.getKey().getPipelineId().equals("FraudDetection")) {
         final List<ResourceSkyline> getSkylines = entry.getValue();
         if (entry.getKey().getRunId().equals("17/06/20 00:00:00")) {
-          Assert.assertEquals(2, getSkylines.size());
+          assertEquals(2, getSkylines.size());
           compare(resourceSkyline1, getSkylines.get(0));
           compare(resourceSkyline2, getSkylines.get(1));
         } else {
-          Assert.assertEquals(entry.getKey().getRunId(), "17/06/21 00:00:00");
-          Assert.assertEquals(2, getSkylines.size());
+          assertEquals(entry.getKey().getRunId(), "17/06/21 00:00:00");
+          assertEquals(2, getSkylines.size());
           compare(resourceSkyline3, getSkylines.get(0));
           compare(resourceSkyline4, getSkylines.get(1));
         }
       } else {
-        Assert.assertEquals("Random", entry.getKey().getPipelineId());
-        Assert.assertEquals(entry.getKey().getRunId(), "17/06/20 00:00:00");
+        assertEquals("Random", entry.getKey().getPipelineId());
+        assertEquals(entry.getKey().getRunId(), "17/06/20 00:00:00");
         final List<ResourceSkyline> getSkylines = entry.getValue();
-        Assert.assertEquals(2, getSkylines.size());
+        assertEquals(2, getSkylines.size());
         compare(resourceSkyline1, getSkylines.get(0));
         compare(resourceSkyline2, getSkylines.get(1));
       }
@@ -189,7 +194,7 @@ public abstract class TestSkylineStore {
     // test getHistory with wrong RecurrenceId
     recurrenceIdTest =
         new RecurrenceId("some random pipelineId", "some random runId");
-    Assert.assertNull(skylineStore.getHistory(recurrenceIdTest));
+    assertNull(skylineStore.getHistory(recurrenceIdTest));
   }
 
   @Test public final void testGetEstimation() throws SkylineStoreException {
@@ -206,41 +211,45 @@ public abstract class TestSkylineStore {
     final RLESparseResourceAllocation estimation =
         skylineStore.getEstimation("FraudDetection");
     for (int i = 0; i < 50; i++) {
-      Assert.assertEquals(skylineList2.getCapacityAtTime(i),
+      assertEquals(skylineList2.getCapacityAtTime(i),
           estimation.getCapacityAtTime(i));
     }
   }
 
-  @Test(expected = NullRecurrenceIdException.class)
+  @Test
   public final void testGetNullRecurrenceId()
       throws SkylineStoreException {
-    // addHistory first recurring pipeline
-    final RecurrenceId recurrenceId1 =
+          assertThrows(NullRecurrenceIdException.class, () -> {
+              final RecurrenceId recurrenceId1 =
         new RecurrenceId("FraudDetection", "17/06/20 00:00:00");
-    final ResourceSkyline resourceSkyline1 = getSkyline(1);
-    addToStore(recurrenceId1, resourceSkyline1);
-    final ResourceSkyline resourceSkyline2 = getSkyline(2);
-    addToStore(recurrenceId1, resourceSkyline2);
-    final RecurrenceId recurrenceId2 =
+              final ResourceSkyline resourceSkyline1 = getSkyline(1);
+              addToStore(recurrenceId1, resourceSkyline1);
+              final ResourceSkyline resourceSkyline2 = getSkyline(2);
+              addToStore(recurrenceId1, resourceSkyline2);
+              final RecurrenceId recurrenceId2 =
         new RecurrenceId("FraudDetection", "17/06/21 00:00:00");
-    final ResourceSkyline resourceSkyline3 = getSkyline(3);
-    addToStore(recurrenceId2, resourceSkyline3);
-    final ResourceSkyline resourceSkyline4 = getSkyline(4);
-    addToStore(recurrenceId2, resourceSkyline4);
-    // addHistory second recurring pipeline
-    final RecurrenceId recurrenceId3 =
+              final ResourceSkyline resourceSkyline3 = getSkyline(3);
+              addToStore(recurrenceId2, resourceSkyline3);
+              final ResourceSkyline resourceSkyline4 = getSkyline(4);
+              addToStore(recurrenceId2, resourceSkyline4);
+              final RecurrenceId recurrenceId3 =
         new RecurrenceId("Random", "17/06/20 00:00:00");
-    addToStore(recurrenceId3, resourceSkyline1);
-    addToStore(recurrenceId3, resourceSkyline2);
-    // try to getHistory with null recurringId
-    skylineStore.getHistory(null);
-  }
+              addToStore(recurrenceId3, resourceSkyline1);
+              addToStore(recurrenceId3, resourceSkyline2);
+              skylineStore.getHistory(null);
+          });
 
-  @Test(expected = NullPipelineIdException.class)
+
+// try to getHistory with null recurringId
+}
+
+  @Test
   public final void testGetNullPipelineIdException()
       throws SkylineStoreException {
-    skylineStore.getEstimation(null);
-  }
+          assertThrows(NullPipelineIdException.class, () -> {
+              skylineStore.getEstimation(null);
+          });
+      }
 
   @Test public final void testAddNormal() throws SkylineStoreException {
     // addHistory resource skylines to the in-memory store
@@ -258,74 +267,84 @@ public abstract class TestSkylineStore {
     // query the in-memory store
     final Map<RecurrenceId, List<ResourceSkyline>> jobHistory =
         skylineStore.getHistory(recurrenceId);
-    Assert.assertEquals(1, jobHistory.size());
+    assertEquals(1, jobHistory.size());
     for (final Map.Entry<RecurrenceId, List<ResourceSkyline>> entry : jobHistory
         .entrySet()) {
-      Assert.assertEquals(recurrenceId, entry.getKey());
+      assertEquals(recurrenceId, entry.getKey());
       final List<ResourceSkyline> getSkylines = entry.getValue();
-      Assert.assertEquals(2, getSkylines.size());
+      assertEquals(2, getSkylines.size());
       compare(resourceSkyline1, getSkylines.get(0));
       compare(resourceSkyline2, getSkylines.get(1));
     }
   }
 
-  @Test(expected = NullRecurrenceIdException.class)
+  @Test
   public final void testAddNullRecurrenceId()
       throws SkylineStoreException {
-    // recurrenceId is null
-    final RecurrenceId recurrenceIdNull = null;
-    final ArrayList<ResourceSkyline> resourceSkylines =
+          assertThrows(NullRecurrenceIdException.class, () -> {
+              final RecurrenceId recurrenceIdNull = null;
+              final ArrayList<ResourceSkyline> resourceSkylines =
         new ArrayList<ResourceSkyline>();
-    final ResourceSkyline resourceSkyline1 = getSkyline(1);
-    resourceSkylines.add(resourceSkyline1);
-    skylineStore.addHistory(recurrenceIdNull, resourceSkylines);
-  }
+              final ResourceSkyline resourceSkyline1 = getSkyline(1);
+              resourceSkylines.add(resourceSkyline1);
+              skylineStore.addHistory(recurrenceIdNull, resourceSkylines);
+          });
 
-  @Test(expected = NullResourceSkylineException.class)
+}
+
+  @Test
   public final void testAddNullResourceSkyline()
       throws SkylineStoreException {
-    final RecurrenceId recurrenceId =
+          assertThrows(NullResourceSkylineException.class, () -> {
+              final RecurrenceId recurrenceId =
         new RecurrenceId("FraudDetection", "17/06/20 00:00:00");
-    final ArrayList<ResourceSkyline> resourceSkylines =
+              final ArrayList<ResourceSkyline> resourceSkylines =
         new ArrayList<ResourceSkyline>();
-    final ResourceSkyline resourceSkyline1 = getSkyline(1);
-    resourceSkylines.add(resourceSkyline1);
-    // resourceSkylines is null
-    skylineStore.addHistory(recurrenceId, null);
-  }
+              final ResourceSkyline resourceSkyline1 = getSkyline(1);
+              resourceSkylines.add(resourceSkyline1);
+              skylineStore.addHistory(recurrenceId, null);
+          });
+      // resourceSkylines is null
+}
 
-  @Test(expected = DuplicateRecurrenceIdException.class)
+  @Test
   public final void testAddDuplicateRecurrenceId()
       throws SkylineStoreException {
-    final RecurrenceId recurrenceId =
+          assertThrows(DuplicateRecurrenceIdException.class, () -> {
+              final RecurrenceId recurrenceId =
         new RecurrenceId("FraudDetection", "17/06/20 00:00:00");
-    final ArrayList<ResourceSkyline> resourceSkylines =
+              final ArrayList<ResourceSkyline> resourceSkylines =
         new ArrayList<ResourceSkyline>();
-    final ResourceSkyline resourceSkyline1 = getSkyline(1);
-    resourceSkylines.add(resourceSkyline1);
-    // trying to addHistory duplicate resource skylines
-    skylineStore.addHistory(recurrenceId, resourceSkylines);
-    skylineStore.addHistory(recurrenceId, resourceSkylines);
-  }
+              final ResourceSkyline resourceSkyline1 = getSkyline(1);
+              resourceSkylines.add(resourceSkyline1);
+              skylineStore.addHistory(recurrenceId, resourceSkylines);
+              skylineStore.addHistory(recurrenceId, resourceSkylines);
+          });
 
-  @Test(expected = NullPipelineIdException.class)
+}
+
+  @Test
   public final void testAddNullPipelineIdException()
       throws SkylineStoreException {
-    final RLESparseResourceAllocation skylineList2 =
+          assertThrows(NullPipelineIdException.class, () -> {
+              final RLESparseResourceAllocation skylineList2 =
         new RLESparseResourceAllocation(resourceOverTime,
             new DefaultResourceCalculator());
-    for (int i = 0; i < 5; i++) {
+              for (int i = 0; i < 5; i++) {
       riAdd = new ReservationInterval(i * 10, (i + 1) * 10);
       skylineList2.addInterval(riAdd, resource);
     }
-    skylineStore.addEstimation(null, skylineList2);
-  }
+              skylineStore.addEstimation(null, skylineList2);
+          });
+      }
 
-  @Test(expected = NullRLESparseResourceAllocationException.class)
+  @Test
   public final void testAddNullRLESparseResourceAllocationExceptionException()
       throws SkylineStoreException {
-    skylineStore.addEstimation("FraudDetection", null);
-  }
+          assertThrows(NullRLESparseResourceAllocationException.class, () -> {
+              skylineStore.addEstimation("FraudDetection", null);
+          });
+      }
 
   @Test public final void testDeleteNormal() throws SkylineStoreException {
     // addHistory first recurring pipeline
@@ -339,29 +358,33 @@ public abstract class TestSkylineStore {
     skylineStore.deleteHistory(recurrenceId1);
   }
 
-  @Test(expected = NullRecurrenceIdException.class)
+  @Test
   public final void testDeleteNullRecurrenceId()
       throws SkylineStoreException {
-    final RecurrenceId recurrenceId1 =
+          assertThrows(NullRecurrenceIdException.class, () -> {
+              final RecurrenceId recurrenceId1 =
         new RecurrenceId("FraudDetection", "17/06/20 00:00:00");
-    final ResourceSkyline resourceSkyline1 = getSkyline(1);
-    addToStore(recurrenceId1, resourceSkyline1);
-    // try to deleteHistory with null recurringId
-    skylineStore.deleteHistory(null);
-  }
+              final ResourceSkyline resourceSkyline1 = getSkyline(1);
+              addToStore(recurrenceId1, resourceSkyline1);
+              skylineStore.deleteHistory(null);
+          });
+      // try to deleteHistory with null recurringId
+}
 
-  @Test(expected = RecurrenceIdNotFoundException.class)
+  @Test
   public final void testDeleteRecurrenceIdNotFound()
       throws SkylineStoreException {
-    final RecurrenceId recurrenceId1 =
+          assertThrows(RecurrenceIdNotFoundException.class, () -> {
+              final RecurrenceId recurrenceId1 =
         new RecurrenceId("FraudDetection", "17/06/20 00:00:00");
-    final ResourceSkyline resourceSkyline1 = getSkyline(1);
-    addToStore(recurrenceId1, resourceSkyline1);
-    final RecurrenceId recurrenceIdInvalid =
+              final ResourceSkyline resourceSkyline1 = getSkyline(1);
+              addToStore(recurrenceId1, resourceSkyline1);
+              final RecurrenceId recurrenceIdInvalid =
         new RecurrenceId("Some random pipelineId", "Some random runId");
-    // try to deleteHistory non-existing recurringId
-    skylineStore.deleteHistory(recurrenceIdInvalid);
-  }
+              skylineStore.deleteHistory(recurrenceIdInvalid);
+          });
+      // try to deleteHistory non-existing recurringId
+}
 
   @Test public final void testUpdateNormal() throws SkylineStoreException {
     // addHistory first recurring pipeline
@@ -378,82 +401,91 @@ public abstract class TestSkylineStore {
     // query the in-memory store
     final Map<RecurrenceId, List<ResourceSkyline>> jobHistory =
         skylineStore.getHistory(recurrenceId1);
-    Assert.assertEquals(1, jobHistory.size());
+    assertEquals(1, jobHistory.size());
     for (final Map.Entry<RecurrenceId, List<ResourceSkyline>> entry : jobHistory
         .entrySet()) {
-      Assert.assertEquals(recurrenceId1, entry.getKey());
+      assertEquals(recurrenceId1, entry.getKey());
       final List<ResourceSkyline> getSkylines = entry.getValue();
-      Assert.assertEquals(2, getSkylines.size());
+      assertEquals(2, getSkylines.size());
       compare(resourceSkyline1, getSkylines.get(0));
       compare(resourceSkyline2, getSkylines.get(1));
     }
   }
 
-  @Test(expected = NullRecurrenceIdException.class)
+  @Test
   public final void testUpdateNullRecurrenceId()
       throws SkylineStoreException {
-    final ArrayList<ResourceSkyline> resourceSkylines =
+          assertThrows(NullRecurrenceIdException.class, () -> {
+              final ArrayList<ResourceSkyline> resourceSkylines =
         new ArrayList<ResourceSkyline>();
-    final ResourceSkyline resourceSkyline1 = getSkyline(1);
-    resourceSkylines.add(resourceSkyline1);
-    final ArrayList<ResourceSkyline> resourceSkylinesInvalid =
+              final ResourceSkyline resourceSkyline1 = getSkyline(1);
+              resourceSkylines.add(resourceSkyline1);
+              final ArrayList<ResourceSkyline> resourceSkylinesInvalid =
         new ArrayList<ResourceSkyline>();
-    resourceSkylinesInvalid.add(null);
-    // try to updateHistory with null recurringId
-    skylineStore.updateHistory(null, resourceSkylines);
-  }
+              resourceSkylinesInvalid.add(null);
+              skylineStore.updateHistory(null, resourceSkylines);
+          });
+      // try to updateHistory with null recurringId
+}
 
-  @Test(expected = NullResourceSkylineException.class)
+  @Test
   public final void testUpdateNullResourceSkyline()
       throws SkylineStoreException {
-    final RecurrenceId recurrenceId =
+          assertThrows(NullResourceSkylineException.class, () -> {
+              final RecurrenceId recurrenceId =
         new RecurrenceId("FraudDetection", "17/06/20 00:00:00");
-    final ArrayList<ResourceSkyline> resourceSkylines =
+              final ArrayList<ResourceSkyline> resourceSkylines =
         new ArrayList<ResourceSkyline>();
-    final ResourceSkyline resourceSkyline1 = getSkyline(1);
-    resourceSkylines.add(resourceSkyline1);
-    final ArrayList<ResourceSkyline> resourceSkylinesInvalid =
+              final ResourceSkyline resourceSkyline1 = getSkyline(1);
+              resourceSkylines.add(resourceSkyline1);
+              final ArrayList<ResourceSkyline> resourceSkylinesInvalid =
         new ArrayList<ResourceSkyline>();
-    resourceSkylinesInvalid.add(null);
-    // try to updateHistory with null resourceSkylines
-    skylineStore.addHistory(recurrenceId, resourceSkylines);
-    skylineStore.updateHistory(recurrenceId, null);
-  }
+              resourceSkylinesInvalid.add(null);
+              skylineStore.addHistory(recurrenceId, resourceSkylines);
+              skylineStore.updateHistory(recurrenceId, null);
+          });
 
-  @Test(expected = EmptyResourceSkylineException.class)
+}
+
+  @Test
   public final void testUpdateEmptyRecurrenceId()
       throws SkylineStoreException {
-    final RecurrenceId recurrenceId =
+          assertThrows(EmptyResourceSkylineException.class, () -> {
+              final RecurrenceId recurrenceId =
         new RecurrenceId("FraudDetection", "17/06/20 00:00:00");
-    final ArrayList<ResourceSkyline> resourceSkylines =
+              final ArrayList<ResourceSkyline> resourceSkylines =
         new ArrayList<ResourceSkyline>();
-    final ResourceSkyline resourceSkyline1 = getSkyline(1);
-    resourceSkylines.add(resourceSkyline1);
-    final ArrayList<ResourceSkyline> resourceSkylinesInvalid =
+              final ResourceSkyline resourceSkyline1 = getSkyline(1);
+              resourceSkylines.add(resourceSkyline1);
+              final ArrayList<ResourceSkyline> resourceSkylinesInvalid =
         new ArrayList<ResourceSkyline>();
-    resourceSkylinesInvalid.add(null);
-    skylineStore.addHistory(recurrenceId, resourceSkylines);
-    // try to updateHistory with empty resourceSkyline
-    skylineStore.updateHistory(recurrenceId, resourceSkylinesInvalid);
-  }
+              resourceSkylinesInvalid.add(null);
+              skylineStore.addHistory(recurrenceId, resourceSkylines);
+              skylineStore.updateHistory(recurrenceId, resourceSkylinesInvalid);
+          });
+      // try to updateHistory with empty resourceSkyline
+}
 
-  @Test(expected = RecurrenceIdNotFoundException.class)
+  @Test
   public final void testUpdateRecurrenceIdNotFound()
       throws SkylineStoreException {
-    final ArrayList<ResourceSkyline> resourceSkylines =
+          assertThrows(RecurrenceIdNotFoundException.class, () -> {
+              final ArrayList<ResourceSkyline> resourceSkylines =
         new ArrayList<ResourceSkyline>();
-    final ResourceSkyline resourceSkyline1 = getSkyline(1);
-    resourceSkylines.add(resourceSkyline1);
-    final RecurrenceId recurrenceIdInvalid =
+              final ResourceSkyline resourceSkyline1 = getSkyline(1);
+              resourceSkylines.add(resourceSkyline1);
+              final RecurrenceId recurrenceIdInvalid =
         new RecurrenceId("Some random pipelineId", "Some random runId");
-    final ArrayList<ResourceSkyline> resourceSkylinesInvalid =
+              final ArrayList<ResourceSkyline> resourceSkylinesInvalid =
         new ArrayList<ResourceSkyline>();
-    resourceSkylinesInvalid.add(null);
-    // try to updateHistory with non-existing recurringId
-    skylineStore.updateHistory(recurrenceIdInvalid, resourceSkylines);
-  }
+              resourceSkylinesInvalid.add(null);
+              skylineStore.updateHistory(recurrenceIdInvalid, resourceSkylines);
+          });
+      // try to updateHistory with non-existing recurringId
+}
 
-  @After public final void cleanUp() {
+  @AfterEach
+  public final void cleanUp() {
     skylineStore = null;
     resourceOverTime.clear();
     resourceOverTime = null;

@@ -22,9 +22,9 @@ import java.util.function.Supplier;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -53,9 +53,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
 
@@ -86,7 +87,7 @@ public class TestFileCorruption {
       DataNode dn = cluster.getDataNodes().get(2);
       Map<DatanodeStorage, BlockListAsLongs> blockReports =
           dn.getFSDataset().getBlockReports(bpid);
-      assertTrue("Blocks do not exist on data-dir", !blockReports.isEmpty());
+      assertTrue(!blockReports.isEmpty(), "Blocks do not exist on data-dir");
       for (BlockListAsLongs report : blockReports.values()) {
         for (BlockReportReplica brr : report) {
           LOG.info("Deliberately removing block {}", brr.getBlockName());
@@ -94,8 +95,8 @@ public class TestFileCorruption {
               new ExtendedBlock(bpid, brr)).deleteData();
         }
       }
-      assertTrue("Corrupted replicas not handled properly.",
-                 util.checkFiles(fs, "/srcdat"));
+      assertTrue(
+                util.checkFiles(fs, "/srcdat"), "Corrupted replicas not handled properly.");
       util.cleanup(fs, "/srcdat");
     } finally {
       if (cluster != null) { cluster.shutdown(); }
@@ -146,8 +147,8 @@ public class TestFileCorruption {
       // get the block
       final String bpid = cluster.getNamesystem().getBlockPoolId();
       ExtendedBlock blk = getFirstBlock(cluster.getDataNodes().get(0), bpid);
-      assertFalse("Data directory does not contain any blocks or there was an "
-          + "IO error", blk==null);
+      assertFalse(blk==null, "Data directory does not contain any blocks or there was an "
+          + "IO error");
 
       // start a third datanode
       cluster.startDataNodes(conf, 1, true, null, null);
@@ -159,13 +160,13 @@ public class TestFileCorruption {
       DatanodeRegistration dnR = InternalDataNodeTestUtils.
         getDNRegistrationForBP(dataNode, blk.getBlockPoolId());
       FSNamesystem ns = cluster.getNamesystem();
-      ns.writeLock();
+      ns.writeLock(RwLockMode.BM);
       try {
         cluster.getNamesystem().getBlockManager().findAndMarkBlockAsCorrupt(blk,
             new DatanodeInfoBuilder().setNodeID(dnR).build(), "TEST",
             "STORAGE_ID");
       } finally {
-        ns.writeUnlock();
+        ns.writeUnlock(RwLockMode.BM, "testArrayOutOfBoundsException");
       }
       
       // open the file
@@ -197,29 +198,29 @@ public class TestFileCorruption {
       final String bpid = cluster.getNamesystem().getBlockPoolId();
       File storageDir = cluster.getInstanceStorageDir(0, 0);
       File dataDir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
-      assertTrue("Data directory does not exist", dataDir.exists());
+      assertTrue(dataDir.exists(), "Data directory does not exist");
       ExtendedBlock blk = getFirstBlock(cluster.getDataNodes().get(0), bpid);
       if (blk == null) {
         blk = getFirstBlock(cluster.getDataNodes().get(0), bpid);
       }
-      assertFalse("Data directory does not contain any blocks or there was an" +
+      assertFalse(blk == null, "Data directory does not contain any blocks or there was an" +
           " " +
-          "IO error", blk == null);
+          "IO error");
       ArrayList<DataNode> datanodes = cluster.getDataNodes();
       assertEquals(datanodes.size(), 3);
       FSNamesystem ns = cluster.getNamesystem();
       //fail the storage on that node which has the block
       try {
-        ns.writeLock();
+        ns.writeLock(RwLockMode.BM);
         updateAllStorages(bm);
       } finally {
-        ns.writeUnlock();
+        ns.writeUnlock(RwLockMode.BM, "testCorruptionWithDiskFailure");
       }
-      ns.writeLock();
+      ns.writeLock(RwLockMode.BM);
       try {
         markAllBlocksAsCorrupt(bm, blk);
       } finally {
-        ns.writeUnlock();
+        ns.writeUnlock(RwLockMode.BM, "testCorruptionWithDiskFailure");
       }
 
       // open the file

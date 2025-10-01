@@ -23,25 +23,25 @@ import org.apache.hadoop.mapred.MiniMRClientCluster;
 import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestLargeSort {
   MiniMRClientCluster cluster;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     Configuration conf = new YarnConfiguration();
     cluster = MiniMRClientClusterFactory.create(this.getClass(), 2, conf);
     cluster.start();
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws IOException {
     if (cluster != null) {
       cluster.stop();
@@ -59,8 +59,8 @@ public class TestLargeSort {
       conf.setInt(MRJobConfig.IO_SORT_MB, ioSortMb);
       conf.setInt(LargeSorter.NUM_MAP_TASKS, 1);
       conf.setInt(LargeSorter.MBS_PER_MAP, ioSortMb);
-      assertEquals("Large sort failed for " + ioSortMb, 0,
-          ToolRunner.run(conf, new LargeSorter(), args));
+      assertEquals(0, ToolRunner.run(conf, new LargeSorter(), args),
+          "Large sort failed for " + ioSortMb);
     }
   }
 }

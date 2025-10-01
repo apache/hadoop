@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.contract;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.SafeMode;

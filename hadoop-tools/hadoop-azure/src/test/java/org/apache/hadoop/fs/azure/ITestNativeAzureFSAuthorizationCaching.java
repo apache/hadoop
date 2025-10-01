@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.azure;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.azure.CachingAuthorizer.KEY_AUTH_SERVICE_CACHING_ENABLE;
 
@@ -48,6 +48,6 @@ public class ITestNativeAzureFSAuthorizationCaching
     cache.put("TEST", 1);
     cache.put("TEST", 3);
     int result = cache.get("TEST");
-    assertEquals("Cache returned unexpected result", 3, result);
+    assertEquals(3, result, "Cache returned unexpected result");
   }
 }

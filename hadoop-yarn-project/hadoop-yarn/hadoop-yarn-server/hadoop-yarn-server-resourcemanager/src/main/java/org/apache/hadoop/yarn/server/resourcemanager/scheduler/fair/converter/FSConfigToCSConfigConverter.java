@@ -346,7 +346,7 @@ public class FSConfigToCSConfigConverter {
       if (!rulesToFile) {
         String json =
             ((ByteArrayOutputStream)mappingRulesOutputStream)
-            .toString(StandardCharsets.UTF_8.displayName());
+            .toString(StandardCharsets.UTF_8.name());
         capacitySchedulerConfig.setMappingRuleJson(json);
       }
     } else {

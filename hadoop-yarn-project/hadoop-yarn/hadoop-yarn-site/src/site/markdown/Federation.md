@@ -177,7 +177,7 @@ ZooKeeper: one must set the ZooKeeper settings for Hadoop:
 | Property                            | Example                                                                             | Description                             |
 |:------------------------------------|:------------------------------------------------------------------------------------|:----------------------------------------|
 | `yarn.federation.state-store.class` | `org.apache.hadoop.yarn.server.federation.store.impl.ZookeeperFederationStateStore` | The type of state-store to use.         |
-| `hadoop.zk.address`                 | `host:port`                                                                         | The address for the ZooKeeper ensemble. |
+| `yarn.federation.state-store.zk.address`                 | `host:port`                                                                         | The address for the ZooKeeper ensemble. |
 
 SQL: one must setup the following parameters:
 
@@ -536,7 +536,7 @@ To enable cross-origin support (CORS) for the Yarn Router, please set the follow
 #### How to configure Router Cache
 
 Cache is enabled by default. When we set the `yarn.federation.cache-ttl.secs` parameter and its value is greater than 0, Cache will be enabled.
-We currently provide two Cache implementations: `JCache` and `GuavaCache`.
+We currently provide three Cache implementations: `JCache`, `GuavaCache`, `CaffeineCache`
 
 - JCache
 
@@ -549,6 +549,12 @@ If we want to use JCache, we can configure `yarn.federation.cache.class` to `org
 
 This is a Cache implemented based on the Guava framework.
 If we want to use it, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationGuavaCache`.
+
+- CaffeineCache
+
+[CaffeineCache](https://github.com/ben-manes/caffeine) is a high-performance caching library for Java, offering better performance compared to Ehcache and Guava Cache.
+If we want to use it, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationCaffeineCache`.
+
 
 #### How to configure Router AuditLog
 
@@ -1006,7 +1012,7 @@ Example of Machine-Role Mapping(Exclude HDFS):
 
 <!-- ZK Address. -->
 <property>
-  <name>hadoop.zk.address</name>
+  <name>yarn.federation.state-store.zk.address</name>
   <value>zkHost:zkPort</value>
 </property>
 
@@ -1067,7 +1073,7 @@ $HADOOP_HOME/bin/yarn --daemon start resourcemanager
 
 <!-- ZK Address. -->
 <property>
-  <name>hadoop.zk.address</name>
+  <name>yarn.federation.state-store.zk.address</name>
   <value>zkHost:zkPort</value>
 </property>
 
@@ -1135,7 +1141,7 @@ After we have finished configuring the `YARN-2` cluster, we can proceed with sta
 
 <!-- ZK Address. -->
 <property>
-  <name>hadoop.zk.address</name>
+  <name>yarn.federation.state-store.zk.address</name>
   <value>zkHost:zkPort</value>
 </property>
 

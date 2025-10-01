@@ -36,13 +36,15 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+
+@Timeout(30)
 public class TestWebHdfsContentLength {
   private static ServerSocket listenSocket;
   private static String bindAddr;
@@ -60,10 +62,7 @@ public class TestWebHdfsContentLength {
 
   private static ExecutorService executor;
 
-  @Rule
-  public Timeout timeout = new Timeout(30000);
-
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     listenSocket = new ServerSocket();
     listenSocket.bind(null);
@@ -79,7 +78,7 @@ public class TestWebHdfsContentLength {
     executor = Executors.newSingleThreadExecutor();    
   }
   
-  @AfterClass
+  @AfterAll
   public static void teardown() throws IOException {
     if (listenSocket != null) {
       listenSocket.close();
@@ -94,9 +93,9 @@ public class TestWebHdfsContentLength {
     Future<String> future = contentLengthFuture(errResponse);
     try {
       fs.getFileStatus(p);
-      Assert.fail();
+      fail();
     } catch (IOException ioe) {} // expected
-    Assert.assertEquals(null, getContentLength(future));
+    assertEquals(null, getContentLength(future));
   }
 
   @Test
@@ -106,11 +105,11 @@ public class TestWebHdfsContentLength {
     Future<String> future3 = contentLengthFuture(errResponse);
     try {
       fs.open(p).read();
-      Assert.fail();
+      fail();
     } catch (IOException ioe) {} // expected
-    Assert.assertEquals(null, getContentLength(future1));
-    Assert.assertEquals(null, getContentLength(future2));
-    Assert.assertEquals(null, getContentLength(future3));
+    assertEquals(null, getContentLength(future1));
+    assertEquals(null, getContentLength(future2));
+    assertEquals(null, getContentLength(future3));
   }
   
   @Test
@@ -118,9 +117,9 @@ public class TestWebHdfsContentLength {
     Future<String> future = contentLengthFuture(errResponse);
     try {
       fs.mkdirs(p);
-      Assert.fail();
+      fail();
     } catch (IOException ioe) {} // expected
-    Assert.assertEquals("0", getContentLength(future));
+    assertEquals("0", getContentLength(future));
   }
 
   @Test
@@ -131,10 +130,10 @@ public class TestWebHdfsContentLength {
       FSDataOutputStream os = fs.create(p);
       os.write(new byte[]{0});
       os.close();
-      Assert.fail();
+      fail();
     } catch (IOException ioe) {} // expected
-    Assert.assertEquals("0", getContentLength(future1));
-    Assert.assertEquals("chunked", getContentLength(future2));
+    assertEquals("0", getContentLength(future1));
+    assertEquals("chunked", getContentLength(future2));
   }
   
   @Test
@@ -142,9 +141,9 @@ public class TestWebHdfsContentLength {
     Future<String> future = contentLengthFuture(errResponse);
     try {
       fs.concat(p, new Path[]{p});
-      Assert.fail();
+      fail();
     } catch (IOException ioe) {} // expected
-    Assert.assertEquals("0", getContentLength(future));
+    assertEquals("0", getContentLength(future));
   }
   
   @Test
@@ -156,10 +155,10 @@ public class TestWebHdfsContentLength {
       FSDataOutputStream os = fs.append(p);
       os.write(new byte[]{0});
       os.close();
-      Assert.fail();
+      fail();
     } catch (IOException ioe) {} // expected
-    Assert.assertEquals("0", getContentLength(future1));
-    Assert.assertEquals("chunked", getContentLength(future2));
+    assertEquals("0", getContentLength(future1));
+    assertEquals("chunked", getContentLength(future2));
   }
   
   @Test
@@ -167,9 +166,9 @@ public class TestWebHdfsContentLength {
     Future<String> future = contentLengthFuture(errResponse);
     try {
       fs.delete(p, false);
-      Assert.fail();
+      fail();
     } catch (IOException ioe) {} // expected
-    Assert.assertEquals(null, getContentLength(future));
+    assertEquals(null, getContentLength(future));
   }  
 
   private String getContentLength(Future<String> future)  {
@@ -177,7 +176,7 @@ public class TestWebHdfsContentLength {
     try {
       request = future.get(2, TimeUnit.SECONDS);
     } catch (Exception e) {
-      Assert.fail(e.toString());
+      fail(e.toString());
     }
     Matcher matcher = contentLengthPattern.matcher(request);
     return matcher.find() ? matcher.group(2) : null;

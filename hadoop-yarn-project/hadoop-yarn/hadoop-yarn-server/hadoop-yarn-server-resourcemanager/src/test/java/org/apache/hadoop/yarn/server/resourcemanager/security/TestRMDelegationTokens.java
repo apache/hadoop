@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -50,15 +52,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.slf4j.event.Level;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestRMDelegationTokens {
 
   private YarnConfiguration testConf;
 
-  @Before
+  @BeforeEach
   public void setup() {
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
     ExitUtil.disableSystemExit();
@@ -81,12 +83,13 @@ public class TestRMDelegationTokens {
           break;
         }
       }
-      Assert.assertTrue("Master key not found: " + keyId, found);
+      assertTrue(found, "Master key not found: " + keyId);
     });
   }
 
   // Test the DT mast key in the state-store when the mast key is being rolled.
-  @Test(timeout = 15000)
+  @Test
+  @Timeout(value = 15)
   public void testRMDTMasterKeyStateOnRollingMasterKey() throws Exception {
     Configuration conf = new Configuration(testConf);
     conf.set("hadoop.security.authentication", "kerberos");
@@ -146,7 +149,8 @@ public class TestRMDelegationTokens {
   }
 
   // Test all expired keys are removed from state-store.
-  @Test(timeout = 15000)
+  @Test
+  @Timeout(value = 15)
   public void testRemoveExpiredMasterKeyInRMStateStore() throws Exception {
     MemoryRMStateStore memStore = new MockMemoryRMStateStore();
     memStore.init(testConf);
@@ -180,7 +184,8 @@ public class TestRMDelegationTokens {
   }
 
   // Test removing token without key from state-store.
-  @Test(timeout = 15000)
+  @Test
+  @Timeout(value = 15)
   public void testUnknownKeyTokensOnRecover() throws Exception {
     final int masterID = 1234;
     final int sequenceNumber = 1000;
@@ -212,10 +217,10 @@ public class TestRMDelegationTokens {
     // Cannot recover while running: stop and clear
     dtSecretManager.stopThreads();
     dtSecretManager.reset();
-    Assert.assertEquals("Secret manager should have no tokens",
-        dtSecretManager.getAllTokens().size(), 0);
-    Assert.assertEquals("Secret manager should have no keys",
-        dtSecretManager.getAllMasterKeys().size(), 0);
+    assertEquals(dtSecretManager.getAllTokens().size(), 0,
+        "Secret manager should have no tokens");
+    assertEquals(dtSecretManager.getAllMasterKeys().size(), 0,
+        "Secret manager should have no keys");
     dtSecretManager.recover(rmState);
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       public Boolean get() {
@@ -224,8 +229,8 @@ public class TestRMDelegationTokens {
                 containsKey(rmDT);
       }
     }, 10, 2000);
-    Assert.assertEquals("Token should have been expired but is not", 0L,
-        dtSecretManager.getRenewDate(rmDT));
+    assertEquals(0L, dtSecretManager.getRenewDate(rmDT),
+        "Token should have been expired but is not");
     // The remover thread should immediately do its work,
     // still give it some time to process
     dtSecretManager.startThreads();
@@ -296,7 +301,7 @@ public class TestRMDelegationTokens {
               break;
             }
           }
-          Assert.assertTrue(found);
+          assertTrue(found);
           return currentKey;
         }
       }

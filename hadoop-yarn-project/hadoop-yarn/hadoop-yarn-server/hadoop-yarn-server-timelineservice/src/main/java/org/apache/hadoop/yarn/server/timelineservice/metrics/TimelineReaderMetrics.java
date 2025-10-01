@@ -33,7 +33,7 @@ import static org.apache.hadoop.metrics2.lib.Interns.info;
  * Metrics class for TimelineReader.
  */
 @Metrics(about = "Metrics for timeline reader", context = "timelineservice")
-public class TimelineReaderMetrics {
+final public class TimelineReaderMetrics {
 
   private final static MetricsInfo METRICS_INFO = info("TimelineReaderMetrics",
       "Metrics for TimelineReader");
@@ -50,8 +50,7 @@ public class TimelineReaderMetrics {
   @Metric(about = "GET entity types success latency", valueName = "latency")
   private MutableQuantiles getEntityTypesSuccessLatency;
 
-  @VisibleForTesting
-  protected TimelineReaderMetrics() {
+  private TimelineReaderMetrics() {
   }
 
   public static TimelineReaderMetrics getInstance() {

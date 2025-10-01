@@ -56,6 +56,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
       <id>${distMgmtSnapshotsId}</id>
       <name>${distMgmtSnapshotsName}</name>
       <url>${distMgmtSnapshotsUrl}</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
     </repository>
     <repository>
       <id>repository.jboss.org</id>
@@ -82,6 +85,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <!-- required as child projects with different version can't use ${project.version} -->
     <hadoop.version>3.5.0-SNAPSHOT</hadoop.version>
 
+    <docker.image>apache/hadoop:${project.version}</docker.image>
+
     <distMgmtSnapshotsId>apache.snapshots.https</distMgmtSnapshotsId>
     <distMgmtSnapshotsName>Apache Development Snapshot Repository</distMgmtSnapshotsName>
     <distMgmtSnapshotsUrl>https://repository.apache.org/content/repositories/snapshots</distMgmtSnapshotsUrl>
@@ -99,8 +104,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <maven-stylus-skin.version>1.5</maven-stylus-skin.version>
     <maven-antrun-plugin.version>1.7</maven-antrun-plugin.version>
     <maven-assembly-plugin.version>2.4</maven-assembly-plugin.version>
-    <maven-dependency-plugin.version>3.0.2</maven-dependency-plugin.version>
-    <maven-enforcer-plugin.version>3.0.0</maven-enforcer-plugin.version>
+    <maven-dependency-plugin.version>3.8.1</maven-dependency-plugin.version>
+    <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
     <restrict-imports.enforcer.version>2.0.0</restrict-imports.enforcer.version>
     <maven-javadoc-plugin.version>3.0.1</maven-javadoc-plugin.version>
     <maven-gpg-plugin.version>1.5</maven-gpg-plugin.version>
@@ -118,11 +123,20 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <spotbugs-maven-plugin.version>4.2.0</spotbugs-maven-plugin.version>
     <jsonschema2pojo-maven-plugin.version>1.1.1</jsonschema2pojo-maven-plugin.version>
     <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
-    <cyclonedx.version>2.7.10</cyclonedx.version>
+    <cyclonedx.version>2.9.1</cyclonedx.version>
+    <docker-maven-plugin.version>0.29.0</docker-maven-plugin.version>
 
     <shell-executable>bash</shell-executable>
 
     <leveldbjni.group>org.fusesource.leveldbjni</leveldbjni.group>
+
+    <!--
+     Surefire option to not fail a build if -Dtest=NAME doesn't find a
+     test called NAME. This is needed when running integration tests through
+     failsafe, as setting -Dtest=none is the way to stop surefire
+     running all unit tests before the it.test option is picked up.
+    -->
+    <surefire.failIfNoSpecifiedTests>false</surefire.failIfNoSpecifiedTests>
   </properties>
 
   <modules>
@@ -149,6 +163,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-dependency-plugin</artifactId>
           <version>${maven-dependency-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>io.fabric8</groupId>
+          <artifactId>docker-maven-plugin</artifactId>
+          <version>${docker-maven-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -302,6 +321,17 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                     <bannedImports>
                       <bannedImport>org.apache.commons.logging.**</bannedImport>
                     </bannedImports>
+                  </restrictImports>
+                  <restrictImports>
+                     <includeTestCode>true</includeTestCode>
+                     <reason>Use JUnit5</reason>
+                     <bannedImports>
+                        <bannedImport>org.junit.**</bannedImport>
+                     </bannedImports>
+                     <allowedImports>
+                        <allowedImport>org.junit.jupiter.**</allowedImport>
+                        <allowedImport>org.junit.platform.**</allowedImport>
+                     </allowedImports>
                   </restrictImports>
                 </rules>
               </configuration>
@@ -574,6 +604,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <exclude>licenses-binary/**</exclude>
             <exclude>dev-support/docker/pkg-resolver/packages.json</exclude>
             <exclude>dev-support/docker/pkg-resolver/platforms.json</exclude>
+            <exclude>dev-support/docker/vcpkg/vcpkg.json</exclude>
             <exclude>**/target/**</exclude>
          </excludes>
        </configuration>
@@ -605,8 +636,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
              dependencies of this project for known CVEs (security
              vulnerabilities against them). It will produce a report
              in target/dependency-check-report.html. To invoke, run
-             'mvn dependency-check:aggregate'. Note that this plugin
-             requires maven 3.1.1 or greater.
+             'mvn dependency-check:aggregate'.
         -->
         <groupId>org.owasp</groupId>
         <artifactId>dependency-check-maven</artifactId>
@@ -892,5 +922,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
       </activation>
     </profile>
 
+    <profile>
+      <id>docker-build</id>
+      <properties>
+        <docker.image>${user.name}/hadoop:${project.version}</docker.image>
+      </properties>
+    </profile>
   </profiles>
 </project>

@@ -85,7 +85,7 @@ public class PBImageCorruption {
   }
 
   String getType() {
-    StringBuffer s = new StringBuffer();
+    StringBuilder s = new StringBuilder();
     if (type.contains(PBImageCorruptionType.CORRUPT_NODE)) {
       s.append(PBImageCorruptionType.CORRUPT_NODE);
     }

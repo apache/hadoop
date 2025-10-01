@@ -25,12 +25,10 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resource
 
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
-import org.junit.Assert;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Test;
-import org.junit.After;
-import org.junit.Before;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.*;
 import java.util.Collections;
@@ -41,13 +39,21 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 @Deprecated
 public class TestCgroupsLCEResourcesHandler {
   private static File cgroupDir = null;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     cgroupDir =
         new File(System.getProperty("test.build.data",
@@ -56,7 +62,7 @@ public class TestCgroupsLCEResourcesHandler {
     FileUtils.deleteQuietly(cgroupDir);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     FileUtils.deleteQuietly(cgroupDir);
   }
@@ -70,22 +76,22 @@ public class TestCgroupsLCEResourcesHandler {
     FileUtils.deleteQuietly(cgroupDir);
     // Test 0
     // tasks file not present, should return false
-    Assert.assertFalse(handler.checkAndDeleteCgroup(cgroupDir));
+    assertFalse(handler.checkAndDeleteCgroup(cgroupDir));
 
     File tfile = new File(cgroupDir.getAbsolutePath(), "tasks");
     FileOutputStream fos = FileUtils.openOutputStream(tfile);
-    File fspy = Mockito.spy(cgroupDir);
+    File fspy = spy(cgroupDir);
 
     // Test 1, tasks file is empty
     // tasks file has no data, should return true
-    Mockito.when(fspy.delete()).thenReturn(true);
-    Assert.assertTrue(handler.checkAndDeleteCgroup(fspy));
+    when(fspy.delete()).thenReturn(true);
+    assertTrue(handler.checkAndDeleteCgroup(fspy));
 
     // Test 2, tasks file has data
     fos.write("1234".getBytes());
     fos.close();
     // tasks has data, would not be able to delete, should return false
-    Assert.assertFalse(handler.checkAndDeleteCgroup(fspy));
+    assertFalse(handler.checkAndDeleteCgroup(fspy));
     FileUtils.deleteQuietly(cgroupDir);
 
   }
@@ -122,7 +128,7 @@ public class TestCgroupsLCEResourcesHandler {
       }
     }.start();
     latch.await();
-    Assert.assertFalse(handler.deleteCgroup(cgroupDir.getAbsolutePath()));
+    assertFalse(handler.deleteCgroup(cgroupDir.getAbsolutePath()));
     FileUtils.deleteQuietly(cgroupDir);
   }
 
@@ -181,9 +187,9 @@ public class TestCgroupsLCEResourcesHandler {
     YarnConfiguration conf = new YarnConfiguration();
     final int numProcessors = 4;
     ResourceCalculatorPlugin plugin =
-        Mockito.mock(ResourceCalculatorPlugin.class);
-    Mockito.doReturn(numProcessors).when(plugin).getNumProcessors();
-    Mockito.doReturn(numProcessors).when(plugin).getNumCores();
+        mock(ResourceCalculatorPlugin.class);
+    doReturn(numProcessors).when(plugin).getNumProcessors();
+    doReturn(numProcessors).when(plugin).getNumCores();
     handler.setConf(conf);
     handler.initConfig();
 
@@ -204,8 +210,8 @@ public class TestCgroupsLCEResourcesHandler {
     handler.init(mockLCE, plugin);
     File periodFile = new File(cpuCgroupMountDir, "cpu.cfs_period_us");
     File quotaFile = new File(cpuCgroupMountDir, "cpu.cfs_quota_us");
-    Assert.assertFalse(periodFile.exists());
-    Assert.assertFalse(quotaFile.exists());
+    assertFalse(periodFile.exists());
+    assertFalse(quotaFile.exists());
 
     // subset of cpu being used, files should be created
     conf
@@ -215,8 +221,8 @@ public class TestCgroupsLCEResourcesHandler {
     handler.init(mockLCE, plugin);
     int period = readIntFromFile(periodFile);
     int quota = readIntFromFile(quotaFile);
-    Assert.assertEquals(100 * 1000, period);
-    Assert.assertEquals(1000 * 1000, quota);
+    assertEquals(100 * 1000, period);
+    assertEquals(1000 * 1000, quota);
 
     // set cpu back to 100, quota should be -1
     conf.setInt(YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT,
@@ -225,7 +231,7 @@ public class TestCgroupsLCEResourcesHandler {
     handler.limits[1] = 1000 * 1000;
     handler.init(mockLCE, plugin);
     quota = readIntFromFile(quotaFile);
-    Assert.assertEquals(-1, quota);
+    assertEquals(-1, quota);
 
     FileUtils.deleteQuietly(cgroupDir);
   }
@@ -246,18 +252,18 @@ public class TestCgroupsLCEResourcesHandler {
     CgroupsLCEResourcesHandler handler = new CgroupsLCEResourcesHandler();
 
     int[] ret = handler.getOverallLimits(2);
-    Assert.assertEquals(expectedQuota / 2, ret[0]);
-    Assert.assertEquals(expectedQuota, ret[1]);
+    assertEquals(expectedQuota / 2, ret[0]);
+    assertEquals(expectedQuota, ret[1]);
 
     ret = handler.getOverallLimits(2000);
-    Assert.assertEquals(expectedQuota, ret[0]);
-    Assert.assertEquals(-1, ret[1]);
+    assertEquals(expectedQuota, ret[0]);
+    assertEquals(-1, ret[1]);
 
     int[] params = {0, -1};
     for (int cores : params) {
       try {
         handler.getOverallLimits(cores);
-        Assert.fail("Function call should throw error.");
+        fail("Function call should throw error.");
       } catch (IllegalArgumentException ie) {
         // expected
       }
@@ -265,8 +271,8 @@ public class TestCgroupsLCEResourcesHandler {
 
     // test minimums
     ret = handler.getOverallLimits(1000 * 1000);
-    Assert.assertEquals(1000 * 1000, ret[0]);
-    Assert.assertEquals(-1, ret[1]);
+    assertEquals(1000 * 1000, ret[0]);
+    assertEquals(-1, ret[1]);
   }
 
   @Test
@@ -279,9 +285,9 @@ public class TestCgroupsLCEResourcesHandler {
     conf.setBoolean(YarnConfiguration.NM_DISK_RESOURCE_ENABLED, true);
     final int numProcessors = 4;
     ResourceCalculatorPlugin plugin =
-        Mockito.mock(ResourceCalculatorPlugin.class);
-    Mockito.doReturn(numProcessors).when(plugin).getNumProcessors();
-    Mockito.doReturn(numProcessors).when(plugin).getNumCores();
+        mock(ResourceCalculatorPlugin.class);
+    doReturn(numProcessors).when(plugin).getNumProcessors();
+    doReturn(numProcessors).when(plugin).getNumCores();
     handler.setConf(conf);
     handler.initConfig();
 
@@ -300,16 +306,16 @@ public class TestCgroupsLCEResourcesHandler {
     // check the controller paths map isn't empty
     ContainerId id = ContainerId.fromString("container_1_1_1_1");
     handler.preExecute(id, Resource.newInstance(1024, 1));
-    Assert.assertNotNull(handler.getControllerPaths());
+    assertNotNull(handler.getControllerPaths());
     // check values
     // default case - files shouldn't exist, strict mode off by default
     File containerCpuDir = new File(cpuCgroupMountDir, id.toString());
-    Assert.assertTrue(containerCpuDir.exists());
-    Assert.assertTrue(containerCpuDir.isDirectory());
+    assertTrue(containerCpuDir.exists());
+    assertTrue(containerCpuDir.isDirectory());
     File periodFile = new File(containerCpuDir, "cpu.cfs_period_us");
     File quotaFile = new File(containerCpuDir, "cpu.cfs_quota_us");
-    Assert.assertFalse(periodFile.exists());
-    Assert.assertFalse(quotaFile.exists());
+    assertFalse(periodFile.exists());
+    assertFalse(quotaFile.exists());
 
     // no files created because we're using all cpu
     FileUtils.deleteQuietly(containerCpuDir);
@@ -319,12 +325,12 @@ public class TestCgroupsLCEResourcesHandler {
     handler.initConfig();
     handler.preExecute(id,
         Resource.newInstance(1024, YarnConfiguration.DEFAULT_NM_VCORES));
-    Assert.assertTrue(containerCpuDir.exists());
-    Assert.assertTrue(containerCpuDir.isDirectory());
+    assertTrue(containerCpuDir.exists());
+    assertTrue(containerCpuDir.isDirectory());
     periodFile = new File(containerCpuDir, "cpu.cfs_period_us");
     quotaFile = new File(containerCpuDir, "cpu.cfs_quota_us");
-    Assert.assertFalse(periodFile.exists());
-    Assert.assertFalse(quotaFile.exists());
+    assertFalse(periodFile.exists());
+    assertFalse(quotaFile.exists());
 
     // 50% of CPU
     FileUtils.deleteQuietly(containerCpuDir);
@@ -334,14 +340,14 @@ public class TestCgroupsLCEResourcesHandler {
     handler.initConfig();
     handler.preExecute(id,
         Resource.newInstance(1024, YarnConfiguration.DEFAULT_NM_VCORES / 2));
-    Assert.assertTrue(containerCpuDir.exists());
-    Assert.assertTrue(containerCpuDir.isDirectory());
+    assertTrue(containerCpuDir.exists());
+    assertTrue(containerCpuDir.isDirectory());
     periodFile = new File(containerCpuDir, "cpu.cfs_period_us");
     quotaFile = new File(containerCpuDir, "cpu.cfs_quota_us");
-    Assert.assertTrue(periodFile.exists());
-    Assert.assertTrue(quotaFile.exists());
-    Assert.assertEquals(500 * 1000, readIntFromFile(periodFile));
-    Assert.assertEquals(1000 * 1000, readIntFromFile(quotaFile));
+    assertTrue(periodFile.exists());
+    assertTrue(quotaFile.exists());
+    assertEquals(500 * 1000, readIntFromFile(periodFile));
+    assertEquals(1000 * 1000, readIntFromFile(quotaFile));
 
     // CGroups set to 50% of CPU, container set to 50% of YARN CPU
     FileUtils.deleteQuietly(containerCpuDir);
@@ -354,14 +360,14 @@ public class TestCgroupsLCEResourcesHandler {
     handler.init(mockLCE, plugin);
     handler.preExecute(id,
         Resource.newInstance(1024, YarnConfiguration.DEFAULT_NM_VCORES / 2));
-    Assert.assertTrue(containerCpuDir.exists());
-    Assert.assertTrue(containerCpuDir.isDirectory());
+    assertTrue(containerCpuDir.exists());
+    assertTrue(containerCpuDir.isDirectory());
     periodFile = new File(containerCpuDir, "cpu.cfs_period_us");
     quotaFile = new File(containerCpuDir, "cpu.cfs_quota_us");
-    Assert.assertTrue(periodFile.exists());
-    Assert.assertTrue(quotaFile.exists());
-    Assert.assertEquals(1000 * 1000, readIntFromFile(periodFile));
-    Assert.assertEquals(1000 * 1000, readIntFromFile(quotaFile));
+    assertTrue(periodFile.exists());
+    assertTrue(quotaFile.exists());
+    assertEquals(1000 * 1000, readIntFromFile(periodFile));
+    assertEquals(1000 * 1000, readIntFromFile(quotaFile));
 
     FileUtils.deleteQuietly(cgroupDir);
   }
@@ -375,9 +381,9 @@ public class TestCgroupsLCEResourcesHandler {
       CgroupsLCEResourcesHandler handler = new CgroupsLCEResourcesHandler();
       Map<String, Set<String>> cgroups = new LinkedHashMap<>();
 
-      Assert.assertTrue("temp dir should be created", cpu.mkdirs());
-      Assert.assertTrue("temp dir should be created", memory.mkdirs());
-      Assert.assertFalse("temp dir should not be created", cpuNoExist.exists());
+      assertTrue(cpu.mkdirs(), "temp dir should be created");
+      assertTrue(memory.mkdirs(), "temp dir should be created");
+      assertFalse(cpuNoExist.exists(), "temp dir should not be created");
 
       cgroups.put(
           memory.getAbsolutePath(), Collections.singleton("memory"));
@@ -385,8 +391,8 @@ public class TestCgroupsLCEResourcesHandler {
           cpuNoExist.getAbsolutePath(), Collections.singleton("cpu"));
       cgroups.put(cpu.getAbsolutePath(), Collections.singleton("cpu"));
       String selectedCPU = handler.findControllerInMtab("cpu", cgroups);
-      Assert.assertEquals("Wrong CPU mount point selected",
-          cpu.getAbsolutePath(), selectedCPU);
+      assertEquals(cpu.getAbsolutePath(), selectedCPU,
+          "Wrong CPU mount point selected");
     } finally {
       FileUtils.deleteQuietly(cpu);
       FileUtils.deleteQuietly(memory);
@@ -403,18 +409,18 @@ public class TestCgroupsLCEResourcesHandler {
     File cpu = new File(new File(cgroupDir, "cpuacct,cpu"), "/hadoop-yarn");
 
     try {
-      Assert.assertTrue("temp dir should be created", cpu.mkdirs());
+      assertTrue(cpu.mkdirs(), "temp dir should be created");
 
       final int numProcessors = 4;
       ResourceCalculatorPlugin plugin =
-              Mockito.mock(ResourceCalculatorPlugin.class);
-      Mockito.doReturn(numProcessors).when(plugin).getNumProcessors();
-      Mockito.doReturn(numProcessors).when(plugin).getNumCores();
+              mock(ResourceCalculatorPlugin.class);
+      doReturn(numProcessors).when(plugin).getNumProcessors();
+      doReturn(numProcessors).when(plugin).getNumCores();
       when(plugin.getNumProcessors()).thenReturn(8);
       handler.init(null, plugin);
 
-      Assert.assertEquals("CPU CGRoup path was not set", cpu.getParent(),
-          handler.getControllerPaths().get("cpu"));
+      assertEquals(cpu.getParent(), handler.getControllerPaths().get("cpu"),
+          "CPU CGRoup path was not set");
 
     } finally {
       FileUtils.deleteQuietly(cpu);

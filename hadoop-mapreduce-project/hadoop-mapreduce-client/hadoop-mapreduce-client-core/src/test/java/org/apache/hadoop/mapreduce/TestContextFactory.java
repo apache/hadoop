@@ -22,8 +22,8 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.lib.map.WrappedMapper;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestContextFactory {
 
@@ -31,7 +31,7 @@ public class TestContextFactory {
   Configuration conf;
   JobContext jobContext;
   
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     jobId = new JobID("test", 1);
@@ -56,7 +56,7 @@ public class TestContextFactory {
     ContextFactory.cloneMapContext(mapperContext, conf, null, null);
   }
 
-  @Before
+  @BeforeEach
   public void tearDown() throws Exception {
     
   }

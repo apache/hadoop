@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.streaming;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -29,7 +29,7 @@ import java.nio.charset.StandardCharsets;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestUnconsumedInput {
   protected final int EXPECTED_OUTPUT_SIZE = 10000;
@@ -91,11 +91,11 @@ public class TestUnconsumedInput {
       job = new StreamJob();
       job.setConf(conf);
       int exitCode = job.run(genArgs());
-      assertEquals("Job failed", 0, exitCode);
+      assertEquals(0, exitCode, "Job failed");
       outFile = new File(OUTPUT_DIR, outFileName).getAbsoluteFile();
       String output = StreamUtil.slurp(outFile);
-      assertEquals("Output was truncated", EXPECTED_OUTPUT_SIZE,
-          StringUtils.countMatches(output, "\t"));
+      assertEquals(EXPECTED_OUTPUT_SIZE, StringUtils.countMatches(output, "\t"),
+          "Output was truncated");
     } finally {
       INPUT_FILE.delete();
       FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());

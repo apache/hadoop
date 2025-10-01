@@ -186,7 +186,7 @@ public abstract class NMStateStoreService extends AbstractService {
 
     @Override
     public String toString() {
-      return new StringBuffer("Status: ").append(getStatus())
+      return new StringBuilder("Status: ").append(getStatus())
           .append(", Exit code: ").append(exitCode)
           .append(", Version: ").append(version)
           .append(", Start Time: ").append(startTime)

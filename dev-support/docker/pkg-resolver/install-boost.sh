@@ -27,25 +27,25 @@ if [ $? -eq 1 ]; then
   exit 1
 fi
 
-default_version="1.72.0"
+default_version="1.86.0"
 version_to_install=$default_version
 if [ -n "$2" ]; then
   version_to_install="$2"
 fi
 
-if [ "$version_to_install" != "1.72.0" ]; then
+if [ "$version_to_install" != "1.86.0" ]; then
   echo "WARN: Don't know how to install version $version_to_install, installing the default version $default_version instead"
   version_to_install=$default_version
 fi
 
-if [ "$version_to_install" == "1.72.0" ]; then
+if [ "$version_to_install" == "1.86.0" ]; then
   # hadolint ignore=DL3003
   mkdir -p /opt/boost-library &&
-    curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download >boost_1_72_0.tar.bz2 &&
-    mv boost_1_72_0.tar.bz2 /opt/boost-library &&
+    curl -L https://sourceforge.net/projects/boost/files/boost/1.86.0/boost_1_86_0.tar.bz2/download >boost_1_86_0.tar.bz2 &&
+    mv boost_1_86_0.tar.bz2 /opt/boost-library &&
     cd /opt/boost-library &&
-    tar --bzip2 -xf boost_1_72_0.tar.bz2 &&
-    cd /opt/boost-library/boost_1_72_0 &&
+    tar --bzip2 -xf boost_1_86_0.tar.bz2 &&
+    cd /opt/boost-library/boost_1_86_0 &&
     ./bootstrap.sh --prefix=/usr/ &&
     ./b2 --without-python install &&
     cd /root &&

@@ -27,12 +27,17 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.attribute.AclEntry;
+import java.nio.file.attribute.AclEntryPermission;
 import java.nio.file.attribute.FileAttribute;
-import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.nio.file.attribute.UserPrincipal;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Set;
@@ -50,6 +55,10 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IOUtils.NullOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static java.nio.file.attribute.AclEntryFlag.DIRECTORY_INHERIT;
+import static java.nio.file.attribute.AclEntryFlag.FILE_INHERIT;
+import static java.nio.file.attribute.AclEntryType.ALLOW;
 
 /** Run a Hadoop job jar. */
 @InterfaceAudience.Private
@@ -286,24 +295,18 @@ public class RunJar {
     }
     mainClassName = mainClassName.replaceAll("/", ".");
 
-    File tmpDir = new File(System.getProperty("java.io.tmpdir"));
-    ensureDirectory(tmpDir);
-
     final File workDir;
     try {
-      FileAttribute<Set<PosixFilePermission>> perms = PosixFilePermissions
-          .asFileAttribute(PosixFilePermissions.fromString("rwx------"));
-      workDir = Files.createTempDirectory(tmpDir.toPath(), "hadoop-unjar", perms).toFile();
+      workDir = createWorkDirectory();
     } catch (IOException | SecurityException e) {
       // If user has insufficient perms to write to tmpDir, default
       // "Permission denied" message doesn't specify a filename.
       System.err.println("Error creating temp dir in java.io.tmpdir "
-                         + tmpDir + " due to " + e.getMessage());
+                         + System.getProperty("java.io.tmpdir") + " due to "
+                         + e.getMessage());
       System.exit(-1);
       return;
     }
-
-    ensureDirectory(workDir);
 
     ShutdownHookManager.get().addShutdownHook(
         new Runnable() {
@@ -331,6 +334,55 @@ public class RunJar {
     } catch (InvocationTargetException e) {
       throw e.getTargetException();
     }
+  }
+
+  static File createWorkDirectory() throws IOException {
+    File tmpDir = new File(System.getProperty("java.io.tmpdir"));
+    ensureDirectory(tmpDir);
+
+    File workDir = Files.createTempDirectory(tmpDir.toPath(), "hadoop-unjar",
+        directoryPermissions()).toFile();
+    ensureDirectory(workDir);
+    return workDir;
+  }
+
+  private static FileAttribute<?> directoryPermissions() throws IOException {
+    Set<String> views = FileSystems.getDefault().supportedFileAttributeViews();
+    if (views.contains("posix")) {
+      return PosixFilePermissions
+          .asFileAttribute(PosixFilePermissions.fromString("rwx------"));
+    } else if (views.contains("acl")) {
+      return userOnly();
+    } else {
+      throw new IOException("unrecognized FileSystem type " +
+          FileSystems.getDefault());
+    }
+  }
+
+  private static FileAttribute<?> userOnly() throws IOException {
+    UserPrincipal user =
+        FileSystems.getDefault()
+            .getUserPrincipalLookupService()
+            .lookupPrincipalByName(System.getProperty("user.name"));
+    List<AclEntry> acl =
+        Collections.singletonList(AclEntry.newBuilder()
+            .setType(ALLOW)
+            .setPrincipal(user)
+            .setPermissions(EnumSet.allOf(AclEntryPermission.class))
+            .setFlags(DIRECTORY_INHERIT, FILE_INHERIT)
+            .build());
+    return
+        new FileAttribute<List<AclEntry>>() {
+          @Override
+          public String name() {
+            return "acl:acl";
+          }
+
+          @Override
+          public List<AclEntry> value() {
+            return acl;
+          }
+        };
   }
 
   /**

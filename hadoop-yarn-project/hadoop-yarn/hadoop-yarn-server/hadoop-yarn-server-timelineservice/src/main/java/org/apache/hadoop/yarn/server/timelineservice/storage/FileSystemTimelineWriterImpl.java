@@ -291,6 +291,10 @@ public class FileSystemTimelineWriterImpl extends AbstractService
    * In order to make this writeInternal atomic as a part of writeInternal
    * we will first writeInternal data to .tmp file and then rename it.
    * Here we are assuming that rename is atomic for underlying file system.
+   *
+   * @param outputPath outputPath.
+   * @param data data.
+   * @throws IOException Signals that an I/O exception of some sort has occurred.
    */
   protected void writeFile(Path outputPath, byte[] data) throws IOException {
     Path tempPath =

@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -37,12 +36,12 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Retry;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.token.block.SecurityTestUtil;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
+@Timeout(60)
 public class TestSaslDataTransferExpiredBlockToken extends SaslDataTransferTestCase {
   private static final int BLOCK_SIZE = 4096;
   private static final int FILE_SIZE = 2 * BLOCK_SIZE;
@@ -51,10 +50,7 @@ public class TestSaslDataTransferExpiredBlockToken extends SaslDataTransferTestC
   private final byte[] rawData = new byte[FILE_SIZE];
   private MiniDFSCluster cluster;
 
-  @Rule
-  public Timeout timeout = new Timeout(60, TimeUnit.SECONDS);
-
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     Random r = new Random();
     r.nextBytes(rawData);
@@ -73,7 +69,7 @@ public class TestSaslDataTransferExpiredBlockToken extends SaslDataTransferTestC
         1000L);
   }
 
-  @After
+  @AfterEach
   public void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -99,7 +95,7 @@ public class TestSaslDataTransferExpiredBlockToken extends SaslDataTransferTestC
     } catch (IOException e) {
       return false;
     }
-    assertEquals("Cannot read file.", toRead.length, totalRead);
+    assertEquals(toRead.length, totalRead, "Cannot read file.");
     return checkFile(toRead);
   }
 
@@ -107,7 +103,7 @@ public class TestSaslDataTransferExpiredBlockToken extends SaslDataTransferTestC
   private boolean checkFile2(FSDataInputStream in) {
     byte[] toRead = new byte[FILE_SIZE];
     try {
-      assertEquals("Cannot read file", toRead.length, in.read(0, toRead, 0, toRead.length));
+      assertEquals(toRead.length, in.read(0, toRead, 0, toRead.length), "Cannot read file");
     } catch (IOException e) {
       return false;
     }

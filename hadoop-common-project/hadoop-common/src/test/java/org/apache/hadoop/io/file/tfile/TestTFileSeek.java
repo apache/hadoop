@@ -22,9 +22,9 @@ import java.util.Random;
 import java.util.StringTokenizer;
 
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 
 import org.apache.commons.cli.CommandLine;
@@ -60,7 +60,7 @@ public class TestTFileSeek {
   private DiscreteRNG keyLenGen;
   private KVGenerator kvGen;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     if (options == null) {
       options = new MyOptions(new String[0]);
@@ -87,7 +87,7 @@ public class TestTFileSeek {
             options.dictSize);
   }
   
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     fs.delete(path, true);
   }

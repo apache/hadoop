@@ -29,8 +29,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,6 +84,7 @@ import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID_SOURCE;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.SPARK_WRITE_UUID;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_TASKS_SUCCEEDED;
+import static org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTrackerUtils.isTrackMagicCommitsInMemoryEnabled;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -161,6 +164,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     return suitename() + "-" + super.getMethodName();
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -175,6 +179,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     cleanupDestDir();
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     describe("teardown");
@@ -200,7 +205,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
    * This only looks for leakage of committer thread pools,
    * and not any other leaked threads, such as those from S3A FS instances.
    */
-  @AfterClass
+  @AfterAll
   public static void checkForThreadLeakage() {
     List<String> committerThreads = getCurrentThreadNames().stream()
         .filter(n -> n.startsWith(AbstractS3ACommitter.THREAD_PREFIX))
@@ -636,10 +641,10 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     TaskAttemptContext tContext = jobData.tContext;
     AbstractS3ACommitter committer = jobData.committer;
 
-    assertNotNull("null workPath in committer " + committer,
-        committer.getWorkPath());
-    assertNotNull("null outputPath in committer " + committer,
-        committer.getOutputPath());
+    assertNotNull(committer.getWorkPath(),
+        "null workPath in committer " + committer);
+    assertNotNull(committer.getOutputPath(),
+        "null outputPath in committer " + committer);
 
     // note the task attempt path.
     Path job1TaskAttempt0Path = committer.getTaskAttemptPath(tContext);
@@ -658,8 +663,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     AbstractS3ACommitter committer2 = createCommitter(tContext2);
     committer2.setupJob(tContext2);
 
-    assertFalse("recoverySupported in " + committer2,
-        committer2.isRecoverySupported());
+    assertFalse(committer2.isRecoverySupported(),
+        "recoverySupported in " + committer2);
     intercept(PathCommitException.class, "recover",
         () -> committer2.recoverTask(tContext2));
 
@@ -668,9 +673,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     final Path job2TaskAttempt0Path = committer2.getTaskAttemptPath(tContext2);
     LOG.info("Job attempt 1 task attempt path {}; attempt 2 path {}",
         job1TaskAttempt0Path, job2TaskAttempt0Path);
-    assertNotEquals("Task attempt paths must differ",
-        job1TaskAttempt0Path,
-        job2TaskAttempt0Path);
+    assertNotEquals(job1TaskAttempt0Path,
+        job2TaskAttempt0Path, "Task attempt paths must differ");
 
     // at this point, task attempt 0 has failed to recover
     // it should be abortable though. This will be a no-op as it already
@@ -721,7 +725,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     }
     Path expectedFile = getPart0000(dir);
     log().debug("Validating content in {}", expectedFile);
-    StringBuffer expectedOutput = new StringBuffer();
+    StringBuilder expectedOutput = new StringBuilder();
     expectedOutput.append(KEY_1).append('\t').append(VAL_1).append("\n");
     expectedOutput.append(VAL_1).append("\n");
     expectedOutput.append(VAL_2).append("\n");
@@ -729,8 +733,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     expectedOutput.append(KEY_1).append("\n");
     expectedOutput.append(KEY_2).append('\t').append(VAL_2).append("\n");
     String output = readFile(expectedFile);
-    assertEquals("Content of " + expectedFile,
-        expectedOutput.toString(), output);
+    assertEquals(expectedOutput.toString(), output,
+        "Content of " + expectedFile);
   }
 
   /**
@@ -825,8 +829,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
 
     dumpMultipartUploads();
     describe("2. Committing task");
-    assertTrue("No files to commit were found by " + committer,
-        committer.needsTaskCommit(tContext));
+    assertTrue(committer.needsTaskCommit(tContext),
+        "No files to commit were found by " + committer);
     commitTask(committer, tContext);
 
     // this is only task commit; there MUST be no part- files in the dest dir
@@ -906,7 +910,14 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     assertNoMultipartUploadsPending(outDir);
 
     // commit task to fail on retry
-    expectFNFEonTaskCommit(committer, tContext);
+    // FNFE is not thrown in case of Magic committer when
+    // in memory commit data is enabled and hence skip the check.
+    boolean skipExpectFNFE = committer instanceof MagicS3GuardCommitter &&
+        isTrackMagicCommitsInMemoryEnabled(tContext.getConfiguration());
+
+    if (!skipExpectFNFE) {
+      expectFNFEonTaskCommit(committer, tContext);
+    }
   }
 
   /**
@@ -1231,8 +1242,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
       if (children.length != 0) {
         lsR(fs, outDir, true);
       }
-      assertArrayEquals("Output directory not empty " + ls(outDir),
-          new FileStatus[0], children);
+      assertArrayEquals(new FileStatus[0], children,
+          "Output directory not empty " + ls(outDir));
     } catch (FileNotFoundException e) {
       // this is a valid failure mode; it means the dest dir doesn't exist yet.
     }
@@ -1422,9 +1433,12 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     validateTaskAttemptPathDuringWrite(dest, expectedLength, jobData.getCommitter().getUUID());
     recordWriter.close(tContext);
     // at this point
-    validateTaskAttemptPathAfterWrite(dest, expectedLength);
-    assertTrue("Committer does not have data to commit " + committer,
-        committer.needsTaskCommit(tContext));
+    // Skip validation when commit data is stored in memory
+    if (!isTrackMagicCommitsInMemoryEnabled(conf)) {
+      validateTaskAttemptPathAfterWrite(dest, expectedLength);
+    }
+    assertTrue(committer.needsTaskCommit(tContext),
+        "Committer does not have data to commit " + committer);
     commitTask(committer, tContext);
     // at this point the committer tasks stats should be current.
     IOStatisticsSnapshot snapshot = new IOStatisticsSnapshot(
@@ -1473,7 +1487,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
         = ReflectionUtils.newInstance(newAttempt
         .getOutputFormatClass(), conf);
     Path outputPath = FileOutputFormat.getOutputPath(newAttempt);
-    assertNotNull("null output path in new task attempt", outputPath);
+    assertNotNull(outputPath, "null output path in new task attempt");
 
     AbstractS3ACommitter committer2 = (AbstractS3ACommitter)
         outputFormat.getOutputCommitter(newAttempt);
@@ -1522,13 +1536,11 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
       setup(jobData2);
       abortInTeardown(jobData2);
       // make sure the directories are different
-      assertNotEquals("Committer output paths",
-          committer1.getOutputPath(),
-          committer2.getOutputPath());
+      assertNotEquals(committer1.getOutputPath(),
+          committer2.getOutputPath(), "Committer output paths");
 
-      assertNotEquals("job UUIDs",
-          committer1.getUUID(),
-          committer2.getUUID());
+      assertNotEquals(committer1.getUUID(),
+          committer2.getUUID(), "job UUIDs");
 
       // job2 setup, write some data there
       writeTextOutput(tContext2);
@@ -1692,8 +1704,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     // validate the output
     Path job1Output = new Path(outDir, job1TaskOutputFile.getName());
     Path job2Output = new Path(outDir, job2TaskOutputFile.getName());
-    assertNotEquals("Job output file filenames must be different",
-        job1Output, job2Output);
+    assertNotEquals(job1Output, job2Output,
+        "Job output file filenames must be different");
 
     // job1 output must be there
     assertPathExists("job 1 output", job1Output);
@@ -1750,9 +1762,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     Assertions.assertThat(committer2.getUUIDSource())
         .describedAs("UUID source of %s", committer2)
         .isEqualTo(AbstractS3ACommitter.JobUUIDSource.GeneratedLocally);
-    assertNotEquals("job UUIDs",
-        committer.getUUID(),
-        committer2.getUUID());
+    assertNotEquals(committer.getUUID(),
+        committer2.getUUID(), "job UUIDs");
     // Task setup MUST fail.
     intercept(PathCommitException.class,
         E_SELF_GENERATED_JOB_UUID, () -> {

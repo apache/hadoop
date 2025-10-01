@@ -22,7 +22,7 @@ import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.HadoopTestBase;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestGetEnclosingRoot extends HadoopTestBase {
   @Test

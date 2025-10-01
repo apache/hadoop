@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.client.cli;
 import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
 import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -36,8 +36,8 @@ import java.util.Arrays;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
@@ -49,7 +49,7 @@ public class TestClusterCLI {
   private PrintStream sysErr;
   private YarnClient client = mock(YarnClient.class);
 
-  @Before
+  @BeforeEach
   public void setup() {
     sysOutStream = new ByteArrayOutputStream();
     sysOut = spy(new PrintStream(sysOutStream));

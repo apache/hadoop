@@ -21,9 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,13 +30,15 @@ import java.util.Map;
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.VCORES_URI;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class TestResourceVector {
   private final static String CUSTOM_RESOURCE = "custom";
 
   private final YarnConfiguration conf = new YarnConfiguration();
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf.set(YarnConfiguration.RESOURCE_TYPES, CUSTOM_RESOURCE);
     ResourceUtils.resetResourceTypes(conf);
@@ -46,22 +47,22 @@ public class TestResourceVector {
   @Test
   public void testCreation() {
     ResourceVector zeroResourceVector = ResourceVector.newInstance();
-    Assert.assertEquals(0, zeroResourceVector.getValue(MEMORY_URI), EPSILON);
-    Assert.assertEquals(0, zeroResourceVector.getValue(VCORES_URI), EPSILON);
-    Assert.assertEquals(0, zeroResourceVector.getValue(CUSTOM_RESOURCE), EPSILON);
+    assertEquals(0, zeroResourceVector.getValue(MEMORY_URI), EPSILON);
+    assertEquals(0, zeroResourceVector.getValue(VCORES_URI), EPSILON);
+    assertEquals(0, zeroResourceVector.getValue(CUSTOM_RESOURCE), EPSILON);
 
     ResourceVector uniformResourceVector = ResourceVector.of(10);
-    Assert.assertEquals(10, uniformResourceVector.getValue(MEMORY_URI), EPSILON);
-    Assert.assertEquals(10, uniformResourceVector.getValue(VCORES_URI), EPSILON);
-    Assert.assertEquals(10, uniformResourceVector.getValue(CUSTOM_RESOURCE), EPSILON);
+    assertEquals(10, uniformResourceVector.getValue(MEMORY_URI), EPSILON);
+    assertEquals(10, uniformResourceVector.getValue(VCORES_URI), EPSILON);
+    assertEquals(10, uniformResourceVector.getValue(CUSTOM_RESOURCE), EPSILON);
 
     Map<String, Long> customResources = new HashMap<>();
     customResources.put(CUSTOM_RESOURCE, 2L);
     Resource resource = Resource.newInstance(10, 5, customResources);
     ResourceVector resourceVectorFromResource = ResourceVector.of(resource);
-    Assert.assertEquals(10, resourceVectorFromResource.getValue(MEMORY_URI), EPSILON);
-    Assert.assertEquals(5, resourceVectorFromResource.getValue(VCORES_URI), EPSILON);
-    Assert.assertEquals(2, resourceVectorFromResource.getValue(CUSTOM_RESOURCE), EPSILON);
+    assertEquals(10, resourceVectorFromResource.getValue(MEMORY_URI), EPSILON);
+    assertEquals(5, resourceVectorFromResource.getValue(VCORES_URI), EPSILON);
+    assertEquals(2, resourceVectorFromResource.getValue(CUSTOM_RESOURCE), EPSILON);
   }
 
   @Test
@@ -70,17 +71,17 @@ public class TestResourceVector {
     ResourceVector rhsResourceVector = ResourceVector.of(5);
     lhsResourceVector.decrement(rhsResourceVector);
 
-    Assert.assertEquals(8, lhsResourceVector.getValue(MEMORY_URI), EPSILON);
-    Assert.assertEquals(8, lhsResourceVector.getValue(VCORES_URI), EPSILON);
-    Assert.assertEquals(8, lhsResourceVector.getValue(CUSTOM_RESOURCE), EPSILON);
+    assertEquals(8, lhsResourceVector.getValue(MEMORY_URI), EPSILON);
+    assertEquals(8, lhsResourceVector.getValue(VCORES_URI), EPSILON);
+    assertEquals(8, lhsResourceVector.getValue(CUSTOM_RESOURCE), EPSILON);
 
     ResourceVector negativeResourceVector = ResourceVector.of(-100);
 
     // Check whether overflow causes any issues
     negativeResourceVector.decrement(ResourceVector.of(Float.MAX_VALUE));
-    Assert.assertEquals(-Float.MAX_VALUE, negativeResourceVector.getValue(MEMORY_URI), EPSILON);
-    Assert.assertEquals(-Float.MAX_VALUE, negativeResourceVector.getValue(VCORES_URI), EPSILON);
-    Assert.assertEquals(-Float.MAX_VALUE, negativeResourceVector.getValue(CUSTOM_RESOURCE),
+    assertEquals(-Float.MAX_VALUE, negativeResourceVector.getValue(MEMORY_URI), EPSILON);
+    assertEquals(-Float.MAX_VALUE, negativeResourceVector.getValue(VCORES_URI), EPSILON);
+    assertEquals(-Float.MAX_VALUE, negativeResourceVector.getValue(CUSTOM_RESOURCE),
         EPSILON);
 
   }
@@ -90,14 +91,14 @@ public class TestResourceVector {
     ResourceVector resourceVector = ResourceVector.of(13);
     resourceVector.increment(MEMORY_URI, 5);
 
-    Assert.assertEquals(18, resourceVector.getValue(MEMORY_URI), EPSILON);
-    Assert.assertEquals(13, resourceVector.getValue(VCORES_URI), EPSILON);
-    Assert.assertEquals(13, resourceVector.getValue(CUSTOM_RESOURCE), EPSILON);
+    assertEquals(18, resourceVector.getValue(MEMORY_URI), EPSILON);
+    assertEquals(13, resourceVector.getValue(VCORES_URI), EPSILON);
+    assertEquals(13, resourceVector.getValue(CUSTOM_RESOURCE), EPSILON);
 
     // Check whether overflow causes any issues
     ResourceVector maxFloatResourceVector = ResourceVector.of(Float.MAX_VALUE);
     maxFloatResourceVector.increment(MEMORY_URI, 100);
-    Assert.assertEquals(Float.MAX_VALUE, maxFloatResourceVector.getValue(MEMORY_URI), EPSILON);
+    assertEquals(Float.MAX_VALUE, maxFloatResourceVector.getValue(MEMORY_URI), EPSILON);
   }
 
   @Test
@@ -106,13 +107,13 @@ public class TestResourceVector {
     ResourceVector resourceVectorOther = ResourceVector.of(14);
     Resource resource = Resource.newInstance(13, 13);
 
-    Assert.assertNotEquals(null, resourceVector);
-    Assert.assertNotEquals(resourceVectorOther, resourceVector);
-    Assert.assertNotEquals(resource, resourceVector);
+    assertNotEquals(null, resourceVector);
+    assertNotEquals(resourceVectorOther, resourceVector);
+    assertNotEquals(resource, resourceVector);
 
     ResourceVector resourceVectorOne = ResourceVector.of(1);
     resourceVectorOther.decrement(resourceVectorOne);
 
-    Assert.assertEquals(resourceVectorOther, resourceVector);
+    assertEquals(resourceVectorOther, resourceVector);
   }
 }

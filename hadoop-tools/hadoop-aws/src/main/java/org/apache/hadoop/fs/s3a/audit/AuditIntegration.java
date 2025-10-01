@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED_DEFAULT;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REJECT_OUT_OF_SPAN_OPERATIONS;
 import static org.apache.hadoop.fs.s3a.audit.impl.S3AInternalAuditConstants.AUDIT_SPAN_EXECUTION_ATTRIBUTE;
 
 /**
@@ -186,4 +187,14 @@ public final class AuditIntegration {
         || exception.getCause() instanceof AuditFailureException;
   }
 
+  /**
+   * Check if the configuration is set to reject operations that are
+   * performed outside of an audit span.
+   *
+   * @param conf the configuration to check
+   * @return true if operations outside of an audit span should be rejected, false otherwise
+   */
+  public static boolean isRejectOutOfSpan(final Configuration conf) {
+    return conf.getBoolean(REJECT_OUT_OF_SPAN_OPERATIONS, false);
+  }
 }

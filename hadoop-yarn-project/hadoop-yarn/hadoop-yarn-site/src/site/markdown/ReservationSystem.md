@@ -41,7 +41,7 @@ With reference to the figure above, a typical reservation proceeds as follows:
 
  * **Step 2**  The ReservationSystem leverages a ReservationAgent (GREE in the figure) to find a plausible allocation for the reservation in the Plan, a data structure tracking all reservation currently accepted and the available resources in the system.
 
- * **Step 3**  The SharingPolicy provides a way to enforce invariants on the reservation being accepted, potentially rejecting reservations. For example, the CapacityOvertimePolicy allows enforcement of both instantaneous max-capacity a user can request across all of his/her reservations and a limit on the integral of resources over a period of time, e.g., the user can reserve up to 50% of the cluster capacity instantanesouly, but in any 24h period of time he/she cannot exceed 10% average.
+ * **Step 3**  The SharingPolicy provides a way to enforce invariants on the reservation being accepted, potentially rejecting reservations. For example, the CapacityOvertimePolicy allows enforcement of both instantaneous max-capacity a user can request across all of his/her reservations and a limit on the integral of resources over a period of time, e.g., the user can reserve up to 50% of the cluster capacity instantaneously, but in any 24h period of time he/she cannot exceed 10% average.
 
  * **Step 4**  Upon a successful validation the ReservationSystem returns to the user a ReservationId (think of it as an airline ticket).
 

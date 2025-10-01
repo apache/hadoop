@@ -52,13 +52,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.Assert;
 
 import java.io.IOException;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfAmbiguousQueue;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfiguration;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -84,7 +85,7 @@ public final class CapacitySchedulerTestUtilities {
       String label) {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     CSQueue queue = cs.getQueue(queueName);
-    Assert.assertEquals(
+    assertEquals(
         memory,
         queue.getQueueResourceUsage()
             .getPending(label == null ? RMNodeLabelsManager.NO_LABEL : label)
@@ -96,7 +97,7 @@ public final class CapacitySchedulerTestUtilities {
       String label) {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     CSQueue queue = cs.getQueue(queueName);
-    Assert.assertTrue(queue.getQueueResourceUsage()
+    assertTrue(queue.getQueueResourceUsage()
         .getPending(label == null ? RMNodeLabelsManager.NO_LABEL : label)
         .getMemorySize() > 0);
   }
@@ -230,11 +231,11 @@ public final class CapacitySchedulerTestUtilities {
   }
 
   public static void checkApplicationResourceUsage(int expected, Application application) {
-    Assert.assertEquals(expected, application.getUsedResources().getMemorySize());
+    assertEquals(expected, application.getUsedResources().getMemorySize());
   }
 
   public static void checkNodeResourceUsage(int expected, NodeManager node) {
-    Assert.assertEquals(expected, node.getUsed().getMemorySize());
+    assertEquals(expected, node.getUsed().getMemorySize());
     node.checkResourceUsage();
   }
 }

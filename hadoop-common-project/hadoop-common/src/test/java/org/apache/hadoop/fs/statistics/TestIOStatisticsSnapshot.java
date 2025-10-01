@@ -19,8 +19,8 @@
 package org.apache.hadoop.fs.statistics;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +52,7 @@ public class TestIOStatisticsSnapshot extends AbstractHadoopTestBase {
   /** Saved to the snapshot as "mean1". */
   private MeanStatistic mean1;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     snapshot.counters().put("c1", 0L);
     snapshot.gauges().put("g1", 1L);

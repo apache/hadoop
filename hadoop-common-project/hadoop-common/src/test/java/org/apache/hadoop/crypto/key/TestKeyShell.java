@@ -27,13 +27,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestKeyShell {
   private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
@@ -45,7 +45,7 @@ public class TestKeyShell {
   /* The default JCEKS provider - for testing purposes */
   private String jceksProvider;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     outContent.reset();
     errContent.reset();
@@ -62,7 +62,7 @@ public class TestKeyShell {
     System.setErr(new PrintStream(errContent));
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws Exception {
     System.setOut(initialStdOut);
     System.setErr(initialStdErr);
@@ -115,7 +115,7 @@ public class TestKeyShell {
     rc = ks.run(args1);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains(keyName + " has been " +
-            "successfully created"));
+        "successfully created"));
     assertTrue(outContent.toString()
         .contains(ProviderUtils.NO_PASSWORD_WARN));
     assertTrue(outContent.toString()
@@ -150,7 +150,7 @@ public class TestKeyShell {
     deleteKey(ks, keyName);
 
     listOut = listKeys(ks, false);
-    assertFalse(listOut, listOut.contains(keyName));
+    assertFalse(listOut.contains(keyName), listOut);
   }
   
   /* HADOOP-10586 KeyShell didn't allow -description. */

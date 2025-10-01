@@ -20,6 +20,9 @@
 
 package org.apache.hadoop.resourceestimator.common.serialization;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,10 +35,9 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInterval;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -56,7 +58,8 @@ public class TestHistorySkylineSerDe {
   private TreeMap<Long, Resource> resourceOverTime;
   private RLESparseResourceAllocation skylineList;
 
-  @Before public final void setup() {
+  @BeforeEach
+  public final void setup() {
     resourceOverTime = new TreeMap<>();
     skylineList = new RLESparseResourceAllocation(resourceOverTime,
         new DefaultResourceCalculator());
@@ -93,36 +96,36 @@ public class TestHistorySkylineSerDe {
     // check if the recurrenceId is correct
     List<ResourceSkyline> resourceSkylineList =
         historySkylineDe.get(recurrenceId);
-    Assert.assertNotNull(resourceSkylineList);
-    Assert.assertEquals(1, resourceSkylineList.size());
+    assertNotNull(resourceSkylineList);
+    assertEquals(1, resourceSkylineList.size());
 
     // check if the resourceSkyline is correct
     ResourceSkyline resourceSkylineDe = resourceSkylineList.get(0);
-    Assert
-        .assertEquals(resourceSkylineDe.getJobId(), resourceSkyline.getJobId());
-    Assert.assertEquals(resourceSkylineDe.getJobInputDataSize(),
+    assertEquals(resourceSkylineDe.getJobId(), resourceSkyline.getJobId());
+    assertEquals(resourceSkylineDe.getJobInputDataSize(),
         resourceSkyline.getJobInputDataSize(), 0);
-    Assert.assertEquals(resourceSkylineDe.getJobSubmissionTime(),
+    assertEquals(resourceSkylineDe.getJobSubmissionTime(),
         resourceSkyline.getJobSubmissionTime());
-    Assert.assertEquals(resourceSkylineDe.getJobFinishTime(),
+    assertEquals(resourceSkylineDe.getJobFinishTime(),
         resourceSkyline.getJobFinishTime());
-    Assert.assertEquals(resourceSkylineDe.getContainerSpec().getMemorySize(),
+    assertEquals(resourceSkylineDe.getContainerSpec().getMemorySize(),
         resourceSkyline.getContainerSpec().getMemorySize());
-    Assert.assertEquals(resourceSkylineDe.getContainerSpec().getVirtualCores(),
+    assertEquals(resourceSkylineDe.getContainerSpec().getVirtualCores(),
         resourceSkyline.getContainerSpec().getVirtualCores());
     final RLESparseResourceAllocation skylineList2 =
         resourceSkyline.getSkylineList();
     final RLESparseResourceAllocation skylineListDe =
         resourceSkylineDe.getSkylineList();
     for (int i = 0; i < 20; i++) {
-      Assert.assertEquals(skylineList2.getCapacityAtTime(i).getMemorySize(),
+      assertEquals(skylineList2.getCapacityAtTime(i).getMemorySize(),
           skylineListDe.getCapacityAtTime(i).getMemorySize());
-      Assert.assertEquals(skylineList2.getCapacityAtTime(i).getVirtualCores(),
+      assertEquals(skylineList2.getCapacityAtTime(i).getVirtualCores(),
           skylineListDe.getCapacityAtTime(i).getVirtualCores());
     }
   }
 
-  @After public final void cleanUp() {
+  @AfterEach
+  public final void cleanUp() {
     gson = null;
     resourceSkyline = null;
     resourceOverTime.clear();

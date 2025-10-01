@@ -263,8 +263,11 @@ public abstract class ZKFailoverController {
       rpcServer.stopAndJoin();
       
       elector.quitElection(true);
-      healthMonitor.shutdown();
-      healthMonitor.join();
+
+      if (healthMonitor != null) {
+        healthMonitor.shutdown();
+        healthMonitor.join();
+      }
     }
     return 0;
   }

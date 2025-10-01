@@ -73,8 +73,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.security
     .RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,12 +90,11 @@ import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
     .NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -120,7 +119,8 @@ public class TestCapacitySchedulerAutoQueueCreation
       4);
 
 
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testAutoCreateLeafQueueCreation() throws Exception {
 
     try {
@@ -177,7 +177,8 @@ public class TestCapacitySchedulerAutoQueueCreation
     }
   }
 
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testAutoCreateLeafQueueCreationSchedulerMaximumAllocation()
       throws Exception {
     try {
@@ -206,7 +207,8 @@ public class TestCapacitySchedulerAutoQueueCreation
     }
   }
 
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testAutoCreateLeafQueueCreationUsingFullParentPath()
       throws Exception {
 
@@ -430,7 +432,8 @@ public class TestCapacitySchedulerAutoQueueCreation
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testAutoCreateLeafQueueFailsWithNoQueueMapping()
       throws Exception {
 
@@ -451,7 +454,8 @@ public class TestCapacitySchedulerAutoQueueCreation
     assertEquals(RMAppState.FAILED, app.getState());
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testQueueMappingValidationFailsWithInvalidParentQueueInMapping()
       throws Exception {
 
@@ -498,7 +502,8 @@ public class TestCapacitySchedulerAutoQueueCreation
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testQueueMappingUpdatesFailsOnRemovalOfParentQueueInMapping()
       throws Exception {
 
@@ -618,6 +623,59 @@ public class TestCapacitySchedulerAutoQueueCreation
     }
   }
 
+  @Test
+  public void testAutoQueueCreationWithWeightModeAndMaxAppLifetimeFirstSubmittedApp()
+      throws Exception {
+    if (mockRM != null) {
+      mockRM.stop();
+    }
+
+    long maxRootLifetime = 20L;
+    long defaultRootLifetime = 10L;
+
+    QueuePath testQueue = new QueuePath("root.test");
+
+    CapacitySchedulerConfiguration conf = setupSchedulerConfiguration();
+    conf.setQueues(ROOT, new String[] {"test"});
+    conf.setAutoQueueCreationV2Enabled(testQueue, true);
+    conf.setCapacity(DEFAULT, "1w");
+    conf.setCapacity(testQueue, "2w");
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+
+    conf.setMaximumLifetimePerQueue(ROOT, maxRootLifetime);
+    conf.setDefaultLifetimePerQueue(ROOT, defaultRootLifetime);
+
+    MockRM newMockRM = new MockRM(conf);
+    newMockRM.start();
+    ((CapacityScheduler) newMockRM.getResourceScheduler()).start();
+
+    CapacityScheduler newCS =
+        (CapacityScheduler) newMockRM.getResourceScheduler();
+
+    Priority appPriority = Priority.newInstance(0);
+    MockRMAppSubmissionData app = MockRMAppSubmissionData.Builder.createWithMemory(1024, newMockRM)
+              .withAppPriority(appPriority)
+              .withQueue("root.test.user")
+              .build();
+    RMApp app1 = MockRMAppSubmitter.submit(newMockRM, app);
+
+    assertEquals(newCS.getMaximumApplicationLifetime("root.test.user"), 20L);
+
+    try {
+      newMockRM.waitForState(app1.getApplicationId(), RMAppState.KILLED);
+      long totalTimeRun = app1.getFinishTime() - app1.getSubmitTime();
+
+      assertEquals(RMAppState.KILLED, app1.getState());
+      assertTrue(totalTimeRun > (defaultRootLifetime * 1000),
+          "Application killed before default lifetime value");
+      assertTrue(totalTimeRun < (maxRootLifetime * 1000),
+          "Application killed after max lifetime value " + totalTimeRun);
+    } finally {
+      ((CapacityScheduler) newMockRM.getResourceScheduler()).stop();
+      newMockRM.stop();
+    }
+  }
 
   /**
    * This test case checks if a mapping rule can put an application to an auto
@@ -859,28 +917,23 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       Resource MIN_RES = Resources.createResource(14438, 6);
 
-      Assert.assertEquals("Effective Min resource for USER3 is not correct",
-          Resources.none(), user3LeafQueue.getQueueResourceQuotas()
-              .getEffectiveMinResource());
-      Assert.assertEquals("Effective Max resource for USER3 is not correct",
-          MAX_RES, user3LeafQueue
-              .getQueueResourceQuotas()
-              .getEffectiveMaxResource());
+      assertEquals(Resources.none(), user3LeafQueue.getQueueResourceQuotas()
+          .getEffectiveMinResource(), "Effective Min resource for USER3 is not correct");
+      assertEquals(MAX_RES, user3LeafQueue
+          .getQueueResourceQuotas()
+          .getEffectiveMaxResource(), "Effective Max resource for USER3 is not correct");
 
       CSQueue user1LeafQueue = newCS.getQueue(USER1);
       CSQueue user2LeafQueue = newCS.getQueue(USER2);
-      Assert.assertEquals("Effective Min resource for USER2 is not correct",
-          MIN_RES, user1LeafQueue.getQueueResourceQuotas()
-              .getEffectiveMinResource());
-      Assert.assertEquals("Effective Max resource for USER2 is not correct",
-          MAX_RES, user1LeafQueue.getQueueResourceQuotas().getEffectiveMaxResource());
+      assertEquals(MIN_RES, user1LeafQueue.getQueueResourceQuotas()
+          .getEffectiveMinResource(), "Effective Min resource for USER2 is not correct");
+      assertEquals(MAX_RES, user1LeafQueue.getQueueResourceQuotas().getEffectiveMaxResource(),
+          "Effective Max resource for USER2 is not correct");
 
-      Assert.assertEquals("Effective Min resource for USER1 is not correct",
-          MIN_RES, user2LeafQueue.getQueueResourceQuotas()
-              .getEffectiveMinResource());
-      Assert.assertEquals("Effective Max resource for USER1 is not correct",
-          MAX_RES, user2LeafQueue.getQueueResourceQuotas()
-              .getEffectiveMaxResource());
+      assertEquals(MIN_RES, user2LeafQueue.getQueueResourceQuotas()
+          .getEffectiveMinResource(), "Effective Min resource for USER1 is not correct");
+      assertEquals(MAX_RES, user2LeafQueue.getQueueResourceQuotas()
+          .getEffectiveMaxResource(), "Effective Max resource for USER1 is not correct");
 
       // unregister one NM.
       newMockRM.unRegisterNode(nm3);
@@ -888,12 +941,11 @@ public class TestCapacitySchedulerAutoQueueCreation
       Resource MAX_RES_UPDATED = Resources.createResource(128000, 20);
 
       // After loosing one NM, resources will reduce
-      Assert.assertEquals("Effective Min resource for USER2 is not correct",
-          MIN_RES_UPDATED, user1LeafQueue.getQueueResourceQuotas().getEffectiveMinResource
-              ());
-      Assert.assertEquals("Effective Max resource for USER2 is not correct",
-          MAX_RES_UPDATED, user2LeafQueue.getQueueResourceQuotas()
-              .getEffectiveMaxResource());
+      assertEquals(MIN_RES_UPDATED,
+          user1LeafQueue.getQueueResourceQuotas().getEffectiveMinResource(),
+          "Effective Min resource for USER2 is not correct");
+      assertEquals(MAX_RES_UPDATED, user2LeafQueue.getQueueResourceQuotas()
+          .getEffectiveMaxResource(), "Effective Max resource for USER2 is not correct");
 
     } finally {
       cleanupQueue(USER1);
@@ -1046,9 +1098,8 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       CapacityScheduler cs = (CapacityScheduler) mockRM.getResourceScheduler();
       CSQueue queue = cs.getQueue("root.a.testuser");
-      assertNotNull("Leaf queue has not been auto-created", queue);
-      assertEquals("Number of running applications", 1,
-          queue.getNumApplications());
+      assertNotNull(queue, "Leaf queue has not been auto-created");
+      assertEquals(1, queue.getNumApplications(), "Number of running applications");
     } finally {
       if (mockRM != null) {
         mockRM.close();
@@ -1056,7 +1107,8 @@ public class TestCapacitySchedulerAutoQueueCreation
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testAutoCreateLeafQueueFailsWithSpecifiedEmptyStringLeafQueue()
           throws Exception {
 

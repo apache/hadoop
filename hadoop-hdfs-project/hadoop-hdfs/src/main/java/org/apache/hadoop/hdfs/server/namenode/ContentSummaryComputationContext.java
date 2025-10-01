@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.XAttr;
@@ -118,27 +119,26 @@ public class ContentSummaryComputationContext {
 
     boolean hadDirReadLock = dir.hasReadLock();
     boolean hadDirWriteLock = dir.hasWriteLock();
-    boolean hadFsnReadLock = fsn.hasReadLock();
-    boolean hadFsnWriteLock = fsn.hasWriteLock();
+    boolean hadFsnReadLock = fsn.hasReadLock(RwLockMode.GLOBAL);
+    boolean hadFsnWriteLock = fsn.hasWriteLock(RwLockMode.GLOBAL);
 
     // sanity check.
     if (!hadDirReadLock || !hadFsnReadLock || hadDirWriteLock ||
-        hadFsnWriteLock || dir.getReadHoldCount() != 1 ||
-        fsn.getReadHoldCount() != 1) {
+        hadFsnWriteLock || fsn.getReadHoldCount() != 1) {
       // cannot relinquish
       return false;
     }
 
     // unlock
     dir.readUnlock();
-    fsn.readUnlock("contentSummary");
+    fsn.readUnlock(RwLockMode.GLOBAL, "contentSummary");
 
     try {
       Thread.sleep(sleepMilliSec, sleepNanoSec);
     } catch (InterruptedException ie) {
     } finally {
       // reacquire
-      fsn.readLock();
+      fsn.readLock(RwLockMode.GLOBAL);
       dir.readLock();
     }
     yieldCount++;

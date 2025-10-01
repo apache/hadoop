@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.test;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.text.MessageFormat;
 
 import org.apache.hadoop.util.Time;
-import org.junit.Rule;
-import org.junit.rules.MethodRule;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public abstract class HTestCase {
 
@@ -37,14 +36,14 @@ public abstract class HTestCase {
 
   private float waitForRatio = WAITFOR_RATIO_DEFAULT;
 
-  @Rule
-  public MethodRule testDir = new TestDirHelper();
+  @RegisterExtension
+  public TestDirHelper testDir = new TestDirHelper();
 
-  @Rule
-  public MethodRule jettyTestHelper = new TestJettyHelper();
+  @RegisterExtension
+  public TestJettyHelper jettyTestHelper = new TestJettyHelper();
 
-  @Rule
-  public MethodRule exceptionHelper = new TestExceptionHelper();
+  @RegisterExtension
+  public TestExceptionHelper exceptionHelper = new TestExceptionHelper();
 
   /**
    * Sets the 'wait for ratio' used in the {@link #sleep(long)},

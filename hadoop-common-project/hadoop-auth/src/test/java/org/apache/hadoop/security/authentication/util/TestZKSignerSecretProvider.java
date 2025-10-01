@@ -21,10 +21,13 @@ import javax.servlet.ServletContext;
 import org.apache.curator.test.TestingServer;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
@@ -44,12 +47,12 @@ public class TestZKSignerSecretProvider {
         RolloverSignerSecretProvider.LOG.getName()).setLevel(Level.DEBUG);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     zkServer = new TestingServer();
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     if (zkServer != null) {
       zkServer.stop();
@@ -80,28 +83,28 @@ public class TestZKSignerSecretProvider {
 
       byte[] currentSecret = secretProvider.getCurrentSecret();
       byte[][] allSecrets = secretProvider.getAllSecrets();
-      Assert.assertArrayEquals(secret1, currentSecret);
-      Assert.assertEquals(2, allSecrets.length);
-      Assert.assertArrayEquals(secret1, allSecrets[0]);
-      Assert.assertNull(allSecrets[1]);
+      assertArrayEquals(secret1, currentSecret);
+      assertEquals(2, allSecrets.length);
+      assertArrayEquals(secret1, allSecrets[0]);
+      assertNull(allSecrets[1]);
       verify(secretProvider, timeout(timeout).atLeastOnce()).rollSecret();
       secretProvider.realRollSecret();
 
       currentSecret = secretProvider.getCurrentSecret();
       allSecrets = secretProvider.getAllSecrets();
-      Assert.assertArrayEquals(secret2, currentSecret);
-      Assert.assertEquals(2, allSecrets.length);
-      Assert.assertArrayEquals(secret2, allSecrets[0]);
-      Assert.assertArrayEquals(secret1, allSecrets[1]);
+      assertArrayEquals(secret2, currentSecret);
+      assertEquals(2, allSecrets.length);
+      assertArrayEquals(secret2, allSecrets[0]);
+      assertArrayEquals(secret1, allSecrets[1]);
       verify(secretProvider, timeout(timeout).atLeast(2)).rollSecret();
       secretProvider.realRollSecret();
 
       currentSecret = secretProvider.getCurrentSecret();
       allSecrets = secretProvider.getAllSecrets();
-      Assert.assertArrayEquals(secret3, currentSecret);
-      Assert.assertEquals(2, allSecrets.length);
-      Assert.assertArrayEquals(secret3, allSecrets[0]);
-      Assert.assertArrayEquals(secret2, allSecrets[1]);
+      assertArrayEquals(secret3, currentSecret);
+      assertEquals(2, allSecrets.length);
+      assertArrayEquals(secret3, allSecrets[0]);
+      assertArrayEquals(secret2, allSecrets[1]);
       verify(secretProvider, timeout(timeout).atLeast(3)).rollSecret();
       secretProvider.realRollSecret();
     } finally {
@@ -167,18 +170,18 @@ public class TestZKSignerSecretProvider {
 
       byte[] currentSecret = oldSecretProvider.getCurrentSecret();
       byte[][] allSecrets = oldSecretProvider.getAllSecrets();
-      Assert.assertArrayEquals(secret1, currentSecret);
-      Assert.assertEquals(2, allSecrets.length);
-      Assert.assertArrayEquals(secret1, allSecrets[0]);
-      Assert.assertNull(allSecrets[1]);
+      assertArrayEquals(secret1, currentSecret);
+      assertEquals(2, allSecrets.length);
+      assertArrayEquals(secret1, allSecrets[0]);
+      assertNull(allSecrets[1]);
       oldSecretProvider.realRollSecret();
 
       currentSecret = oldSecretProvider.getCurrentSecret();
       allSecrets = oldSecretProvider.getAllSecrets();
-      Assert.assertArrayEquals(secret2, currentSecret);
-      Assert.assertEquals(2, allSecrets.length);
-      Assert.assertArrayEquals(secret2, allSecrets[0]);
-      Assert.assertArrayEquals(secret1, allSecrets[1]);
+      assertArrayEquals(secret2, currentSecret);
+      assertEquals(2, allSecrets.length);
+      assertArrayEquals(secret2, allSecrets[0]);
+      assertArrayEquals(secret1, allSecrets[1]);
     } finally {
       oldSecretProvider.destroy();
     }
@@ -191,34 +194,34 @@ public class TestZKSignerSecretProvider {
 
       byte[] currentSecret = newSecretProvider.getCurrentSecret();
       byte[][] allSecrets = newSecretProvider.getAllSecrets();
-      Assert.assertArrayEquals(secret2, currentSecret);
-      Assert.assertEquals(2, allSecrets.length);
-      Assert.assertArrayEquals(secret2, allSecrets[0]);
-      Assert.assertArrayEquals(secret1, allSecrets[1]);
+      assertArrayEquals(secret2, currentSecret);
+      assertEquals(2, allSecrets.length);
+      assertArrayEquals(secret2, allSecrets[0]);
+      assertArrayEquals(secret1, allSecrets[1]);
       newSecretProvider.realRollSecret();
 
       currentSecret = newSecretProvider.getCurrentSecret();
       allSecrets = newSecretProvider.getAllSecrets();
-      Assert.assertArrayEquals(secret3, currentSecret);
-      Assert.assertEquals(2, allSecrets.length);
-      Assert.assertArrayEquals(secret3, allSecrets[0]);
-      Assert.assertArrayEquals(secret2, allSecrets[1]);
+      assertArrayEquals(secret3, currentSecret);
+      assertEquals(2, allSecrets.length);
+      assertArrayEquals(secret3, allSecrets[0]);
+      assertArrayEquals(secret2, allSecrets[1]);
       newSecretProvider.realRollSecret();
 
       currentSecret = newSecretProvider.getCurrentSecret();
       allSecrets = newSecretProvider.getAllSecrets();
-      Assert.assertArrayEquals(secret6, currentSecret);
-      Assert.assertEquals(2, allSecrets.length);
-      Assert.assertArrayEquals(secret6, allSecrets[0]);
-      Assert.assertArrayEquals(secret3, allSecrets[1]);
+      assertArrayEquals(secret6, currentSecret);
+      assertEquals(2, allSecrets.length);
+      assertArrayEquals(secret6, allSecrets[0]);
+      assertArrayEquals(secret3, allSecrets[1]);
       newSecretProvider.realRollSecret();
 
       currentSecret = newSecretProvider.getCurrentSecret();
       allSecrets = newSecretProvider.getAllSecrets();
-      Assert.assertArrayEquals(secret7, currentSecret);
-      Assert.assertEquals(2, allSecrets.length);
-      Assert.assertArrayEquals(secret7, allSecrets[0]);
-      Assert.assertArrayEquals(secret6, allSecrets[1]);
+      assertArrayEquals(secret7, currentSecret);
+      assertEquals(2, allSecrets.length);
+      assertArrayEquals(secret7, allSecrets[0]);
+      assertArrayEquals(secret6, allSecrets[1]);
     } finally {
       newSecretProvider.destroy();
     }
@@ -290,14 +293,14 @@ public class TestZKSignerSecretProvider {
       byte[][] allSecretsA = secretProviderA.getAllSecrets();
       byte[] currentSecretB = secretProviderB.getCurrentSecret();
       byte[][] allSecretsB = secretProviderB.getAllSecrets();
-      Assert.assertArrayEquals(secretA1, currentSecretA);
-      Assert.assertArrayEquals(secretA1, currentSecretB);
-      Assert.assertEquals(2, allSecretsA.length);
-      Assert.assertEquals(2, allSecretsB.length);
-      Assert.assertArrayEquals(secretA1, allSecretsA[0]);
-      Assert.assertArrayEquals(secretA1, allSecretsB[0]);
-      Assert.assertNull(allSecretsA[1]);
-      Assert.assertNull(allSecretsB[1]);
+      assertArrayEquals(secretA1, currentSecretA);
+      assertArrayEquals(secretA1, currentSecretB);
+      assertEquals(2, allSecretsA.length);
+      assertEquals(2, allSecretsB.length);
+      assertArrayEquals(secretA1, allSecretsA[0]);
+      assertArrayEquals(secretA1, allSecretsB[0]);
+      assertNull(allSecretsA[1]);
+      assertNull(allSecretsB[1]);
       verify(secretProviderA, timeout(timeout).atLeastOnce()).rollSecret();
       verify(secretProviderB, timeout(timeout).atLeastOnce()).rollSecret();
       secretProviderA.realRollSecret();
@@ -305,17 +308,17 @@ public class TestZKSignerSecretProvider {
 
       currentSecretA = secretProviderA.getCurrentSecret();
       allSecretsA = secretProviderA.getAllSecrets();
-      Assert.assertArrayEquals(secretA2, currentSecretA);
-      Assert.assertEquals(2, allSecretsA.length);
-      Assert.assertArrayEquals(secretA2, allSecretsA[0]);
-      Assert.assertArrayEquals(secretA1, allSecretsA[1]);
+      assertArrayEquals(secretA2, currentSecretA);
+      assertEquals(2, allSecretsA.length);
+      assertArrayEquals(secretA2, allSecretsA[0]);
+      assertArrayEquals(secretA1, allSecretsA[1]);
 
       currentSecretB = secretProviderB.getCurrentSecret();
       allSecretsB = secretProviderB.getAllSecrets();
-      Assert.assertArrayEquals(secretA2, currentSecretB);
-      Assert.assertEquals(2, allSecretsA.length);
-      Assert.assertArrayEquals(secretA2, allSecretsB[0]);
-      Assert.assertArrayEquals(secretA1, allSecretsB[1]);
+      assertArrayEquals(secretA2, currentSecretB);
+      assertEquals(2, allSecretsA.length);
+      assertArrayEquals(secretA2, allSecretsB[0]);
+      assertArrayEquals(secretA1, allSecretsB[1]);
       verify(secretProviderA, timeout(timeout).atLeast(2)).rollSecret();
       verify(secretProviderB, timeout(timeout).atLeastOnce()).rollSecret();
 
@@ -340,18 +343,18 @@ public class TestZKSignerSecretProvider {
       allSecretsA = secretProviderA.getAllSecrets();
       currentSecretB = secretProviderB.getCurrentSecret();
       allSecretsB = secretProviderB.getAllSecrets();
-      Assert.assertArrayEquals(currentSecretA, currentSecretB);
-      Assert.assertEquals(2, allSecretsA.length);
-      Assert.assertEquals(2, allSecretsB.length);
-      Assert.assertArrayEquals(allSecretsA[0], allSecretsB[0]);
-      Assert.assertArrayEquals(allSecretsA[1], allSecretsB[1]);
+      assertArrayEquals(currentSecretA, currentSecretB);
+      assertEquals(2, allSecretsA.length);
+      assertEquals(2, allSecretsB.length);
+      assertArrayEquals(allSecretsA[0], allSecretsB[0]);
+      assertArrayEquals(allSecretsA[1], allSecretsB[1]);
       switch (order) {
         case 1:
-          Assert.assertArrayEquals(secretA4, allSecretsA[0]);
-          break;
+        assertArrayEquals(secretA4, allSecretsA[0]);
+        break;
         case 2:
-          Assert.assertArrayEquals(secretB4, allSecretsA[0]);
-          break;
+        assertArrayEquals(secretB4, allSecretsA[0]);
+        break;
       }
     } finally {
       secretProviderB.destroy();

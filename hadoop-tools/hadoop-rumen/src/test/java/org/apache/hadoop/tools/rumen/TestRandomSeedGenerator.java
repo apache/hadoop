@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.tools.rumen;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.apache.hadoop.tools.rumen.RandomSeedGenerator.getSeed;
 
 public class TestRandomSeedGenerator {
@@ -28,13 +28,13 @@ public class TestRandomSeedGenerator {
     long masterSeed1 = 42;
     long masterSeed2 = 43;
     
-    assertTrue("Deterministic seeding",
-        getSeed("stream1", masterSeed1) == getSeed("stream1", masterSeed1));
-    assertTrue("Deterministic seeding",
-        getSeed("stream2", masterSeed2) == getSeed("stream2", masterSeed2));
-    assertTrue("Different streams", 
-        getSeed("stream1", masterSeed1) != getSeed("stream2", masterSeed1));
-    assertTrue("Different master seeds",
-        getSeed("stream1", masterSeed1) != getSeed("stream1", masterSeed2));
+    assertTrue(getSeed("stream1", masterSeed1) == getSeed("stream1", masterSeed1),
+        "Deterministic seeding");
+    assertTrue(getSeed("stream2", masterSeed2) == getSeed("stream2", masterSeed2),
+        "Deterministic seeding");
+    assertTrue(getSeed("stream1", masterSeed1) != getSeed("stream2", masterSeed1),
+        "Different streams");
+    assertTrue(getSeed("stream1", masterSeed1) != getSeed("stream1", masterSeed2),
+        "Different master seeds");
   }
 }

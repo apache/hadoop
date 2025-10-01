@@ -22,6 +22,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
+
 /**
  * Responsible to keep all the Azure Blob File System configurations keys in Hadoop configuration file.
  */
@@ -32,15 +34,45 @@ public final class ConfigurationKeys {
   /**
    * Config to specify if the configured account is HNS enabled or not. If
    * this config is not set, getacl call is made on account filesystem root
-   * path to determine HNS status.
+   * path on DFS Endpoint to determine HNS status.
    */
   public static final String FS_AZURE_ACCOUNT_IS_HNS_ENABLED = "fs.azure.account.hns.enabled";
+
+  /**
+   * Config to specify which {@link  AbfsServiceType} to use with HNS-Disabled Account type.
+   * Default value will be identified from URL used to initialize filesystem.
+   * This will allow an override to choose service endpoint in cases where any
+   * local DNS resolution is set for account and driver is unable to detect
+   * intended endpoint from the url used to initialize filesystem.
+   * If configured Blob for HNS-Enabled account, FS init will fail.
+   * Value {@value} case-insensitive "DFS" or "BLOB"
+   */
+  public static final String FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE = "fs.azure.fns.account.service.type";
+
+  /**
+   * Config to specify which {@link AbfsServiceType} to use only for Ingress Operations.
+   * Other operations will continue to move to the FS configured service endpoint.
+   * Value {@value} case-insensitive "DFS" or "BLOB"
+   */
+  public static final String FS_AZURE_INGRESS_SERVICE_TYPE = "fs.azure.ingress.service.type";
+
+  /**
+   * Config to be set only for cases where traffic over dfs endpoint is
+   * experiencing compatibility issues and need to move to blob for mitigation.
+   * Value {@value} case-insensitive "True" or "False"
+   */
+  public static final String FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK = "fs.azure.enable.dfstoblob.fallback";
+
   /**
    * Enable or disable expect hundred continue header.
    * Value: {@value}.
    */
   public static final String FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED = "fs.azure.account.expect.header.enabled";
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME = "fs.azure.account.key";
+  public static final String FS_AZURE_METRIC_ACCOUNT_NAME = "fs.azure.metric.account.name";
+  public static final String FS_AZURE_METRIC_ACCOUNT_KEY = "fs.azure.metric.account.key";
+  public static final String FS_AZURE_METRIC_URI = "fs.azure.metric.uri";
+
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX = "fs\\.azure\\.account\\.key\\.(.*)";
   public static final String FS_AZURE_SECURE_MODE = "fs.azure.secure.mode";
   public static final String FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED = "fs.azure.account.throttling.enabled";
@@ -48,9 +80,22 @@ public final class ConfigurationKeys {
   // Retry strategy defined by the user
   public static final String AZURE_MIN_BACKOFF_INTERVAL = "fs.azure.io.retry.min.backoff.interval";
   public static final String AZURE_MAX_BACKOFF_INTERVAL = "fs.azure.io.retry.max.backoff.interval";
+  public static final String AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED = "fs.azure.static.retry.for.connection.timeout.enabled";
+  public static final String AZURE_STATIC_RETRY_INTERVAL = "fs.azure.static.retry.interval";
   public static final String AZURE_BACKOFF_INTERVAL = "fs.azure.io.retry.backoff.interval";
   public static final String AZURE_MAX_IO_RETRIES = "fs.azure.io.retry.max.retries";
   public static final String AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT = "fs.azure.custom.token.fetch.retry.count";
+
+  /**
+   * Config to set HTTP Connection Timeout Value for Rest Operations.
+   * Value: {@value}.
+   */
+  public static final String AZURE_HTTP_CONNECTION_TIMEOUT = "fs.azure.http.connection.timeout";
+  /**
+   * Config to set HTTP Read Timeout Value for Rest Operations.
+   * Value: {@value}.
+   */
+  public static final String AZURE_HTTP_READ_TIMEOUT = "fs.azure.http.read.timeout";
 
   //  Retry strategy for getToken calls
   public static final String AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT = "fs.azure.oauth.token.fetch.retry.max.retries";
@@ -137,6 +182,8 @@ public final class ConfigurationKeys {
   public static final String AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION = "fs.azure.createRemoteFileSystemDuringInitialization";
   public static final String AZURE_SKIP_USER_GROUP_METADATA_DURING_INITIALIZATION = "fs.azure.skipUserGroupMetadataDuringInitialization";
   public static final String FS_AZURE_ENABLE_AUTOTHROTTLING = "fs.azure.enable.autothrottling";
+  public static final String FS_AZURE_METRIC_IDLE_TIMEOUT = "fs.azure.metric.idle.timeout";
+  public static final String FS_AZURE_METRIC_ANALYSIS_TIMEOUT = "fs.azure.metric.analysis.timeout";
   public static final String FS_AZURE_ACCOUNT_OPERATION_IDLE_TIMEOUT = "fs.azure.account.operation.idle.timeout";
   public static final String FS_AZURE_ANALYSIS_PERIOD = "fs.azure.analysis.period";
   public static final String FS_AZURE_ALWAYS_USE_HTTPS = "fs.azure.always.use.https";
@@ -177,6 +224,7 @@ public final class ConfigurationKeys {
    * character constraints are not satisfied. **/
   public static final String FS_AZURE_CLIENT_CORRELATIONID = "fs.azure.client.correlationid";
   public static final String FS_AZURE_TRACINGHEADER_FORMAT = "fs.azure.tracingheader.format";
+  public static final String FS_AZURE_METRIC_FORMAT = "fs.azure.metric.format";
   public static final String FS_AZURE_CLUSTER_NAME = "fs.azure.cluster.name";
   public static final String FS_AZURE_CLUSTER_TYPE = "fs.azure.cluster.type";
   public static final String FS_AZURE_SSL_CHANNEL_MODE_KEY = "fs.azure.ssl.channel.mode";
@@ -211,10 +259,46 @@ public final class ConfigurationKeys {
   public static final String AZURE_KEY_ACCOUNT_SHELLKEYPROVIDER_SCRIPT = "fs.azure.shellkeyprovider.script";
 
   /**
-   * Enable or disable readahead buffer in AbfsInputStream.
+   * Enable or disable readahead V1 in AbfsInputStream.
    * Value: {@value}.
    */
   public static final String FS_AZURE_ENABLE_READAHEAD = "fs.azure.enable.readahead";
+  /**
+   * Enable or disable readahead V2 in AbfsInputStream. This will work independent of V1.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_ENABLE_READAHEAD_V2 = "fs.azure.enable.readahead.v2";
+
+  /**
+   * Minimum number of prefetch threads in the thread pool for readahead V2.
+   * {@value }
+   */
+  public static final String FS_AZURE_READAHEAD_V2_MIN_THREAD_POOL_SIZE = "fs.azure.readahead.v2.min.thread.pool.size";
+  /**
+   * Maximum number of prefetch threads in the thread pool for readahead V2.
+   * {@value }
+   */
+  public static final String FS_AZURE_READAHEAD_V2_MAX_THREAD_POOL_SIZE = "fs.azure.readahead.v2.max.thread.pool.size";
+  /**
+   * Minimum size of the buffer pool for caching prefetched data for readahead V2.
+   * {@value }
+   */
+  public static final String FS_AZURE_READAHEAD_V2_MIN_BUFFER_POOL_SIZE = "fs.azure.readahead.v2.min.buffer.pool.size";
+  /**
+   * Maximum size of the buffer pool for caching prefetched data for readahead V2.
+   * {@value }
+   */
+  public static final String FS_AZURE_READAHEAD_V2_MAX_BUFFER_POOL_SIZE = "fs.azure.readahead.v2.max.buffer.pool.size";
+
+  /**
+   * TTL in milliseconds for the idle threads in executor service used by read ahead v2.
+   */
+  public static final String FS_AZURE_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS = "fs.azure.readahead.v2.executor.service.ttl.millis";
+
+  /**
+   * TTL in milliseconds for the cached buffers in buffer pool used by read ahead v2.
+   */
+  public static final String FS_AZURE_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS = "fs.azure.readahead.v2.cached.buffer.ttl.millis";
 
   /** Setting this true will make the driver use it's own RemoteIterator implementation */
   public static final String FS_AZURE_ENABLE_ABFS_LIST_ITERATOR = "fs.azure.enable.abfslistiterator";
@@ -253,6 +337,10 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN = "fs.azure.account.oauth2.refresh.token";
   /** Key for oauth AAD refresh token endpoint: {@value}. */
   public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT = "fs.azure.account.oauth2.refresh.token.endpoint";
+  /** Key for oauth AAD workload identity token file path: {@value}. */
+  public static final String FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE = "fs.azure.account.oauth2.token.file";
+  /** Key for custom client assertion provider class for WorkloadIdentityTokenProvider */
+  public static final String FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_TYPE = "fs.azure.account.oauth2.client.assertion.provider.type";
   /** Key for enabling the tracking of ABFS API latency and sending the latency numbers to the ABFS API service */
   public static final String FS_AZURE_ABFS_LATENCY_TRACK = "fs.azure.abfs.latency.track";
 
@@ -262,14 +350,32 @@ public final class ConfigurationKeys {
   /** Add extra resilience to rename failures, at the expense of performance. */
   public static final String FS_AZURE_ABFS_RENAME_RESILIENCE = "fs.azure.enable.rename.resilience";
 
+  /**
+   * Specify whether paginated behavior is to be expected or not in delete path. {@value}
+   */
+  public static final String FS_AZURE_ENABLE_PAGINATED_DELETE = "fs.azure.enable.paginated.delete";
+
+  /** Add extra layer of verification of the integrity of the request content during transport: {@value}. */
+  public static final String FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION = "fs.azure.enable.checksum.validation";
+
+  /** Add extra layer of verification of the integrity of the full blob request content during transport: {@value}. */
+  public static final String FS_AZURE_ENABLE_FULL_BLOB_CHECKSUM_VALIDATION = "fs.azure.enable.full.blob.checksum.validation";
+
   public static String accountProperty(String property, String account) {
-    return property + "." + account;
+    return property + DOT + account;
+  }
+
+  public static String containerProperty(String property, String fsName, String account) {
+    return property + DOT + fsName + DOT + account;
   }
 
   public static final String FS_AZURE_ENABLE_DELEGATION_TOKEN = "fs.azure.enable.delegation.token";
   public static final String FS_AZURE_DELEGATION_TOKEN_PROVIDER_TYPE = "fs.azure.delegation.token.provider.type";
 
-  /** Key for SAS token provider **/
+  /** Key for fixed SAS token: {@value}. **/
+  public static final String FS_AZURE_SAS_FIXED_TOKEN = "fs.azure.sas.fixed.token";
+
+  /** Key for SAS token provider: {@value}. **/
   public static final String FS_AZURE_SAS_TOKEN_PROVIDER_TYPE = "fs.azure.sas.token.provider.type";
 
   /** For performance, AbfsInputStream/AbfsOutputStream re-use SAS tokens until the expiry is within this number of seconds. **/
@@ -288,5 +394,68 @@ public final class ConfigurationKeys {
    * @see FileSystem#openFile(org.apache.hadoop.fs.Path)
    */
   public static final String FS_AZURE_BUFFERED_PREAD_DISABLE = "fs.azure.buffered.pread.disable";
+  /**Defines what network library to use for server IO calls: {@value}*/
+  public static final String FS_AZURE_NETWORKING_LIBRARY = "fs.azure.networking.library";
+  /**
+   * Maximum number of IOExceptions retries for a single server call on ApacheHttpClient.
+   * Breach of this count would turn off future uses of the ApacheHttpClient library
+   * in the JVM lifecycle: {@value}
+   */
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = "fs.azure.apache.http.client.max.io.exception.retries";
+  /**Maximum ApacheHttpClient-connection cache size at filesystem level: {@value}*/
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE = "fs.azure.apache.http.client.max.cache.size";
+  /**
+   * Defines number of connections to establish during warmup phase
+   * of ApacheHttpClient connection cache: {@value}
+   */
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT = "fs.azure.apache.http.client.cache.warmup.count";
+  /**
+   * Defines number of connections to establish during refresh phase
+   * of ApacheHttpClient connection cache: {@value}
+   */
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_CACHE_REFRESH_COUNT = "fs.azure.apache.http.client.cache.refresh.count";
+  /**
+   * Defines time duration to wait for ApacheHttpClient connection
+   * cache to warmup/ refresh: {@value}
+   */
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_REFRESH_WAIT_TIME_MILLIS = "fs.azure.apache.http.client.max.refresh.wait.time.millis";
+  /**
+   * Minimum number of cached connections in ApacheHttpClient cache
+   * below which refresh will be triggered. {@value}
+   */
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_MIN_TRIGGER_REFRESH_COUNT = "fs.azure.apache.http.client.min.trigger.refresh.count";
+  /**
+   * Time duration to wait for ApacheHttpClient connection cache to warmup/refresh: {@value}
+   */
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_WARMUP_CACHE_TIMEOUT_MILLIS = "fs.azure.apache.http.client.warmup.cache.timeout.millis";
+  /**
+   * Blob copy API is an async API, this configuration defines polling duration
+   * for checking copy status: {@value}
+   */
+  public static final String FS_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS = "fs.azure.blob.copy.progress.wait.millis";
+  /**
+   * Maximum time to wait for a blob copy operation to complete: {@value}
+   */
+  public static final String FS_AZURE_BLOB_COPY_MAX_WAIT_MILLIS = "fs.azure.blob.copy.max.wait.millis";
+  /**Blob rename lease refresh duration: {@value}*/
+  public static final String FS_AZURE_BLOB_ATOMIC_RENAME_LEASE_REFRESH_DURATION
+          = "fs.azure.blob.atomic.rename.lease.refresh.duration";
+  /**Maximum number of blob information enqueued in memory for rename or delete orchestration: {@value}*/
+  public static final String FS_AZURE_PRODUCER_QUEUE_MAX_SIZE = "fs.azure.blob.dir.list.producer.queue.max.size";
+  /**
+   * Maximum consumer lag (count of blob information which is yet to be taken for operation)
+   * in blob listing which can be tolerated before making producer to wait for
+   * consumer lag to become tolerable: {@value}.
+   */
+  public static final String FS_AZURE_CONSUMER_MAX_LAG = "fs.azure.blob.dir.list.consumer.max.lag";
+  /**Maximum number of thread per blob-rename orchestration: {@value}*/
+  public static final String FS_AZURE_BLOB_DIR_RENAME_MAX_THREAD = "fs.azure.blob.dir.rename.max.thread";
+  /**Maximum number of thread per blob-delete orchestration: {@value}*/
+  public static final String FS_AZURE_BLOB_DIR_DELETE_MAX_THREAD = "fs.azure.blob.dir.delete.max.thread";
+  /**Flag to enable/disable sending client transactional ID during create/rename operations: {@value}*/
+  public static final String FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = "fs.azure.enable.client.transaction.id";
+  /**Flag to enable/disable create idempotency during create operation: {@value}*/
+  public static final String FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY = "fs.azure.enable.create.blob.idempotency";
+
   private ConfigurationKeys() {}
 }

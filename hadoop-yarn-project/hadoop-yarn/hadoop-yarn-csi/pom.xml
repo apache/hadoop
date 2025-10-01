@@ -26,8 +26,8 @@
     <packaging>jar</packaging>
 
     <properties>
-        <grpc.version>1.53.0</grpc.version>
-        <animal-sniffer.version>1.21</animal-sniffer.version>
+        <grpc.version>1.69.0</grpc.version>
+        <animal-sniffer.version>1.24</animal-sniffer.version>
     </properties>
 
     <dependencies>
@@ -96,10 +96,6 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
             <scope>test</scope>
@@ -162,11 +158,6 @@
                     <artifactId>protobuf-java</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>javax.annotation</groupId>
-            <artifactId>javax.annotation-api</artifactId>
-            <scope>compile</scope>
         </dependency>
     </dependencies>
 

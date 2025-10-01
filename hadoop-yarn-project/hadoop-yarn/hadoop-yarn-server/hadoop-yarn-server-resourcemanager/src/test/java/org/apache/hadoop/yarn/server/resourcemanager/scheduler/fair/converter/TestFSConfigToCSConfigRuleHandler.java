@@ -25,14 +25,15 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.conve
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.QUEUE_AUTO_CREATE;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.RESERVATION_SYSTEM;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.FAIR_AS_DRF;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Properties;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for FSConfigToCSConfigRuleHandler.
@@ -45,7 +46,7 @@ public class TestFSConfigToCSConfigRuleHandler {
   private FSConfigToCSConfigRuleHandler ruleHandler;
   private DryRunResultHolder dryRunResultHolder;
 
-  @Before
+  @BeforeEach
   public void setup() {
     dryRunResultHolder = new DryRunResultHolder();
   }
@@ -123,15 +124,17 @@ public class TestFSConfigToCSConfigRuleHandler {
     expectAbort(() -> ruleHandler.handleFairAsDrf("test"));
   }
 
-  @Test(expected = ConversionException.class)
+  @Test
   public void testMaxChildQueueCountNotInteger() throws IOException {
-    Properties rules = new Properties();
-    rules.put(MAX_CHILD_QUEUE_LIMIT, "abc");
+    assertThrows(ConversionException.class, () -> {
+      Properties rules = new Properties();
+      rules.put(MAX_CHILD_QUEUE_LIMIT, "abc");
 
-    ruleHandler = new FSConfigToCSConfigRuleHandler(rules,
-        createDefaultConversionOptions());
+      ruleHandler = new FSConfigToCSConfigRuleHandler(rules,
+          createDefaultConversionOptions());
 
-    ruleHandler.handleChildQueueCount("test", 1);
+      ruleHandler.handleChildQueueCount("test", 1);
+    });
   }
 
   @Test
@@ -144,10 +147,10 @@ public class TestFSConfigToCSConfigRuleHandler {
     ruleHandler.handleDynamicMaxAssign();
     ruleHandler.handleMaxChildCapacity();
 
-    assertEquals("Number of warnings", 2,
-        dryRunResultHolder.getWarnings().size());
-    assertEquals("Number of errors", 0,
-        dryRunResultHolder.getErrors().size());
+    assertEquals(2, dryRunResultHolder.getWarnings().size(),
+        "Number of warnings");
+    assertEquals(0, dryRunResultHolder.getErrors().size(),
+        "Number of errors");
   }
 
   @Test
@@ -162,10 +165,10 @@ public class TestFSConfigToCSConfigRuleHandler {
     ruleHandler.handleDynamicMaxAssign();
     ruleHandler.handleMaxChildCapacity();
 
-    assertEquals("Number of warnings", 0,
-        dryRunResultHolder.getWarnings().size());
-    assertEquals("Number of errors", 2,
-        dryRunResultHolder.getErrors().size());
+    assertEquals(0, dryRunResultHolder.getWarnings().size(),
+        "Number of warnings");
+    assertEquals(2, dryRunResultHolder.getErrors().size(),
+        "Number of errors");
   }
 
   private void expectAbort(VoidCall call) {
@@ -183,8 +186,8 @@ public class TestFSConfigToCSConfigRuleHandler {
       exceptionThrown = true;
     }
 
-    assertTrue("Exception was not thrown", exceptionThrown);
-    assertEquals("Unexpected exception", exceptionClass, thrown.getClass());
+    assertTrue(exceptionThrown, "Exception was not thrown");
+    assertEquals(exceptionClass, thrown.getClass(), "Unexpected exception");
   }
 
   @FunctionalInterface

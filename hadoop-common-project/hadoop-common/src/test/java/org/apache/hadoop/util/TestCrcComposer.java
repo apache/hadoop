@@ -22,22 +22,21 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 /**
  * Unittests for CrcComposer.
  */
+@Timeout(10)
 public class TestCrcComposer {
-  @Rule
-  public Timeout globalTimeout = new Timeout(10000, TimeUnit.MILLISECONDS);
 
   private final Random rand = new Random(1234);
 
@@ -55,7 +54,7 @@ public class TestCrcComposer {
   private byte[] crcBytesByChunk;
   private byte[] crcBytesByCell;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     rand.nextBytes(data);
     fullCrc = getRangeChecksum(data, 0, dataSize);

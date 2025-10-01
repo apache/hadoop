@@ -46,6 +46,7 @@ The following are all supported command options:
 |`-logLevel` | Specify the logging level when the benchmark runs. The default logging level is ERROR. |
 |`-UGCacheRefreshCount` | After every specified number of operations, the benchmark purges the name-node's user group cache. By default the refresh is never called. |
 |`-keepResults` | If specified, do not clean up the name-space after execution. By default the name-space will be removed after test. |
+|`-nonSuperUser` | If specified, non super user can use the tool and can be helpful for bringing authorization time into benchmarking calculations. |
 
 ##### Operations Supported
 
@@ -87,6 +88,7 @@ When running benchmarks with the above operation(s), please provide operation-sp
 |`-totalBlocks` | Number of total blocks to operate. |
 |`-replication` | Replication factor. Will be adjusted to number of data-nodes if it is larger than that. |
 |`-baseDirName` | The base dir name for benchmarks, to support multiple clients submitting benchmark tests at the same time. |
+|`-blockSize` | The block size for new files. |
 
 ### Reports
 

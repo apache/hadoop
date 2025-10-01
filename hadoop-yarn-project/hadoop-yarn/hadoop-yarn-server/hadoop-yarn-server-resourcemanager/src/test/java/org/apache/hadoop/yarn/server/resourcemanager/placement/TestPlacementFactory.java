@@ -18,11 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test for the {@link PlacementFactory}.
@@ -34,10 +35,12 @@ public class TestPlacementFactory {
    *
    * @throws ClassNotFoundException
    */
-  @Test(expected = ClassNotFoundException.class)
+  @Test
   public void testGetNonExistRuleText() throws ClassNotFoundException {
-    final String nonExist = "my.placement.Rule";
-    PlacementFactory.getPlacementRule(nonExist, null);
+    assertThrows(ClassNotFoundException.class, ()->{
+      final String nonExist = "my.placement.Rule";
+      PlacementFactory.getPlacementRule(nonExist, null);
+    });
   }
 
   /**
@@ -53,8 +56,8 @@ public class TestPlacementFactory {
     } catch (ClassNotFoundException cnfe) {
       fail("Class should have been found");
     }
-    assertNotNull("Rule object is null", rule);
-    assertEquals("Names not equal", rule.getName(), exists);
+    assertNotNull(rule, "Rule object is null");
+    assertEquals(rule.getName(), exists, "Names not equal");
   }
 
   /**
@@ -65,11 +68,11 @@ public class TestPlacementFactory {
   public void testGetRuleClass() {
     PlacementRule rule = PlacementFactory.getPlacementRule(
         DefaultPlacementRule.class, null);
-    assertNotNull("Rule object is null", rule);
+    assertNotNull(rule, "Rule object is null");
     // Should take anything as the second object: ignores unknown types in the
     // default implementation.
     rule = PlacementFactory.getPlacementRule(
         DefaultPlacementRule.class, "");
-    assertNotNull("Rule object is null", rule);
+    assertNotNull(rule, "Rule object is null");
   }
 }

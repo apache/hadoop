@@ -49,6 +49,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.FileUtil.maybeIgnoreMissingDirectory;
 
 /**
@@ -455,10 +456,17 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
       if (length != 0) {
         BlockLocation[] blkLocations;
         if (file instanceof LocatedFileStatus) {
-          blkLocations = ((LocatedFileStatus) file).getBlockLocations();
+          blkLocations = requireNonNull(
+              ((LocatedFileStatus) file).getBlockLocations(),
+              () -> String.format("No block locations in LocatedFileStatus %s; length=%d",
+                  file, length));
+
         } else {
           FileSystem fs = path.getFileSystem(job.getConfiguration());
-          blkLocations = fs.getFileBlockLocations(file, 0, length);
+          blkLocations = requireNonNull(fs.getFileBlockLocations(file, 0, length), () ->
+              String.format("No block locations returned from getFileBlockLocations(%s, 0, %d)"
+                      + "; status=%s",
+                  path, length, file));
         }
         if (isSplitable(job, path)) {
           long blockSize = file.getBlockSize();
@@ -569,7 +577,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
                                    Path... inputPaths) throws IOException {
     Configuration conf = job.getConfiguration();
     Path path = inputPaths[0].getFileSystem(conf).makeQualified(inputPaths[0]);
-    StringBuffer str = new StringBuffer(StringUtils.escapeString(path.toString()));
+    StringBuilder str = new StringBuilder(StringUtils.escapeString(path.toString()));
     for(int i = 1; i < inputPaths.length;i++) {
       str.append(StringUtils.COMMA_STR);
       path = inputPaths[i].getFileSystem(conf).makeQualified(inputPaths[i]);

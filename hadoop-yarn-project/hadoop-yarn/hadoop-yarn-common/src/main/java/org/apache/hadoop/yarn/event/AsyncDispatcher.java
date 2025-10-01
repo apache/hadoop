@@ -57,7 +57,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 @Evolving
 public class AsyncDispatcher extends AbstractService implements Dispatcher {
 
-  private static final Logger LOG =
+  protected static final Logger LOG =
       LoggerFactory.getLogger(AsyncDispatcher.class);
   private static final Marker FATAL =
       MarkerFactory.getMarker("FATAL");
@@ -164,13 +164,18 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
             if (printTrigger) {
               //Log the latest dispatch event type
               // may cause the too many events queued
-              LOG.info("Latest dispatch event type: " + event.getType());
+              logTriggered("Latest dispatch event type: " + event.getType());
               printTrigger = false;
             }
           }
         }
       }
     };
+  }
+
+  // This is a separate method to make it overridable for testing
+  protected void logTriggered(String message) {
+    LOG.info(message);
   }
 
   @VisibleForTesting

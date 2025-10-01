@@ -24,7 +24,13 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_KEY;
-import static org.hamcrest.CoreMatchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -61,37 +67,28 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.hamcrest.CoreMatchers;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Timeout(180)
 public class TestBlockReaderFactory {
   static final Logger LOG =
       LoggerFactory.getLogger(TestBlockReaderFactory.class);
 
-  @Rule
-  public final Timeout globalTimeout = new Timeout(180000);
 
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
-
-  @Before
+  @BeforeEach
   public void init() {
     DomainSocket.disableBindPathValidation();
-    Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
+    assumeTrue(DomainSocket.getLoadingFailureReason() == null);
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     DFSInputStream.tcpReadsDisabledForTesting = false;
     BlockReaderFactory.createShortCircuitReplicaInfoCallback = null;
@@ -117,7 +114,8 @@ public class TestBlockReaderFactory {
    * and short-circuit access fails, we should still be able to pass
    * data traffic over the UNIX domain socket.  Test this.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testFallbackFromShortCircuitToUnixDomainTraffic()
       throws Exception {
     DFSInputStream.tcpReadsDisabledForTesting = true;
@@ -145,7 +143,7 @@ public class TestBlockReaderFactory {
     byte contents[] = DFSTestUtil.readFileBuffer(dfs, new Path(TEST_FILE));
     byte expected[] = DFSTestUtil.
         calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
-    Assert.assertTrue(Arrays.equals(contents, expected));
+    assertTrue(Arrays.equals(contents, expected));
     cluster.shutdown();
     sockDir.close();
   }
@@ -154,7 +152,8 @@ public class TestBlockReaderFactory {
    * Test the case where address passed to DomainSocketFactory#getPathInfo is
    * unresolved. In such a case an exception should be thrown.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testGetPathInfoWithUnresolvedHost() throws Exception {
     TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
 
@@ -171,10 +170,11 @@ public class TestBlockReaderFactory {
     InetSocketAddress targetAddr =
         InetSocketAddress.createUnresolved("random", 32456);
 
-    thrown.expect(IOException.class);
-    thrown.expectMessage("Unresolved host: " + targetAddr);
-    domainSocketFactory.getPathInfo(targetAddr, shortCircuitConf);
-    sockDir.close();
+    IOException exception = assertThrows(IOException.class, () -> {
+      domainSocketFactory.getPathInfo(targetAddr, shortCircuitConf);
+      sockDir.close();
+    });
+    assertTrue(exception.getMessage().contains("Unresolved host: " + targetAddr));
   }
 
   /**
@@ -185,7 +185,8 @@ public class TestBlockReaderFactory {
    * createShortCircuitReplicaInfo.  This one replica should be shared
    * by all threads.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testMultipleWaitersOnShortCircuitCache()
       throws Exception {
     final CountDownLatch latch = new CountDownLatch(1);
@@ -198,7 +199,7 @@ public class TestBlockReaderFactory {
         public ShortCircuitReplicaInfo createShortCircuitReplicaInfo() {
           Uninterruptibles.awaitUninterruptibly(latch);
           if (!creationIsBlocked.compareAndSet(true, false)) {
-            Assert.fail("there were multiple calls to "
+            fail("there were multiple calls to "
                 + "createShortCircuitReplicaInfo.  Only one was expected.");
           }
           return null;
@@ -222,10 +223,10 @@ public class TestBlockReaderFactory {
       public void run() {
         try {
           byte contents[] = DFSTestUtil.readFileBuffer(dfs, new Path(TEST_FILE));
-          Assert.assertFalse(creationIsBlocked.get());
+          assertFalse(creationIsBlocked.get());
           byte expected[] = DFSTestUtil.
               calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
-          Assert.assertTrue(Arrays.equals(contents, expected));
+          assertTrue(Arrays.equals(contents, expected));
         } catch (Throwable e) {
           LOG.error("readerRunnable error", e);
           testFailed.set(true);
@@ -244,7 +245,7 @@ public class TestBlockReaderFactory {
     }
     cluster.shutdown();
     sockDir.close();
-    Assert.assertFalse(testFailed.get());
+    assertFalse(testFailed.get());
   }
 
   /**
@@ -303,11 +304,11 @@ public class TestBlockReaderFactory {
           try {
             blockReader = BlockReaderTestUtil.getBlockReader(
                 cluster.getFileSystem(), lblock, 0, TEST_FILE_LEN);
-            Assert.fail("expected getBlockReader to fail the first time.");
+            fail("expected getBlockReader to fail the first time.");
           } catch (Throwable t) {
-            Assert.assertTrue("expected to see 'TCP reads were disabled " +
-                "for testing' in exception " + t, t.getMessage().contains(
-                "TCP reads were disabled for testing"));
+            assertTrue(t.getMessage().contains("TCP reads were disabled for testing"),
+                "expected to see 'TCP reads were disabled "
+                    + "for testing' in exception " + t);
           } finally {
             if (blockReader != null) blockReader.close(); // keep findbugs happy
           }
@@ -344,7 +345,7 @@ public class TestBlockReaderFactory {
     }
     cluster.shutdown();
     sockDir.close();
-    Assert.assertFalse(testFailed.get());
+    assertFalse(testFailed.get());
   }
 
   /**
@@ -388,7 +389,7 @@ public class TestBlockReaderFactory {
             calculateFileContentsFromSeed(seed, testFileLen);
 
         try (FSDataInputStream in = dfs.open(testFile)) {
-          Assert.assertEquals(0,
+          assertEquals(0,
               dfs.getClient().getClientContext().getShortCircuitCache(0)
                   .getReplicaInfoMapSize());
 
@@ -402,9 +403,8 @@ public class TestBlockReaderFactory {
               .setMaxTotalSize(0);
           LOG.info("Unbuffering");
           in.unbuffer();
-          Assert.assertEquals(0,
-              dfs.getClient().getClientContext().getShortCircuitCache(0)
-                  .getReplicaInfoMapSize());
+          assertEquals(0, dfs.getClient().getClientContext().getShortCircuitCache(0)
+              .getReplicaInfoMapSize());
 
           DFSTestUtil.appendFile(dfs, testFile, "append more data");
 
@@ -430,8 +430,8 @@ public class TestBlockReaderFactory {
   private void validateReadResult(final DistributedFileSystem dfs,
       final byte[] expected, final byte[] actual,
       final int expectedScrRepMapSize) {
-    Assert.assertThat(expected, CoreMatchers.is(actual));
-    Assert.assertEquals(expectedScrRepMapSize,
+    assertThat(expected).isEqualTo(actual);
+    assertEquals(expectedScrRepMapSize,
         dfs.getClient().getClientContext().getShortCircuitCache(0)
             .getReplicaInfoMapSize());
   }
@@ -465,7 +465,7 @@ public class TestBlockReaderFactory {
     byte contents[] = DFSTestUtil.readFileBuffer(fs, new Path(TEST_FILE));
     byte expected[] = DFSTestUtil.
         calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
-    Assert.assertTrue(Arrays.equals(contents, expected));
+    assertTrue(Arrays.equals(contents, expected));
     final ShortCircuitCache cache =
         fs.getClient().getClientContext().getShortCircuitCache(0);
     final DatanodeInfo datanode = new DatanodeInfoBuilder()
@@ -475,11 +475,11 @@ public class TestBlockReaderFactory {
       @Override
       public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)
           throws IOException {
-        Assert.assertEquals(1,  info.size());
+        assertEquals(1,  info.size());
         PerDatanodeVisitorInfo vinfo = info.get(datanode);
-        Assert.assertTrue(vinfo.disabled);
-        Assert.assertEquals(0, vinfo.full.size());
-        Assert.assertEquals(0, vinfo.notFull.size());
+        assertTrue(vinfo.disabled);
+        assertEquals(0, vinfo.full.size());
+        assertEquals(0, vinfo.notFull.size());
       }
     });
     cluster.shutdown();
@@ -514,10 +514,10 @@ public class TestBlockReaderFactory {
     byte contents[] = DFSTestUtil.readFileBuffer(fs, new Path(TEST_FILE));
     byte expected[] = DFSTestUtil.
         calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
-    Assert.assertTrue(Arrays.equals(contents, expected));
+    assertTrue(Arrays.equals(contents, expected));
     final ShortCircuitCache cache =
         fs.getClient().getClientContext().getShortCircuitCache(0);
-    Assert.assertEquals(null, cache.getDfsClientShmManager());
+    assertEquals(null, cache.getDfsClientShmManager());
     cluster.shutdown();
     sockDir.close();
   }
@@ -546,11 +546,11 @@ public class TestBlockReaderFactory {
     byte contents[] = DFSTestUtil.readFileBuffer(fs, new Path(TEST_FILE));
     byte expected[] = DFSTestUtil.
         calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
-    Assert.assertTrue(Arrays.equals(contents, expected));
+    assertTrue(Arrays.equals(contents, expected));
     final ShortCircuitCache cache =
         fs.getClient().getClientContext().getShortCircuitCache(0);
     cache.close();
-    Assert.assertTrue(cache.getDfsClientShmManager().
+    assertTrue(cache.getDfsClientShmManager().
         getDomainSocketWatcher().isClosed());
     cluster.shutdown();
     sockDir.close();
@@ -573,7 +573,8 @@ public class TestBlockReaderFactory {
    * are reading from the same replica and an InterruptedException is delivered
    * to one of them.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testPurgingClosedReplicas() throws Exception {
     BlockReaderTestUtil.enableBlockReaderFactoryTracing();
     final AtomicInteger replicasCreated = new AtomicInteger(0);
@@ -649,7 +650,7 @@ public class TestBlockReaderFactory {
       thread.interrupt();
       sem.release();
     }
-    Assert.assertFalse(testFailed.get());
+    assertFalse(testFailed.get());
 
     // We should be able to read from the file without
     // getting a ClosedChannelException.
@@ -663,10 +664,10 @@ public class TestBlockReaderFactory {
     }
     byte expected[] = DFSTestUtil.
         calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
-    Assert.assertTrue(Arrays.equals(buf, expected));
+    assertTrue(Arrays.equals(buf, expected));
 
     // Another ShortCircuitReplica object should have been created.
-    Assert.assertEquals(2, replicasCreated.get());
+    assertEquals(2, replicasCreated.get());
 
     dfs.close();
     cluster.shutdown();

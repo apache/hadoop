@@ -93,7 +93,8 @@ public class ProportionRouterRpcFairnessPolicyController extends
   public void releasePermit(String nsId) {
     if (contains(nsId)) {
       super.releasePermit(nsId);
+    } else {
+      super.releasePermit(DEFAULT_NS);
     }
-    super.releasePermit(DEFAULT_NS);
   }
 }

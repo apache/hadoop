@@ -139,7 +139,7 @@ public class Quota {
    * @return quota usage for each remote location.
    * @throws IOException If the quota system is disabled.
    */
-  Map<RemoteLocation, QuotaUsage> getEachQuotaUsage(String path)
+  protected Map<RemoteLocation, QuotaUsage> getEachQuotaUsage(String path)
       throws IOException {
     rpcServer.checkOperation(OperationCategory.READ);
     if (!router.isQuotaEnabled()) {
@@ -213,9 +213,9 @@ public class Quota {
    * method will do some additional filtering.
    * @param path Federation path.
    * @return List of valid quota remote locations.
-   * @throws IOException
+   * @throws IOException If the location for this path cannot be determined.
    */
-  private List<RemoteLocation> getValidQuotaLocations(String path)
+  protected List<RemoteLocation> getValidQuotaLocations(String path)
       throws IOException {
     final List<RemoteLocation> locations = getQuotaRemoteLocations(path);
 
@@ -252,8 +252,9 @@ public class Quota {
    * @param path Federation path of the results.
    * @param results Quota query result.
    * @return Aggregated Quota.
+   * @throws IOException If the quota system is disabled.
    */
-  QuotaUsage aggregateQuota(String path,
+  protected QuotaUsage aggregateQuota(String path,
       Map<RemoteLocation, QuotaUsage> results) throws IOException {
     long nsCount = 0;
     long ssCount = 0;
@@ -359,7 +360,7 @@ public class Quota {
    * federation path.
    * @param path Federation path.
    * @return List of quota remote locations.
-   * @throws IOException
+   * @throws IOException If the location for this path cannot be determined.
    */
   private List<RemoteLocation> getQuotaRemoteLocations(String path)
       throws IOException {

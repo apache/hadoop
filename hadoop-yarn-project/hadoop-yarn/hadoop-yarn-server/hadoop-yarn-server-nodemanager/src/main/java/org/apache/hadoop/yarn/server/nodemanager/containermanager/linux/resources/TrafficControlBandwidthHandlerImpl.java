@@ -101,7 +101,7 @@ public class TrafficControlBandwidthHandlerImpl
     containerBandwidthMbit = (int) Math.ceil((double) yarnBandwidthMbit /
         MAX_CONTAINER_COUNT);
 
-    StringBuffer logLine = new StringBuffer("strict mode is set to :")
+    StringBuilder logLine = new StringBuilder("strict mode is set to :")
         .append(strictMode).append(System.lineSeparator());
 
     if (strictMode) {
@@ -152,7 +152,7 @@ public class TrafficControlBandwidthHandlerImpl
     //executable.
     String tasksFile = cGroupsHandler.getPathForCGroupTasks(
         CGroupsHandler.CGroupController.NET_CLS, containerIdStr);
-    String opArg = new StringBuffer(PrivilegedOperation.CGROUP_ARG_PREFIX)
+    String opArg = new StringBuilder(PrivilegedOperation.CGROUP_ARG_PREFIX)
         .append(tasksFile).toString();
     List<PrivilegedOperation> ops = new ArrayList<>();
 

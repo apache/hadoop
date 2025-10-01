@@ -20,9 +20,9 @@ package org.apache.hadoop.conf;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.test.ReflectionUtils;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -40,9 +40,9 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Base class for comparing fields in one or more Configuration classes
@@ -80,7 +80,7 @@ import static org.junit.Assert.assertNull;
  * run.  This class (and its subclasses) are mostly not intended to be
  * overridden, but to do a very specific form of comparison testing.
  */
-@Ignore
+@Disabled
 public abstract class TestConfigurationFieldsBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -397,13 +397,13 @@ public abstract class TestConfigurationFieldsBase {
    * Initialize the four variables corresponding the Configuration
    * class and the XML properties file.
    */
-  @Before
+  @BeforeEach
   public void setupTestConfigurationFields() {
     initializeMemberVariables();
 
     // Error if subclass hasn't set class members
-    assertNotNull("XML file name is null", xmlFilename);
-    assertNotNull("Configuration classes array is null", configurationClasses);
+    assertNotNull(xmlFilename, "XML file name is null");
+    assertNotNull(configurationClasses, "Configuration classes array is null");
 
     // Create class member/value map
     configurationMemberVariables = new HashMap<>();
@@ -449,8 +449,8 @@ public abstract class TestConfigurationFieldsBase {
   @Test
   public void testCompareConfigurationClassAgainstXml() {
     // Error if subclass hasn't set class members
-    assertNotNull("XML file name is null", xmlFilename);
-    assertNotNull("Configuration classes array is null", configurationClasses);
+    assertNotNull(xmlFilename, "XML file name is null");
+    assertNotNull(configurationClasses, "Configuration classes array is null");
 
     final int missingXmlSize = configurationFieldsMissingInXmlFile.size();
 
@@ -477,7 +477,7 @@ public abstract class TestConfigurationFieldsBase {
     }
     LOG.info("\n=====\n");
     if (errorIfMissingXmlProps) {
-      assertEquals(xmlErrorMsg.toString(), 0, missingXmlSize);
+      assertEquals(0, missingXmlSize, xmlErrorMsg.toString());
     }
   }
 
@@ -503,8 +503,8 @@ public abstract class TestConfigurationFieldsBase {
   @Test
   public void testCompareXmlAgainstConfigurationClass() {
     // Error if subclass hasn't set class members
-    assertNotNull("XML file name is null", xmlFilename);
-    assertNotNull("Configuration classes array is null", configurationClasses);
+    assertNotNull(xmlFilename, "XML file name is null");
+    assertNotNull(configurationClasses, "Configuration classes array is null");
 
     final int missingConfigSize = xmlFieldsMissingInConfiguration.size();
 
@@ -524,7 +524,7 @@ public abstract class TestConfigurationFieldsBase {
     }
     LOG.info("\n=====\n");
     if (errorIfMissingConfigProps) {
-      assertEquals(configErrorMsg.toString(), 0, missingConfigSize);
+      assertEquals(0, missingConfigSize, configErrorMsg.toString());
     }
   }
 
@@ -535,9 +535,9 @@ public abstract class TestConfigurationFieldsBase {
   @Test
   public void testXmlAgainstDefaultValuesInConfigurationClass() {
     // Error if subclass hasn't set class members
-    assertNotNull("XML file name is null", xmlFilename);
-    assertNotNull("Configuration member variables is null", configurationMemberVariables);
-    assertNotNull("Configuration default variables is null", configurationMemberVariables);
+    assertNotNull(xmlFilename, "XML file name is null");
+    assertNotNull(configurationMemberVariables, "Configuration member variables is null");
+    assertNotNull(configurationMemberVariables, "Configuration default variables is null");
 
     Set<String> xmlPropertiesWithEmptyValue = new TreeSet<>();
     Set<String> configPropertiesWithNoDefaultConfig = new TreeSet<>();
@@ -685,8 +685,8 @@ public abstract class TestConfigurationFieldsBase {
           if (StringUtils.isNumeric(ent.getValue())) {
             String crtValue =
                 filteredValues.putIfAbsent(ent.getValue(), ent.getKey());
-            assertNull("Parameters " + ent.getKey() + " and " + crtValue +
-                " are using the same default value!", crtValue);
+            assertNull(crtValue, "Parameters " + ent.getKey() + " and " + crtValue +
+                " are using the same default value!");
           }
           valuesChecked++;
         }

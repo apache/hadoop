@@ -34,7 +34,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestRMWebServicesCustomResourceTypesCommons {
 
@@ -62,12 +62,12 @@ public class TestRMWebServicesCustomResourceTypesCommons {
       throws JSONException {
     int expectedNumberOfElements = getExpectedNumberOfElements(app);
 
-    assertEquals("incorrect number of elements", expectedNumberOfElements,
-        info.length());
+    assertEquals(expectedNumberOfElements,
+        info.length(), "incorrect number of elements");
 
     AppInfoJsonVerifications.verify(info, app);
 
-    JSONArray resourceRequests = info.getJSONArray("resourceRequests");
+    JSONArray resourceRequests = parseResourceRequests(info);
     JSONObject requestInfo = resourceRequests.getJSONObject(0);
     ResourceRequest rr =
         ((AbstractYarnScheduler) rm.getRMContext().getScheduler())
@@ -76,6 +76,20 @@ public class TestRMWebServicesCustomResourceTypesCommons {
 
     ResourceRequestsJsonVerifications.verifyWithCustomResourceTypes(requestInfo,
         rr, CustomResourceTypesConfigurationProvider.getCustomResourceTypes());
+  }
+
+  public static JSONArray parseResourceRequests(JSONObject info) throws JSONException {
+    Object resourceRequests = info.get("resourceRequests");
+    if (resourceRequests instanceof JSONArray) {
+      return info.getJSONArray("resourceRequests");
+    }
+    if (resourceRequests instanceof JSONObject) {
+      JSONObject resourceRequest = info.getJSONObject("resourceRequests");
+      JSONArray jsonArray = new JSONArray();
+      jsonArray.put(resourceRequest);
+      return jsonArray;
+    }
+    return null;
   }
 
   static int getExpectedNumberOfElements(RMApp app) {

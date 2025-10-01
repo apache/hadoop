@@ -24,7 +24,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -42,7 +42,7 @@ import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PREFETCH_MAX_BLOCKS_COU
 import static org.apache.hadoop.fs.s3a.Constants.HADOOP_TMP_DIR;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_MAX_BLOCKS_COUNT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests to perform read from S3ACachingBlockManager.
@@ -253,13 +253,13 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
     }
   }
 
-  // @Ignore
+  // @Disabled
   @Test
   public void testGet() throws Exception {
     testGetHelper(false);
   }
 
-  // @Ignore
+  // @Disabled
   @Test
   public void testGetFailure() throws Exception {
     testGetHelper(true);
@@ -300,13 +300,13 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
     }
   }
 
-  // @Ignore
+  // @Disabled
   @Test
   public void testPrefetch() throws IOException, InterruptedException {
     testPrefetchHelper(false);
   }
 
-  // @Ignore
+  // @Disabled
   @Test
   public void testPrefetchFailure() throws IOException, InterruptedException {
     testPrefetchHelper(true);
@@ -356,7 +356,7 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
             CONF.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
   }
 
-  // @Ignore
+  // @Disabled
   @Test
   public void testCachingOfPrefetched()
       throws IOException, InterruptedException {
@@ -392,13 +392,13 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
     assertEquals(0, this.totalErrors(blockManager));
   }
 
-  // @Ignore
+  // @Disabled
   @Test
   public void testCachingOfGet() throws IOException, InterruptedException {
     testCachingOfGetHelper(false);
   }
 
-  // @Ignore
+  // @Disabled
   @Test
   public void testCachingFailureOfGet()
       throws IOException, InterruptedException {

@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestLineRecordReaderJobs {
 

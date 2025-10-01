@@ -19,37 +19,46 @@ package org.apache.hadoop.yarn.server.resourcemanager.volume.csi;
 
 import org.apache.hadoop.yarn.server.volume.csi.exception.InvalidVolumeException;
 import org.apache.hadoop.yarn.server.volume.csi.VolumeCapabilityRange;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Test cases for volume capability.
  */
 public class TestVolumeCapabilityRange {
 
-  @Test(expected = InvalidVolumeException.class)
+  @Test
   public void testInvalidMinCapability() throws InvalidVolumeException {
-    VolumeCapabilityRange.newBuilder()
-        .minCapacity(-1L)
-        .maxCapacity(5L)
-        .unit("Gi")
-        .build();
+    assertThrows(InvalidVolumeException.class, () -> {
+        VolumeCapabilityRange.newBuilder()
+          .minCapacity(-1L)
+          .maxCapacity(5L)
+          .unit("Gi")
+          .build();
+    });
   }
 
-  @Test(expected = InvalidVolumeException.class)
+  @Test
   public void testMissingMinCapability() throws InvalidVolumeException {
-    VolumeCapabilityRange.newBuilder()
-        .maxCapacity(5L)
-        .unit("Gi")
-        .build();
+    assertThrows(InvalidVolumeException.class, () -> {
+        VolumeCapabilityRange.newBuilder()
+          .maxCapacity(5L)
+          .unit("Gi")
+          .build();
+    });
+
   }
 
-  @Test(expected = InvalidVolumeException.class)
+  @Test
   public void testMissingUnit() throws InvalidVolumeException {
-    VolumeCapabilityRange.newBuilder()
-        .minCapacity(0L)
-        .maxCapacity(5L)
-        .build();
+    assertThrows(InvalidVolumeException.class, () -> {
+        VolumeCapabilityRange.newBuilder()
+          .minCapacity(0L)
+          .maxCapacity(5L)
+          .build();
+    });
   }
 
   @Test
@@ -60,8 +69,8 @@ public class TestVolumeCapabilityRange {
         .unit("Gi")
         .build();
 
-    Assert.assertEquals(0L, vc.getMinCapacity());
-    Assert.assertEquals(5L, vc.getMaxCapacity());
-    Assert.assertEquals("Gi", vc.getUnit());
+    assertEquals(0L, vc.getMinCapacity());
+    assertEquals(5L, vc.getMaxCapacity());
+    assertEquals("Gi", vc.getUnit());
   }
 }

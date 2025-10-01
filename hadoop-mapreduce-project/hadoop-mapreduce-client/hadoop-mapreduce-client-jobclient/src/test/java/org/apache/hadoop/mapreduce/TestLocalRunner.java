@@ -30,7 +30,8 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,10 +45,10 @@ import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Stress tests for the LocalJobRunner
@@ -235,9 +236,9 @@ public class TestLocalRunner {
 
     // Should get a single line of the form "0\t(count)"
     String line = r.readLine().trim();
-    assertTrue("Line does not have correct key", line.startsWith("0\t"));
+    assertTrue(line.startsWith("0\t"), "Line does not have correct key");
     int count = Integer.valueOf(line.substring(2));
-    assertEquals("Incorrect count generated!", TOTAL_RECORDS, count);
+    assertEquals(TOTAL_RECORDS, count, "Incorrect count generated!");
 
     r.close();
 
@@ -276,7 +277,7 @@ public class TestLocalRunner {
     FileOutputFormat.setOutputPath(job, outputPath);
 
     boolean ret = job.waitForCompletion(true);
-    assertTrue("job failed", ret);
+    assertTrue(ret, "job failed");
 
     // This job should have done *some* gc work.
     // It had to clean up 400,000 objects.
@@ -284,7 +285,7 @@ public class TestLocalRunner {
     Counter gcCounter = job.getCounters().findCounter(
         TaskCounter.GC_TIME_MILLIS);
     assertNotNull(gcCounter);
-    assertTrue("No time spent in gc", gcCounter.getValue() > 0);
+    assertTrue(gcCounter.getValue() > 0, "No time spent in gc");
   }
 
 
@@ -292,7 +293,8 @@ public class TestLocalRunner {
    * Run a test with several mappers in parallel, operating at different
    * speeds. Verify that the correct amount of output is created.
    */
-  @Test(timeout=120*1000)
+  @Test
+  @Timeout(value=120)
   public void testMultiMaps() throws Exception {
     Job job = Job.getInstance();
 
@@ -377,7 +379,7 @@ public class TestLocalRunner {
     FileOutputFormat.setOutputPath(job, outputPath);
 
     boolean success = job.waitForCompletion(true);
-    assertFalse("Job succeeded somehow", success);
+    assertFalse(success, "Job succeeded somehow");
   }
 
   /** An IF that creates no splits */
@@ -434,7 +436,7 @@ public class TestLocalRunner {
     FileOutputFormat.setOutputPath(job, outputPath);
 
     boolean success = job.waitForCompletion(true);
-    assertTrue("Empty job should work", success);
+    assertTrue(success, "Empty job should work");
   }
 
   /** @return the directory where numberfiles are written (mapper inputs)  */
@@ -510,7 +512,7 @@ public class TestLocalRunner {
     int expectedPerMapper = maxVal * (maxVal + 1) / 2;
     int expectedSum = expectedPerMapper * numMaps;
     LOG.info("expected sum: " + expectedSum + ", got " + valueSum);
-    assertEquals("Didn't get all our results back", expectedSum, valueSum);
+    assertEquals(expectedSum, valueSum, "Didn't get all our results back");
   }
 
   /**
@@ -551,7 +553,7 @@ public class TestLocalRunner {
     LocalJobRunner.setLocalMaxRunningReduces(job, parallelReduces);
 
     boolean result = job.waitForCompletion(true);
-    assertTrue("Job failed!!", result);
+    assertTrue(result, "Job failed!!");
 
     verifyNumberJob(numMaps);
   }

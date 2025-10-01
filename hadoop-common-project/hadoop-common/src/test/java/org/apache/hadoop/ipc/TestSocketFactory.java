@@ -38,12 +38,13 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.SocksSocketFactory;
 import org.apache.hadoop.net.StandardSocketFactory;
-import org.junit.After;
-import org.junit.Test;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -76,7 +77,7 @@ public class TestSocketFactory {
     port = serverRunnable.getPort();
   }
 
-  @After
+  @AfterEach
   public void stopTestServer() throws InterruptedException {
     final Thread t = serverThread;
     if (t != null) {
@@ -131,7 +132,8 @@ public class TestSocketFactory {
   /**
    * Test SocksSocketFactory.
    */
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testSocksSocketFactory() throws Exception {
     startTestServer();
     testSocketFactory(new SocksSocketFactory());
@@ -140,7 +142,8 @@ public class TestSocketFactory {
   /**
    * Test StandardSocketFactory.
    */
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testStandardSocketFactory() throws Exception {
     startTestServer();
     testSocketFactory(new StandardSocketFactory());
@@ -176,7 +179,8 @@ public class TestSocketFactory {
   /**
    * test proxy methods
    */
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testProxy() throws Exception {
     SocksSocketFactory templateWithoutProxy = new SocksSocketFactory();
     Proxy proxy = new Proxy(Type.SOCKS, InetSocketAddress.createUnresolved(

@@ -36,16 +36,16 @@ import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.containerlaunch.AbstractLauncher;
 import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
 import org.apache.hadoop.yarn.service.provider.docker.DockerProviderService;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -58,11 +58,11 @@ public class TestAbstractProviderService {
   private Service testService;
   private AbstractLauncher launcher;
 
-  @Rule
-  public ServiceTestUtils.ServiceFSWatcher rule =
+  @RegisterExtension
+  private ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     testService = TestServiceManager.createBaseDef("testService");
     serviceContext = new MockRunningServiceContext(rule, testService);
@@ -70,7 +70,7 @@ public class TestAbstractProviderService {
     rule.getFs().setAppDir(new Path("target/testAbstractProviderService"));
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     FileUtils.deleteQuietly(
         new File(rule.getFs().getAppDir().toUri().getPath()));
@@ -91,8 +91,8 @@ public class TestAbstractProviderService {
         rule.getFs(), serviceContext.scheduler.getConfig(), container, clc,
         null);
 
-    Assert.assertEquals("commands", Lists.newArrayList(clc.getLaunchCommand()),
-        launcher.getCommands());
+    assertEquals(Lists.newArrayList(clc.getLaunchCommand()),
+        launcher.getCommands(), "commands");
   }
 
   @Test
@@ -110,8 +110,8 @@ public class TestAbstractProviderService {
         rule.getFs(), serviceContext.scheduler.getConfig(), container, clc,
         null);
 
-    Assert.assertEquals("commands don't match.",
-        Lists.newArrayList("ls,-l, space"), launcher.getCommands());
+    assertEquals(Lists.newArrayList("ls,-l, space"),
+        launcher.getCommands(), "commands don't match.");
   }
 
   @Test
@@ -132,8 +132,8 @@ public class TestAbstractProviderService {
     providerService.buildContainerLaunchContext(launcher, testService, instance,
         rule.getFs(), serviceContext.scheduler.getConfig(), container, clc);
 
-    Assert.assertEquals("artifact", clc.getArtifact().getId(),
-        launcher.getDockerImage());
+    assertEquals(clc.getArtifact().getId(),
+        launcher.getDockerImage(), "artifact");
   }
 
   private static ContainerLaunchService.ComponentLaunchContext

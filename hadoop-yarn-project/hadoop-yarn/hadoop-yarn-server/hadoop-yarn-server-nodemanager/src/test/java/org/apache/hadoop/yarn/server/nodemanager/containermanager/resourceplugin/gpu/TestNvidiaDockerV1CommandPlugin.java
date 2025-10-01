@@ -31,8 +31,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Reso
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRunCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerVolumeCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -42,6 +41,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -119,14 +122,14 @@ public class TestNvidiaDockerV1CommandPlugin {
 
     // getResourceMapping is null, so commandline won't be updated
     commandPlugin.updateDockerRunCommand(runCommand, nmContainer);
-    Assert.assertTrue(commandlinesEquals(originalCommandline,
+    assertTrue(commandlinesEquals(originalCommandline,
         runCommand.getDockerCommandWithArguments()));
 
     // no GPU resource assigned, so commandline won't be updated
     ResourceMappings resourceMappings = new ResourceMappings();
     when(nmContainer.getResourceMappings()).thenReturn(resourceMappings);
     commandPlugin.updateDockerRunCommand(runCommand, nmContainer);
-    Assert.assertTrue(commandlinesEquals(originalCommandline,
+    assertTrue(commandlinesEquals(originalCommandline,
         runCommand.getDockerCommandWithArguments()));
 
     // Assign GPU resource, init will be invoked
@@ -146,7 +149,7 @@ public class TestNvidiaDockerV1CommandPlugin {
     } catch (ContainerExecutionException e) {
       caughtException = true;
     }
-    Assert.assertTrue(caughtException);
+    assertTrue(caughtException);
 
     // Start HTTP server
     MyHandler handler = new MyHandler();
@@ -169,7 +172,7 @@ public class TestNvidiaDockerV1CommandPlugin {
     } catch (ContainerExecutionException e) {
       caughtException = true;
     }
-    Assert.assertTrue(caughtException);
+    assertTrue(caughtException);
 
     // Start use invalid options
     handler.response = "INVALID_RESPONSE";
@@ -178,7 +181,7 @@ public class TestNvidiaDockerV1CommandPlugin {
     } catch (ContainerExecutionException e) {
       caughtException = true;
     }
-    Assert.assertTrue(caughtException);
+    assertTrue(caughtException);
 
     /* Test get docker run command */
     handler.response = "--device=/dev/nvidiactl --device=/dev/nvidia-uvm "
@@ -192,24 +195,24 @@ public class TestNvidiaDockerV1CommandPlugin {
         runCommand.getDockerCommandWithArguments();
 
     // Command line will be updated
-    Assert.assertFalse(commandlinesEquals(originalCommandline, newCommandLine));
+    assertFalse(commandlinesEquals(originalCommandline, newCommandLine));
     // Volume driver should not be included by final commandline
-    Assert.assertFalse(newCommandLine.containsKey("volume-driver"));
-    Assert.assertTrue(newCommandLine.containsKey("devices"));
-    Assert.assertTrue(newCommandLine.containsKey("mounts"));
+    assertFalse(newCommandLine.containsKey("volume-driver"));
+    assertTrue(newCommandLine.containsKey("devices"));
+    assertTrue(newCommandLine.containsKey("mounts"));
 
     /* Test get docker volume command */
     commandPlugin = new MyNvidiaDockerV1CommandPlugin(conf);
 
     // When requests Gpu == false, returned docker volume command is null,
-    Assert.assertNull(commandPlugin.getCreateDockerVolumeCommand(nmContainer));
+    assertNull(commandPlugin.getCreateDockerVolumeCommand(nmContainer));
 
     // set requests Gpu to true
     commandPlugin.setRequestsGpu(true);
 
     DockerVolumeCommand dockerVolumeCommand = commandPlugin.getCreateDockerVolumeCommand(
         nmContainer);
-    Assert.assertEquals(
+    assertEquals(
         "volume docker-command=volume " + "driver=nvidia-docker "
             + "sub-command=create " + "volume=nvidia_driver_352.68",
         dockerVolumeCommand.toString());

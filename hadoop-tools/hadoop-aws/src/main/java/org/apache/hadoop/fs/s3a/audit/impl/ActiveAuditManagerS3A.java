@@ -22,6 +22,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -35,6 +36,7 @@ import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.transfer.s3.progress.TransferListener;
 
 import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.fs.s3a.audit.AuditorFlags;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -392,6 +394,11 @@ public final class ActiveAuditManagerS3A
         operation, path1, path2));
   }
 
+  @Override
+  public void setAuditFlags(final EnumSet<AuditorFlags> flags) {
+    auditor.setAuditFlags(flags);
+  }
+
   /**
    * Return a list of execution interceptors for the AWS SDK which
    * relays to this class.
@@ -700,7 +707,8 @@ public final class ActiveAuditManagerS3A
    * span is deactivated.
    * Package-private for testing.
    */
-  private final class WrappingAuditSpan extends AbstractAuditSpanImpl {
+  @VisibleForTesting
+  final class WrappingAuditSpan extends AbstractAuditSpanImpl {
 
     /**
      * Inner span.
@@ -790,6 +798,15 @@ public final class ActiveAuditManagerS3A
     @Override
     public boolean isValidSpan() {
       return isValid && span.isValidSpan();
+    }
+
+    /**
+     * Get the inner span.
+     * @return the span.
+     */
+    @VisibleForTesting
+    AuditSpanS3A getSpan() {
+      return span;
     }
 
     /**

@@ -324,6 +324,7 @@ They have also been updated to return V2 SDK classes.
 public interface S3AInternals {
   S3Client getAmazonS3V2Client(String reason);
 
+  S3AStore getStore();
   @Retries.RetryTranslated
   @AuditEntryPoint
   String getBucketLocation() throws IOException;

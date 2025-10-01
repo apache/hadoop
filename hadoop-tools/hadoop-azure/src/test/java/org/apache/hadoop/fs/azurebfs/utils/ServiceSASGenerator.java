@@ -20,24 +20,28 @@ package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.time.Instant;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsUriQueryBuilder;
 
 /**
- * Test Service SAS generator.
+ * Test Service SAS Generator.
  */
 public class ServiceSASGenerator extends SASGenerator {
 
   /**
-   * Creates a SAS Generator for Service SAS
+   * Creates a SAS Generator for Service SAS.
    * (https://docs.microsoft.com/en-us/rest/api/storageservices/create-service-sas).
-   * @param accountKey - the storage account key
+   * @param accountKey - the storage account key.
    */
   public ServiceSASGenerator(byte[] accountKey) {
     super(accountKey);
   }
 
-  public String getContainerSASWithFullControl(String accountName, String containerName) {
-    String sp = "rcwdl";
+  private String permissions = "racwdl";
+  public String getContainerSASWithFullControl(String accountName, String containerName) throws
+      InvalidConfigurationValueException {
+    accountName = getCanonicalAccountName(accountName);
+    String sp = permissions;
     String sv = AuthenticationVersion.Feb20.toString();
     String sr = "c";
     String st = ISO_8601_FORMATTER.format(Instant.now().minus(FIVE_MINUTES));
@@ -66,7 +70,7 @@ public class ServiceSASGenerator extends SASGenerator {
     sb.append("\n");
     sb.append(se);
     sb.append("\n");
-    // canonicalized resource
+    // canonicalize resource
     sb.append("/blob/");
     sb.append(accountName);
     sb.append("/");
@@ -92,5 +96,14 @@ public class ServiceSASGenerator extends SASGenerator {
     String stringToSign = sb.toString();
     LOG.debug("Service SAS stringToSign: " + stringToSign.replace("\n", "."));
     return computeHmac256(stringToSign);
+  }
+
+  /**
+   * By default, Container SAS has all the available permissions. Use this to
+   * override the default permissions and set as per the requirements.
+   * @param permissions
+   */
+  public void setPermissions(final String permissions) {
+    this.permissions = permissions;
   }
 }

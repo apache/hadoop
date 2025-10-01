@@ -94,9 +94,10 @@ import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerIn
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public abstract class BaseContainerManagerTest {
 
@@ -179,7 +180,7 @@ public abstract class BaseContainerManagerTest {
     return spy(exec);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     localFS.delete(new Path(localDir.getAbsolutePath()), true);
     localFS.delete(new Path(tmpDir.getAbsolutePath()), true);
@@ -307,7 +308,7 @@ public abstract class BaseContainerManagerTest {
     };
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException, InterruptedException {
     if (containerManager != null) {
       containerManager.stop();
@@ -358,8 +359,8 @@ public abstract class BaseContainerManagerTest {
     } while (!fStates.contains(containerStatus.getState())
         && timeoutSecs < timeOutMax);
     LOG.info("Container state is " + containerStatus.getState());
-    Assert.assertTrue("ContainerState is not correct (timedout)",
-          fStates.contains(containerStatus.getState()));
+    assertTrue(fStates.contains(containerStatus.getState()),
+        "ContainerState is not correct (timedout)");
   }
 
   public static void waitForApplicationState(
@@ -378,8 +379,8 @@ public abstract class BaseContainerManagerTest {
       Thread.sleep(1000);
     }
   
-    Assert.assertTrue("App is not in " + finalState + " yet!! Timedout!!",
-        app.getApplicationState().equals(finalState));
+    assertTrue(app.getApplicationState().equals(finalState),
+        "App is not in " + finalState + " yet!! Timedout!!");
   }
 
   public static void waitForNMContainerState(ContainerManagerImpl
@@ -423,8 +424,8 @@ public abstract class BaseContainerManagerTest {
     } while (!finalStates.contains(currentState)
         && timeoutSecs < timeOutMax);
     LOG.info("Container state is " + currentState);
-    Assert.assertTrue("ContainerState is not correct (timedout)",
-        finalStates.contains(currentState));
+    assertTrue(finalStates.contains(currentState),
+        "ContainerState is not correct (timedout)");
   }
 
   public static Token createContainerToken(ContainerId cId, long rmIdentifier,

@@ -20,22 +20,18 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestGpuDeviceInformationParser {
   private static final double DELTA = 1e-6;
-
-  @Rule
-  public ExpectedException expected = ExpectedException.none();
 
   @Test
   public void testParse() throws IOException, YarnException {
@@ -84,16 +80,18 @@ public class TestGpuDeviceInformationParser {
 
   @Test
   public void testParseEmptyString() throws YarnException {
-    expected.expect(YarnException.class);
-    GpuDeviceInformationParser parser = new GpuDeviceInformationParser();
-    parser.parseXml("");
+    assertThrows(YarnException.class, () -> {
+      GpuDeviceInformationParser parser = new GpuDeviceInformationParser();
+      parser.parseXml("");
+    });
   }
 
   @Test
   public void testParseInvalidRootElement() throws YarnException {
-    expected.expect(YarnException.class);
-    GpuDeviceInformationParser parser = new GpuDeviceInformationParser();
-    parser.parseXml("<nvidia_smiiiii></nvidia_smiiiii");
+    assertThrows(YarnException.class, () -> {
+      GpuDeviceInformationParser parser = new GpuDeviceInformationParser();
+      parser.parseXml("<nvidia_smiiiii></nvidia_smiiiii");
+    });
   }
 
   @Test

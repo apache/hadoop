@@ -685,21 +685,21 @@ public class FTPFileSystem extends FileSystem {
       throw new FileAlreadyExistsException("Destination path " + dst
           + " already exists");
     }
-    String parentSrc = absoluteSrc.getParent().toUri().toString();
-    String parentDst = absoluteDst.getParent().toUri().toString();
+    URI parentSrc = absoluteSrc.getParent().toUri();
+    URI parentDst = absoluteDst.getParent().toUri();
     if (isParentOf(absoluteSrc, absoluteDst)) {
       throw new IOException("Cannot rename " + absoluteSrc + " under itself"
       + " : "+ absoluteDst);
     }
 
-    if (!parentSrc.equals(parentDst)) {
+    if (!parentSrc.toString().equals(parentDst.toString())) {
       throw new IOException("Cannot rename source: " + absoluteSrc
           + " to " + absoluteDst
           + " -"+ E_SAME_DIRECTORY_ONLY);
     }
     String from = absoluteSrc.getName();
     String to = absoluteDst.getName();
-    client.changeWorkingDirectory(parentSrc);
+    client.changeWorkingDirectory(parentSrc.getPath());
     boolean renamed = client.rename(from, to);
     return renamed;
   }

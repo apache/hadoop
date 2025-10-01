@@ -31,8 +31,9 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.typedbytes.TypedBytesOutput;
 import org.apache.hadoop.typedbytes.TypedBytesWritable;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestLoadTypedBytes {
 
@@ -62,7 +63,7 @@ public class TestLoadTypedBytes {
       String[] args = new String[1];
       args[0] = "/typedbytestest/test.seq";
       int ret = loadtb.run(args);
-      assertEquals("Return value != 0.", 0, ret);
+      assertEquals(0, ret, "Return value != 0.");
 
       Path file = new Path(root, "test.seq");
       assertTrue(fs.exists(file));
@@ -73,11 +74,10 @@ public class TestLoadTypedBytes {
       while (reader.next(key, value)) {
         assertEquals(Long.class, key.getValue().getClass());
         assertEquals(String.class, value.getValue().getClass());
-        assertTrue("Invalid record.",
-          Integer.parseInt(value.toString()) % 10 == 0);
+        assertTrue(Integer.parseInt(value.toString()) % 10 == 0, "Invalid record.");
         counter++;
       }
-      assertEquals("Wrong number of records.", 100, counter);
+      assertEquals(100, counter, "Wrong number of records.");
     } finally {
       try {
         fs.close();

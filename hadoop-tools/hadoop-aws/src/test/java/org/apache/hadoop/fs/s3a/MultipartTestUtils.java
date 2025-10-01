@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +45,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertFileHasLengt
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Utilities for S3A multipart upload tests.
@@ -80,8 +81,7 @@ public final class MultipartTestUtils {
         anyFailure = true;
       }
     }
-    Assert.assertFalse("Failure aborting multipart upload(s), see log.",
-        anyFailure);
+    assertFalse(anyFailure, "Failure aborting multipart upload(s), see log.");
   }
 
   public static IdKey createPartUpload(S3AFileSystem fs, String key, int len,
@@ -90,9 +90,9 @@ public final class MultipartTestUtils {
       WriteOperationHelper writeHelper = fs.getWriteOperationHelper();
       byte[] data = dataset(len, 'a', 'z');
       InputStream in = new ByteArrayInputStream(data);
-      String uploadId = writeHelper.initiateMultiPartUpload(key, PutObjectOptions.keepingDirs());
+      String uploadId = writeHelper.initiateMultiPartUpload(key, PutObjectOptions.defaultOptions());
       UploadPartRequest req = writeHelper.newUploadPartRequestBuilder(key, uploadId,
-          partNo, len).build();
+          partNo, true, len).build();
       RequestBody body = RequestBody.fromInputStream(in, len);
       UploadPartResponse response = writeHelper.uploadPart(req, body, null);
       LOG.debug("uploaded part etag {}, upid {}", response.eTag(), uploadId);
@@ -116,7 +116,7 @@ public final class MultipartTestUtils {
     RemoteIterator<MultipartUpload> uploads = fs.listUploads(key);
     while (uploads.hasNext()) {
       MultipartUpload upload = uploads.next();
-      Assert.fail("Found unexpected upload " + upload.key() + " " +
+      Assertions.fail("Found unexpected upload " + upload.key() + " " +
           truncatedUploadId(upload.uploadId()));
     }
   }

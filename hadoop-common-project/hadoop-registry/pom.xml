@@ -65,12 +65,6 @@
     </dependency>
 
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
     </dependency>
@@ -144,6 +138,27 @@
       <groupId>org.xerial.snappy</groupId>
       <artifactId>snappy-java</artifactId>
       <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <scope>test</scope>
     </dependency>
 
   </dependencies>
@@ -233,7 +248,7 @@
       <configuration>
         <reuseForks>false</reuseForks>
         <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
-        <argLine>-Xmx1024m -XX:+HeapDumpOnOutOfMemoryError</argLine>
+        <argLine>${maven-surefire-plugin.argLine} -Xmx1024m -XX:+HeapDumpOnOutOfMemoryError</argLine>
         <environmentVariables>
           <!-- HADOOP_HOME required for tests on Windows to find winutils -->
           <HADOOP_HOME>${hadoop.common.build.dir}</HADOOP_HOME>

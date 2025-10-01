@@ -21,17 +21,18 @@ import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.router.WeightedRandomRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public class TestWeightedHomePolicyManager extends BasePolicyManagerTest {
   private WeightedPolicyInfo policyInfo;
 
-  @Before
+  @BeforeEach
   public void setup() {
     // configure a policy
     WeightedHomePolicyManager whpm = new WeightedHomePolicyManager();
@@ -57,7 +58,7 @@ public class TestWeightedHomePolicyManager extends BasePolicyManagerTest {
     serializeAndDeserializePolicyManager(wfp, expectedPolicyManager,
         expectedAMRMProxyPolicy, expectedRouterPolicy);
     // check the policyInfo propagates through ser/der correctly
-    Assert.assertEquals(((WeightedHomePolicyManager) wfp)
+    assertEquals(((WeightedHomePolicyManager) wfp)
         .getWeightedPolicyInfo(), policyInfo);
   }
 }

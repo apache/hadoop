@@ -1131,7 +1131,14 @@
   not permitted to connect to the namenode.  The full pathname of the
   file must be specified.  If the value is empty, no hosts are
   excluded.</description>
-</property> 
+</property>
+
+<property>
+  <name>dfs.hosts.timeout</name>
+  <value>0</value>
+  <description>Specifies a timeout (in milliseconds) for reading the dfs.hosts file.
+  A value of zero indicates no timeout to be set.</description>
+</property>
 
 <property>
   <name>dfs.namenode.max.objects</name>
@@ -3608,6 +3615,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.edekcacheloader.max-retries</name>
+  <value>10</value>
+  <description>When KeyProvider is configured, the max retries allowed to attempt
+    warm up edek cache if none of key successful on NN start up / become active.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.reencrypt.sleep.interval</name>
   <value>1m</value>
   <description>Interval the re-encrypt EDEK thread sleeps in the main loop. The
@@ -3909,6 +3924,19 @@
 </property>
 
 <property>
+  <name>dfs.client.ec.write.failed.blocks.tolerated</name>
+  <value>-1</value>
+  <description>
+    Provide extra tolerated failed streamer for ec policy to prevent
+    the potential data loss. For example, if we use RS-6-3-1024K ec policy.
+    We can write successfully when there are 3 failure streamers. But if one of the six
+    replicas lost during reconstruction, we may lose the data forever.
+    It should better configured between [0, numParityBlocks], the default value is -1 which
+    means the parity block number of the specified ec policy we are using.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.quota.init-threads</name>
   <value>12</value>
   <description>
@@ -3953,6 +3981,15 @@
     ensures each replica has an unique upgrade domain. When the number of
     replicas is greater than this value, the policy ensures the number of
     unique domains is at least this value.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.lock.model.provider.class</name>
+  <value>org.apache.hadoop.hdfs.server.namenode.fgl.GlobalFSNamesystemLock</value>
+  <description>
+    An implementation class of FSNamesystem lock.
+    Defaults to GlobalFSNamesystemLock.class
   </description>
 </property>
 
@@ -4098,6 +4135,60 @@
     Keytab based login can be enabled with dfs.balancer.keytab.enabled.
   </description>
 </property>
+
+  <property>
+    <name>dfs.balancer.kerberos.internal.spnego.principal</name>
+    <value></value>
+    <description>
+      Kerberos SPNEGO principal name used by the balancer.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.httpserver.enabled</name>
+    <value>false</value>
+    <description>
+      If true, balancer will start httpserver.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.http-address</name>
+    <value>0.0.0.0:8590</value>
+    <description>
+      The balancer http server address and port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.http-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the HTTP server will bind to. If this optional address
+      is set, it overrides only the hostname portion of
+      dfs.balancer.http-address. This is useful for making the Balancer
+      HTTP server listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.https-address</name>
+    <value>0.0.0.0:8591</value>
+    <description>
+      The balancer HTTPS server address and port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.https-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the HTTP server will bind to. If this optional address
+      is set, it overrides only the hostname portion of
+      dfs.balancer.https-address. This is useful for making the Balancer
+      HTTP server listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
 
 <property>
   <name>dfs.http.client.retry.policy.enabled</name>
@@ -4466,6 +4557,15 @@
     In secure environment, this has to be enabled since Kerberos is using fqdn
     in machine's principal therefore accessing servers by IP won't be recognized
     by the KDC.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.failover.lazy.resolved</name>
+  <value>false</value>
+  <description>
+    Used to enable lazy resolution of host->ip. If the value is true,
+    the host will only be resolved only before Dfsclient needs to request the host.
   </description>
 </property>
 
@@ -5035,6 +5135,16 @@
     Time interval, in milliseconds, between two Journal Node syncs.
     This configuration takes effect only if the journalnode sync is enabled
     by setting the configuration parameter dfs.journalnode.enable.sync to true.
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.enable.sync.format</name>
+  <value>false</value>
+  <description>
+    If true, the journal node syncer daemon that tries to sync edit
+    logs between journal nodes will try to format its journal if it is not.
+    It will query the other journal nodes for the storage info required to format.
   </description>
 </property>
 
@@ -6345,6 +6455,15 @@
     <description>
       Whether the corrupt replicas should be deleted immediately, irrespective
       of other replicas on stale storages..
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.random.node.order.enabled</name>
+    <value>false</value>
+    <description>
+      Whether to randomized the order of data nodes of a block or sort by network
+      distance (default behavior) before returning to clients.
     </description>
   </property>
 

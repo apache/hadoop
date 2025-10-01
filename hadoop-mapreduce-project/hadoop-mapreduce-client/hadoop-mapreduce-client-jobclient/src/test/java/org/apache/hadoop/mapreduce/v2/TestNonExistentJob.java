@@ -27,20 +27,20 @@ import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestNonExistentJob {
 
   private MiniDFSCluster dfsCluster = null;
   private MiniMRCluster mrCluster = null;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     if (System.getProperty("hadoop.log.dir") == null) {
       System.setProperty("hadoop.log.dir", "/tmp");
@@ -81,7 +81,7 @@ public class TestNonExistentJob {
     return mrCluster.createJobConf();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (mrCluster != null) {
       mrCluster.shutdown();

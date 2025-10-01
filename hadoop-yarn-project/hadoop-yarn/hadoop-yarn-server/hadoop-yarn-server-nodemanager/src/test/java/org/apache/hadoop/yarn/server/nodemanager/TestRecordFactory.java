@@ -23,8 +23,10 @@ import org.apache.hadoop.yarn.factories.impl.pb.RecordFactoryPBImpl;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerHeartbeatResponse;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.impl.pb.LocalizerHeartbeatResponsePBImpl;
 
-import org.junit.Test;
-import org.junit.Assert;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestRecordFactory {
   
@@ -35,11 +37,11 @@ public class TestRecordFactory {
     try {
       LocalizerHeartbeatResponse response = pbRecordFactory.newRecordInstance(
           LocalizerHeartbeatResponse.class);
-      Assert.assertEquals(LocalizerHeartbeatResponsePBImpl.class,
+      assertEquals(LocalizerHeartbeatResponsePBImpl.class,
                           response.getClass());
     } catch (YarnRuntimeException e) {
       e.printStackTrace();
-      Assert.fail("Failed to crete record");
+      fail("Failed to crete record");
     }
   }
 

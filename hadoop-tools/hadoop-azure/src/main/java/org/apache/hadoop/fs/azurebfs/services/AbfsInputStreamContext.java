@@ -41,6 +41,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private boolean isReadAheadEnabled = true;
 
+  private boolean isReadAheadV2Enabled;
+
   private boolean alwaysReadBufferSize;
 
   private int readAheadBlockSize;
@@ -88,6 +90,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   public AbfsInputStreamContext isReadAheadEnabled(
           final boolean isReadAheadEnabled) {
     this.isReadAheadEnabled = isReadAheadEnabled;
+    return this;
+  }
+
+  public AbfsInputStreamContext isReadAheadV2Enabled(
+      final boolean isReadAheadV2Enabled) {
+    this.isReadAheadV2Enabled = isReadAheadV2Enabled;
     return this;
   }
 
@@ -179,6 +187,10 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   public boolean isReadAheadEnabled() {
     return isReadAheadEnabled;
+  }
+
+  public boolean isReadAheadV2Enabled() {
+    return isReadAheadV2Enabled;
   }
 
   public int getReadAheadRange() {

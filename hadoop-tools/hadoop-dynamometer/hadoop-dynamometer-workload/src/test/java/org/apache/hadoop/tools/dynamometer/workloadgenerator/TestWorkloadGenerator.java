@@ -40,16 +40,16 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ImpersonationProvider;
 import org.jline.utils.Log;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 /** Tests for {@link WorkloadDriver} and related classes. */
@@ -61,7 +61,7 @@ public class TestWorkloadGenerator {
   private MiniDFSCluster miniCluster;
   private FileSystem dfs;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new Configuration();
     conf.setClass(HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS,
@@ -74,7 +74,7 @@ public class TestWorkloadGenerator {
     dfs.setOwner(new Path("/tmp"), "hdfs", "hdfs");
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (miniCluster != null) {
       miniCluster.shutdown();
@@ -135,7 +135,7 @@ public class TestWorkloadGenerator {
     Job workloadJob = WorkloadDriver.getJobForSubmission(conf,
         dfs.getUri().toString(), workloadStartTime, AuditReplayMapper.class);
     boolean success = workloadJob.waitForCompletion(true);
-    assertTrue("workload job should succeed", success);
+    assertTrue(success, "workload job should succeed");
     Counters counters = workloadJob.getCounters();
     assertEquals(6,
         counters.findCounter(AuditReplayMapper.REPLAYCOUNTERS.TOTALCOMMANDS)

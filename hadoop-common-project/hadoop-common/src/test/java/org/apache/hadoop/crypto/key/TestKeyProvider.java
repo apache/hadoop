@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.crypto.key;
 
-import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
@@ -37,11 +36,12 @@ import java.util.List;
 import java.util.Map;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestKeyProvider {
 
@@ -59,7 +59,7 @@ public class TestKeyProvider {
     assertEquals("/aaa", KeyProvider.getBaseName("/aaa@112"));
     try {
       KeyProvider.getBaseName("no-slashes");
-      assertTrue("should have thrown", false);
+      assertTrue(false, "should have thrown");
     } catch (IOException e) {
       assertTrue(true);
     }
@@ -249,15 +249,15 @@ public class TestKeyProvider {
     options.setCipher(CIPHER);
     options.setBitLength(128);
     kp.createKey("hello", options);
-    Assert.assertEquals(128, kp.size);
-    Assert.assertEquals(CIPHER, kp.algorithm);
-    Assert.assertNotNull(kp.material);
+    assertEquals(128, kp.size);
+    assertEquals(CIPHER, kp.algorithm);
+    assertNotNull(kp.material);
 
     kp = new MyKeyProvider(new Configuration());
     kp.rollNewVersion("hello");
-    Assert.assertEquals(128, kp.size);
-    Assert.assertEquals(CIPHER, kp.algorithm);
-    Assert.assertNotNull(kp.material);
+    assertEquals(128, kp.size);
+    assertEquals(CIPHER, kp.algorithm);
+    assertNotNull(kp.material);
   }
 
   @Test
@@ -267,9 +267,9 @@ public class TestKeyProvider {
     options.setCipher(CIPHER);
     options.setBitLength(128);
     kp.createKey("hello", options);
-    Assert.assertEquals(128, kp.size);
-    Assert.assertEquals(CIPHER, kp.algorithm);
-    Assert.assertNotNull(kp.material);
+    assertEquals(128, kp.size);
+    assertEquals(CIPHER, kp.algorithm);
+    assertNotNull(kp.material);
 
     kp = new MyKeyProvider(new Configuration());
     try {
@@ -286,7 +286,7 @@ public class TestKeyProvider {
     Configuration conf = new Configuration(false);
     conf.set("a", "A");
     MyKeyProvider kp = new MyKeyProvider(conf);
-    Assert.assertEquals("A", kp.getConf().get("a"));
+    assertEquals("A", kp.getConf().get("a"));
   }
 
 }

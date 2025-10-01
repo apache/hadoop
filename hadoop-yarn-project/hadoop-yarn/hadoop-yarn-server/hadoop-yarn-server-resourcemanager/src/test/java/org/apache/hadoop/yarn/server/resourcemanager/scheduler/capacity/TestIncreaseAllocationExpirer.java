@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -44,9 +48,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -57,7 +60,7 @@ public class TestIncreaseAllocationExpirer {
   private YarnConfiguration conf;
   RMNodeLabelsManager mgr;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -106,12 +109,12 @@ public class TestIncreaseAllocationExpirer {
     // AM acquire a new container to start container allocation expirer
     List<Container> containers =
         am1.allocate(null, null).getAllocatedContainers();
-    Assert.assertEquals(containerId2, containers.get(0).getId());
-    Assert.assertNotNull(containers.get(0).getContainerToken());
+    assertEquals(containerId2, containers.get(0).getId());
+    assertNotNull(containers.get(0).getContainerToken());
     checkUsedResource(rm1, "default", 2 * GB, null);
     FiCaSchedulerApp app = TestUtils.getFiCaSchedulerApp(
         rm1, app1.getApplicationId());
-    Assert.assertEquals(2 * GB,
+    assertEquals(2 * GB,
         app.getAppAttemptResourceUsage().getUsed().getMemorySize());
     verifyAvailableResourceOfSchedulerNode(rm1, nm1.getNodeId(), 18 * GB);
     // Report container status
@@ -139,15 +142,14 @@ public class TestIncreaseAllocationExpirer {
     // Wait long enough and verify that the container was removed
     // from allocation expirer, and the container is still running
     Thread.sleep(10000);
-    Assert.assertEquals(RMContainerState.RUNNING,
+    assertEquals(RMContainerState.RUNNING,
         rm1.getResourceScheduler().getRMContainer(containerId2).getState());
     // Verify container size is 3G
-      Assert.assertEquals(
-        3 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
-            .getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
+        .getAllocatedResource().getMemorySize());
     // Verify total resource usage
     checkUsedResource(rm1, "default", 4 * GB, null);
-    Assert.assertEquals(4 * GB,
+    assertEquals(4 * GB,
         app.getAppAttemptResourceUsage().getUsed().getMemorySize());
     // Verify available resource
     verifyAvailableResourceOfSchedulerNode(rm1, nm1.getNodeId(), 16 * GB);
@@ -195,12 +197,12 @@ public class TestIncreaseAllocationExpirer {
     rm1.waitForState(nm1, containerId2, RMContainerState.ALLOCATED);
     List<Container> containers =
         am1.allocate(null, null).getAllocatedContainers();
-    Assert.assertEquals(containerId2, containers.get(0).getId());
-    Assert.assertNotNull(containers.get(0).getContainerToken());
+    assertEquals(containerId2, containers.get(0).getId());
+    assertNotNull(containers.get(0).getContainerToken());
     checkUsedResource(rm1, "default", 2 * GB, null);
     FiCaSchedulerApp app = TestUtils.getFiCaSchedulerApp(
         rm1, app1.getApplicationId());
-    Assert.assertEquals(2 * GB,
+    assertEquals(2 * GB,
         app.getAppAttemptResourceUsage().getUsed().getMemorySize());
     verifyAvailableResourceOfSchedulerNode(rm1, nm1.getNodeId(), 18 * GB);
     nm1.nodeHeartbeat(
@@ -219,7 +221,7 @@ public class TestIncreaseAllocationExpirer {
     am1.allocate(null, null);
     // Verify resource usage
     checkUsedResource(rm1, "default", 4 * GB, null);
-    Assert.assertEquals(4 * GB,
+    assertEquals(4 * GB,
         app.getAppAttemptResourceUsage().getUsed().getMemorySize());
     verifyAvailableResourceOfSchedulerNode(rm1, nm1.getNodeId(), 16 * GB);
     // Wait long enough for the increase token to expire, and for the roll
@@ -228,13 +230,13 @@ public class TestIncreaseAllocationExpirer {
     // Verify container size is 1G
     am1.allocate(null, null);
     rm1.drainEvents();
-    Assert.assertEquals(
+    assertEquals(
         1 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
             .getAllocatedResource().getMemorySize());
     disp.waitForEventThreadToWait();
     // Verify total resource usage is 2G
     checkUsedResource(rm1, "default", 2 * GB, null);
-    Assert.assertEquals(2 * GB,
+    assertEquals(2 * GB,
         app.getAppAttemptResourceUsage().getUsed().getMemorySize());
     // Verify available resource is rolled back to 18GB
     verifyAvailableResourceOfSchedulerNode(rm1, nm1.getNodeId(), 18 * GB);
@@ -311,10 +313,10 @@ public class TestIncreaseAllocationExpirer {
             ContainerUpdateType.INCREASE_RESOURCE,
             Resources.createResource(5 * GB), null)));
     List<UpdateContainerError> updateErrors = response.getUpdateErrors();
-    Assert.assertEquals(1, updateErrors.size());
-    Assert.assertEquals("INCORRECT_CONTAINER_VERSION_ERROR",
+    assertEquals(1, updateErrors.size());
+    assertEquals("INCORRECT_CONTAINER_VERSION_ERROR",
         updateErrors.get(0).getReason());
-    Assert.assertEquals(1,
+    assertEquals(1,
         updateErrors.get(0).getCurrentContainerVersion());
 
     // am1 asks to change containerId2 from 3GB to 5GB
@@ -332,7 +334,7 @@ public class TestIncreaseAllocationExpirer {
     checkUsedResource(rm1, "default", 6 * GB, null);
     FiCaSchedulerApp app = TestUtils.getFiCaSchedulerApp(
         rm1, app1.getApplicationId());
-    Assert.assertEquals(6 * GB,
+    assertEquals(6 * GB,
         app.getAppAttemptResourceUsage().getUsed().getMemorySize());
     // Verify available resource is now reduced to 14GB
     verifyAvailableResourceOfSchedulerNode(rm1, nm1.getNodeId(), 14 * GB);
@@ -344,20 +346,20 @@ public class TestIncreaseAllocationExpirer {
     am1.allocate(null, null);
     Thread.sleep(2000);
     // Verify container size is rolled back to 3G
-    Assert.assertEquals(
+    assertEquals(
         3 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
             .getAllocatedResource().getMemorySize());
     // Verify total resource usage is 4G
     checkUsedResource(rm1, "default", 4 * GB, null);
-    Assert.assertEquals(4 * GB,
+    assertEquals(4 * GB,
         app.getAppAttemptResourceUsage().getUsed().getMemorySize());
     // Verify available resource is rolled back to 14GB
     verifyAvailableResourceOfSchedulerNode(rm1, nm1.getNodeId(), 16 * GB);
     // Verify NM receives the decrease message (3G)
     List<Container> containersToDecrease =
         nm1.nodeHeartbeat(true).getContainersToUpdate();
-    Assert.assertEquals(1, containersToDecrease.size());
-    Assert.assertEquals(
+    assertEquals(1, containersToDecrease.size());
+    assertEquals(
         3 * GB, containersToDecrease.get(0).getResource().getMemorySize());
     rm1.stop();
   }
@@ -413,10 +415,10 @@ public class TestIncreaseAllocationExpirer {
     // AM acquires tokens to start container allocation expirer
     List<Container> containers =
         am1.allocate(null, null).getAllocatedContainers();
-    Assert.assertEquals(3, containers.size());
-    Assert.assertNotNull(containers.get(0).getContainerToken());
-    Assert.assertNotNull(containers.get(1).getContainerToken());
-    Assert.assertNotNull(containers.get(2).getContainerToken());
+    assertEquals(3, containers.size());
+    assertNotNull(containers.get(0).getContainerToken());
+    assertNotNull(containers.get(1).getContainerToken());
+    assertNotNull(containers.get(2).getContainerToken());
     // Report container status
     nm1.nodeHeartbeat(app1.getCurrentAppAttempt().getAppAttemptId(),
         2, ContainerState.RUNNING);
@@ -458,7 +460,7 @@ public class TestIncreaseAllocationExpirer {
     AllocateResponse response =
         am1.sendContainerResizingRequest(decreaseRequests);
     // Verify containers are decreased in scheduler
-    Assert.assertEquals(3, response.getUpdatedContainers().size());
+    assertEquals(3, response.getUpdatedContainers().size());
     // Use the token for containerId4 on NM (6G). This should set the last
     // confirmed resource to 4G, and cancel the allocation expirer
     nm1.containerIncreaseStatus(getContainer(
@@ -469,13 +471,13 @@ public class TestIncreaseAllocationExpirer {
     am1.allocate(null, null);
 
     rm1.drainEvents();
-    Assert.assertEquals(
+    assertEquals(
         2 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
             .getAllocatedResource().getMemorySize());
-    Assert.assertEquals(
+    assertEquals(
         3 * GB, rm1.getResourceScheduler().getRMContainer(containerId3)
             .getAllocatedResource().getMemorySize());
-    Assert.assertEquals(
+    assertEquals(
         4 * GB, rm1.getResourceScheduler().getRMContainer(containerId4)
             .getAllocatedResource().getMemorySize());
     // Verify NM receives 2 decrease message
@@ -483,18 +485,18 @@ public class TestIncreaseAllocationExpirer {
         nm1.nodeHeartbeat(true).getContainersToUpdate();
     // NOTE: Can be more that 2 depending on which event arrives first.
     // What is important is the final size of the containers.
-    Assert.assertTrue(containersToDecrease.size() >= 2);
+    assertTrue(containersToDecrease.size() >= 2);
 
     // Sort the list to make sure containerId3 is the first
     Collections.sort(containersToDecrease);
     int i = 0;
     if (containersToDecrease.size() > 2) {
-      Assert.assertEquals(
+      assertEquals(
           2 * GB, containersToDecrease.get(i++).getResource().getMemorySize());
     }
-    Assert.assertEquals(
+    assertEquals(
         3 * GB, containersToDecrease.get(i++).getResource().getMemorySize());
-    Assert.assertEquals(
+    assertEquals(
         4 * GB, containersToDecrease.get(i++).getResource().getMemorySize());
     rm1.stop();
   }
@@ -503,7 +505,7 @@ public class TestIncreaseAllocationExpirer {
       String label) {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     CSQueue queue = cs.getQueue(queueName);
-    Assert.assertEquals(memory,
+    assertEquals(memory,
         queue.getQueueResourceUsage()
             .getUsed(label == null ? RMNodeLabelsManager.NO_LABEL : label)
             .getMemorySize());
@@ -513,8 +515,7 @@ public class TestIncreaseAllocationExpirer {
       int expectedMemory) {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     SchedulerNode node = cs.getNode(nodeId);
-    Assert
-        .assertEquals(expectedMemory, node.getUnallocatedResource().getMemorySize());
+    assertEquals(expectedMemory, node.getUnallocatedResource().getMemorySize());
   }
 
   private Container getContainer(

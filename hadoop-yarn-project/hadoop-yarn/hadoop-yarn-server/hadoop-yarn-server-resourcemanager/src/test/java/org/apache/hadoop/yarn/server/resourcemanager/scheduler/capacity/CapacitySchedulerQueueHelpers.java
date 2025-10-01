@@ -21,9 +21,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Assert;
-
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public final class CapacitySchedulerQueueHelpers {
 
@@ -386,18 +385,18 @@ public final class CapacitySchedulerQueueHelpers {
     CSQueue rootQueue = cs.getRootQueue();
     for (Map.Entry<String, ExpectedCapacities> entry : capacities.entrySet()) {
       CSQueue queue = findQueue(rootQueue, entry.getKey());
-      Assert.assertNotNull(queue);
+      assertNotNull(queue);
       assertQueueCapacities(queue, entry.getValue());
     }
   }
 
   public static void assertQueueCapacities(CSQueue q, ExpectedCapacities capacities) {
     final float epsilon = 1e-4f;
-    assertEquals("capacity", capacities.getCapacity(), q.getCapacity(), epsilon);
-    assertEquals("absolute capacity", capacities.getAbsCapacity(),
-        q.getAbsoluteCapacity(), epsilon);
-    assertEquals("maximum capacity", 1.0f, q.getMaximumCapacity(), epsilon);
-    assertEquals("absolute maximum capacity", 1.0f, q.getAbsoluteMaximumCapacity(), epsilon);
+    assertEquals(capacities.getCapacity(), q.getCapacity(), epsilon, "capacity");
+    assertEquals(capacities.getAbsCapacity(),
+        q.getAbsoluteCapacity(), epsilon, "absolute capacity");
+    assertEquals(1.0f, q.getMaximumCapacity(), epsilon, "maximum capacity");
+    assertEquals(1.0f, q.getAbsoluteMaximumCapacity(), epsilon, "absolute maximum capacity");
   }
 
   public static CSQueue findQueue(CSQueue root, String queuePath) {

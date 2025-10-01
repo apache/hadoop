@@ -19,16 +19,16 @@ package org.apache.hadoop.fs;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test to make sure df can run and work.
@@ -37,13 +37,13 @@ public class TestDFCachingGetSpaceUsed {
   final static private File DF_DIR = GenericTestUtils.getTestDir("testdfspace");
   public static final int FILE_SIZE = 1024;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     FileUtil.fullyDelete(DF_DIR);
     assertTrue(DF_DIR.mkdirs());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     FileUtil.fullyDelete(DF_DIR);
   }

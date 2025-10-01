@@ -23,8 +23,9 @@ import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 
 import java.util.function.Supplier;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -38,11 +39,10 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.concurrent.TimeoutException;
 
-import static org.junit.Assert.assertEquals;
 import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.createTrustStore;
 import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.generateCertificate;
 import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.generateKeyPair;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestReloadingX509TrustManager {
 
@@ -54,33 +54,37 @@ public class TestReloadingX509TrustManager {
   private final LogCapturer reloaderLog = LogCapturer.captureLogs(
       FileMonitoringTimerTask.LOG);
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
     base.mkdirs();
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testLoadMissingTrustStore() throws Exception {
-    String truststoreLocation = BASEDIR + "/testmissing.jks";
-
-    ReloadingX509TrustManager tm =
-            new ReloadingX509TrustManager("jks", truststoreLocation, "password");
+    assertThrows(IOException.class, () -> {
+      String truststoreLocation = BASEDIR + "/testmissing.jks";
+      ReloadingX509TrustManager tm =
+          new ReloadingX509TrustManager("jks", truststoreLocation, "password");
+    });
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testLoadCorruptTrustStore() throws Exception {
-    String truststoreLocation = BASEDIR + "/testcorrupt.jks";
-    OutputStream os = new FileOutputStream(truststoreLocation);
-    os.write(1);
-    os.close();
+    assertThrows(IOException.class, () -> {
+      String truststoreLocation = BASEDIR + "/testcorrupt.jks";
+      OutputStream os = new FileOutputStream(truststoreLocation);
+      os.write(1);
+      os.close();
 
-    ReloadingX509TrustManager tm =
-      new ReloadingX509TrustManager("jks", truststoreLocation, "password");
+      ReloadingX509TrustManager tm =
+          new ReloadingX509TrustManager("jks", truststoreLocation, "password");
+    });
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testReload() throws Exception {
     KeyPair kp = generateKeyPair("RSA");
     cert1 = generateCertificate("CN=Cert1", kp, 30, "SHA1withRSA");
@@ -117,7 +121,8 @@ public class TestReloadingX509TrustManager {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testReloadMissingTrustStore() throws Exception {
     KeyPair kp = generateKeyPair("RSA");
     cert1 = generateCertificate("CN=Cert1", kp, 30, "SHA1withRSA");
@@ -157,7 +162,8 @@ public class TestReloadingX509TrustManager {
   }
 
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testReloadCorruptTrustStore() throws Exception {
     KeyPair kp = generateKeyPair("RSA");
     cert1 = generateCertificate("CN=Cert1", kp, 30, "SHA1withRSA");

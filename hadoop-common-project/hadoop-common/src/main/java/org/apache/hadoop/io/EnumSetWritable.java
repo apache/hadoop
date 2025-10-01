@@ -59,10 +59,10 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
   }
 
   /**
-   * Construct a new EnumSetWritable. If the <tt>value</tt> argument is null or
-   * its size is zero, the <tt>elementType</tt> argument must not be null. If
-   * the argument <tt>value</tt>'s size is bigger than zero, the argument
-   * <tt>elementType</tt> is not be used.
+   * Construct a new EnumSetWritable. If the <code>value</code> argument is null or
+   * its size is zero, the <code>elementType</code> argument must not be null. If
+   * the argument <code>value</code>'s size is bigger than zero, the argument
+   * <code>elementType</code> is not be used.
    * 
    * @param value enumSet value.
    * @param elementType elementType.
@@ -72,7 +72,7 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
   }
 
   /**
-   * Construct a new EnumSetWritable. Argument <tt>value</tt> should not be null
+   * Construct a new EnumSetWritable. Argument <code>value</code> should not be null
    * or empty.
    * 
    * @param value enumSet value.
@@ -83,10 +83,10 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
 
   /**
    * reset the EnumSetWritable with specified
-   * <tt>value</tt> and <tt>elementType</tt>. If the <tt>value</tt> argument
-   * is null or its size is zero, the <tt>elementType</tt> argument must not be
-   * null. If the argument <tt>value</tt>'s size is bigger than zero, the
-   * argument <tt>elementType</tt> is not be used.
+   * <code>value</code> and <code>elementType</code>. If the <code>value</code> argument
+   * is null or its size is zero, the <code>elementType</code> argument must not be
+   * null. If the argument <code>value</code>'s size is bigger than zero, the
+   * argument <code>elementType</code> is not be used.
    * 
    * @param value enumSet Value.
    * @param elementType elementType.

@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -30,6 +31,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_CONTEXT;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
@@ -69,6 +71,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     removeBaseAndBucketOverrides(conf,
         S3_ENCRYPTION_ALGORITHM,
         S3_ENCRYPTION_KEY,
+        S3_ENCRYPTION_CONTEXT,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_KEY);
     conf.set(S3_ENCRYPTION_ALGORITHM,
@@ -97,6 +100,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
    * S3 throw AmazonS3Exception with status 403 AccessDenied
    * then it is translated into AccessDeniedException by S3AUtils.translateException(...)
    */
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     try {
@@ -117,8 +121,8 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     S3AEncryptionMethods algorithm = getEncryptionAlgorithm(
         fs.getBucket(), fs.getConf());
-    assertEquals("Configuration has wrong encryption algorithm",
-        getSSEAlgorithm(), algorithm);
+    assertEquals(getSSEAlgorithm(), algorithm,
+        "Configuration has wrong encryption algorithm");
   }
 
   @Test
@@ -156,10 +160,10 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
    * @param secrets encryption secrets of the filesystem.
    */
   protected void validateEncryptionSecrets(final EncryptionSecrets secrets) {
-    assertNotNull("No encryption secrets for filesystem", secrets);
+    assertNotNull(secrets, "No encryption secrets for filesystem");
     S3AEncryptionMethods sseAlgorithm = getSSEAlgorithm();
-    assertEquals("Filesystem has wrong encryption algorithm",
-        sseAlgorithm, secrets.getEncryptionMethod());
+    assertEquals(sseAlgorithm, secrets.getEncryptionMethod(),
+        "Filesystem has wrong encryption algorithm");
   }
 
   protected void validateEncryptionForFilesize(int len) throws IOException {

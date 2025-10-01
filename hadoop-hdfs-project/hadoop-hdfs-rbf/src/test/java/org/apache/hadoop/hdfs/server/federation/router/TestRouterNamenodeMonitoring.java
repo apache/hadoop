@@ -21,9 +21,9 @@ import static java.util.Arrays.asList;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getFileSystem;
 import static org.apache.hadoop.hdfs.server.federation.MockNamenode.registerSubclusters;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -58,9 +58,9 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -87,7 +87,7 @@ public class TestRouterNamenodeMonitoring {
   private long initializedTime;
 
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     LOG.info("Initialize the Mock Namenodes to monitor");
     for (String nsId : nsIds) {
@@ -106,7 +106,7 @@ public class TestRouterNamenodeMonitoring {
     initializedTime = Time.now();
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws Exception {
     for (Map<String, MockNamenode> nnNS : nns.values()) {
       for (MockNamenode nn : nnNS.values()) {
@@ -215,12 +215,10 @@ public class TestRouterNamenodeMonitoring {
           "nn0".equals(nnInfo.getNamenodeId())) {
         // The modified date won't be updated in ns0.nn0
         // since it isn't monitored by the Router.
-        assertTrue(nnInfo + " shouldn't be updated: " + diff,
-            modTime < initializedTime);
+        assertTrue(modTime < initializedTime, nnInfo + " shouldn't be updated: " + diff);
       } else {
         // other namnodes should be updated as expected
-        assertTrue(nnInfo + " should be updated: " + diff,
-            modTime > initializedTime);
+        assertTrue(modTime > initializedTime, nnInfo + " should be updated: " + diff);
       }
     }
   }
@@ -278,10 +276,8 @@ public class TestRouterNamenodeMonitoring {
       sb.append(report.getNamenodeId());
       actualSet.add(sb.toString());
     }
-    assertTrue(expected + " does not contain all " + actualSet,
-        expected.containsAll(actualSet));
-    assertTrue(actualSet + " does not contain all " + expected,
-        actualSet.containsAll(expected));
+    assertTrue(expected.containsAll(actualSet), expected + " does not contain all " + actualSet);
+    assertTrue(actualSet.containsAll(expected), actualSet + " does not contain all " + expected);
   }
 
   @Test

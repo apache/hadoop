@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.mapreduce.lib.db;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestTextSplitter {
 
@@ -48,9 +48,9 @@ public class TestTextSplitter {
   public void assertArrayEquals(Object [] expected, Object [] actual) {
     for (int i = 0; i < expected.length; i++) {
       try {
-        assertEquals("Failure at position " + i + "; got " + actual[i]
-            + " instead of " + expected[i] + "; actual array is " + formatArray(actual),
-            expected[i], actual[i]);
+        assertEquals(expected[i], actual[i],
+            "Failure at position " + i + "; got " + actual[i]
+            + " instead of " + expected[i] + "; actual array is " + formatArray(actual));
       } catch (ArrayIndexOutOfBoundsException oob) {
         fail("Expected array with " + expected.length + " elements; got " + actual.length
             + ". Actual array is " + formatArray(actual));

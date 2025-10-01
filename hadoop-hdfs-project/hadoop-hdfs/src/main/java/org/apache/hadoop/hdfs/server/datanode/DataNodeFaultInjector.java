@@ -172,4 +172,10 @@ public class DataNodeFaultInjector {
    * Just delay getMetaDataInputStream a while.
    */
   public void delayGetMetaDataInputStream() {}
+
+  /**
+   * Used in {@link DirectoryScanner#reconcile()} to wait until a storage is removed,
+   * leaving a stale copy of {@link DirectoryScanner#diffs}.
+   */
+  public void waitUntilStorageRemoved() {}
 }

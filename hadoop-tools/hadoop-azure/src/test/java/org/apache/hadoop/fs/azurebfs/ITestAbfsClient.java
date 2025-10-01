@@ -27,13 +27,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test continuation token which has equal sign.
@@ -54,7 +55,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     super();
   }
 
-  @Ignore("HADOOP-16845: Invalid continuation tokens are ignored by the ADLS "
+  @Disabled("HADOOP-16845: Invalid continuation tokens are ignored by the ADLS "
       + "Gen2 service, so we are disabling this test until the service is fixed.")
   @Test
   public void testContinuationTokenHavingEqualSign() throws Exception {
@@ -64,14 +65,14 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     try {
       AbfsRestOperation op = abfsClient
           .listPath("/", true, LIST_MAX_RESULTS, "===========",
-              getTestTracingContext(fs, true));
-      Assert.assertTrue(false);
+              getTestTracingContext(fs, true), null).getOp();
+      Assertions.assertTrue(false);
     } catch (AbfsRestOperationException ex) {
-      Assert.assertEquals("InvalidQueryParameterValue", ex.getErrorCode().getErrorCode());
+      Assertions.assertEquals("InvalidQueryParameterValue", ex.getErrorCode().getErrorCode());
     }
   }
 
-  @Ignore("Enable this to verify the log warning message format for HostNotFoundException")
+  @Disabled("Enable this to verify the log warning message format for HostNotFoundException")
   @Test
   public void testUnknownHost() throws Exception {
     // When hitting hostName not found exception, the retry will take about 14 mins until failed.
@@ -102,11 +103,31 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       setListMaxResults(listMaxResults);
       int expectedListResultsSize =
           listMaxResults > fileCount ? fileCount : listMaxResults;
-      Assertions.assertThat(listPath(directory.toString())).describedAs(
-          "AbfsClient.listPath result should contain %d items when "
-              + "listMaxResults is %d and directory contains %d items",
-          expectedListResultsSize, listMaxResults, fileCount)
-          .hasSize(expectedListResultsSize);
+
+      AbfsRestOperation op = getFileSystem().getAbfsClient().listPath(
+          directory.toString(), false, getListMaxResults(), null,
+          getTestTracingContext(getFileSystem(), true), null).getOp();
+
+      List<? extends ListResultEntrySchema> list = op.getResult().getListResultSchema().paths();
+      String continuationToken = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+
+      if (continuationToken == null) {
+        // Listing is complete and number of objects should be same as expected
+        assertThat(list)
+            .describedAs("AbfsClient.listPath() should return %d items"
+                + " when listMaxResults is %d, directory contains %d items and "
+                + "listing is complete",
+                expectedListResultsSize, listMaxResults, fileCount)
+            .hasSize(expectedListResultsSize);
+      } else {
+        // Listing is incomplete and number of objects can be less than expected
+        assertThat(list)
+            .describedAs("AbfsClient.listPath() should return %d items"
+                + " or less when listMaxResults is %d,  directory contains"
+                + " %d items and listing is incomplete",
+                expectedListResultsSize, listMaxResults, fileCount)
+            .hasSizeLessThanOrEqualTo(expectedListResultsSize);
+      }
     }
   }
 
@@ -117,12 +138,31 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     final Path directory = getUniquePath(
         "testWithValueGreaterThanServerMaximum");
     createDirectoryWithNFiles(directory, LIST_MAX_RESULTS_SERVER + 200);
-    Assertions.assertThat(listPath(directory.toString())).describedAs(
-        "AbfsClient.listPath result will contain a maximum of %d items "
-            + "even if listMaxResults >= %d or directory "
-            + "contains more than %d items", LIST_MAX_RESULTS_SERVER,
-        LIST_MAX_RESULTS_SERVER, LIST_MAX_RESULTS_SERVER)
-        .hasSize(LIST_MAX_RESULTS_SERVER);
+
+    AbfsRestOperation op = getFileSystem().getAbfsClient().listPath(
+        directory.toString(), false, getListMaxResults(), null,
+        getTestTracingContext(getFileSystem(), true), null).getOp();
+
+    List<? extends ListResultEntrySchema> list = op.getResult().getListResultSchema().paths();
+    String continuationToken = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+
+    if (continuationToken == null) {
+      // Listing is complete and number of objects should be same as expected
+      assertThat(list)
+          .describedAs("AbfsClient.listPath() should return %d items"
+              + " when listMaxResults is %d directory contains %d items and "
+              + "listing is complete", LIST_MAX_RESULTS_SERVER,
+              LIST_MAX_RESULTS_SERVER, LIST_MAX_RESULTS_SERVER)
+          .hasSize(LIST_MAX_RESULTS_SERVER);
+    } else {
+      // Listing is incomplete and number of objects can be less than expected
+      assertThat(list)
+          .describedAs("AbfsClient.listPath() should return %d items"
+              + " or less when listMaxResults is %d, directory contains"
+              + " %d items and listing is complete", LIST_MAX_RESULTS_SERVER,
+              LIST_MAX_RESULTS_SERVER, LIST_MAX_RESULTS_SERVER)
+          .hasSizeLessThanOrEqualTo(LIST_MAX_RESULTS_SERVER);
+    }
   }
 
   @Test
@@ -135,11 +175,11 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     }
   }
 
-  private List<ListResultEntrySchema> listPath(String directory)
+  private List<? extends ListResultEntrySchema> listPath(String directory)
       throws IOException {
     return getFileSystem().getAbfsClient()
         .listPath(directory, false, getListMaxResults(), null,
-            getTestTracingContext(getFileSystem(), true)).getResult()
+            getTestTracingContext(getFileSystem(), true), null).getOp().getResult()
         .getListResultSchema().paths();
   }
 

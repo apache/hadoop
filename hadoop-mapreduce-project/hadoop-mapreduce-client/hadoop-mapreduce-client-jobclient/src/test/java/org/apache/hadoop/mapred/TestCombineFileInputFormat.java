@@ -26,11 +26,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.lib.CombineFileInputFormat;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
 import org.apache.hadoop.mapred.lib.CombineFileRecordReader;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestCombineFileInputFormat {
   private static final Logger LOG =
@@ -79,6 +79,6 @@ public class TestCombineFileInputFormat {
     LOG.info("Trying to getSplits with splits = " + SIZE_SPLITS);
     InputSplit[] splits = format.getSplits(job, SIZE_SPLITS);
     LOG.info("Got getSplits = " + splits.length);
-    assertEquals("splits == " + SIZE_SPLITS, SIZE_SPLITS, splits.length);
+    assertEquals(SIZE_SPLITS, splits.length, "splits == " + SIZE_SPLITS);
   }
 }

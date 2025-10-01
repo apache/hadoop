@@ -22,6 +22,7 @@ import java.nio.file.AccessDeniedException;
 
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.io.Text;
+import org.junit.jupiter.api.BeforeEach;
 
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.probeForAssumedRoleARN;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_ROLE_BINDING;
@@ -35,6 +36,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public class ITestRoleDelegationInFilesystem extends
     ITestSessionDelegationInFilesystem {
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -53,8 +55,7 @@ public class ITestRoleDelegationInFilesystem extends
 
   /**
    * This verifies that the granted credentials only access the target bucket
-   * by using the credentials in a new S3 client to query the AWS-owned landsat
-   * bucket.
+   * by using the credentials in a new S3 client to query the public data bucket.
    * @param delegatedFS delegated FS with role-restricted access.
    * @throws Exception failure
    */
@@ -62,7 +63,7 @@ public class ITestRoleDelegationInFilesystem extends
   protected void verifyRestrictedPermissions(final S3AFileSystem delegatedFS)
       throws Exception {
     intercept(AccessDeniedException.class,
-        () -> readLandsatMetadata(delegatedFS));
+        () -> readExternalDatasetMetadata(delegatedFS));
   }
 
 }

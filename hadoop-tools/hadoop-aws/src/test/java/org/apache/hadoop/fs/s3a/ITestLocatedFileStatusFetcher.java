@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.s3a;
 import java.nio.charset.StandardCharsets;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,6 +110,7 @@ public class ITestLocatedFileStatusFetcher extends AbstractS3ATestBase {
 
   private Configuration listConfig;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();

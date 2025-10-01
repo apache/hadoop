@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.RecoveryIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -342,30 +343,34 @@ public class ResourceLocalizationService extends CompositeService
       LocalResourceTrackerState state) throws URISyntaxException, IOException {
     try (RecoveryIterator<LocalizedResourceProto> it =
              state.getCompletedResourcesIterator()) {
-      while (it != null && it.hasNext()) {
-        LocalizedResourceProto proto = it.next();
-        LocalResource rsrc = new LocalResourcePBImpl(proto.getResource());
-        LocalResourceRequest req = new LocalResourceRequest(rsrc);
-        LOG.debug("Recovering localized resource {} at {}",
-            req, proto.getLocalPath());
-        tracker.handle(new ResourceRecoveredEvent(req,
-            new Path(proto.getLocalPath()), proto.getSize()));
+      if (it != null) {
+        while (it.hasNext()) {
+          LocalizedResourceProto proto = it.next();
+          LocalResource rsrc = new LocalResourcePBImpl(proto.getResource());
+          LocalResourceRequest req = new LocalResourceRequest(rsrc);
+          LOG.debug("Recovering localized resource {} at {}",
+              req, proto.getLocalPath());
+          tracker.handle(new ResourceRecoveredEvent(req,
+              new Path(proto.getLocalPath()), proto.getSize()));
+        }
       }
     }
 
     try (RecoveryIterator<Map.Entry<LocalResourceProto, Path>> it =
              state.getStartedResourcesIterator()) {
-      while (it != null && it.hasNext()) {
-        Map.Entry<LocalResourceProto, Path> entry = it.next();
-        LocalResource rsrc = new LocalResourcePBImpl(entry.getKey());
-        LocalResourceRequest req = new LocalResourceRequest(rsrc);
-        Path localPath = entry.getValue();
-        tracker.handle(new ResourceRecoveredEvent(req, localPath, 0));
+      if(it != null) {
+        while (it.hasNext()) {
+          Map.Entry<LocalResourceProto, Path> entry = it.next();
+          LocalResource rsrc = new LocalResourcePBImpl(entry.getKey());
+          LocalResourceRequest req = new LocalResourceRequest(rsrc);
+          Path localPath = entry.getValue();
+          tracker.handle(new ResourceRecoveredEvent(req, localPath, 0));
 
-        // delete any in-progress localizations, containers will request again
-        LOG.info("Deleting in-progress localization for " + req + " at "
-            + localPath);
-        tracker.remove(tracker.getLocalizedResource(req), delService);
+          // delete any in-progress localizations, containers will request again
+          LOG.info("Deleting in-progress localization for " + req + " at "
+               + localPath);
+          tracker.remove(tracker.getLocalizedResource(req), delService);
+        }
       }
     }
 
@@ -1255,7 +1260,7 @@ public class ResourceLocalizationService extends CompositeService
       try {
         // Get nmPrivateDir
         nmPrivateCTokensPath = dirsHandler.getLocalPathForWrite(
-                NM_PRIVATE_DIR + Path.SEPARATOR + tokenFileName);
+            NM_PRIVATE_DIR + Path.SEPARATOR + tokenFileName);
 
         // 0) init queue, etc.
         // 1) write credentials to private dir
@@ -1275,10 +1280,13 @@ public class ResourceLocalizationService extends CompositeService
           throw new IOException("All disks failed. "
               + dirsHandler.getDisksHealthReport(false));
         }
-      // TODO handle ExitCodeException separately?
-      } catch (FSError fe) {
-        exception = fe;
-      } catch (Exception e) {
+        // TODO handle ExitCodeException separately?
+      } catch (ConfigurationException e) {
+        exception = e;
+        LOG.error("Failed to launch localizer for {}, due to configuration error. " +
+            "Marking the node unhealthy.", localizerId, e);
+        nmContext.getNodeStatusUpdater().reportException(e);
+      } catch (Exception | FSError e) {
         exception = e;
       } finally {
         if (exception != null) {

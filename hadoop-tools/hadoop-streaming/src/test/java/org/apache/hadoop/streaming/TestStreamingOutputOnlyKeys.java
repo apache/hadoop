@@ -20,7 +20,7 @@ package org.apache.hadoop.streaming;
 
 import java.io.IOException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestStreamingOutputOnlyKeys extends TestStreaming {
 

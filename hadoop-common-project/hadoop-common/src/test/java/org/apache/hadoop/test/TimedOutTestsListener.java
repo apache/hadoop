@@ -30,14 +30,12 @@ import java.util.Date;
 import java.util.Map;
 
 import org.apache.hadoop.util.StringUtils;
-import org.junit.runner.notification.Failure;
-import org.junit.runner.notification.RunListener;
 
 /**
  * JUnit run listener which prints full thread dump into System.err
  * in case a test is failed due to timeout.
  */
-public class TimedOutTestsListener extends RunListener {
+public class TimedOutTestsListener {
 
   static final String TEST_TIMED_OUT_PREFIX = "test timed out after";
   
@@ -53,8 +51,7 @@ public class TimedOutTestsListener extends RunListener {
     this.output = output;
   }
 
-  @Override
-  public void testFailure(Failure failure) throws Exception {
+  public void testFailure(RuntimeException failure) throws Exception {
     if (failure != null && failure.getMessage() != null 
         && failure.getMessage().startsWith(TEST_TIMED_OUT_PREFIX)) {
       output.println("====> TEST TIMED OUT. PRINTING THREAD DUMP. <====");

@@ -17,12 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,9 +32,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.apache.hadoop.test.ReflectionUtils;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class TestStoragePolicyPermissionSettings {
 
@@ -51,7 +50,7 @@ public class TestStoragePolicyPermissionSettings {
   private static UserGroupInformation nonAdmin;
   private static UserGroupInformation admin;
 
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetUp() throws IOException {
     conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL).build();
@@ -65,7 +64,7 @@ public class TestStoragePolicyPermissionSettings {
         new String[]{"supergroup"});
   }
 
-  @AfterClass
+  @AfterAll
   public static void clusterShutdown() throws IOException {
     if (fs != null) {
       fs.close();
@@ -77,22 +76,15 @@ public class TestStoragePolicyPermissionSettings {
     }
   }
 
-  private void setFSNameSystemFinalField(String field, boolean value)
-      throws NoSuchFieldException, IllegalAccessException {
-    Field f = FSNamesystem.class.getDeclaredField(field);
-    f.setAccessible(true);
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
-    modifiersField.setAccessible(true);
-    modifiersField.setInt(f, f.getModifiers() & ~Modifier.FINAL);
-    f.set(cluster.getNamesystem(), value);
-  }
-
   private void setStoragePolicyPermissions(boolean isStoragePolicyEnabled,
                                            boolean isStoragePolicySuperuserOnly)
-      throws NoSuchFieldException, IllegalAccessException {
-    setFSNameSystemFinalField("isStoragePolicyEnabled", isStoragePolicyEnabled);
-    setFSNameSystemFinalField("isStoragePolicySuperuserOnly",
-        isStoragePolicySuperuserOnly);
+      throws ReflectiveOperationException {
+    ReflectionUtils.setFinalField(
+        FSNamesystem.class, cluster.getNamesystem(),
+        "isStoragePolicyEnabled", isStoragePolicyEnabled);
+    ReflectionUtils.setFinalField(
+        FSNamesystem.class, cluster.getNamesystem(),
+        "isStoragePolicySuperuserOnly", isStoragePolicySuperuserOnly);
   }
 
   @Test

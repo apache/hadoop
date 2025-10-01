@@ -33,9 +33,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Simple test class for the {@link WeightedRandomRouterPolicy}. Generate large
@@ -44,7 +45,7 @@ import org.junit.Test;
  */
 public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     setPolicy(new WeightedRandomRouterPolicy());
     setPolicyInfo(new WeightedPolicyInfo());
@@ -128,17 +129,13 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
       // make sure that the weights is respected among active subclusters
       // and no jobs are routed to inactive subclusters.
       if (getActiveSubclusters().containsKey(counterEntry.getKey())) {
-        Assert.assertTrue(
+        assertTrue(Math.abs(actualWeight - expectedWeight) < 0.01,
             "Id " + counterEntry.getKey() + " Actual weight: " + actualWeight
-                + " expected weight: " + expectedWeight,
-            Math.abs(actualWeight - expectedWeight) < 0.01);
+            + " expected weight: " + expectedWeight);
       } else {
-        Assert
-            .assertTrue(
-                "Id " + counterEntry.getKey() + " Actual weight: "
-                    + actualWeight + " expected weight: " + expectedWeight,
-                actualWeight == 0);
-
+        assertTrue(actualWeight == 0,
+            "Id " + counterEntry.getKey() + " Actual weight: "
+            + actualWeight + " expected weight: " + expectedWeight);
       }
     }
   }

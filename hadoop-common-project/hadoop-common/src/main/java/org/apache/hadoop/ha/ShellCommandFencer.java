@@ -39,8 +39,8 @@ import org.slf4j.LoggerFactory;
  * (cmd.exe on Windows) and may not include any closing parentheses.<p>
  * 
  * The shell command will be run with an environment set up to contain
- * all of the current Hadoop configuration variables, with the '_' character 
- * replacing any '.' characters in the configuration keys.<p>
+ * all of the current Hadoop configuration variables, with the '_' character
+ * replacing any '.' or '-' characters in the configuration keys.<p>
  * 
  * If the shell command returns an exit code of 0, the fencing is
  * determined to be successful. If it returns any other exit code, the
@@ -202,11 +202,11 @@ public class ShellCommandFencer
 
   /**
    * Set the environment of the subprocess to be the Configuration,
-   * with '.'s replaced by '_'s.
+   * with '.'s and '-'s replaced by '_'s.
    */
   private void setConfAsEnvVars(Map<String, String> env) {
     for (Map.Entry<String, String> pair : getConf()) {
-      env.put(pair.getKey().replace('.', '_'), pair.getValue());
+      env.put(pair.getKey().replaceAll("[.-]", "_"), pair.getValue());
     }
   }
 
@@ -237,7 +237,7 @@ public class ShellCommandFencer
     for (Map.Entry<String, String> e :
          target.getFencingParameters().entrySet()) {
       String key = prefix + e.getKey();
-      key = key.replace('.', '_');
+      key = key.replaceAll("[.-]", "_");
       environment.put(key, e.getValue());
     }
   }

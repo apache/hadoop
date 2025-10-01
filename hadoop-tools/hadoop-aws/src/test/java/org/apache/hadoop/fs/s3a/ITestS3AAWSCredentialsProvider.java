@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -29,10 +28,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Test;
 
+import org.junit.jupiter.api.Timeout;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -40,23 +38,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getCSVTestPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.CONSTRUCTOR_EXCEPTION;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Integration tests for {@link Constants#AWS_CREDENTIALS_PROVIDER} logic
  * through the S3A Filesystem instantiation process.
  */
+@Timeout(60)
 public class ITestS3AAWSCredentialsProvider {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AAWSCredentialsProvider.class);
-
-  @Rule
-  public Timeout testTimeout = new Timeout(60_1000, TimeUnit.MILLISECONDS);
 
   /**
    * Expecting a wrapped ClassNotFoundException.
@@ -207,15 +205,19 @@ public class ITestS3AAWSCredentialsProvider {
   @Test
   public void testAnonymousProvider() throws Exception {
     Configuration conf = createConf(AnonymousAWSCredentialsProvider.class);
-    Path testFile = getCSVTestPath(conf);
+    if (isUsingDefaultExternalDataFile(conf)) {
+      removeBaseAndBucketOverrides(conf,
+          ENDPOINT);
+      conf.set(ENDPOINT, CENTRAL_ENDPOINT);
+    }
+    Path testFile = getExternalData(conf);
     try (FileSystem fs = FileSystem.newInstance(testFile.toUri(), conf)) {
       Assertions.assertThat(fs)
           .describedAs("Filesystem")
           .isNotNull();
       FileStatus stat = fs.getFileStatus(testFile);
-      assertEquals(
-          "The qualified path returned by getFileStatus should be same as the original file",
-          testFile, stat.getPath());
+      assertEquals(testFile, stat.getPath(),
+          "The qualified path returned by getFileStatus should be same as the original file");
     }
   }
 

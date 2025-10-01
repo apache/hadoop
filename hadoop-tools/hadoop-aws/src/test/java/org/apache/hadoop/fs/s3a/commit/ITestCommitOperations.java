@@ -27,7 +27,8 @@ import java.util.List;
 import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +41,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.auth.ProgressCounter;
+import org.apache.hadoop.fs.s3a.commit.files.UploadEtag;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
@@ -87,6 +89,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     FileSystem.closeAll();
@@ -250,8 +253,8 @@ public class ITestCommitOperations extends AbstractCommitITest {
         methodPath(),
         new TaskAttemptContextImpl(getConfiguration(),
             new TaskAttemptID(new TaskID(), 1)));
-    assertEquals("Wrong committer",
-        MagicS3GuardCommitter.class, committer.getClass());
+    assertEquals(MagicS3GuardCommitter.class, committer.getClass(),
+        "Wrong committer");
   }
 
   @Test
@@ -429,7 +432,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
         filename + PENDING_SUFFIX);
     FileStatus fileStatus = verifyPathExists(fs, "no pending file",
         pendingDataPath);
-    assertTrue("No data in " + fileStatus, fileStatus.getLen() > 0);
+    assertTrue(fileStatus.getLen() > 0, "No data in " + fileStatus);
     String data = read(fs, pendingDataPath);
     LOG.info("Contents of {}: \n{}", pendingDataPath, data);
     // really read it in and parse
@@ -442,11 +445,11 @@ public class ITestCommitOperations extends AbstractCommitITest {
     Assertions.assertThat(persisted.getSaved())
         .describedAs("saved timestamp in %s", persisted)
         .isGreaterThan(0);
-    List<String> etags = persisted.getEtags();
-    Assertions.assertThat(etags)
+    List<UploadEtag> uploadEtags = persisted.getEtags();
+    Assertions.assertThat(uploadEtags)
         .describedAs("Etag list")
         .hasSize(1);
-    Assertions.assertThat(CommitOperations.toPartEtags(etags))
+    Assertions.assertThat(uploadEtags)
         .describedAs("Etags to parts")
         .hasSize(1);
     return pendingDataPath;
@@ -580,8 +583,8 @@ public class ITestCommitOperations extends AbstractCommitITest {
     Path destFile = path("normal");
     try (FSDataOutputStream out = fs.create(destFile, true)) {
       out.writeChars("data");
-      assertFalse("stream has magic output: " + out,
-          out.hasCapability(STREAM_CAPABILITY_MAGIC_OUTPUT));
+      assertFalse(out.hasCapability(STREAM_CAPABILITY_MAGIC_OUTPUT),
+          "stream has magic output: " + out);
     }
     FileStatus status = fs.getFileStatus(destFile);
     Assertions.assertThat(status.getLen())

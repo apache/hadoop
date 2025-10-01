@@ -27,8 +27,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.auth.signer.Aws4Signer;
 import software.amazon.awssdk.auth.signer.AwsS3V4Signer;
 import software.amazon.awssdk.auth.signer.internal.AbstractAwsS3V4Signer;
@@ -36,7 +39,6 @@ import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.signer.Signer;
 import software.amazon.awssdk.http.SdkHttpFullRequest;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +55,7 @@ import org.apache.hadoop.fs.s3a.auth.ITestCustomSigner.CustomSignerInitializer.S
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
@@ -65,7 +68,8 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides
  * Because the v2 sdk has had some problems with bulk delete
  * and custom signing, this suite is parameterized.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="bulk-delete={0}")
+@MethodSource("params")
 public class ITestCustomSigner extends AbstractS3ATestBase {
 
   private static final Logger LOG = LoggerFactory
@@ -77,7 +81,6 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   /**
    * Parameterization.
    */
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {"bulk delete",  true},
@@ -102,6 +105,15 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   }
 
   @Override
+  protected Configuration createConfiguration() {
+    final Configuration conf = super.createConfiguration();
+    // customer signer doesn't work
+    removeBaseAndBucketOverrides(conf, CHECKSUM_ALGORITHM);
+    return conf;
+  }
+
+  @Override
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
     final S3AFileSystem fs = getFileSystem();
@@ -120,6 +132,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   /**
    * Teardown closes all filesystems for the test UGIs.
    */
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     super.teardown();
@@ -216,6 +229,11 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
 
     conf.set(TEST_ID_KEY, identifier);
     conf.set(TEST_REGION_KEY, regionName);
+
+    // Having the checksum algorithm in this test causes
+    // x-amz-sdk-checksum-algorithm specified, but no corresponding
+    // x-amz-checksum-* or x-amz-trailer headers were found
+    conf.unset(CHECKSUM_ALGORITHM);
 
     // make absolutely sure there is no caching.
     disableFilesystemCaching(conf);

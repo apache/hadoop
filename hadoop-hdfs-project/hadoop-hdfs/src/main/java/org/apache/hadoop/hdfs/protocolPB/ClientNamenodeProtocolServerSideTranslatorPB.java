@@ -341,117 +341,109 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       VOID_UNSET_STORAGE_POLICY_RESPONSE =
       UnsetStoragePolicyResponseProto.newBuilder().build();
 
-  private static final CreateResponseProto VOID_CREATE_RESPONSE = 
-  CreateResponseProto.newBuilder().build();
+  protected static final CreateResponseProto VOID_CREATE_RESPONSE =
+      CreateResponseProto.newBuilder().build();
 
-  private static final SetPermissionResponseProto VOID_SET_PERM_RESPONSE = 
-  SetPermissionResponseProto.newBuilder().build();
+  protected static final SetPermissionResponseProto VOID_SET_PERM_RESPONSE =
+      SetPermissionResponseProto.newBuilder().build();
 
-  private static final SetOwnerResponseProto VOID_SET_OWNER_RESPONSE = 
-  SetOwnerResponseProto.newBuilder().build();
+  protected static final SetOwnerResponseProto VOID_SET_OWNER_RESPONSE =
+      SetOwnerResponseProto.newBuilder().build();
 
-  private static final AbandonBlockResponseProto VOID_ADD_BLOCK_RESPONSE = 
-  AbandonBlockResponseProto.newBuilder().build();
+  protected static final AbandonBlockResponseProto VOID_ADD_BLOCK_RESPONSE =
+      AbandonBlockResponseProto.newBuilder().build();
 
-  private static final ReportBadBlocksResponseProto VOID_REP_BAD_BLOCK_RESPONSE = 
-  ReportBadBlocksResponseProto.newBuilder().build();
+  protected static final ReportBadBlocksResponseProto VOID_REP_BAD_BLOCK_RESPONSE =
+      ReportBadBlocksResponseProto.newBuilder().build();
 
-  private static final ConcatResponseProto VOID_CONCAT_RESPONSE = 
-  ConcatResponseProto.newBuilder().build();
+  protected static final ConcatResponseProto VOID_CONCAT_RESPONSE =
+      ConcatResponseProto.newBuilder().build();
 
-  private static final Rename2ResponseProto VOID_RENAME2_RESPONSE = 
-  Rename2ResponseProto.newBuilder().build();
+  protected static final Rename2ResponseProto VOID_RENAME2_RESPONSE =
+      Rename2ResponseProto.newBuilder().build();
 
-  private static final GetListingResponseProto VOID_GETLISTING_RESPONSE = 
-  GetListingResponseProto.newBuilder().build();
+  protected static final GetListingResponseProto VOID_GETLISTING_RESPONSE =
+      GetListingResponseProto.newBuilder().build();
 
-  private static final GetBatchedListingResponseProto
+  protected static final GetBatchedListingResponseProto
       VOID_GETBATCHEDLISTING_RESPONSE =
       GetBatchedListingResponseProto.newBuilder()
           .setStartAfter(ByteString.copyFromUtf8(""))
           .setHasMore(false)
           .build();
 
-  private static final RenewLeaseResponseProto VOID_RENEWLEASE_RESPONSE = 
-  RenewLeaseResponseProto.newBuilder().build();
+  protected static final RenewLeaseResponseProto VOID_RENEWLEASE_RESPONSE =
+      RenewLeaseResponseProto.newBuilder().build();
 
-  private static final RefreshNodesResponseProto VOID_REFRESHNODES_RESPONSE =
-  RefreshNodesResponseProto.newBuilder().build();
+  protected static final RefreshNodesResponseProto VOID_REFRESHNODES_RESPONSE =
+      RefreshNodesResponseProto.newBuilder().build();
 
-  private static final FinalizeUpgradeResponseProto VOID_FINALIZEUPGRADE_RESPONSE = 
-  FinalizeUpgradeResponseProto.newBuilder().build();
+  protected static final FinalizeUpgradeResponseProto VOID_FINALIZEUPGRADE_RESPONSE =
+      FinalizeUpgradeResponseProto.newBuilder().build();
 
-  private static final MetaSaveResponseProto VOID_METASAVE_RESPONSE = 
-  MetaSaveResponseProto.newBuilder().build();
+  protected static final MetaSaveResponseProto VOID_METASAVE_RESPONSE =
+      MetaSaveResponseProto.newBuilder().build();
 
-  private static final GetFileInfoResponseProto VOID_GETFILEINFO_RESPONSE = 
-  GetFileInfoResponseProto.newBuilder().build();
+  protected static final GetFileInfoResponseProto VOID_GETFILEINFO_RESPONSE =
+      GetFileInfoResponseProto.newBuilder().build();
 
-  private static final GetLocatedFileInfoResponseProto
+  protected static final GetLocatedFileInfoResponseProto
       VOID_GETLOCATEDFILEINFO_RESPONSE =
           GetLocatedFileInfoResponseProto.newBuilder().build();
 
-  private static final GetFileLinkInfoResponseProto VOID_GETFILELINKINFO_RESPONSE = 
-  GetFileLinkInfoResponseProto.newBuilder().build();
+  protected static final GetFileLinkInfoResponseProto VOID_GETFILELINKINFO_RESPONSE =
+      GetFileLinkInfoResponseProto.newBuilder().build();
 
-  private static final SetQuotaResponseProto VOID_SETQUOTA_RESPONSE = 
-  SetQuotaResponseProto.newBuilder().build();
+  protected static final SetQuotaResponseProto VOID_SETQUOTA_RESPONSE =
+      SetQuotaResponseProto.newBuilder().build();
 
-  private static final FsyncResponseProto VOID_FSYNC_RESPONSE = 
-  FsyncResponseProto.newBuilder().build();
+  protected static final FsyncResponseProto VOID_FSYNC_RESPONSE =
+      FsyncResponseProto.newBuilder().build();
 
-  private static final SetTimesResponseProto VOID_SETTIMES_RESPONSE = 
-  SetTimesResponseProto.newBuilder().build();
+  protected static final SetTimesResponseProto VOID_SETTIMES_RESPONSE =
+      SetTimesResponseProto.newBuilder().build();
 
-  private static final CreateSymlinkResponseProto VOID_CREATESYMLINK_RESPONSE = 
-  CreateSymlinkResponseProto.newBuilder().build();
+  protected static final CreateSymlinkResponseProto VOID_CREATESYMLINK_RESPONSE =
+      CreateSymlinkResponseProto.newBuilder().build();
 
-  private static final UpdatePipelineResponseProto
-    VOID_UPDATEPIPELINE_RESPONSE = 
-  UpdatePipelineResponseProto.newBuilder().build();
+  protected static final UpdatePipelineResponseProto VOID_UPDATEPIPELINE_RESPONSE =
+      UpdatePipelineResponseProto.newBuilder().build();
 
-  private static final CancelDelegationTokenResponseProto 
-      VOID_CANCELDELEGATIONTOKEN_RESPONSE = 
-          CancelDelegationTokenResponseProto.newBuilder().build();
+  protected static final CancelDelegationTokenResponseProto VOID_CANCELDELEGATIONTOKEN_RESPONSE =
+      CancelDelegationTokenResponseProto.newBuilder().build();
 
-  private static final SetBalancerBandwidthResponseProto 
-      VOID_SETBALANCERBANDWIDTH_RESPONSE = 
-        SetBalancerBandwidthResponseProto.newBuilder().build();
+  protected static final SetBalancerBandwidthResponseProto VOID_SETBALANCERBANDWIDTH_RESPONSE =
+      SetBalancerBandwidthResponseProto.newBuilder().build();
 
-  private static final SetAclResponseProto
-    VOID_SETACL_RESPONSE = SetAclResponseProto.getDefaultInstance();
+  protected static final SetAclResponseProto VOID_SETACL_RESPONSE =
+      SetAclResponseProto.getDefaultInstance();
 
-  private static final ModifyAclEntriesResponseProto
-    VOID_MODIFYACLENTRIES_RESPONSE = ModifyAclEntriesResponseProto
-      .getDefaultInstance();
+  protected static final ModifyAclEntriesResponseProto VOID_MODIFYACLENTRIES_RESPONSE =
+      ModifyAclEntriesResponseProto.getDefaultInstance();
 
-  private static final RemoveAclEntriesResponseProto
-    VOID_REMOVEACLENTRIES_RESPONSE = RemoveAclEntriesResponseProto
-      .getDefaultInstance();
+  protected static final RemoveAclEntriesResponseProto VOID_REMOVEACLENTRIES_RESPONSE =
+      RemoveAclEntriesResponseProto.getDefaultInstance();
 
-  private static final RemoveDefaultAclResponseProto
-    VOID_REMOVEDEFAULTACL_RESPONSE = RemoveDefaultAclResponseProto
-      .getDefaultInstance();
+  protected static final RemoveDefaultAclResponseProto VOID_REMOVEDEFAULTACL_RESPONSE =
+      RemoveDefaultAclResponseProto.getDefaultInstance();
 
-  private static final RemoveAclResponseProto
-    VOID_REMOVEACL_RESPONSE = RemoveAclResponseProto.getDefaultInstance();
-  
-  private static final SetXAttrResponseProto
-    VOID_SETXATTR_RESPONSE = SetXAttrResponseProto.getDefaultInstance();
-  
-  private static final RemoveXAttrResponseProto
-    VOID_REMOVEXATTR_RESPONSE = RemoveXAttrResponseProto.getDefaultInstance();
+  protected static final RemoveAclResponseProto VOID_REMOVEACL_RESPONSE =
+      RemoveAclResponseProto.getDefaultInstance();
 
-  private static final CheckAccessResponseProto
-    VOID_CHECKACCESS_RESPONSE = CheckAccessResponseProto.getDefaultInstance();
+  protected static final SetXAttrResponseProto VOID_SETXATTR_RESPONSE =
+      SetXAttrResponseProto.getDefaultInstance();
 
-  private static final SatisfyStoragePolicyResponseProto
+  protected static final RemoveXAttrResponseProto VOID_REMOVEXATTR_RESPONSE =
+      RemoveXAttrResponseProto.getDefaultInstance();
+
+  protected static final CheckAccessResponseProto VOID_CHECKACCESS_RESPONSE =
+      CheckAccessResponseProto.getDefaultInstance();
+
+  protected static final SatisfyStoragePolicyResponseProto
       VOID_SATISFYSTORAGEPOLICY_RESPONSE = SatisfyStoragePolicyResponseProto
       .getDefaultInstance();
 
-  /**
-   * Constructor
-   * 
+  /** Constructor.
    * @param server - the NN server
    * @throws IOException
    */
@@ -730,7 +722,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
 
   @Override
   public DeleteResponseProto delete(RpcController controller,
-    DeleteRequestProto req) throws ServiceException {
+      DeleteRequestProto req) throws ServiceException {
     try {
       boolean result =  server.delete(req.getSrc(), req.getRecursive());
       return DeleteResponseProto.newBuilder().setResult(result).build();
@@ -1474,7 +1466,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       CacheDirectiveInfo filter =
           PBHelperClient.convert(request.getFilter());
       BatchedEntries<CacheDirectiveEntry> entries =
-        server.listCacheDirectives(request.getPrevId(), filter);
+          server.listCacheDirectives(request.getPrevId(), filter);
       ListCacheDirectivesResponseProto.Builder builder =
           ListCacheDirectivesResponseProto.newBuilder();
       builder.setHasMore(entries.hasMore());
@@ -1525,9 +1517,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       ListCachePoolsRequestProto request) throws ServiceException {
     try {
       BatchedEntries<CachePoolEntry> entries =
-        server.listCachePools(request.getPrevPoolName());
+          server.listCachePools(request.getPrevPoolName());
       ListCachePoolsResponseProto.Builder responseBuilder =
-        ListCachePoolsResponseProto.newBuilder();
+          ListCachePoolsResponseProto.newBuilder();
       responseBuilder.setHasMore(entries.hasMore());
       for (int i=0, n=entries.size(); i<n; i++) {
         responseBuilder.addEntries(PBHelperClient.convert(entries.get(i)));
@@ -1609,8 +1601,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   
   @Override
   public CreateEncryptionZoneResponseProto createEncryptionZone(
-    RpcController controller, CreateEncryptionZoneRequestProto req)
-    throws ServiceException {
+      RpcController controller, CreateEncryptionZoneRequestProto req)
+      throws ServiceException {
     try {
       server.createEncryptionZone(req.getSrc(), req.getKeyName());
       return CreateEncryptionZoneResponseProto.newBuilder().build();
@@ -1638,8 +1630,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
 
   @Override
   public ListEncryptionZonesResponseProto listEncryptionZones(
-    RpcController controller, ListEncryptionZonesRequestProto req)
-    throws ServiceException {
+      RpcController controller, ListEncryptionZonesRequestProto req)
+      throws ServiceException {
     try {
       BatchedEntries<EncryptionZone> entries = server
           .listEncryptionZones(req.getId());
@@ -1755,7 +1747,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
 
   @Override
   public ListXAttrsResponseProto listXAttrs(RpcController controller,
-    ListXAttrsRequestProto req) throws ServiceException {
+                                            ListXAttrsRequestProto req) throws ServiceException {
     try {
       return PBHelperClient.convertListXAttrsResponse(server.listXAttrs(req.getSrc()));
     } catch (IOException e) {
@@ -1776,7 +1768,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
 
   @Override
   public CheckAccessResponseProto checkAccess(RpcController controller,
-     CheckAccessRequestProto req) throws ServiceException {
+      CheckAccessRequestProto req) throws ServiceException {
     try {
       server.checkAccess(req.getPath(), PBHelperClient.convert(req.getMode()));
     } catch (IOException e) {
@@ -1869,8 +1861,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       GetErasureCodingPoliciesRequestProto request) throws ServiceException {
     try {
       ErasureCodingPolicyInfo[] ecpInfos = server.getErasureCodingPolicies();
-      GetErasureCodingPoliciesResponseProto.Builder resBuilder = GetErasureCodingPoliciesResponseProto
-          .newBuilder();
+      GetErasureCodingPoliciesResponseProto.Builder resBuilder =
+          GetErasureCodingPoliciesResponseProto.newBuilder();
       for (ErasureCodingPolicyInfo info : ecpInfos) {
         resBuilder.addEcPolicies(
             PBHelperClient.convertErasureCodingPolicy(info));
@@ -1965,7 +1957,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       GetErasureCodingPolicyRequestProto request) throws ServiceException {
     try {
       ErasureCodingPolicy ecPolicy = server.getErasureCodingPolicy(request.getSrc());
-      GetErasureCodingPolicyResponseProto.Builder builder = GetErasureCodingPolicyResponseProto.newBuilder();
+      GetErasureCodingPolicyResponseProto.Builder builder =
+          GetErasureCodingPolicyResponseProto.newBuilder();
       if (ecPolicy != null) {
         builder.setEcPolicy(PBHelperClient.convertErasureCodingPolicy(ecPolicy));
       }

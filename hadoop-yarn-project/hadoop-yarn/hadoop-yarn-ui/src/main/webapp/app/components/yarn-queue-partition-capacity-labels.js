@@ -33,28 +33,52 @@ export default Ember.Component.extend({
   initData() {
     const queue = this.get("queue");
     const partitionMap = this.get("partitionMap");
-    const filteredParition = this.get("filteredPartition") || PARTITION_LABEL;
+    const resourceUsagesByPartitionMap = this.get("resourceUsagesByPartitionMap");
+    const filteredPartition = this.get("filteredPartition") || PARTITION_LABEL;
     const userLimit = queue.get("userLimit");
     const userLimitFactor = queue.get("userLimitFactor");
     const isLeafQueue = queue.get("isLeafQueue");
     const isWeightMode = queue.get("isWeightMode");
     const isFlexibleDynamicQueue = queue.get("isFlexibleDynamicQueue");
     const weight = queue.get("weight");
-    const orderingPolicy = queue.get("orderingPolicy");
+    const orderingPolicyInfo = queue.get("orderingPolicyInfo");
     const normalizedWeight = queue.get("normalizedWeight");
     const creationMethod = queue.get("creationMethod");
+    const numActiveApplications = queue.get("numActiveApplications");
+    const numPendingApplications = queue.get("numPendingApplications");
+    const numContainers = queue.get("numContainers");
+    const maxApplications = queue.get("maxApplications");
+    const maxApplicationsPerUser = queue.get("maxApplicationsPerUser");
+    const nodeLabels = queue.get("nodeLabels");
+    const defaultNodeLabelExpression = queue.get("defaultNodeLabelExpression");
+    const preemptionDisabled = queue.get("preemptionDisabled");
+    const intraQueuePreemptionDisabled = queue.get("intraQueuePreemptionDisabled");
+    const defaultPriority = queue.get("defaultPriority");
 
     return {
-      ...partitionMap[filteredParition],
+      ...partitionMap[filteredPartition],
+      ...resourceUsagesByPartitionMap[filteredPartition],
       userLimit,
       userLimitFactor,
       isLeafQueue,
       isWeightMode,
       weight,
       normalizedWeight,
-      orderingPolicy,
+      orderingPolicyInfo,
       creationMethod,
-      isFlexibleDynamicQueue
+      isFlexibleDynamicQueue,
+      numActiveApplications,
+      numPendingApplications,
+      numContainers,
+      maxApplications,
+      maxApplicationsPerUser,
+      userLimit,
+      userLimitFactor,
+      nodeLabels,
+      defaultNodeLabelExpression,
+      preemptionDisabled,
+      intraQueuePreemptionDisabled,
+      defaultPriority
     };
   }
 });

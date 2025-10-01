@@ -21,17 +21,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 
-public class TestDataNodeECN {
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-  @Rule
-  public Timeout globalTimeout = new Timeout(300000);
+@Timeout(300)
+public class TestDataNodeECN {
 
   @Test
   public void testECNFlag() throws IOException {
@@ -41,7 +39,7 @@ public class TestDataNodeECN {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
       PipelineAck.ECN ecn = cluster.getDataNodes().get(0).getECN();
-      Assert.assertNotEquals(PipelineAck.ECN.DISABLED, ecn);
+      assertNotEquals(PipelineAck.ECN.DISABLED, ecn);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

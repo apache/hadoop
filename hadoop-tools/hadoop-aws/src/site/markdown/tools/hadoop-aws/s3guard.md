@@ -141,7 +141,7 @@ Options
 |----------------------|---------------------------------------------------------------------|
 | `-fips`              | Require FIPS endopint to be in use                                  |
 | `-magic`             | Require the S3 filesystem to be support the "magic" committer       |
-| `-markers`           | Directory marker status: `aware`, `keep`, `delete`, `authoritative` |
+| `-markers`           | Directory marker status: `aware`, `keep`                            |
 | `-encryption <type>` | Require a specific encryption algorithm                             |
 
 The server side encryption options are not directly related to S3Guard, but
@@ -172,10 +172,7 @@ S3A Committers
 Security
         Delegation token support is disabled
 
-Directory Markers
-        The directory marker policy is "keep"
-        Available Policies: delete, keep, authoritative
-        Authoritative paths: fs.s3a.authoritative.path=
+This version of Hadoop always retains directory markers
 
 ```
 

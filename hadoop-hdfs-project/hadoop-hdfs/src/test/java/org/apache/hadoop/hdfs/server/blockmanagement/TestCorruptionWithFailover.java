@@ -25,7 +25,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED;
 
@@ -65,8 +65,8 @@ public class TestCorruptionWithFailover {
       BlockManager bm1 = cluster.getNamesystem(1).getBlockManager();
       // Mark datanodes as stale, as are marked if a namenode went through a
       // failover, to prevent replica deletion.
-      bm0.getDatanodeManager().markAllDatanodesStale();
-      bm1.getDatanodeManager().markAllDatanodesStale();
+      bm0.getDatanodeManager().markAllDatanodesStaleAndSetKeyUpdateIfNeed();
+      bm1.getDatanodeManager().markAllDatanodesStaleAndSetKeyUpdateIfNeed();
       // Restart the datanode
       cluster.restartDataNode(dn);
       // The replica from the datanode will be having lesser genstamp, so

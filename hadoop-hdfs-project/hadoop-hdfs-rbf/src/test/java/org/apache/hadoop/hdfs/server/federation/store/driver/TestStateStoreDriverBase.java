@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.federation.store.driver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -51,8 +51,8 @@ import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 
-import org.junit.After;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,7 +83,7 @@ public class TestStateStoreDriverBase {
     return stateStore;
   }
 
-  @After
+  @AfterEach
   public void cleanMetrics() {
     if (stateStore != null) {
       StateStoreMetrics metrics = stateStore.getMetrics();
@@ -91,7 +91,7 @@ public class TestStateStoreDriverBase {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownCluster() {
     if (stateStore != null) {
       stateStore.stop();
@@ -184,7 +184,7 @@ public class TestStateStoreDriverBase {
       Object data1 = getField(original, key);
       Object data2 = getField(committed, key);
       if (assertEquals) {
-        assertEquals("Field " + key + " does not match", data1, data2);
+        assertEquals(data1, data2, "Field " + key + " does not match");
       } else if (!data1.equals(data2)) {
         ret = false;
       }
@@ -347,8 +347,8 @@ public class TestStateStoreDriverBase {
     // Verify no update occurred, all original records are unchanged
     QueryResult<T> newRecords = driver.get(clazz);
     assertEquals(10, newRecords.getRecords().size());
-    assertEquals("A single entry was improperly updated in the store", 10,
-        countMatchingEntries(records.getRecords(), newRecords.getRecords()));
+    assertEquals(10, countMatchingEntries(records.getRecords(), newRecords.getRecords()),
+        "A single entry was improperly updated in the store");
 
     // Update the entry (allowing updates)
     assertTrue(driver.put(updatedRecord, true, false));
@@ -358,9 +358,8 @@ public class TestStateStoreDriverBase {
     assertEquals(10, newRecords.getRecords().size());
     T record = records.getRecords().get(0);
     if (record.hasOtherFields()) {
-      assertEquals(
-          "Record of type " + clazz + " not updated in the store", 9,
-          countMatchingEntries(records.getRecords(), newRecords.getRecords()));
+      assertEquals(9, countMatchingEntries(records.getRecords(), newRecords.getRecords()),
+          "Record of type " + clazz + " not updated in the store");
     }
   }
 
@@ -613,8 +612,8 @@ public class TestStateStoreDriverBase {
     driver.getMultiple(MountTable.class, query);
     final Map<String, MutableRate> cacheLoadMetrics = metrics.getCacheLoadMetrics();
     final MutableRate mountTableCache = cacheLoadMetrics.get("CacheMountTableLoad");
-    assertNotNull("CacheMountTableLoad should be present in the state store metrics",
-        mountTableCache);
+    assertNotNull(mountTableCache,
+        "CacheMountTableLoad should be present in the state store metrics");
     return mountTableCache;
   }
 
@@ -623,13 +622,12 @@ public class TestStateStoreDriverBase {
     final MutableRate mountTableCache = getMountTableCache(driver);
     // CacheMountTableLoadNumOps
     final long mountTableCacheLoadNumOps = getMountTableCacheLoadSamples(driver);
-    assertEquals("Num of samples collected should match", numRefresh, mountTableCacheLoadNumOps);
+    assertEquals(numRefresh, mountTableCacheLoadNumOps, "Num of samples collected should match");
     // CacheMountTableLoadAvgTime ms
     final double mountTableCacheLoadAvgTimeMs = mountTableCache.lastStat().mean();
-    assertTrue(
+    assertTrue(mountTableCacheLoadAvgTimeMs > expectedHigherThan,
         "Mean time duration for cache load is expected to be higher than " + expectedHigherThan
-            + " ms." + " Actual value: " + mountTableCacheLoadAvgTimeMs,
-        mountTableCacheLoadAvgTimeMs > expectedHigherThan);
+            + " ms." + " Actual value: " + mountTableCacheLoadAvgTimeMs);
   }
 
   /**

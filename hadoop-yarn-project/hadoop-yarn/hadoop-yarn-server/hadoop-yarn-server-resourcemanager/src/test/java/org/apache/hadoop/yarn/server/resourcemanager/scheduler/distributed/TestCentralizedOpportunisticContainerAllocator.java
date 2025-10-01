@@ -36,9 +36,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,10 +51,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -79,7 +78,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
       ResourceBlacklistRequest.newInstance(
           new ArrayList<>(), new ArrayList<>());
 
-  @Before
+  @BeforeEach
   public void setup() {
     // creating a dummy master key to be used for creation of container.
     final MasterKey mKey = new MasterKey() {
@@ -649,21 +648,21 @@ public class TestCentralizedOpportunisticContainerAllocator {
 
   private RMNode createRMNode(String host, int port, String rack,
       int queueLength, int queueCapacity) {
-    RMNode node1 = Mockito.mock(RMNode.class);
+    RMNode node1 = mock(RMNode.class);
     NodeId nID1 = new TestNodeQueueLoadMonitor.FakeNodeId(host, port);
-    Mockito.when(node1.getHostName()).thenReturn(host);
-    Mockito.when(node1.getRackName()).thenReturn(rack);
-    Mockito.when(node1.getNodeID()).thenReturn(nID1);
-    Mockito.when(node1.getState()).thenReturn(NodeState.RUNNING);
+    when(node1.getHostName()).thenReturn(host);
+    when(node1.getRackName()).thenReturn(rack);
+    when(node1.getNodeID()).thenReturn(nID1);
+    when(node1.getState()).thenReturn(NodeState.RUNNING);
     OpportunisticContainersStatus status1 =
-        Mockito.mock(OpportunisticContainersStatus.class);
-    Mockito.when(status1.getEstimatedQueueWaitTime())
+        mock(OpportunisticContainersStatus.class);
+    when(status1.getEstimatedQueueWaitTime())
         .thenReturn(-1);
-    Mockito.when(status1.getWaitQueueLength())
+    when(status1.getWaitQueueLength())
         .thenReturn(queueLength);
-    Mockito.when(status1.getOpportQueueCapacity())
+    when(status1.getOpportQueueCapacity())
         .thenReturn(queueCapacity);
-    Mockito.when(node1.getOpportunisticContainersStatus()).thenReturn(status1);
+    when(node1.getOpportunisticContainersStatus()).thenReturn(status1);
     return node1;
   }
 }

@@ -18,6 +18,7 @@ package org.apache.hadoop.yarn.server.federation.store.impl;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsSource;
@@ -235,5 +236,10 @@ public final class ZKFederationStateStoreOpDurations implements MetricsSource {
 
   public void getTokenByRouterStoreTokenDuration(long startTime, long endTime) {
     getTokenByRouterStoreToken.add(endTime - startTime);
+  }
+
+  @VisibleForTesting
+  protected ZKFederationStateStoreOpDurations resetOpDurations() {
+    return new ZKFederationStateStoreOpDurations();
   }
 }

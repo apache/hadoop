@@ -21,6 +21,7 @@ package org.apache.hadoop.metrics2.lib;
 import static org.apache.hadoop.metrics2.impl.MsInfo.Context;
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 import static org.apache.hadoop.test.MetricsAsserts.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.AdditionalMatchers.eq;
 import static org.mockito.AdditionalMatchers.geq;
 import static org.mockito.AdditionalMatchers.leq;
@@ -28,7 +29,6 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +40,8 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.util.Quantile;
 import org.apache.hadoop.thirdparty.com.google.common.math.Stats;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -264,8 +265,8 @@ public class TestMutableMetrics {
     // the totals are as expected
     snapshotMutableRatesWithAggregation(rates, opCount, opTotalTime);
     for (int i = 0; i < n; i++) {
-      assertEquals("metric" + i + " count", 1001, opCount[i]);
-      assertEquals("metric" + i + " total", 1500, opTotalTime[i], 1.0);
+      assertEquals(1001, opCount[i], "metric" + i + " count");
+      assertEquals(1500, opTotalTime[i], 1.0, "metric" + i + " total");
     }
     firstSnapshotsFinished.countDown();
 
@@ -274,8 +275,8 @@ public class TestMutableMetrics {
     secondAddsFinished.await();
     snapshotMutableRatesWithAggregation(rates, opCount, opTotalTime);
     for (int i = 0; i < n; i++) {
-      assertEquals("metric" + i + " count", 1501, opCount[i]);
-      assertEquals("metric" + i + " total", 2250, opTotalTime[i], 1.0);
+      assertEquals(1501, opCount[i], "metric" + i + " count");
+      assertEquals(2250, opTotalTime[i], 1.0, "metric" + i + " total");
     }
     secondSnapshotsFinished.countDown();
   }
@@ -402,7 +403,8 @@ public class TestMutableMetrics {
    * Ensure that quantile estimates from {@link MutableQuantiles} are within
    * specified error bounds.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMutableQuantilesError() throws Exception {
     MetricsRecordBuilder mb = mockMetricsRecordBuilder();
     MetricsRegistry registry = new MetricsRegistry("test");
@@ -448,7 +450,8 @@ public class TestMutableMetrics {
    * Ensure that quantile estimates from {@link MutableInverseQuantiles} are within
    * specified error bounds.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMutableInverseQuantilesError() throws Exception {
     MetricsRecordBuilder mb = mockMetricsRecordBuilder();
     MetricsRegistry registry = new MetricsRegistry("test");
@@ -488,7 +491,8 @@ public class TestMutableMetrics {
    * Test that {@link MutableQuantiles} rolls the window over at the specified
    * interval.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMutableQuantilesRollover() throws Exception {
     MetricsRecordBuilder mb = mockMetricsRecordBuilder();
     MetricsRegistry registry = new MetricsRegistry("test");
@@ -536,7 +540,8 @@ public class TestMutableMetrics {
    * Test that {@link MutableInverseQuantiles} rolls the window over at the specified
    * interval.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMutableInverseQuantilesRollover() throws Exception {
     MetricsRecordBuilder mb = mockMetricsRecordBuilder();
     MetricsRegistry registry = new MetricsRegistry("test");
@@ -585,7 +590,8 @@ public class TestMutableMetrics {
    * Test that {@link MutableQuantiles} rolls over correctly even if no items.
    * have been added to the window
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMutableQuantilesEmptyRollover() throws Exception {
     MetricsRecordBuilder mb = mockMetricsRecordBuilder();
     MetricsRegistry registry = new MetricsRegistry("test");
@@ -607,7 +613,8 @@ public class TestMutableMetrics {
    * Test that {@link MutableInverseQuantiles} rolls over correctly even if no items
    * have been added to the window
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMutableInverseQuantilesEmptyRollover() throws Exception {
     MetricsRecordBuilder mb = mockMetricsRecordBuilder();
     MetricsRegistry registry = new MetricsRegistry("test");
@@ -628,7 +635,8 @@ public class TestMutableMetrics {
   /**
    * Test {@link MutableGaugeFloat#incr()}.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMutableGaugeFloat() {
     MutableGaugeFloat mgf = new MutableGaugeFloat(Context, 3.2f);
     assertEquals(3.2f, mgf.value(), 0.0);

@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.applications.distributedshell;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +33,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timeline.PluginStoreTestUtils;
+
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Unit tests implementations for distributed shell on TimeLineV1.5.
@@ -83,18 +85,18 @@ public class TestDSTimelineV15 extends DistributedShellBaseTest {
         return true;
       }
     }, scanInterval * 2, TEST_TIME_WINDOW_EXPIRE);
-    Assert.assertNull("Exception in getting listing status",
-        exceptionRef.get());
+    assertNull(exceptionRef.get(),
+        "Exception in getting listing status");
     super.checkTimeline(appId, defaultFlow, haveDomain, appReport);
   }
 
   @Test
-  public void testDSShellWithDomain() throws Exception {
-    baseTestDSShell(true);
+  public void testDSShellWithDomain(TestInfo testInfo) throws Exception {
+    baseTestDSShell(getMethodName(testInfo), true);
   }
 
   @Test
-  public void testDSShellWithoutDomain() throws Exception {
-    baseTestDSShell(false);
+  public void testDSShellWithoutDomain(TestInfo testInfo) throws Exception {
+    baseTestDSShell(getMethodName(testInfo), false);
   }
 }

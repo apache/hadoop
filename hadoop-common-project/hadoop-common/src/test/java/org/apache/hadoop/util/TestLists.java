@@ -18,14 +18,15 @@
 
 package org.apache.hadoop.util;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Simple tests for utility class Lists.
@@ -36,27 +37,27 @@ public class TestLists {
   public void testAddToEmptyArrayList() {
     List<String> list = Lists.newArrayList();
     list.add("record1");
-    Assert.assertEquals(1, list.size());
-    Assert.assertEquals("record1", list.get(0));
+    assertEquals(1, list.size());
+    assertEquals("record1", list.get(0));
   }
 
   @Test
   public void testAddToEmptyLinkedList() {
     List<String> list = Lists.newLinkedList();
     list.add("record1");
-    Assert.assertEquals(1, list.size());
-    Assert.assertEquals("record1", list.get(0));
+    assertEquals(1, list.size());
+    assertEquals("record1", list.get(0));
   }
 
   @Test
   public void testVarArgArrayLists() {
     List<String> list = Lists.newArrayList("record1", "record2", "record3");
     list.add("record4");
-    Assert.assertEquals(4, list.size());
-    Assert.assertEquals("record1", list.get(0));
-    Assert.assertEquals("record2", list.get(1));
-    Assert.assertEquals("record3", list.get(2));
-    Assert.assertEquals("record4", list.get(3));
+    assertEquals(4, list.size());
+    assertEquals("record1", list.get(0));
+    assertEquals("record2", list.get(1));
+    assertEquals("record3", list.get(2));
+    assertEquals("record4", list.get(3));
   }
 
   @Test
@@ -67,7 +68,7 @@ public class TestLists {
     set.add("record3");
     List<String> list = Lists.newArrayList(set);
     list.add("record4");
-    Assert.assertEquals(4, list.size());
+    assertEquals(4, list.size());
   }
 
   @Test
@@ -78,7 +79,7 @@ public class TestLists {
     set.add("record3");
     List<String> list = Lists.newLinkedList(set);
     list.add("record4");
-    Assert.assertEquals(4, list.size());
+    assertEquals(4, list.size());
   }
 
   @Test
@@ -91,34 +92,34 @@ public class TestLists {
     list.add("e");
     List<List<String>> res = Lists.
             partition(list, 2);
-    Assertions.assertThat(res)
+    assertThat(res)
             .describedAs("Number of partitions post partition")
             .hasSize(3);
-    Assertions.assertThat(res.get(0))
+    assertThat(res.get(0))
             .describedAs("Number of elements in first partition")
             .hasSize(2);
-    Assertions.assertThat(res.get(2))
+    assertThat(res.get(2))
             .describedAs("Number of elements in last partition")
             .hasSize(1);
 
     List<List<String>> res2 = Lists.
             partition(list, 1);
-    Assertions.assertThat(res2)
+    assertThat(res2)
             .describedAs("Number of partitions post partition")
             .hasSize(5);
-    Assertions.assertThat(res2.get(0))
+    assertThat(res2.get(0))
             .describedAs("Number of elements in first partition")
             .hasSize(1);
-    Assertions.assertThat(res2.get(4))
+    assertThat(res2.get(4))
             .describedAs("Number of elements in last partition")
             .hasSize(1);
 
     List<List<String>> res3 = Lists.
             partition(list, 6);
-    Assertions.assertThat(res3)
+    assertThat(res3)
             .describedAs("Number of partitions post partition")
             .hasSize(1);
-    Assertions.assertThat(res3.get(0))
+    assertThat(res3.get(0))
             .describedAs("Number of elements in first partition")
             .hasSize(5);
   }
@@ -129,18 +130,18 @@ public class TestLists {
     list.add("record1");
     list.add("record2");
     list.add("record3");
-    Assert.assertEquals(3, list.size());
-    Assert.assertEquals("record1", list.get(0));
-    Assert.assertEquals("record2", list.get(1));
-    Assert.assertEquals("record3", list.get(2));
+    assertEquals(3, list.size());
+    assertEquals("record1", list.get(0));
+    assertEquals("record2", list.get(1));
+    assertEquals("record3", list.get(2));
     list = Lists.newArrayListWithCapacity(3);
     list.add("record1");
     list.add("record2");
     list.add("record3");
-    Assert.assertEquals(3, list.size());
-    Assert.assertEquals("record1", list.get(0));
-    Assert.assertEquals("record2", list.get(1));
-    Assert.assertEquals("record3", list.get(2));
+    assertEquals(3, list.size());
+    assertEquals("record1", list.get(0));
+    assertEquals("record2", list.get(1));
+    assertEquals("record3", list.get(2));
   }
 
 }

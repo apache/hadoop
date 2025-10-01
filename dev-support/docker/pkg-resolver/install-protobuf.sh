@@ -27,25 +27,26 @@ if [ $? -eq 1 ]; then
   exit 1
 fi
 
-default_version="3.7.1"
+default_version="3.21.12"
 version_to_install=$default_version
 if [ -n "$2" ]; then
   version_to_install="$2"
 fi
 
-if [ "$version_to_install" != "3.7.1" ]; then
+if [ "$version_to_install" != "3.21.12" ]; then
   echo "WARN: Don't know how to install version $version_to_install, installing the default version $default_version instead"
   version_to_install=$default_version
 fi
 
-if [ "$version_to_install" == "3.7.1" ]; then
+if [ "$version_to_install" == "3.21.12" ]; then
   # hadolint ignore=DL3003
   mkdir -p /opt/protobuf-src &&
     curl -L -s -S \
-      https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
+      https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz \
       -o /opt/protobuf.tar.gz &&
     tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src &&
     cd /opt/protobuf-src &&
+    ./autogen.sh &&
     ./configure --prefix=/opt/protobuf &&
     make "-j$(nproc)" &&
     make install &&

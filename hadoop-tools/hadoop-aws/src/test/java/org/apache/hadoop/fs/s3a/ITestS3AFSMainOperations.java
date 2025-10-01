@@ -20,21 +20,25 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Ignore;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
+import org.apache.hadoop.test.tags.IntegrationTest;
+
+import org.junit.jupiter.api.Disabled;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createTestPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.isCreatePerformanceEnabled;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * S3A Test suite for the FSMainOperationsBaseTest tests.
  */
+@IntegrationTest
 public class ITestS3AFSMainOperations extends FSMainOperationsBaseTest {
 
   private S3AContract contract;
@@ -46,32 +50,50 @@ public class ITestS3AFSMainOperations extends FSMainOperationsBaseTest {
 
   @Override
   protected FileSystem createFileSystem() throws Exception {
-    contract = new S3AContract(new Configuration());
+    Configuration conf = setPerformanceFlags(
+        new Configuration(),
+        "");
+    contract = new S3AContract(conf);
     contract.init();
     return contract.getTestFileSystem();
   }
 
   @Override
-  public void tearDown() throws Exception {
-    if (contract.getTestFileSystem() != null) {
-      super.tearDown();
-    }
-  }
-
-  @Override
-  @Ignore("Permissions not supported")
+  @Disabled("Permissions not supported")
   public void testListStatusThrowsExceptionForUnreadableDir() {
   }
 
   @Override
-  @Ignore("Permissions not supported")
+  @Disabled("Permissions not supported")
   public void testGlobStatusThrowsExceptionForUnreadableDir() {
   }
 
   @Override
-  @Ignore("local FS path setup broken")
+  @Disabled("local FS path setup broken")
   public void testCopyToLocalWithUseRawLocalFileSystemOption()
       throws Exception {
+  }
+
+  @Override
+  public void testWriteReadAndDeleteOneAndAHalfBlocks() throws Exception {
+    // Currently analytics accelerator does not support reading of files that have been overwritten.
+    // This is because the analytics accelerator library caches metadata, and when a file is
+    // overwritten, the old metadata continues to be used, until it is removed from the cache over
+    // time. This will be fixed in https://github.com/awslabs/analytics-accelerator-s3/issues/218.
+    skipIfAnalyticsAcceleratorEnabled(this.contract.getConf(),
+        "Analytics Accelerator currently does not support reading of over written files");
+    super.testWriteReadAndDeleteOneAndAHalfBlocks();
+  }
+
+  @Override
+  public void testWriteReadAndDeleteTwoBlocks() throws Exception {
+    // Currently analytics accelerator does not support reading of files that have been overwritten.
+    // This is because the analytics accelerator library caches metadata, and when a file is
+    // overwritten, the old metadata continues to be used, until it is removed from the cache over
+    // time. This will be fixed in https://github.com/awslabs/analytics-accelerator-s3/issues/218.
+    skipIfAnalyticsAcceleratorEnabled(this.contract.getConf(),
+        "Analytics Accelerator currently does not support reading of over written files");
+    super.testWriteReadAndDeleteTwoBlocks();
   }
 
   @Override
@@ -79,7 +101,7 @@ public class ITestS3AFSMainOperations extends FSMainOperationsBaseTest {
     boolean createPerformance = isCreatePerformanceEnabled(fSys);
     try {
       super.testOverwrite();
-      Assertions.assertThat(createPerformance)
+      assertThat(createPerformance)
           .describedAs("create performance enabled")
           .isFalse();
     } catch (AssertionError e) {

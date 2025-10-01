@@ -20,8 +20,9 @@ package org.apache.hadoop.ipc;
 
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,9 +35,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /** Split from TestRPC. */
 @SuppressWarnings("deprecation")
@@ -45,7 +46,7 @@ public class TestRPCServerShutdown extends TestRpcBase {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestRPCServerShutdown.class);
 
-  @Before
+  @BeforeEach
   public void setup() {
     setupConf();
   }
@@ -53,7 +54,8 @@ public class TestRPCServerShutdown extends TestRpcBase {
   /**
    *  Verify the RPC server can shutdown properly when callQueue is full.
    */
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testRPCServerShutdown() throws Exception {
     final int numClients = 3;
     final List<Future<Void>> res = new ArrayList<Future<Void>>();
@@ -87,15 +89,15 @@ public class TestRPCServerShutdown extends TestRpcBase {
     } finally {
       try {
         stop(server, proxy);
-        assertEquals("Not enough clients", numClients, res.size());
+        assertEquals(numClients, res.size(), "Not enough clients");
         for (Future<Void> f : res) {
           try {
             f.get();
             fail("Future get should not return");
           } catch (ExecutionException e) {
             ServiceException se = (ServiceException) e.getCause();
-            assertTrue("Unexpected exception: " + se,
-                se.getCause() instanceof IOException);
+            assertTrue(se.getCause() instanceof IOException,
+                "Unexpected exception: " + se);
             LOG.info("Expected exception", e.getCause());
           }
         }

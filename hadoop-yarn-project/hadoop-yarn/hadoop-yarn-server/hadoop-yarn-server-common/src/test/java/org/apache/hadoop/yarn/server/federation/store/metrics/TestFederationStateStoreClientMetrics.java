@@ -17,10 +17,11 @@
 
 package org.apache.hadoop.yarn.server.federation.store.metrics;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Unittests for {@link FederationStateStoreClientMetrics}.
@@ -39,9 +40,9 @@ public class TestFederationStateStoreClientMetrics {
   public void testAggregateMetricInit() {
     LOG.info("Test: aggregate metrics are initialized correctly");
 
-    Assert.assertEquals(0,
+    assertEquals(0,
         FederationStateStoreClientMetrics.getNumSucceededCalls());
-    Assert.assertEquals(0,
+    assertEquals(0,
         FederationStateStoreClientMetrics.getNumFailedCalls());
 
     LOG.info("Test: aggregate metrics are updated correctly");
@@ -58,26 +59,26 @@ public class TestFederationStateStoreClientMetrics {
 
     goodStateStore.registerSubCluster(100);
 
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         FederationStateStoreClientMetrics.getNumSucceededCalls());
-    Assert.assertEquals(100,
+    assertEquals(100,
         FederationStateStoreClientMetrics.getLatencySucceededCalls(), 0);
-    Assert.assertEquals(apiGoodBefore + 1,
+    assertEquals(apiGoodBefore + 1,
         FederationStateStoreClientMetrics.getNumSucceededCalls());
-    Assert.assertEquals(100, FederationStateStoreClientMetrics
+    assertEquals(100, FederationStateStoreClientMetrics
         .getLatencySucceessfulCallsForMethod("registerSubCluster"), 0);
 
     LOG.info("Test: Running stats correctly calculated for 2 metrics");
 
     goodStateStore.registerSubCluster(200);
 
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         FederationStateStoreClientMetrics.getNumSucceededCalls());
-    Assert.assertEquals(150,
+    assertEquals(150,
         FederationStateStoreClientMetrics.getLatencySucceededCalls(), 0);
-    Assert.assertEquals(apiGoodBefore + 2,
+    assertEquals(apiGoodBefore + 2,
         FederationStateStoreClientMetrics.getNumSucceededCalls());
-    Assert.assertEquals(150, FederationStateStoreClientMetrics
+    assertEquals(150, FederationStateStoreClientMetrics
         .getLatencySucceessfulCallsForMethod("registerSubCluster"), 0);
 
   }
@@ -92,9 +93,9 @@ public class TestFederationStateStoreClientMetrics {
     badStateStore.registerSubCluster();
 
     LOG.info("Test: Aggregate and method failed calls updated correctly");
-    Assert.assertEquals(totalBadbefore + 1,
+    assertEquals(totalBadbefore + 1,
         FederationStateStoreClientMetrics.getNumFailedCalls());
-    Assert.assertEquals(apiBadBefore + 1, FederationStateStoreClientMetrics
+    assertEquals(apiBadBefore + 1, FederationStateStoreClientMetrics
         .getNumFailedCallsForMethod("registerSubCluster"));
 
   }
@@ -115,14 +116,14 @@ public class TestFederationStateStoreClientMetrics {
     FederationStateStoreClientMetrics.succeededStateStoreCall(100);
 
     LOG.info("Test: Aggregate and method calls did not update");
-    Assert.assertEquals(totalBadbefore,
+    assertEquals(totalBadbefore,
         FederationStateStoreClientMetrics.getNumFailedCalls());
-    Assert.assertEquals(apiBadBefore, FederationStateStoreClientMetrics
+    assertEquals(apiBadBefore, FederationStateStoreClientMetrics
         .getNumFailedCallsForMethod("registerSubCluster"));
 
-    Assert.assertEquals(totalGoodBefore,
+    assertEquals(totalGoodBefore,
         FederationStateStoreClientMetrics.getNumSucceededCalls());
-    Assert.assertEquals(apiGoodBefore, FederationStateStoreClientMetrics
+    assertEquals(apiGoodBefore, FederationStateStoreClientMetrics
         .getNumSucceessfulCallsForMethod("registerSubCluster"));
 
   }

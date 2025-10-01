@@ -136,18 +136,18 @@ public class TestMiniYarnCluster {
       Configuration conf1 = cluster.getResourceManager(0).getConfig(),
           conf2 = cluster.getResourceManager(1).getConfig();
       assertFalse(conf1 == conf2);
-      assertEquals("0.0.0.0:18032",
+      assertEquals("localhost:18032",
           conf1.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS,
               RM1_NODE_ID)));
-      assertEquals("0.0.0.0:28032",
+      assertEquals("localhost:28032",
           conf1.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS,
               RM2_NODE_ID)));
       assertEquals("rm1", conf1.get(YarnConfiguration.RM_HA_ID));
 
-      assertEquals("0.0.0.0:18032",
+      assertEquals("localhost:18032",
           conf2.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS,
               RM1_NODE_ID)));
-      assertEquals("0.0.0.0:28032",
+      assertEquals("localhost:28032",
           conf2.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS,
               RM2_NODE_ID)));
       assertEquals("rm2", conf2.get(YarnConfiguration.RM_HA_ID));

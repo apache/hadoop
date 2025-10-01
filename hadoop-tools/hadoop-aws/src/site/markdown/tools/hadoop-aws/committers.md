@@ -362,6 +362,13 @@ the magic directory path rewriting is enabled by default.
 The Magic Committer has not been field tested to the extent of Netflix's committer;
 consider it the least mature of the committers.
 
+When there are less number of files to be written, The Magic committer has an option to store the commit data in-memory which can speed up the TaskCommit operation as well as save S3 cost. This can be enabled by the following property
+```xml
+<property>
+  <name>fs.s3a.committer.magic.track.commits.in.memory.enabled</name>
+  <value>true</value>
+</property>
+```
 
 ### Which Committer to Use?
 
@@ -551,6 +558,7 @@ The table below provides a summary of each option.
 | `fs.s3a.committer.threads` | Number of threads in committers for parallel operations on files.| -4 |
 | `fs.s3a.committer.generate.uuid` | Generate a Job UUID if none is passed down from Spark | `false` |
 | `fs.s3a.committer.require.uuid` |Require the Job UUID to be passed down from Spark | `false` |
+| `fs.s3a.committer.magic.cleanup.enabled` | Cleanup the magic path after the job is committed. | `true` |
 
 The examples below shows how these options can be configured in XML.
 
@@ -713,7 +721,7 @@ such use case, The "MAGIC PATH" for each job is unique of the format `__magic_jo
 multiple job running simultaneously do not step into each other.
 
 Before attempting this, the committers must be set to not delete all incomplete uploads on job commit,
-by setting `fs.s3a.committer.abort.pending.uploads` to `false`. This is set to `false`by default
+by setting `fs.s3a.committer.abort.pending.uploads` to `false`. This is set to `true` by default.
 
 ```xml
 <property>
@@ -747,7 +755,7 @@ For example, for any job executed through Hadoop MapReduce, the Job ID can be us
 ### `Filesystem does not have support for 'magic' committer`
 
 ```
-org.apache.hadoop.fs.s3a.commit.PathCommitException: `s3a://landsat-pds': Filesystem does not have support for 'magic' committer enabled
+org.apache.hadoop.fs.s3a.commit.PathCommitException: `s3a://noaa-isd-pds': Filesystem does not have support for 'magic' committer enabled
 in configuration option fs.s3a.committer.magic.enabled
 ```
 
@@ -760,41 +768,14 @@ Remove all global/per-bucket declarations of `fs.s3a.bucket.magic.enabled` or se
 
 ```xml
 <property>
-  <name>fs.s3a.bucket.landsat-pds.committer.magic.enabled</name>
+  <name>fs.s3a.bucket.noaa-isd-pds.committer.magic.enabled</name>
   <value>true</value>
 </property>
 ```
 
 Tip: you can verify that a bucket supports the magic committer through the
-`hadoop s3guard bucket-info` command:
+`hadoop s3guard bucket-info` command.
 
-
-```
-> hadoop s3guard bucket-info -magic s3a://landsat-pds/
-Location: us-west-2
-
-S3A Client
-        Signing Algorithm: fs.s3a.signing-algorithm=(unset)
-        Endpoint: fs.s3a.endpoint=s3.amazonaws.com
-        Encryption: fs.s3a.encryption.algorithm=none
-        Input seek policy: fs.s3a.experimental.input.fadvise=normal
-        Change Detection Source: fs.s3a.change.detection.source=etag
-        Change Detection Mode: fs.s3a.change.detection.mode=server
-
-S3A Committers
-        The "magic" committer is supported in the filesystem
-        S3A Committer factory class: mapreduce.outputcommitter.factory.scheme.s3a=org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory
-        S3A Committer name: fs.s3a.committer.name=magic
-        Store magic committer integration: fs.s3a.committer.magic.enabled=true
-
-Security
-        Delegation token support is disabled
-
-Directory Markers
-        The directory marker policy is "keep"
-        Available Policies: delete, keep, authoritative
-        Authoritative paths: fs.s3a.authoritative.path=```
-```
 
 ### Error message: "File being created has a magic path, but the filesystem has magic file support disabled"
 
@@ -1078,3 +1059,20 @@ one of the following conditions are met
 1. The committer is being used in spark, and the version of spark being used does not
    set the `spark.sql.sources.writeJobUUID` property.
    Either upgrade to a new spark release, or set `fs.s3a.committer.generate.uuid` to true.
+
+### Long Job Completion Time Due to Magic Committer Cleanup
+When using the S3A Magic Committer in large Spark or MapReduce jobs, job completion can be significantly delayed
+due to the cleanup of temporary files (such as those under the `__magic` directory).
+This happens because deleting many small files in S3 is a slow and expensive operation, especially at scale.
+In some cases, the cleanup phase alone can take several minutes or more — even after all data has already been written.
+
+To reduce this overhead, Hadoop 3.4.2+ introduced a configuration option in
+[HADOOP-18568](https://issues.apache.org/jira/browse/HADOOP-18568) that allows users to disable this automatic cleanup
+and use lifecycle policies instead to clean up the temporary files.
+#### Configuration
+```xml
+<property>
+  <name>fs.s3a.committer.magic.cleanup.enabled</name>
+  <value>false</value>
+</property>
+```

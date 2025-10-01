@@ -20,8 +20,8 @@ package org.apache.hadoop.net;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +33,7 @@ import java.util.Map;
  * Test the static mapping class.
  * Because the map is actually static, this map needs to be reset for every test
  */
-public class TestStaticMapping extends Assert {
+public class TestStaticMapping extends Assertions {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestStaticMapping.class);
 
@@ -78,23 +78,18 @@ public class TestStaticMapping extends Assert {
   }
 
   private void assertSingleSwitch(DNSToSwitchMapping mapping) {
-    assertEquals("Expected a single switch mapping "
-                     + mapping,
-                 true,
-                 AbstractDNSToSwitchMapping.isMappingSingleSwitch(mapping));
+    assertEquals(true, AbstractDNSToSwitchMapping.isMappingSingleSwitch(mapping),
+        "Expected a single switch mapping " + mapping);
   }
 
   private void assertMultiSwitch(DNSToSwitchMapping mapping) {
-    assertEquals("Expected a multi switch mapping "
-                     + mapping,
-                 false,
-                 AbstractDNSToSwitchMapping.isMappingSingleSwitch(mapping));
+    assertEquals(false, AbstractDNSToSwitchMapping.isMappingSingleSwitch(mapping),
+        "Expected a multi switch mapping " + mapping);
   }
 
   protected void assertMapSize(AbstractDNSToSwitchMapping switchMapping, int expectedSize) {
-    assertEquals(
-        "Expected two entries in the map " + switchMapping.dumpTopology(),
-        expectedSize, switchMapping.getSwitchMap().size());
+    assertEquals(expectedSize, switchMapping.getSwitchMap().size(),
+        "Expected two entries in the map " + switchMapping.dumpTopology());
   }
 
   private List<String> createQueryList() {
@@ -130,8 +125,8 @@ public class TestStaticMapping extends Assert {
     Map<String, String> switchMap = mapping.getSwitchMap();
     String topology = mapping.dumpTopology();
     LOG.info(topology);
-    assertEquals(topology, 1, switchMap.size());
-    assertEquals(topology, "/r1", switchMap.get("n1"));
+    assertEquals(1, switchMap.size(), topology);
+    assertEquals("/r1", switchMap.get("n1"), topology);
   }
 
   /**
@@ -160,9 +155,9 @@ public class TestStaticMapping extends Assert {
     Map<String, String> switchMap = mapping.getSwitchMap();
     String topology = mapping.dumpTopology();
     LOG.info(topology);
-    assertEquals(topology, 2, switchMap.size());
-    assertEquals(topology, "/r1", switchMap.get("n1"));
-    assertNull(topology, switchMap.get("unknown"));
+    assertEquals(2, switchMap.size(), topology);
+    assertEquals("/r1", switchMap.get("n1"), topology);
+    assertNull(switchMap.get("unknown"), topology);
   }
 
 

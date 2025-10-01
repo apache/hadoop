@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.util;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.text.SimpleDateFormat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * A JUnit test to test {@link Time}.

@@ -20,9 +20,8 @@ package org.apache.hadoop.yarn.service.monitor.probe;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.service.api.records.ReadinessCheck;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -32,23 +31,21 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
  * Tests for default probe.
  */
-@RunWith(Parameterized.class)
 public class TestDefaultProbe {
-  private final DefaultProbe probe;
+  private DefaultProbe probe;
 
-  public TestDefaultProbe(Probe probe) {
-    this.probe = (DefaultProbe) probe;
+  public void initTestDefaultProbe(Probe paramProbe) {
+    this.probe = (DefaultProbe) paramProbe;
   }
 
-  @Parameterized.Parameters
   public static Collection<Object[]> data() {
     // test run 1: Default probe checks that container has an IP
     Probe p1 = MonitorUtils.getProbe(null);
@@ -71,8 +68,10 @@ public class TestDefaultProbe {
     return Arrays.asList(new Object[][] {{p1}, {p2}, {p3}});
   }
 
-  @Test
-  public void testDefaultProbe() {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testDefaultProbe(Probe paramProbe) {
+    initTestDefaultProbe(paramProbe);
     // component instance has a good hostname, so probe will eventually succeed
     // whether or not DNS checking is enabled
     ComponentInstance componentInstance =
@@ -89,35 +88,34 @@ public class TestDefaultProbe {
       componentInstance, boolean expectDNSCheckFailure) {
     // on the first ping, null container status results in failure
     ProbeStatus probeStatus = probe.ping(componentInstance);
-    assertFalse("Expected failure for " + probeStatus.toString(),
-        probeStatus.isSuccess());
-    assertTrue("Expected IP failure for " + probeStatus.toString(),
-        probeStatus.toString().contains(
-        componentInstance.getCompInstanceName() + ": IP is not available yet"));
+    assertFalse(probeStatus.isSuccess(),
+        "Expected failure for " + probeStatus.toString());
+    assertTrue(probeStatus.toString().contains(
+        componentInstance.getCompInstanceName() + ": IP is not available yet"),
+        "Expected IP failure for " + probeStatus.toString());
 
     // on the second ping, container status is retrieved but there are no
     // IPs, resulting in failure
     probeStatus = probe.ping(componentInstance);
-    assertFalse("Expected failure for " + probeStatus.toString(),
-        probeStatus.isSuccess());
-    assertTrue("Expected IP failure for " + probeStatus.toString(),
-        probeStatus.toString().contains(componentInstance
-            .getCompInstanceName() + ": IP is not available yet"));
+    assertFalse(probeStatus.isSuccess(),
+        "Expected failure for " + probeStatus.toString());
+    assertTrue(probeStatus.toString().contains(componentInstance
+        .getCompInstanceName() + ": IP is not available yet"),
+        "Expected IP failure for " + probeStatus.toString());
 
     // on the third ping, IPs are retrieved and success depends on whether or
     // not a DNS lookup can be performed for the component instance hostname
     probeStatus = probe.ping(componentInstance);
     if (expectDNSCheckFailure) {
-      assertFalse("Expected failure for " + probeStatus.toString(),
-          probeStatus.isSuccess());
-      assertTrue("Expected DNS failure for " + probeStatus.toString(),
-          probeStatus.toString().contains(componentInstance
-              .getCompInstanceName() + ": DNS checking is enabled, but lookup" +
-              " for " + componentInstance.getHostname() + " is not available " +
-              "yet"));
+      assertFalse(probeStatus.isSuccess(),
+          "Expected failure for " + probeStatus.toString());
+      assertTrue(probeStatus.toString().contains(componentInstance
+          .getCompInstanceName() + ": DNS checking is enabled, but lookup" +
+          " for " + componentInstance.getHostname() + " is not available " +
+          "yet"), "Expected DNS failure for " + probeStatus.toString());
     } else {
-      assertTrue("Expected success for " + probeStatus.toString(),
-          probeStatus.isSuccess());
+      assertTrue(probeStatus.isSuccess(),
+          "Expected success for " + probeStatus.toString());
     }
   }
 

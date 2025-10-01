@@ -31,12 +31,12 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestJoinTupleWritable {
 
@@ -96,7 +96,7 @@ public class TestJoinTupleWritable {
         i = verifIter(writs, ((TupleWritable)w), i);
         continue;
       }
-      assertTrue("Bad value", w.equals(writs[i++]));
+      assertTrue(w.equals(writs[i++]), "Bad value");
     }
     return i;
   }
@@ -139,7 +139,7 @@ public class TestJoinTupleWritable {
       new IntWritable(r.nextInt())
     };
     TupleWritable sTuple = makeTuple(writs);
-    assertTrue("Bad count", writs.length == verifIter(writs, sTuple, 0));
+    assertTrue(writs.length == verifIter(writs, sTuple, 0), "Bad count");
   }
 
   @Test
@@ -163,7 +163,7 @@ public class TestJoinTupleWritable {
     ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
     TupleWritable dTuple = new TupleWritable();
     dTuple.readFields(new DataInputStream(in));
-    assertTrue("Failed to write/read tuple", sTuple.equals(dTuple));
+    assertTrue(sTuple.equals(dTuple), "Failed to write/read tuple");
   }
 
   @Test
@@ -184,8 +184,8 @@ public class TestJoinTupleWritable {
     dTuple.readFields(new DataInputStream(in));
     assertThat(dTuple).withFailMessage("Failed to write/read tuple")
         .isEqualTo(sTuple);
-    assertEquals("All tuple data has not been read from the stream", 
-      -1, in.read());
+    assertEquals(-1, in.read(),
+        "All tuple data has not been read from the stream");
   }
 
   @Test
@@ -204,8 +204,8 @@ public class TestJoinTupleWritable {
     dTuple.readFields(new DataInputStream(in));
     assertThat(dTuple).withFailMessage("Failed to write/read tuple")
             .isEqualTo(sTuple);
-    assertEquals("All tuple data has not been read from the stream", 
-      -1, in.read());
+    assertEquals(-1, in.read(),
+        "All tuple data has not been read from the stream");
   }
   
   /**
@@ -230,8 +230,8 @@ public class TestJoinTupleWritable {
     dTuple.readFields(new DataInputStream(in));
     assertThat(dTuple).withFailMessage("Failed to write/read tuple")
         .isEqualTo(sTuple);
-    assertEquals("All tuple data has not been read from the stream", 
-      -1, in.read());
+    assertEquals(-1, in.read(),
+        "All tuple data has not been read from the stream");
   }
 
   @Test
@@ -250,8 +250,7 @@ public class TestJoinTupleWritable {
         assertTrue(has);
       }
       else {
-        assertFalse("Tuple position is incorrectly labelled as set: " + pos,
-          has);
+        assertFalse(has, "Tuple position is incorrectly labelled as set: " + pos);
       }
     }
   }
@@ -272,8 +271,7 @@ public class TestJoinTupleWritable {
         assertTrue(has);
       }
       else {
-        assertFalse("Tuple position is incorrectly labelled as set: " + pos,
-          has);
+        assertFalse(has, "Tuple position is incorrectly labelled as set: " + pos);
       }
     }
   }
@@ -297,8 +295,7 @@ public class TestJoinTupleWritable {
         assertTrue(has);
       }
       else {
-        assertFalse("Tuple position is incorrectly labelled as set: " + pos,
-          has);
+        assertFalse(has, "Tuple position is incorrectly labelled as set: " + pos);
       }
     }
   }

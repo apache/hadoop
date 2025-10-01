@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.fs.shell;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.reset;
 
 import java.io.IOException;
 import java.net.URI;
@@ -33,22 +36,22 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.PathExistsException;
 import org.apache.hadoop.fs.shell.CommandFormat.UnknownOptionException;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class TestMove {
   static Configuration conf;
   static FileSystem mockFs;
  
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException, URISyntaxException {
     mockFs = mock(FileSystem.class);
     conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
   }
     
-  @Before
+  @BeforeEach
   public void resetMock() throws IOException {
     reset(mockFs);
   }
@@ -91,14 +94,15 @@ public class TestMove {
     cmd.run(cmdargs);
     
     // make sure command failed with the proper exception
-    assertTrue("Rename should have failed with path exists exception",
-                         cmd.error instanceof PathExistsException);
+    assertTrue(cmd.error instanceof PathExistsException,
+        "Rename should have failed with path exists exception");
   }
 
-  @Test(expected = UnknownOptionException.class)
+  @Test
   public void testMoveFromLocalDoesNotAllowTOption() {
-    new MoveCommands.MoveFromLocal().run("-t", "2",
-        null, null);
+    assertThrows(UnknownOptionException.class, () -> {
+      new MoveCommands.MoveFromLocal().run("-t", "2", null, null);
+    });
   }
     
   static class MockFileSystem extends FilterFileSystem {

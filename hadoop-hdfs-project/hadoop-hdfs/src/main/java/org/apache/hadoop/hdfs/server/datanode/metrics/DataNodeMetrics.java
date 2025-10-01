@@ -102,7 +102,7 @@ public class DataNodeMetrics {
   final MutableQuantiles[]   ramDiskBlocksLazyPersistWindowMsQuantiles;
 
   @Metric MutableCounterLong fsyncCount;
-  
+
   @Metric MutableCounterLong volumeFailures;
 
   @Metric("Count of network errors on the datanode")
@@ -132,6 +132,7 @@ public class DataNodeMetrics {
   @Metric MutableRate heartbeatsTotal;
   @Metric MutableRate lifelines;
   @Metric MutableRate blockReports;
+  @Metric private MutableRate blockReportsCreateCostMills;
   @Metric MutableRate incrementalBlockReports;
   @Metric MutableRate cacheReports;
   @Metric MutableRate packetAckRoundTripTimeNanos;
@@ -184,6 +185,8 @@ public class DataNodeMetrics {
   private MutableCounterLong numProcessedCommands;
   @Metric("Rate of processed commands of all BPServiceActors")
   private MutableRate processedCommandsOp;
+  @Metric("Number of blocks in IBRs that failed due to null storage")
+  private MutableCounterLong nullStorageBlockReports;
 
   // FsDatasetImpl local file process metrics.
   @Metric private MutableRate createRbwOp;
@@ -215,6 +218,10 @@ public class DataNodeMetrics {
   @Metric("Milliseconds spent on calling NN rpc")
   private MutableRatesWithAggregation
       nnRpcLatency = registry.newRatesWithAggregation("nnRpcLatency");
+  @Metric("Nanoseconds spent on acquire dataset write lock")
+  private MutableRate acquireDatasetWriteLock;
+  @Metric("Nanoseconds spent on acquire dataset read lock")
+  private MutableRate acquireDatasetReadLock;
 
   final String name;
   JvmMetrics jvmMetrics = null;
@@ -319,6 +326,10 @@ public class DataNodeMetrics {
     if (rpcMetricSuffix != null) {
       nnRpcLatency.add("BlockReportsFor" + rpcMetricSuffix, latency);
     }
+  }
+
+  public void addBlockReportCreateCost(long latency) {
+    blockReportsCreateCostMills.add(latency);
   }
 
   public void addIncrementalBlockReport(long latency,
@@ -807,4 +818,15 @@ public class DataNodeMetrics {
     replaceBlockOpToOtherHost.incr();
   }
 
+  public void incrNullStorageBlockReports() {
+    nullStorageBlockReports.incr();
+  }
+
+  public void addAcquireDataSetReadLock(long latency) {
+    acquireDatasetReadLock.add(latency);
+  }
+
+  public void addAcquireDataSetWriteLock(long latency) {
+    acquireDatasetWriteLock.add(latency);
+  }
 }

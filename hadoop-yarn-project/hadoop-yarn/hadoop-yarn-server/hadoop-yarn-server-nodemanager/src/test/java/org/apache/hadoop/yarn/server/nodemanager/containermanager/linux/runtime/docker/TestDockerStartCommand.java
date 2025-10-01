@@ -17,10 +17,10 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests the docker start command and any command line arguments.
@@ -31,7 +31,7 @@ public class TestDockerStartCommand {
 
   private static final String CONTAINER_NAME = "foo";
 
-  @Before
+  @BeforeEach
   public void setUp() {
     dockerStartCommand = new DockerStartCommand(CONTAINER_NAME);
   }

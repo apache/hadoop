@@ -34,9 +34,9 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.Reducer;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -44,9 +44,10 @@ import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -70,17 +71,19 @@ public class TestMRMultipleOutputs extends HadoopTestCase {
   }
 
   @SuppressWarnings("unchecked")
-  @Test(expected = IOException.class)
+  @Test
   public void testParallelCloseIOException() throws IOException, InterruptedException {
-    RecordWriter writer = mock(RecordWriter.class);
-    Map recordWriters = mock(Map.class);
-    when(recordWriters.values()).thenReturn(Arrays.asList(writer, writer));
-    Mapper.Context taskInputOutputContext = mock(Mapper.Context.class);
-    when(taskInputOutputContext.getConfiguration()).thenReturn(createJobConf());
-    doThrow(new IOException("test IO exception")).when(writer).close(taskInputOutputContext);
-    MultipleOutputs<Long, String> mos = new MultipleOutputs<Long, String>(taskInputOutputContext);
-    mos.setRecordWriters(recordWriters);
-    mos.close();
+    assertThrows(IOException.class, () -> {
+      RecordWriter writer = mock(RecordWriter.class);
+      Map recordWriters = mock(Map.class);
+      when(recordWriters.values()).thenReturn(Arrays.asList(writer, writer));
+      Mapper.Context taskInputOutputContext = mock(Mapper.Context.class);
+      when(taskInputOutputContext.getConfiguration()).thenReturn(createJobConf());
+      doThrow(new IOException("test IO exception")).when(writer).close(taskInputOutputContext);
+      MultipleOutputs<Long, String> mos = new MultipleOutputs<Long, String>(taskInputOutputContext);
+      mos.setRecordWriters(recordWriters);
+      mos.close();
+    });
   }
 
   private static String localPathRoot = 
@@ -91,7 +94,7 @@ public class TestMRMultipleOutputs extends HadoopTestCase {
   private static String TEXT = "text";
   private static String SEQUENCE = "sequence";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     Configuration conf = createJobConf();
@@ -99,7 +102,7 @@ public class TestMRMultipleOutputs extends HadoopTestCase {
     fs.delete(ROOT_DIR, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     Configuration conf = createJobConf();
     FileSystem fs = FileSystem.get(conf);

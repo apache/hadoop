@@ -23,7 +23,9 @@ import java.util.List;
 import java.util.Set;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -71,6 +73,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     return ManifestCommitterTestSupport.NUMBER_OF_TASK_ATTEMPTS;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -80,6 +83,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
         .isGreaterThan(0);
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     if (entryFile != null) {
@@ -176,7 +180,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     // and skipping the rename stage (which is going to fail),
     // go straight to cleanup
     new CleanupJobStage(stageConfig).apply(
-        new CleanupJobStage.Arguments("", true, true, false));
+        new CleanupJobStage.Arguments("", true, true, false, false, 0));
     heapinfo(heapInfo, "cleanup");
 
     ManifestSuccessData success = createManifestOutcome(stageConfig, OP_STAGE_JOB_COMMIT);

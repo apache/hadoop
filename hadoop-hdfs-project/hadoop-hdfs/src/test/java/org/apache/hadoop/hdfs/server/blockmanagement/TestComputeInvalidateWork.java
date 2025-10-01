@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.util.Random;
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -41,11 +41,13 @@ import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.VersionInfo;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test if FSNamesystem handles heartbeat right
@@ -64,7 +66,7 @@ public class TestComputeInvalidateWork {
   private int totalBlockGroups, blockGroupSize, stripesPerBlock, cellSize;
   private LocatedStripedBlock locatedStripedBlock;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     ecPolicy = SystemErasureCodingPolicies.getByID(
         SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
@@ -99,7 +101,7 @@ public class TestComputeInvalidateWork {
     locatedStripedBlock = (LocatedStripedBlock)(lbs.get(0));
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -127,11 +129,12 @@ public class TestComputeInvalidateWork {
    * Test if {@link BlockManager#computeInvalidateWork(int)}
    * can schedule invalidate work correctly for the replicas.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testComputeInvalidateReplicas() throws Exception {
     final int blockInvalidateLimit = bm.getDatanodeManager()
         .getBlockInvalidateLimit();
-    namesystem.writeLock();
+    namesystem.writeLock(RwLockMode.BM);
     try {
       for (int i=0; i<nodes.length; i++) {
         for(int j=0; j<3*blockInvalidateLimit+1; j++) {
@@ -142,7 +145,7 @@ public class TestComputeInvalidateWork {
       }
       verifyInvalidationWorkCounts(blockInvalidateLimit);
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock(RwLockMode.BM, "testComputeInvalidateReplicas");
     }
   }
 
@@ -150,11 +153,12 @@ public class TestComputeInvalidateWork {
    * Test if {@link BlockManager#computeInvalidateWork(int)}
    * can schedule invalidate work correctly for the striped block groups.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testComputeInvalidateStripedBlockGroups() throws Exception {
     final int blockInvalidateLimit =
         bm.getDatanodeManager().getBlockInvalidateLimit();
-    namesystem.writeLock();
+    namesystem.writeLock(RwLockMode.BM);
     try {
       int nodeCount = ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits();
       for (int i = 0; i < nodeCount; i++) {
@@ -167,7 +171,7 @@ public class TestComputeInvalidateWork {
       }
       verifyInvalidationWorkCounts(blockInvalidateLimit);
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock(RwLockMode.BM, "testComputeInvalidateStripedBlockGroups");
     }
   }
 
@@ -176,12 +180,13 @@ public class TestComputeInvalidateWork {
    * can schedule invalidate work correctly for both replicas and striped
    * block groups, combined.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testComputeInvalidate() throws Exception {
     final int blockInvalidateLimit =
         bm.getDatanodeManager().getBlockInvalidateLimit();
     final Random random = new Random(System.currentTimeMillis());
-    namesystem.writeLock();
+    namesystem.writeLock(RwLockMode.BM);
     try {
       int nodeCount = ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits();
       for (int i = 0; i < nodeCount; i++) {
@@ -201,7 +206,7 @@ public class TestComputeInvalidateWork {
       }
       verifyInvalidationWorkCounts(blockInvalidateLimit);
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock(RwLockMode.BM, "testComputeInvalidate");
     }
   }
 
@@ -210,9 +215,10 @@ public class TestComputeInvalidateWork {
    * {@link DatanodeManager#datanodeMap}. This tests if block
    * invalidation work on the original DataNode can be skipped.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testDatanodeReformat() throws Exception {
-    namesystem.writeLock();
+    namesystem.writeLock(RwLockMode.BM);
     try {
       // Change the datanode UUID to emulate a reformat
       String poolId = cluster.getNamesystem().getBlockPoolId();
@@ -234,11 +240,12 @@ public class TestComputeInvalidateWork {
       assertEquals(0, bm.computeInvalidateWork(1));
       assertEquals(0, bm.getPendingDeletionBlocksCount());
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock(RwLockMode.BM, "testDatanodeReformat");
     }
   }
 
-  @Test(timeout=12000)
+  @Test
+  @Timeout(value = 12)
   public void testDatanodeReRegistration() throws Exception {
     // Create a test file
     final DistributedFileSystem dfs = cluster.getFileSystem();
@@ -255,7 +262,7 @@ public class TestComputeInvalidateWork {
     dfs.delete(ecFile, false);
     BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
         cluster.getNamesystem(0).getBlockManager());
-    namesystem.writeLock();
+    namesystem.writeLock(RwLockMode.BM);
     InvalidateBlocks invalidateBlocks;
     int totalStripedDataBlocks = totalBlockGroups * (ecPolicy.getNumDataUnits()
         + ecPolicy.getNumParityUnits());
@@ -264,15 +271,15 @@ public class TestComputeInvalidateWork {
       invalidateBlocks = (InvalidateBlocks) Whitebox
           .getInternalState(cluster.getNamesystem().getBlockManager(),
               "invalidateBlocks");
-      assertEquals("Invalidate blocks should include both Replicas and " +
-          "Striped BlockGroups!",
-          (long) expected, invalidateBlocks.numBlocks());
-      assertEquals("Unexpected invalidate count for replicas!",
-          totalReplicas, invalidateBlocks.getBlocks());
-      assertEquals("Unexpected invalidate count for striped block groups!",
-          totalStripedDataBlocks, invalidateBlocks.getECBlocks());
+      assertEquals((long) expected, invalidateBlocks.numBlocks(),
+          "Invalidate blocks should include both Replicas and " +
+              "Striped BlockGroups!");
+      assertEquals(totalReplicas, invalidateBlocks.getBlocks(),
+          "Unexpected invalidate count for replicas!");
+      assertEquals(totalStripedDataBlocks, invalidateBlocks.getECBlocks(),
+          "Unexpected invalidate count for striped block groups!");
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock(RwLockMode.BM, "testDatanodeReRegistration");
     }
     // Re-register each DN and see that it wipes the invalidation work
     int totalBlockGroupsPerDataNode = totalBlockGroups;
@@ -284,14 +291,14 @@ public class TestComputeInvalidateWork {
           new StorageInfo(HdfsServerConstants.NodeType.DATA_NODE),
           new ExportedBlockKeys(),
           VersionInfo.getVersion());
-      namesystem.writeLock();
+      namesystem.writeLock(RwLockMode.BM);
       try {
         bm.getDatanodeManager().registerDatanode(reg);
         expected -= (totalReplicasPerDataNode + totalBlockGroupsPerDataNode);
-        assertEquals("Expected number of invalidate blocks to decrease",
-            (long) expected, invalidateBlocks.numBlocks());
+        assertEquals((long) expected, invalidateBlocks.numBlocks(),
+            "Expected number of invalidate blocks to decrease");
       } finally {
-          namesystem.writeUnlock();
+        namesystem.writeUnlock(RwLockMode.BM, "testDatanodeReRegistration");
       }
     }
   }

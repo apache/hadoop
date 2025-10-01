@@ -25,7 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,13 +104,13 @@ public class ITestNativeAzureFileSystemClientLogging
     performWASBOperations();
 
     String output = getLogOutput(logs);
-    assertTrue("Log entry " + TEMP_DIR + " not found  in " + output,
-        verifyStorageClientLogs(output, TEMP_DIR));
+    assertTrue(verifyStorageClientLogs(output, TEMP_DIR),
+        "Log entry " + TEMP_DIR + " not found  in " + output);
   }
 
   protected String getLogOutput(LogCapturer logs) {
     String output = logs.getOutput();
-    assertTrue("No log created/captured", !output.isEmpty());
+    assertTrue(!output.isEmpty(), "No log created/captured");
     return output;
   }
 
@@ -125,8 +125,8 @@ public class ITestNativeAzureFileSystemClientLogging
     performWASBOperations();
     String output = getLogOutput(logs);
 
-    assertFalse("Log entry " + TEMP_DIR + " found  in " + output,
-        verifyStorageClientLogs(output, TEMP_DIR));
+    assertFalse(verifyStorageClientLogs(output, TEMP_DIR),
+        "Log entry " + TEMP_DIR + " found  in " + output);
   }
 
   @Override

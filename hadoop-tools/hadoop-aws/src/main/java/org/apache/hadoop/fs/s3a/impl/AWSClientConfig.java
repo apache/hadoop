@@ -22,10 +22,16 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.awscore.AwsRequest;
+import software.amazon.awssdk.awscore.AwsRequestOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.retry.RetryMode;
@@ -43,6 +49,8 @@ import org.apache.hadoop.util.VersionInfo;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_ACQUISITION_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_STS;
+import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_EXPECT_CONTINUE;
+import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_EXPECT_CONTINUE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_IDLE_TIME;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_KEEPALIVE;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_TTL;
@@ -72,6 +80,8 @@ import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_STS;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
+import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_HEADERS_S3;
+import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_HEADERS_STS;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.enforceMinimumDuration;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.getDuration;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
@@ -116,6 +126,8 @@ public final class AWSClientConfig {
 
     initUserAgent(conf, overrideConfigBuilder);
 
+    initRequestHeaders(conf, overrideConfigBuilder, awsServiceIdentifier);
+
     String signer = conf.getTrimmed(SIGNING_ALGORITHM, "");
     if (!signer.isEmpty()) {
       LOG.debug("Signer override = {}", signer);
@@ -147,6 +159,7 @@ public final class AWSClientConfig {
             .connectionMaxIdleTime(conn.getMaxIdleTime())
             .connectionTimeout(conn.getEstablishTimeout())
             .connectionTimeToLive(conn.getConnectionTTL())
+            .expectContinueEnabled(conn.isExpectContinueEnabled())
             .maxConnections(conn.getMaxConnections())
             .socketTimeout(conn.getSocketTimeout())
             .tcpKeepAlive(conn.isKeepAlive())
@@ -408,6 +421,44 @@ public final class AWSClientConfig {
   }
 
   /**
+   * Initialize custom request headers for AWS clients.
+   * @param conf hadoop configuration
+   * @param clientConfig client configuration to update
+   * @param awsServiceIdentifier service name
+   */
+  private static void initRequestHeaders(Configuration conf,
+      ClientOverrideConfiguration.Builder clientConfig, String awsServiceIdentifier) {
+    String configKey = null;
+    switch (awsServiceIdentifier) {
+    case AWS_SERVICE_IDENTIFIER_S3:
+      configKey = CUSTOM_HEADERS_S3;
+      break;
+    case AWS_SERVICE_IDENTIFIER_STS:
+      configKey = CUSTOM_HEADERS_STS;
+      break;
+    default:
+      // No known service.
+    }
+    if (configKey != null) {
+      Map<String, String> awsClientCustomHeadersMap =
+              S3AUtils.getTrimmedStringCollectionSplitByEquals(conf, configKey);
+      awsClientCustomHeadersMap.forEach((header, valueString) -> {
+        List<String> headerValues = Arrays.stream(valueString.split(";"))
+                        .map(String::trim)
+                        .filter(v -> !v.isEmpty())
+                        .collect(Collectors.toList());
+        if (!headerValues.isEmpty()) {
+          clientConfig.putHeader(header, headerValues);
+        } else {
+          LOG.warn("Ignoring header '{}' for {} client because no values were provided",
+                  header, awsServiceIdentifier);
+        }
+      });
+      LOG.debug("headers for {} client = {}", awsServiceIdentifier, clientConfig.headers());
+    }
+  }
+
+  /**
    * Configures request timeout in the client configuration.
    * This is independent of the timeouts set in the sync and async HTTP clients;
    * the same method
@@ -489,7 +540,7 @@ public final class AWSClientConfig {
    * All the connection settings, wrapped as a class for use by
    * both the sync and async client.
    */
-  static class ConnectionSettings {
+  static final class ConnectionSettings {
     private final int maxConnections;
     private final boolean keepAlive;
     private final Duration acquisitionTimeout;
@@ -497,6 +548,7 @@ public final class AWSClientConfig {
     private final Duration establishTimeout;
     private final Duration maxIdleTime;
     private final Duration socketTimeout;
+    private final boolean expectContinueEnabled;
 
     private ConnectionSettings(
         final int maxConnections,
@@ -505,7 +557,8 @@ public final class AWSClientConfig {
         final Duration connectionTTL,
         final Duration establishTimeout,
         final Duration maxIdleTime,
-        final Duration socketTimeout) {
+        final Duration socketTimeout,
+        final boolean expectContinueEnabled) {
       this.maxConnections = maxConnections;
       this.keepAlive = keepAlive;
       this.acquisitionTimeout = acquisitionTimeout;
@@ -513,6 +566,7 @@ public final class AWSClientConfig {
       this.establishTimeout = establishTimeout;
       this.maxIdleTime = maxIdleTime;
       this.socketTimeout = socketTimeout;
+      this.expectContinueEnabled = expectContinueEnabled;
     }
 
     int getMaxConnections() {
@@ -543,6 +597,10 @@ public final class AWSClientConfig {
       return socketTimeout;
     }
 
+    boolean isExpectContinueEnabled() {
+      return expectContinueEnabled;
+    }
+
     @Override
     public String toString() {
       return "ConnectionSettings{" +
@@ -553,6 +611,7 @@ public final class AWSClientConfig {
           ", establishTimeout=" + establishTimeout +
           ", maxIdleTime=" + maxIdleTime +
           ", socketTimeout=" + socketTimeout +
+          ", expectContinueEnabled=" + expectContinueEnabled +
           '}';
     }
   }
@@ -613,6 +672,9 @@ public final class AWSClientConfig {
         DEFAULT_SOCKET_TIMEOUT_DURATION, TimeUnit.MILLISECONDS,
         minimumOperationDuration);
 
+    final boolean expectContinueEnabled = conf.getBoolean(CONNECTION_EXPECT_CONTINUE,
+        CONNECTION_EXPECT_CONTINUE_DEFAULT);
+
     return new ConnectionSettings(
         maxConnections,
         keepAlive,
@@ -620,7 +682,28 @@ public final class AWSClientConfig {
         connectionTTL,
         establishTimeout,
         maxIdleTime,
-        socketTimeout);
+        socketTimeout,
+        expectContinueEnabled);
   }
 
+  /**
+   * Set a custom ApiCallTimeout for a single request.
+   * This allows for a longer timeout to be used in data upload
+   * requests than that for all other S3 interactions;
+   * This does not happen by default in the V2 SDK
+   * (see HADOOP-19295).
+   * <p>
+   * If the timeout is zero, the request is not patched.
+   * @param builder builder to patch.
+   * @param timeout timeout
+   */
+  public static void setRequestTimeout(AwsRequest.Builder builder, Duration timeout) {
+    if (!timeout.isZero()) {
+      builder.overrideConfiguration(
+          AwsRequestOverrideConfiguration.builder()
+              .apiCallTimeout(timeout)
+              .apiCallAttemptTimeout(timeout)
+              .build());
+    }
+  }
 }

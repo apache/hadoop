@@ -46,10 +46,12 @@ import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestExceptio
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.scheduler.ResourceRequestSet;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Unit test for AMRMClientRelayer.
@@ -150,7 +152,7 @@ public class TestAMRMClientRelayer {
   private List<String> blacklistAdditions = new ArrayList<>();
   private List<String> blacklistRemoval = new ArrayList<>();
 
-  @Before
+  @BeforeEach
   public void setup() throws YarnException, IOException {
     this.conf = new Configuration();
 
@@ -162,21 +164,21 @@ public class TestAMRMClientRelayer {
     clearAllocateRequestLists();
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     this.relayer.shutdown();
   }
 
   private void assertAsksAndReleases(int expectedAsk, int expectedRelease) {
-    Assert.assertEquals(expectedAsk, this.mockAMS.lastAsk.size());
-    Assert.assertEquals(expectedRelease, this.mockAMS.lastRelease.size());
+    assertEquals(expectedAsk, this.mockAMS.lastAsk.size());
+    assertEquals(expectedRelease, this.mockAMS.lastRelease.size());
   }
 
   private void assertBlacklistAdditionsAndRemovals(int expectedAdditions,
       int expectedRemovals) {
-    Assert.assertEquals(expectedAdditions,
+    assertEquals(expectedAdditions,
         this.mockAMS.lastBlacklistAdditions.size());
-    Assert.assertEquals(expectedRemovals,
+    assertEquals(expectedRemovals,
         this.mockAMS.lastBlacklistRemovals.size());
   }
 
@@ -229,10 +231,10 @@ public class TestAMRMClientRelayer {
     this.relayer.allocate(getAllocateRequest());
 
     assertAsksAndReleases(3, 0);
-    Assert.assertEquals(1, this.relayer.getRemotePendingAsks().size());
+    assertEquals(1, this.relayer.getRemotePendingAsks().size());
     ResourceRequestSet set =
         this.relayer.getRemotePendingAsks().values().iterator().next();
-    Assert.assertEquals(3, set.getAsks().size());
+    assertEquals(3, set.getAsks().size());
     clearAllocateRequestLists();
 
     // Cancel one ask
@@ -243,9 +245,9 @@ public class TestAMRMClientRelayer {
     this.relayer.allocate(getAllocateRequest());
 
     assertAsksAndReleases(2, 0);
-    Assert.assertEquals(1, relayer.getRemotePendingAsks().size());
+    assertEquals(1, relayer.getRemotePendingAsks().size());
     set = this.relayer.getRemotePendingAsks().values().iterator().next();
-    Assert.assertEquals(2, set.getAsks().size());
+    assertEquals(2, set.getAsks().size());
     clearAllocateRequestLists();
 
     // Cancel the other ask, the pending askSet should be removed
@@ -254,7 +256,7 @@ public class TestAMRMClientRelayer {
     this.relayer.allocate(AllocateRequest.newInstance(0, 0, asks, null, null));
 
     assertAsksAndReleases(1, 0);
-    Assert.assertEquals(0, this.relayer.getRemotePendingAsks().size());
+    assertEquals(0, this.relayer.getRemotePendingAsks().size());
   }
 
   /**
@@ -310,26 +312,26 @@ public class TestAMRMClientRelayer {
     this.responseId = 10;
 
     AllocateResponse response = this.relayer.allocate(getAllocateRequest());
-    Assert.assertEquals(this.responseId + 1, response.getResponseId());
+    assertEquals(this.responseId + 1, response.getResponseId());
 
     int expected = 5;
     this.mockAMS.setResponseIdReset(expected);
 
     try {
       this.relayer.allocate(getAllocateRequest());
-      Assert.fail("Expecting exception from RM");
+      fail("Expecting exception from RM");
     } catch (InvalidApplicationMasterRequestException e) {
       // Expected exception
     }
 
     // Verify that the responseId is overridden
     response = this.relayer.allocate(getAllocateRequest());
-    Assert.assertEquals(expected + 1, response.getResponseId());
+    assertEquals(expected + 1, response.getResponseId());
 
     // Verify it is no longer overriden
     this.responseId = response.getResponseId();
     response = this.relayer.allocate(getAllocateRequest());
-    Assert.assertEquals(this.responseId + 1, response.getResponseId());
+    assertEquals(this.responseId + 1, response.getResponseId());
   }
 
   @Test

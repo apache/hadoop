@@ -23,28 +23,23 @@ import org.apache.hadoop.yarn.service.ServiceTestUtils;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
 
 import static org.apache.hadoop.yarn.service.ServiceTestUtils.JSON_SER_DESER;
 
-/**
- * Test loading example resources.
- */
-@RunWith(value = Parameterized.class)
-public class TestLoadExampleAppJson extends Assert {
+
+public class TestLoadExampleAppJson extends Assertions {
   private String resource;
 
-  public TestLoadExampleAppJson(String resource) {
-    this.resource = resource;
+  public void initTestLoadExampleAppJson(String pResource) {
+    this.resource = pResource;
   }
 
-  @Parameterized.Parameters
   public static Collection<String[]> filenames() {
     String[][] stringArray = new String[ExampleAppJson
         .ALL_EXAMPLE_RESOURCES.size()][1];
@@ -55,8 +50,10 @@ public class TestLoadExampleAppJson extends Assert {
     return Arrays.asList(stringArray);
   }
 
-  @Test
-  public void testLoadResource() throws Throwable {
+  @MethodSource("filenames")
+  @ParameterizedTest
+  public void testLoadResource(String pResource) throws Throwable {
+    initTestLoadExampleAppJson(pResource);
     try {
       Service service = JSON_SER_DESER.fromResource(resource);
 

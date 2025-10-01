@@ -18,10 +18,10 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby.ERR_CODE_INVALID_VERSION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.common.HttpGetFailedException;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -56,9 +57,10 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
@@ -72,7 +74,7 @@ public class TestBootstrapStandby {
   private MiniDFSCluster cluster;
   private NameNode nn0;
 
-  @Before
+  @BeforeEach
   public void setupCluster() throws IOException {
     Configuration conf = new Configuration();
 
@@ -99,7 +101,7 @@ public class TestBootstrapStandby {
     }
   }
 
-  @After
+  @AfterEach
   public void shutdownCluster() {
     if (cluster != null) {
       cluster.shutdown();
@@ -177,8 +179,7 @@ public class TestBootstrapStandby {
     FSImageTestUtil.assertNNFilesMatch(cluster);
 
     // Make sure the seen_txid was not modified by the standby
-    assertEquals(seen_txid_shared,
-        FSImageTestUtil.getStorageTxId(nn0, editsUri));
+    assertEquals(seen_txid_shared, FSImageTestUtil.getStorageTxId(nn0, editsUri));
 
     // We should now be able to start the standby successfully.
     restartNameNodesFromIndex(1);
@@ -189,7 +190,8 @@ public class TestBootstrapStandby {
    */
   @Test
   public void testRollingUpgradeBootstrapStandby() throws Exception {
-    removeStandbyNameDirs();
+    // This node is needed to create the rollback fsimage
+    cluster.restartNameNode(1);
 
     int futureVersion = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION - 1;
 
@@ -208,12 +210,18 @@ public class TestBootstrapStandby {
 
     // BootstrapStandby should fail if the node has a future version
     // and the cluster isn't in rolling upgrade
-    bs.setConf(cluster.getConfiguration(1));
-    assertEquals("BootstrapStandby should return ERR_CODE_INVALID_VERSION",
-        ERR_CODE_INVALID_VERSION, bs.run(new String[]{"-force"}));
+    bs.setConf(cluster.getConfiguration(2));
+    assertEquals(ERR_CODE_INVALID_VERSION, bs.run(new String[]{"-force"}),
+        "BootstrapStandby should return ERR_CODE_INVALID_VERSION");
 
     // Start rolling upgrade
     fs.rollingUpgrade(RollingUpgradeAction.PREPARE);
+    LambdaTestUtils.await(60000, 1000, () ->
+        fs.rollingUpgrade(RollingUpgradeAction.QUERY).createdRollbackImages());
+    // After the rollback image is created the standby is not needed
+    cluster.shutdownNameNode(1);
+    removeStandbyNameDirs();
+
     nn0 = spy(nn0);
 
     // Make nn0 think it is a future version
@@ -237,6 +245,9 @@ public class TestBootstrapStandby {
 
     long expectedCheckpointTxId = NameNodeAdapter.getNamesystem(nn0)
         .getFSImage().getMostRecentCheckpointTxId();
+    long expectedRollbackTxId = NameNodeAdapter.getNamesystem(nn0)
+        .getFSImage().getMostRecentNameNodeFileTxId(
+            NNStorage.NameNodeFile.IMAGE_ROLLBACK);
     assertEquals(11, expectedCheckpointTxId);
 
     for (int i = 1; i < maxNNCount; i++) {
@@ -245,6 +256,8 @@ public class TestBootstrapStandby {
       bs.run(new String[]{"-force"});
       FSImageTestUtil.assertNNHasCheckpoints(cluster, i,
           ImmutableList.of((int) expectedCheckpointTxId));
+      FSImageTestUtil.assertNNHasRollbackCheckpoints(cluster, i,
+          ImmutableList.of((int) expectedRollbackTxId));
     }
 
     // Make sure the bootstrap was successful
@@ -252,6 +265,13 @@ public class TestBootstrapStandby {
 
     // We should now be able to start the standby successfully
     restartNameNodesFromIndex(1, "-rollingUpgrade", "started");
+
+    for (int i = 1; i < maxNNCount; i++) {
+      NameNode nn = cluster.getNameNode(i);
+      assertTrue(nn.getFSImage().hasRollbackFSImage(),
+          "NameNodes should all have the rollback FSImage");
+      assertTrue(nn.getNamesystem().isRollingUpgrade(), "NameNodes should all be inRollingUpgrade");
+    }
 
     // Cleanup standby dirs
     for (int i = 1; i < maxNNCount; i++) {
@@ -270,14 +290,21 @@ public class TestBootstrapStandby {
 
     for (int i = 1; i < maxNNCount; i++) {
       bs.setConf(cluster.getConfiguration(i));
-      assertThrows("BootstrapStandby should fail the image transfer request",
-          HttpGetFailedException.class, () -> {
+      assertThrows(
+          HttpGetFailedException.class,
+          () -> {
             try {
               bs.run(new String[]{"-force"});
             } catch (RuntimeException e) {
-              throw e.getCause();
+              Throwable cause = e.getCause();
+              if (cause != null) {
+                throw cause;
+              }
+              throw e;
             }
-          });
+          },
+          "BootstrapStandby should fail the image transfer request"
+      );
     }
   }
 
@@ -338,7 +365,8 @@ public class TestBootstrapStandby {
    * Test that, even if the other node is not active, we are able
    * to bootstrap standby from it.
    */
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testOtherNodeNotActive() throws Exception {
     cluster.transitionToStandby(0);
     assertSuccessfulBootstrapFromIndex(1);
@@ -350,7 +378,8 @@ public class TestBootstrapStandby {
    * {@link DFSConfigKeys#DFS_IMAGE_TRANSFER_BOOTSTRAP_STANDBY_RATE_KEY}
    * created by HDFS-8808.
    */
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testRateThrottling() throws Exception {
     cluster.getConfiguration(0).setLong(
         DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_KEY, 1);

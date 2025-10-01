@@ -21,9 +21,14 @@ package org.apache.hadoop.metrics2.util;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
@@ -48,15 +53,15 @@ public class TestMetricsCache {
     verify(mr).name();
     verify(mr).tags();
     verify(mr).metrics();
-    assertEquals("same record size", cr.metrics().size(),
-                 ((Collection<AbstractMetric>)mr.metrics()).size());
-    assertEquals("same metric value", 0, cr.getMetric("m"));
+    assertEquals(cr.metrics().size(), ((Collection<AbstractMetric>) mr.metrics()).size(),
+        "same record size");
+    assertEquals(0, cr.getMetric("m"), "same metric value");
 
     MetricsRecord mr2 = makeRecord("r",
         Arrays.asList(makeTag("t", "tv")),
         Arrays.asList(makeMetric("m", 2), makeMetric("m2", 42)));
     cr = cache.update(mr2);
-    assertEquals("contains 3 metric", 3, cr.metrics().size());
+    assertEquals(3, cr.metrics().size(), "contains 3 metric");
     checkMetricValue("updated metric value", cr, "m", 2);
     checkMetricValue("old metric value", cr, "m1", 1);
     checkMetricValue("new metric value", cr, "m2", 42);
@@ -65,21 +70,21 @@ public class TestMetricsCache {
         Arrays.asList(makeTag("t", "tv3")), // different tag value
         Arrays.asList(makeMetric("m3", 3)));
     cr = cache.update(mr3); // should get a new record
-    assertEquals("contains 1 metric", 1, cr.metrics().size());
+    assertEquals(1, cr.metrics().size(), "contains 1 metric");
     checkMetricValue("updated metric value", cr, "m3", 3);
     // tags cache should be empty so far
-    assertEquals("no tags", 0, cr.tags().size());
+    assertEquals(0, cr.tags().size(), "no tags");
     // until now
     cr = cache.update(mr3, true);
-    assertEquals("Got 1 tag", 1, cr.tags().size());
-    assertEquals("Tag value", "tv3", cr.getTag("t"));
+    assertEquals(1, cr.tags().size(), "Got 1 tag");
+    assertEquals("tv3", cr.getTag("t"), "Tag value");
     checkMetricValue("Metric value", cr, "m3", 3);
   }
 
   @SuppressWarnings("deprecation")
   @Test public void testGet() {
     MetricsCache cache = new MetricsCache();
-    assertNull("empty", cache.get("r", Arrays.asList(makeTag("t", "t"))));
+    assertNull(cache.get("r", Arrays.asList(makeTag("t", "t"))), "empty");
     MetricsRecord mr = makeRecord("r",
         Arrays.asList(makeTag("t", "t")),
         Arrays.asList(makeMetric("m", 1)));
@@ -87,8 +92,8 @@ public class TestMetricsCache {
     MetricsCache.Record cr = cache.get("r", mr.tags());
     LOG.debug("tags="+ mr.tags() +" cr="+ cr);
 
-    assertNotNull("Got record", cr);
-    assertEquals("contains 1 metric", 1, cr.metrics().size());
+    assertNotNull(cr, "Got record");
+    assertEquals(1, cr.metrics().size(), "contains 1 metric");
     checkMetricValue("new metric value", cr, "m", 1);
   }
 
@@ -102,7 +107,7 @@ public class TestMetricsCache {
         Arrays.asList(makeMetric("m", 0), makeMetric("m1", 1)));
 
     MetricsCache.Record cr = cache.update(mr);
-    assertTrue("t value should be null", null == cr.getTag("t"));
+    assertTrue(null == cr.getTag("t"), "t value should be null");
   }
 
   @Test public void testOverflow() {
@@ -115,17 +120,17 @@ public class TestMetricsCache {
           Arrays.asList(makeMetric("m", i))));
       checkMetricValue("new metric value", cr, "m", i);
       if (i < MetricsCache.MAX_RECS_PER_NAME_DEFAULT) {
-        assertNotNull("t0 is still there", cache.get("r", t0));
+        assertNotNull(cache.get("r", t0), "t0 is still there");
       }
     }
-    assertNull("t0 is gone", cache.get("r", t0));
+    assertNull(cache.get("r", t0), "t0 is gone");
   }
 
   private void checkMetricValue(String description, MetricsCache.Record cr,
       String key, Number val) {
-    assertEquals(description, val, cr.getMetric(key));
-    assertNotNull("metric not null", cr.getMetricInstance(key));
-    assertEquals(description, val, cr.getMetricInstance(key).value());
+    assertEquals(val, cr.getMetric(key), description);
+    assertNotNull(cr.getMetricInstance(key), "metric not null");
+    assertEquals(val, cr.getMetricInstance(key).value(), description);
   }
 
   private MetricsRecord makeRecord(String name, Collection<MetricsTag> tags,

@@ -88,9 +88,12 @@ public class RouterHeartbeatService extends PeriodicService {
             getStateStoreVersion(MountTableStore.class));
         record.setStateStoreVersion(stateStoreVersion);
         // if admin server not started then hostPort will be empty
-        String hostPort =
-            StateStoreUtils.getHostPortString(router.getAdminServerAddress());
-        record.setAdminAddress(hostPort);
+        if (router.getConfig().getBoolean(RBFConfigKeys.DFS_ROUTER_HEARTBEAT_WITH_IP_ENABLE,
+            RBFConfigKeys.DFS_ROUTER_HEARTBEAT_WITH_IP_ENABLE_DEFAULT)) {
+          record.setAdminAddress(StateStoreUtils.getIpPortString(router.getAdminServerAddress()));
+        } else {
+          record.setAdminAddress(StateStoreUtils.getHostPortString(router.getAdminServerAddress()));
+        }
         RouterHeartbeatRequest request =
             RouterHeartbeatRequest.newInstance(record);
         RouterHeartbeatResponse response = routerStore.routerHeartbeat(request);

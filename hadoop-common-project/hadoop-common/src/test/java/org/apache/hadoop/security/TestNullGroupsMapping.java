@@ -18,9 +18,9 @@ package org.apache.hadoop.security;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test that the {@link NullGroupsMapping} really does nothing.
@@ -28,7 +28,7 @@ import static org.junit.Assert.*;
 public class TestNullGroupsMapping {
   private NullGroupsMapping ngm;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     this.ngm = new NullGroupsMapping();
   }
@@ -42,19 +42,16 @@ public class TestNullGroupsMapping {
     List<String> expResult = Collections.emptyList();
     List<String> result = ngm.getGroups(user);
 
-    assertEquals("No groups should be returned",
-        expResult, result);
+    assertEquals(expResult, result, "No groups should be returned");
 
     ngm.cacheGroupsAdd(Arrays.asList(new String[] {"group1", "group2"}));
     result = ngm.getGroups(user);
 
-    assertEquals("No groups should be returned",
-        expResult, result);
+    assertEquals(expResult, result, "No groups should be returned");
 
     ngm.cacheGroupsRefresh();
     result = ngm.getGroups(user);
 
-    assertEquals("No groups should be returned",
-        expResult, result);
+    assertEquals(expResult, result, "No groups should be returned");
   }
 }

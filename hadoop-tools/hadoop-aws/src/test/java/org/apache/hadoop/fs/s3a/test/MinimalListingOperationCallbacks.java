@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a.test;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
+import software.amazon.awssdk.services.s3.model.S3Object;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
@@ -67,6 +69,12 @@ public class MinimalListingOperationCallbacks
 
   @Override
   public long getDefaultBlockSize(Path path) {
+    return 0;
+  }
+
+
+  @Override
+  public long getObjectSize(S3Object s3Object) throws IOException {
     return 0;
   }
 

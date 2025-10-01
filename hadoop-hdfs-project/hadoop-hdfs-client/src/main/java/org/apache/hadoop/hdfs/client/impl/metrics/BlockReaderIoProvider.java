@@ -65,7 +65,7 @@ public class BlockReaderIoProvider {
   public int read(FileChannel dataIn, ByteBuffer dst, long position)
       throws IOException{
     final int nRead;
-    if (isEnabled && (ThreadLocalRandom.current().nextInt() < sampleRangeMax)) {
+    if (isEnabled && (ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE) < sampleRangeMax)) {
       long begin = timer.monotonicNow();
       nRead = dataIn.read(dst, position);
       long latency = timer.monotonicNow() - begin;
