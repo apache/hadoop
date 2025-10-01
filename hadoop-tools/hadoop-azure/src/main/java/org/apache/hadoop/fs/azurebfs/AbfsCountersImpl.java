@@ -207,14 +207,30 @@ public class AbfsCountersImpl implements AbfsCounters {
         abfsBackoffMetrics = new AbfsBackoffMetrics();
         break;
       case INTERNAL_FOOTER_METRIC_FORMAT:
-        abfsReadFooterMetrics = new AbfsReadFooterMetrics();
-        break;
+        initializeReadFooterMetrics();
       case INTERNAL_METRIC_FORMAT:
         abfsBackoffMetrics = new AbfsBackoffMetrics();
-        abfsReadFooterMetrics = new AbfsReadFooterMetrics();
+        initializeReadFooterMetrics();
         break;
       default:
         break;
+    }
+  }
+
+  /**
+   * Initialize the read footer metrics.
+   * In case the metrics are already initialized,
+   * create a new instance with the existing map.
+   */
+  private void initializeReadFooterMetrics() {
+    if (abfsReadFooterMetrics == null) {
+      abfsReadFooterMetrics = new AbfsReadFooterMetrics();
+    } else {
+      //In case metrics is emitted based on total count, there could be a chance
+      // that file type for which we have calculated the type will be lost.
+      // To avoid that, creating a new instance with existing map.
+      abfsReadFooterMetrics = new AbfsReadFooterMetrics(
+          abfsReadFooterMetrics.getFileTypeMetricsMap());
     }
   }
 
@@ -375,8 +391,7 @@ public class AbfsCountersImpl implements AbfsCounters {
   public String toString() {
     String metric = "";
     if (abfsBackoffMetrics != null) {
-      long totalNoRequests = getAbfsBackoffMetrics().getMetricValue(TOTAL_NUMBER_OF_REQUESTS);
-      if (totalNoRequests > 0) {
+      if (getAbfsBackoffMetrics().getMetricValue(TOTAL_NUMBER_OF_REQUESTS) > 0) {
         metric += "#BO:" + getAbfsBackoffMetrics().toString();
       }
     }

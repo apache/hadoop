@@ -258,7 +258,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : abfsStoreBuilder.isSecureScheme;
     this.abfsPerfTracker = new AbfsPerfTracker(fileSystemName, accountName, this.abfsConfiguration);
     this.abfsCounters = abfsStoreBuilder.abfsCounters;
-    initializeClient(uri, fileSystemName, accountName, useHttps);
+    initializeClient(uri, fileSystemName, accountName, useHttps, abfsStoreBuilder.fileSystemId);
     final Class<? extends IdentityTransformerInterface> identityTransformerClass =
         abfsStoreBuilder.configuration.getClass(FS_AZURE_IDENTITY_TRANSFORM_CLASS, IdentityTransformer.class,
             IdentityTransformerInterface.class);
@@ -1717,7 +1717,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws IOException
    */
   private void initializeClient(URI uri, String fileSystemName,
-      String accountName, boolean isSecure)
+      String accountName, boolean isSecure, String fileSystemId)
       throws IOException {
     if (this.getClient() != null) {
       return;
@@ -1795,7 +1795,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     this.clientHandler = new AbfsClientHandler(baseUrl, creds,
         abfsConfiguration,
         tokenProvider, sasTokenProvider, encryptionContextProvider,
-        populateAbfsClientContext());
+        populateAbfsClientContext(), fileSystemId);
 
     this.setClient(getClientHandler().getClient());
     LOG.trace("AbfsClient init complete");
@@ -1966,6 +1966,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     private DataBlocks.BlockFactory blockFactory;
     private int blockOutputActiveBlocks;
     private BackReference fsBackRef;
+    private String fileSystemId;
 
     public AzureBlobFileSystemStoreBuilder withUri(URI value) {
       this.uri = value;
@@ -2004,6 +2005,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     public AzureBlobFileSystemStoreBuilder withBackReference(
         BackReference fsBackRef) {
       this.fsBackRef = fsBackRef;
+      return this;
+    }
+
+    public AzureBlobFileSystemStoreBuilder withFileSystemId(String fileSystemId) {
+      this.fileSystemId = fileSystemId;
       return this;
     }
 

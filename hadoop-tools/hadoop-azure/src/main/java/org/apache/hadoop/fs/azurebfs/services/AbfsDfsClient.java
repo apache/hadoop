@@ -172,9 +172,10 @@ public class AbfsDfsClient extends AbfsClient {
       final AccessTokenProvider tokenProvider,
       final SASTokenProvider sasTokenProvider,
       final EncryptionContextProvider encryptionContextProvider,
-      final AbfsClientContext abfsClientContext) throws IOException {
+      final AbfsClientContext abfsClientContext,
+      final String fileSystemId) throws IOException {
     super(baseUrl, sharedKeyCredentials, abfsConfiguration, tokenProvider, sasTokenProvider,
-        encryptionContextProvider, abfsClientContext, AbfsServiceType.DFS);
+        encryptionContextProvider, abfsClientContext, fileSystemId, AbfsServiceType.DFS);
   }
 
   /**

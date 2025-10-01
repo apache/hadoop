@@ -188,9 +188,10 @@ public class AbfsBlobClient extends AbfsClient {
       final AccessTokenProvider tokenProvider,
       final SASTokenProvider sasTokenProvider,
       final EncryptionContextProvider encryptionContextProvider,
-      final AbfsClientContext abfsClientContext) throws IOException {
+      final AbfsClientContext abfsClientContext,
+      final String fileSystemId) throws IOException {
     super(baseUrl, sharedKeyCredentials, abfsConfiguration, tokenProvider, sasTokenProvider,
-        encryptionContextProvider, abfsClientContext, AbfsServiceType.BLOB);
+        encryptionContextProvider, abfsClientContext, fileSystemId, AbfsServiceType.BLOB);
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureAtomicRenameDirs()
             .split(AbfsHttpConstants.COMMA)));

@@ -71,7 +71,13 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME = "fs.azure.account.key";
   public static final String FS_AZURE_METRIC_ACCOUNT_NAME = "fs.azure.metric.account.name";
   public static final String FS_AZURE_METRIC_ACCOUNT_KEY = "fs.azure.metric.account.key";
-  public static final String FS_AZURE_METRIC_URI = "fs.azure.metric.uri";
+  public static final String FS_AZURE_METRIC_FORMAT = "fs.azure.metric.format";
+  public static final String FS_AZURE_METRICS_COLLECTION_ENABLED = "fs.azure.metrics.collection.enabled";
+  public static final String FS_AZURE_SHOULD_EMIT_METRICS_ON_IDLE_TIME = "fs.azure.should.emit.metrics.on.idle.time";
+  public static final String FS_AZURE_METRIC_EMIT_THRESHOLD = "fs.azure.metric.emit.threshold";
+  public static final String FS_AZURE_METRICS_EMIT_THRESHOLD_INTERVAL_SECS = "fs.azure.metrics.emit.threshold.interval.secs";
+  public static final String FS_AZURE_METRIC_EMIT_INTERVAL_MINS = "fs.azure.metric.emit.interval.mins";
+  public static final String FS_AZURE_MAX_METRICS_CALLS_PER_SECOND =  "fs.azure.max.metrics.calls.per.second";
 
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX = "fs\\.azure\\.account\\.key\\.(.*)";
   public static final String FS_AZURE_SECURE_MODE = "fs.azure.secure.mode";
@@ -231,7 +237,6 @@ public final class ConfigurationKeys {
    * character constraints are not satisfied. **/
   public static final String FS_AZURE_CLIENT_CORRELATIONID = "fs.azure.client.correlationid";
   public static final String FS_AZURE_TRACINGHEADER_FORMAT = "fs.azure.tracingheader.format";
-  public static final String FS_AZURE_METRIC_FORMAT = "fs.azure.metric.format";
   public static final String FS_AZURE_CLUSTER_NAME = "fs.azure.cluster.name";
   public static final String FS_AZURE_CLUSTER_TYPE = "fs.azure.cluster.type";
   public static final String FS_AZURE_SSL_CHANNEL_MODE_KEY = "fs.azure.ssl.channel.mode";

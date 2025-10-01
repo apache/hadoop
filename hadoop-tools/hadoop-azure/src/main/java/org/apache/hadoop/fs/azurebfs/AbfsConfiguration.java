@@ -79,7 +79,9 @@ import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_EMIT_INTERVAL_MINS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_METRIC_EMIT_INTERVAL_MINS;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.INCORRECT_INGRESS_TYPE;
 
 /**
@@ -324,10 +326,6 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_METRIC_ANALYSIS_TIMEOUT_MS)
   private int metricAnalysisTimeout;
 
-  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_URI,
-          DefaultValue = EMPTY_STRING)
-  private String metricUri;
-
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_ACCOUNT_NAME,
           DefaultValue = EMPTY_STRING)
   private String metricAccount;
@@ -335,6 +333,30 @@ public class AbfsConfiguration{
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_ACCOUNT_KEY,
           DefaultValue = EMPTY_STRING)
   private String metricAccountKey;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_COLLECTION_ENABLED,
+      DefaultValue = DEFAULT_METRICS_COLLECTION_ENABLED)
+  private boolean metricsCollectionEnabled;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SHOULD_EMIT_METRICS_ON_IDLE_TIME,
+      DefaultValue = DEFAULT_SHOULD_EMIT_METRICS_ON_IDLE_TIME)
+  private boolean shouldEmitMetricsOnIdleTime;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_EMIT_THRESHOLD,
+  DefaultValue = DEFAULT_METRIC_EMIT_THRESHOLD)
+  private long metricEmitThreshold;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_EMIT_THRESHOLD_INTERVAL_SECS,
+      DefaultValue = DEFAULT_METRICS_EMIT_THRESHOLD_INTERVAL_SECS)
+  private long metricsEmitThresholdIntervalInSecs;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_EMIT_INTERVAL_MINS,
+      DefaultValue = DEFAULT_METRIC_EMIT_INTERVAL_MINS)
+  private long metricEmitIntervalInMins;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MAX_METRICS_CALLS_PER_SECOND,
+      DefaultValue = DEFAULT_MAX_METRICS_CALLS_PER_SECOND)
+  private int maxMetricsCallsPerSecond;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_OPERATION_IDLE_TIMEOUT,
       DefaultValue = DEFAULT_ACCOUNT_OPERATION_IDLE_TIMEOUT_MS)
@@ -1290,16 +1312,36 @@ public class AbfsConfiguration{
     return this.metricAnalysisTimeout;
   }
 
-  public String getMetricUri() {
-    return metricUri;
-  }
-
   public String getMetricAccount() {
     return metricAccount;
   }
 
   public String getMetricAccountKey() {
     return metricAccountKey;
+  }
+
+  public boolean isMetricsCollectionEnabled() {
+    return metricsCollectionEnabled;
+  }
+
+  public boolean shouldEmitMetricsOnIdleTime() {
+    return shouldEmitMetricsOnIdleTime;
+  }
+
+  public long getMetricEmitThreshold() {
+    return metricEmitThreshold;
+  }
+
+  public long getMetricEmitIntervalInMins() {
+    return metricEmitIntervalInMins;
+  }
+
+  public long getMetricsEmitThresholdIntervalInSecs() {
+    return metricsEmitThresholdIntervalInSecs;
+  }
+
+  public int getMaxMetricsCallsPerSecond() {
+    return maxMetricsCallsPerSecond;
   }
 
   public int getAccountOperationIdleTimeout() {
@@ -1390,7 +1432,7 @@ public class AbfsConfiguration{
   }
 
   public MetricFormat getMetricFormat() {
-    return getEnum(FS_AZURE_METRIC_FORMAT, MetricFormat.EMPTY);
+    return getEnum(FS_AZURE_METRIC_FORMAT, MetricFormat.INTERNAL_METRIC_FORMAT);
   }
 
   public AuthType getAuthType(String accountName) {

@@ -149,7 +149,8 @@ public final class ResourceUtilizationUtils {
    * @return the PID of the current JVM process
    */
   public static long getJvmProcessId() {
-    return ProcessHandle.current().pid();
+    String jvmName = ManagementFactory.getRuntimeMXBean().getName();
+    return Long.parseLong(jvmName.split("@")[0]);
   }
 
   /**

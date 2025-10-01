@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.ClosedIOException;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.http.HttpClientConnection;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KEEP_ALIVE_CACHE_CLOSED;
 
@@ -123,6 +124,10 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
         return thread;
       });
     }
+
+    PoolingHttpClientConnectionManager poolingHttpClientConnectionManager = new PoolingHttpClientConnectionManager();
+    poolingHttpClientConnectionManager.setMaxTotal(maxCacheConnections);
+    poolingHttpClientConnectionManager.setDefaultMaxPerRoute(maxCacheConnections);
   }
 
   /**

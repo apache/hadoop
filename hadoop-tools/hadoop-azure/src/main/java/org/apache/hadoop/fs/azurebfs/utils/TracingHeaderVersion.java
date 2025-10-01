@@ -47,7 +47,11 @@ public enum TracingHeaderVersion {
    *         :position:operatedBlobCount:operationSpecificHeader:httpOperationHeader
    *         :aggregatedMetrics:resourceUtilizationMetrics
    */
-  V2("v2", 15);
+  V2("v2", 15),
+  /**
+   * Metrics to client request id header.
+   */
+  AV0("av0", 15);
 
   private final String versionString;
   private final int fieldCount;
@@ -69,6 +73,10 @@ public enum TracingHeaderVersion {
    */
   public static TracingHeaderVersion getCurrentVersion() {
     return V2;
+  }
+
+  public static TracingHeaderVersion getMetricsCurrentVersion() {
+    return AV0;
   }
 
   public int getFieldCount() {

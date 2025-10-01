@@ -69,17 +69,18 @@ public class AbfsClientHandler implements Closeable {
       final AccessTokenProvider tokenProvider,
       final SASTokenProvider sasTokenProvider,
       final EncryptionContextProvider encryptionContextProvider,
-      final AbfsClientContext abfsClientContext) throws IOException {
+      final AbfsClientContext abfsClientContext,
+      final String fileSystemId) throws IOException {
     // This will initialize the default and ingress service types.
     // This is needed before creating the clients so that we can do cache warmup
     // only for default client.
     initServiceType(abfsConfiguration);
     this.dfsAbfsClient = createDfsClient(baseUrl, sharedKeyCredentials,
         abfsConfiguration, tokenProvider, sasTokenProvider, encryptionContextProvider,
-        abfsClientContext);
+        abfsClientContext, fileSystemId);
     this.blobAbfsClient = createBlobClient(baseUrl, sharedKeyCredentials,
         abfsConfiguration, tokenProvider, sasTokenProvider, encryptionContextProvider,
-        abfsClientContext);
+        abfsClientContext, fileSystemId);
   }
 
   /**
@@ -154,7 +155,8 @@ public class AbfsClientHandler implements Closeable {
       final AccessTokenProvider tokenProvider,
       final SASTokenProvider sasTokenProvider,
       final EncryptionContextProvider encryptionContextProvider,
-      final AbfsClientContext abfsClientContext) throws IOException {
+      final AbfsClientContext abfsClientContext,
+      final String fileSystemId) throws IOException {
     URL dfsUrl = changeUrlFromBlobToDfs(baseUrl);
     LOG.debug(
         "Creating AbfsDfsClient with access token provider: %s and "
@@ -162,7 +164,7 @@ public class AbfsClientHandler implements Closeable {
         tokenProvider, sasTokenProvider, dfsUrl);
     return new AbfsDfsClient(dfsUrl, creds, abfsConfiguration,
         tokenProvider, sasTokenProvider, encryptionContextProvider,
-        abfsClientContext);
+        abfsClientContext, fileSystemId);
   }
 
   /**
@@ -184,7 +186,8 @@ public class AbfsClientHandler implements Closeable {
       final AccessTokenProvider tokenProvider,
       final SASTokenProvider sasTokenProvider,
       final EncryptionContextProvider encryptionContextProvider,
-      final AbfsClientContext abfsClientContext) throws IOException {
+      final AbfsClientContext abfsClientContext,
+      final String fileSystemId) throws IOException {
     URL blobUrl = changeUrlFromDfsToBlob(baseUrl);
     LOG.debug(
         "Creating AbfsBlobClient with access token provider: %s and "
@@ -192,7 +195,7 @@ public class AbfsClientHandler implements Closeable {
         tokenProvider, sasTokenProvider, blobUrl);
     return new AbfsBlobClient(blobUrl, creds, abfsConfiguration,
         tokenProvider, sasTokenProvider, encryptionContextProvider,
-        abfsClientContext);
+        abfsClientContext, fileSystemId);
   }
 
   @Override
