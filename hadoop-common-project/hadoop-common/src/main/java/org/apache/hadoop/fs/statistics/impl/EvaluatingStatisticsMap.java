@@ -19,12 +19,15 @@
 package org.apache.hadoop.fs.statistics.impl;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * A map of functions which can be invoked to dynamically
@@ -132,11 +135,10 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
    */
   @Override
   public Collection<E> values() {
-    Set<Entry<String, Function<String, E>>> evalEntries =
-        evaluators.entrySet();
-    return evalEntries.parallelStream().map((e) ->
-        e.getValue().apply(e.getKey()))
-        .collect(Collectors.toList());
+    List<E> result = new ArrayList<>(size());
+    evaluators.forEach((k, f) ->
+        result.add(f.apply(k)));
+    return result;
   }
 
   /**
@@ -149,22 +151,37 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
 
   /**
    * Creating the entry set forces an evaluation of the functions.
-   *
+   * <p>
+   * Not synchronized, though thread safe.
+   * <p>
    * This is not a snapshot, so if the evaluators actually return
    * references to mutable objects (e.g. a MeanStatistic instance)
    * then that value may still change.
    *
-   * The evaluation may be parallelized.
    * @return an evaluated set of values
    */
   @Override
-  public synchronized Set<Entry<String, E>> entrySet() {
-    Set<Entry<String, Function<String, E>>> evalEntries =
-        evaluators.entrySet();
-    Set<Entry<String, E>> r = evalEntries.parallelStream().map((e) ->
-        new EntryImpl<>(e.getKey(), e.getValue().apply(e.getKey())))
-        .collect(Collectors.toSet());
-    return r;
+  public Set<Entry<String, E>> entrySet() {
+    Set<Entry<String, E>> result = new LinkedHashSet<>(size());
+    evaluators.forEach((key, evaluator) -> {
+      final E current = evaluator.apply(key);
+      result.add(new EntryImpl<>(key, current));
+    });
+    return result;
+  }
+
+
+  /**
+   * Hand down to the foreach iterator of the evaluators, by evaluating as each
+   * entry is processed and passing that in to the {@code action} consumer.
+   * @param action consumer of entries.
+   */
+  @Override
+  public void forEach(final BiConsumer<? super String, ? super E> action) {
+    BiConsumer<String, Function<String, E>> biConsumer = (key, value) -> {
+      action.accept(key, value.apply(key));
+    };
+    evaluators.forEach(biConsumer);
   }
 
   /**
