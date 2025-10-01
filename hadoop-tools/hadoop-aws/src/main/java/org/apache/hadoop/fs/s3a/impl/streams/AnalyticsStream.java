@@ -27,10 +27,14 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
+import java.util.Optional;
 
+import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecretOperations;
 import software.amazon.s3.analyticsaccelerator.S3SeekableInputStreamFactory;
 import software.amazon.s3.analyticsaccelerator.S3SeekableInputStream;
 import software.amazon.s3.analyticsaccelerator.common.ObjectRange;
+import software.amazon.s3.analyticsaccelerator.request.EncryptionSecrets;
 import software.amazon.s3.analyticsaccelerator.request.ObjectMetadata;
 import software.amazon.s3.analyticsaccelerator.util.InputPolicy;
 import software.amazon.s3.analyticsaccelerator.util.OpenStreamInformation;
@@ -251,6 +255,12 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
       openStreamInformationBuilder.objectMetadata(ObjectMetadata.builder()
           .contentLength(parameters.getObjectAttributes().getLen())
           .etag(parameters.getObjectAttributes().getETag()).build());
+    }
+
+    if (parameters.getEncryptionSecrets().getEncryptionMethod() == S3AEncryptionMethods.SSE_C) {
+      EncryptionSecretOperations.getSSECustomerKey(parameters.getEncryptionSecrets())
+              .ifPresent(base64customerKey -> openStreamInformationBuilder.encryptionSecrets(
+              EncryptionSecrets.builder().sseCustomerKey(Optional.of(base64customerKey)).build()));
     }
 
     return openStreamInformationBuilder.build();

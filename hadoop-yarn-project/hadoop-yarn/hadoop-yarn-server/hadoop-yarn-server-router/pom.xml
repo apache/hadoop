@@ -168,7 +168,11 @@
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>com.github.stephenc.jcip</groupId>
+      <artifactId>jcip-annotations</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>

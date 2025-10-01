@@ -702,6 +702,8 @@ public class TestRPC extends TestRpcBase {
 
     // Expect to succeed
     myConf.set(ACL_CONFIG, "*");
+    RPC.setProtocolEngine(myConf, TestRpcService.class, ProtobufRpcEngine2.class);
+
     doRPCs(myConf, false);
 
     // Reset authorization to expect failure

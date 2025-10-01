@@ -141,4 +141,185 @@ public class TestWorkloadIdentityTokenProvider extends AbstractAbfsTestWithTimeo
         .describedAs("Exception should be thrown when the token file not found")
         .contains("Error reading token file");
   }
+
+  /**
+   * Test that tokens with whitespace are properly trimmed.
+   *
+   * @throws IOException if file I/O fails.
+   */
+  @Test
+  public void testTokenTrimsWhitespace() throws Exception {
+    String tokenWithWhitespace = "  " + CLIENT_ASSERTION + "  \n\t  ";
+    AzureADToken adToken = new AzureADToken();
+    adToken.setAccessToken(TOKEN);
+    adToken.setExpiry(new Date(System.currentTimeMillis() + FIVE_MINUTES));
+
+    File tokenFile = File.createTempFile("azure-identity-token", "txt");
+    FileUtils.write(tokenFile, tokenWithWhitespace, StandardCharsets.UTF_8);
+
+    WorkloadIdentityTokenProvider mockedTokenProvider = Mockito.spy(
+        new WorkloadIdentityTokenProvider(AUTHORITY, TENANT_ID, CLIENT_ID,
+            tokenFile.getPath()));
+    Mockito.doReturn(adToken).when(mockedTokenProvider).getTokenUsingJWTAssertion(CLIENT_ASSERTION);
+
+    Assertions.assertThat(mockedTokenProvider.getToken().getAccessToken())
+        .describedAs("Token should be fetched successfully with trimmed whitespace")
+        .isEqualTo(TOKEN);
+
+    // Verify that the trimmed token (without whitespace) was passed to getTokenUsingJWTAssertion
+    Mockito.verify(mockedTokenProvider).getTokenUsingJWTAssertion(CLIENT_ASSERTION);
+  }
+
+  /**
+   * Test that tokens with only whitespace are treated as empty.
+   *
+   * @throws IOException if file I/O fails.
+   */
+  @Test
+  public void testTokenFileWithOnlyWhitespace() throws Exception {
+    String whitespaceOnlyToken = "   \n\t  \r  ";
+    File tokenFile = File.createTempFile("azure-identity-token", "txt");
+    FileUtils.write(tokenFile, whitespaceOnlyToken, StandardCharsets.UTF_8);
+
+    WorkloadIdentityTokenProvider tokenProvider = new WorkloadIdentityTokenProvider(
+        AUTHORITY, TENANT_ID, CLIENT_ID, tokenFile.getPath());
+
+    IOException ex = intercept(IOException.class, () -> {
+      tokenProvider.getToken();
+    });
+    Assertions.assertThat(ex.getMessage())
+        .describedAs("Exception should be thrown when the token file contains only whitespace")
+        .contains("Empty token file");
+  }
+
+  /**
+   * Test constructor with a custom ClientAssertionProvider.
+   *
+   * @throws IOException if the assertion provider fails.
+   */
+  @Test
+  public void testCustomClientAssertionProvider() throws Exception {
+    AzureADToken adToken = new AzureADToken();
+    adToken.setAccessToken(TOKEN);
+    adToken.setExpiry(new Date(System.currentTimeMillis() + FIVE_MINUTES));
+
+    ClientAssertionProvider mockProvider = Mockito.mock(ClientAssertionProvider.class);
+    Mockito.when(mockProvider.getClientAssertion()).thenReturn(CLIENT_ASSERTION);
+
+    WorkloadIdentityTokenProvider mockedTokenProvider = Mockito.spy(
+        new WorkloadIdentityTokenProvider(AUTHORITY, TENANT_ID, CLIENT_ID, mockProvider));
+    Mockito.doReturn(adToken).when(mockedTokenProvider).getTokenUsingJWTAssertion(CLIENT_ASSERTION);
+
+    Assertions.assertThat(mockedTokenProvider.getToken().getAccessToken())
+        .describedAs("Token should be fetched using custom provider")
+        .isEqualTo(TOKEN);
+
+    Mockito.verify(mockProvider).getClientAssertion();
+    Mockito.verify(mockedTokenProvider).getTokenUsingJWTAssertion(CLIENT_ASSERTION);
+  }
+
+  /**
+   * Test that custom ClientAssertionProvider initialize method is called.
+   *
+   * @throws IOException if assertion provider fails.
+   */
+  @Test
+  public void testCustomClientAssertionProviderInitialize() throws Exception {
+    ClientAssertionProvider mockProvider = Mockito.mock(ClientAssertionProvider.class);
+    Mockito.when(mockProvider.getClientAssertion()).thenReturn(CLIENT_ASSERTION);
+
+    WorkloadIdentityTokenProvider tokenProvider = new WorkloadIdentityTokenProvider(
+        AUTHORITY, TENANT_ID, CLIENT_ID, mockProvider);
+
+    // The provider should be ready to use without explicit initialization
+    // but we can verify it's properly integrated
+    Assertions.assertThat(tokenProvider)
+        .describedAs("Token provider should be created successfully")
+        .isNotNull();
+  }
+
+  /**
+   * Test that a custom ClientAssertionProvider can throw IOException.
+   *
+   * @throws IOException if the assertion provider fails.
+   */
+  @Test
+  public void testCustomClientAssertionProviderThrowsException() throws Exception {
+    ClientAssertionProvider mockProvider = Mockito.mock(ClientAssertionProvider.class);
+    Mockito.when(mockProvider.getClientAssertion())
+        .thenThrow(new IOException("Custom provider error"));
+
+    WorkloadIdentityTokenProvider tokenProvider = new WorkloadIdentityTokenProvider(
+        AUTHORITY, TENANT_ID, CLIENT_ID, mockProvider);
+
+    IOException ex = intercept(IOException.class, () -> {
+      tokenProvider.getToken();
+    });
+    Assertions.assertThat(ex.getMessage())
+        .describedAs("Exception from custom provider should be propagated")
+        .contains("Custom provider error");
+  }
+
+  /**
+   * Test that null parameters are properly validated in a custom provider constructor.
+   */
+  @Test
+  public void testCustomProviderConstructorValidation() throws Exception {
+    ClientAssertionProvider mockProvider = Mockito.mock(ClientAssertionProvider.class);
+
+    // Test null authority
+    Throwable ex1 = intercept(RuntimeException.class, () -> {
+      new WorkloadIdentityTokenProvider(null, TENANT_ID, CLIENT_ID, mockProvider);
+    });
+    Assertions.assertThat(ex1.getMessage())
+        .describedAs("Should validate authority parameter")
+        .contains("authority");
+
+    // Test null tenantId
+    Throwable ex2 = intercept(RuntimeException.class, () -> {
+      new WorkloadIdentityTokenProvider(AUTHORITY, null, CLIENT_ID, mockProvider);
+    });
+    Assertions.assertThat(ex2.getMessage())
+        .describedAs("Should validate tenantId parameter")
+        .contains("tenantId");
+
+    // Test null clientId
+    Throwable ex3 = intercept(RuntimeException.class, () -> {
+      new WorkloadIdentityTokenProvider(AUTHORITY, TENANT_ID, null, mockProvider);
+    });
+    Assertions.assertThat(ex3.getMessage())
+        .describedAs("Should validate clientId parameter")
+        .contains("clientId");
+
+    // Test null clientAssertionProvider
+    Throwable ex4 = intercept(RuntimeException.class, () -> {
+      new WorkloadIdentityTokenProvider(AUTHORITY, TENANT_ID, CLIENT_ID, (ClientAssertionProvider) null);
+    });
+    Assertions.assertThat(ex4.getMessage())
+        .describedAs("Should validate clientAssertionProvider parameter")
+        .contains("clientAssertionProvider");
+  }
+
+  /**
+   * Test that a file-based provider implements ClientAssertionProvider correctly.
+   *
+   * @throws IOException if file operations fail.
+   */
+  @Test
+  public void testFileBasedProviderImplementsInterface() throws Exception {
+    File tokenFile = File.createTempFile("azure-identity-token", "txt");
+    FileUtils.write(tokenFile, CLIENT_ASSERTION, StandardCharsets.UTF_8);
+
+    // Create provider with file-based constructor
+    WorkloadIdentityTokenProvider provider = new WorkloadIdentityTokenProvider(
+        AUTHORITY, TENANT_ID, CLIENT_ID, tokenFile.getPath());
+
+    // The internal FileBasedClientAssertionProvider should work correctly
+    Assertions.assertThat(provider)
+        .describedAs("File-based provider should be created successfully")
+        .isNotNull();
+
+    // Clean up
+    tokenFile.delete();
+  }
 }

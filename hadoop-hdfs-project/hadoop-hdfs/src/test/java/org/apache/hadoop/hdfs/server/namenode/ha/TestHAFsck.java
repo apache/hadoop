@@ -22,8 +22,9 @@ import java.io.PrintStream;
 import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.event.Level;
 
 import org.apache.hadoop.conf.Configuration;
@@ -39,20 +40,21 @@ import org.apache.hadoop.util.ToolRunner;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@ParameterizedClass(name = "ProxyProvider: {0}")
+@MethodSource("data")
 public class TestHAFsck {
   
   static {
     GenericTestUtils.setLogLevel(DFSUtil.LOG, Level.TRACE);
   }
 
-  @Parameter
+  @Parameter(0)
   private String proxyProvider;
 
   public String getProxyProvider() {
     return proxyProvider;
   }
 
-  @Parameterized.Parameters(name = "ProxyProvider: {0}")
   public static Iterable<Object[]> data() {
     return Arrays.asList(new Object[][]
         {{ConfiguredFailoverProxyProvider.class.getName()},

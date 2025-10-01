@@ -33,7 +33,6 @@
     <!-- Set the Release year during release -->
     <release-year>2025</release-year>
 
-    <failIfNoTests>false</failIfNoTests>
     <!--Whether to proceed to next module if any test failures exist-->
     <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
@@ -111,7 +110,7 @@
     <findbugs.version>3.0.5</findbugs.version>
     <dnsjava.version>3.6.1</dnsjava.version>
 
-    <guava.version>27.0-jre</guava.version>
+    <guava.version>32.0.1-jre</guava.version>
     <guice.version>5.1.0</guice.version>
 
     <bouncycastle.version>1.78.1</bouncycastle.version>
@@ -127,11 +126,11 @@
     <commons-compress.version>1.26.1</commons-compress.version>
     <commons-csv.version>1.9.0</commons-csv.version>
     <commons-io.version>2.16.1</commons-io.version>
-    <commons-lang3.version>3.17.0</commons-lang3.version>
+    <commons-lang3.version>3.18.0</commons-lang3.version>
     <commons-logging.version>1.3.0</commons-logging.version>
     <commons-math3.version>3.6.1</commons-math3.version>
     <commons-net.version>3.9.0</commons-net.version>
-    <commons-text.version>1.10.0</commons-text.version>
+    <commons-text.version>1.14.0</commons-text.version>
 
     <kerby.version>2.0.3</kerby.version>
     <ehcache.version>3.8.2</ehcache.version>
@@ -140,13 +139,13 @@
     <hikari.version>4.0.3</hikari.version>
     <derby.version>10.14.2.0</derby.version>
     <mssql.version>6.2.1.jre7</mssql.version>
-    <okhttp3.version>4.11.0</okhttp3.version>
+    <okhttp3.version>5.1.0</okhttp3.version>
     <kotlin-stdlib.version>1.6.20</kotlin-stdlib.version>
     <jdom2.version>2.0.6.1</jdom2.version>
     <jna.version>5.2.0</jna.version>
     <gson.version>2.9.0</gson.version>
     <metrics.version>3.2.4</metrics.version>
-    <netty4.version>4.1.118.Final</netty4.version>
+    <netty4.version>4.1.127.Final</netty4.version>
     <snappy-java.version>1.1.10.4</snappy-java.version>
     <lz4-java.version>1.7.1</lz4-java.version>
     <byte-buddy.version>1.17.6</byte-buddy.version>
@@ -193,13 +192,6 @@
     <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
-    <!--
-     Surefire option to not fail a build if -Dtest=NAME doesn't find a
-     test called NAME. This is needed when running integration tests through
-     failsafe, as setting -Dtest=none is the way to stop surefire
-     running all unit tests before the it.test option is picked up.
-    -->
-    <surefire.failIfNoSpecifiedTests>false</surefire.failIfNoSpecifiedTests>
     <!-- Flag to stop surefire from shortening test stacks  -->
     <trimStackTrace>false</trimStackTrace>
 
@@ -219,7 +211,7 @@
     <aws-java-sdk.version>1.12.720</aws-java-sdk.version>
     <aws-java-sdk-v2.version>2.29.52</aws-java-sdk-v2.version>
     <amazon-s3-encryption-client-java.version>3.1.1</amazon-s3-encryption-client-java.version>
-    <amazon-s3-analyticsaccelerator-s3.version>1.2.1</amazon-s3-analyticsaccelerator-s3.version>
+    <amazon-s3-analyticsaccelerator-s3.version>1.3.0</amazon-s3-analyticsaccelerator-s3.version>
     <aws.eventstream.version>1.0.1</aws.eventstream.version>
     <hsqldb.version>2.7.1</hsqldb.version>
     <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
@@ -236,9 +228,7 @@
     <snakeyaml.version>2.0</snakeyaml.version>
     <sshd.version>2.11.0</sshd.version>
     <hbase.version>2.6.1-hadoop3</hbase.version>
-    <junit.version>4.13.2</junit.version>
     <junit.jupiter.version>5.13.3</junit.jupiter.version>
-    <junit.vintage.version>5.13.3</junit.vintage.version>
     <junit.platform.version>1.13.3</junit.platform.version>
     <assertj.version>3.12.2</assertj.version>
     <jline.version>3.9.0</jline.version>
@@ -247,7 +237,8 @@
     <openssl-wildfly.version>2.1.4.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
     <woodstox.version>5.4.0</woodstox.version>
-    <nimbus-jose-jwt.version>9.37.2</nimbus-jose-jwt.version>
+    <nimbus-jose-jwt.version>10.4</nimbus-jose-jwt.version>
+    <jcip-annotations.version>1.0-1</jcip-annotations.version>
     <nodejs.version>v12.22.1</nodejs.version>
     <yarnpkg.version>v1.22.5</yarnpkg.version>
     <apache-ant.version>1.10.13</apache-ant.version>
@@ -258,7 +249,7 @@
     <dependencies>
       <dependency>
         <groupId>com.squareup.okhttp3</groupId>
-        <artifactId>mockwebserver</artifactId>
+        <artifactId>mockwebserver3-junit5</artifactId>
         <version>${okhttp3.version}</version>
         <scope>test</scope>
         <exclusions>
@@ -1181,12 +1172,6 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>${junit.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>org.junit.jupiter</groupId>
         <artifactId>junit-jupiter-engine</artifactId>
         <version>${junit.jupiter.version}</version>
@@ -1196,12 +1181,6 @@
         <groupId>org.junit.jupiter</groupId>
         <artifactId>junit-jupiter-params</artifactId>
         <version>${junit.jupiter.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.junit.vintage</groupId>
-        <artifactId>junit-vintage-engine</artifactId>
-        <version>${junit.vintage.version}</version>
         <scope>test</scope>
       </dependency>
       <!-- Only required to run tests in an IDE that bundles an older version -->
@@ -1406,6 +1385,12 @@
         <groupId>com.googlecode.json-simple</groupId>
         <artifactId>json-simple</artifactId>
         <version>1.1.1</version>
+        <exclusions>
+          <exclusion>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
 
       <dependency>
@@ -1558,6 +1543,11 @@
         <groupId>com.google.code.findbugs</groupId>
         <artifactId>jsr305</artifactId>
         <version>3.0.2</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.stephenc.jcip</groupId>
+        <artifactId>jcip-annotations</artifactId>
+        <version>${jcip-annotations.version}</version>
       </dependency>
       <dependency>
         <groupId>jakarta.xml.bind</groupId>
@@ -2011,11 +2001,6 @@
           <groupId>org.yaml</groupId>
           <artifactId>snakeyaml</artifactId>
           <version>${snakeyaml.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.hamcrest</groupId>
-          <artifactId>hamcrest-library</artifactId>
-          <version>1.3</version>
         </dependency>
         <dependency>
           <groupId>org.assertj</groupId>

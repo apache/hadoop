@@ -51,12 +51,6 @@
       <artifactId>hadoop-client-runtime</artifactId>
       <scope>runtime</scope>
     </dependency>
-    <!-- Leave JUnit as a direct dependency -->
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>runtime</scope>
-    </dependency>
     <!-- Adding hadoop-annotations so we can make it optional to remove from our transitive tree -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -629,6 +623,10 @@
           <groupId>jakarta.servlet</groupId>
           <artifactId>jakarta.servlet-api</artifactId>
         </exclusion>
+        <exclusion>
+          <artifactId>junit-jupiter</artifactId>
+          <groupId>org.junit.jupiter</groupId>
+        </exclusion>
       </exclusions>
       <optional>true</optional>
     </dependency>
@@ -639,6 +637,10 @@
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
           <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <artifactId>junit-jupiter</artifactId>
+          <groupId>org.junit.jupiter</groupId>
         </exclusion>
       </exclusions>
       <optional>true</optional>

@@ -54,7 +54,8 @@ RUN apt-get -q update \
 ######
 # Set env vars required to build Hadoop
 ######
-ENV MAVEN_HOME=/usr
+ENV MAVEN_HOME=/opt/maven
+ENV PATH="${PATH}:${MAVEN_HOME}/bin"
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 
@@ -80,6 +81,7 @@ ENV HADOOP_SKIP_YETUS_VERIFICATION=true
 ####
 # Install packages
 ####
+RUN pkg-resolver/install-maven.sh debian:11
 RUN pkg-resolver/install-cmake.sh debian:11
 RUN pkg-resolver/install-spotbugs.sh debian:11
 RUN pkg-resolver/install-boost.sh debian:11
