@@ -2890,7 +2890,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   boolean recoverLease(String src, String holder, String clientMachine)
       throws IOException {
-    final String operationName = "recoverLease";
     boolean skipSync = false;
     final String operationName = "recoverLease";
     checkOperation(OperationCategory.WRITE);
@@ -3132,7 +3131,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       final Set<Node> excludes,
       final int numAdditionalNodes, final String clientName
       ) throws IOException {
-    final String operationName = "getAdditionalDatanode";
     //check if the feature is enabled
     dtpReplaceDatanodeOnFailure.checkEnabled();
 
@@ -3260,7 +3258,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   boolean completeFile(final String src, String holder,
                        ExtendedBlock last, long fileId)
       throws IOException {
-    final String operationName = "completeFile";
     boolean success = false;
     final String operationName = "completeFile";
     checkOperation(OperationCategory.WRITE);
