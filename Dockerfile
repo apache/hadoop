@@ -14,7 +14,7 @@
 # limitations under the License.
 
 FROM apache/hadoop-runner
-ARG HADOOP_URL=https://dlcdn.apache.org/hadoop/common/hadoop-3.4.1/hadoop-3.4.1.tar.gz
+ARG HADOOP_URL=https://dlcdn.apache.org/hadoop/common/hadoop-3.4.2/hadoop-3.4.2.tar
 WORKDIR /opt
 RUN sudo rm -rf /opt/hadoop && curl -LSs -o hadoop.tar.gz $HADOOP_URL && tar zxf hadoop.tar.gz && rm hadoop.tar.gz && mv hadoop* hadoop && rm -rf /opt/hadoop/share/doc
 WORKDIR /opt/hadoop
