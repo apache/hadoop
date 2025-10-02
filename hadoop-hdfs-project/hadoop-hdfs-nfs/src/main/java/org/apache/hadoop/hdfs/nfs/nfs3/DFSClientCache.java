@@ -170,15 +170,19 @@ class DFSClientCache {
       // if a unique nnid, add it to the map
       if (value == null) {
         LOG.info("Added export: {} FileSystem URI: {} with namenodeId: {}",
-            exportPath, exportPath, namenodeId);
+            exportPath, exportURI, namenodeId);
         namenodeUriMap.put(namenodeId, exportURI);
-      } else {
-        // if the nnid already exists, it better be the for the same namenode
+      } else if (!value.equals(exportURI)) {
+        // Only throw exception if different URIs have the same namenode ID
         String msg = String.format("FS:%s, Namenode ID collision for path:%s "
                 + "nnid:%s uri being added:%s existing uri:%s", fs.getScheme(),
             exportPath, namenodeId, exportURI, value);
         LOG.error(msg);
         throw new FileSystemException(msg);
+      } else {
+        // Same URI with same namenode ID - this is expected and safe to ignore
+        LOG.debug("Export path {} resolves to same URI {} as existing entry, skipping",
+            exportPath, exportURI);
       }
     }
   }

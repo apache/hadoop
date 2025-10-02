@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.file.FileSystemException;
+import java.util.Objects;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -242,7 +243,7 @@ public class Nfs3Utils {
   public static int getNamenodeId(Configuration conf, URI namenodeURI) {
     InetSocketAddress address =
         DFSUtilClient.getNNAddressCheckLogical(conf, namenodeURI);
-    return address.hashCode();
+    return Objects.hash(namenodeURI.toString(), address.toString());
   }
 
   public static URI getResolvedURI(FileSystem fs, String exportPath)
