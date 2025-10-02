@@ -2768,6 +2768,23 @@
         <maven.compiler.release>${javac.version}</maven.compiler.release>
       </properties>
     </profile>
+    <profile>
+      <id>quiet-surefire</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <enableOutErrElements>false</enableOutErrElements>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 
   <repositories>
