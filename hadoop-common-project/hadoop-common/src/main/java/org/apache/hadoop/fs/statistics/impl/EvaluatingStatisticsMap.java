@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
@@ -190,7 +191,7 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
    */
   private static final class EntryImpl<E> implements Entry<String, E> {
 
-    private String key;
+    private final String key;
 
     private E value;
 
@@ -213,6 +214,18 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
     public E setValue(final E val) {
       this.value = val;
       return val;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+      if (!(o instanceof Entry)) {return false;}
+      Entry<String, ?> entry = (Entry<String, ?>) o;
+      return Objects.equals(key, entry.getKey()) && Objects.equals(value, entry.getValue());
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(key);
     }
   }
 
