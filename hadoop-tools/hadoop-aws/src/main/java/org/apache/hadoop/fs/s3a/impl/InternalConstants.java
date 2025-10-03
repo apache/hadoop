@@ -127,14 +127,12 @@ public final class InternalConstants {
   public static final int SC_403_FORBIDDEN = 403;
 
   /** 403 error code. */
-  @Deprecated
   public static final int SC_403 = SC_403_FORBIDDEN;
 
   /** 404 status code: Not Found. */
   public static final int SC_404_NOT_FOUND = 404;
 
   /** 404 error code. */
-  @Deprecated
   public static final int SC_404 = SC_404_NOT_FOUND;
 
   /** 405 status code: Method Not Allowed. */
