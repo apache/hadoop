@@ -22,7 +22,10 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.BindException;
+import java.net.ConnectException;
 import java.net.NoRouteToHostException;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.file.AccessDeniedException;
@@ -197,6 +200,9 @@ public class S3ARetryPolicy implements RetryPolicy {
     // implementation
     policyMap.put(NoVersionAttributeException.class, fail);
 
+    // range header is out of scope of object; retrying won't help
+    policyMap.put(RangeNotSatisfiableEOFException.class, fail);
+
     // should really be handled by resubmitting to new location;
     // that's beyond the scope of this retry policy
     policyMap.put(AWSRedirectException.class, fail);
@@ -204,14 +210,17 @@ public class S3ARetryPolicy implements RetryPolicy {
     // throttled requests are can be retried, always
     policyMap.put(AWSServiceThrottledException.class, throttlePolicy);
 
+    // socket exception subclass we consider unrecoverable
+    // though this is normally only found when opening a port for listening.
+    // which is never done in S3A.
+    policyMap.put(BindException.class, fail);
+
     // connectivity problems are retried without worrying about idempotency
     policyMap.put(ConnectTimeoutException.class, connectivityFailure);
+    policyMap.put(ConnectException.class, connectivityFailure);
 
     // this can be a sign of an HTTP connection breaking early.
-    // which can be reacted to by another attempt if the request was idempotent.
-    // But: could also be a sign of trying to read past the EOF on a GET,
-    // which isn't going to be recovered from
-    policyMap.put(EOFException.class, retryIdempotentCalls);
+    policyMap.put(EOFException.class, connectivityFailure);
 
     // policy on a 400/bad request still ambiguous.
     // Treated as an immediate failure
@@ -227,7 +236,9 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(AWSClientIOException.class, retryIdempotentCalls);
     policyMap.put(AWSServiceIOException.class, retryIdempotentCalls);
     policyMap.put(AWSS3IOException.class, retryIdempotentCalls);
-    policyMap.put(SocketTimeoutException.class, retryIdempotentCalls);
+    // general socket exceptions
+    policyMap.put(SocketException.class, connectivityFailure);
+    policyMap.put(SocketTimeoutException.class, connectivityFailure);
 
     // Unsupported requests do not work, however many times you try
     policyMap.put(UnsupportedRequestException.class, fail);
