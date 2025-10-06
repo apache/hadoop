@@ -230,9 +230,9 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
     entryCount.reset();
     sum.reset();
     entries.forEach(e -> {
-          entryCount.increment();
-          sum.add(e.getValue());
-        });
+      entryCount.increment();
+      sum.add(e.getValue());
+    });
   }
 
 }

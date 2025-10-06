@@ -218,7 +218,9 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
 
     @Override
     public boolean equals(final Object o) {
-      if (!(o instanceof Entry)) {return false;}
+      if (!(o instanceof Entry)) {
+        return false;
+      }
       Entry<String, ?> entry = (Entry<String, ?>) o;
       return Objects.equals(key, entry.getKey()) && Objects.equals(value, entry.getValue());
     }
