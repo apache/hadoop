@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.functional.Tuples;
 import org.apache.http.HttpHost;
@@ -45,8 +46,10 @@ import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.conn.DefaultHttpClientConnectionOperator;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APACHE_IMPL;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JDK_FALLBACK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KEEP_ALIVE_CACHE_CLOSED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_NETWORKING_LIBRARY;
@@ -74,7 +77,9 @@ public class ITestApacheClientConnectionPool extends
     configuration.unset(FS_AZURE_METRIC_FORMAT);
     try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
         configuration)) {
-      KeepAliveCache kac = fs.getAbfsStore().getClientHandler().getIngressClient()
+      KeepAliveCache kac = fs.getAbfsStore()
+          .getClientHandler()
+          .getIngressClient()
           .getKeepAliveCache();
       kac.close();
       AbfsDriverException ex = intercept(AbfsDriverException.class,
@@ -149,8 +154,31 @@ public class ITestApacheClientConnectionPool extends
       Assertions.assertThat(AbfsApacheHttpClient.usable())
           .describedAs("Apache HttpClient should be not usable")
           .isFalse();
+      // Make a rest API call to verify that the client falls back to JDK client.
+      AzureBlobFileSystem fs = getFileSystem();
+      verifyClientRequestId(fs, JDK_FALLBACK);
       AbfsApacheHttpClient.setUsable();
+      verifyClientRequestId(fs, APACHE_IMPL);
     }
+  }
+
+  /**
+   * Verify that the client request id contains the expected client.
+   * @param fs AzureBlobFileSystem instance
+   * @param expectedClient Expected client in the client request id.
+   * @throws AzureBlobFileSystemException if any failure occurs during the operation.
+   */
+  private void verifyClientRequestId(AzureBlobFileSystem fs,
+      String expectedClient)
+      throws AzureBlobFileSystemException {
+    AbfsRestOperation op = fs.getAbfsStore()
+        .getClient()
+        .getFilesystemProperties(getTestTracingContext(fs, true));
+    String[] clientRequestIdList = op.getResult()
+        .getClientRequestId().split(COLON);
+    Assertions.assertThat(clientRequestIdList[clientRequestIdList.length - 1])
+        .describedAs("Http Client in use should be %s", expectedClient)
+        .isEqualTo(expectedClient);
   }
 
   private Map.Entry<HttpRoute, AbfsManagedApacheHttpConnection> getTestConnection()

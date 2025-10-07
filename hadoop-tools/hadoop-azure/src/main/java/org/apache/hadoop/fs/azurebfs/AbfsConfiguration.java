@@ -203,6 +203,10 @@ public class AbfsConfiguration{
           DefaultValue = DEFAULT_HTTP_READ_TIMEOUT)
   private int httpReadTimeout;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_EXPECT_100CONTINUE_WAIT_TIMEOUT,
+          DefaultValue = DEFAULT_EXPECT_100CONTINUE_WAIT_TIMEOUT)
+  private int expect100ContinueWaitTimeout;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT,
       MinValue = 0,
       DefaultValue = DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS)
@@ -1031,6 +1035,10 @@ public class AbfsConfiguration{
 
   public int getHttpReadTimeout() {
     return this.httpReadTimeout;
+  }
+
+  public int getExpect100ContinueWaitTimeout() {
+    return this.expect100ContinueWaitTimeout;
   }
 
   public long getAzureBlockSize() {

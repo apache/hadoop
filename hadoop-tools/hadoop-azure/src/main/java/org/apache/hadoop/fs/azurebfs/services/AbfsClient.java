@@ -257,6 +257,9 @@ public abstract class AbfsClient implements Closeable {
         == HttpOperationType.APACHE_HTTP_CLIENT) {
       keepAliveCache = new KeepAliveCache(abfsConfiguration);
 
+      // Warm up the connection pool during client initialization to avoid latency during first request.
+      // Since for every filesystem instance, we create both DFS and Blob client instance,
+      // so warmup is done only for the default client.
       abfsApacheHttpClient = new AbfsApacheHttpClient(
           DelegatingSSLSocketFactory.getDefaultFactory(),
           abfsConfiguration, keepAliveCache, baseUrl,

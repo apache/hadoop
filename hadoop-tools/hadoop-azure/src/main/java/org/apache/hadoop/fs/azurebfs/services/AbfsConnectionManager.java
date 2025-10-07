@@ -361,7 +361,7 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
         } catch (RejectedExecutionException e) {
           LOG.debug("Task rejected for connection creation: {}",
               e.getMessage());
-          return 0;
+          return -1;
         }
       }
 

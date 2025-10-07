@@ -58,6 +58,12 @@ public final class FileSystemConfigurations {
    */
   public static final int DEFAULT_HTTP_READ_TIMEOUT = 30_000; // 30 secs
 
+  /**
+   * Default value of connection request timeout to be used when 100continue is enabled.
+   * Value: {@value}.
+   */
+  public static final int DEFAULT_EXPECT_100CONTINUE_WAIT_TIMEOUT = 3_000; // 3s
+
   // Retry parameter defaults.
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS = 5;
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MIN_BACKOFF_INTERVAL = 0;

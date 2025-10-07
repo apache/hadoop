@@ -93,8 +93,14 @@ final class AbfsApacheHttpClient implements Closeable {
     final HttpClientBuilder builder = HttpClients.custom();
     builder.setConnectionManager(connMgr)
         .setRequestExecutor(
+            // In case of Expect:100-continue, the timeout for waiting for
+            // the 100-continue response from the server is set using
+            // ExpectWaitContinueTimeout. For other requests, the read timeout
+            // is set using SocketTimeout.
             new AbfsManagedHttpRequestExecutor(
-                abfsConfiguration.getHttpReadTimeout()))
+                abfsConfiguration.isExpectHeaderEnabled()
+                    ? abfsConfiguration.getExpect100ContinueWaitTimeout()
+                    : abfsConfiguration.getHttpReadTimeout()))
         .disableContentCompression()
         .disableRedirectHandling()
         .disableAutomaticRetries()
