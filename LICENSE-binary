@@ -269,7 +269,7 @@ com.google.http-client:google-http-client:1.46.3
 com.google.j2objc:j2objc-annotations:3.0.0
 com.google.oauth-client:google-oauth-client:1.37.0
 com.microsoft.azure:azure-storage:7.0.0
-com.nimbusds:nimbus-jose-jwt:9.37.2
+com.nimbusds:nimbus-jose-jwt:10.4
 com.zaxxer:HikariCP:4.0.3
 commons-beanutils:commons-beanutils:1.9.4
 commons-cli:commons-cli:1.9.0
