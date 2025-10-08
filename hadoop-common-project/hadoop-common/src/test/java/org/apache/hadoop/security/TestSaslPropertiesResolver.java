@@ -17,19 +17,17 @@
  */
 package org.apache.hadoop.security;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_RPC_PROTECTION;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Map;
 import javax.security.sasl.Sasl;
-
-import org.junit.Before;
-import org.junit.Test;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
-
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_RPC_PROTECTION;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestSaslPropertiesResolver extends AbstractHadoopTestBase {
 
@@ -37,7 +35,7 @@ public class TestSaslPropertiesResolver extends AbstractHadoopTestBase {
 
   private SaslPropertiesResolver resolver;
 
-  @Before
+  @BeforeEach
   public void setup() {
     Configuration conf = new Configuration();
     conf.set(HADOOP_RPC_PROTECTION, "privacy");
@@ -68,7 +66,7 @@ public class TestSaslPropertiesResolver extends AbstractHadoopTestBase {
   }
 
   private static void assertPrivacyQop(Map<String, String> saslProperties) {
-    assertEquals(SaslRpcServer.QualityOfProtection.PRIVACY.getSaslQop(),
+    assertThat(SaslRpcServer.QualityOfProtection.PRIVACY.getSaslQop()).isEqualTo(
         saslProperties.get(Sasl.QOP));
   }
 
