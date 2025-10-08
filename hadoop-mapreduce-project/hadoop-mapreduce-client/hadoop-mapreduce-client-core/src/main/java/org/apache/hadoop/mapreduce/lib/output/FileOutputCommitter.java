@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.lib.output;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -128,6 +129,9 @@ public class FileOutputCommitter extends PathOutputCommitter {
   final int moveThreads;
   final AtomicInteger numberOfTasks = new AtomicInteger();
   final boolean isParallelTaskCommitEnabled;
+  
+  // Map to store synchronization objects for path-based operations to prevent race conditions
+  private static final ConcurrentHashMap<String, Object> pathLocks = new ConcurrentHashMap<>();
 
   /**
    * Create a file output committer
@@ -495,42 +499,51 @@ public class FileOutputCommitter extends PathOutputCommitter {
         false,
         "Merging data from %s to %s", from, to)) {
       reportProgress(context);
-      FileStatus toStat;
-      try {
-        toStat = fs.getFileStatus(to);
-      } catch (FileNotFoundException fnfe) {
-        toStat = null;
-      }
 
-      if (from.isFile()) {
-        if (toStat != null) {
-          if (!fs.delete(to, true)) {
-            throw new IOException("Failed to delete " + to);
-          }
+      Object lock = getPathLock(to);
+      synchronized (lock) {
+        FileStatus toStat;
+        try {
+          toStat = fs.getFileStatus(to);
+        } catch (FileNotFoundException fnfe) {
+          toStat = null;
         }
 
-        if (!fs.rename(from.getPath(), to)) {
-          throw new IOException("Failed to rename " + from + " to " + to);
-        }
-      } else if (from.isDirectory()) {
-        if (toStat != null) {
-          if (!toStat.isDirectory()) {
+        if (from.isFile()) {
+          if (toStat != null) {
             if (!fs.delete(to, true)) {
               throw new IOException("Failed to delete " + to);
             }
-            renameOrMerge(fs, from, to, context);
-          } else {
-            //It is a directory so merge everything in the directories
-            for (FileStatus subFrom : fs.listStatus(from.getPath())) {
-              Path subTo = new Path(to, subFrom.getPath().getName());
-              mergePaths(fs, subFrom, subTo, context);
-            }
           }
-        } else {
-          renameOrMerge(fs, from, to, context);
+
+          if (!fs.rename(from.getPath(), to)) {
+            throw new IOException("Failed to rename " + from + " to " + to);
+          }
+        } else if (from.isDirectory()) {
+          if (toStat != null) {
+            if (!toStat.isDirectory()) {
+              if (!fs.delete(to, true)) {
+                throw new IOException("Failed to delete " + to);
+              }
+              renameOrMerge(fs, from, to, context);
+            } else {
+              //It is a directory so merge everything in the directories
+              for (FileStatus subFrom : fs.listStatus(from.getPath())) {
+                Path subTo = new Path(to, subFrom.getPath().getName());
+                mergePaths(fs, subFrom, subTo, context);
+              }
+            }
+          } else {
+            renameOrMerge(fs, from, to, context);
+          }
         }
       }
     }
+  }
+
+  private Object getPathLock(Path path) {
+    String pathKey = path.toUri().toString();
+    return pathLocks.computeIfAbsent(pathKey, k -> new Object());
   }
 
   public boolean isParallelMoveEnabled() {
@@ -733,43 +746,47 @@ public class FileOutputCommitter extends PathOutputCommitter {
     try (DurationInfo d = new DurationInfo(LOG, false,
         "Merging data from %s to %s", from.getPath(), to)) {
       reportProgress(context);
-      FileStatus toStat;
-      try {
-        toStat = fs.getFileStatus(to);
-      } catch (FileNotFoundException fnfe) {
-        toStat = null;
-      }
 
-      if (from.isFile()) {
-        if (toStat != null) {
-          if (!fs.delete(to, true)) {
-            throw new IOException("Failed to delete " + to);
-          }
+      Object lock = getPathLock(to);
+      synchronized (lock) {
+        FileStatus toStat;
+        try {
+          toStat = fs.getFileStatus(to);
+        } catch (FileNotFoundException fnfe) {
+          toStat = null;
         }
 
-        if (!fs.rename(from.getPath(), to)) {
-          throw new IOException("Failed to rename " + from.getPath() + " to " + to);
-        }
-      } else if (from.isDirectory()) {
-        if (toStat != null) {
-          if (!toStat.isDirectory()) {
+        if (from.isFile()) {
+          if (toStat != null) {
             if (!fs.delete(to, true)) {
               throw new IOException("Failed to delete " + to);
             }
-            boolean dirCreated = fs.mkdirs(to);
-            LOG.debug("Merging from:{} to:{}, destCreated: {}", from.getPath(), to, dirCreated);
-            mergePathsInParallel(fs, from, to, context, pool, futures);
-          } else {
-            //It is a directory so merge everything in the directories
-            LOG.debug("Dir merge from : {} to: {}", from.getPath(), to);
-            mergeDirInParallel(fs, from, to, context, pool, futures);
           }
-        } else {
-          // Init dir to avoid conflicting multi-threaded rename
-          boolean dirCreated = fs.mkdirs(to);
-          LOG.debug("Created dir upfront. from: {} --> to:{}, totalTasks:{}, destCreated: {}",
-              from.getPath(), to, futures.size(), dirCreated);
-          mergePathsInParallel(fs, from, to, context, pool, futures);
+
+          if (!fs.rename(from.getPath(), to)) {
+            throw new IOException("Failed to rename " + from.getPath() + " to " + to);
+          }
+        } else if (from.isDirectory()) {
+          if (toStat != null) {
+            if (!toStat.isDirectory()) {
+              if (!fs.delete(to, true)) {
+                throw new IOException("Failed to delete " + to);
+              }
+              boolean dirCreated = fs.mkdirs(to);
+              LOG.debug("Merging from:{} to:{}, destCreated: {}", from.getPath(), to, dirCreated);
+              mergePathsInParallel(fs, from, to, context, pool, futures);
+            } else {
+              //It is a directory so merge everything in the directories
+              LOG.debug("Dir merge from : {} to: {}", from.getPath(), to);
+              mergeDirInParallel(fs, from, to, context, pool, futures);
+            }
+          } else {
+            // Init dir to avoid conflicting multi-threaded rename
+            boolean dirCreated = fs.mkdirs(to);
+            LOG.debug("Created dir upfront. from: {} --> to:{}, totalTasks:{}, destCreated: {}",
+                from.getPath(), to, futures.size(), dirCreated);
+            mergePathsInParallel(fs, from, to, context, pool, futures);
+          }
         }
       }
     }
