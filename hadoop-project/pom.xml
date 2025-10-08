@@ -234,7 +234,7 @@
     <jline.version>3.9.0</jline.version>
     <mockito.version>4.11.0</mockito.version>
     <solr.version>8.11.2</solr.version>
-    <openssl-wildfly.version>2.1.4.Final</openssl-wildfly.version>
+    <openssl-wildfly.version>2.2.5.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
     <woodstox.version>5.4.0</woodstox.version>
     <nimbus-jose-jwt.version>10.4</nimbus-jose-jwt.version>
