@@ -95,7 +95,11 @@
         </exclusion>
       </exclusions>
     </dependency>
-
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-aliyun</artifactId>
+      <scope>compile</scope>
+    </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-aws</artifactId>
@@ -115,34 +119,16 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-cos</artifactId>
       <scope>compile</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>*</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-huaweicloud</artifactId>
       <scope>compile</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>*</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-tos</artifactId>
       <scope>compile</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>*</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -160,143 +146,4 @@
       </exclusions>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.rat</groupId>
-        <artifactId>apache-rat-plugin</artifactId>
-        <configuration>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
-
-  <profiles>
-
-    <!-- distribution profile builds the artifacts. -->
-    <profile>
-      <id>dist</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <build>
-        <plugins>
-         <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-assembly-plugin</artifactId>
-            <dependencies>
-              <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-assemblies</artifactId>
-                <version>${project.version}</version>
-              </dependency>
-            </dependencies>
-            <executions>
-              <execution>
-                <id>dist</id>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>single</goal>
-                </goals>
-                <configuration>
-                  <appendAssemblyId>false</appendAssemblyId>
-                  <attach>false</attach>
-                  <finalName>${project.artifactId}-${project.version}</finalName>
-                  <descriptorRefs>
-                    <descriptorRef>hadoop-cloud-storage</descriptorRef>
-                  </descriptorRefs>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-    <!-- Pull in all the huaweicloud dependencies-->
-    <profile>
-      <id>huaweicloud</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-huaweicloud</artifactId>
-          <scope>compile</scope>
-          <exclusions>
-            <exclusion>
-              <groupId>com.fasterxml.jackson</groupId>
-              <artifactId>*</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <!-- Pull in all the cos -->
-    <profile>
-      <id>cos</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-cos</artifactId>
-          <scope>compile</scope>
-        </dependency>
-      </dependencies>
-    </profile>
-    <!-- Pull in aliyun -->
-    <profile>
-      <id>aliyun</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-aliyun</artifactId>
-          <scope>compile</scope>
-        </dependency>
-      </dependencies>
-    </profile>
-    <!-- Pull in ADLS gen1 -->
-    <profile>
-      <id>adls</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-azure-datalake</artifactId>
-          <scope>compile</scope>
-        </dependency>
-      </dependencies>
-    </profile>
-    <!-- Pull in ADLS gen1 -->
-    <profile>
-      <id>tos</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-tos</artifactId>
-          <scope>compile</scope>
-        </dependency>
-      </dependencies>
-    </profile>
-
-  </profiles>
 </project>

@@ -34,6 +34,7 @@
     <module>hadoop-cos</module>
     <module>hadoop-huaweicloud</module>
     <module>hadoop-tos</module>
+    <module>hadoop-cloud-storage-dist</module>
   </modules>
 
   <build>
