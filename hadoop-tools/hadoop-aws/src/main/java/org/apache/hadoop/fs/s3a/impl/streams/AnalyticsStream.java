@@ -36,6 +36,7 @@ import software.amazon.s3.analyticsaccelerator.S3SeekableInputStream;
 import software.amazon.s3.analyticsaccelerator.common.ObjectRange;
 import software.amazon.s3.analyticsaccelerator.request.EncryptionSecrets;
 import software.amazon.s3.analyticsaccelerator.request.ObjectMetadata;
+import software.amazon.s3.analyticsaccelerator.request.StreamAuditContext;
 import software.amazon.s3.analyticsaccelerator.util.InputPolicy;
 import software.amazon.s3.analyticsaccelerator.util.OpenStreamInformation;
 import software.amazon.s3.analyticsaccelerator.util.S3URI;
@@ -257,11 +258,17 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
           .etag(parameters.getObjectAttributes().getETag()).build());
     }
 
+
     if (parameters.getEncryptionSecrets().getEncryptionMethod() == S3AEncryptionMethods.SSE_C) {
       EncryptionSecretOperations.getSSECustomerKey(parameters.getEncryptionSecrets())
               .ifPresent(base64customerKey -> openStreamInformationBuilder.encryptionSecrets(
               EncryptionSecrets.builder().sseCustomerKey(Optional.of(base64customerKey)).build()));
     }
+
+    openStreamInformationBuilder.streamAuditContext(StreamAuditContext.builder()
+                    .operationName(parameters.getAuditSpan().getOperationName())
+                    .spanId(parameters.getAuditSpan().getSpanId())
+                    .build());
 
     return openStreamInformationBuilder.build();
   }

@@ -994,8 +994,7 @@ public class S3AStoreImpl
 
     @Override
     public S3Client getOrCreateSyncClient() throws IOException {
-      // Needs support of the CRT before the requireCRT can be used
-      LOG.debug("Stream factory requested async client");
+      LOG.debug("Stream factory requested sync client");
       return clientManager().getOrCreateS3Client();
     }
 
