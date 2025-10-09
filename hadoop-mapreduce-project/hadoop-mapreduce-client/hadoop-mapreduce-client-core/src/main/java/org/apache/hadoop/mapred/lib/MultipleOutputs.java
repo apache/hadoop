@@ -203,7 +203,7 @@ public class MultipleOutputs {
         continue;
       }
       throw new IllegalArgumentException(
-        "Name cannot be have a '" + ch + "' char");
+        "Name cannot contain a '" + ch + "' char");
     }
   }
 
