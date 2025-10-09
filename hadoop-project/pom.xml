@@ -67,6 +67,11 @@
     <!-- jersey version -->
     <jersey2.version>2.46</jersey2.version>
 
+    <!-- moxy version -->
+    <eclipse-persistence.version>2.7.14</eclipse-persistence.version>
+    <jsonapi.version>1.1.6</jsonapi.version>
+    <json.version>1.1.4</json.version>
+
     <!-- jaxb version -->
     <jaxb.version>2.3.9</jaxb.version>
 
@@ -2186,6 +2191,21 @@
         <groupId>org.glassfish.jersey.media</groupId>
         <artifactId>jersey-media-json-jettison</artifactId>
         <version>${jersey2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.persistence</groupId>
+        <artifactId>org.eclipse.persistence.moxy</artifactId>
+        <version>${eclipse-persistence.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>jakarta.json</groupId>
+        <artifactId>jakarta.json-api</artifactId>
+        <version>${jsonapi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.glassfish</groupId>
+        <artifactId>javax.json</artifactId>
+        <version>${json.version}</version>
       </dependency>
       <dependency>
         <groupId>org.glassfish.jaxb</groupId>

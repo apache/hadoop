@@ -90,6 +90,7 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.JAXBContextResolver;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -122,6 +123,7 @@ public class FederationStateStoreService extends AbstractService
   private String cleanUpThreadNamePrefix = "FederationStateStoreService-Clean-Thread";
   private int cleanUpRetryCountNum;
   private long cleanUpRetrySleepTime;
+  private JAXBContextResolver resolver;
 
   public FederationStateStoreService(RMContext rmContext) {
     super(FederationStateStoreService.class.getName());
@@ -182,6 +184,8 @@ public class FederationStateStoreService extends AbstractService
 
     this.metrics = FederationStateStoreServiceMetrics.getMetrics();
     LOG.info("Initialized federation statestore service metrics.");
+
+    this.resolver = new JAXBContextResolver(conf);
 
     super.serviceInit(conf);
   }
@@ -253,7 +257,7 @@ public class FederationStateStoreService extends AbstractService
           "Failed to register Federation membership with the StateStore", e);
     }
     stateStoreHeartbeat = new FederationStateStoreHeartbeat(subClusterId,
-        stateStoreClient, rmContext.getScheduler());
+        stateStoreClient, rmContext.getScheduler(), resolver);
     scheduledExecutorService =
         HadoopExecutors.newSingleThreadScheduledExecutor();
     scheduledExecutorService.scheduleWithFixedDelay(stateStoreHeartbeat,
