@@ -509,9 +509,34 @@ public class AbfsBlobClient extends AbfsClient {
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsRestOperation op;
     if (isFileCreation) {
-      // Create a file with the specified parameters
-      op = createFile(path, overwrite, permissions, isAppendBlob, eTag,
-          contextEncryptionAdapter, tracingContext);
+      if (getAbfsConfiguration().getIsCreateIdempotencyEnabled()) {
+        AbfsRestOperation statusOp = null;
+        try {
+          // Check if the file already exists by calling GetPathStatus
+          statusOp = getPathStatus(path, tracingContext, null, false);
+        } catch (AbfsRestOperationException ex) {
+          // If the path does not exist, continue with file creation
+          // For other errors, rethrow the exception
+          if (ex.getStatusCode() != HTTP_NOT_FOUND) {
+            throw ex;
+          }
+        }
+        // If the file exists and overwrite is not allowed, throw conflict
+        if (statusOp != null && statusOp.hasResult() && !overwrite) {
+          throw new AbfsRestOperationException(
+              HTTP_CONFLICT,
+              AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
+              PATH_EXISTS,
+              null);
+        } else {
+          // Proceed with file creation (force overwrite = true)
+          op = createFile(path, true, permissions, isAppendBlob, eTag,
+              contextEncryptionAdapter, tracingContext);
+        }
+      } else {
+        op = createFile(path, overwrite, permissions, isAppendBlob, eTag,
+            contextEncryptionAdapter, tracingContext);
+      }
     } else {
       // Create a directory with the specified parameters
       op = createDirectory(path, permissions, isAppendBlob, eTag,
@@ -584,7 +609,6 @@ public class AbfsBlobClient extends AbfsClient {
     if (eTag != null && !eTag.isEmpty()) {
       requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.IF_MATCH, eTag));
     }
-
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
         AbfsRestOperationType.PutBlob,
@@ -1076,9 +1100,10 @@ public class AbfsBlobClient extends AbfsClient {
     if (leaseId != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
     }
-    if (blobMd5 != null) {
-      requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, blobMd5));
-    }
+    String md5Value = (isFullBlobChecksumValidationEnabled() && blobMd5 != null)
+        ? blobMd5
+        : computeMD5Hash(buffer, 0, buffer.length);
+    requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, md5Value));
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCKLIST);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(isClose));
@@ -1103,7 +1128,12 @@ public class AbfsBlobClient extends AbfsClient {
         AbfsRestOperation op1 = getPathStatus(path, true, tracingContext,
             contextEncryptionAdapter);
         String metadataMd5 = op1.getResult().getResponseHeader(CONTENT_MD5);
-        if (blobMd5 != null && !blobMd5.equals(metadataMd5)) {
+        /*
+         * Validate the response by comparing the server's MD5 metadata against either:
+         * 1. The full blob content MD5 (if full blob checksum validation is enabled), or
+         * 2. The full block ID list buffer MD5 (fallback if blob checksum validation is disabled)
+         */
+        if (md5Value != null && !md5Value.equals(metadataMd5)) {
           throw ex;
         }
         return op;

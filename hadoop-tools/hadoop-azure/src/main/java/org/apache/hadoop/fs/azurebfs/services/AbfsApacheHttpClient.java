@@ -20,7 +20,9 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.URL;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.config.RequestConfig;
@@ -71,15 +73,18 @@ final class AbfsApacheHttpClient implements Closeable {
   }
 
   AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
-      final int readTimeout, final KeepAliveCache keepAliveCache) {
+      final AbfsConfiguration abfsConfiguration, final KeepAliveCache keepAliveCache,
+      URL baseUrl) {
     final AbfsConnectionManager connMgr = new AbfsConnectionManager(
         createSocketFactoryRegistry(
             new SSLConnectionSocketFactory(delegatingSSLSocketFactory,
                 getDefaultHostnameVerifier())),
-        new AbfsHttpClientConnectionFactory(), keepAliveCache);
+        new AbfsHttpClientConnectionFactory(), keepAliveCache,
+        abfsConfiguration, baseUrl);
     final HttpClientBuilder builder = HttpClients.custom();
     builder.setConnectionManager(connMgr)
-        .setRequestExecutor(new AbfsManagedHttpRequestExecutor(readTimeout))
+        .setRequestExecutor(
+            new AbfsManagedHttpRequestExecutor(abfsConfiguration.getHttpReadTimeout()))
         .disableContentCompression()
         .disableRedirectHandling()
         .disableAutomaticRetries()

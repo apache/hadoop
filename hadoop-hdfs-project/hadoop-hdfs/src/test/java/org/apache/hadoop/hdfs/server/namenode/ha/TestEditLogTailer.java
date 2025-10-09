@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -59,21 +61,19 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.FakeTimer;
 import org.slf4j.event.Level;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.function.Supplier;
 import org.mockito.Mockito;
 
-@RunWith(Parameterized.class)
+@MethodSource("data")
+@ParameterizedClass
 public class TestEditLogTailer {
   static {
     GenericTestUtils.setLogLevel(FSEditLog.LOG, Level.DEBUG);
   }
 
-  @Parameters
   public static Collection<Object[]> data() {
     Collection<Object[]> params = new ArrayList<Object[]>();
     params.add(new Object[]{ Boolean.FALSE });
@@ -132,9 +132,9 @@ public class TestEditLogTailer {
       }
       
       HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
-      assertEquals("Inconsistent number of applied txns on Standby",
-          nn1.getNamesystem().getEditLog().getLastWrittenTxId(),
-          nn2.getNamesystem().getFSImage().getLastAppliedTxId() + 1);
+      assertEquals(nn1.getNamesystem().getEditLog().getLastWrittenTxId(),
+          nn2.getNamesystem().getFSImage().getLastAppliedTxId() + 1,
+          "Inconsistent number of applied txns on Standby");
 
       for (int i = 0; i < DIRS_TO_MAKE / 2; i++) {
         assertTrue(NameNodeAdapter.getFileInfo(nn2,
@@ -148,9 +148,9 @@ public class TestEditLogTailer {
       }
       
       HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
-      assertEquals("Inconsistent number of applied txns on Standby",
-          nn1.getNamesystem().getEditLog().getLastWrittenTxId(),
-          nn2.getNamesystem().getFSImage().getLastAppliedTxId() + 1);
+      assertEquals(nn1.getNamesystem().getEditLog().getLastWrittenTxId(),
+          nn2.getNamesystem().getFSImage().getLastAppliedTxId() + 1,
+          "Inconsistent number of applied txns on Standby");
 
       for (int i = DIRS_TO_MAKE / 2; i < DIRS_TO_MAKE; i++) {
         assertTrue(NameNodeAdapter.getFileInfo(nn2,
@@ -302,7 +302,8 @@ public class TestEditLogTailer {
     }, 100, 10000);
   }
 
-  @Test(timeout=20000)
+  @Test
+  @Timeout(value = 20)
   public void testRollEditTimeoutForActiveNN() throws IOException {
     Configuration conf = getConf();
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_KEY, 5); // 5s

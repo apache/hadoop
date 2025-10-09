@@ -84,17 +84,17 @@ pipeline {
         stage ('setup sources') {
             steps {
 
-                dir("${WORKSPACE}/centos-8") {
+                dir("${WORKSPACE}/rockylinux-8") {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/centos-8
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/rockylinux-8
                     '''
                 }
 
-                dir("${WORKSPACE}/debian-10") {
+                dir("${WORKSPACE}/debian-11") {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/debian-10
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/debian-11
                     '''
                 }
 
@@ -111,12 +111,12 @@ pipeline {
         // C++/C++ build/platform.
         // This stage serves as a means of cross platform validation, which is
         // really needed to ensure that any C++ related/platform change doesn't
-        // break the Hadoop build on Centos 8.
-        stage ('precommit-run Centos 8') {
+        // break the Hadoop build on Rocky Linux 8.
+        stage ('precommit-run Rocky Linux 8') {
             environment {
-                SOURCEDIR = "${WORKSPACE}/centos-8/src"
-                PATCHDIR = "${WORKSPACE}/centos-8/out"
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_centos_8"
+                SOURCEDIR = "${WORKSPACE}/rockylinux-8/src"
+                PATCHDIR = "${WORKSPACE}/rockylinux-8/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_rockylinux_8"
                 IS_OPTIONAL = 1
             }
 
@@ -136,7 +136,7 @@ pipeline {
                 failure {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp "${WORKSPACE}/centos-8/out" "${WORKSPACE}"
+                    cp -Rp "${WORKSPACE}/rockylinux-8/out" "${WORKSPACE}"
                     '''
                     archiveArtifacts "out/**"
                 }
@@ -157,12 +157,12 @@ pipeline {
         // C++/C++ build/platform.
         // This stage serves as a means of cross platform validation, which is
         // really needed to ensure that any C++ related/platform change doesn't
-        // break the Hadoop build on Debian 10.
-        stage ('precommit-run Debian 10') {
+        // break the Hadoop build on Debian 11.
+        stage ('precommit-run Debian 11') {
             environment {
-                SOURCEDIR = "${WORKSPACE}/debian-10/src"
-                PATCHDIR = "${WORKSPACE}/debian-10/out"
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_10"
+                SOURCEDIR = "${WORKSPACE}/debian-11/src"
+                PATCHDIR = "${WORKSPACE}/debian-11/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_11"
                 IS_OPTIONAL = 1
             }
 
@@ -182,7 +182,7 @@ pipeline {
                 failure {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp "${WORKSPACE}/debian-10/out" "${WORKSPACE}"
+                    cp -Rp "${WORKSPACE}/debian-11/out" "${WORKSPACE}"
                     '''
                     archiveArtifacts "out/**"
                 }

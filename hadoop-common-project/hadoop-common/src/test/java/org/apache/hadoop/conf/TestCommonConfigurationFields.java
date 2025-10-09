@@ -149,6 +149,12 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.azure.saskey.usecontainersaskeyforallaccess");
     xmlPropsToSkipCompare.add("fs.azure.user.agent.prefix");
 
+    // GS properties are in a different class
+    // - org.apache.hadoop.fs.gs.GoogleHadoopFileSystemConfiguration
+    xmlPrefixToSkipCompare.add("gs.");
+    xmlPrefixToSkipCompare.add("fs.gs.");
+    xmlPropsToSkipCompare.add("fs.AbstractFileSystem.gs.impl");
+
     // Properties in enable callqueue overflow trigger failover for stateless servers.
     xmlPropsToSkipCompare.add("ipc.[port_number].callqueue.overflow.trigger.failover");
     xmlPropsToSkipCompare.add("ipc.callqueue.overflow.trigger.failover");

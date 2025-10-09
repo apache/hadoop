@@ -152,6 +152,13 @@ public final class ExitUtil {
   }
 
   /**
+   * Enable the use of System.exit for testing.
+   */
+  public static void enableSystemExit() {
+    systemExitDisabled = false;
+  }
+
+  /**
    * Disable the use of {@code Runtime.getRuntime().halt() } for testing.
    */
   public static void disableSystemHalt() {

@@ -223,7 +223,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       md5 = MessageDigest.getInstance(MD5);
       fullBlobContentMd5 = MessageDigest.getInstance(MD5);
     } catch (NoSuchAlgorithmException e) {
-      if (client.isChecksumValidationEnabled()) {
+      if (isChecksumValidationEnabled()) {
         throw new IOException("MD5 algorithm not available", e);
       }
     }
@@ -464,10 +464,13 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     AbfsBlock block = createBlockIfNeeded(position);
     int written = bufferData(block, data, off, length);
     // Update the incremental MD5 hash with the written data.
-    getMessageDigest().update(data, off, written);
-
+    if (isChecksumValidationEnabled()) {
+      getMessageDigest().update(data, off, written);
+    }
     // Update the full blob MD5 hash with the written data.
-    getFullBlobContentMd5().update(data, off, written);
+    if (isFullBlobChecksumValidationEnabled()) {
+      getFullBlobContentMd5().update(data, off, written);
+    }
     int remainingCapacity = block.remainingCapacity();
 
     if (written < length) {
@@ -544,7 +547,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     outputStreamStatistics.bytesToUpload(bytesLength);
     outputStreamStatistics.writeCurrentBuffer();
     DataBlocks.BlockUploadData blockUploadData = blockToUpload.startUpload();
-    String md5Hash = getMd5();
+    String md5Hash = getClient().isChecksumValidationEnabled() ? getMd5() : null;
     final Future<Void> job =
         executorService.submit(() -> {
           AbfsPerfTracker tracker =
@@ -1220,6 +1223,20 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    */
   public MessageDigest getFullBlobContentMd5() {
     return fullBlobContentMd5;
+  }
+
+  /**
+   * @return true if checksum validation is enabled.
+   */
+  public boolean isChecksumValidationEnabled() {
+    return getClient().isChecksumValidationEnabled();
+  }
+
+  /**
+   * @return true if full blob checksum validation is enabled.
+   */
+  public boolean isFullBlobChecksumValidationEnabled() {
+    return getClient().isFullBlobChecksumValidationEnabled();
   }
 
   /**

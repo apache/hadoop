@@ -54,9 +54,10 @@ import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ThreadUtil;
 import org.apache.log4j.spi.LoggingEvent;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
@@ -65,7 +66,10 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 
 public class TestStandbyCheckpoints {
@@ -80,7 +84,7 @@ public class TestStandbyCheckpoints {
   private static final Logger LOG = LoggerFactory.getLogger(TestStandbyCheckpoints.class);
 
   @SuppressWarnings("rawtypes")
-  @Before
+  @BeforeEach
   public void setupCluster() throws Exception {
     Configuration conf = setupCommonConfig();
 
@@ -143,7 +147,7 @@ public class TestStandbyCheckpoints {
     return conf;
   }
 
-  @After
+  @AfterEach
   public void shutdownCluster() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -155,7 +159,8 @@ public class TestStandbyCheckpoints {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testSBNCheckpoints() throws Exception {
     JournalSet standbyJournalSet = NameNodeAdapterMockitoUtil.spyOnJournalSet(nns[1]);
 
@@ -177,7 +182,7 @@ public class TestStandbyCheckpoints {
     }, 1000, 60000);
     
     // It should have saved the oiv image too.
-    assertEquals("One file is expected", 1, tmpOivImgDir.list().length);
+    assertEquals(1, tmpOivImgDir.list().length, "One file is expected");
     
     // It should also upload it back to the active.
     HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(12));
@@ -234,7 +239,8 @@ public class TestStandbyCheckpoints {
    * checkpoint for the given txid, but this should not cause
    * an abort, etc.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testBothNodesInStandbyState() throws Exception {
     doEdits(0, 10);
     
@@ -247,10 +253,8 @@ public class TestStandbyCheckpoints {
     HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(12));
     HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(12));
     
-    assertEquals(12, nns[0].getNamesystem().getFSImage()
-        .getMostRecentCheckpointTxId());
-    assertEquals(12, nns[1].getNamesystem().getFSImage()
-        .getMostRecentCheckpointTxId());
+    assertEquals(12, nns[0].getNamesystem().getFSImage().getMostRecentCheckpointTxId());
+    assertEquals(12, nns[1].getNamesystem().getFSImage().getMostRecentCheckpointTxId());
     
     List<File> dirs = Lists.newArrayList();
     dirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 0));
@@ -262,7 +266,8 @@ public class TestStandbyCheckpoints {
    * Test for the case of when there are observer NameNodes, Standby node is
    * able to upload fsImage to Observer node as well.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testStandbyAndObserverState() throws Exception {
     // Transition 2 to observer
     cluster.transitionToObserver(2);
@@ -277,10 +282,8 @@ public class TestStandbyCheckpoints {
     HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(12));
     HATestUtil.waitForCheckpoint(cluster, 2, ImmutableList.of(12));
 
-    assertEquals(12, nns[2].getNamesystem().getFSImage()
-        .getMostRecentCheckpointTxId());
-    assertEquals(12, nns[1].getNamesystem().getFSImage()
-        .getMostRecentCheckpointTxId());
+    assertEquals(12, nns[2].getNamesystem().getFSImage().getMostRecentCheckpointTxId());
+    assertEquals(12, nns[1].getNamesystem().getFSImage().getMostRecentCheckpointTxId());
 
     List<File> dirs = Lists.newArrayList();
     // observer and standby both have this same image.
@@ -296,7 +299,8 @@ public class TestStandbyCheckpoints {
    * If putImage is called while a NameNode is still starting up, the FSImage
    * may not have been initialized yet. See HDFS-15290.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testCheckpointBeforeNameNodeInitializationIsComplete()
       throws Exception {
     final LogVerificationAppender appender = new LogVerificationAppender();
@@ -341,7 +345,8 @@ public class TestStandbyCheckpoints {
    * same txid, which is a no-op. This test makes sure this doesn't
    * cause any problem.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testCheckpointWhenNoNewTransactionsHappened()
       throws Exception {
     // Checkpoint as fast as we can, in a tight loop.
@@ -370,7 +375,8 @@ public class TestStandbyCheckpoints {
    * Test cancellation of ongoing checkpoints when failover happens
    * mid-checkpoint. 
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testCheckpointCancellation() throws Exception {
     cluster.transitionToStandby(0);
     
@@ -414,7 +420,8 @@ public class TestStandbyCheckpoints {
    * Test cancellation of ongoing checkpoints when failover happens
    * mid-checkpoint during image upload from standby to active NN.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testCheckpointCancellationDuringUpload() throws Exception {
     // Set dfs.namenode.checkpoint.txns differently on the first NN to avoid it
     // doing checkpoint when it becomes a standby
@@ -482,7 +489,8 @@ public class TestStandbyCheckpoints {
    * checkpoint is in progress on the SBN, and therefore the StandbyCheckpointer
    * thread will have FSNS lock. Regression test for HDFS-4591.
    */
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testStandbyExceptionThrownDuringCheckpoint() throws Exception {
     
     // Set it up so that we know when the SBN checkpoint starts and ends.
@@ -496,8 +504,8 @@ public class TestStandbyCheckpoints {
     doEdits(0, 1000);
     nns[0].getRpcServer().rollEditLog();
     answerer.waitForCall();
-    assertTrue("SBN is not performing checkpoint but it should be.",
-        answerer.getFireCount() == 1 && answerer.getResultCount() == 0);
+    assertTrue(answerer.getFireCount() == 1 && answerer.getResultCount() == 0,
+        "SBN is not performing checkpoint but it should be.");
     
     // Make sure that the lock has actually been taken by the checkpointing
     // thread.
@@ -519,15 +527,16 @@ public class TestStandbyCheckpoints {
     
     // Make sure that the checkpoint is still going on, implying that the client
     // RPC to the SBN happened during the checkpoint.
-    assertTrue("SBN should have still been checkpointing.",
-        answerer.getFireCount() == 1 && answerer.getResultCount() == 0);
+    assertTrue(answerer.getFireCount() == 1 && answerer.getResultCount() == 0,
+        "SBN should have still been checkpointing.");
     answerer.proceed();
     answerer.waitForResult();
-    assertTrue("SBN should have finished checkpointing.",
-        answerer.getFireCount() == 1 && answerer.getResultCount() == 1);
+    assertTrue(answerer.getFireCount() == 1 && answerer.getResultCount() == 1,
+        "SBN should have finished checkpointing.");
   }
-  
-  @Test(timeout=300000)
+
+  @Test
+  @Timeout(value = 300)
   public void testReadsAllowedDuringCheckpoint() throws Exception {
     
     // Set it up so that we know when the SBN checkpoint starts and ends.
@@ -542,8 +551,8 @@ public class TestStandbyCheckpoints {
     doEdits(0, 1000);
     nns[0].getRpcServer().rollEditLog();
     answerer.waitForCall();
-    assertTrue("SBN is not performing checkpoint but it should be.",
-        answerer.getFireCount() == 1 && answerer.getResultCount() == 0);
+    assertTrue(answerer.getFireCount() == 1 && answerer.getResultCount() == 0,
+        "SBN is not performing checkpoint but it should be.");
     
     // Make sure that the lock has actually been taken by the checkpointing
     // thread.
@@ -578,12 +587,12 @@ public class TestStandbyCheckpoints {
     
     // Make sure that the checkpoint is still going on, implying that the client
     // RPC to the SBN happened during the checkpoint.
-    assertTrue("SBN should have still been checkpointing.",
-        answerer.getFireCount() == 1 && answerer.getResultCount() == 0);
+    assertTrue(answerer.getFireCount() == 1 && answerer.getResultCount() == 0,
+        "SBN should have still been checkpointing.");
     answerer.proceed();
     answerer.waitForResult();
-    assertTrue("SBN should have finished checkpointing.",
-        answerer.getFireCount() == 1 && answerer.getResultCount() == 1);
+    assertTrue(answerer.getFireCount() == 1 && answerer.getResultCount() == 1,
+        "SBN should have finished checkpointing.");
     
     t.join();
   }
@@ -592,7 +601,8 @@ public class TestStandbyCheckpoints {
    * Test for the case standby NNs can upload FSImage to ANN after
    * become non-primary standby NN. HDFS-9787
    */
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testNonPrimarySBNUploadFSImage() throws Exception {
     // Shutdown all standby NNs.
     for (int i = 1; i < NUM_NNS; i++) {
@@ -634,7 +644,8 @@ public class TestStandbyCheckpoints {
    * Test that checkpointing is still successful even if an issue
    * was encountered while writing the legacy OIV image.
    */
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testCheckpointSucceedsWithLegacyOIVException() throws Exception {
     // Delete the OIV image dir to cause an IOException while saving
     FileUtil.fullyDelete(tmpOivImgDir);
@@ -652,7 +663,8 @@ public class TestStandbyCheckpoints {
   /**
    * Test that lastCheckpointTime is correctly updated at each checkpoint.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testLastCheckpointTime() throws Exception {
     for (int i = 1; i < NUM_NNS; i++) {
       cluster.shutdownNameNode(i);

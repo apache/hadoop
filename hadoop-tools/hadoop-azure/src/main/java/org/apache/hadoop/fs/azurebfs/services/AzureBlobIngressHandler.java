@@ -180,7 +180,10 @@ public class AzureBlobIngressHandler extends AzureIngressHandler {
       tracingContextFlush.setIngressHandler(BLOB_FLUSH);
       tracingContextFlush.setPosition(String.valueOf(offset));
       LOG.trace("Flushing data at offset {} for path {}", offset, getAbfsOutputStream().getPath());
-      String fullBlobMd5 = computeFullBlobMd5();
+      String fullBlobMd5 = null;
+      if (getClient().isFullBlobChecksumValidationEnabled()) {
+        fullBlobMd5 = computeFullBlobMd5();
+      }
       op = getClient().flush(blockListXml.getBytes(StandardCharsets.UTF_8),
           getAbfsOutputStream().getPath(),
           isClose, getAbfsOutputStream().getCachedSasTokenString(), leaseId,
@@ -194,7 +197,9 @@ public class AzureBlobIngressHandler extends AzureIngressHandler {
       LOG.error("Error in remote flush for path {} and offset {}", getAbfsOutputStream().getPath(), offset, ex);
       throw ex;
     } finally {
-      getAbfsOutputStream().getFullBlobContentMd5().reset();
+      if (getClient().isFullBlobChecksumValidationEnabled()) {
+        getAbfsOutputStream().getFullBlobContentMd5().reset();
+      }
     }
     return op;
   }
@@ -221,7 +226,7 @@ public class AzureBlobIngressHandler extends AzureIngressHandler {
       AppendRequestParameters reqParams,
       TracingContext tracingContext) throws IOException {
     // Perform the remote append operation using the blob client.
-    AbfsRestOperation op = null;
+    AbfsRestOperation op;
     try {
       op = blobClient.appendBlock(path, reqParams, uploadData.toByteArray(), tracingContext);
     } catch (AbfsRestOperationException ex) {
