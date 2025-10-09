@@ -425,8 +425,8 @@ Available package profiles:
 To build a complete distribution then with all cloud dependencies included:
 
 mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true \
- -Phadoop-aliyun-package,hadoop-aws-package,hadoop-azure-datalake-package\
- -Phadoop-cos-package,hadoop-gcp-package,hadoop-tos-package
+ -Dhadoop-aliyun-package -Dhadoop-aws-package -Dhadoop-azure-datalake-package\
+ -Dhadoop-cos-package -Dhadoop-gcp-package -Dhadoop-tos-package
 
 The resulting tar file will be too large to be distributable through ASF infrastructure.
 
