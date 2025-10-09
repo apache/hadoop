@@ -31,6 +31,7 @@ import javax.ws.rs.core.Response;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.ApplicationSubmissionContextInfoReader;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.writer.ApplicationSubmissionContextInfoWriter;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -73,7 +74,8 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
     config.register(ApplicationSubmissionContextInfoWriter.class);
     config.register(ApplicationSubmissionContextInfoReader.class);
     config.register(TestRMWebServicesAppsModification.TestRMCustomAuthFilter.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     return config;
   }
 

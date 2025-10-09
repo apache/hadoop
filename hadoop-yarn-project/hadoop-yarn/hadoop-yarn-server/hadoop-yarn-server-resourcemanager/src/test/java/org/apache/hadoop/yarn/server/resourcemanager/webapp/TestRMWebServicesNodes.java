@@ -88,6 +88,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.Alloca
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.ResourceOptionInfoReader;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.writer.ResourceOptionInfoWriter;
 import org.apache.hadoop.yarn.util.Records;
@@ -127,7 +128,8 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     config.register(RMWebServices.class);
     config.register(GenericExceptionHandler.class);
     config.register(TestRMCustomAuthFilter.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
   }
@@ -292,10 +294,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject nodes = json.getJSONObject("nodes");
     assertEquals(1, nodes.length(), "incorrect number of elements");
-    JSONObject node = nodes.getJSONObject("node");
-    JSONArray nodeArray = new JSONArray();
-    nodeArray.put(node);
-
+    JSONArray nodeArray = nodes.getJSONArray("node");
     assertEquals(1, nodeArray.length(), "incorrect number of elements");
     JSONObject info = nodeArray.getJSONObject(0);
 
@@ -316,7 +315,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
-    assertEquals("", json.get("nodes").toString(), "nodes is not empty");
+    assertEquals(new JSONObject().toString(), json.get("nodes").toString(), "nodes is not empty");
   }
 
   @Test
@@ -428,9 +427,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject nodes = json.getJSONObject("nodes");
     assertEquals(1, nodes.length(), "incorrect number of elements");
-    JSONObject node = nodes.getJSONObject("node");
-    JSONArray nodeArray = new JSONArray();
-    nodeArray.put(node);
+    JSONArray nodeArray = nodes.getJSONArray("node");
     assertEquals(1, nodeArray.length(), "incorrect number of elements");
   }
 
@@ -447,7 +444,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
-    assertEquals("", json.get("nodes").toString(), "nodes is not empty");
+    assertEquals(new JSONObject().toString(), json.get("nodes").toString(), "nodes is not empty");
   }
 
   public void testNodesHelper(String path, String media) throws JSONException,
@@ -739,9 +736,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject nodes = json.getJSONObject("nodes");
     assertEquals(1, nodes.length(), "incorrect number of elements");
-    JSONObject jsonNode = nodes.getJSONObject("node");
-    JSONArray nodeArray = new JSONArray();
-    nodeArray.put(jsonNode);
+    JSONArray nodeArray = nodes.getJSONArray("node");
     assertEquals(1, nodeArray.length(), "incorrect number of elements");
     JSONObject info = nodeArray.getJSONObject(0);
 
@@ -752,8 +747,6 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
   @Test
   public void testUpdateNodeResource() throws Exception {
     WebTarget r = targetWithJsonObject()
-        .register(ResourceOptionInfoReader.class)
-        .register(ResourceOptionInfoWriter.class)
         .path(RMWSConsts.RM_WEB_SERVICE_PATH);
 
     r = r.queryParam("user.name", userName);
@@ -1023,10 +1016,8 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
 
     String entity =  response.readEntity(String.class);
     JSONObject nodesInfoJson = new JSONObject(entity);
-    JSONObject jsonNodes = nodesInfoJson.getJSONObject("nodes");
-    JSONObject jsonNode = jsonNodes.getJSONObject("node");
-    JSONArray nodes = new JSONArray();
-    nodes.put(jsonNode);
+    JSONArray nodes = nodesInfoJson.getJSONObject("nodes")
+        .getJSONArray("node");
     JSONObject nodeJson = nodes.getJSONObject(0);
     JSONArray nodeAttributesInfo = nodeJson.getJSONObject("nodeAttributesInfo")
         .getJSONArray("nodeAttributeInfo");

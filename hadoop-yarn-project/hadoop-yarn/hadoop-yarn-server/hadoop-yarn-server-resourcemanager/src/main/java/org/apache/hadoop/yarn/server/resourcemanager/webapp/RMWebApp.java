@@ -23,10 +23,13 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
+
+import org.glassfish.jersey.moxy.json.MoxyJsonConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.util.RMHAUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -60,7 +63,8 @@ public class RMWebApp extends WebApp implements YarnWebParams {
     config.register(new JerseyBinder());
     config.register(RMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     return config;
   }
 

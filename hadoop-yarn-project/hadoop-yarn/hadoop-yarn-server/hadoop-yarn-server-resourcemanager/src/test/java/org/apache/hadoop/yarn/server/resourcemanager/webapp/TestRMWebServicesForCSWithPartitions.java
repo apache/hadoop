@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.Activi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
@@ -130,7 +131,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     config.register(RMWebServices.class);
     config.register(new JerseyBinder());
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
   }

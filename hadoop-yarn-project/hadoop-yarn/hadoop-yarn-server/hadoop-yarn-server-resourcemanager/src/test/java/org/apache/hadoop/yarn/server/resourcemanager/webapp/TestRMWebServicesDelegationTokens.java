@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -85,10 +86,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJsonNoRoot;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toEntity;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.logging.LoggingFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 
@@ -111,7 +111,8 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     config.register(RMWebServices.class);
     config.register(GenericExceptionHandler.class);
     config.register(TestRMWebServicesAppsModification.TestRMCustomAuthFilter.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     return config;
   }
 
@@ -278,7 +279,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     final String renewer = "test-renewer";
     DelegationToken token = new DelegationToken();
     token.setRenewer(renewer);
-    String jsonBody = toJson(token, DelegationToken.class);
+    String jsonBody = toJsonNoRoot(token, DelegationToken.class);
     String xmlBody =
         "<delegation-token><renewer>" + renewer
             + "</renewer></delegation-token>";
@@ -477,7 +478,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
             if (mediaType.equals(MediaType.APPLICATION_JSON)) {
               DelegationToken dToken = new DelegationToken();
               dToken.setToken(token);
-              body = toJson(dToken, DelegationToken.class);
+              body = toJsonNoRoot(dToken, DelegationToken.class);
             } else {
               body =
                   "<delegation-token><token>" + token
@@ -510,7 +511,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
       DelegationToken delegationToken = new DelegationToken();
       body = "{\"token\": \"" + token + "\" }";
       delegationToken.setToken("test-123");
-      body = toJson(delegationToken, DelegationToken.class);
+      body = toJsonNoRoot(delegationToken, DelegationToken.class);
     } else {
       body =
           "<delegation-token><token>" + token + "</token></delegation-token>";
@@ -748,7 +749,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
           JSONException {
     if (response.getMediaType().toString().contains(MediaType.APPLICATION_JSON)) {
       return getDelegationTokenFromJson(
-          response.readEntity(JSONObject.class).getJSONObject("delegation-token"));
+          response.readEntity(JSONObject.class));
     }
     return getDelegationTokenFromXML(response.readEntity(String.class));
   }
@@ -822,7 +823,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     if (mediaType.contains(MediaType.APPLICATION_JSON)) {
       DelegationToken dToken = new DelegationToken();
       dToken.setToken(token);
-      body = toJson(dToken, DelegationToken.class);
+      body = toJsonNoRoot(dToken, DelegationToken.class);
     } else {
       body =
           "<delegation-token><token>" + token + "</token></delegation-token>";

@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
@@ -36,8 +35,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.NodeLabelsInfoReader;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.writer.SchedConfUpdateInfoWriter;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
@@ -75,7 +74,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getCapacitySchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.backupSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.restoreSchedulerConfigFileInTarget;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJsonNoRoot;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -112,7 +111,8 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     config.register(GenericExceptionHandler.class);
     config.register(NodeLabelsInfoReader.class);
     config.register(TestRMWebServicesAppsModification.TestRMCustomAuthFilter.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     return config;
   }
 
@@ -207,8 +207,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
             .request(MediaType.APPLICATION_JSON)
             .get(Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
-    JSONObject json = response.readEntity(JSONObject.class).
-        getJSONObject("configuration");
+    JSONObject json = response.readEntity(JSONObject.class);
     JSONArray items = (JSONArray) json.get("property");
     CapacitySchedulerConfiguration parsedConf =
         new CapacitySchedulerConfiguration();
@@ -248,7 +247,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(stoppedInfo);
 
     // Add a queue root.formattest to the existing three queues
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
     Response response = r.path("ws").path("v1").path("cluster")
         .path("scheduler-conf").queryParam("user.name", userName)
         .request(MediaType.APPLICATION_JSON)
@@ -293,7 +292,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     assertNotNull(orgConf);
     assertEquals(4, orgConf.getQueues(ROOT).size());
 
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
 
     Response response;
 
@@ -338,7 +337,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testAddWithUpdate() throws Exception {
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
 
     Response response;
 
@@ -368,7 +367,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testUnsetParentQueueOrderingPolicy() throws Exception {
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
     Response response;
 
     // Update ordering policy of Leaf Queue root.b to fair
@@ -415,7 +414,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testUnsetLeafQueueOrderingPolicy() throws Exception {
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
     Response response;
 
     // Update ordering policy of Parent Queue root.c to priority-utilization
@@ -459,7 +458,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testRemoveQueue() throws Exception {
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
 
     Response response;
 
@@ -485,7 +484,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testStopWithRemoveQueue() throws Exception {
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
 
     Response response;
 
@@ -514,7 +513,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testRemoveQueueWhichHasQueueMapping() throws Exception {
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
 
     Response response;
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -553,7 +552,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testStopWithConvertLeafToParentQueue() throws Exception {
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
     Response response;
 
     // Set state of queues to STOPPED.
@@ -584,7 +583,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testRemoveParentQueue() throws Exception {
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
 
     Response response;
 
@@ -607,7 +606,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testRemoveParentQueueWithCapacity() throws Exception {
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
 
     Response response;
 
@@ -637,7 +636,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testRemoveMultipleQueues() throws Exception {
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
 
     Response response;
 
@@ -664,7 +663,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
   }
 
   private void stopQueue(QueuePath... queuePaths) throws Exception {
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
 
     Response response;
 
@@ -692,7 +691,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testUpdateQueue() throws Exception {
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
 
     Response response;
 
@@ -743,7 +742,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testUpdateQueueCapacity() throws Exception {
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
 
     Response response;
 
@@ -770,7 +769,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testGlobalConfChange() throws Exception {
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
 
     Response response;
 
@@ -805,9 +804,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         newCSConf.getMaximumSystemApplications());
   }
 
+  //TODO: fix, some missing label
   @Test
   public void testNodeLabelRemovalResidualConfigsAreCleared() throws Exception {
-    WebTarget r = target().register(NodeLabelsInfoReader.class);
+    WebTarget r = target();
     Response response;
 
     // 1. Create Node Label: label1
@@ -824,7 +824,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response = addNodeLabelsResource.queryParam("user.name", userName)
         .request(MediaType.APPLICATION_JSON)
         .post(Entity.entity(logAndReturnJson(addNodeLabelsResource,
-        toJson(nodeLabelsInfo, NodeLabelsInfo.class)), MediaType.APPLICATION_JSON), Response.class);
+        toJsonNoRoot(nodeLabelsInfo, NodeLabelsInfo.class)), MediaType.APPLICATION_JSON), Response.class);
 
     // 2. Verify new Node Label
     response = getNodeLabelsResource.queryParam("user.name", userName)
@@ -854,7 +854,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response = schedulerConfResource
         .queryParam("user.name", userName)
         .request(MediaType.APPLICATION_JSON)
-        .put(Entity.entity(logAndReturnJson(schedulerConfResource, toJson(updateInfo,
+        .put(Entity.entity(logAndReturnJson(schedulerConfResource, toJsonNoRoot(updateInfo,
         SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON), Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
 
@@ -901,7 +901,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response = schedulerConfResource
         .queryParam("user.name", userName)
         .request(MediaType.APPLICATION_JSON)
-        .put(Entity.entity(logAndReturnJson(schedulerConfResource, toJson(updateInfo,
+        .put(Entity.entity(logAndReturnJson(schedulerConfResource, toJsonNoRoot(updateInfo,
         SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON),
         Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -953,7 +953,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response = schedulerConfResource
         .queryParam("user.name", userName)
         .request(MediaType.APPLICATION_JSON)
-        .put(Entity.entity(logAndReturnJson(schedulerConfResource, toJson(updateInfo,
+        .put(Entity.entity(logAndReturnJson(schedulerConfResource, toJsonNoRoot(updateInfo,
         SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON), Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     assertEquals(Sets.newHashSet("*"),
@@ -1010,7 +1010,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testValidateWithClusterMaxAllocation() throws Exception {
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
+    WebTarget r = target();
     int clusterMax = YarnConfiguration.
         DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB * 2;
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,

@@ -36,6 +36,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.ApplicationSubmissionContextInfoReader;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.writer.ApplicationSubmissionContextInfoWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.writer.SchedConfUpdateInfoWriter;
@@ -83,11 +84,9 @@ public class TestRMWebServicesCapacitySchedulerConfigMutation extends JerseyTest
     config.register(RMWebServices.class);
     config.register(new JerseyBinder());
     config.register(GenericExceptionHandler.class);
-    config.register(ApplicationSubmissionContextInfoWriter.class);
-    config.register(SchedConfUpdateInfoWriter.class);
-    config.register(ApplicationSubmissionContextInfoReader.class);
     config.register(TestRMWebServicesAppsModification.TestRMCustomAuthFilter.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     return config;
   }
 
@@ -161,7 +160,7 @@ public class TestRMWebServicesCapacitySchedulerConfigMutation extends JerseyTest
     QueueConfigInfo b = new QueueConfigInfo("root.a", capacityChange);
     updateInfo.getUpdateQueueInfo().add(b);
 
-    Response response = target().register(SchedConfUpdateInfoWriter.class)
+    Response response = target()
         .path("ws/v1/cluster/scheduler-conf")
         .queryParam("user.name", userName)
         .request(MediaType.APPLICATION_JSON)

@@ -32,59 +32,63 @@ import org.apache.hadoop.yarn.api.records.NodeLabel;
 public class NodeLabelsInfo {
 
   @XmlElement(name = "nodeLabelInfo")
-  private ArrayList<NodeLabelInfo> nodeLabelsInfo = new ArrayList<>();
+  private ArrayList<NodeLabelInfo> nodeLabelInfo = new ArrayList<>();
 
   public NodeLabelsInfo() {
     // JAXB needs this
   }
 
   public NodeLabelsInfo(ArrayList<NodeLabelInfo> nodeLabels) {
-    this.nodeLabelsInfo = nodeLabels;
+    this.nodeLabelInfo = nodeLabels;
   }
 
   public NodeLabelsInfo(List<NodeLabel> nodeLabels) {
-    this.nodeLabelsInfo = new ArrayList<>();
+    this.nodeLabelInfo = new ArrayList<>();
     for (NodeLabel label : nodeLabels) {
-      this.nodeLabelsInfo.add(new NodeLabelInfo(label));
+      this.nodeLabelInfo.add(new NodeLabelInfo(label));
     }
   }
-  
+
   public NodeLabelsInfo(Set<String> nodeLabelsName) {
-    this.nodeLabelsInfo = new ArrayList<>();
+    this.nodeLabelInfo = new ArrayList<>();
     for (String labelName : nodeLabelsName) {
-      this.nodeLabelsInfo.add(new NodeLabelInfo(labelName));
+      this.nodeLabelInfo.add(new NodeLabelInfo(labelName));
     }
   }
 
   public NodeLabelsInfo(Collection<NodeLabel> nodeLabels) {
-    this.nodeLabelsInfo = new ArrayList<>();
+    this.nodeLabelInfo = new ArrayList<>();
     nodeLabels.stream().forEach(nodeLabel -> {
-      this.nodeLabelsInfo.add(new NodeLabelInfo(nodeLabel));
+      this.nodeLabelInfo.add(new NodeLabelInfo(nodeLabel));
     });
   }
 
   public ArrayList<NodeLabelInfo> getNodeLabelsInfo() {
-    return nodeLabelsInfo;
+    return nodeLabelInfo;
   }
 
   public Set<NodeLabel> getNodeLabels() {
     Set<NodeLabel> nodeLabels = new HashSet<>();
-    for (NodeLabelInfo label : nodeLabelsInfo) {
+    for (NodeLabelInfo label : nodeLabelInfo) {
       nodeLabels.add(NodeLabel.newInstance(label.getName(),
           label.getExclusivity()));
     }
     return nodeLabels;
   }
-  
+
   public List<String> getNodeLabelsName() {
     ArrayList<String> nodeLabelsName = new ArrayList<>();
-    for (NodeLabelInfo label : nodeLabelsInfo) {
+    for (NodeLabelInfo label : nodeLabelInfo) {
       nodeLabelsName.add(label.getName());
     }
     return nodeLabelsName;
   }
 
   public void setNodeLabelsInfo(ArrayList<NodeLabelInfo> nodeLabelInfo) {
-    this.nodeLabelsInfo = nodeLabelInfo;
+    this.nodeLabelInfo = nodeLabelInfo;
+  }
+
+  public void setNodeLabelInfo(ArrayList<NodeLabelInfo> nodeLabelsInfo) {
+    this.nodeLabelInfo = nodeLabelsInfo;
   }
 }

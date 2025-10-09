@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJsonNoRoot;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -200,7 +200,7 @@ public class TestRMWebappAuthentication {
 
     AppState appState = new AppState();
     appState.setState("KILLED");
-    requestBody = toJson(appState, AppState.class);
+    requestBody = toJsonNoRoot(appState, AppState.class);
     url = new URL("http://localhost:8088/ws/v1/cluster/apps/application_123_0/state");
     conn = (HttpURLConnection) url.openConnection();
     TestRMWebServicesDelegationTokenAuthentication.setupConn(conn, "PUT",

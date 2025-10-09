@@ -97,6 +97,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.AdHocLogDumper;
 import org.apache.hadoop.yarn.util.AppsCacheKey;
@@ -137,7 +138,8 @@ public class TestRMWebServices extends JerseyTestBase {
     config.register(new JerseyBinder());
     config.register(RMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
   }
@@ -634,7 +636,7 @@ public class TestRMWebServices extends JerseyTestBase {
     LOG.debug("schedulerInfo: {}", info);
     assertEquals(11, info.length(), "incorrect number of elements in: " + info);
 
-    verifyClusterSchedulerFifoGeneric(info.getString("@xsi.type"),
+    verifyClusterSchedulerFifoGeneric(info.getString("type"),
         info.getString("qstate"), (float) info.getDouble("capacity"),
         (float) info.getDouble("usedCapacity"),
         info.getInt("minQueueMemoryCapacity"),

@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -105,6 +106,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmi
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CredentialsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LocalResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LogAggregationContextInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.IncludeRootJSONProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.AppStateReader;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.ApplicationSubmissionContextInfoReader;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.writer.ApplicationSubmissionContextInfoWriter;
@@ -112,6 +115,9 @@ import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
+
+import com.google.gson.Gson;
+import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
@@ -159,55 +165,14 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
   private HttpServletRequest hsRequest = mock(HttpServletRequest.class);
   private HttpServletResponse hsResponse = mock(HttpServletResponse.class);
 
-  private static final JettisonMarshaller APP_STATE_WRITER;
-  static {
-    try {
-      JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(AppState.class);
-      APP_STATE_WRITER = jettisonJaxbContext.createJsonMarshaller();
-    } catch (JAXBException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private static final JettisonMarshaller APP_PRIORITY_WRITER;
-  static {
-    try {
-      JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(AppPriority.class);
-      APP_PRIORITY_WRITER = jettisonJaxbContext.createJsonMarshaller();
-    } catch (JAXBException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private static final JettisonMarshaller APP_QUEUE_WRITER;
-  static {
-    try {
-      JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(AppQueue.class);
-      APP_QUEUE_WRITER = jettisonJaxbContext.createJsonMarshaller();
-    } catch (JAXBException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private static final JettisonMarshaller APP_TIMEOUT_WRITER;
-  static {
-    try {
-      JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(AppTimeoutInfo.class);
-      APP_TIMEOUT_WRITER = jettisonJaxbContext.createJsonMarshaller();
-    } catch (JAXBException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   @Override
   protected Application configure() {
     config = new ResourceConfig();
     config.register(RMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(ApplicationSubmissionContextInfoWriter.class);
-    config.register(ApplicationSubmissionContextInfoReader.class);
     config.register(TestRMCustomAuthFilter.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
   }
@@ -378,11 +343,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
   }
 
   private WebTarget constructWebResource(String... paths) {
-    WebTarget r = target()
-        .register(App.class)
-        .register(AppStateReader.class)
-        .register(ApplicationSubmissionContextInfoReader.class)
-        .register(ApplicationSubmissionContextInfoWriter.class);
+    WebTarget r = target().register(App.class);
     WebTarget ws = r.path("ws").path("v1").path("cluster");
     return this.constructWebResource(ws, paths);
   }
@@ -565,9 +526,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
   }
 
   private static String appStateToJSON(AppState state) throws Exception {
-    StringWriter stringWriter = new StringWriter();
-    APP_STATE_WRITER.marshallToJSON(state, stringWriter);
-    return stringWriter.toString();
+    return new Gson().toJson(state);
   }
 
   protected static void verifyAppStateJson(Response response,
@@ -577,7 +536,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
-    String responseState = json.getJSONObject("appstate").getString("state");
+    String responseState = json.getString("state");
     boolean valid = false;
     for (RMAppState state : states) {
       if (state.toString().equals(responseState)) {
@@ -774,8 +733,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     String ret = "";
     if (resp.getMediaType().toString().contains(MediaType.APPLICATION_JSON)) {
       JSONObject json = resp.readEntity(JSONObject.class);
-      JSONObject newApplication = json.getJSONObject("NewApplication");
-      ret = validateGetNewApplicationJsonResponse(newApplication);
+      ret = validateGetNewApplicationJsonResponse(json);
     } else if (resp.getMediaType().toString().contains(MediaType.APPLICATION_XML)) {
       String xml = resp.readEntity(String.class);
       ret = validateGetNewApplicationXMLResponse(xml);
@@ -938,10 +896,11 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     String reservationId = ReservationId.newInstance(
         System.currentTimeMillis(), 1).toString();
     appInfo.setReservationId(reservationId);
+    Entity<ApplicationSubmissionContextInfo> entity = Entity.entity(appInfo, contentMedia);
 
     Response response =
         this.constructWebResource(urlPath).request(acceptMedia)
-        .post(Entity.entity(appInfo, contentMedia), Response.class);
+        .post(entity, Response.class);
 
     if (!this.isAuthenticationEnabled()) {
       assertResponseStatusCode(Response.Status.UNAUTHORIZED, response.getStatusInfo());
@@ -1336,15 +1295,11 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
 
   protected static String appPriorityToJSON(AppPriority targetPriority)
       throws Exception {
-    StringWriter stringWriter = new StringWriter();
-    APP_PRIORITY_WRITER.marshallToJSON(targetPriority, stringWriter);
-    return stringWriter.toString();
+    return new Gson().toJson(targetPriority);
   }
 
   protected static String appQueueToJSON(AppQueue targetQueue) throws Exception {
-    StringWriter stringWriter = new StringWriter();
-    APP_QUEUE_WRITER.marshallToJSON(targetQueue, stringWriter);
-    return stringWriter.toString();
+    return new Gson().toJson(targetQueue);
   }
 
   protected static void verifyAppPriorityJson(Response response,
@@ -1353,8 +1308,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
-    JSONObject applicationpriority = json.getJSONObject("applicationpriority");
-    int responsePriority = applicationpriority.getInt("priority");
+    int responsePriority = json.getInt("priority");
     assertEquals(expectedPriority, responsePriority);
   }
 
@@ -1382,7 +1336,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
-    String responseQueue = json.getJSONObject("appqueue").getString("queue");
+    String responseQueue = json.getString("queue");
     assertEquals(queue, responseQueue);
   }
 
@@ -1433,8 +1387,8 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
               response.getMediaType().toString());
           JSONObject js =
               response.readEntity(JSONObject.class).getJSONObject("timeouts");
-          JSONObject entity = js.getJSONObject("timeout");
-          verifyAppTimeoutJson(entity,
+          JSONArray entity = js.getJSONArray("timeout");
+          verifyAppTimeoutJson(entity.getJSONObject(0),
               ApplicationTimeoutType.LIFETIME, "UNLIMITED", -1);
         }
 
@@ -1454,6 +1408,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
               response.getStatusInfo());
           continue;
         }
+
         assertResponseStatusCode(Response.Status.OK, response.getStatusInfo());
         if (mediaType.contains(MediaType.APPLICATION_JSON)) {
           verifyAppTimeoutJson(response, ApplicationTimeoutType.LIFETIME,
@@ -1548,7 +1503,9 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
   protected static String appTimeoutToJSON(AppTimeoutInfo timeout)
       throws Exception {
     StringWriter stringWriter = new StringWriter();
-    APP_TIMEOUT_WRITER.marshallToJSON(timeout, stringWriter);
+    JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(AppTimeoutInfo.class);
+    JettisonMarshaller jettisonMarshaller = jettisonJaxbContext.createJsonMarshaller();
+    jettisonMarshaller.marshallToJSON(timeout, stringWriter);
     return stringWriter.toString();
   }
 }

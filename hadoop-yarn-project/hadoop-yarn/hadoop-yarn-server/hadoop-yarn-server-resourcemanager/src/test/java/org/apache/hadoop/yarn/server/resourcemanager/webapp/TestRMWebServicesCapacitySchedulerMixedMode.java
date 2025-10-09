@@ -24,6 +24,7 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
@@ -79,7 +80,8 @@ public class TestRMWebServicesCapacitySchedulerMixedMode extends JerseyTestBase 
     config.register(new JerseyBinder());
     config.register(GenericExceptionHandler.class);
     config.register(TestRMWebServicesAppsModification.TestRMCustomAuthFilter.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     return config;
   }
 

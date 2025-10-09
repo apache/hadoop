@@ -46,6 +46,8 @@ import javax.ws.rs.core.UriBuilder;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Lists;
+
+import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.http.JettyUtils;
@@ -59,6 +61,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntry;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.ExcludeRootJSONProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.IncludeRootJSONProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.NodeLabelsInfoReader;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.LabelsToNodesInfoReader;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.NodeToLabelsInfoReader;
@@ -121,8 +126,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     config.register(RMWebServices.class);
     config.register(new JerseyBinder());
     config.register(GenericExceptionHandler.class);
-    config.register(NodeLabelsInfoReader.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
   }
@@ -167,9 +172,6 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
 
   private WebTarget getClusterWebResource() {
     return targetWithJsonObject().
-        register(NodeLabelsInfoReader.class).
-        register(LabelsToNodesInfoReader.class).
-        register(NodeToLabelsInfoReader.class).
         path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER);
   }
 
@@ -703,10 +705,6 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     if (obj == null) {
       return null;
     }
-    JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(klass);
-    JettisonMarshaller jsonMarshaller = jettisonJaxbContext.createJsonMarshaller();
-    StringWriter stringWriter = new StringWriter();
-    jsonMarshaller.marshallToJSON(obj, stringWriter);
-    return stringWriter.toString();
+    return new Gson().toJson(obj, klass);
   }
 }

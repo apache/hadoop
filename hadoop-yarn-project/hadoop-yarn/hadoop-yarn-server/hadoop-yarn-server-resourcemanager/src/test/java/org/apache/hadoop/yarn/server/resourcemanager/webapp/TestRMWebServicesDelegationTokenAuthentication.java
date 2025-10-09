@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJsonNoRoot;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -311,11 +311,11 @@ public class TestRMWebServicesDelegationTokenAuthentication {
     DelegationToken createRequestToken = new DelegationToken();
     createRequestToken.setRenewer("test");
     String createRequest =
-        toJson(createRequestToken, DelegationToken.class);
+        toJsonNoRoot(createRequestToken, DelegationToken.class);
     DelegationToken renewRequestToken = new DelegationToken();
     renewRequestToken.setToken(token);
     String renewRequest =
-        toJson(renewRequestToken, DelegationToken.class);
+        toJsonNoRoot(renewRequestToken, DelegationToken.class);
 
     // first test create and renew
     String[] requests = { createRequest, renewRequest };
@@ -363,7 +363,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         String renewer = "renewer";
         DelegationToken token2 = new DelegationToken();
         token2.setRenewer(renewer);
-        String body = toJson(token2, DelegationToken.class);
+        String body = toJsonNoRoot(token2, DelegationToken.class);
         URL url =
             new URL("http://localhost:8088/ws/v1/cluster/delegation-token?doAs=client2");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -374,7 +374,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         try {
           reader = new BufferedReader(new InputStreamReader(response, StandardCharsets.UTF_8));
           for (String line; (line = reader.readLine()) != null;) {
-            JSONObject obj = new JSONObject(line).getJSONObject("delegation-token");
+            JSONObject obj = new JSONObject(line);
             if (obj.has("token")) {
               token = obj.getString("token");
             }
@@ -399,7 +399,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
     String renewer = "renewer";
     DelegationToken token2 = new DelegationToken();
     token2.setRenewer(renewer);
-    String body = toJson(token2, DelegationToken.class);
+    String body = toJsonNoRoot(token2, DelegationToken.class);
 
     URL url =
         new URL("http://localhost:8088/ws/v1/cluster/delegation-token?doAs=client2");
@@ -445,7 +445,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         String ret = null;
         DelegationToken token = new DelegationToken();
         token.setRenewer(renewer);
-        String body = toJson(token, DelegationToken.class);
+        String body = toJsonNoRoot(token, DelegationToken.class);
         URL url =
             new URL("http://localhost:8088/ws/v1/cluster/delegation-token");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -457,7 +457,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
           String line;
           while ((line = reader.readLine()) != null) {
             String dtoken = line;
-            JSONObject obj = new JSONObject(dtoken).getJSONObject("delegation-token");
+            JSONObject obj = new JSONObject(dtoken);
             if (obj.has("token")) {
               reader.close();
               response.close();

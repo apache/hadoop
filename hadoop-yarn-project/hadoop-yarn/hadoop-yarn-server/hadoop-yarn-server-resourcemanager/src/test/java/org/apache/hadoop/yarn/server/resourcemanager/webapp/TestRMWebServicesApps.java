@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnSched
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -89,7 +90,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     config.register(new JerseyBinder());
     config.register(RMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
   }
@@ -280,9 +281,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    JSONObject jSONObjectApp = apps.getJSONObject("app");
-    JSONArray array = new JSONArray();
-    array.put(jSONObjectApp);
+    JSONArray array = apps.getJSONArray("app");
     assertEquals(1, array.length(), "incorrect number of elements");
     verifyAppInfo(array.getJSONObject(0), app, hasResourceReq);
 
@@ -306,9 +305,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    JSONObject app = apps.getJSONObject("app");
-    JSONArray array = new JSONArray();
-    array.put(app);
+    JSONArray array = apps.getJSONArray("app");
     assertEquals(1, array.length(), "incorrect number of elements");
     verifyAppInfo(array.getJSONObject(0), app1, false);
     rm.stop();
@@ -334,9 +331,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    JSONObject app = apps.getJSONObject("app");
-    JSONArray array = new JSONArray();
-    array.put(app);
+    JSONArray array = apps.getJSONArray("app");
     assertEquals(1, array.length(), "incorrect number of elements");
     assertEquals("ACCEPTED", array.getJSONObject(0).getString("state"),
         "state not equal to ACCEPTED");
@@ -384,9 +379,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    JSONObject app = apps.getJSONObject("app");
-    JSONArray array = new JSONArray();
-    array.put(app);
+    JSONArray array = apps.getJSONArray("app");
     assertEquals(1, array.length(), "incorrect number of elements");
     assertEquals("ACCEPTED", array.getJSONObject(0).getString("state"),
         "state not equal to ACCEPTED");
@@ -430,7 +423,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
-    assertEquals("", json.get("apps").toString(), "apps is not empty");
+    assertEquals(new JSONObject().toString(), json.get("apps").toString(), "apps is not empty");
     rm.stop();
   }
 
@@ -450,7 +443,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
-    assertEquals("", json.get("apps").toString(), "apps is not empty");
+    assertEquals(new JSONObject().toString(), json.get("apps").toString(), "apps is not empty");
     rm.stop();
   }
 
@@ -543,9 +536,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    JSONObject app = apps.getJSONObject("app");
-    JSONArray array = new JSONArray();
-    array.put(app);
+    JSONArray array  = apps.getJSONArray("app");
     assertEquals(1, array.length(), "incorrect number of elements");
     verifyAppInfo(array.getJSONObject(0), app1, false);
     rm.stop();
@@ -566,7 +557,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
-    assertEquals("", json.get("apps").toString(), "apps is not null");
+    assertEquals(new JSONObject().toString(), json.get("apps").toString(), "apps is not null");
     rm.stop();
   }
 
@@ -719,9 +710,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     JSONObject apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
 
-    JSONObject app = apps.getJSONObject("app");
-    JSONArray array = new JSONArray();
-    array.put(app);
+    JSONArray array = apps.getJSONArray("app");
 
     Set<String> appIds = getApplicationIds(array);
     assertFalse(appIds.contains(runningApp.getApplicationId().toString()),
@@ -833,9 +822,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    JSONObject app = apps.getJSONObject("app");
-    JSONArray array = new JSONArray();
-    array.put(app);
+    JSONArray array = apps.getJSONArray("app");
     assertEquals(1, array.length(), "incorrect number of elements");
     rm.stop();
   }
@@ -857,7 +844,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
-    assertEquals("", json.get("apps").toString(), "apps is not empty");
+    assertEquals(new JSONObject().toString(), json.get("apps").toString(), "apps is not empty");
     rm.stop();
   }
 
@@ -910,9 +897,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    JSONObject appsJSONObject = apps.getJSONObject("app");
-    JSONArray array = new JSONArray();
-    array.put(appsJSONObject);
+    JSONArray array  = apps.getJSONArray("app");
     assertEquals(1, array.length(), "incorrect number of elements");
     rm.stop();
   }
@@ -981,9 +966,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    JSONObject appsJSONObject = apps.getJSONObject("app");
-    JSONArray array = new JSONArray();
-    array.put(appsJSONObject);
+    JSONArray array  = apps.getJSONArray("app");
     assertEquals(1, array.length(), "incorrect number of elements");
     rm.stop();
   }
@@ -1033,9 +1016,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    JSONObject appsJSONObject = apps.getJSONObject("app");
-    JSONArray array = new JSONArray();
-    array.put(appsJSONObject);
+    JSONArray array = apps.getJSONArray("app");
     assertEquals(1, array.length(), "incorrect number of elements");
     assertEquals("MAPREDUCE",
         array.getJSONObject(0).getString("applicationType"));
@@ -1120,9 +1101,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    appsJSONObject = apps.getJSONObject("app");
-    array = new JSONArray();
-    array.put(appsJSONObject);
+    array = apps.getJSONArray("app");
     assertEquals(1, array.length(), "incorrect number of elements");
     assertEquals("YARN",
         array.getJSONObject(0).getString("applicationType"));
@@ -1138,9 +1117,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    appsJSONObject = apps.getJSONObject("app");
-    array = new JSONArray();
-    array.put(appsJSONObject);
+    array = apps.getJSONArray("app");
     assertEquals(1, array.length(), "incorrect number of elements");
     assertEquals("YARN",
         array.getJSONObject(0).getString("applicationType"));
@@ -1255,9 +1232,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    JSONObject appsJSONObject = apps.getJSONObject("app");
-    JSONArray array = new JSONArray();
-    array.put(appsJSONObject);
+    JSONArray array = apps.getJSONArray("app");
     assertEquals(1, array.length(), "incorrect number of elements");
     JSONObject app = array.getJSONObject(0);
     assertTrue(!app.has("resourceRequests"), "resource requests shouldn't exist");
@@ -1272,9 +1247,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    appsJSONObject = apps.getJSONObject("app");
-    array = new JSONArray();
-    array.put(appsJSONObject);
+    array  = apps.getJSONArray("app");
     assertEquals(1, array.length(), "incorrect number of elements");
     app = array.getJSONObject(0);
     assertTrue(!app.has("amNodeLabelExpression"),
@@ -1290,9 +1263,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    appsJSONObject = apps.getJSONObject("app");
-    array = new JSONArray();
-    array.put(appsJSONObject);
+    array = apps.getJSONArray("app");
     assertEquals(1, array.length(), "incorrect number of elements");
     app = array.getJSONObject(0);
     assertTrue(!app.has("timeouts"), "Timeouts shouldn't exist");
@@ -1309,9 +1280,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    appsJSONObject = apps.getJSONObject("app");
-    array = new JSONArray();
-    array.put(appsJSONObject);
+    array = apps.getJSONArray("app");
     assertEquals(1, array.length(), "incorrect number of elements");
     app = array.getJSONObject(0);
     assertTrue(!app.has("appNodeLabelExpression"), "AppNodeLabelExpression shouldn't exist");
@@ -1328,9 +1297,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(1, json.length(), "incorrect number of elements");
     apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    appsJSONObject = apps.getJSONObject("app");
-    array = new JSONArray();
-    array.put(appsJSONObject);
+    array = apps.getJSONArray("app");
     assertEquals(1, array.length(), "incorrect number of elements");
     app = array.getJSONObject(0);
     assertTrue(!app.has("resourceInfo"), "Resource info shouldn't exist");
@@ -1421,9 +1388,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       assertEquals(1, json.length(), "incorrect number of elements");
       appsStatInfo = json.getJSONObject("appStatInfo");
       assertEquals(1, appsStatInfo.length(), "incorrect number of elements");
-      JSONObject statItem = appsStatInfo.getJSONObject("statItem");
-      statItems = new JSONArray();
-      statItems.put(statItem);
+      statItems = appsStatInfo.getJSONArray("statItem");
       assertEquals(1, statItems.length(), "incorrect number of elements");
       assertEquals("ACCEPTED", statItems.getJSONObject(0).getString("state"));
       assertEquals("*", statItems.getJSONObject(0).getString("type"));
@@ -1789,7 +1754,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   public void verifyAppInfo(JSONObject info, RMApp app, boolean hasResourceReqs)
       throws JSONException, Exception {
 
-    int expectedNumberOfElements = 41 + (hasResourceReqs ? 2 : 0);
+    int expectedNumberOfElements = 40 + (hasResourceReqs ? 2 : 0);
     String appNodeLabelExpression = null;
     String amNodeLabelExpression = null;
     if (app.getApplicationSubmissionContext()
@@ -1836,10 +1801,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         amRPCAddress);
 
     if (hasResourceReqs) {
-      JSONObject resourceRequests = info.getJSONObject("resourceRequests");
-      JSONArray array = new JSONArray();
-      array.put(resourceRequests);
-      verifyResourceRequests(array, app);
+      JSONArray resourceRequests = info.getJSONArray("resourceRequests");
+      verifyResourceRequests(resourceRequests, app);
     }
   }
 

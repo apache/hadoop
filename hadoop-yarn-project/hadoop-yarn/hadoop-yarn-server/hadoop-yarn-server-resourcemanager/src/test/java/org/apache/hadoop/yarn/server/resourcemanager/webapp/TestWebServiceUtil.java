@@ -53,6 +53,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.gson.Gson;
 import org.glassfish.jersey.jettison.JettisonJaxbContext;
 import org.glassfish.jersey.jettison.JettisonMarshaller;
 import org.w3c.dom.Document;
@@ -195,13 +196,7 @@ public final class TestWebServiceUtil {
 
     String actual = OBJECT_WRITER.writeValueAsString(jsonNode);
     updateTestDataAutomatically(expectedResourceFilename, actual);
-    assertEquals(
-        // Deserialize/serialise again with the exact same settings
-        // to make sure jackson upgrade doesn't break the test
-        OBJECT_WRITER.writeValueAsString(
-            MAPPER.readTree(
-                Objects.requireNonNull(getResourceAsString(expectedResourceFilename)))),
-        actual);
+    assertEquals(getResourceAsString(expectedResourceFilename), actual);
   }
 
   /**
@@ -351,7 +346,7 @@ public final class TestWebServiceUtil {
   public static String toEntity(Object obj, Class<?> klass, String mediaType)
       throws Exception {
     if (mediaType == MediaType.APPLICATION_JSON) {
-      return toJson(obj, klass);
+      return toJsonNoRoot(obj, klass);
     }
     if(mediaType == MediaType.APPLICATION_XML) {
       return toXml(obj, klass);
@@ -359,12 +354,16 @@ public final class TestWebServiceUtil {
     return null;
   }
 
-  public static String toJson(Object obj, Class<?> klass) throws Exception {
+  public static String toJsonRoot(Object obj, Class<?> klass) throws Exception {
     StringWriter stringWriter = new StringWriter();
     JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(klass);
     JettisonMarshaller jettisonMarshaller = jettisonJaxbContext.createJsonMarshaller();
     jettisonMarshaller.marshallToJSON(obj, stringWriter);
     return stringWriter.toString();
+  }
+
+  public static String toJsonNoRoot(Object obj, Class<?> klass) throws Exception {
+    return new Gson().toJson(obj, klass);
   }
 
   public static String toXml(Object obj, Class<?> klass) throws JAXBException {
