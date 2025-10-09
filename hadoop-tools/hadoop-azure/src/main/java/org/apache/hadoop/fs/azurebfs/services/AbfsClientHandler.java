@@ -69,7 +69,7 @@ public class AbfsClientHandler implements Closeable {
       final EncryptionContextProvider encryptionContextProvider,
       final AbfsClientContext abfsClientContext) throws IOException {
     // This will initialize the default and ingress service types.
-    // This is needed before crating the clients so that we can do cache warmup
+    // This is needed before creating the clients so that we can do cache warmup
     // only for default client.
     initServiceType(abfsConfiguration);
     this.dfsAbfsClient = createDfsClient(baseUrl, sharedKeyCredentials,
