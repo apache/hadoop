@@ -214,11 +214,12 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/data
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/TimeoutFuture.java
 
 ch.qos.reload4j:reload4j:1.2.22
+com.aliyun:aliyun-java-core:0.2.11-beta
 com.aliyun:aliyun-java-sdk-core:4.5.10
 com.aliyun:aliyun-java-sdk-kms:2.11.0
 com.aliyun:aliyun-java-sdk-ram:3.1.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
-com.aliyun:java-trace-api:0.2.11-beta.jar
+com.aliyun:java-trace-api:0.2.11-beta
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
@@ -274,7 +275,7 @@ com.google.j2objc:j2objc-annotations:3.0.0
 com.google.oauth-client:google-oauth-client:1.37.0
 com.huaweicloud:esdk-obs-java:3.20.4.2
 com.jamesmurty.utils:java-xmlbuilder-1.2.jar
-com.microsoft.azure:azure-storage:7.0.0
+com.microsoft.azure:azure-storage:7.0.1
 com.nimbusds:nimbus-jose-jwt:10.4
 com.squareup.okhttp3:okhttp:jar:3.14.2
 com.squareup.okio:okio:jar:1.17.2
@@ -556,7 +557,7 @@ com.microsoft.azure:azure-cosmosdb:2.4.5
 com.microsoft.azure:azure-cosmosdb-commons:2.4.5
 com.microsoft.azure:azure-cosmosdb-direct:2.4.5
 com.microsoft.azure:azure-cosmosdb-gateway:2.4.5
-com.microsoft.azure:azure-data-lake-store-sdk:2.3.3
+com.microsoft.azure:azure-data-lake-store-sdk:2.3.9
 com.microsoft.azure:azure-keyvault-core:1.0.0
 com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre7
 org.bouncycastle:bcpkix-jdk18on:1.82

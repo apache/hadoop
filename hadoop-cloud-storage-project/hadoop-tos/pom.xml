@@ -231,9 +231,9 @@
 
     <!-- Generate a shaded artifact -->
     <profile>
-      <id>shade-tos</id>
+      <id>shade</id>
       <activation>
-        <activeByDefault>false</activeByDefault>
+        <property><name>!skipShade</name></property>
       </activation>
       <build>
         <plugins>

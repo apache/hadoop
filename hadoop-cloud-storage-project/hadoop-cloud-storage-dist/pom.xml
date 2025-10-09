@@ -37,15 +37,34 @@
   the Jars.
 
   By default, while hadoop-* artifacts are all included, dependencies
-  are omitted for nearly everything.
-  * keeps size down
-  * keeps CVE attack surface down
+  are omitted for all cloud connectors except hadoop-azure and
+  possibly hadoop-gcs and hadoop-tos modules.
+  For hadoop-aws the AWS SDK bundle.jar omitted, but everything else is included.
+
+   * This keeps binary release size below the limit of apache distributions
+   * Reduces download and size overhead in docker usage.
+   * Reduces the CVE attack surface
+   * Reduces the risk of classpath conflict.
+
   To produce a build with the specific desired dependencies, the build must be executed
-  with the relevant profile of ${module}-dependencies.
+  with the relevant profile of ${module}-package.
 
   For example, a build with the hadoop-aws and hadoop-azure-datalake dependencies,
-  run with
-      -Phadoop-aws-dependencies -Phadoop-azure-datalake-dependencies
+  build with -Dhadoop-aws-package -Dhadoop-azure-datalake-package
+
+  Available package profiles:
+    hadoop-aliyun-package
+    hadoop-aws-package
+    hadoop-azure-datalake-package
+    hadoop-cos-package
+    hadoop-gcp-package
+    hadoop-huaweicloud-package
+    hadoop-tos-package
+
+ To build a complete distribution then
+ mvn package -Pdist -DskipTests -Phadoop-aliyun-package,hadoop-aws-package,hadoop-azure-datalake-package\
+   -Phadoop-cos-package,hadoop-gcp-package,hadoop-tos-package
+
   -->
   <properties>
     <hadoop.component>cloud-storage</hadoop.component>
@@ -130,10 +149,6 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-gcp</artifactId>
       <scope>compile</scope>
-      <!--
-      Exclude transitive dependencies to prevent dependency convergence
-      problems. hadoop-gcp is a self-contained shaded jar.
-      -->
       <exclusions>
         <exclusion>
           <groupId>*</groupId>
@@ -202,12 +217,11 @@
       </build>
     </profile>
 
-
     <!-- Pull in aliyun -->
     <profile>
-      <id>hadoop-aliyun-dependencies</id>
+      <id>hadoop-aliyun-package</id>
       <activation>
-        <activeByDefault>false</activeByDefault>
+        <property><name>hadoop-aliyun-package</name></property>
       </activation>
       <dependencies>
         <dependency>
@@ -220,9 +234,9 @@
 
     <!-- Pull in the AWS SDK -->
     <profile>
-      <id>hadoop-aws-dependencies</id>
+      <id>hadoop-aws-package</id>
       <activation>
-        <activeByDefault>false</activeByDefault>
+        <property><name>hadoop-aws-package</name></property>
       </activation>
       <dependencies>
         <dependency>
@@ -233,26 +247,11 @@
       </dependencies>
     </profile>
 
-    <!-- Pull in all the cos -->
+    <!-- Pull in ADLS gen1 support -->
     <profile>
-      <id>hadoop-cos-dependencies</id>
+      <id>hadoop-azure-datalake-package</id>
       <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-cos</artifactId>
-          <scope>compile</scope>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <!-- Pull in ADLS gen1 -->
-    <profile>
-      <id>hadoop-azure-datalake-dependencies</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
+        <property><name>hadoop-azure-datalake-package</name></property>
       </activation>
       <dependencies>
         <dependency>
@@ -263,11 +262,26 @@
       </dependencies>
     </profile>
 
+    <!-- Pull in all the hadoop-cos dependencies -->
+    <profile>
+      <id>hadoop-cos-package</id>
+      <activation>
+        <property><name>hadoop-cos-package</name></property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-cos</artifactId>
+          <scope>compile</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+
     <!-- Pull in the huaweicloud dependencies -->
     <profile>
-      <id>hadoop-huaweicloud-dependencies</id>
+      <id>hadoop-huaweicloud-package</id>
       <activation>
-        <activeByDefault>false</activeByDefault>
+        <property><name>hadoop-huaweicloud-package</name></property>
       </activation>
       <dependencies>
         <dependency>
@@ -284,11 +298,26 @@
       </dependencies>
     </profile>
 
+    <!-- Pull in the gcp dependencies -->
+    <profile>
+      <id>hadoop-gcp-package</id>
+      <activation>
+        <property><name>hadoop-gcp-package</name></property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-gcp</artifactId>
+          <scope>compile</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+
     <!-- Pull in Volcano TOS -->
     <profile>
-      <id>hadoop-tos-dependencies</id>
+      <id>hadoop-tos-package</id>
       <activation>
-        <activeByDefault>false</activeByDefault>
+        <property><name>hadoop-tos-package</name></property>
       </activation>
       <dependencies>
         <dependency>

@@ -132,7 +132,7 @@ run copy "${ROOT}/hadoop-common-project/hadoop-nfs/target/hadoop-nfs-${VERSION}"
 run copy "${ROOT}/hadoop-common-project/hadoop-registry/target/hadoop-registry-${VERSION}" .
 
 # cloud connectors go into common
-run copy "${ROOT}/hadoop-cloud-storage-project/hadoop-cloud-storage/target/hadoop-cloud-storage-${VERSION}" .
+run copy "${ROOT}/hadoop-cloud-storage-project/hadoop-cloud-storage-dist/target/hadoop-cloud-storage-dist-${VERSION}" .
 
 run copy "${ROOT}/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-${VERSION}" .
 run copy "${ROOT}/hadoop-hdfs-project/hadoop-hdfs-nfs/target/hadoop-hdfs-nfs-${VERSION}" .
