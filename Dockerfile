@@ -20,4 +20,4 @@ RUN sudo rm -rf /opt/hadoop && curl -LSs -o hadoop.tar.gz $HADOOP_URL && tar zxf
 WORKDIR /opt/hadoop
 ADD log4j.properties /opt/hadoop/etc/hadoop/log4j.properties
 RUN sudo chown -R hadoop:users /opt/hadoop/etc/hadoop/*
-ENV HADOOP_CONF_DIR /opt/hadoop/etc/hadoop
+ENV HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
