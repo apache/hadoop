@@ -30,7 +30,7 @@ RUN apt update -q \
     && apt clean
 
 # Robot Framework for testing
-RUN pip install robotframework \
+RUN pip install robotframework==6.1.1 \
     && rm -fr ~/.cache/pip
 
 #dumb init for proper init handling
