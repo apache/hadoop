@@ -13,11 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM apache/hadoop-runner
-ARG HADOOP_URL=https://dlcdn.apache.org/hadoop/common/hadoop-3.4.2/hadoop-3.4.2-lean.tar.gz
-WORKDIR /opt
-RUN sudo rm -rf /opt/hadoop && curl -LSs -o hadoop.tar.gz $HADOOP_URL && tar zxf hadoop.tar.gz && rm hadoop.tar.gz && mv hadoop* hadoop && rm -rf /opt/hadoop/share/doc
+FROM ghcr.io/apache/hadoop-runner:jdk11-u2204
+ARG HADOOP_VERSION=3.4.2
+ARG HADOOP_FLAVOR=-lean
+ARG BASE_URL=https://dlcdn.apache.org/hadoop/common
+ARG TARGETPLATFORM
 WORKDIR /opt/hadoop
+RUN set -eux; \
+    echo "Building for ${TARGETPLATFORM}"; \
+    case "${TARGETPLATFORM}" in \
+        linux/amd64) HADOOP_ARCH='' ;; \
+        linux/arm64) HADOOP_ARCH='-aarch64' ;; \
+        *) echo "Unsupported platform: ${TARGETPLATFORM}"; exit 1 ;; \
+    esac; \
+    export HADOOP_URL="${BASE_URL}/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}${HADOOP_ARCH}${HADOOP_FLAVOR}.tar.gz"; \
+    curl -LSs "$HADOOP_URL" | tar -x -z --strip-components 1 && rm -rf /opt/hadoop/share/doc
 ADD log4j.properties /opt/hadoop/etc/hadoop/log4j.properties
 RUN sudo chown -R hadoop:users /opt/hadoop/etc/hadoop/*
-ENV HADOOP_CONF_DIR /opt/hadoop/etc/hadoop
+ENV HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
