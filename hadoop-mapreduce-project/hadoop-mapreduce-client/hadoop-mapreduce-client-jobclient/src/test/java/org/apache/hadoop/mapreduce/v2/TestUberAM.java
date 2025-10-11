@@ -45,7 +45,6 @@ public class TestUberAM extends TestMRJobs {
 
   @BeforeAll
   public static void setup() throws IOException {
-    TestMRJobs.setup();
     if (mrCluster != null) {
     	mrCluster.getConfig().setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, true);
     	mrCluster.getConfig().setInt(MRJobConfig.JOB_UBERTASK_MAXREDUCES, 3);
