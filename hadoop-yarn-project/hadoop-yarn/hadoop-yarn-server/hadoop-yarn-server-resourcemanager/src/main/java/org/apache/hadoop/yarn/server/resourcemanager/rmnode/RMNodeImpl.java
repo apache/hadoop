@@ -36,6 +36,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.collections4.keyvalue.DefaultMapEntry;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.slf4j.Logger;
@@ -139,6 +140,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private Integer decommissioningTimeout;
 
   private long timeStamp;
+  private final boolean opportunisticContainersEnabled;
   /* Aggregated resource utilization for the containers. */
   private ResourceUtilization containersUtilization;
   /* Resource utilization for the node. */
@@ -407,6 +409,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.healthReport = "Healthy";
     this.lastHealthReportTime = System.currentTimeMillis();
     this.nodeManagerVersion = nodeManagerVersion;
+    this.opportunisticContainersEnabled = YarnConfiguration
+            .isOpportunisticContainerAllocationEnabled(context.getYarnConfiguration());
     this.timeStamp = 0;
     // If physicalResource is not available, capability is a reasonable guess
     this.physicalResource = physResource==null ? capability : physResource;
@@ -1583,7 +1587,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     List<Map.Entry<ApplicationId, ContainerStatus>> needUpdateContainers =
         new ArrayList<Map.Entry<ApplicationId, ContainerStatus>>();
     int numRemoteRunningContainers = 0;
-    final Resource allocatedResource = Resource.newInstance(Resources.none());
 
     for (ContainerStatus remoteContainer : containerStatuses) {
       ContainerId containerId = remoteContainer.getContainerId();
@@ -1654,14 +1657,17 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
             .unregister(new AllocationExpirationInfo(containerId));
       }
 
-      if ((remoteContainer.getState() == ContainerState.RUNNING ||
-          remoteContainer.getState() == ContainerState.NEW) &&
-          remoteContainer.getCapability() != null) {
-        Resources.addTo(allocatedResource, remoteContainer.getCapability());
+      if (opportunisticContainersEnabled){
+        Resource allocatedResource = Resource.newInstance(Resources.none());
+        Resource capability = remoteContainer.getCapability();
+        if ((remoteContainer.getState() == ContainerState.RUNNING ||
+                remoteContainer.getState() == ContainerState.NEW) &&
+                remoteContainer.getCapability() != null) {
+          Resources.addTo(allocatedResource, remoteContainer.getCapability());
+        }
+        allocatedContainerResource = allocatedResource;
       }
     }
-
-    allocatedContainerResource = allocatedResource;
 
     List<ContainerStatus> lostContainers =
         findLostContainers(numRemoteRunningContainers, containerStatuses);
