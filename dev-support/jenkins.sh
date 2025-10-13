@@ -126,7 +126,7 @@ function run_ci() {
 
     # test with Java 17 & Java 21
     YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-17-openjdk-amd64")
-    YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-21-openjdk-amd64")
+    YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-21-openjdk-amd64")
     YETUS_ARGS+=("--multijdktests=compile")
   fi
 
