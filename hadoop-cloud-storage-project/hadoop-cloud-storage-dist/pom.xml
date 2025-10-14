@@ -61,9 +61,16 @@
     hadoop-huaweicloud-package
     hadoop-tos-package
 
- To build a complete distribution then
- mvn package -Pdist -DskipTests -Phadoop-aliyun-package,hadoop-aws-package,hadoop-azure-datalake-package\
-   -Phadoop-cos-package,hadoop-gcp-package,hadoop-tos-package
+ To build a complete distribution then:
+
+mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true \
+ -Dhadoop-aliyun-package \
+ -Dhadoop-aws-package \
+ -Dhadoop-azure-datalake-package \
+ -Dhadoop-cos-package \
+ -Dhadoop-gcp-package \
+ -Dhadoop-huaweicloud-package \
+ -Dhadoop-tos-package
 
   -->
   <properties>
