@@ -4695,4 +4695,10 @@ The switch to turn S3A auditing on or off.
     </description>
   </property>
 
+  <property>
+    <name>fs.obs.impl</name>
+    <value>org.apache.hadoop.fs.obs.OBSFileSystem</value>
+    <description>The FileSystem for obs: uris.</description>
+  </property>
+
 </configuration>
