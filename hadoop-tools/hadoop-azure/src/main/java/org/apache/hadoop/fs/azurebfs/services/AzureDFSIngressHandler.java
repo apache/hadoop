@@ -117,6 +117,7 @@ public class AzureDFSIngressHandler extends AzureIngressHandler {
       AppendRequestParameters reqParams,
       TracingContext tracingContext) throws IOException {
     TracingContext tracingContextAppend = new TracingContext(tracingContext);
+    tracingContextAppend.setMetricResults(getAbfsOutputStream().getClient().getAbfsCounters().getAbfsWriteThreadPoolMetrics().toString());
     String threadIdStr = String.valueOf(Thread.currentThread().getId());
     if (tracingContextAppend.getIngressHandler().equals(EMPTY_STRING)) {
       tracingContextAppend.setIngressHandler(DFS_APPEND + " T " + threadIdStr);

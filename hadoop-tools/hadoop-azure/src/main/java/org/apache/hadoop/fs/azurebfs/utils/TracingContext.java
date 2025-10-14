@@ -244,9 +244,11 @@ public class TracingContext {
     if (listener != null) { //for testing
       listener.callTracingHeaderValidator(header, format);
     }
-    httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
     if (!metricHeader.equals(EMPTY_STRING)) {
-      httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_FECLIENT_METRICS, metricHeader);
+      httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header + " " + metricHeader);
+    } else {
+      httpOperation.setRequestProperty(
+          HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
     }
     /*
     * In case the primaryRequestId is an empty-string and if it is the first try to
@@ -388,5 +390,9 @@ public class TracingContext {
     if (listener != null) {
       listener.updateReadType(readType);
     }
+  }
+
+  public void setMetricResults(final String metricResults) {
+    this.metricResults = metricResults;
   }
 }

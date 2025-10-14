@@ -281,7 +281,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     if (abfsConfiguration.isDynamicWriteThreadPoolEnablement()) {
       this.poolSizeManager = WriteThreadPoolSizeManager.getInstance(
           getClient().getFileSystem() + "-" + UUID.randomUUID(),
-          abfsConfiguration);
+          abfsConfiguration, getClient());
       poolSizeManager.startCPUMonitoring();
       this.boundedThreadPool = poolSizeManager.getExecutorService();
     } else {

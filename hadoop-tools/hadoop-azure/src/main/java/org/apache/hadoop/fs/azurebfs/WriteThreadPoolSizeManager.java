@@ -35,6 +35,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsWriteThreadPoolMetrics;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.LOW_HEAP_SPACE_FACTOR;
@@ -81,6 +83,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   /* The configuration instance. */
   private final AbfsConfiguration abfsConfiguration;
 
+  private final AbfsWriteThreadPoolMetrics writeThreadPoolMetrics;
+
   /**
    * Private constructor to initialize the write thread pool and CPU monitor executor
    * based on system resources and ABFS configuration.
@@ -89,7 +93,9 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    * @param abfsConfiguration    Configuration containing pool size parameters.
    */
   private WriteThreadPoolSizeManager(String filesystemName,
-      AbfsConfiguration abfsConfiguration) {
+      AbfsConfiguration abfsConfiguration, AbfsClient abfsClient) {
+    this.writeThreadPoolMetrics = abfsClient.getAbfsCounters()
+        .getAbfsWriteThreadPoolMetrics();
     this.filesystemName = filesystemName;
     this.abfsConfiguration = abfsConfiguration;
     int availableProcessors = Runtime.getRuntime().availableProcessors();
@@ -183,7 +189,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    * @return the singleton instance.
    */
   public static synchronized WriteThreadPoolSizeManager getInstance(
-      String filesystemName, AbfsConfiguration abfsConfiguration) {
+      String filesystemName, AbfsConfiguration abfsConfiguration, AbfsClient abfsClient) {
     /* Check if an instance already exists in the map for the given filesystem */
     WriteThreadPoolSizeManager existingInstance = POOL_SIZE_MANAGER_MAP.get(
         filesystemName);
@@ -199,7 +205,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         "Creating new WriteThreadPoolSizeManager instance for filesystem: {}",
         filesystemName);
     WriteThreadPoolSizeManager newInstance = new WriteThreadPoolSizeManager(
-        filesystemName, abfsConfiguration);
+        filesystemName, abfsConfiguration, abfsClient);
     POOL_SIZE_MANAGER_MAP.put(filesystemName, newInstance);
     return newInstance;
   }
@@ -222,7 +228,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         threadPoolExecutor.setCorePoolSize(newMaxPoolSize);
         threadPoolExecutor.setMaximumPoolSize(newMaxPoolSize);
       }
-
+      WriteThreadPoolStats stats = getCurrentStats();
+      writeThreadPoolMetrics.update(stats);
       LOG.debug("The thread pool size is: {} ", newMaxPoolSize);
       LOG.debug("The pool size is: {} ", threadPoolExecutor.getPoolSize());
       LOG.debug("The active thread count is: {}", threadPoolExecutor.getActiveCount());
@@ -379,5 +386,57 @@ public final class WriteThreadPoolSizeManager implements Closeable {
             filesystemName, e);
       }
     }
+  }
+
+  /**
+   * Represents current statistics of the write thread pool and system.
+   */
+  public static class WriteThreadPoolStats {
+    private final int currentPoolSize;   // matches CURRENT_POOL_SIZE metric
+    private final int maxPoolSize;       // matches MAX_POOL_SIZE metric
+    private final int activeThreads;     // matches ACTIVE_THREADS metric
+    private final double cpuUtilization; // matches CPU_UTILIZATION metric
+    private final long availableHeapGB;  // matches MEMORY_UTILIZATION metric
+
+    public WriteThreadPoolStats(int currentPoolSize, int maxPoolSize,
+        int activeThreads, double cpuUtilization, long availableHeapGB) {
+      this.currentPoolSize = currentPoolSize;
+      this.maxPoolSize = maxPoolSize;
+      this.activeThreads = activeThreads;
+      this.cpuUtilization = cpuUtilization;
+      this.availableHeapGB = availableHeapGB;
+    }
+
+    public int getCurrentPoolSize() { return currentPoolSize; }
+    public int getMaxPoolSize() { return maxPoolSize; }
+    public int getActiveThreads() { return activeThreads; }
+    public double getCpuUtilization() { return cpuUtilization; }
+    public long getMemoryUtilization() { return availableHeapGB; }
+
+    @Override
+    public String toString() {
+      return String.format(
+          "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, cpuUtilization=%.2f%%, availableHeap=%dGB",
+          currentPoolSize, maxPoolSize, activeThreads, cpuUtilization * 100, availableHeapGB);
+    }
+  }
+
+  /**
+   * Returns the latest snapshot of thread pool + system stats.
+   */
+  synchronized WriteThreadPoolStats getCurrentStats() {
+    if (boundedThreadPool == null) {
+      return new WriteThreadPoolStats(0, 0, 0, 0.0, 0);
+    }
+
+    ThreadPoolExecutor exec = (ThreadPoolExecutor) this.boundedThreadPool;
+
+    return new WriteThreadPoolStats(
+        exec.getCorePoolSize(),           // current pool size
+        exec.getMaximumPoolSize(),    // max allowed pool size
+        exec.getActiveCount(),        // active threads
+        getCpuUtilization(),          // current CPU utilization
+        getAvailableHeapMemory()    // available heap in GB
+    );
   }
 }
