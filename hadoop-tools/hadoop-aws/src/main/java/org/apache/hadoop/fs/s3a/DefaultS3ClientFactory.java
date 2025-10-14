@@ -207,17 +207,21 @@ public class DefaultS3ClientFactory extends Configured
 
     // add a plugin to add a Content-MD5 header.
     // this is required when performing some operations with third party stores
-    // (for example: bulk delete), and is harmless when working with AWS S3.
-    builder.addPlugin(LegacyMd5Plugin.create());
+    // (for example: bulk delete), and is somewhat harmless when working with AWS S3.
+    if (parameters.isMd5HeaderEnabled()) {
+      builder.addPlugin(LegacyMd5Plugin.create());
+    }
 
-    // do not do request checksums as this causes third-party store problems.
-    builder.requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED);
+    //when to calculate request checksums.
+    builder.requestChecksumCalculation(
+        parameters.isChecksumCalculationEnabled()
+            ? RequestChecksumCalculation.WHEN_SUPPORTED
+            : RequestChecksumCalculation.WHEN_REQUIRED);
 
     // response checksum validation. Slow, even with CRC32 checksums.
     if (parameters.isChecksumValidationEnabled()) {
       builder.responseChecksumValidation(ResponseChecksumValidation.WHEN_SUPPORTED);
     }
-
 
     maybeApplyS3AccessGrantsConfigurations(builder, conf);
 

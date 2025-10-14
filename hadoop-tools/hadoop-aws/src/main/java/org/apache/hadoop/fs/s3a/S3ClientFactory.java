@@ -188,6 +188,11 @@ public interface S3ClientFactory {
     private String region;
 
     /**
+     * Is this an S3 Express store?
+     */
+    private boolean s3ExpressStore;
+
+    /**
      * Enable S3Express create session.
      */
     private boolean expressCreateSession = S3EXPRESS_CREATE_SESSION_DEFAULT;
@@ -206,6 +211,17 @@ public interface S3ClientFactory {
      * Is analytics accelerator enabled?
      */
     private boolean isAnalyticsAcceleratorEnabled;
+
+    /**
+     * Is the MD5 Header Enabled?
+     */
+    private boolean md5HeaderEnabled;
+
+    /**
+     * Is Checksum calculation Enabled?
+     */
+    private boolean checksumCalculationEnabled;
+
 
     /**
      * List of execution interceptors to include in the chain
@@ -536,6 +552,20 @@ public interface S3ClientFactory {
       return kmsRegion;
     }
 
+    public boolean isS3ExpressStore() {
+      return s3ExpressStore;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withS3ExpressStore(final boolean value) {
+      s3ExpressStore = value;
+      return this;
+    }
+
     /**
      * Should s3express createSession be called?
      * @return true if the client should enable createSession.
@@ -568,6 +598,34 @@ public interface S3ClientFactory {
       return checksumValidationEnabled;
     }
 
+    public boolean isMd5HeaderEnabled() {
+      return md5HeaderEnabled;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withMd5HeaderEnabled(final boolean value) {
+      md5HeaderEnabled = value;
+      return this;
+    }
+
+    public boolean isChecksumCalculationEnabled() {
+      return checksumCalculationEnabled;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withChecksumCalculationEnabled(final boolean value) {
+      checksumCalculationEnabled = value;
+      return this;
+    }
+
     @Override
     public String toString() {
       return "S3ClientCreationParameters{" +
@@ -580,8 +638,10 @@ public interface S3ClientFactory {
           ", multiPartThreshold=" + multiPartThreshold +
           ", multipartCopy=" + multipartCopy +
           ", region='" + region + '\'' +
+          ", s3ExpressStore=" + s3ExpressStore +
           ", expressCreateSession=" + expressCreateSession +
           ", checksumValidationEnabled=" + checksumValidationEnabled +
+          ", md5HeaderEnabled=" + md5HeaderEnabled +
           '}';
     }
 

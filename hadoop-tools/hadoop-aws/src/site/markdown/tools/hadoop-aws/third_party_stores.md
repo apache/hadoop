@@ -42,6 +42,8 @@ The features which may be unavailable include:
 * Bucket lifecycle rules to clean up pending uploads.
 * Support for multipart uploads.
 * Conditional file creation. (`fs.s3a.create.conditional.enabled = false`)
+* Variations in checksum calculation on uploads.
+* Requirement for Content-MD5 headers.
 
 ### Disabling Change Detection
 
@@ -172,6 +174,27 @@ false to disable use of these features.
     <name>fs.s3a.create.conditional.enabled</name>
     <value>false</value>
   </property>
+```
+
+## Upload checksums and MD5 Headers
+
+It may be necessary to change checksums of uploads by
+1. Restoring the attachment of a `Content-MD5 header` in requests
+2. Changing checksum calculation from "always" to "when required"
+
+```xml
+  <property>
+    <name>fs.s3a.md5.header.enabled</name>
+    <value>false</value>
+    <description>re-enable calculation and inclusion of an MD5 HEADER on data upload operations (default: false)</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.checksum.calculation.enabled</name>
+    <value>false</value>
+    <description>Calculate and attach a message checksum on every operation. (default: true)</description>
+  </property>
+
 ```
 
 

@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.s3a.impl.ChecksumSupport;
 import org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
@@ -1837,13 +1838,51 @@ public final class Constants {
   public static final boolean CHECKSUM_VALIDATION_DEFAULT = false;
 
   /**
+   * Should checksums always be calculated?
+   * Not all third-party stores like this being enabled for every request.
+   * Value: {@value}.
+   */
+  public static final String CHECKSUM_CALCULATION_ENABLED =
+      "fs.s3a.checksum.calculation.enabled";
+
+  /**
+   * Default value of {@link #CHECKSUM_CALCULATION_ENABLED}.
+   * Value: {@value}.
+   */
+  public static final boolean CHECKSUM_CALCULATION_ENABLED_DEFAULT = true;
+
+  /**
    * Indicates the algorithm used to create the checksum for the object
    * to be uploaded to S3. Unset by default. It supports the following values:
-   * 'CRC32', 'CRC32C', 'SHA1', and 'SHA256'
+   * 'CRC32', 'CRC32C', 'SHA1', 'SHA256', 'NONE', ''..
    * value:{@value}
    */
   public static final String CHECKSUM_ALGORITHM =
       "fs.s3a.create.checksum.algorithm";
+
+  /**
+   * Default checksum algorithm: {@code "none"}.
+   */
+  public static final String CHECKSUM_ALGORITHM_DEFAULT =
+      ChecksumSupport.NONE;
+
+  /**
+   * Send a {@code Content-MD5 header} with every request.
+   * This is required when performing some operations with third party stores
+   * For example: bulk delete).
+   * It is supported by AWS S3, though has unexpected behavior with AWS S3 Express storage.
+   * See https://github.com/aws/aws-sdk-java-v2/issues/6459  for details.
+   * It will be automatically disabled there.
+   */
+  public static final String MD5_HEADER_ENABLED =
+      "fs.s3a.md5.header.enabled";
+
+  /**
+   * Default value of {@link #MD5_HEADER_ENABLED}.
+   * Value: {@value}.
+   */
+  public static final boolean MD5_HEADER_ENABLED_DEFAULT = true;
+
 
   /**
    * Are extensions classes, such as {@code fs.s3a.aws.credentials.provider},
