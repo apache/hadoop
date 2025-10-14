@@ -2673,7 +2673,7 @@ public abstract class Server {
       // accelerate token negotiation by sending initial challenge
       // in the negotiation response
       if (enabledAuthMethods.contains(AuthMethod.TOKEN)
-          && SaslMechanismFactory.isDefaultMechanism(AuthMethod.TOKEN.getMechanismName())) {
+          && SaslMechanismFactory.isDigestMechanism(AuthMethod.TOKEN.getMechanismName())) {
         saslServer = createSaslServer(AuthMethod.TOKEN);
         byte[] challenge = saslServer.evaluateResponse(new byte[0]);
         RpcSaslProto.Builder negotiateBuilder =

@@ -66,6 +66,13 @@ final class AbfsApacheHttpClient implements Closeable {
   }
 
   /**
+   * In case, getting success response from apache client, sets the usable flag to true.
+   */
+  static void setUsable() {
+    usable = true;
+  }
+
+  /**
    * @return if ApacheHttpClient is usable.
    */
   static boolean usable() {
@@ -73,18 +80,27 @@ final class AbfsApacheHttpClient implements Closeable {
   }
 
   AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
-      final AbfsConfiguration abfsConfiguration, final KeepAliveCache keepAliveCache,
-      URL baseUrl) {
+      final AbfsConfiguration abfsConfiguration,
+      final KeepAliveCache keepAliveCache,
+      URL baseUrl,
+      final boolean isCacheWarmupNeeded) {
     final AbfsConnectionManager connMgr = new AbfsConnectionManager(
         createSocketFactoryRegistry(
             new SSLConnectionSocketFactory(delegatingSSLSocketFactory,
                 getDefaultHostnameVerifier())),
         new AbfsHttpClientConnectionFactory(), keepAliveCache,
-        abfsConfiguration, baseUrl);
+        abfsConfiguration, baseUrl, isCacheWarmupNeeded);
     final HttpClientBuilder builder = HttpClients.custom();
     builder.setConnectionManager(connMgr)
         .setRequestExecutor(
-            new AbfsManagedHttpRequestExecutor(abfsConfiguration.getHttpReadTimeout()))
+            // In case of Expect:100-continue, the timeout for waiting for
+            // the 100-continue response from the server is set using
+            // ExpectWaitContinueTimeout. For other requests, the read timeout
+            // is set using SocketTimeout.
+            new AbfsManagedHttpRequestExecutor(
+                abfsConfiguration.isExpectHeaderEnabled()
+                    ? abfsConfiguration.getExpect100ContinueWaitTimeout()
+                    : abfsConfiguration.getHttpReadTimeout()))
         .disableContentCompression()
         .disableRedirectHandling()
         .disableAutomaticRetries()
