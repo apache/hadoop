@@ -30,6 +30,7 @@ import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 
+import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.util.ajax.JSON;
@@ -56,6 +57,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
@@ -633,6 +635,26 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation>any())).thenReturn(false);
     Mockito.when(context.getAttribute(HttpServer2.ADMINS_ACL)).thenReturn(acls);
     assertFalse(HttpServer2.isInstrumentationAccessAllowed(context, request, response));
+  }
+
+  @Test
+  public void testAddConnectors() throws Exception {
+    HttpServer2.Builder builder = new HttpServer2.Builder()
+        .setName("test").setConf(new Configuration()).setFindPort(false);
+    URI endpoint = URI.create("http://testaddress.com:8080/my-app");
+    InetAddress[] addresses = new InetAddress[2];
+    // IPv4 test address
+    addresses[0] = InetAddress.getByName("192.168.1.100");
+    // IPv6 test address
+    addresses[1] = InetAddress.getByName("fd00::1");
+    HttpConfiguration httpConfig = new HttpConfiguration();
+    final int backlogSize = 2048;
+    final int idleTimeout = 1000;
+
+    server = builder.addConnectors(
+        endpoint, addresses, server, httpConfig, backlogSize, idleTimeout);
+    //the expected value is 3: the loopback address and the two addresses
+    assertEquals(server.getListeners().toArray().length, 3);
   }
 
   @Test public void testBindAddress() throws Exception {

@@ -264,20 +264,20 @@
       "openjdk-17-jdk"
     ],
     "ubuntu:focal": [
-      "temurin-24-jdk",
+      "temurin-25-jdk",
       "openjdk-8-jdk",
       "openjdk-11-jdk",
       "openjdk-17-jdk",
       "openjdk-21-jdk"
     ],
     "ubuntu:noble": [
-      "temurin-24-jdk",
+      "temurin-25-jdk",
       "openjdk-11-jdk",
       "openjdk-17-jdk",
       "openjdk-21-jdk"
     ],
     "ubuntu:focal::arch64": [
-      "temurin-24-jdk",
+      "temurin-25-jdk",
       "openjdk-8-jdk",
       "openjdk-11-jdk",
       "openjdk-17-jdk",
