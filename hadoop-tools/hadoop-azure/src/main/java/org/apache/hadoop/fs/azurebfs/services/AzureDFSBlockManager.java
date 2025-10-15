@@ -62,7 +62,9 @@ public class AzureDFSBlockManager extends AzureBlockManager {
     if (getActiveBlock() == null) {
       setBlockCount(getBlockCount() + 1);
       AbfsBlock activeBlock = new AbfsBlock(getAbfsOutputStream(), position);
-      getAbfsOutputStream().getMessageDigest().reset();
+      if (getAbfsOutputStream().isChecksumValidationEnabled()) {
+        getAbfsOutputStream().getMessageDigest().reset();
+      }
       setActiveBlock(activeBlock);
     }
     return getActiveBlock();
