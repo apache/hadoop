@@ -359,7 +359,9 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     public static StoreValue getStoreValue(String bucketName,
         UserGroupInformation ugi) {
       StoreKey storeKey = new StoreKey(bucketName, ugi);
-      return knownStores.get(storeKey);
+      final StoreValue storeValue = knownStores.get(storeKey);
+      LOG.info("Getting store value for key {}: {}", storeKey, storeValue);
+      return storeValue;
     }
 
     private static class StoreKey {

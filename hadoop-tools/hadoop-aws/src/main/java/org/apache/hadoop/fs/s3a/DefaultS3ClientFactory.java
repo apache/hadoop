@@ -209,14 +209,17 @@ public class DefaultS3ClientFactory extends Configured
     // this is required when performing some operations with third party stores
     // (for example: bulk delete), and is somewhat harmless when working with AWS S3.
     if (parameters.isMd5HeaderEnabled()) {
+      LOG.debug("MD5 header enabled");
       builder.addPlugin(LegacyMd5Plugin.create());
     }
 
     //when to calculate request checksums.
-    builder.requestChecksumCalculation(
+    final RequestChecksumCalculation checksumCalculation =
         parameters.isChecksumCalculationEnabled()
             ? RequestChecksumCalculation.WHEN_SUPPORTED
-            : RequestChecksumCalculation.WHEN_REQUIRED);
+            : RequestChecksumCalculation.WHEN_REQUIRED;
+    LOG.debug("Using checksum calculation policy: {}", checksumCalculation);
+    builder.requestChecksumCalculation(checksumCalculation);
 
     // response checksum validation. Slow, even with CRC32 checksums.
     if (parameters.isChecksumValidationEnabled()) {

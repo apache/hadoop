@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.io.FileNotFoundException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractMultipartUploaderTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
@@ -148,5 +150,17 @@ public class ITestS3AContractMultipartUploader extends
     skipIfAnalyticsAcceleratorEnabled(getContract().getConf(),
         "Analytics Accelerator currently does not support reading of over written files");
     super.testConcurrentUploads();
+  }
+
+
+  @Test
+  @Override
+  public void testMultipartUploadAbort() throws Exception {
+    try {
+      super.testMultipartUploadAbort();
+    } catch (FileNotFoundException e) {
+      LOG.info("Multipart upload not found in abort(). This is common on third-party stores: {}", e.toString());
+      LOG.debug("Exception: ", e);
+    }
   }
 }

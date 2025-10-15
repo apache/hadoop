@@ -37,7 +37,12 @@ import org.apache.hadoop.fs.s3a.impl.ChecksumSupport;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_CALCULATION_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_CALCULATION_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_VALIDATION;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
+import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REJECT_OUT_OF_SPAN_OPERATIONS;
 
 /**
@@ -59,6 +64,7 @@ public class ITestS3AChecksum extends AbstractS3ATestBase {
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {"SHA256"},
+        {"CRC32"},
         {"CRC32C"},
         {"SHA1"},
         {UNKNOWN},
@@ -89,11 +95,14 @@ public class ITestS3AChecksum extends AbstractS3ATestBase {
         CHECKSUM_VALIDATION,
         REJECT_OUT_OF_SPAN_OPERATIONS);
     S3ATestUtils.disableFilesystemCaching(conf);
-    LOG.info("Using checksum algorithm {}", algorithmName);
     conf.set(CHECKSUM_ALGORITHM, algorithmName);
     conf.setBoolean(CHECKSUM_VALIDATION, true);
     conf.setBoolean(REJECT_OUT_OF_SPAN_OPERATIONS, false);
     checksumAlgorithm = ChecksumSupport.getChecksumAlgorithm(conf);
+    LOG.info("Using checksum algorithm {}/{}", algorithmName, checksumAlgorithm);
+    assume("Skipping checksum tests as " + CHECKSUM_CALCULATION_ENABLED + " is set",
+        propagateBucketOptions(conf, getTestBucketName(conf))
+            .getBoolean(CHECKSUM_CALCULATION_ENABLED, CHECKSUM_CALCULATION_ENABLED_DEFAULT));
     return conf;
   }
 

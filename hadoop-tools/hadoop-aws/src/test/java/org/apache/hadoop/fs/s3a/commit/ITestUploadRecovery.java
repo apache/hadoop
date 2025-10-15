@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.commit;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
@@ -266,7 +267,11 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
 
     try (CommitContext commitContext
              = actions.createCommitContextForTesting(dest, JOB_ID, 0)) {
-      commitContext.commitOrFail(commit);
+      try {
+        commitContext.commitOrFail(commit);
+      } catch (FileNotFoundException e) {
+        LOG.info("S3 Store doesn't support retries on completed commits: {}", e.toString());
+      }
     }
     // make sure the saved data is as expected
     verifyFileContents(fs, dest, dataset);

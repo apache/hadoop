@@ -39,12 +39,18 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESSPOINT_REQUIRED;
+import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_CALCULATION_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_CALCULATION_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
 import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
+import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.isAwsEndpoint;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -58,6 +64,15 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
           "random-bucket-" + UUID.randomUUID();
 
   private final URI uri = URI.create(FS_S3A + "://" + randomBucket + "/");
+
+  @Override
+  protected Configuration createConfiguration() {
+    final Configuration conf = super.createConfiguration();
+    String endpoint = propagateBucketOptions(conf, getTestBucketName(conf)).get(ENDPOINT, "");
+    assume("Skipping existence probes",
+        isAwsEndpoint(endpoint));
+    return conf;
+  }
 
   @SuppressWarnings("deprecation")
   @Test
