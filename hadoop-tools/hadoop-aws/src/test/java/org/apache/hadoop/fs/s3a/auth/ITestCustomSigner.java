@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
@@ -60,6 +61,7 @@ import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_VALIDATION;
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createMagicFile;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
@@ -79,6 +81,13 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
 
   private static final String TEST_ID_KEY = "TEST_ID_KEY";
   private static final String TEST_REGION_KEY = "TEST_REGION_KEY";
+
+  /**
+   * Is the store using path style access?
+   */
+  private static final AtomicBoolean PATH_STYLE_ACCESS_IN_USE = new AtomicBoolean(false);
+
+  public static final String BUCKET = "bucket";
 
   /**
    * Parameterization.
@@ -121,6 +130,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     final S3AFileSystem fs = getFileSystem();
     final Configuration conf = fs.getConf();
     endpoint = conf.getTrimmed(Constants.ENDPOINT, Constants.CENTRAL_ENDPOINT);
+    PATH_STYLE_ACCESS_IN_USE.set(conf.getBoolean(PATH_STYLE_ACCESS, false));
     LOG.info("Test endpoint is {}", endpoint);
     regionName = conf.getTrimmed(Constants.AWS_REGION, "");
     if (regionName.isEmpty()) {
@@ -168,6 +178,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       throws IOException, InterruptedException {
     Configuration conf = createTestConfig(identifier);
     return ugi.doAs((PrivilegedExceptionAction<S3AFileSystem>) () -> {
+      LOG.info("Performing store operations for {}", ugi.getShortUserName());
       int instantiationCount = CustomSigner.getInstantiationCount();
       int invocationCount = CustomSigner.getInvocationCount();
       S3AFileSystem fs = (S3AFileSystem)finalPath.getFileSystem(conf);
@@ -288,6 +299,9 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
 
       String host = request.host();
       String bucketName = parseBucketFromHost(host);
+      if (PATH_STYLE_ACCESS_IN_USE.get()) {
+        bucketName = BUCKET;
+      }
       try {
         lastStoreValue = CustomSignerInitializer
             .getStoreValue(bucketName, UserGroupInformation.getCurrentUser());
@@ -330,11 +344,20 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   public static final class CustomSignerInitializer
       implements AwsSignerInitializer {
 
+    /**
+     * Map of (bucket-name, ugi) -> store value.
+     * <p>
+     * When working with buckets using path-style resolution, the store bucket name
+     * is just {@link #BUCKET}.
+     */
     private static final Map<StoreKey, StoreValue> knownStores = new HashMap<>();
 
     @Override
     public void registerStore(String bucketName, Configuration storeConf,
         DelegationTokenProvider dtProvider, UserGroupInformation storeUgi) {
+      if (PATH_STYLE_ACCESS_IN_USE.get()) {
+        bucketName = BUCKET;
+      }
       StoreKey storeKey = new StoreKey(bucketName, storeUgi);
       StoreValue storeValue = new StoreValue(storeConf, dtProvider);
       LOG.info("Registering store {} with value {}", storeKey, storeValue);
@@ -344,6 +367,9 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     @Override
     public void unregisterStore(String bucketName, Configuration storeConf,
         DelegationTokenProvider dtProvider, UserGroupInformation storeUgi) {
+      if (PATH_STYLE_ACCESS_IN_USE.get()) {
+        bucketName = BUCKET;
+      }
       StoreKey storeKey = new StoreKey(bucketName, storeUgi);
       LOG.info("Unregistering store {}", storeKey);
       knownStores.remove(storeKey);
@@ -364,6 +390,12 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       return storeValue;
     }
 
+    /**
+     * The key for the signer map: bucket-name and UGI.
+     * <p>
+     * In path-style-access the bucket name is mapped to {@link #BUCKET} so only
+     * one bucket per UGI instance is supported.
+     */
     private static class StoreKey {
       private final String bucketName;
       private final UserGroupInformation ugi;
