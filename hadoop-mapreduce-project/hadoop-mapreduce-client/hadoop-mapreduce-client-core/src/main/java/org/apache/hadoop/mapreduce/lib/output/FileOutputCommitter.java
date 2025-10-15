@@ -158,6 +158,11 @@ public class FileOutputCommitter extends PathOutputCommitter {
         "output directory:" + skipCleanup + ", ignore cleanup failures: " +
         ignoreCleanupFailures);
 
+    if (algorithmVersion == 1 && skipCleanup) {
+        LOG.warn("Skip cleaning up when using FileOutputCommitter V1 can lead to unexpected behaviors. " +
+                "For example, committing several times may be allowed falsely.");
+    }
+
     if (outputPath != null) {
       FileSystem fs = outputPath.getFileSystem(context.getConfiguration());
       this.outputPath = fs.makeQualified(outputPath);

@@ -35,7 +35,6 @@ import software.amazon.awssdk.services.sts.StsClientBuilder;
 import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
 import software.amazon.awssdk.services.sts.model.Credentials;
 import software.amazon.awssdk.services.sts.model.GetSessionTokenRequest;
-import software.amazon.awssdk.thirdparty.org.apache.http.client.utils.URIBuilder;
 import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
 import org.apache.hadoop.util.Preconditions;
 
@@ -167,7 +166,7 @@ public class STSClientFactory {
    */
   private static URI getSTSEndpoint(String endpoint) {
     try {
-      return new URIBuilder().setScheme("https").setHost(endpoint).build();
+      return new URI("https", endpoint, null, null);
     } catch (URISyntaxException e) {
       throw new IllegalArgumentException(e);
     }
