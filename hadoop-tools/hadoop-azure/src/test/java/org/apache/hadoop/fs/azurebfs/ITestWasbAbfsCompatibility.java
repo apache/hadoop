@@ -70,6 +70,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       LoggerFactory.getLogger(ITestWasbAbfsCompatibility.class);
 
   public ITestWasbAbfsCompatibility() throws Exception {
+    super.setup();
     assumeThat(isIPAddress()).as("Emulator is not supported").isFalse();
     assumeHnsDisabled();
     assumeBlobServiceType();
