@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.junit.Assume;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +36,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
+import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.io.IOUtils;
@@ -47,6 +50,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatCode;
 
 /**
  * Test Azure Oauth with Blob Data contributor role and Blob Data Reader role.
@@ -165,6 +169,36 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
       IOUtils.cleanupWithLogger(LOG, abfsStore);
     }
 
+  }
+
+  /*
+   * GetPathStatus with Blob Data Reader role should not throw an exception when marker creation fails due to permission issues.
+   * */
+  @Test
+  public void testGetPathStatusWithReader() throws Exception {
+    String clientId = this.getConfiguration().get(FS_AZURE_BLOB_DATA_READER_CLIENT_ID);
+    Assume.assumeTrue("Reader client id not provided", clientId != null);
+    String secret = this.getConfiguration().get(FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET);
+    Assume.assumeTrue("Reader client secret not provided", secret != null);
+
+    Path existedFolderPath = path(EXISTED_FOLDER_PATH);
+    createAzCopyFolder(existedFolderPath);
+    final AzureBlobFileSystem fs = Mockito.spy(getBlobReader());
+
+    // Use abfsStore in this test to verify the  ERROR code in AbfsRestOperationException
+    AzureBlobFileSystemStore abfsStore = Mockito.spy(fs.getAbfsStore());
+    Mockito.doReturn(abfsStore).when(fs).getAbfsStore();
+    AbfsBlobClient abfsClient = Mockito.spy(abfsStore.getClientHandler().getBlobClient());
+    Mockito.doReturn(abfsClient).when(abfsStore).getClient();
+    TracingContext tracingContext = getTestTracingContext(fs, true);
+
+    // GETPATHSTATUS marker creation fail should not be propagated to the caller.
+    assertThatCode(() -> abfsStore.getPathStatus(existedFolderPath, tracingContext))
+        .as("Expected getPathStatus to complete without throwing an exception")
+        .doesNotThrowAnyException();
+    Mockito.verify(abfsClient, Mockito.times(1)).createMarkerAtPath(Mockito.anyString(), Mockito.nullable(String.class),
+        Mockito.nullable(ContextEncryptionAdapter.class),
+        Mockito.nullable(TracingContext.class));
   }
 
   private void prepareFiles(Path existedFilePath, Path existedFolderPath) throws IOException {

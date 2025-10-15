@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -976,10 +977,14 @@ public class FSImage implements Closeable {
           " but expecting " + expectedMd5);
     }
 
-    long txId = loader.getLoadedImageTxId();
+    final long txId = setLastAppliedTxId(loader);
     LOG.info("Loaded image for txid " + txId + " from " + curFile);
-    lastAppliedTxId = txId;
     storage.setMostRecentCheckpointInfo(txId, curFile.lastModified());
+  }
+
+  synchronized long setLastAppliedTxId(FSImageFormat.LoaderDelegator loader) {
+    lastAppliedTxId = loader.getLoadedImageTxId();
+    return lastAppliedTxId;
   }
 
   /**
@@ -1211,6 +1216,15 @@ public class FSImage implements Closeable {
 
   public void removeFromCheckpointing(long txid) {
     currentlyCheckpointing.remove(txid);
+  }
+
+  void save(FSNamesystem src, File dst) throws IOException {
+    final long txid = getCorrectLastAppliedOrWrittenTxId();
+    LOG.info("save fsimage with txid={} to {}", txid, dst.getAbsolutePath());
+    final SaveNamespaceContext context = new SaveNamespaceContext(src, txid, new Canceler());
+    final Storage.StorageDirectory storageDirectory = new Storage.StorageDirectory(dst);
+    Files.createDirectories(storageDirectory.getCurrentDir().toPath());
+    new FSImageSaver(context, storageDirectory, NameNodeFile.IMAGE).run();
   }
 
   private synchronized void saveFSImageInAllDirs(FSNamesystem source,
