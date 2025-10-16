@@ -64,7 +64,6 @@ public class ITestS3AChecksum extends AbstractS3ATestBase {
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {"SHA256"},
-        {"CRC32"},
         {"CRC32C"},
         {"SHA1"},
         {UNKNOWN},
@@ -156,11 +155,10 @@ public class ITestS3AChecksum extends AbstractS3ATestBase {
       break;
     case UNKNOWN_TO_SDK_VERSION:
       // expect values to be null
+      // this is brittle with different stores; crc32 assertions have been cut
+      // because S3 express always set them.
       Assertions.assertThat(headObject.checksumSHA256())
           .describedAs("headObject.checksumSHA256()")
-          .isNull();
-      Assertions.assertThat(headObject.checksumCRC32())
-          .describedAs("headObject.checksumCRC32()")
           .isNull();
       break;
     default:
