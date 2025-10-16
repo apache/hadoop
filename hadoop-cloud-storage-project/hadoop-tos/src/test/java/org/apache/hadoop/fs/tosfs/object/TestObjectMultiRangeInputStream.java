@@ -107,7 +107,6 @@ public class TestObjectMultiRangeInputStream extends ObjectStorageTestBase {
       in.seek(2 << 20);
       assertEquals(2 << 20, in.getPos());
       assertEquals((4 << 20) + 1024, in.nextExpectPos());
-      assertEquals((4 << 20) + 1024, in.nextExpectPos());
 
       readCnt = in.read(b);
       assertEquals(readCnt, b.length);
