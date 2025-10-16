@@ -16,7 +16,7 @@
     },
     "devDependencies": {
         "requirejs": "^2.1.0",
-        "shelljs": "^0.2.6",
+        "shelljs": "^0.8.5",
         "apidoc": "0.17.7"
     },
     "resolutions": {
