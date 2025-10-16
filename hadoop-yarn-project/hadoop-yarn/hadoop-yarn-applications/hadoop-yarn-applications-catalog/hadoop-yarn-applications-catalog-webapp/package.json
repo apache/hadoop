@@ -10,7 +10,7 @@
         "angular-loader": "~1.6.4",
         "angular-mocks": "~1.6.4",
         "angular-route": "~1.6.4",
-        "angular": "~1.6.4",
+        "angular": "~1.8.3",
         "bootstrap": "~3.3.7",
         "roboto-fontface": "0.10.0"
     },
