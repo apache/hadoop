@@ -58,6 +58,12 @@ public final class FileSystemConfigurations {
    */
   public static final int DEFAULT_HTTP_READ_TIMEOUT = 30_000; // 30 secs
 
+  /**
+   * Default value of connection request timeout to be used when 100continue is enabled.
+   * Value: {@value}.
+   */
+  public static final int DEFAULT_EXPECT_100CONTINUE_WAIT_TIMEOUT = 3_000; // 3s
+
   // Retry parameter defaults.
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS = 5;
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MIN_BACKOFF_INTERVAL = 0;
@@ -214,7 +220,7 @@ public final class FileSystemConfigurations {
   public static final long THOUSAND = 1000L;
 
   public static final HttpOperationType DEFAULT_NETWORKING_LIBRARY
-      = HttpOperationType.JDK_HTTP_URL_CONNECTION;
+      = HttpOperationType.APACHE_HTTP_CLIENT;
 
   public static final int DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = 3;
 
@@ -228,7 +234,7 @@ public final class FileSystemConfigurations {
 
   public static final int MAX_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT = 5;
 
-  public static final int DEFAULT_APACHE_HTTP_CLIENT_CACHE_REFRESH_COUNT = 5;
+  public static final int DEFAULT_APACHE_HTTP_CLIENT_CACHE_REFRESH_COUNT = 3;
 
   public static final int MAX_APACHE_HTTP_CLIENT_CACHE_REFRESH_COUNT = 5;
 

@@ -97,6 +97,13 @@ public final class ConfigurationKeys {
    */
   public static final String AZURE_HTTP_READ_TIMEOUT = "fs.azure.http.read.timeout";
 
+  /**
+   * Config to set HTTP Expect100-Continue Wait Timeout Value for Rest Operations.
+   * Value: {@value}.
+   */
+  public static final String AZURE_EXPECT_100CONTINUE_WAIT_TIMEOUT
+      = "fs.azure.http.expect.100continue.wait.timeout";
+
   //  Retry strategy for getToken calls
   public static final String AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT = "fs.azure.oauth.token.fetch.retry.max.retries";
   public static final String AZURE_OAUTH_TOKEN_FETCH_RETRY_MIN_BACKOFF = "fs.azure.oauth.token.fetch.retry.min.backoff.interval";

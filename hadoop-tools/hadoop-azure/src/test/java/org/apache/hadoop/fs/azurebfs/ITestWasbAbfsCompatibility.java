@@ -69,6 +69,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       LoggerFactory.getLogger(ITestWasbAbfsCompatibility.class);
 
   public ITestWasbAbfsCompatibility() throws Exception {
+    // To ensure the wasb and abfs filesystem are initialized.
+    super.setup();
     assumeThat(isIPAddress()).as("Emulator is not supported").isFalse();
     assumeHnsDisabled();
     assumeBlobServiceType();
