@@ -170,6 +170,9 @@ public class AbfsCountersImpl implements AbfsCounters {
     }
     ioStatisticsStore = ioStatisticsStoreBuilder.build();
     lastExecutionTime = new AtomicLong(now());
+  }
+
+  public void initializeWriteMetrics() {
     abfsWriteThreadPoolMetrics = new AbfsWriteThreadPoolMetrics();
   }
 

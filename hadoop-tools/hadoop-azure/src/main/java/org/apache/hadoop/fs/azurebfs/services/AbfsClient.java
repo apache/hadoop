@@ -305,6 +305,9 @@ public abstract class AbfsClient implements Closeable {
           metricIdlePeriod,
           metricIdlePeriod);
     }
+    if (abfsConfiguration.isDynamicWriteThreadPoolEnablement()) {
+      abfsCounters.initializeWriteMetrics();
+    }
     this.abfsMetricUrl = abfsConfiguration.getMetricUri();
 
     final Class<? extends IdentityTransformerInterface> identityTransformerClass =

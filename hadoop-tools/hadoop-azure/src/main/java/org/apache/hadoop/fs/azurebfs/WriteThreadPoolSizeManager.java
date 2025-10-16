@@ -83,7 +83,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   /* The configuration instance. */
   private final AbfsConfiguration abfsConfiguration;
 
-  private final AbfsWriteThreadPoolMetrics writeThreadPoolMetrics;
+  private AbfsWriteThreadPoolMetrics writeThreadPoolMetrics;
 
   /**
    * Private constructor to initialize the write thread pool and CPU monitor executor
@@ -228,8 +228,12 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         threadPoolExecutor.setCorePoolSize(newMaxPoolSize);
         threadPoolExecutor.setMaximumPoolSize(newMaxPoolSize);
       }
-      WriteThreadPoolStats stats = getCurrentStats();
-      writeThreadPoolMetrics.update(stats);
+      try {
+        WriteThreadPoolStats stats = getCurrentStats();
+        writeThreadPoolMetrics.update(stats);
+      } finally {
+        writeThreadPoolMetrics = new AbfsWriteThreadPoolMetrics();
+      }
       LOG.debug("The thread pool size is: {} ", newMaxPoolSize);
       LOG.debug("The pool size is: {} ", threadPoolExecutor.getPoolSize());
       LOG.debug("The active thread count is: {}", threadPoolExecutor.getActiveCount());
