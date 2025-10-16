@@ -31,9 +31,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.DEFAULT_MULTIPART_COMMIT_CONSUMES_UPLOAD_ID;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.DEFAULT_SCALE_TESTS_ENABLED;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_HUGE_PARTITION_SIZE;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_SCALE_TESTS_ENABLED;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.MULTIPART_COMMIT_CONSUMES_UPLOAD_ID;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.SCALE_TEST_TIMEOUT_MILLIS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeNotS3ExpressFileSystem;
@@ -55,6 +57,8 @@ public class ITestS3AContractMultipartUploader extends
     AbstractContractMultipartUploaderTest {
 
   private int partitionSize;
+
+  private boolean mpuCommitConsumesUploadId;
 
   /**
    * S3 requires a minimum part size of 5MB (except the last part).
@@ -97,7 +101,7 @@ public class ITestS3AContractMultipartUploader extends
 
   @Override
   protected boolean finalizeConsumesUploadIdImmediately() {
-    return false;
+    return mpuCommitConsumesUploadId;
   }
 
   @BeforeEach
@@ -115,6 +119,10 @@ public class ITestS3AContractMultipartUploader extends
     partitionSize = (int) getTestPropertyBytes(conf,
         KEY_HUGE_PARTITION_SIZE,
         DEFAULT_HUGE_PARTITION_SIZE);
+    mpuCommitConsumesUploadId = getFileSystem().getConf().getBoolean(
+        MULTIPART_COMMIT_CONSUMES_UPLOAD_ID,
+        DEFAULT_MULTIPART_COMMIT_CONSUMES_UPLOAD_ID);
+    LOG.debug("{} = {}", MULTIPART_COMMIT_CONSUMES_UPLOAD_ID, mpuCommitConsumesUploadId);
   }
 
   /**

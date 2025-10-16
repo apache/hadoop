@@ -65,6 +65,7 @@ import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_I
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.BASE;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
 import static org.apache.hadoop.fs.s3a.test.SdkFaultInjector.setRequestFailureConditions;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test upload recovery by injecting failures into the response chain.
@@ -265,12 +266,17 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
     setRequestFailureConditions(2,
         SdkFaultInjector::isCompleteMultipartUploadRequest);
 
+    boolean mpuCommitConsumesUploadId = getFileSystem().getConf().getBoolean(
+        MULTIPART_COMMIT_CONSUMES_UPLOAD_ID,
+        DEFAULT_MULTIPART_COMMIT_CONSUMES_UPLOAD_ID);
     try (CommitContext commitContext
              = actions.createCommitContextForTesting(dest, JOB_ID, 0)) {
-      try {
+
+      if (mpuCommitConsumesUploadId) {
+        intercept(FileNotFoundException.class, () ->
+            commitContext.commitOrFail(commit));
+      } else {
         commitContext.commitOrFail(commit);
-      } catch (FileNotFoundException e) {
-        LOG.info("S3 Store doesn't support retries on completed commits: {}", e.toString());
       }
     }
     // make sure the saved data is as expected
