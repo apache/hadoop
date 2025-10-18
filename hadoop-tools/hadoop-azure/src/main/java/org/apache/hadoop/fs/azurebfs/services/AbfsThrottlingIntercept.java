@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.Closeable;
+import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -46,12 +48,5 @@ public interface AbfsThrottlingIntercept extends Closeable {
    */
   void sendingRequest(AbfsRestOperationType operationType,
       AbfsCounters abfsCounters);
-
-  /**
-   * Closes the throttling intercept and releases associated resources.
-   * @throws IOException if an I/O error occurs during cleanup
-   */
-  @Override
-  void close() throws IOException;
 
 }

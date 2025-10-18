@@ -43,10 +43,11 @@ final class AbfsNoOpThrottlingIntercept implements AbfsThrottlingIntercept {
       final AbfsCounters abfsCounters) {
   }
 
-/**
- * No-op implementation of close method.
- * @throws IOException never thrown in this no-op implementation
- */
+  /**
+   * No-op implementation of close method.
+   *
+   * @throws IOException if an I/O error occurs during cleanup
+   */
   @Override
   public void close() throws IOException {
     // No resources to clean up in no-op implementation
