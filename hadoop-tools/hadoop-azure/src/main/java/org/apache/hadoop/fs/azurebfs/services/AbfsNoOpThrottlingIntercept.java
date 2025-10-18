@@ -45,6 +45,7 @@ final class AbfsNoOpThrottlingIntercept implements AbfsThrottlingIntercept {
 
 /**
  * No-op implementation of close method.
+ * @throws IOException never thrown in this no-op implementation
  */
   @Override
   public void close() throws IOException {
