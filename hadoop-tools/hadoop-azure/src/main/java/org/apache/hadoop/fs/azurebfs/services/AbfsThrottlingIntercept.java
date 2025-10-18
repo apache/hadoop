@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public interface AbfsThrottlingIntercept extends Closable {
+public interface AbfsThrottlingIntercept extends Closeable {
 
   /**
    * Updates the metrics for successful and failed read and write operations.
